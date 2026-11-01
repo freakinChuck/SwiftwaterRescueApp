@@ -18,6 +18,8 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS messages(id $ai, incident_id INT, from_user INT, text TEXT, recipients TEXT NULL, created BIGINT)",
  "CREATE TABLE IF NOT EXISTS incident_log(id $ai, incident_id INT, ts BIGINT, user_id INT NULL, kind $tx, text TEXT)",
  "CREATE TABLE IF NOT EXISTS rescuee_marks(id $ai, incident_id INT, user_id INT, lat DOUBLE, lon DOUBLE, ts BIGINT, manual INT DEFAULT 0)",
+ // Einrückoptionen beim Annehmen eines Einsatzes; participants.mode verweist auf code
+ "CREATE TABLE IF NOT EXISTS modes(id $ai, code $tx UNIQUE, name $tx, share_location INT DEFAULT 1, active INT DEFAULT 1)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
@@ -27,13 +29,16 @@ if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO roles(name,color,is_lead,is_post) VALUES(?,?,?,?)");
   foreach ([['Einsatzleitung','#d62828',1,0],['Rettungsboot','#1d7fd1',0,0],['Rettungsschlitten','#e6a100',0,0],['Sicherungs- und Beobachtungsposten','#2a9d5c',0,1]] as $r) $st->execute($r);
 }
+if (!$db->query("SELECT COUNT(*) c FROM modes")->fetch()['c']) { // bisherige feste Optionen, Codes bleiben für bestehende Einsätze gültig
+  $st = $db->prepare("INSERT INTO modes(code,name,share_location) VALUES(?,?,?)");
+  foreach ([['base','Anfahrt via Stützpunkt',1],['direct','Anfahrt direkt',1],['logistics','Logistik',1],['coordinator','Koordinator KP Rück',0]] as $r) $st->execute($r);
+}
 if (!$db->query("SELECT COUNT(*) c FROM users")->fetch()['c'])
   $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin,must_change) VALUES(?,?,?,1,1)")->execute([$cfg['admin_user'], 'Administrator', password_hash($cfg['admin_pass'], PASSWORD_DEFAULT)]);
 
 $route = $_GET['r'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: [];
 $now = time();
-$MODES = ['base' => 'Anfahrt via Stützpunkt', 'direct' => 'Anfahrt direkt', 'logistics' => 'Logistik', 'coordinator' => 'Koordinator KP Rück'];
 
 if ($route === 'login') {
   $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
@@ -63,6 +68,8 @@ function isActivePart($incId) { $p = part($incId); return $p && $p['mode'] !== '
 function isLead($incId) { global $db, $uid; $s = $db->prepare("SELECT COUNT(*) c FROM participants p JOIN roles r ON r.id=p.role_id WHERE p.incident_id=? AND p.user_id=? AND p.left_at IS NULL AND r.is_lead=1"); $s->execute([$incId, $uid]); return $s->fetch()['c'] > 0; }
 function canManage($inc) { global $me, $uid; return $me['is_admin'] || (int)$inc['created_by'] === $uid || isLead((int)$inc['id']); }
 function canFlow($inc) { return canManage($inc) || isActivePart((int)$inc['id']); }
+function modeRow($code) { global $db; $s = $db->prepare("SELECT * FROM modes WHERE code=?"); $s->execute([$code]); return $s->fetch() ?: null; }
+function modeShares($code) { $m = modeRow($code); return !$m || (int)$m['share_location']; }
 function activeIncident() { global $db; return $db->query("SELECT * FROM incidents WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1")->fetch() ?: null; }
 function logev($incId, $userId, $kind, $text) { global $db, $now; $db->prepare("INSERT INTO incident_log(incident_id,ts,user_id,kind,text) VALUES(?,?,?,?,?)")->execute([$incId, $now, $userId, $kind, $text]); }
 function hav($a, $b, $c, $d) { $p1 = deg2rad($a); $p2 = deg2rad($c); $dp = $p2 - $p1; $dl = deg2rad($d - $b); $x = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 12742000 * asin(min(1, sqrt($x))); }
@@ -78,9 +85,14 @@ function logRows($id, $asc = false) {
   return array_map(fn($r) => ints($r, ['id', 'ts']), $s->fetchAll());
 }
 
+// Einrückoption ohne Standortfreigabe: Standortmeldungen werden nicht gespeichert (serverseitig erzwungen)
+if ($route === 'incident/location' && ($inc = activeIncident()) && ($p = part($inc['id'])) && !modeShares($p['mode'])) out(['ok' => true, 'shared' => false]);
+
 switch ($route) {
  case 'me': out(['me' => $me]);
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post']), $db->query("SELECT id,name,color,is_lead,is_post FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
+ case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
+  out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active']), $db->query("SELECT id,code,name,share_location,active FROM modes ORDER BY id")->fetchAll()));
 
  case 'incident/start':
   if (activeIncident()) fail('Es läuft bereits ein Einsatz');
@@ -121,16 +133,19 @@ switch ($route) {
        'marks' => $marks, 'messages' => $msgs, 'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'critical' => critical($inc),
        'log' => $cf ? logRows($id) : null, 'now' => $now]);
 
- case 'incident/join': // mode: base | direct | logistics | coordinator | declined
+ case 'incident/join': // mode: code einer aktiven Einrückoption oder declined
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
-  $mode = $in['mode'] ?? '';
-  if (!in_array($mode, ['base', 'direct', 'logistics', 'coordinator', 'declined'])) fail('Ungültige Auswahl');
+  $mode = (string)($in['mode'] ?? '');
+  $m = $mode === 'declined' ? null : modeRow($mode);
+  if ($mode !== 'declined' && (!$m || !(int)$m['active'])) fail('Ungültige Auswahl');
   $prev = part($inc['id']);
   $db->prepare($my ? "INSERT INTO participants(incident_id,user_id,mode) VALUES(?,?,?) ON DUPLICATE KEY UPDATE mode=VALUES(mode), left_at=NULL"
                    : "INSERT INTO participants(incident_id,user_id,mode) VALUES(?,?,?) ON CONFLICT(incident_id,user_id) DO UPDATE SET mode=excluded.mode, left_at=NULL")->execute([$inc['id'], $uid, $mode]);
+  // Option ohne Standortfreigabe (z. B. Koordinator KP Rück): bisherigen Standort von der Karte nehmen
+  if ($m && !(int)$m['share_location']) $db->prepare("UPDATE participants SET lat=NULL, lon=NULL, loc_at=NULL WHERE incident_id=? AND user_id=?")->execute([$inc['id'], $uid]);
   if (!$prev || $prev['mode'] !== $mode || $prev['left_at'] !== null) {
     if ($mode === 'declined') logev($inc['id'], $uid, 'decline', 'hat den Einsatz abgelehnt');
-    else logev($inc['id'], $uid, 'accept', ($prev && $prev['left_at'] !== null ? 'ist wieder eingestiegen' : 'hat den Einsatz angenommen') . ' (' . $MODES[$mode] . ')');
+    else logev($inc['id'], $uid, 'accept', ($prev && $prev['left_at'] !== null ? 'ist wieder eingestiegen' : 'hat den Einsatz angenommen') . ' (' . $m['name'] . ')');
   }
   out(['ok' => true]);
 
@@ -333,6 +348,21 @@ switch ($route) {
  case 'role/save': admin();
   if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), $in['id']]);
   else $db->prepare("INSERT INTO roles(name,color,is_lead) VALUES(?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0)]);
+  out(['ok' => true]);
+ case 'mode/save': admin(); // Einrückoption anlegen oder ändern
+  $nm = trim($in['name'] ?? ''); if ($nm === '') fail('Name fehlt');
+  $s = $db->prepare("SELECT * FROM modes WHERE id=?"); $s->execute([(int)($in['id'] ?? 0)]); $old = $s->fetch() ?: ['share_location' => 1, 'active' => 1];
+  $flag = fn($k) => isset($in[$k]) ? (empty($in[$k]) ? 0 : 1) : (int)$old[$k]; // nicht übergeben = bisheriger Wert
+  $sh = $flag('share_location'); $ac = $flag('active');
+  if (!empty($in['id'])) {
+    $id = (int)$in['id']; if (empty($old['id'])) fail('Einrückoption nicht gefunden', 404);
+    $s = $db->prepare("SELECT COUNT(*) c FROM modes WHERE active=1 AND id<>?"); $s->execute([$id]);
+    if (!$ac && !$s->fetch()['c']) fail('Mindestens eine Einrückoption muss aktiv bleiben');
+    $db->prepare("UPDATE modes SET name=?,share_location=?,active=? WHERE id=?")->execute([$nm, $sh, $ac, $id]);
+  } else {
+    $db->prepare("INSERT INTO modes(code,name,share_location,active) VALUES(?,?,?,1)")->execute(['neu-' . bin2hex(random_bytes(6)), $nm, $sh]);
+    $id = (int)$db->lastInsertId(); $db->prepare("UPDATE modes SET code=? WHERE id=?")->execute(['m' . $id, $id]);
+  }
   out(['ok' => true]);
 }
 fail('Unbekannte Route', 404);

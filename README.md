@@ -19,7 +19,8 @@ powershell -File scripts\deploy.ps1 -Ref origin/feature/irgendwas    # anderer S
 Beim ersten Mal auf dem Server `api/config.php` von Hand anlegen (Vorlage im Repo), das Skript lädt sie nicht hoch.
 
 ## Verwaltung, Passwörter, Übungen
-- `admin.html` (ohne Karte) ist nur für die Benutzerrolle Administrator: Benutzer anlegen, Rolle ändern, Passwort zurücksetzen, deaktivieren/reaktivieren, Spezialrollen, Einsatzstatistik.
+- `admin.html` (ohne Karte) ist nur für die Benutzerrolle Administrator: Benutzer anlegen, Rolle ändern, Passwort zurücksetzen, deaktivieren/reaktivieren, Einrückoptionen, Spezialrollen, Einsatzstatistik.
+- Einrückoptionen (z. B. «Anfahrt direkt», «Koordinator KP Rück») lassen sich umbenennen, ergänzen und deaktivieren. Pro Option wird festgelegt, ob der Standort geteilt wird; bei «Koordinator KP Rück» ist das standardmässig aus.
 - Jede Person ändert ihr Passwort im Menü unter «Konto → Passwort ändern».
 - Beim Einsatzstart wählen: «Scharfer Einsatz» (immer kritischer Alarm) oder «Übung» (normale Benachrichtigung). Wer unter «Konto» den Übungsmodus aktiviert, erhält auch Übungen als kritischen Alarm.
 
