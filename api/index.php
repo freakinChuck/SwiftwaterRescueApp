@@ -3,6 +3,7 @@
 $cfg = require __DIR__ . '/config.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
+ini_set('serialize_precision', '-1'); // Zahlen im JSON kurz ausgeben (47.481 statt 47.48100000000000164…), Hosting-Einstellung übersteuern
 function out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE); exit; }
 function fail($m, $c = 400) { out(['error' => $m], $c); }
 
@@ -24,6 +25,8 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS modes(id $ai, code $tx UNIQUE, name $tx, share_location INT DEFAULT 1, active INT DEFAULT 1, lead_rights INT DEFAULT 0)",
  // Einstellungen der Verwaltung als Schlüssel/Wert, z. B. msg_no_role
  "CREATE TABLE IF NOT EXISTS settings(k $tx PRIMARY KEY, v TEXT)",
+ // Positionen und Bereiche der Einsatzleitung: kind point|area, pts = JSON [[lat,lon],…]; removed = Zeitpunkt des Entfernens
+ "CREATE TABLE IF NOT EXISTS pois(id $ai, incident_id INT, kind $tx, name $tx, color $tx, pts TEXT, created_by INT, created BIGINT, removed BIGINT NULL)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
@@ -189,8 +192,12 @@ switch ($route) {
   $mk = $db->prepare("SELECT m.id,m.user_id,m.lat,m.lon,m.ts,m.manual,u.name FROM rescuee_marks m LEFT JOIN users u ON u.id=m.user_id WHERE m.incident_id=? ORDER BY m.id");
   $mk->execute([$id]);
   $marks = array_map(fn($m) => ints(array_merge($m, ['lat' => (float)$m['lat'], 'lon' => (float)$m['lon']]), ['id', 'user_id', 'ts', 'manual']), $mk->fetchAll());
+  // Positionen und Bereiche der Einsatzleitung: für alle sichtbar, immer vollständig (Entfernen kommt bei allen an)
+  $po = $db->prepare("SELECT p.id,p.kind,p.name,p.color,p.pts,p.created_by,p.created,u.name by_name FROM pois p LEFT JOIN users u ON u.id=p.created_by WHERE p.incident_id=? AND p.removed IS NULL ORDER BY p.id");
+  $po->execute([$id]);
+  $pois = array_map(fn($p) => array_merge(ints($p, ['id', 'created_by', 'created']), ['pts' => json_decode($p['pts'], true) ?: []]), $po->fetchAll());
   $cf = canFlow($inc);
-  out(['incident' => $inc,
+  out(['incident' => $inc, 'pois' => $pois,
        'participants' => array_map(function ($p) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
        'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'can_message' => canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc),
        'log' => $cf ? logRows($id) : null, 'now' => $now]);
@@ -330,6 +337,40 @@ switch ($route) {
   if (!canManage($inc) && (int)$m['user_id'] !== $uid) fail('Nur die Einsatzleitung kann fremde Markierungen entfernen', 403);
   $db->prepare("DELETE FROM rescuee_marks WHERE id=?")->execute([$m['id']]);
   logev($inc['id'], $uid, 'markdel', (int)$m['user_id'] === $uid ? 'entfernt die eigene Markierung des Rettlings' : 'entfernt eine Markierung des Rettlings');
+  out(['ok' => true]);
+
+ case 'incident/poi': // Position (kind=point, 1 Punkt) oder Bereich (kind=area, Polygon mit 3–200 Punkten) markieren: nur Einsatzleitung
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (!canManage($inc)) fail('Nur die Einsatzleitung kann Positionen und Bereiche markieren', 403);
+  $kind = ($in['kind'] ?? '') === 'area' ? 'area' : 'point';
+  $name = trim((string)($in['name'] ?? ''));
+  if ($name === '') fail('Bezeichnung fehlt');
+  $name = mb_substr($name, 0, 80);
+  $col = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($in['color'] ?? '')) ? $in['color'] : '#ff9f1c';
+  $pts = [];
+  foreach ((array)($in['pts'] ?? []) as $q) {
+    if (!is_array($q) || count($q) !== 2 || !is_numeric($q[0]) || !is_numeric($q[1]) || abs($q[0]) > 90 || abs($q[1]) > 180) fail('Ungültige Koordinaten');
+    $pts[] = [round((float)$q[0], 7), round((float)$q[1], 7)];
+  }
+  if ($kind === 'point' ? count($pts) !== 1 : count($pts) < 3 || count($pts) > 200) fail($kind === 'point' ? 'Für eine Position ist genau ein Punkt nötig' : 'Ein Bereich braucht 3 bis 200 Punkte');
+  $db->prepare("INSERT INTO pois(incident_id,kind,name,color,pts,created_by,created) VALUES(?,?,?,?,?,?,?)")->execute([$inc['id'], $kind, $name, $col, json_encode($pts), $uid, $now]);
+  $pid = (int)$db->lastInsertId();
+  if ($kind === 'point') $txt = sprintf('markiert die Position «%s» (%.5F, %.5F)', $name, $pts[0][0], $pts[0][1]);
+  else { // Fläche grob über lokale Projektion (Shoelace), reicht für die Angabe im Log
+    $k = 111320 * cos(deg2rad($pts[0][0])); $a = 0; $n = count($pts);
+    for ($j = 0; $j < $n; $j++) { $p = $pts[$j]; $q = $pts[($j + 1) % $n]; $a += $p[1] * $k * $q[0] * 111320 - $q[1] * $k * $p[0] * 111320; }
+    $txt = sprintf('markiert den Bereich «%s» (%d Punkte, ca. %s ha)', $name, $n, number_format(abs($a) / 2 / 10000, 1, '.', "'"));
+  }
+  logev($inc['id'], $uid, 'poi', $txt);
+  out(['ok' => true, 'id' => $pid]);
+
+ case 'incident/poi/remove': // Position oder Bereich entfernen: nur Einsatzleitung (bleibt in der Datenbank, removed gesetzt)
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (!canManage($inc)) fail('Nur die Einsatzleitung kann Positionen und Bereiche entfernen', 403);
+  $s = $db->prepare("SELECT * FROM pois WHERE id=? AND incident_id=? AND removed IS NULL"); $s->execute([(int)($in['id'] ?? 0), $inc['id']]); $p = $s->fetch();
+  if (!$p) fail('Markierung nicht gefunden', 404);
+  $db->prepare("UPDATE pois SET removed=? WHERE id=?")->execute([$now, $p['id']]);
+  logev($inc['id'], $uid, 'poidel', ($p['kind'] === 'area' ? 'entfernt den Bereich «' : 'entfernt die Position «') . $p['name'] . '»');
   out(['ok' => true]);
 
  case 'incident/kick': // Einsatzkraft aus dem Einsatz entfernen (Wiedereinstieg bleibt möglich)
