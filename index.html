@@ -60,6 +60,10 @@ table.crew small{display:block;color:var(--mut)}table.crew select{width:100%;pad
 .pp{display:flex;align-items:center;gap:.5rem;padding:.35rem 0;border-bottom:1px solid var(--line)}.pp .mk{width:30px;height:30px;font-size:.7rem;border-width:3px;flex:0 0 auto}
 .pp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.pp .nm small{display:block;color:var(--mut)}.pp button{padding:.35rem .5rem;font-size:.82rem}.pp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
 #followChip{position:fixed;top:calc(4.3rem + env(safe-area-inset-top));left:.7rem;z-index:1000;background:var(--ex);color:#fff;border-radius:6px;padding:.25rem .3rem .25rem .7rem;font-size:.9rem;display:flex;gap:.5rem;align-items:center;max-width:calc(100vw - 5rem);box-shadow:0 1px 4px #0008}
+#rdBox{position:fixed;top:calc(4.3rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:1200;background:var(--panel);border:2px solid #2ee6d6;border-radius:8px;padding:.5rem .7rem;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;width:max-content;max-width:min(30rem,calc(100vw - 1.4rem));box-shadow:0 2px 10px #000a}#rdBox[hidden]{display:none}#rdBox>div{width:100%}
+.rdt{width:100%}.rdt td{padding:.25rem .3rem}.rdt td:last-child{text-align:right;font-weight:600;white-space:nowrap}.rdt input{width:4.5rem;padding:.25rem .4rem}
+body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: Klicks auf Marker/Bereiche gehen an die Karte, keine Popups */
+.rdpt{width:26px;height:26px;border-radius:50%;background:#2ee6d6;color:#0f2430;font-weight:700;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px #0008}
 #followChip button{background:transparent;border:0;color:#fff;padding:.2rem .4rem}
 @media(min-width:760px){body.so #followChip{left:calc(400px + 1rem)}}
 .mk{width:38px;height:38px;border-radius:50%;border:4px solid #888;background:#0c1c25 center/cover;display:grid;place-items:center;font-weight:700;font-size:.8rem;box-shadow:0 0 0 2px #0008}
@@ -77,7 +81,6 @@ table.crew small{display:block;color:var(--mut)}table.crew select{width:100%;pad
 /* ---------- Konfiguration ---------- */
 // Kartenanbieter (MAP_PROVIDERS, DEFAULT_BASE) in common.js, gemeinsam mit dem Replay der Verwaltung
 // Gewässernetz (OpenStreetMap via Overpass). Austauschbar: Funktion loadNet() liefert Wege als {id,nodes[],geometry[{lat,lon}]} in Fliessrichtung.
-const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
 const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
 const WATER_M=80;  // Standort so nahe an der Gewässerachse gilt als «auf dem Gewässer» (Boot); zählt im Einsatzlog nicht als Fahrt
 const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
@@ -113,12 +116,13 @@ $('#aOk').onclick=()=>{if(curKey)ackAdd(curKey);curKey=null;$('#alarm').style.di
 let secReset=true;
 function toggleSheet(f){const w=$('#sheetWrap');if(!w)return;const was=w.classList.contains('open'),o=f===undefined?!was:f;if(o&&!was){secReset=true;draw()}w.classList.toggle('open',o);document.body.classList.toggle('so',o);if(o&&panel)togglePanel(panel,false)}
 function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);if(st&&st.incident){const x=!!st.incident.is_exercise;c.hidden=false;c.classList.toggle('ex',x);c.textContent=(x?'Übung: ':'Einsatz: ')+st.incident.message+' · '+Math.round((st.now-st.incident.alarm_at)/60)+' min'}else c.hidden=true}
-function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><div id="camWrap"><button id="bCam" aria-expanded="false" aria-haspopup="menu" aria-controls="camMenu" title="Kartenausschnitt wählen">Kamerafokus</button><div id="camMenu" role="menu" hidden><button id="bFitA" role="menuitem" title="Ganzes Suchgebiet anzeigen">Suchgebiet</button><button id="bFitF" role="menuitem" title="Alle Einsatzkräfte mit Standort anzeigen">Einsatzkräfte</button></div></div><button id="bPeople" aria-expanded="false" aria-controls="people" title="Liste aller Personen im Einsatz">Personen</button><button id="bRes" aria-expanded="false" aria-controls="res" title="Rettlinge: Standort oder «gerettet» markieren">Rettlinge<span class="cnt" id="resCnt" hidden></span></button><button id="bMsg" aria-expanded="false" aria-controls="msgs" title="Nachrichten lesen und senden">Nachrichten<span class="cnt" id="msgCnt" hidden></span></button><button id="bPoi" aria-expanded="false" aria-controls="pois" title="Positionen und Bereiche der Einsatzleitung">Positionen &amp; Bereiche</button></div><div id="pois" hidden role="dialog" aria-label="Positionen und Bereiche"><div class="phead"><b>Positionen &amp; Bereiche</b><button id="bPoiX" aria-label="Liste schliessen">✕</button></div><div id="poiList"></div><div id="poiForm"></div></div><div id="res" hidden role="dialog" aria-label="Rettlinge"><div class="phead"><b>Rettlinge</b><button id="bResX" aria-label="Liste schliessen">✕</button></div><div id="resList"></div><div id="resForm"><button class="pri" data-re="0">+ Rettling erfassen</button></div></div><div id="drawBar" hidden role="status"></div><div id="followChip" hidden role="status"><span></span><button id="bUnfollow" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><div id="people" hidden role="dialog" aria-label="Personen im Einsatz"><div class="phead"><b>Personen im Einsatz</b><button id="bPeopleX" aria-label="Liste schliessen">✕</button></div><div id="peopleList"></div></div><div id="msgs" hidden role="dialog" aria-label="Nachrichten"><div class="phead"><b>Nachrichten</b><button id="bMsgX" aria-label="Nachrichten schliessen">✕</button></div><div id="msgList" aria-live="polite"></div><label id="mmShowRow"><input type="checkbox" id="mmShow"> Nachrichten-Markierungen auf der Karte anzeigen</label><div id="msgForm"></div></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
+function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><div id="camWrap"><button id="bCam" aria-expanded="false" aria-haspopup="menu" aria-controls="camMenu" title="Kartenausschnitt wählen">Kamerafokus</button><div id="camMenu" role="menu" hidden><button id="bFitA" role="menuitem" title="Ganzes Suchgebiet anzeigen">Suchgebiet</button><button id="bFitF" role="menuitem" title="Alle Einsatzkräfte mit Standort anzeigen">Einsatzkräfte</button></div></div><button id="bPeople" aria-expanded="false" aria-controls="people" title="Liste aller Personen im Einsatz">Personen</button><button id="bRes" aria-expanded="false" aria-controls="res" title="Rettlinge: Standort oder «gerettet» markieren">Rettlinge<span class="cnt" id="resCnt" hidden></span></button><button id="bMsg" aria-expanded="false" aria-controls="msgs" title="Nachrichten lesen und senden">Nachrichten<span class="cnt" id="msgCnt" hidden></span></button><button id="bPoi" aria-expanded="false" aria-controls="pois" title="Positionen und Bereiche der Einsatzleitung">Positionen &amp; Bereiche</button><button id="bRd" title="Distanz und Zeiten zwischen zwei Punkten entlang des Gewässers">Flussdistanz</button></div><div id="rdBox" hidden role="dialog" aria-label="Flussdistanz" aria-live="polite"></div><div id="pois" hidden role="dialog" aria-label="Positionen und Bereiche"><div class="phead"><b>Positionen &amp; Bereiche</b><button id="bPoiX" aria-label="Liste schliessen">✕</button></div><div id="poiList"></div><div id="poiForm"></div></div><div id="res" hidden role="dialog" aria-label="Rettlinge"><div class="phead"><b>Rettlinge</b><button id="bResX" aria-label="Liste schliessen">✕</button></div><div id="resList"></div><div id="resForm"><button class="pri" data-re="0">+ Rettling erfassen</button></div></div><div id="drawBar" hidden role="status"></div><div id="followChip" hidden role="status"><span></span><button id="bUnfollow" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><div id="people" hidden role="dialog" aria-label="Personen im Einsatz"><div class="phead"><b>Personen im Einsatz</b><button id="bPeopleX" aria-label="Liste schliessen">✕</button></div><div id="peopleList"></div></div><div id="msgs" hidden role="dialog" aria-label="Nachrichten"><div class="phead"><b>Nachrichten</b><button id="bMsgX" aria-label="Nachrichten schliessen">✕</button></div><div id="msgList" aria-live="polite"></div><label id="mmShowRow"><input type="checkbox" id="mmShow"> Nachrichten-Markierungen auf der Karte anzeigen</label><div id="msgForm"></div></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
   $('#bMenu').onclick=()=>toggleSheet();$('#bCam').onclick=()=>camMenu();$('#bFitA').onclick=()=>{camMenu(false);fitArea()};$('#bFitF').onclick=()=>{camMenu(false);fitForces()};$('#bClose').onclick=()=>toggleSheet(false);$('#chip').onclick=()=>toggleSheet(true);
   followId=null;panel=null;msgSeen=0;msgFormKey='';$('#bPeople').onclick=()=>togglePanel('people');$('#bPeopleX').onclick=()=>togglePanel('people',false);$('#bUnfollow').onclick=stopFollow;
   $('#bMsg').onclick=()=>togglePanel('msgs');$('#bMsgX').onclick=()=>togglePanel('msgs',false);
   $('#bPoi').onclick=()=>togglePanel('pois');$('#bPoiX').onclick=()=>togglePanel('pois',false);
   $('#bRes').onclick=()=>togglePanel('res');$('#bResX').onclick=()=>togglePanel('res',false);
+  rd=null;$('#bRd').onclick=rdOpen; // Flussdistanz (zusätzlich im ☰-Menü, auch ohne Einsatz)
   $('#poiList').onclick=e=>{const b=e.target.closest('[data-pg],[data-pls]');if(!b)return;if(b.dataset.pg)return showPoi(+b.dataset.pg);stopFollow();map.panTo([st.incident.lat,st.incident.lon]);if(narrow())togglePanel('pois',false)};
   $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
   $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f)};
@@ -162,7 +166,9 @@ function drawMsgMarks(){if(!msgLayer)return;const mm=(st&&st.incident&&st.msg_ma
 document.addEventListener('click',e=>{const b=e.target.closest('[data-mm]');if(!b)return;if(!confirm('Kartenmarkierung dieser Nachricht entfernen? Die Nachricht selbst bleibt erhalten.'))return;
   api('incident/message/unmark',{id:+b.dataset.mm}).then(()=>{map.closePopup();poll()}).catch(fail)});
 // Punkt auf der Karte wählen (z. B. Markierung ohne eigenen Standort); Hinweis unten über #areaNote
-function pickPoint(text){return new Promise(res=>{if(panel)togglePanel(panel,false);toggleSheet(false);window.markPick=text;drawMap();map.once('click',e=>{window.markPick=null;drawMap();res(e.latlng)})})}
+// Punktwahl (pickPoint, Bereich zeichnen, Flussdistanz): Marker, Bereiche usw. lassen Klicks zur Karte durch, damit überall gewählt werden kann
+const pickMode=on=>{document.body.classList.toggle('picking',on);if(on)map.closePopup()};
+function pickPoint(text){return new Promise(res=>{if(panel)togglePanel(panel,false);toggleSheet(false);window.markPick=text;pickMode(true);drawMap();map.once('click',e=>{window.markPick=null;pickMode(false);drawMap();res(e.latlng)})})}
 function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.marker([i.lat,i.lon],{icon:L.divIcon({className:'',html:'<div class="pls"></div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map).bindTooltip('PLS');
   try{layers.area=drawArea(i);if(layers.area)layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message}if(n){n.textContent=window.markPick||areaInfo;n.hidden=!(areaInfo||window.markPick)}checkArea();
@@ -176,15 +182,13 @@ function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if
   if(fitted!==i.id){fitted=i.id;map.setView([i.lat,i.lon],14)}}
 /* ---------- Suchgebiet entlang des Flusslaufs ---------- */
 let net=null,netLoading=false,areaInfo='';
-async function loadNet(i,R){netLoading=true;let err='';
-  const q=`[out:json][timeout:25];way(around:${Math.round(R)},${i.lat},${i.lon})["waterway"~"^(river|stream|canal)$"];out geom;`;
-  for(const url of OVERPASS){try{
-    const r=await fetch(url,{method:'POST',body:new URLSearchParams({data:q})});if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json();if(!j.elements)throw new Error('ungültige Antwort');
+// Gewässernetz über den Server (Cache, siehe Route overpass); Radius auf 1 km aufgerundet, damit alle Geräte eines Einsatzes dieselbe Abfrage stellen
+async function loadNet(i,R){netLoading=true;R=Math.ceil(R/1000)*1000;
+  try{const j=await api('overpass',{around:[R,i.lat,i.lon]});if(!j.elements)throw new Error('ungültige Antwort');
     const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();
     ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));
-    net={inc:i.id,R,ways,byNode};netLoading=false;drawMap();draw();return}catch(e){err=e.message}}
-  net={inc:i.id,R,fail:true,err,retryAt:Date.now()+20000};netLoading=false;drawMap();draw()}
+    net={inc:i.id,R,ways,byNode};netLoading=false;drawMap();draw();return}
+  catch(e){net={inc:i.id,R,fail:true,err:e.message,retryAt:Date.now()+20000};netLoading=false;drawMap();draw()}}
 const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
 function follow(w,k,rem,seen){const pts=[w.geometry[k]];seen=new Set(seen).add(w.id);
   for(let j=k+1;j<w.geometry.length;j++){const a=w.geometry[j-1],b=w.geometry[j],d=dist(a,b);
@@ -241,7 +245,10 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     $('#exm').onchange=e=>{const v=e.target.checked?1:0;api('me/settings',{exercise_mode:v}).then(()=>{me.exercise_mode=v;e.target.blur();return poll()}).catch(x=>{e.target.checked=!v;fail(x)})};
     // eigenes Koordinatensystem ('' = Standard der Verwaltung); Kartenebenen neu aufbauen, damit Popups die neue Anzeige zeigen
     $('#csys').onchange=e=>{const v=e.target.value,old=me.coord_sys;e.target.blur();me.coord_sys=v||null;poiKey=resKey='';api('me/settings',{coord_sys:v}).then(poll).catch(x=>{me.coord_sys=old;fail(x);poll()})}};
-  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+acc+footInfo();$('#bNew').onclick=newView;return bindAcc()}
+  // Werkzeuge: auch ohne Einsatz verfügbar (im Einsatz zusätzlich über den Kartenknopf)
+  const tools=sec('tools','Werkzeuge',`<div class="row"><button id="bRdM">Flussdistanz messen</button></div><div class="mut">Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei ${rdSpeeds().join(', ')} km/h.</div>`);
+  const bindTools=()=>{$('#bRdM').onclick=rdOpen};
+  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+tools+acc+footInfo();$('#bNew').onclick=newView;bindTools();return bindAcc()}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
   if(secReset){secReset=false;openSec=new Set(['mine']);if(!i.flow_ms)openSec.add('flow')}
@@ -265,7 +272,7 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   const act=st.participants.filter(p=>p.mode!=='declined');
   if(st.can_manage)h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table class="crew">${act.map(p=>`<tr><td>${esc(p.name)}<small>${p.left_at?'verlassen':esc(modeOf(p.mode).name)}</small></td><td>${p.left_at?esc(roleName(p)||''):leadMode(p.mode)?'<span class="mut">Rechte der Einsatzleitung</span>':st.can_manage?roleSel('',p.role_id,`data-rset="${p.user_id}" aria-label="Spezialrolle von ${esc(p.name)}"`):esc(roleName(p)||'')}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}" data-n="${esc(p.name)}" aria-label="${esc(p.name)} aus dem Einsatz entfernen" title="Aus dem Einsatz entfernen">✕</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
-  s.innerHTML=h+acc+footInfo();bindAcc();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
+  s.innerHTML=h+tools+acc+footInfo();bindAcc();bindTools();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
   if(joined){if($('#rs'))$('#rs').onchange=e=>{e.target.blur();api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail)};$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
@@ -401,14 +408,87 @@ function newPoi(kind){const area=kind==='area';
       if(area)return startDraw(name,color);
       pickPoint(`Tippe auf die Karte, um «${name}» zu setzen.`).then(q=>api('incident/poi',{kind,name,color,pts:[[q.lat,q.lng]]})).then(()=>{togglePanel('pois',true);poll()}).catch(fail)},'Weiter')}
 function startDraw(name,color){if(panel)togglePanel(panel,false);toggleSheet(false);stopFollow();const pts=[],tmp=L.layerGroup().addTo(map),bar=$('#drawBar');
-  const add=e=>{pts.push(e.latlng);upd()},end=()=>{map.off('click',add);map.removeLayer(tmp);bar.hidden=true;map.doubleClickZoom.enable()};
+  const add=e=>{pts.push(e.latlng);upd()},end=()=>{map.off('click',add);map.removeLayer(tmp);bar.hidden=true;map.doubleClickZoom.enable();pickMode(false)};
   const upd=()=>{tmp.clearLayers();
     if(pts.length>2)L.polygon(pts,{color,weight:2,dashArray:'5',fillOpacity:.15,interactive:false}).addTo(tmp);else if(pts.length)L.polyline(pts,{color,weight:2,dashArray:'5',interactive:false}).addTo(tmp);
     pts.forEach(p=>L.circleMarker(p,{radius:5,color:'#fff',weight:2,fillColor:color,fillOpacity:1,interactive:false}).addTo(tmp));
     bar.innerHTML=`<span>Bereich «${esc(name)}»: Eckpunkte antippen (${pts.length})</span><button id="dU" ${pts.length?'':'disabled'}>Rückgängig</button><button class="pri" id="dOk" ${pts.length>2?'':'disabled'}>Fertig</button><button id="dX">Abbrechen</button>`;
     $('#dU').onclick=()=>{pts.pop();upd()};$('#dX').onclick=end;
     $('#dOk').onclick=()=>{const body={kind:'area',name,color,pts:pts.map(p=>[p.lat,p.lng])};end();api('incident/poi',body).then(()=>{togglePanel('pois',true);poll()}).catch(fail)}};
-  map.doubleClickZoom.disable();map.on('click',add);bar.hidden=false;upd()}
+  map.doubleClickZoom.disable();map.on('click',add);pickMode(true);bar.hidden=false;upd()}
+/* ---------- Flussdistanz: Distanz zwischen zwei Punkten entlang des Gewässers mit Zeitangaben ---------- */
+// Eigenes Gewässernetz (Overpass, Rechteck um beide Punkte), unabhängig vom Suchgebiet und auch ohne Einsatz nutzbar. OSM-Wege zeigen in Fliessrichtung.
+const RD_MAX_M=50000;      // maximale Luftlinie zwischen den Punkten (Grösse der Overpass-Abfrage)
+// Vergleichsgeschwindigkeiten in km/h: in der Verwaltung einstellbar (Einstellung rd_speeds, kommt über «me»)
+const rdSpeeds=()=>(me&&me.rd_speeds&&me.rd_speeds.length?me.rd_speeds:[10,20,30]);
+let rd=null,rdNet=null;     // rd: laufende Messung {step a|b|load|done, a, b, res, err, layer}; rdNet: zuletzt geladenes Netz {bb, g}
+const kmT=m=>m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?2:1)+' km';
+const durS=s=>{if(!isFinite(s))return'–';const m=Math.round(s/60);return m<1?'< 1 min':m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min'};
+function rdOpen(){if(panel)togglePanel(panel,false);toggleSheet(false);stopFollow();rdClose();
+  rd={step:'a',layer:L.layerGroup().addTo(map)};map.doubleClickZoom.disable();map.on('click',rdClick);pickMode(true);rdRender()}
+function rdClose(){if(!rd)return;map.off('click',rdClick);map.doubleClickZoom.enable();pickMode(false);map.removeLayer(rd.layer);rd=null;$('#rdBox').hidden=true}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&rd&&!big)rdClose()});
+const rdPin=(ll,t)=>L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="rdpt">${t}</div>`,iconSize:[26,26],iconAnchor:[13,13]}),interactive:false,zIndexOffset:2000});
+function rdClick(e){if(rd.step==='a'){rd.a=e.latlng;rdPin(rd.a,'A').addTo(rd.layer);rd.step='b';rdRender()}
+  else if(rd.step==='b'){rd.b=e.latlng;rdPin(rd.b,'B').addTo(rd.layer);map.off('click',rdClick);map.doubleClickZoom.enable();pickMode(false);rdCalc()}}
+async function rdCalc(){const cur=rd,air=cur.a.distanceTo(cur.b);cur.air=air;
+  if(air>RD_MAX_M){cur.err=`Die Punkte liegen ${kmT(air)} auseinander (Luftlinie), möglich sind höchstens ${RD_MAX_M/1000} km.`;cur.step='done';return rdRender()}
+  cur.step='load';rdRender();
+  try{const g=await rdGraph(cur.a,cur.b);if(rd!==cur)return; // inzwischen geschlossen oder neu gestartet
+    const A=rdSnap(g,cur.a),B=rdSnap(g,cur.b);
+    if(!A||A.e>SNAP_M)throw new Error(`Kein Gewässer im Umkreis von ${SNAP_M} m um Punkt A.`);
+    if(!B||B.e>SNAP_M)throw new Error(`Kein Gewässer im Umkreis von ${SNAP_M} m um Punkt B.`);
+    // zuerst in Fliessrichtung (A → B oder B → A), sonst ohne Richtung (z. B. über einen Zusammenfluss)
+    let r=rdPath(g,A,B,true),dir='B liegt flussabwärts von A';
+    if(!r){r=rdPath(g,B,A,true);if(r){r.pts.reverse();dir='B liegt flussaufwärts von A'}}
+    if(!r){r=rdPath(g,A,B,false);dir='Verbindung nicht in einer Fliessrichtung (z. B. über einen Zusammenfluss)'}
+    if(!r)throw new Error('Zwischen A und B gibt es keine Verbindung über das Gewässernetz.');
+    cur.res={...r,dir,down:dir.includes('abwärts')};
+    [[cur.a,A.ll],[cur.b,B.ll]].forEach(([p,q])=>L.polyline([p,q],{color:'#fff',weight:1,dashArray:'3',interactive:false}).addTo(cur.layer));
+    const line=L.polyline(r.pts,{color:'#2ee6d6',weight:5,opacity:.9,interactive:false}).addTo(cur.layer);map.fitBounds(line.getBounds().extend(cur.a).extend(cur.b),{padding:[60,60],maxZoom:16})}
+  catch(e){if(rd!==cur)return;cur.err=e.message.startsWith('Kein')||e.message.startsWith('Zwischen')?e.message:'Gewässerdaten nicht verfügbar: '+e.message}
+  cur.step='done';rdRender()}
+// Gewässernetz als Graph: Knoten-ID → {id, lat, lon, adj:[[Nachbar, Meter, 1 = in Fliessrichtung]]}; bereits geladenes Netz wiederverwenden, wenn es beide Punkte abdeckt
+async function rdGraph(a,b){const m=Math.max(1500,a.distanceTo(b)*.3),la=m/111320,lo=m/(111320*Math.cos(a.lat*Math.PI/180));
+  // Ausschnitt auf 0.01° (ca. 1 km) nach aussen runden, damit ähnliche Messungen dieselbe Abfrage stellen (Cache auf dem Server)
+  const R=x=>Math.round(x*100)/100,bb=[Math.floor((Math.min(a.lat,b.lat)-la)*100)/100,Math.floor((Math.min(a.lng,b.lng)-lo)*100)/100,Math.ceil((Math.max(a.lat,b.lat)+la)*100)/100,Math.ceil((Math.max(a.lng,b.lng)+lo)*100)/100].map(R);
+  if(rdNet&&rdNet.bb[0]<=bb[0]&&rdNet.bb[1]<=bb[1]&&rdNet.bb[2]>=bb[2]&&rdNet.bb[3]>=bb[3])return rdNet.g;
+  const j=await api('overpass',{bbox:bb});if(!j.elements)throw new Error('ungültige Antwort');
+  const g=new Map(),node=(id,p)=>g.get(id)||g.set(id,{id,lat:p.lat,lon:p.lon,adj:[]}).get(id);
+  j.elements.filter(w=>w.geometry&&w.nodes).forEach(w=>{for(let k=1;k<w.nodes.length;k++){const u=node(w.nodes[k-1],w.geometry[k-1]),v=node(w.nodes[k],w.geometry[k]),d=dist(u,v);u.adj.push([v.id,d,1]);v.adj.push([u.id,d,0])}});
+  rdNet={bb,g};return g}
+// nächster Punkt auf einem Gewässerabschnitt u → v (in Fliessrichtung); du/dv = Meter bis zu den Enden, e = Abstand zum gewählten Punkt
+function rdSnap(g,p){let best=null;const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);
+  g.forEach(u=>u.adj.forEach(([vid,d,f])=>{if(!f)return;const v=g.get(vid),ax=(u.lon-p.lng)*kx,ay=(u.lat-p.lat)*ky,dx=(v.lon-u.lon)*kx,dy=(v.lat-u.lat)*ky,l2=dx*dx+dy*dy,t=l2?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l2)):0,e=Math.hypot(ax+t*dx,ay+t*dy);
+    if(!best||e<best.e)best={e,u:u.id,v:vid,du:d*t,dv:d*(1-t),ll:[u.lat+(v.lat-u.lat)*t,u.lon+(v.lon-u.lon)*t]}}));return best}
+// kürzeste Wege (Dijkstra mit Binärheap); dir = nur in Fliessrichtung
+function rdDijkstra(g,src,dir){const D=new Map(),P=new Map(),h=[];
+  const push=(c,id)=>{h.push([c,id]);let i=h.length-1;while(i){const q=(i-1)>>1;if(h[q][0]<=h[i][0])break;[h[q],h[i]]=[h[i],h[q]];i=q}};
+  const pop=()=>{const t=h[0],x=h.pop();if(h.length){h[0]=x;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<h.length&&h[l][0]<h[m][0])m=l;if(r<h.length&&h[r][0]<h[m][0])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m}}return t};
+  src.forEach(([id,c])=>{if(!D.has(id)||c<D.get(id)){D.set(id,c);P.set(id,null);push(c,id)}});
+  while(h.length){const[c,id]=pop();if(c>D.get(id))continue;g.get(id).adj.forEach(([n,d,f])=>{if(dir&&!f)return;const nc=c+d;if(!D.has(n)||nc<D.get(n)){D.set(n,nc);P.set(n,id);push(nc,n)}})}
+  return{D,P}}
+// Weg vom Lotpunkt A zum Lotpunkt B: {d: Meter, pts: [[lat,lon],…]} oder null
+function rdPath(g,A,B,dir){let best=null;
+  if(A.u===B.u&&A.v===B.v&&(!dir||B.du>=A.du))best={d:Math.abs(B.du-A.du),nodes:[]}; // gleicher Abschnitt
+  const{D,P}=rdDijkstra(g,dir?[[A.v,A.dv]]:[[A.u,A.du],[A.v,A.dv]],dir);
+  (dir?[[B.u,B.du]]:[[B.u,B.du],[B.v,B.dv]]).forEach(([end,add])=>{if(!D.has(end))return;const d=D.get(end)+add;
+    if(!best||d<best.d){const nodes=[];for(let n=end;n!=null;n=P.get(n))nodes.unshift(n);best={d,nodes}}});
+  return best&&{d:best.d,pts:[A.ll,...best.nodes.map(n=>[g.get(n).lat,g.get(n).lon]),B.ll]}}
+// Fliessgeschwindigkeit fürs Werkzeug: die des Einsatzes, sonst die zuletzt eingegebene (pro Gerät)
+const rdFlow=()=>{const f=st&&st.incident&&st.incident.flow_ms;if(f)return f;try{return+localStorage.getItem('sw_rdflow')||''}catch(e){return''}};
+function rdRender(){const box=$('#rdBox');if(!rd){box.hidden=true;return}box.hidden=false;const r=rd.res,x='<button id="rdX">Schliessen</button>',again='<button id="rdN">Neu messen</button>';
+  box.innerHTML=rd.step==='a'?`<span><b>Flussdistanz:</b> Startpunkt A auf der Karte antippen</span>${x}`
+    :rd.step==='b'?`<span><b>Flussdistanz:</b> Zielpunkt B auf der Karte antippen</span>${x}`
+    :rd.step==='load'?`<span><b>Flussdistanz:</b> Gewässerdaten werden geladen …</span>${x}`
+    :rd.err?`<span><b>Flussdistanz:</b> ${esc(rd.err)}</span><div class="row">${again}${x}</div>`
+    :`<div><b>Flussdistanz A → B: ${kmT(r.d)}</b> <span class="mut">(Luftlinie ${kmT(rd.air)})</span></div><div class="mut">${esc(r.dir)}${esc(fcs(rd.a.lat,rd.a.lng,' · A '))}${esc(fcs(rd.b.lat,rd.b.lng,' · B '))}</div>
+      <table class="rdt"><tr><td><label>Fliessgeschwindigkeit <input id="rdV" type="number" step="0.1" min="0" value="${rdFlow()}" aria-label="Fliessgeschwindigkeit in m/s"> m/s</label></td><td id="rdT0"></td></tr>
+      ${rdSpeeds().map(v=>`<tr><td>Mit ${v} km/h</td><td>${durS(r.d/(v/3.6))}</td></tr>`).join('')}</table>
+      ${r.down?'':`<div class="mut">${r.dir.includes('aufwärts')?'Treibzeit mit der Fliessgeschwindigkeit: von B nach A (flussabwärts).':'Keine durchgehende Fliessrichtung: Treibzeit nur als Richtwert.'}</div>`}<div class="row">${again}${x}</div>`;
+  $('#rdX').onclick=rdClose;if($('#rdN'))$('#rdN').onclick=rdOpen;
+  const v=$('#rdV');if(v){const upd=()=>{const f=+v.value;$('#rdT0').textContent=f>0?durS(r.d/f)+` (${(f*3.6).toFixed(1)} km/h)`:'Fliessgeschwindigkeit eingeben'};
+    v.oninput=()=>{upd();try{localStorage.setItem('sw_rdflow',v.value)}catch(e){}};upd()}}
 /* ---------- Rettlinge (Kartenknopf «Rettlinge») ---------- */
 // mehrere Rettlinge mit Name und Beschreibung; alle im Einsatz markieren Standort (eigener oder auf der Karte gewählt) und «gerettet»
 // Reihenfolge: vermisst (noch kein Standort) oben, dann Standort bekannt, gerettet zuletzt

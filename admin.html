@@ -40,9 +40,9 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   if(!me.is_admin){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
-    <main><section id="sU"><h2>Benutzer</h2><div class="mut">Wird geladen …</div></section><section id="sM"><h2>Einrückoptionen</h2><div class="mut">Wird geladen …</div></section><section id="sR"><h2>Spezialrollen</h2><div class="mut">Wird geladen …</div></section><section id="sC"><h2>Koordinaten</h2><div class="mut">Wird geladen …</div></section><section id="stats"><h2>Einsatzstatistik und Einsatzlog</h2><div class="mut">Wird geladen …</div></section></main>`;
+    <main><section id="sU"><h2>Benutzer</h2><div class="mut">Wird geladen …</div></section><section id="sM"><h2>Einrückoptionen</h2><div class="mut">Wird geladen …</div></section><section id="sR"><h2>Spezialrollen</h2><div class="mut">Wird geladen …</div></section><section id="sC"><h2>Koordinaten</h2><div class="mut">Wird geladen …</div></section><section id="sF"><h2>Flussdistanz</h2><div class="mut">Wird geladen …</div></section><section id="sO"><h2>Gewässerdaten</h2><div class="mut">Wird geladen …</div></section><section id="stats"><h2>Einsatzstatistik und Einsatzlog</h2><div class="mut">Wird geladen …</div></section></main>`;
   $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
-  loadUsers();loadModes();loadRoles();loadCoords();loadStats()}
+  loadUsers();loadModes();loadRoles();loadCoords();loadRd();loadOp();loadStats()}
 /* ---------- Benutzer ---------- */
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
@@ -92,6 +92,17 @@ async function loadCoords(){const el=$('#sC');let s;try{s=await api('settings')}
   el.innerHTML=`<h2>Koordinaten</h2><label class="mut">Standard-Koordinatensystem für die Anzeige<select id="cS">${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===s.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
     <div class="mut">Gilt für alle, die in der Einsatz-App unter «Konto» nichts anderes gewählt haben. Beispiel Brugg AG: ${esc(fmtC(47.4815,8.208,s.coord_sys))}</div>`;
   $('#cS').onchange=e=>{const v=e.target.value;e.target.disabled=true;api('settings/save',{coord_sys:v}).then(loadCoords).catch(x=>{fail(x);loadCoords()})}}
+/* ---------- Werkzeug Flussdistanz: angezeigte Vergleichsgeschwindigkeiten ---------- */
+async function loadRd(){const el=$('#sF');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Flussdistanz</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  el.innerHTML=`<h2>Flussdistanz</h2><div class="mut">Das Werkzeug «Flussdistanz» in der Einsatz-App zeigt neben der Treibzeit mit der Fliessgeschwindigkeit die Dauer für diese Geschwindigkeiten (z. B. Boot, Fahrzeug).</div>
+    <div class="row" style="align-items:end"><label class="mut">Geschwindigkeiten in km/h, durch Komma getrennt (1 bis 6 Werte)<input id="rdS" value="${esc(s.rd_speeds.join(', '))}" inputmode="decimal"></label><button id="rdSv">Speichern</button></div>`;
+  $('#rdSv').onclick=()=>{const v=$('#rdS').value.replace(/km\/h/gi,' ').split(/[,;\s]+/).filter(Boolean); // «km/h» darf mitgeschrieben werden
+    api('settings/save',{rd_speeds:v}).then(()=>{alert('Gespeichert. Die Einsatz-App übernimmt die Werte beim nächsten Laden.');loadRd()}).catch(fail)}}
+/* ---------- Gewässerdaten: Haltedauer des Overpass-Caches auf dem Server ---------- */
+async function loadOp(){const el=$('#sO');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  el.innerHTML=`<h2>Gewässerdaten</h2><div class="mut">Das Gewässernetz für Suchgebiet und Flussdistanz (OpenStreetMap via Overpass) holt der Server und speichert es zwischen. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal zu Overpass. Ist Overpass nicht erreichbar, verwendet der Server ältere Daten (bis 7 Tage).</div>
+    <div class="row" style="align-items:end"><label class="mut">Haltedauer in Minuten (0 = nicht zwischenspeichern)<input id="opT" type="number" min="0" max="10080" step="1" value="${s.overpass_ttl}"></label><button id="opSv">Speichern</button></div>`;
+  $('#opSv').onclick=()=>api('settings/save',{overpass_ttl:$('#opT').value}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail)}
 /* ---------- Einsatzstatistik und Einsatzlog (getrennt nach scharfen Einsätzen und Übungen) ---------- */
 const ARTS={all:'Alle',real:'Scharfe Einsätze',ex:'Übungen'};
 let statsData=null,statsF=(()=>{try{return localStorage.getItem('sw_statsf')||'all'}catch(e){return'all'}})(); // Filter pro Gerät gemerkt
