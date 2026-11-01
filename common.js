@@ -15,7 +15,7 @@ function toLV95(lat,lon){const p=(lat*3600-169028.66)/1e4,l=(lon*3600-26782.5)/1
   return[2600072.37+211455.93*l-10938.51*l*p-.36*l*p*p-44.54*l*l*l,1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p]}
 const thou=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,"'");
 const dms=(v,pos,neg)=>{const a=Math.abs(v),d=Math.floor(a),m=Math.floor((a-d)*60),s=((a-d)*60-m)*60;return `${d}°${String(m).padStart(2,'0')}'${s.toFixed(1).padStart(4,'0')}"${v<0?neg:pos}`};
-function fmtC(lat,lon,sys){if(lat==null||lon==null)return'';
+function fmtC(lat,lon,sys){if(lat==null||lon==null||sys==='none')return''; // none: persönlich ausgeblendet
   if(sys==='wgs84')return `${(+lat).toFixed(5)}, ${(+lon).toFixed(5)}`;
   if(sys==='wgs84dms')return `${dms(lat,'N','S')} ${dms(lon,'E','W')}`;
   const[e,n]=toLV95(lat,lon);return sys==='lv03'?`${thou(e-2e6)} / ${thou(n-1e6)}`:`${thou(e)} / ${thou(n)}`}
