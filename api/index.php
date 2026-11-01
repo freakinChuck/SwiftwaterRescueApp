@@ -55,7 +55,7 @@ if ($me['must_change'] && !in_array($route, ['me', 'me/password'])) fail('Bitte 
 /* ---------- Hilfsfunktionen ---------- */
 function ints($r, $ks) { foreach ($ks as $k) if (isset($r[$k])) $r[$k] = (int)$r[$k]; return $r; }
 function admin() { global $me; if (!$me['is_admin']) fail('Nur für Administratoren', 403); }
-function pwCheck($p) { if (!is_string($p) || mb_strlen($p) < 8) fail('Das Passwort muss mindestens 8 Zeichen lang sein'); }
+function pwCheck($p) { if (!is_string($p) || $p === '') fail('Das Passwort darf nicht leer sein'); }
 // Kritisch alarmieren: scharfe Einsätze immer, Übungen nur bei aktiviertem Übungsmodus
 function critical($inc) { global $me; return !(int)$inc['is_exercise'] || $me['exercise_mode']; }
 function part($incId, $u = null) { global $db, $uid; $s = $db->prepare("SELECT * FROM participants WHERE incident_id=? AND user_id=?"); $s->execute([$incId, $u ?? $uid]); return $s->fetch(); }
@@ -281,7 +281,6 @@ switch ($route) {
   $s = $db->prepare("SELECT pass_hash FROM users WHERE id=?"); $s->execute([$uid]);
   if (!password_verify($in['old'] ?? '', $s->fetch()['pass_hash'])) fail('Das aktuelle Passwort ist falsch', 403);
   pwCheck($in['new'] ?? '');
-  if ($in['new'] === ($in['old'] ?? '')) fail('Das neue Passwort muss sich vom aktuellen unterscheiden');
   $db->prepare("UPDATE users SET pass_hash=?, must_change=0 WHERE id=?")->execute([password_hash($in['new'], PASSWORD_DEFAULT), $uid]);
   out(['ok' => true]);
  case 'me/settings': // Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren

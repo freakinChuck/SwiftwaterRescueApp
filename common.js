@@ -23,7 +23,7 @@ function dlg(title,body,save,okText='Speichern',xText='Abbrechen',onX){const d=d
 function pwDialog(forced,done){
   dlg('Passwort ändern',`${forced?'<div class="mut">Dein Passwort wurde neu gesetzt. Bitte vergib jetzt ein eigenes Passwort.</div>':''}
     <label class="mut">${forced?'Erhaltenes Startpasswort':'Aktuelles Passwort'}<input id="pwO" type="password" autocomplete="current-password"></label>
-    <label class="mut">Neues Passwort (mind. 8 Zeichen)<input id="pwN" type="password" autocomplete="new-password"></label>
+    <label class="mut">Neues Passwort<input id="pwN" type="password" autocomplete="new-password"></label>
     <label class="mut">Neues Passwort wiederholen<input id="pwR" type="password" autocomplete="new-password"></label>`,
     async d=>{const n=$('#pwN',d).value;if(n!==$('#pwR',d).value)throw new Error('Die neuen Passwörter stimmen nicht überein.');
       await api('me/password',{old:$('#pwO',d).value,new:n});alert('Passwort geändert.');done&&done()},
