@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Swiftwater Rescue</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<style>
+:root{--bg:#0f2430;--panel:#16323f;--line:#2c4f60;--tx:#eaf3f6;--mut:#8fb0bd;--alarm:#ff4d2e;--ok:#35c27a;font-family:"Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);height:100dvh;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit;background:#0c1c25;border:1px solid var(--line);border-radius:6px;padding:.6rem .7rem}
+button{cursor:pointer;background:var(--panel)}button.pri{background:var(--alarm);border-color:var(--alarm);font-weight:600}button:focus-visible,input:focus-visible{outline:2px solid #fff;outline-offset:2px}
+header{display:flex;gap:.5rem;align-items:center;padding:.5rem .8rem;border-bottom:1px solid var(--line)}header h1{font-size:1rem;margin:0;flex:1}
+[hidden]{display:none!important}#map{position:fixed;inset:0}
+.fab{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:.7rem;z-index:1000;width:46px;height:46px;font-size:1.3rem;padding:0}
+#chip{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:4rem;right:4rem;z-index:1000;background:var(--alarm);color:#fff;border-radius:6px;padding:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600}
+#sheetWrap{position:fixed;z-index:1100;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;transition:transform .2s;left:0;right:0;bottom:0;max-height:58dvh;transform:translateY(105%)}
+#sheetWrap.open{transform:none}#sheetBar{display:flex;justify-content:space-between;align-items:center;padding:.5rem .8rem;border-bottom:1px solid var(--line)}
+#sheet{overflow:auto;padding:.8rem;flex:1;padding-bottom:calc(.8rem + env(safe-area-inset-bottom))}
+@media(min-width:760px){#sheetWrap{top:0;bottom:0;right:auto;width:400px;max-height:none;transform:translateX(-105%)}}
+@media(prefers-reduced-motion:reduce){#sheetWrap{transition:none}}
+#areaNote{position:fixed;bottom:calc(1.2rem + env(safe-area-inset-bottom));left:.7rem;right:5rem;z-index:1000;background:#0f2430e6;border:1px solid var(--line);border-radius:6px;padding:.4rem .6rem;font-size:.85rem}
+.leaflet-top.leaflet-right{margin-top:calc(3.8rem + env(safe-area-inset-top))}
+@media(min-width:760px){body.so #chip{left:calc(400px + 1rem)}body.so #areaNote{left:calc(400px + 1rem)}}
+@media(min-width:760px){#sheetWrap.wide{width:min(960px,100vw)}}
+#bigLog{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
+#bigHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1rem;border-bottom:1px solid var(--line)}#bigHead h2{margin:0;font-size:1.3rem;flex:1 1 20rem}
+#bigList{overflow:auto;flex:1;padding:.6rem 1rem 2rem;font-size:1.25rem;line-height:1.35}
+.lg{display:grid;grid-template-columns:11rem 13rem 1fr;gap:.8rem;padding:.55rem .8rem;border-left:6px solid;border-bottom:1px solid var(--line)}.lg .t{color:var(--mut)}
+@media(max-width:700px){.lg{grid-template-columns:1fr;gap:.1rem}#bigList{font-size:1.1rem}}
+.rm{width:34px;height:34px;border-radius:50%;background:#2ee6d6;color:#00302c;border:3px solid #fff;display:grid;place-items:center;font-weight:800;box-shadow:0 0 0 2px #0008}
+#fitBtns{position:fixed;right:.7rem;bottom:calc(6.8rem + env(safe-area-inset-bottom));z-index:1000;display:flex;flex-direction:column;gap:.4rem}#fitBtns button{background:var(--panel);box-shadow:0 1px 4px #0008;font-size:.85rem;padding:.5rem .6rem}
+details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summary{cursor:pointer;padding:.4rem 0;font-weight:600}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0}.row>*{flex:1 1 auto}.mut{color:var(--mut);font-size:.9rem}
+.card{max-width:420px;margin:12vh auto;padding:1.2rem;display:grid;gap:.7rem}
+.mk{width:38px;height:38px;border-radius:50%;border:4px solid #888;background:#0c1c25 center/cover;display:grid;place-items:center;font-weight:700;font-size:.8rem;box-shadow:0 0 0 2px #0008}
+.mk.cl{border-radius:8px;background:#fff;color:#000}
+.pls{width:22px;height:22px;background:var(--alarm);border:3px solid #fff;transform:rotate(45deg)}
+#alarm{position:fixed;inset:0;background:var(--alarm);color:#fff;display:none;flex-direction:column;justify-content:center;padding:2rem;gap:1rem;z-index:9999;animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{background:#8f1d0a}}@media(prefers-reduced-motion:reduce){#alarm{animation:none}}
+#alarm button{background:#fff;color:#000;font-weight:700;padding:1rem}#alarm h2{margin:0;font-size:1.8rem}
+.msg{padding:.4rem 0;border-bottom:1px solid var(--line)}table{width:100%;border-collapse:collapse}td{padding:.3rem;border-bottom:1px solid var(--line)}
+</style></head><body>
+<div id="alarm" role="alertdialog"><h2 id="aT"></h2><div id="aB"></div><button id="aOk">Quittieren</button></div>
+<div id="app"></div>
+<script>
+/* ---------- Konfiguration ---------- */
+const API='api/index.php';
+// Kartenanbieter austauschbar: aktiven Eintrag über MAP_PROVIDER wählen oder neuen ergänzen.
+const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
+const MAP_PROVIDERS={
+  swisstopo_sat:{label:'Luftbild (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
+  swisstopo:{label:'Landeskarte (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
+  osm:{label:'OpenStreetMap',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap',maxZoom:19}
+};
+// Gewässernetz (OpenStreetMap via Overpass). Austauschbar: Funktion loadNet() liefert Wege als {id,nodes[],geometry[{lat,lon}]} in Fliessrichtung.
+const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
+const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
+const MODES={base:'Anfahrt via Stützpunkt',direct:'Anfahrt direkt',logistics:'Logistik',coordinator:'Koordinator KP Rück'};
+/* ---------- Helfer ---------- */
+const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let msgInit=false,areaShape=null,lastRiver='',suggText='',suggVal=null,areaLogged={},creating=false,openSec=new Set(['mine','rescuee','flow','manage']),locStatus='',lastPos=null,manual=false,hb=null,token=localStorage.getItem('sw_token'),me=null,roles=[],users=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,view='main',alarmQ=[],watchId=null,lastSent=0,fitted=null;
+async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
+  const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
+  if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');render()}if(j.error)throw new Error(j.error);return j}
+const fail=e=>alert(e.message);
+/* ---------- Alarm ---------- */
+let actx,beepT;function beep(on){clearInterval(beepT);if(!on)return;actx=actx||new(window.AudioContext||webkitAudioContext)();
+  beepT=setInterval(()=>{const o=actx.createOscillator();o.frequency.value=880;o.connect(actx.destination);o.start();o.stop(actx.currentTime+.4);navigator.vibrate&&navigator.vibrate([300,100,300])},1000)}
+const ackGet=()=>{try{return JSON.parse(localStorage.getItem('sw_acked')||'[]')}catch(e){return[]}};
+function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}}
+let curKey=null;
+function alarm(t,b,key){if(key&&(ackGet().includes(key)||key===curKey||alarmQ.some(q=>q[2]===key)))return false;alarmQ.push([t,b,key]);showAlarm();return true}
+function showAlarm(){if($('#alarm').style.display==='flex'||!alarmQ.length)return;const[t,b,k]=alarmQ.shift();curKey=k||null;$('#aT').textContent=t;$('#aB').textContent=b;$('#alarm').style.display='flex';beep(true);
+  if('Notification'in window&&Notification.permission==='granted')new Notification(t,{body:b,requireInteraction:true})}
+$('#aOk').onclick=()=>{if(curKey)ackAdd(curKey);curKey=null;$('#alarm').style.display='none';beep(false);showAlarm()};
+/* ---------- Login ---------- */
+function loginView(){$('#app').innerHTML=`<div class="card"><h1>Swiftwater Rescue</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button></div>`;
+  $('#go').onclick=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);render()}catch(e){fail(e)}}}
+/* ---------- Hauptansicht ---------- */
+function toggleSheet(f){const w=$('#sheetWrap');if(!w)return;const o=f===undefined?!w.classList.contains('open'):f;w.classList.toggle('open',o);document.body.classList.toggle('so',o)}
+function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);if(st&&st.incident){c.hidden=false;c.textContent='Einsatz: '+st.incident.message+' · '+Math.round((st.now-st.incident.alarm_at)/60)+' min'}else c.hidden=true}
+function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><button id="bFitA" title="Ganzes Suchgebiet anzeigen">Suchgebiet</button><button id="bFitF" title="Alle Einsatzkräfte im Suchgebiet anzeigen">Einsatzkräfte</button></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
+  $('#bMenu').onclick=()=>toggleSheet();$('#bFitA').onclick=fitArea;$('#bFitF').onclick=fitForces;$('#bClose').onclick=()=>toggleSheet(false);$('#chip').onclick=()=>toggleSheet(true);
+  $('#sheet').addEventListener('toggle',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k)e.target.open?openSec.add(k):openSec.delete(k)},true);
+  map=L.map('map',{zoomControl:false}).setView([46.8,8.2],8);L.control.zoom({position:'bottomright'}).addTo(map);
+  const bases={};Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
+  const sv=localStorage.getItem('sw_base');bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);L.control.layers(bases,null,{position:'topright'}).addTo(map);
+  map.on('baselayerchange',e=>{const k=Object.keys(MAP_PROVIDERS).find(k=>MAP_PROVIDERS[k].label===e.name);localStorage.setItem('sw_base',k)});
+  layers={};fitted=null;map.on('zoomend',drawMap);
+  if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}
+function mk(p){const r=roles.find(x=>x.id==p.role_id),col=r?r.color:'#8fb0bd';
+  const ini=(p.name||'?').split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase();
+  return `<div class="mk" style="border-color:${col};${p.photo?`background-image:url(${p.photo})`:''}">${p.photo?'':esc(ini)}</div>`}
+function drawMap(){const n=$('#areaNote');if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
+  layers.pls=L.marker([i.lat,i.lon],{icon:L.divIcon({className:'',html:'<div class="pls"></div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map).bindTooltip('PLS');
+  try{layers.area=drawArea(i);if(layers.area)layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message}if(n){n.textContent=window.markPick?'Tippe auf die Karte, um die Position des Rettlings zu setzen.':areaInfo;n.hidden=!(areaInfo||window.markPick)}checkArea();
+  // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
+  const act=st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'),groups=[];
+  act.forEach(p=>{const pt=map.latLngToLayerPoint([p.lat,p.lon]);const g=groups.find(g=>g.pt.distanceTo(pt)<40);g?g.items.push(p):groups.push({pt,items:[p]})});
+  layers.pp=L.layerGroup(groups.map(g=>{const a=g.items[0];const ll=[a.lat,a.lon];
+    if(g.items.length===1)return L.marker(ll,{icon:L.divIcon({className:'',html:mk(a),iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(esc(a.name)+(roleName(a)?' – '+esc(roleName(a)):''));
+    return L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="mk cl">${g.items.length}</div>`,iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(g.items.map(x=>esc(x.name)).join(', '))})).addTo(map);
+  layers.rm=L.layerGroup((st.marks||[]).map(x=>L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="rm">R</div>',iconSize:[34,34],iconAnchor:[17,17]}),zIndexOffset:1000}).bindTooltip('Rettling – '+(x.manual?'manuell (Einsatzleitung)':esc(x.name))+' · '+fmtT(x.ts)))).addTo(map);
+  if(fitted!==i.id){fitted=i.id;map.setView([i.lat,i.lon],14)}}
+/* ---------- Suchgebiet entlang des Flusslaufs ---------- */
+let net=null,netLoading=false,areaInfo='';
+async function loadNet(i,R){netLoading=true;let err='';
+  const q=`[out:json][timeout:25];way(around:${Math.round(R)},${i.lat},${i.lon})["waterway"~"^(river|stream|canal)$"];out geom;`;
+  for(const url of OVERPASS){try{
+    const r=await fetch(url,{method:'POST',body:new URLSearchParams({data:q})});if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();if(!j.elements)throw new Error('ungültige Antwort');
+    const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();
+    ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));
+    net={inc:i.id,R,ways,byNode};netLoading=false;drawMap();if(view==='main')draw();return}catch(e){err=e.message}}
+  net={inc:i.id,R,fail:true,err,retryAt:Date.now()+20000};netLoading=false;drawMap();if(view==='main')draw()}
+const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
+function follow(w,k,rem,seen){const pts=[w.geometry[k]];seen=new Set(seen).add(w.id);
+  for(let j=k+1;j<w.geometry.length;j++){const a=w.geometry[j-1],b=w.geometry[j],d=dist(a,b);
+    if(d>=rem){const f=rem/d;pts.push({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});return[pts]}
+    pts.push(b);rem-=d}
+  const nexts=(net.byNode.get(w.nodes[w.nodes.length-1])||[]).filter(e=>!seen.has(e.w.id)&&e.k<e.w.geometry.length-1);
+  if(!nexts.length)return[pts];
+  return nexts.flatMap(e=>follow(e.w,e.k,rem,seen).map(br=>pts.concat(br.slice(1))))}
+function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/180),P=pts.map(p=>C.project(L.latLng(p.lat,p.lon))),A=[],B=[];
+  P.forEach((p,j)=>{const a=P[Math.max(0,j-1)],b=P[Math.min(P.length-1,j+1)];let dx=b.x-a.x,dy=b.y-a.y;const n=Math.hypot(dx,dy)||1;dx/=n;dy/=n;
+    A.push(C.unproject(L.point(p.x-dy*k,p.y+dx*k)));B.push(C.unproject(L.point(p.x+dy*k,p.y-dx*k)))});return A.concat(B.reverse())}
+function circleArea(i,D,why){areaShape={circle:{lat:i.lat,lon:i.lon,r:D}};areaInfo=why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.';
+  return L.circle([i.lat,i.lon],{radius:D,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6'})}
+function drawArea(i){areaInfo='';areaShape=null;const D=(i.flow_ms||0)*(st.now-i.alarm_at);if(D<=0){areaInfo='Fliessgeschwindigkeit fehlt.';return null}
+  const need=Math.min(Math.max(5000,D*1.3),30000);
+  if(!netLoading&&(!net||net.inc!==i.id||(!net.fail&&net.R<D*1.1&&net.R<30000)||(net.fail&&Date.now()>net.retryAt)))loadNet(i,need);
+  if(!net||net.inc!==i.id)return circleArea(i,D,'Gewässerdaten werden geladen.');
+  if(net.fail)return circleArea(i,D,'Gewässerdaten nicht verfügbar ('+net.err+'), neuer Versuch folgt.');
+  let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=dist(g,{lat:i.lat,lon:i.lon});if(d<bd){bd=d;best={w,k}}}));
+  if(!best||bd>SNAP_M)return circleArea(i,D,'Kein Gewässer nahe der PLS.');
+  areaShape={polys:[]};lastRiver=(best.w.tags&&best.w.tags.name)||'';const posts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&(roles.find(r=>r.id==p.role_id)||{}).is_post);let cutBy=null,maxLen=0;
+  const g=L.layerGroup();
+  follow(best.w,best.k,D,new Set()).forEach(pts=>{
+    for(let j=0;j<pts.length;j++){const po=posts.find(p=>dist(pts[j],{lat:p.lat,lon:p.lon})<120);if(po){pts=pts.slice(0,j+1);cutBy=po.name;break}}
+    if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=dist(pts[j-1],pts[j]);maxLen=Math.max(maxLen,len);
+    const cp=corridor(pts,BANK_M);areaShape.polys.push(cp);g.addLayer(L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false}));
+    g.addLayer(L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#ff4d2e',weight:3,interactive:false}))});
+  areaInfo=`Suchgebiet: ${(maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(cutBy?`, endet am Posten ${cutBy}.`:'.');
+  return g}
+const roleName=p=>(roles.find(r=>r.id==p.role_id)||{}).name;
+const sec=(k,t,b)=>`<details data-k="${k}" ${openSec.has(k)?'open':''}><summary>${t}</summary>${b}</details>`;
+function draw(){const s=$('#sheet');if(!s||creating)return;$('#sheetWrap').classList.toggle('wide',view==='admin');const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
+ if(view==='admin')return adminView(s);
+  const acc=sec('acc','Konto',`<div class="row"><button id="bPh">Profilbild ändern</button>${me.is_admin?'<button id="bAdm">Verwaltung</button>':''}<button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`);
+  const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bOut').onclick=()=>{token=null;localStorage.removeItem('sw_token');stop();render()};if($('#bAdm'))$('#bAdm').onclick=()=>{view='admin';draw()}};
+  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+acc;$('#bNew').onclick=newView;return bindAcc()}
+  const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
+  let h=`<h3 style="margin:0">${esc(i.message)}</h3><div class="mut">Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')} · PLS ${i.lat.toFixed(5)}, ${i.lon.toFixed(5)}</div>`;
+  if(!joined)h+=`<div class="row">${Object.entries(MODES).map(([k,v])=>`<button class="pri" data-m="${k}">Einsatz annehmen<br><small>${v}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
+  else{
+    h+=sec('mine','Mein Einsatz',`<div class="row"><span>${MODES[m.mode]}</span><select id="rs"><option value="">Keine Spezialrolle</option>${roles.map(r=>`<option value="${r.id}" ${r.id==m.role_id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div><div class="mut">${esc(locStatus||'Standort wird ermittelt …')}</div><div class="row"><button id="bMan">${manual?'GPS-Standort verwenden':'Standort manuell setzen (Test)'}</button><button id="bLv">Einsatz verlassen</button></div>`);
+    {const mh=(st.marks||[]).map(x=>`<div class="msg">${x.manual?'Einsatzleitung (manuell)':esc(x.name)} · ${fmtT(x.ts)} · ${x.lat.toFixed(5)}, ${x.lon.toFixed(5)} ${(st.can_manage||x.user_id==me.id)?`<button data-mr="${x.id}">Entfernen</button>`:''}</div>`).join('')||'<div class="mut">Noch keine Markierung</div>';
+    h+=sec('rescuee','Rettling markieren',`<div class="row"><button class="pri" id="bMark">Rettling an meinem Standort markieren</button></div>${st.can_manage?'<div class="row"><button id="bMarkMan">Position manuell setzen (Karte antippen)</button></div>':''}${mh}`)}
+    h+=sec('msg','Nachricht senden',`<div class="row"><input id="mt" placeholder="Nachricht" style="flex:3"></div><div class="row"><select id="mto" multiple size="3" title="Empfänger (leer = alle)">${st.participants.filter(p=>p.user_id!=me.id&&p.mode!=='declined'&&!p.left_at).map(p=>`<option value="${p.user_id}">${esc(p.name)}</option>`).join('')}</select></div><div class="mut">Empfänger: keine Auswahl = alle, die den Einsatz angenommen haben</div><div class="row"><button id="bSend">Senden</button></div>`);
+    }
+  if(st.can_flow)h+=sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button><button id="bSug">Vorschlag BAFU</button></div><div class="mut">${esc(suggText)}</div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`);
+  if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
+  const act=st.participants.filter(p=>p.mode!=='declined');
+  h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table>${act.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(roleName(p)||'')}</td><td class="mut">${p.left_at?'verlassen':MODES[p.mode]}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}">Entfernen</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
+  if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
+  h+=sec('log','Nachrichten',(window.msgs||[]).map(x=>`<div class="msg"><b>${esc(x.from_name)}</b> ${esc(x.text)}</div>`).join('')||'<div class="mut">Keine Nachrichten</div>');
+  s.innerHTML=h+acc;bindAcc();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
+  s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
+  if(joined){$('#rs').onchange=e=>api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail);$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
+    $('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
+    $('#bSend').onclick=()=>{const to=[...$('#mto').selectedOptions].map(o=>+o.value);api('incident/message',{text:$('#mt').value,to}).then(()=>{$('#mt').value='';poll()}).catch(fail)};
+  }
+  if(st.can_flow){$('#bFl').onclick=()=>{const v=+$('#fl').value;api('incident/flow',{flow_ms:v,src:suggVal!==null&&v===suggVal?'BAFU-Vorschlag':'manuell'}).then(poll).catch(fail)};$('#bSug').onclick=suggest}
+  if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail)}}
+async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined')track();await poll()}catch(e){fail(e)}}
+function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
+function track(){if(watchId!=null||hb)return;
+  if(!navigator.geolocation){locStatus='Dieses Gerät kann den Standort nicht bestimmen (Test: manuell setzen).';return}
+  watchId=navigator.geolocation.watchPosition(p=>{if(manual)return;const q={lat:p.coords.latitude,lon:p.coords.longitude};Date.now()-lastSent>3000?sendPos(q):lastPos=q},
+    e=>{locStatus='Standort nicht verfügbar: '+(e.code===1?'Zugriff verweigert. Standortfreigabe im Browser erlauben (HTTPS nötig).':e.message)},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+  hb=setInterval(()=>{if(lastPos&&Date.now()-lastSent>10000)sendPos(lastPos)},5000)}
+function stop(){if(watchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(watchId);watchId=null;clearInterval(hb);hb=null}
+function photo(e){const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d'),s=Math.min(img.width,img.height);x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,96,96);api('me/photo',{photo:c.toDataURL('image/jpeg',.8)}).then(()=>alert('Profilbild gespeichert')).catch(fail)};img.src=URL.createObjectURL(f)}
+function newView(){creating=true;$('#sheet').innerHTML=`<h3>Einsatz starten</h3><div class="row"><textarea id="nm" placeholder="Meldung" rows="2"></textarea></div><div class="row"><input id="nlat" placeholder="Breite (PLS)"><input id="nlon" placeholder="Länge (PLS)"></div><div class="row"><label class="mut">Alarmeingang (Standard: jetzt)<input id="nat" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></label></div><div class="mut">PLS: auf die Karte tippen oder Koordinaten eingeben.</div><div class="row"><button class="pri" id="nGo">Alarm auslösen</button><button id="nX">Abbrechen</button></div>`;
+  let pin;map.once('click',function f(e){$('#nlat').value=e.latlng.lat.toFixed(6);$('#nlon').value=e.latlng.lng.toFixed(6);pin&&map.removeLayer(pin);pin=L.marker(e.latlng).addTo(map);map.once('click',f)});
+  $('#nX').onclick=()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);draw()};
+  $('#nGo').onclick=()=>api('incident/start',{message:$('#nm').value,lat:+$('#nlat').value,lon:+$('#nlon').value,alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined}).then(()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);poll()}).catch(fail)}
+/* ---------- Suchgebiet erreicht, Vorschlag, Statistik ---------- */
+const fmtT=ts=>new Date(ts*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+function inPoly(p,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.lat>p.lat)!==(b.lat>p.lat)&&p.lng<(b.lng-a.lng)*(p.lat-a.lat)/(b.lat-a.lat)+a.lng)c=!c}return c}
+function checkArea(){if(!st||!st.incident||!areaShape||!areaShape.polys||areaLogged[st.incident.id])return;const m=st.me;if(!m||m.left_at||m.mode==='declined')return;
+  const pos=lastPos?{lat:lastPos.lat,lng:lastPos.lon}:(m.lat!=null?{lat:m.lat,lng:m.lon}:null);if(!pos)return;
+  if(areaShape.polys.some(pl=>inPoly(pos,pl))){const id=st.incident.id;areaLogged[id]=true;api('incident/event',{kind:'area'}).catch(()=>{areaLogged[id]=false})}}
+async function suggest(){suggText='Vorschlag wird abgefragt …';suggVal=null;draw();
+  try{const r=await api('flow/suggest',{lat:st.incident.lat,lon:st.incident.lon,river:lastRiver});suggVal=r.v;
+    suggText=`Vorschlag ${r.v} m/s (Station ${r.name}, Abfluss ${r.q} m³/s, ${r.distance_km} km von der PLS${r.same_river?'':', anderes Gewässer möglich'}). Grobe Schätzung, vor Ort prüfen. Quelle: BAFU.`}
+  catch(e){suggText='Kein Vorschlag möglich: '+e.message}
+  draw();const el=$('#fl');if(el&&suggVal)el.value=suggVal}
+async function loadStats(s){try{const r=await api('stats'),t=r.totals,min=x=>x==null?'–':Math.round(x/60)+' min';
+  $('#stats').innerHTML=`<h3>Einsatzstatistik</h3><div class="mut">Einsätze: ${t.count} (beendet: ${t.ended}) · Ø Dauer ${min(t.avg_duration)} · Ø Teilnehmende ${t.avg_accepted??'–'} · Ø bis erste Annahme ${min(t.avg_first_accept)} · Ø bis Suchgebiet erreicht ${min(t.avg_first_area)}</div><div style="overflow:auto"><table><tr><th>Alarm</th><th>Meldung</th><th>Dauer</th><th>Angen.</th><th>Abgel.</th><th>1. Annahme</th><th>1. im Gebiet</th><th></th></tr>${r.incidents.map(x=>`<tr><td>${new Date(x.alarm_at*1000).toLocaleString('de-CH')}</td><td>${esc(x.message)}</td><td>${x.ended_at?min(x.ended_at-x.alarm_at):'läuft'}</td><td>${x.accepted}</td><td>${x.declined}</td><td>${min(x.first_accept==null?null:x.first_accept-x.alarm_at)}</td><td>${min(x.first_area==null?null:x.first_area-x.alarm_at)}</td><td><button data-l="${x.id}">Log</button></td></tr>`).join('')}</table></div>`;
+  $('#stats').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>showLog(s,b.dataset.l,r.incidents.find(x=>x.id==b.dataset.l).message))}catch(e){$('#stats').innerHTML='<div class="mut">Statistik nicht verfügbar: '+esc(e.message)+'</div>'}}
+async function showLog(s,id,msg){try{const l=await api('incident/log&id='+id);s.innerHTML=`<h3>Einsatzlog</h3><button id="lb">Zurück</button> <button id="lg">Gross-Modus</button>`+l.map(x=>`<div class="msg"><span class="mut">${new Date(x.ts*1000).toLocaleString('de-CH')}</span> <b>${esc(x.name||'System')}</b> ${esc(x.text)}</div>`).join('');$('#lb').onclick=()=>adminView(s);$('#lg').onclick=()=>openBigLog('Einsatzlog – '+msg,()=>l,false)}catch(e){fail(e)}}
+function areaBounds(){if(!areaShape)return null;
+  if(areaShape.circle){const c=areaShape.circle;return L.latLng(c.lat,c.lon).toBounds(c.r*2)}
+  if(areaShape.polys&&areaShape.polys.length)return L.latLngBounds(areaShape.polys.flat().map(p=>[p.lat,p.lng]));return null}
+function inArea(pt){if(!areaShape)return false;if(areaShape.circle){const c=areaShape.circle;return map.distance([pt.lat,pt.lng],[c.lat,c.lon])<=c.r}return(areaShape.polys||[]).some(pl=>inPoly(pt,pl))}
+const FITPAD={paddingTopLeft:[50,90],paddingBottomRight:[80,50],maxZoom:17};
+function fitArea(){toggleSheet(false);const b=areaBounds();if(!b)return alert('Das Suchgebiet ist noch nicht berechnet. Zuerst die Fliessgeschwindigkeit setzen.');
+  b.extend([st.incident.lat,st.incident.lon]);map.fitBounds(b,FITPAD)}
+function fitForces(){toggleSheet(false);const act=st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined');
+  const pts=areaShape?act.filter(p=>inArea({lat:p.lat,lng:p.lon})):act;
+  if(!pts.length)return alert(areaShape?'Zurzeit befindet sich keine Einsatzkraft im Suchgebiet.':'Keine Einsatzkräfte mit bekanntem Standort.');
+  map.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lon])),FITPAD)}
+function bindMarks(){const b=$('#bMark');
+  if(b)b.onclick=()=>{const p=lastPos||(st.me&&st.me.lat!=null?{lat:st.me.lat,lon:st.me.lon}:null);if(!p)return alert('Dein Standort ist noch nicht bekannt. Standortfreigabe erlauben oder im Abschnitt «Mein Einsatz» den Standort manuell setzen.');api('incident/mark',{lat:p.lat,lon:p.lon}).then(poll).catch(fail)};
+  const m=$('#bMarkMan');if(m)m.onclick=()=>{toggleSheet(false);window.markPick=true;drawMap();map.once('click',e=>{window.markPick=false;api('incident/mark',{lat:e.latlng.lat,lon:e.latlng.lng,manual:1}).then(poll).catch(fail)})};
+  document.querySelectorAll('#sheet [data-kick]').forEach(x=>x.onclick=()=>{const n=x.closest('tr').children[0].textContent;confirm(n+' aus dem Einsatz entfernen?')&&api('incident/kick',{user_id:+x.dataset.kick}).then(poll).catch(fail)});
+  document.querySelectorAll('#sheet [data-mr]').forEach(x=>x.onclick=()=>api('incident/mark/remove',{id:+x.dataset.mr}).then(poll).catch(fail))}
+/* ---------- Einsatzlog im Gross-Modus ---------- */
+let big=null;
+const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Bewegung / Suchgebiet / Rettling',['move','area','mark','markdel']],msg:['Nachrichten',['message']],inc:['Einsatz / Fliessgeschwindigkeit',['start','end','flow']]};
+const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd'};
+function openBigLog(title,get,live){big={title,get,live,desc:true,filter:'all',cache:[]};let o=$('#bigLog');if(o)o.remove();
+  o=document.createElement('div');o.id='bigLog';o.setAttribute('role','dialog');o.setAttribute('aria-label','Einsatzlog');
+  o.innerHTML=`<div id="bigHead"><h2 id="bigT"></h2><select id="bigF" aria-label="Filter">${Object.entries(KIND_GROUPS).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('')}</select><button id="bigS"></button><button id="bigFs">Vollbild</button><button id="bigX" class="pri">Schliessen</button></div><div id="bigList"></div>`;
+  document.body.appendChild(o);
+  $('#bigF').onchange=e=>{big.filter=e.target.value;renderBigLog()};$('#bigS').onclick=()=>{big.desc=!big.desc;renderBigLog()};
+  $('#bigFs').onclick=()=>{document.fullscreenElement?document.exitFullscreen():o.requestFullscreen&&o.requestFullscreen().catch(()=>{})};$('#bigX').onclick=closeBigLog;
+  renderBigLog()}
+function closeBigLog(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});const o=$('#bigLog');if(o)o.remove();big=null}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&big)closeBigLog()});
+function renderBigLog(){const o=$('#bigLog');if(!big||!o)return;const got=big.get();if(got)big.cache=got;
+  const g=KIND_GROUPS[big.filter][1],all=big.cache,l=all.filter(x=>!g||g.includes(x.kind)).sort((a,b)=>big.desc?b.id-a.id:a.id-b.id);
+  $('#bigT').textContent=`${big.title} · ${l.length} von ${all.length} Einträgen${big.live&&!got?' · Einsatz beendet':''}`;
+  $('#bigS').textContent=big.desc?'Neueste zuerst':'Älteste zuerst';
+  const L=$('#bigList');L.innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
+/* ---------- Administration ---------- */
+async function adminView(s){users=await api('users');roles=await api('roles');
+  s.innerHTML=`<h3>Benutzer</h3><table>${users.map(u=>`<tr><td>${esc(u.name)}<br><span class="mut">${esc(u.username)}${u.is_admin?' · Admin':''}${u.active?'':' · gesperrt'}</span></td><td><button data-u="${u.id}">Bearbeiten</button></td></tr>`).join('')}</table>
+  <div class="row"><input id="un" placeholder="Benutzername"><input id="uf" placeholder="Name"><input id="up" type="password" placeholder="Passwort"><button id="uA">Benutzer anlegen</button></div>
+  <h3>Spezialrollen</h3><table>${roles.map(r=>`<tr><td><span style="color:${r.color}">●</span> ${esc(r.name)}${r.is_lead?' <span class="mut">(darf Einsatz beenden)</span>':''}${r.is_post?' <span class="mut">(Suchgebiet endet hier)</span>':''}</td><td><button data-r="${r.id}">Bearbeiten</button></td></tr>`).join('')}</table>
+  <div class="row"><input id="rn" placeholder="Neue Rolle"><input id="rc" type="color" value="#8888ff"><button id="rA">Rolle anlegen</button></div><div id="stats"><h3>Einsatzstatistik</h3><div class="mut">Wird geladen …</div></div><button id="aX">Zurück</button>`;
+  $('#aX').onclick=()=>{view='main';draw()};loadStats(s);
+  $('#uA').onclick=()=>api('user/save',{username:$('#un').value,name:$('#uf').value,password:$('#up').value}).then(()=>adminView(s)).catch(fail);
+  $('#rA').onclick=()=>api('role/save',{name:$('#rn').value,color:$('#rc').value}).then(()=>adminView(s)).catch(fail);
+  s.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const u=users.find(x=>x.id==b.dataset.u),n=prompt('Name',u.name);if(n===null)return;const pw=prompt('Neues Passwort (leer = unverändert)','');
+    api('user/save',{id:u.id,name:n,password:pw,is_admin:confirm('Administrator?')?1:0,active:confirm('Konto aktiv? (Abbrechen = sperren)')?1:0}).then(()=>adminView(s)).catch(fail)});
+  s.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=roles.find(x=>x.id==b.dataset.r),n=prompt('Rollenname (leer = deaktivieren)',r.name);if(n===null)return;
+    api('role/save',{id:r.id,name:n||r.name,color:r.color,is_lead:r.is_lead,is_post:n&&confirm('Ist dies ein Sicherungs-/Beobachtungsposten? (Suchgebiet endet am Posten)')?1:0,active:n?1:0}).then(()=>adminView(s)).catch(fail)})}
+/* ---------- Polling ---------- */
+let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
+    if(nx.incident){const i=nx.incident;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;window.msgs=[];if(alarm('EINSATZ',i.message,'i:'+i.id))toggleSheet(true)}
+      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id)alarm('Nachricht von '+m.from_name,m.text,'m:'+m.id)});msgInit=true;
+      if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&alarm('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at))toggleSheet(true);
+      st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined')track();else stop()}
+    else{if(st&&st.incident){if(alarm('EINSATZ BEENDET','Der Einsatz wurde beendet.','e:'+st.incident.id))toggleSheet(true)}st=nx;lastIncId=null;stop()}
+    if(st&&st.incident)creating=false;updateChip();drawMap();renderBigLog();if(view==='main'&&!document.activeElement.matches('input,textarea,select'))draw()}catch(e){console.error('Poll',e)}}
+async function render(){clearInterval(timer);if(!token)return loginView();
+  try{me=(await api('me')).me;roles=await api('roles');users=await api('users')}catch(e){return}
+  shell();await poll();draw();timer=setInterval(poll,4000)}
+render();
+</script></body></html>
