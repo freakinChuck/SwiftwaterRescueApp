@@ -27,6 +27,8 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS settings(k $tx PRIMARY KEY, v TEXT)",
  // Positionen und Bereiche der Einsatzleitung: kind point|area, pts = JSON [[lat,lon],…]; removed = Zeitpunkt des Entfernens
  "CREATE TABLE IF NOT EXISTS pois(id $ai, incident_id INT, kind $tx, name $tx, color $tx, pts TEXT, created_by INT, created BIGINT, removed BIGINT NULL)",
+ // Rettlinge (vermisste Personen) eines Einsatzes: letzter markierter Standort (lat/lon, loc_at, loc_by), gerettet (rescued_at, rescued_by); removed = entfernt
+ "CREATE TABLE IF NOT EXISTS rescuees(id $ai, incident_id INT, name $tx, descr TEXT, lat DOUBLE NULL, lon DOUBLE NULL, loc_at BIGINT NULL, loc_by INT NULL, rescued_at BIGINT NULL, rescued_by INT NULL, created_by INT, created BIGINT, removed BIGINT NULL)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
@@ -108,6 +110,7 @@ function canMessage($inc) {
   return !$r || (bool)(int)$r['can_message'];
 }
 function activeIncident() { global $db; return $db->query("SELECT * FROM incidents WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1")->fetch() ?: null; }
+function rescuee($inc, $id) { global $db; $s = $db->prepare("SELECT * FROM rescuees WHERE id=? AND incident_id=? AND removed IS NULL"); $s->execute([(int)$id, $inc['id']]); return $s->fetch() ?: fail('Rettling nicht gefunden', 404); }
 function logev($incId, $userId, $kind, $text) { global $db, $now; $db->prepare("INSERT INTO incident_log(incident_id,ts,user_id,kind,text) VALUES(?,?,?,?,?)")->execute([$incId, $now, $userId, $kind, $text]); }
 function hav($a, $b, $c, $d) { $p1 = deg2rad($a); $p2 = deg2rad($c); $dp = $p2 - $p1; $dl = deg2rad($d - $b); $x = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 12742000 * asin(min(1, sqrt($x))); }
 function avg($a) { $a = array_values(array_filter($a, fn($x) => $x !== null)); return $a ? round(array_sum($a) / count($a), 1) : null; }
@@ -196,8 +199,12 @@ switch ($route) {
   $po = $db->prepare("SELECT p.id,p.kind,p.name,p.color,p.pts,p.created_by,p.created,u.name by_name FROM pois p LEFT JOIN users u ON u.id=p.created_by WHERE p.incident_id=? AND p.removed IS NULL ORDER BY p.id");
   $po->execute([$id]);
   $pois = array_map(fn($p) => array_merge(ints($p, ['id', 'created_by', 'created']), ['pts' => json_decode($p['pts'], true) ?: []]), $po->fetchAll());
+  // Rettlinge: für alle sichtbar, immer vollständig
+  $rq = $db->prepare("SELECT r.id,r.name,r.descr,r.lat,r.lon,r.loc_at,r.loc_by,r.rescued_at,r.rescued_by,r.created_by,r.created,a.name loc_name,b.name rescued_name FROM rescuees r LEFT JOIN users a ON a.id=r.loc_by LEFT JOIN users b ON b.id=r.rescued_by WHERE r.incident_id=? AND r.removed IS NULL ORDER BY r.id");
+  $rq->execute([$id]);
+  $rescuees = array_map(fn($r) => floats(ints($r, ['id', 'loc_at', 'loc_by', 'rescued_at', 'rescued_by', 'created_by', 'created']), ['lat', 'lon']), $rq->fetchAll());
   $cf = canFlow($inc);
-  out(['incident' => $inc, 'pois' => $pois,
+  out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees,
        'participants' => array_map(function ($p) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
        'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'can_message' => canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc),
        'log' => $cf ? logRows($id) : null, 'now' => $now]);
@@ -371,6 +378,56 @@ switch ($route) {
   if (!$p) fail('Markierung nicht gefunden', 404);
   $db->prepare("UPDATE pois SET removed=? WHERE id=?")->execute([$now, $p['id']]);
   logev($inc['id'], $uid, 'poidel', ($p['kind'] === 'area' ? 'entfernt den Bereich «' : 'entfernt die Position «') . $p['name'] . '»');
+  out(['ok' => true]);
+
+ // Rettlinge: erfassen, bearbeiten, Standort und «gerettet» markieren dürfen alle im Einsatz, entfernen nur die Einsatzleitung
+ case 'incident/rescuee/save': // id fehlt = neu; name, descr
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (!isActivePart($inc['id']) && !canManage($inc)) fail('Nur Personen, die den Einsatz angenommen haben, können Rettlinge erfassen', 403);
+  $name = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); $descr = mb_substr(trim((string)($in['descr'] ?? '')), 0, 1000);
+  if ($name === '') fail('Name fehlt');
+  if (!empty($in['id'])) {
+    $r = rescuee($inc, $in['id']);
+    $db->prepare("UPDATE rescuees SET name=?, descr=? WHERE id=?")->execute([$name, $descr, $r['id']]);
+    if ($r['name'] !== $name || (string)$r['descr'] !== $descr) logev($inc['id'], $uid, 'rescuee', ($r['name'] !== $name ? "ändert den Rettling «{$r['name']}» zu «{$name}»" : "ändert die Beschreibung von «{$name}»") . ($descr !== '' ? ": {$descr}" : ''));
+    out(['ok' => true, 'id' => (int)$r['id']]);
+  }
+  $db->prepare("INSERT INTO rescuees(incident_id,name,descr,created_by,created) VALUES(?,?,?,?,?)")->execute([$inc['id'], $name, $descr, $uid, $now]);
+  $rid = (int)$db->lastInsertId();
+  logev($inc['id'], $uid, 'rescuee', "erfasst den Rettling «{$name}»" . ($descr !== '' ? ": {$descr}" : ''));
+  out(['ok' => true, 'id' => $rid]);
+
+ case 'incident/rescuee/locate': // own=1: eigener geteilter Standort (serverseitig), sonst lat/lon (auf der Karte gewählt)
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (!isActivePart($inc['id']) && !canManage($inc)) fail('Nur Personen, die den Einsatz angenommen haben, können den Standort markieren', 403);
+  $r = rescuee($inc, $in['id'] ?? 0);
+  if (!empty($in['own'])) {
+    $p = part($inc['id']);
+    if (!$p || $p['lat'] === null) fail('Dein Standort ist nicht bekannt: Standortfreigabe erlauben oder Position auf der Karte wählen');
+    [$la, $lo] = [(float)$p['lat'], (float)$p['lon']];
+  } else {
+    if (!isset($in['lat'], $in['lon']) || !is_numeric($in['lat']) || !is_numeric($in['lon']) || abs($in['lat']) > 90 || abs($in['lon']) > 180) fail('Ungültige Koordinaten');
+    [$la, $lo] = [round((float)$in['lat'], 7), round((float)$in['lon'], 7)];
+  }
+  $db->prepare("UPDATE rescuees SET lat=?, lon=?, loc_at=?, loc_by=? WHERE id=?")->execute([$la, $lo, $now, $uid, $r['id']]);
+  logev($inc['id'], $uid, 'resmark', sprintf('markiert den Standort von «%s» %s (%.5F, %.5F)', $r['name'], !empty($in['own']) ? 'am eigenen Standort' : 'auf der Karte', $la, $lo));
+  out(['ok' => true]);
+
+ case 'incident/rescuee/rescued': // rescued=1 gerettet, 0 = zurücknehmen
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (!isActivePart($inc['id']) && !canManage($inc)) fail('Nur Personen, die den Einsatz angenommen haben, können Rettlinge als gerettet markieren', 403);
+  $r = rescuee($inc, $in['id'] ?? 0); $on = !empty($in['rescued']);
+  if ($on === ($r['rescued_at'] !== null)) out(['ok' => true]); // unverändert, z. B. gleichzeitig von zwei Personen
+  $db->prepare("UPDATE rescuees SET rescued_at=?, rescued_by=? WHERE id=?")->execute($on ? [$now, $uid, $r['id']] : [null, null, $r['id']]);
+  logev($inc['id'], $uid, 'rescued', $on ? "meldet «{$r['name']}» als gerettet" : "nimmt «gerettet» bei «{$r['name']}» zurück");
+  out(['ok' => true]);
+
+ case 'incident/rescuee/remove': // nur Einsatzleitung (bleibt in der Datenbank, removed gesetzt)
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (!canManage($inc)) fail('Nur die Einsatzleitung kann Rettlinge entfernen', 403);
+  $r = rescuee($inc, $in['id'] ?? 0);
+  $db->prepare("UPDATE rescuees SET removed=? WHERE id=?")->execute([$now, $r['id']]);
+  logev($inc['id'], $uid, 'rescuee', "entfernt den Rettling «{$r['name']}»");
   out(['ok' => true]);
 
  case 'incident/kick': // Einsatzkraft aus dem Einsatz entfernen (Wiedereinstieg bleibt möglich)
