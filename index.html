@@ -4,15 +4,14 @@
 <title>Swiftwater Rescue</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<link rel="stylesheet" href="common.css">
 <style>
-:root{--bg:#0f2430;--panel:#16323f;--line:#2c4f60;--tx:#eaf3f6;--mut:#8fb0bd;--alarm:#ff4d2e;--ok:#35c27a;font-family:"Segoe UI",system-ui,sans-serif}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);height:100dvh;display:flex;flex-direction:column}
-button,input,select,textarea{font:inherit;color:inherit;background:#0c1c25;border:1px solid var(--line);border-radius:6px;padding:.6rem .7rem}
-button{cursor:pointer;background:var(--panel)}button.pri{background:var(--alarm);border-color:var(--alarm);font-weight:600}button:focus-visible,input:focus-visible{outline:2px solid #fff;outline-offset:2px}
-header{display:flex;gap:.5rem;align-items:center;padding:.5rem .8rem;border-bottom:1px solid var(--line)}header h1{font-size:1rem;margin:0;flex:1}
-[hidden]{display:none!important}#map{position:fixed;inset:0}
+body{height:100dvh;display:flex;flex-direction:column}
+#map{position:fixed;inset:0}
 .fab{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:.7rem;z-index:1000;width:46px;height:46px;font-size:1.3rem;padding:0}
-#chip{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:4rem;right:4rem;z-index:1000;background:var(--alarm);color:#fff;border-radius:6px;padding:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600}
+#chip{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:4rem;right:4rem;z-index:1000;background:var(--alarm);color:#fff;border-radius:6px;padding:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600}#chip.ex{background:var(--ex)}
+#toasts{position:fixed;top:calc(4.2rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:8000;display:grid;gap:.4rem;width:min(420px,calc(100vw - 2rem))}
+.toast{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--ex);border-radius:6px;padding:.6rem .8rem;box-shadow:0 2px 8px #000a;cursor:pointer}
 #sheetWrap{position:fixed;z-index:1100;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;transition:transform .2s;left:0;right:0;bottom:0;max-height:58dvh;transform:translateY(105%)}
 #sheetWrap.open{transform:none}#sheetBar{display:flex;justify-content:space-between;align-items:center;padding:.5rem .8rem;border-bottom:1px solid var(--line)}
 #sheet{overflow:auto;padding:.8rem;flex:1;padding-bottom:calc(.8rem + env(safe-area-inset-bottom))}
@@ -21,30 +20,21 @@ header{display:flex;gap:.5rem;align-items:center;padding:.5rem .8rem;border-bott
 #areaNote{position:fixed;bottom:calc(1.2rem + env(safe-area-inset-bottom));left:.7rem;right:5rem;z-index:1000;background:#0f2430e6;border:1px solid var(--line);border-radius:6px;padding:.4rem .6rem;font-size:.85rem}
 .leaflet-top.leaflet-right{margin-top:calc(3.8rem + env(safe-area-inset-top))}
 @media(min-width:760px){body.so #chip{left:calc(400px + 1rem)}body.so #areaNote{left:calc(400px + 1rem)}}
-@media(min-width:760px){#sheetWrap.wide{width:min(960px,100vw)}}
-#bigLog{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
-#bigHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1rem;border-bottom:1px solid var(--line)}#bigHead h2{margin:0;font-size:1.3rem;flex:1 1 20rem}
-#bigList{overflow:auto;flex:1;padding:.6rem 1rem 2rem;font-size:1.25rem;line-height:1.35}
-.lg{display:grid;grid-template-columns:11rem 13rem 1fr;gap:.8rem;padding:.55rem .8rem;border-left:6px solid;border-bottom:1px solid var(--line)}.lg .t{color:var(--mut)}
-@media(max-width:700px){.lg{grid-template-columns:1fr;gap:.1rem}#bigList{font-size:1.1rem}}
 .rm{width:34px;height:34px;border-radius:50%;background:#2ee6d6;color:#00302c;border:3px solid #fff;display:grid;place-items:center;font-weight:800;box-shadow:0 0 0 2px #0008}
 #fitBtns{position:fixed;right:.7rem;bottom:calc(6.8rem + env(safe-area-inset-bottom));z-index:1000;display:flex;flex-direction:column;gap:.4rem}#fitBtns button{background:var(--panel);box-shadow:0 1px 4px #0008;font-size:.85rem;padding:.5rem .6rem}
-details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summary{cursor:pointer;padding:.4rem 0;font-weight:600}
-.row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0}.row>*{flex:1 1 auto}.mut{color:var(--mut);font-size:.9rem}
-.card{max-width:420px;margin:12vh auto;padding:1.2rem;display:grid;gap:.7rem}
 .mk{width:38px;height:38px;border-radius:50%;border:4px solid #888;background:#0c1c25 center/cover;display:grid;place-items:center;font-weight:700;font-size:.8rem;box-shadow:0 0 0 2px #0008}
 .mk.cl{border-radius:8px;background:#fff;color:#000}
 .pls{width:22px;height:22px;background:var(--alarm);border:3px solid #fff;transform:rotate(45deg)}
 #alarm{position:fixed;inset:0;background:var(--alarm);color:#fff;display:none;flex-direction:column;justify-content:center;padding:2rem;gap:1rem;z-index:9999;animation:bl 1s steps(2) infinite}
 @keyframes bl{50%{background:#8f1d0a}}@media(prefers-reduced-motion:reduce){#alarm{animation:none}}
 #alarm button{background:#fff;color:#000;font-weight:700;padding:1rem}#alarm h2{margin:0;font-size:1.8rem}
-.msg{padding:.4rem 0;border-bottom:1px solid var(--line)}table{width:100%;border-collapse:collapse}td{padding:.3rem;border-bottom:1px solid var(--line)}
 </style></head><body>
 <div id="alarm" role="alertdialog"><h2 id="aT"></h2><div id="aB"></div><button id="aOk">Quittieren</button></div>
+<div id="toasts" aria-live="polite"></div>
 <div id="app"></div>
+<script src="common.js"></script>
 <script>
 /* ---------- Konfiguration ---------- */
-const API='api/index.php';
 // Kartenanbieter austauschbar: aktiven Eintrag über MAP_PROVIDER wählen oder neuen ergänzen.
 const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 const MAP_PROVIDERS={
@@ -57,16 +47,17 @@ const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi
 const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
 const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
 const MODES={base:'Anfahrt via Stützpunkt',direct:'Anfahrt direkt',logistics:'Logistik',coordinator:'Koordinator KP Rück'};
-/* ---------- Helfer ---------- */
-const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let msgInit=false,areaShape=null,lastRiver='',suggText='',suggVal=null,areaLogged={},creating=false,openSec=new Set(['mine','rescuee','flow','manage']),locStatus='',lastPos=null,manual=false,hb=null,token=localStorage.getItem('sw_token'),me=null,roles=[],users=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,view='main',alarmQ=[],watchId=null,lastSent=0,fitted=null;
-async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
-  const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
-  if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');render()}if(j.error)throw new Error(j.error);return j}
-const fail=e=>alert(e.message);
+/* ---------- Helfer ($, esc, api, fail, fmtT in common.js) ---------- */
+let msgInit=false,areaShape=null,lastRiver='',suggText='',suggVal=null,areaLogged={},creating=false,openSec=new Set(['mine','rescuee','flow','manage']),locStatus='',lastPos=null,manual=false,hb=null,me=null,roles=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,alarmQ=[],watchId=null,lastSent=0,fitted=null;
+onUnauth=()=>render();
 /* ---------- Alarm ---------- */
 let actx,beepT;function beep(on){clearInterval(beepT);if(!on)return;actx=actx||new(window.AudioContext||webkitAudioContext)();
   beepT=setInterval(()=>{const o=actx.createOscillator();o.frequency.value=880;o.connect(actx.destination);o.start();o.stop(actx.currentTime+.4);navigator.vibrate&&navigator.vibrate([300,100,300])},1000)}
+function ping(){try{actx=actx||new(window.AudioContext||webkitAudioContext)();const o=actx.createOscillator();o.frequency.value=660;o.connect(actx.destination);o.start();o.stop(actx.currentTime+.25)}catch(e){}navigator.vibrate&&navigator.vibrate(200)}
+// critical: Vollbild-Alarm mit Dauerton (scharfer Einsatz oder Übungsmodus), sonst normale Benachrichtigung (Übung)
+function notify(t,b,key,critical){if(critical)return alarm(t,b,key);if(key){if(ackGet().includes(key))return false;ackAdd(key)}
+  const d=document.createElement('div');d.className='toast';d.innerHTML=`<b>${esc(t)}</b><div>${esc(b)}</div>`;d.onclick=()=>d.remove();$('#toasts').appendChild(d);setTimeout(()=>d.remove(),20000);ping();
+  if('Notification'in window&&Notification.permission==='granted')new Notification(t,{body:b});return true}
 const ackGet=()=>{try{return JSON.parse(localStorage.getItem('sw_acked')||'[]')}catch(e){return[]}};
 function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}}
 let curKey=null;
@@ -74,12 +65,9 @@ function alarm(t,b,key){if(key&&(ackGet().includes(key)||key===curKey||alarmQ.so
 function showAlarm(){if($('#alarm').style.display==='flex'||!alarmQ.length)return;const[t,b,k]=alarmQ.shift();curKey=k||null;$('#aT').textContent=t;$('#aB').textContent=b;$('#alarm').style.display='flex';beep(true);
   if('Notification'in window&&Notification.permission==='granted')new Notification(t,{body:b,requireInteraction:true})}
 $('#aOk').onclick=()=>{if(curKey)ackAdd(curKey);curKey=null;$('#alarm').style.display='none';beep(false);showAlarm()};
-/* ---------- Login ---------- */
-function loginView(){$('#app').innerHTML=`<div class="card"><h1>Swiftwater Rescue</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button></div>`;
-  $('#go').onclick=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);render()}catch(e){fail(e)}}}
 /* ---------- Hauptansicht ---------- */
 function toggleSheet(f){const w=$('#sheetWrap');if(!w)return;const o=f===undefined?!w.classList.contains('open'):f;w.classList.toggle('open',o);document.body.classList.toggle('so',o)}
-function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);if(st&&st.incident){c.hidden=false;c.textContent='Einsatz: '+st.incident.message+' · '+Math.round((st.now-st.incident.alarm_at)/60)+' min'}else c.hidden=true}
+function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);if(st&&st.incident){const x=!!st.incident.is_exercise;c.hidden=false;c.classList.toggle('ex',x);c.textContent=(x?'Übung: ':'Einsatz: ')+st.incident.message+' · '+Math.round((st.now-st.incident.alarm_at)/60)+' min'}else c.hidden=true}
 function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><button id="bFitA" title="Ganzes Suchgebiet anzeigen">Suchgebiet</button><button id="bFitF" title="Alle Einsatzkräfte im Suchgebiet anzeigen">Einsatzkräfte</button></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
   $('#bMenu').onclick=()=>toggleSheet();$('#bFitA').onclick=fitArea;$('#bFitF').onclick=fitForces;$('#bClose').onclick=()=>toggleSheet(false);$('#chip').onclick=()=>toggleSheet(true);
   $('#sheet').addEventListener('toggle',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k)e.target.open?openSec.add(k):openSec.delete(k)},true);
@@ -112,8 +100,8 @@ async function loadNet(i,R){netLoading=true;let err='';
     const j=await r.json();if(!j.elements)throw new Error('ungültige Antwort');
     const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();
     ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));
-    net={inc:i.id,R,ways,byNode};netLoading=false;drawMap();if(view==='main')draw();return}catch(e){err=e.message}}
-  net={inc:i.id,R,fail:true,err,retryAt:Date.now()+20000};netLoading=false;drawMap();if(view==='main')draw()}
+    net={inc:i.id,R,ways,byNode};netLoading=false;drawMap();draw();return}catch(e){err=e.message}}
+  net={inc:i.id,R,fail:true,err,retryAt:Date.now()+20000};netLoading=false;drawMap();draw()}
 const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
 function follow(w,k,rem,seen){const pts=[w.geometry[k]];seen=new Set(seen).add(w.id);
   for(let j=k+1;j<w.geometry.length;j++){const a=w.geometry[j-1],b=w.geometry[j],d=dist(a,b);
@@ -145,13 +133,13 @@ function drawArea(i){areaInfo='';areaShape=null;const D=(i.flow_ms||0)*(st.now-i
   return g}
 const roleName=p=>(roles.find(r=>r.id==p.role_id)||{}).name;
 const sec=(k,t,b)=>`<details data-k="${k}" ${openSec.has(k)?'open':''}><summary>${t}</summary>${b}</details>`;
-function draw(){const s=$('#sheet');if(!s||creating)return;$('#sheetWrap').classList.toggle('wide',view==='admin');const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
- if(view==='admin')return adminView(s);
-  const acc=sec('acc','Konto',`<div class="row"><button id="bPh">Profilbild ändern</button>${me.is_admin?'<button id="bAdm">Verwaltung</button>':''}<button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`);
-  const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bOut').onclick=()=>{token=null;localStorage.removeItem('sw_token');stop();render()};if($('#bAdm'))$('#bAdm').onclick=()=>{view='admin';draw()}};
+function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
+  const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button>${me.is_admin?'<button id="bAdm">Verwaltung</button>':''}<button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`);
+  const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();stop();render()};if($('#bAdm'))$('#bAdm').onclick=()=>{location.href='admin.html'};
+    $('#exm').onchange=e=>{const v=e.target.checked?1:0;api('me/settings',{exercise_mode:v}).then(()=>{me.exercise_mode=v;e.target.blur();return poll()}).catch(x=>{e.target.checked=!v;fail(x)})}};
   if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+acc;$('#bNew').onclick=newView;return bindAcc()}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
-  let h=`<h3 style="margin:0">${esc(i.message)}</h3><div class="mut">Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')} · PLS ${i.lat.toFixed(5)}, ${i.lon.toFixed(5)}</div>`;
+  let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')} · PLS ${i.lat.toFixed(5)}, ${i.lon.toFixed(5)}</div>`;
   if(!joined)h+=`<div class="row">${Object.entries(MODES).map(([k,v])=>`<button class="pri" data-m="${k}">Einsatz annehmen<br><small>${v}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
   else{
     h+=sec('mine','Mein Einsatz',`<div class="row"><span>${MODES[m.mode]}</span><select id="rs"><option value="">Keine Spezialrolle</option>${roles.map(r=>`<option value="${r.id}" ${r.id==m.role_id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div><div class="mut">${esc(locStatus||'Standort wird ermittelt …')}</div><div class="row"><button id="bMan">${manual?'GPS-Standort verwenden':'Standort manuell setzen (Test)'}</button><button id="bLv">Einsatz verlassen</button></div>`);
@@ -182,12 +170,11 @@ function track(){if(watchId!=null||hb)return;
   hb=setInterval(()=>{if(lastPos&&Date.now()-lastSent>10000)sendPos(lastPos)},5000)}
 function stop(){if(watchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(watchId);watchId=null;clearInterval(hb);hb=null}
 function photo(e){const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d'),s=Math.min(img.width,img.height);x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,96,96);api('me/photo',{photo:c.toDataURL('image/jpeg',.8)}).then(()=>alert('Profilbild gespeichert')).catch(fail)};img.src=URL.createObjectURL(f)}
-function newView(){creating=true;$('#sheet').innerHTML=`<h3>Einsatz starten</h3><div class="row"><textarea id="nm" placeholder="Meldung" rows="2"></textarea></div><div class="row"><input id="nlat" placeholder="Breite (PLS)"><input id="nlon" placeholder="Länge (PLS)"></div><div class="row"><label class="mut">Alarmeingang (Standard: jetzt)<input id="nat" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></label></div><div class="mut">PLS: auf die Karte tippen oder Koordinaten eingeben.</div><div class="row"><button class="pri" id="nGo">Alarm auslösen</button><button id="nX">Abbrechen</button></div>`;
+function newView(){creating=true;$('#sheet').innerHTML=`<h3>Einsatz starten</h3><div class="row"><select id="nex" aria-label="Art des Einsatzes"><option value="0">Scharfer Einsatz (kritische Alarmierung)</option><option value="1">Übung (normale Benachrichtigung)</option></select></div><div class="row"><textarea id="nm" placeholder="Meldung" rows="2"></textarea></div><div class="row"><input id="nlat" placeholder="Breite (PLS)"><input id="nlon" placeholder="Länge (PLS)"></div><div class="row"><label class="mut">Alarmeingang (Standard: jetzt)<input id="nat" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></label></div><div class="mut">PLS: auf die Karte tippen oder Koordinaten eingeben.</div><div class="row"><button class="pri" id="nGo">Alarm auslösen</button><button id="nX">Abbrechen</button></div>`;
   let pin;map.once('click',function f(e){$('#nlat').value=e.latlng.lat.toFixed(6);$('#nlon').value=e.latlng.lng.toFixed(6);pin&&map.removeLayer(pin);pin=L.marker(e.latlng).addTo(map);map.once('click',f)});
   $('#nX').onclick=()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);draw()};
-  $('#nGo').onclick=()=>api('incident/start',{message:$('#nm').value,lat:+$('#nlat').value,lon:+$('#nlon').value,alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined}).then(()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);poll()}).catch(fail)}
-/* ---------- Suchgebiet erreicht, Vorschlag, Statistik ---------- */
-const fmtT=ts=>new Date(ts*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  $('#nGo').onclick=()=>api('incident/start',{is_exercise:+$('#nex').value,message:$('#nm').value,lat:+$('#nlat').value,lon:+$('#nlon').value,alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined}).then(()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);poll()}).catch(fail)}
+/* ---------- Suchgebiet erreicht, Vorschlag ---------- */
 function inPoly(p,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.lat>p.lat)!==(b.lat>p.lat)&&p.lng<(b.lng-a.lng)*(p.lat-a.lat)/(b.lat-a.lat)+a.lng)c=!c}return c}
 function checkArea(){if(!st||!st.incident||!areaShape||!areaShape.polys||areaLogged[st.incident.id])return;const m=st.me;if(!m||m.left_at||m.mode==='declined')return;
   const pos=lastPos?{lat:lastPos.lat,lng:lastPos.lon}:(m.lat!=null?{lat:m.lat,lng:m.lon}:null);if(!pos)return;
@@ -197,10 +184,6 @@ async function suggest(){suggText='Vorschlag wird abgefragt …';suggVal=null;dr
     suggText=`Vorschlag ${r.v} m/s (Station ${r.name}, Abfluss ${r.q} m³/s, ${r.distance_km} km von der PLS${r.same_river?'':', anderes Gewässer möglich'}). Grobe Schätzung, vor Ort prüfen. Quelle: BAFU.`}
   catch(e){suggText='Kein Vorschlag möglich: '+e.message}
   draw();const el=$('#fl');if(el&&suggVal)el.value=suggVal}
-async function loadStats(s){try{const r=await api('stats'),t=r.totals,min=x=>x==null?'–':Math.round(x/60)+' min';
-  $('#stats').innerHTML=`<h3>Einsatzstatistik</h3><div class="mut">Einsätze: ${t.count} (beendet: ${t.ended}) · Ø Dauer ${min(t.avg_duration)} · Ø Teilnehmende ${t.avg_accepted??'–'} · Ø bis erste Annahme ${min(t.avg_first_accept)} · Ø bis Suchgebiet erreicht ${min(t.avg_first_area)}</div><div style="overflow:auto"><table><tr><th>Alarm</th><th>Meldung</th><th>Dauer</th><th>Angen.</th><th>Abgel.</th><th>1. Annahme</th><th>1. im Gebiet</th><th></th></tr>${r.incidents.map(x=>`<tr><td>${new Date(x.alarm_at*1000).toLocaleString('de-CH')}</td><td>${esc(x.message)}</td><td>${x.ended_at?min(x.ended_at-x.alarm_at):'läuft'}</td><td>${x.accepted}</td><td>${x.declined}</td><td>${min(x.first_accept==null?null:x.first_accept-x.alarm_at)}</td><td>${min(x.first_area==null?null:x.first_area-x.alarm_at)}</td><td><button data-l="${x.id}">Log</button></td></tr>`).join('')}</table></div>`;
-  $('#stats').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>showLog(s,b.dataset.l,r.incidents.find(x=>x.id==b.dataset.l).message))}catch(e){$('#stats').innerHTML='<div class="mut">Statistik nicht verfügbar: '+esc(e.message)+'</div>'}}
-async function showLog(s,id,msg){try{const l=await api('incident/log&id='+id);s.innerHTML=`<h3>Einsatzlog</h3><button id="lb">Zurück</button> <button id="lg">Gross-Modus</button>`+l.map(x=>`<div class="msg"><span class="mut">${new Date(x.ts*1000).toLocaleString('de-CH')}</span> <b>${esc(x.name||'System')}</b> ${esc(x.text)}</div>`).join('');$('#lb').onclick=()=>adminView(s);$('#lg').onclick=()=>openBigLog('Einsatzlog – '+msg,()=>l,false)}catch(e){fail(e)}}
 function areaBounds(){if(!areaShape)return null;
   if(areaShape.circle){const c=areaShape.circle;return L.latLng(c.lat,c.lon).toBounds(c.r*2)}
   if(areaShape.polys&&areaShape.polys.length)return L.latLngBounds(areaShape.polys.flat().map(p=>[p.lat,p.lng]));return null}
@@ -217,47 +200,19 @@ function bindMarks(){const b=$('#bMark');
   const m=$('#bMarkMan');if(m)m.onclick=()=>{toggleSheet(false);window.markPick=true;drawMap();map.once('click',e=>{window.markPick=false;api('incident/mark',{lat:e.latlng.lat,lon:e.latlng.lng,manual:1}).then(poll).catch(fail)})};
   document.querySelectorAll('#sheet [data-kick]').forEach(x=>x.onclick=()=>{const n=x.closest('tr').children[0].textContent;confirm(n+' aus dem Einsatz entfernen?')&&api('incident/kick',{user_id:+x.dataset.kick}).then(poll).catch(fail)});
   document.querySelectorAll('#sheet [data-mr]').forEach(x=>x.onclick=()=>api('incident/mark/remove',{id:+x.dataset.mr}).then(poll).catch(fail))}
-/* ---------- Einsatzlog im Gross-Modus ---------- */
-let big=null;
-const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Bewegung / Suchgebiet / Rettling',['move','area','mark','markdel']],msg:['Nachrichten',['message']],inc:['Einsatz / Fliessgeschwindigkeit',['start','end','flow']]};
-const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd'};
-function openBigLog(title,get,live){big={title,get,live,desc:true,filter:'all',cache:[]};let o=$('#bigLog');if(o)o.remove();
-  o=document.createElement('div');o.id='bigLog';o.setAttribute('role','dialog');o.setAttribute('aria-label','Einsatzlog');
-  o.innerHTML=`<div id="bigHead"><h2 id="bigT"></h2><select id="bigF" aria-label="Filter">${Object.entries(KIND_GROUPS).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('')}</select><button id="bigS"></button><button id="bigFs">Vollbild</button><button id="bigX" class="pri">Schliessen</button></div><div id="bigList"></div>`;
-  document.body.appendChild(o);
-  $('#bigF').onchange=e=>{big.filter=e.target.value;renderBigLog()};$('#bigS').onclick=()=>{big.desc=!big.desc;renderBigLog()};
-  $('#bigFs').onclick=()=>{document.fullscreenElement?document.exitFullscreen():o.requestFullscreen&&o.requestFullscreen().catch(()=>{})};$('#bigX').onclick=closeBigLog;
-  renderBigLog()}
-function closeBigLog(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});const o=$('#bigLog');if(o)o.remove();big=null}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&big)closeBigLog()});
-function renderBigLog(){const o=$('#bigLog');if(!big||!o)return;const got=big.get();if(got)big.cache=got;
-  const g=KIND_GROUPS[big.filter][1],all=big.cache,l=all.filter(x=>!g||g.includes(x.kind)).sort((a,b)=>big.desc?b.id-a.id:a.id-b.id);
-  $('#bigT').textContent=`${big.title} · ${l.length} von ${all.length} Einträgen${big.live&&!got?' · Einsatz beendet':''}`;
-  $('#bigS').textContent=big.desc?'Neueste zuerst':'Älteste zuerst';
-  const L=$('#bigList');L.innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
-/* ---------- Administration ---------- */
-async function adminView(s){users=await api('users');roles=await api('roles');
-  s.innerHTML=`<h3>Benutzer</h3><table>${users.map(u=>`<tr><td>${esc(u.name)}<br><span class="mut">${esc(u.username)}${u.is_admin?' · Admin':''}${u.active?'':' · gesperrt'}</span></td><td><button data-u="${u.id}">Bearbeiten</button></td></tr>`).join('')}</table>
-  <div class="row"><input id="un" placeholder="Benutzername"><input id="uf" placeholder="Name"><input id="up" type="password" placeholder="Passwort"><button id="uA">Benutzer anlegen</button></div>
-  <h3>Spezialrollen</h3><table>${roles.map(r=>`<tr><td><span style="color:${r.color}">●</span> ${esc(r.name)}${r.is_lead?' <span class="mut">(darf Einsatz beenden)</span>':''}${r.is_post?' <span class="mut">(Suchgebiet endet hier)</span>':''}</td><td><button data-r="${r.id}">Bearbeiten</button></td></tr>`).join('')}</table>
-  <div class="row"><input id="rn" placeholder="Neue Rolle"><input id="rc" type="color" value="#8888ff"><button id="rA">Rolle anlegen</button></div><div id="stats"><h3>Einsatzstatistik</h3><div class="mut">Wird geladen …</div></div><button id="aX">Zurück</button>`;
-  $('#aX').onclick=()=>{view='main';draw()};loadStats(s);
-  $('#uA').onclick=()=>api('user/save',{username:$('#un').value,name:$('#uf').value,password:$('#up').value}).then(()=>adminView(s)).catch(fail);
-  $('#rA').onclick=()=>api('role/save',{name:$('#rn').value,color:$('#rc').value}).then(()=>adminView(s)).catch(fail);
-  s.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const u=users.find(x=>x.id==b.dataset.u),n=prompt('Name',u.name);if(n===null)return;const pw=prompt('Neues Passwort (leer = unverändert)','');
-    api('user/save',{id:u.id,name:n,password:pw,is_admin:confirm('Administrator?')?1:0,active:confirm('Konto aktiv? (Abbrechen = sperren)')?1:0}).then(()=>adminView(s)).catch(fail)});
-  s.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=roles.find(x=>x.id==b.dataset.r),n=prompt('Rollenname (leer = deaktivieren)',r.name);if(n===null)return;
-    api('role/save',{id:r.id,name:n||r.name,color:r.color,is_lead:r.is_lead,is_post:n&&confirm('Ist dies ein Sicherungs-/Beobachtungsposten? (Suchgebiet endet am Posten)')?1:0,active:n?1:0}).then(()=>adminView(s)).catch(fail)})}
 /* ---------- Polling ---------- */
+// Alarmierungsart kommt vom Server (critical): scharfer Einsatz immer kritisch, Übung nur mit Übungsmodus
 let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
-    if(nx.incident){const i=nx.incident;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;window.msgs=[];if(alarm('EINSATZ',i.message,'i:'+i.id))toggleSheet(true)}
-      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id)alarm('Nachricht von '+m.from_name,m.text,'m:'+m.id)});msgInit=true;
-      if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&alarm('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at))toggleSheet(true);
+    if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;window.msgs=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
+      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id)notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
+      if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
       st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined')track();else stop()}
-    else{if(st&&st.incident){if(alarm('EINSATZ BEENDET','Der Einsatz wurde beendet.','e:'+st.incident.id))toggleSheet(true)}st=nx;lastIncId=null;stop()}
-    if(st&&st.incident)creating=false;updateChip();drawMap();renderBigLog();if(view==='main'&&!document.activeElement.matches('input,textarea,select'))draw()}catch(e){console.error('Poll',e)}}
-async function render(){clearInterval(timer);if(!token)return loginView();
-  try{me=(await api('me')).me;roles=await api('roles');users=await api('users')}catch(e){return}
+    else{if(st&&st.incident){const x=st.incident.is_exercise;if(notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
+    if(st&&st.incident)creating=false;updateChip();drawMap();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}catch(e){console.error('Poll',e)}}
+async function render(){clearInterval(timer);if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
+  try{me=(await api('me')).me}catch(e){return}
+  if(me.must_change){$('#app').innerHTML='';return pwDialog(true,render)} // nach Zurücksetzen zuerst eigenes Passwort setzen
+  try{roles=await api('roles')}catch(e){return}
   shell();await poll();draw();timer=setInterval(poll,4000)}
 render();
 </script></body></html>

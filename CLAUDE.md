@@ -6,7 +6,9 @@ Sprache: Oberfläche, Code-Kommentare, Commits und Kommunikation auf Deutsch (Sc
 Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und Lageübersicht bei Einsätzen (vermisste Person im Fliessgewässer). Grundlage ist die Anforderungsspezifikation «SwiftwaterRescue App Specs V0.1» vom 01.11.2026 (PDF, im Claude-Projekt «Swiftwater Rescue App»).
 
 ## Architektur
-- `index.html`: gesamte Web-App (Vanilla JS, Leaflet via cdnjs, kein Build-Schritt). Läuft am Handy und im Browser.
+- `index.html`: Einsatz-App mit Karte (Vanilla JS, Leaflet via cdnjs, kein Build-Schritt). Läuft am Handy und im Browser.
+- `admin.html`: Verwaltung ohne Karte (Benutzer, Spezialrollen, Einsatzstatistik/-log), nur für die Benutzerrolle Administrator.
+- `common.js` / `common.css`: gemeinsamer Code beider Seiten (`api()`, Anmeldung, Dialoge inkl. Passwort ändern, Einsatzlog im Gross-Modus).
 - `api/index.php`: JSON-API (PHP, PDO). Routen über `?r=<route>`, Token im Header `X-Token`.
 - `api/config.php`: DB-Konfiguration. Standard SQLite (`api/data/`), MySQL über DSN möglich. Nur Platzhalter-Passwort einchecken, echte Zugangsdaten nie committen.
 - Hosting-Vorgabe: cyon «Webhosting Single» (PHP, MySQL, keine WebSockets, kein Node-Dauerprozess). Alles muss dort laufen.
@@ -24,6 +26,10 @@ Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und
 - Rettling-Markierung: alle Teilnehmenden markieren mit eigenem Standort (eine Markierung pro Person).
 - Einsatzlog (Beitritt, Rollen, Bewegung > 300 m, Suchgebiet erreicht, Nachrichten, Markierungen, Entfernen), Gross-Modus im Einsatz und in der History; Einsatzstatistik im Admin-Bereich.
 - Quittierte Alarme bleiben pro Gerät quittiert (`localStorage` `sw_acked`).
+- Benutzerrollen: «Einsatzkraft» und «Administrator» (`users.is_admin`). Nur Administratoren erreichen `admin.html` und die Verwaltungsrouten (`admin()`). Die eigene Administratorrolle und das eigene Konto lassen sich nicht entfernen, damit immer ein Administrator bleibt.
+- Passwort: jede Person kann das eigene ändern (`me/password`, aktuelles Passwort nötig, keine Passwortregeln ausser nicht leer). Administratoren setzen Passwörter zurück (`user/password`): Person wird abgemeldet und muss beim nächsten Login ein eigenes setzen (`must_change`, serverseitig erzwungen). Gilt auch für neue Benutzer und das Erst-Admin-Konto.
+- Benutzer entfernen = deaktivieren (`user/active`): abgemeldet, aus laufendem Einsatz ausgetragen, Daten bleiben erhalten, reaktivierbar.
+- Einsatzart: «Scharfer Einsatz» oder «Übung» (`incidents.is_exercise`). Scharf = immer kritischer Alarm (Vollbild, Dauerton). Übung = normale Benachrichtigung (Hinweis, kurzer Ton), ausser die Person hat den «Übungsmodus» aktiviert (`users.exercise_mode`). Der Server entscheidet (`critical()` → `critical` in `incident/state`), das Frontend folgt; eine spätere Push-Lösung soll dieselbe Regel nutzen.
 
 ## Wichtige Konventionen
 - Frontend: keine Neuzeichnung des Menüs, solange ein Eingabefeld Fokus hat oder das Formular «Einsatz starten» offen ist (`draw()`-Guards). Bei Änderungen am Polling darauf achten.
