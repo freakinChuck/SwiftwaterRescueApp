@@ -45,6 +45,7 @@ const MAP_PROVIDERS={
 // Gewässernetz (OpenStreetMap via Overpass). Austauschbar: Funktion loadNet() liefert Wege als {id,nodes[],geometry[{lat,lon}]} in Fliessrichtung.
 const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
 const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
+const WATER_M=80;  // Standort so nahe an der Gewässerachse gilt als «auf dem Gewässer» (Boot); zählt im Einsatzlog nicht als Fahrt
 const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
 const MODES={base:'Anfahrt via Stützpunkt',direct:'Anfahrt direkt',logistics:'Logistik',coordinator:'Koordinator KP Rück'};
 /* ---------- Helfer ($, esc, api, fail, fmtT in common.js) ---------- */
@@ -164,7 +165,10 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   if(st.can_flow){$('#bFl').onclick=()=>{const v=+$('#fl').value;api('incident/flow',{flow_ms:v,src:suggVal!==null&&v===suggVal?'BAFU-Vorschlag':'manuell'}).then(poll).catch(fail)};$('#bSug').onclick=suggest}
   if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail)}}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined')track();await poll()}catch(e){fail(e)}}
-function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
+// Abstand zur nächsten Gewässerachse im geladenen Gewässernetz (Meter), Infinity ohne Daten
+function waterDist(p){if(!net||!net.ways)return Infinity;const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);let best=Infinity;
+  net.ways.forEach(w=>{const g=w.geometry;for(let j=1;j<g.length;j++){const ax=(g[j-1].lon-p.lon)*kx,ay=(g[j-1].lat-p.lat)*ky,dx=(g[j].lon-g[j-1].lon)*kx,dy=(g[j].lat-g[j-1].lat)*ky,L=dx*dx+dy*dy,t=L?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L)):0;best=Math.min(best,Math.hypot(ax+t*dx,ay+t*dy))}});return best}
+function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',{lat:p.lat,lon:p.lon,water:waterDist(p)<WATER_M?1:0,manual:manual?1:0}).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
 function track(){if(watchId!=null||hb)return;
   if(!navigator.geolocation){locStatus='Dieses Gerät kann den Standort nicht bestimmen (Test: manuell setzen).';return}
   watchId=navigator.geolocation.watchPosition(p=>{if(manual)return;const q={lat:p.coords.latitude,lon:p.coords.longitude};Date.now()-lastSent>3000?sendPos(q):lastPos=q},

@@ -22,14 +22,14 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS users(id $ai, username $tx UNIQUE, name $tx, pass_hash $tx, is_admin INT DEFAULT 0, active INT DEFAULT 1, photo MEDIUMTEXT, token $tx, exercise_mode INT DEFAULT 0, must_change INT DEFAULT 0)",
  "CREATE TABLE IF NOT EXISTS roles(id $ai, name $tx, color $tx, is_lead INT DEFAULT 0, active INT DEFAULT 1, is_post INT DEFAULT 0)",
  "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT, is_exercise INT DEFAULT 0)",
- "CREATE TABLE IF NOT EXISTS participants(id $ai, incident_id INT, user_id INT, mode $tx, role_id INT NULL, lat DOUBLE NULL, lon DOUBLE NULL, loc_at BIGINT NULL, left_at BIGINT NULL, log_lat DOUBLE NULL, log_lon DOUBLE NULL, log_at BIGINT NULL, UNIQUE(incident_id,user_id))",
+ "CREATE TABLE IF NOT EXISTS participants(id $ai, incident_id INT, user_id INT, mode $tx, role_id INT NULL, lat DOUBLE NULL, lon DOUBLE NULL, loc_at BIGINT NULL, left_at BIGINT NULL, log_lat DOUBLE NULL, log_lon DOUBLE NULL, log_at BIGINT NULL, fast_at BIGINT NULL, UNIQUE(incident_id,user_id))",
  "CREATE TABLE IF NOT EXISTS messages(id $ai, incident_id INT, from_user INT, text TEXT, recipients TEXT NULL, created BIGINT)",
  "CREATE TABLE IF NOT EXISTS incident_log(id $ai, incident_id INT, ts BIGINT, user_id INT NULL, kind $tx, text TEXT)",
  "CREATE TABLE IF NOT EXISTS rescuee_marks(id $ai, incident_id INT, user_id INT, lat DOUBLE, lon DOUBLE, ts BIGINT, manual INT DEFAULT 0)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
-foreach (['participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0'], 'incidents' => ['is_exercise INT DEFAULT 0']] as $t => $cs)
+foreach (['participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0'], 'incidents' => ['is_exercise INT DEFAULT 0']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO roles(name,color,is_lead,is_post) VALUES(?,?,?,?)");
@@ -42,6 +42,11 @@ $route = $_GET['r'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: [];
 $now = time();
 $MODES = ['base' => 'Anfahrt via Stützpunkt', 'direct' => 'Anfahrt direkt', 'logistics' => 'Logistik', 'coordinator' => 'Koordinator KP Rück'];
+// Einsatzlog: nur Fahrten mit Fahrzeug protokollieren (nicht zu Fuss, nicht auf dem Gewässer)
+const VEHICLE_MS = 7;    // ab ca. 25 km/h zwischen zwei Standortmeldungen gilt eine Bewegung als Fahrt (Gehen/Laufen liegt deutlich darunter)
+const TRIP_MIN_M = 500;  // kürzere Fahrten und GPS-Sprünge nicht protokollieren
+const STOP_S = 90;       // so lange ohne schnelle Meldung = Fahrt beendet
+const TRIP_LOG_S = 600;  // lange Fahrten zusätzlich alle 10 Minuten protokollieren
 
 if ($route === 'info') out(['app' => 'swiftwater', 'name' => $cfg['install_name'] ?? null]); // App prüft damit die eingegebene Adresse
 if ($route === 'login') {
@@ -79,6 +84,15 @@ function avg($a) { $a = array_values(array_filter($a, fn($x) => $x !== null)); r
 function http_get($url) {
   if (function_exists('curl_init')) { $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']); $r = curl_exec($c); curl_close($c); return $r; }
   return @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 10, 'header' => "User-Agent: SwiftwaterRescue/0.1\r\n"]]));
+}
+// Ortsname zu Koordinaten: swisstopo-Ortschaftenverzeichnis, ausserhalb der Schweiz OpenStreetMap (Nominatim), sonst Koordinaten
+function placeName($la, $lo) {
+  $r = json_decode(http_get('https://api3.geo.admin.ch/rest/services/api/MapServer/identify?geometryType=esriGeometryPoint&sr=4326&tolerance=0&returnGeometry=false&lang=de&layers=all:ch.swisstopo-vd.ortschaftenverzeichnis_plz&geometry=' . sprintf('%.6F,%.6F', $lo, $la)) ?: '', true);
+  $n = $r['results'][0]['attributes']['langtext'] ?? null;
+  if (is_string($n) && $n !== '') return $n;
+  $r = json_decode(http_get('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=de&' . sprintf('lat=%.6F&lon=%.6F', $la, $lo)) ?: '', true);
+  foreach (['village', 'town', 'city', 'suburb', 'hamlet', 'municipality'] as $k) if (!empty($r['address'][$k])) return $r['address'][$k];
+  return sprintf('%.4F, %.4F', $la, $lo);
 }
 function logRows($id, $asc = false) {
   global $db;
@@ -160,18 +174,27 @@ switch ($route) {
   }
   out(['ok' => true]);
 
- case 'incident/location':
+ case 'incident/location': // water=1: Gerät liegt am Gewässer (z. B. Boot), manual=1: von Hand gesetzt; beides zählt nicht als Fahrt
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
   $p = part($inc['id']); if (!$p || $p['left_at'] !== null || $p['mode'] === 'declined') out(['ok' => true]);
   $la = (float)$in['lat']; $lo = (float)$in['lon'];
   $db->prepare("UPDATE participants SET lat=?,lon=?,loc_at=? WHERE incident_id=? AND user_id=?")->execute([$la, $lo, $now, $inc['id'], $uid]);
-  if ($p['log_lat'] === null) $db->prepare("UPDATE participants SET log_lat=?,log_lon=?,log_at=? WHERE incident_id=? AND user_id=?")->execute([$la, $lo, $now, $inc['id'], $uid]);
-  else { // grössere Verschiebung (> 300 m, höchstens einmal pro Minute) protokollieren
-    $d = hav((float)$p['log_lat'], (float)$p['log_lon'], $la, $lo);
-    if ($d > 300 && $now - (int)$p['log_at'] >= 60) {
-      logev($inc['id'], $uid, 'move', 'hat sich um ca. ' . (round($d / 10) * 10) . ' m verschoben');
-      $db->prepare("UPDATE participants SET log_lat=?,log_lon=?,log_at=? WHERE incident_id=? AND user_id=?")->execute([$la, $lo, $now, $inc['id'], $uid]);
-    }
+  // Fahrt erkennen: Start = letzte Position vor der ersten schnellen Meldung (log_*), fast_at = letzte schnelle Meldung
+  $dt = $p['loc_at'] !== null ? $now - (int)$p['loc_at'] : 0;
+  $fast = $dt >= 4 && empty($in['water']) && empty($in['manual']) && hav((float)$p['lat'], (float)$p['lon'], $la, $lo) / $dt >= VEHICLE_MS;
+  $trip = fn($a, $b, $c, $f) => $db->prepare("UPDATE participants SET log_lat=?,log_lon=?,log_at=?,fast_at=? WHERE incident_id=? AND user_id=?")->execute([$a, $b, $c, $f, $inc['id'], $uid]);
+  if ($p['fast_at'] === null) { if ($fast) $trip((float)$p['lat'], (float)$p['lon'], (int)$p['loc_at'], $now); }
+  else {
+    $end = !$fast && $now - (int)$p['fast_at'] >= STOP_S; $long = $fast && $now - (int)$p['log_at'] >= TRIP_LOG_S;
+    if ($end || $long) {
+      $d = hav((float)$p['log_lat'], (float)$p['log_lon'], $la, $lo);
+      if ($d >= TRIP_MIN_M) {
+        $t = max(1, ($end ? (int)$p['fast_at'] : $now) - (int)$p['log_at']); $a = placeName((float)$p['log_lat'], (float)$p['log_lon']); $b = placeName($la, $lo);
+        logev($inc['id'], $uid, 'move', ($a === $b ? "fährt innerhalb von $a" : "fährt von $a " . ($end ? 'nach' : 'Richtung') . " $b")
+          . ' (ca. ' . number_format($d / 1000, 1, '.', '') . ' km Luftlinie, Ø ' . round($d / $t * 3.6) . ' km/h' . ($end ? '' : ', unterwegs') . ')');
+      }
+      $end ? $trip(null, null, null, null) : $trip($la, $lo, $now, $now); // lange Fahrt: ab hier neuer Abschnitt
+    } elseif ($fast) $db->prepare("UPDATE participants SET fast_at=? WHERE incident_id=? AND user_id=?")->execute([$now, $inc['id'], $uid]);
   }
   out(['ok' => true]);
 

@@ -6,6 +6,18 @@
 3. `rescue/admin.html` im Browser öffnen, mit `admin` anmelden, ein eigenes Passwort setzen und Benutzer und Rollen anlegen. Die Einsatz-App liegt unter `rescue/`.
 4. Das Admin-Passwort danach nicht mehr in `config.php` stehen lassen (Konto wird nur beim ersten Start angelegt).
 
+## Deployment per SSH (`scripts/deploy.ps1`)
+Liefert einen eingecheckten Git-Stand aus (nicht die Arbeitskopie): Dateien per `git archive`, Upload per `scp`, auf dem Server erst PHP-Syntaxprüfung (`php -l`), dann Übernahme. `api/config.php` und `api/data/` (Datenbank) werden nie überschrieben; der ausgelieferte Stand steht in `api/data/deployed.txt`.
+
+1. SSH-Schlüssel erzeugen (`ssh-keygen -t ed25519 -f %USERPROFILE%\.ssh\swiftwater-tst`) und den öffentlichen Teil im cyon-Panel beim Hosting-Benutzer eintragen (FTP-Unterkonten unterstützen keine Schlüssel).
+2. `deploy.example.json` nach `deploy.local.json` kopieren und Server, Benutzer, Schlüssel und Zielordner eintragen. Die Datei ist per `.gitignore` ausgeschlossen, Passwörter braucht es keine.
+3. Ausliefern:
+```
+powershell -File scripts\deploy.ps1                                  # origin/main
+powershell -File scripts\deploy.ps1 -Ref origin/feature/irgendwas    # anderer Stand, z. B. zum Testen eines PR
+```
+Beim ersten Mal auf dem Server `api/config.php` von Hand anlegen (Vorlage im Repo), das Skript lädt sie nicht hoch.
+
 ## Verwaltung, Passwörter, Übungen
 - `admin.html` (ohne Karte) ist nur für die Benutzerrolle Administrator: Benutzer anlegen, Rolle ändern, Passwort zurücksetzen, deaktivieren/reaktivieren, Spezialrollen, Einsatzstatistik.
 - Jede Person ändert ihr Passwort im Menü unter «Konto → Passwort ändern».
@@ -46,4 +58,4 @@ In `index.html` oben: `DEFAULT_BASE` ändern oder in `MAP_PROVIDERS` einen Eintr
 - Nur ein aktiver Einsatz gleichzeitig.
 - BAFU-Vorschlag: Abfluss (m³/s) der nächsten BAFU-Station via api.existenz.ch (inoffiziell, Quelle BAFU angeben), Geschwindigkeit nur grob geschätzt (v ≈ 0.8·Q^0.18). Abfrage ist ungetestet gegen die Live-API.
 - Rettling-Markierung: Teilnehmende markieren die Position des Rettlings mit ihrem Standort; Einsatzleitung/Admin/Einsatzersteller kann Markierungen entfernen oder manuell setzen.
-- Einsatzlog (Beitritt, Rollen, Fliessgeschwindigkeit, Nachrichten, Verschiebung > 300 m, Suchgebiet erreicht) und Statistik im Admin-Bereich.
+- Einsatzlog (Beitritt, Rollen, Fliessgeschwindigkeit, Nachrichten, Fahrten mit Fahrzeug mit Ortsnamen, Suchgebiet erreicht) und Statistik im Admin-Bereich.
