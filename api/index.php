@@ -295,37 +295,8 @@ switch ($route) {
   $inc = activeIncident(); if (!$inc || !canFlow($inc)) fail('Nur Personen, die am Einsatz teilnehmen, können die Fliessgeschwindigkeit setzen', 403);
   $v = (float)($in['flow_ms'] ?? 0); if ($v <= 0 || $v > 15) fail('Fliessgeschwindigkeit muss zwischen 0 und 15 m/s liegen');
   $db->prepare("UPDATE incidents SET flow_ms=? WHERE id=?")->execute([$v, $inc['id']]);
-  logev($inc['id'], $uid, 'flow', 'setzt die Fliessgeschwindigkeit auf ' . $v . ' m/s (' . (($in['src'] ?? '') === 'BAFU-Vorschlag' ? 'BAFU-Vorschlag' : 'manuell') . ')');
+  logev($inc['id'], $uid, 'flow', 'setzt die Fliessgeschwindigkeit auf ' . $v . ' m/s');
   out(['ok' => true]);
-
- case 'flow/suggest': // Vorschlag aus BAFU-Abflussdaten (via api.existenz.ch), grobe Schätzung
-  $lat = (float)($in['lat'] ?? 0); $lon = (float)($in['lon'] ?? 0); $river = mb_strtolower(trim($in['river'] ?? ''));
-  $cache = __DIR__ . '/data/hydro_locations.json'; $q = 'app=swiftwater.rescue&version=0.1';
-  $raw = (is_file($cache) && filemtime($cache) > $now - 7 * 86400) ? file_get_contents($cache) : http_get("https://api.existenz.ch/apiv1/hydro/locations?$q");
-  $pl = json_decode($raw ?: '', true)['payload'] ?? null;
-  if (!is_array($pl) || !$pl) fail('BAFU-Stationsliste nicht abrufbar', 502);
-  if (!is_file($cache) || filemtime($cache) <= $now - 7 * 86400) @file_put_contents($cache, $raw);
-  $c = [];
-  foreach ($pl as $key => $e) {
-    if (!is_array($e)) continue;
-    $la = $lo = null;
-    array_walk_recursive($e, function ($v, $k) use (&$la, &$lo) { $k = strtolower((string)$k); if (!is_numeric($v)) return; if ($k === 'lat' || $k === 'latitude') $la = (float)$v; if ($k === 'lon' || $k === 'lng' || $k === 'longitude') $lo = (float)$v; });
-    if ($la === null || $lo === null) continue;
-    $d = hav($lat, $lon, $la, $lo); if ($d > 25000) continue;
-    $nm = is_string($e['name'] ?? null) ? $e['name'] : (string)$key;
-    $c[] = ['id' => (string)($e['id'] ?? $key), 'd' => $d, 'name' => $nm, 'm' => $river !== '' && str_contains(mb_strtolower(json_encode($e, JSON_UNESCAPED_UNICODE)), $river)];
-  }
-  if (!$c) fail('Keine BAFU-Messstation innerhalb von 25 km gefunden', 404);
-  usort($c, fn($a, $b) => [$b['m'], $a['d']] <=> [$a['m'], $b['d']]);
-  $c = array_slice($c, 0, 6);
-  $lt = json_decode(http_get('https://api.existenz.ch/apiv1/hydro/latest?locations=' . implode(',', array_column($c, 'id')) . "&parameters=flow&$q") ?: '', true)['payload'] ?? null;
-  if (!is_array($lt)) fail('BAFU-Abflussdaten nicht abrufbar', 502);
-  $flow = []; foreach ($lt as $r) if (($r['par'] ?? '') === 'flow' && is_numeric($r['val'] ?? null)) $flow[(string)$r['loc']] = (float)$r['val'];
-  foreach ($c as $s) if (isset($flow[$s['id']]) && $flow[$s['id']] > 0) {
-    $qv = $flow[$s['id']];
-    out(['name' => $s['name'], 'station' => $s['id'], 'distance_km' => round($s['d'] / 1000, 1), 'q' => round($qv, 1), 'v' => max(0.3, round(0.8 * pow($qv, 0.18), 1)), 'same_river' => $s['m']]);
-  }
-  fail('Keine aktuellen Abflussdaten in der Nähe verfügbar', 404);
 
  case 'incident/mark': // Position des Rettlings: alle Teilnehmenden (eigener Standort), manuell nur Einsatzleitung
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');

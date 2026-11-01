@@ -97,7 +97,7 @@ const roleSel=(id,cur,attr)=>`<select ${attr}><option value="">Keine Spezialroll
 const csys=()=>(me&&(me.coord_sys||me.coord_default))||'lv95',fc=(lat,lon)=>fmtC(lat,lon,csys());
 // mit Trennzeichen, leer wenn ausgeblendet (persönliche Einstellung «Keine Koordinaten anzeigen», coord_sys none)
 const fcs=(lat,lon,pre=' · ',post='')=>{const t=fc(lat,lon);return t?pre+t+post:''};
-let msgInit=false,areaShape=null,lastRiver='',suggText='',suggVal=null,areaLogged={},creating=false,openSec=new Set(),locStatus='',lastPos=null,manual=false,hb=null,me=null,roles=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,alarmQ=[],watchId=null,lastSent=0,fitted=null;
+let msgInit=false,areaShape=null,areaLogged={},creating=false,openSec=new Set(),locStatus='',lastPos=null,manual=false,hb=null,me=null,roles=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,alarmQ=[],watchId=null,lastSent=0,fitted=null;
 onUnauth=()=>render();
 /* ---------- Alarm ---------- */
 let actx,beepT;function beep(on){clearInterval(beepT);if(!on)return;actx=actx||new(window.AudioContext||webkitAudioContext)();
@@ -211,7 +211,7 @@ function drawArea(i){areaInfo='';areaShape=null;const D=(i.flow_ms||0)*(st.now-i
   if(net.fail)return circleArea(i,D,'Gewässerdaten nicht verfügbar ('+net.err+'), neuer Versuch folgt.');
   let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=dist(g,{lat:i.lat,lon:i.lon});if(d<bd){bd=d;best={w,k}}}));
   if(!best||bd>SNAP_M)return circleArea(i,D,'Kein Gewässer nahe der PLS.');
-  areaShape={polys:[]};lastRiver=(best.w.tags&&best.w.tags.name)||'';const posts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&(roles.find(r=>r.id==p.role_id)||{}).is_post);let cutBy=null,maxLen=0;
+  areaShape={polys:[]};const posts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&(roles.find(r=>r.id==p.role_id)||{}).is_post);let cutBy=null,maxLen=0;
   const g=L.layerGroup();
   follow(best.w,best.k,D,new Set()).forEach(pts=>{
     for(let j=0;j<pts.length;j++){const po=posts.find(p=>dist(pts[j],{lat:p.lat,lon:p.lon})<120);if(po){pts=pts.slice(0,j+1);cutBy=po.name;break}}
@@ -254,7 +254,7 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}${esc(fcs(i.lat,i.lon,' · PLS '))}</div>`;
   if(!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button class="pri" data-m="${esc(x.code)}">Einsatz annehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
   // Reihenfolge im Menü: Mein Einsatz, Fliessgeschwindigkeit & Suchgebiet, danach der Rest
-  const flowSec=st.can_flow?sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button><button id="bSug">Vorschlag BAFU</button></div><div class="mut">${esc(suggText)}</div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`):'';
+  const flowSec=st.can_flow?sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button></div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`):'';
   if(!joined)h+=flowSec;
   else{
     const sh=shares(m.mode);
@@ -274,7 +274,7 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   if(joined){if($('#rs'))$('#rs').onchange=e=>{e.target.blur();api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail)};$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
   }
-  if(st.can_flow){$('#bFl').onclick=()=>{const v=+$('#fl').value;api('incident/flow',{flow_ms:v,src:suggVal!==null&&v===suggVal?'BAFU-Vorschlag':'manuell'}).then(poll).catch(fail)};$('#bSug').onclick=suggest}
+  if(st.can_flow)$('#bFl').onclick=()=>api('incident/flow',{flow_ms:+$('#fl').value}).then(poll).catch(fail);
   if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail)}}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'&&shares(mode))track();await poll()}catch(e){fail(e)}}
 function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
@@ -299,11 +299,6 @@ function inPoly(p,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=
 function checkArea(){if(!st||!st.incident||!areaShape||!areaShape.polys||areaLogged[st.incident.id])return;const m=st.me;if(!m||m.left_at||m.mode==='declined')return;
   const pos=lastPos?{lat:lastPos.lat,lng:lastPos.lon}:(m.lat!=null?{lat:m.lat,lng:m.lon}:null);if(!pos)return;
   if(areaShape.polys.some(pl=>inPoly(pos,pl))){const id=st.incident.id;areaLogged[id]=true;api('incident/event',{kind:'area'}).catch(()=>{areaLogged[id]=false})}}
-async function suggest(){suggText='Vorschlag wird abgefragt …';suggVal=null;draw();
-  try{const r=await api('flow/suggest',{lat:st.incident.lat,lon:st.incident.lon,river:lastRiver});suggVal=r.v;
-    suggText=`Vorschlag ${r.v} m/s (Station ${r.name}, Abfluss ${r.q} m³/s, ${r.distance_km} km von der PLS${r.same_river?'':', anderes Gewässer möglich'}). Grobe Schätzung, vor Ort prüfen. Quelle: BAFU.`}
-  catch(e){suggText='Kein Vorschlag möglich: '+e.message}
-  draw();const el=$('#fl');if(el&&suggVal)el.value=suggVal}
 function areaBounds(){if(!areaShape)return null;
   if(areaShape.circle){const c=areaShape.circle;return L.latLng(c.lat,c.lon).toBounds(c.r*2)}
   if(areaShape.polys&&areaShape.polys.length)return L.latLngBounds(areaShape.polys.flat().map(p=>[p.lat,p.lng]));return null}
