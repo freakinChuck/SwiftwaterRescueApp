@@ -11,9 +11,9 @@ $my = str_starts_with($cfg['dsn'], 'mysql');
 $ai = $my ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
 $tx = $my ? 'VARCHAR(190)' : 'TEXT';
 foreach ([
- "CREATE TABLE IF NOT EXISTS users(id $ai, username $tx UNIQUE, name $tx, pass_hash $tx, is_admin INT DEFAULT 0, active INT DEFAULT 1, photo MEDIUMTEXT, token $tx)",
+ "CREATE TABLE IF NOT EXISTS users(id $ai, username $tx UNIQUE, name $tx, pass_hash $tx, is_admin INT DEFAULT 0, active INT DEFAULT 1, photo MEDIUMTEXT, token $tx, exercise_mode INT DEFAULT 0, must_change INT DEFAULT 0)",
  "CREATE TABLE IF NOT EXISTS roles(id $ai, name $tx, color $tx, is_lead INT DEFAULT 0, active INT DEFAULT 1, is_post INT DEFAULT 0)",
- "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT)",
+ "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT, is_exercise INT DEFAULT 0)",
  "CREATE TABLE IF NOT EXISTS participants(id $ai, incident_id INT, user_id INT, mode $tx, role_id INT NULL, lat DOUBLE NULL, lon DOUBLE NULL, loc_at BIGINT NULL, left_at BIGINT NULL, log_lat DOUBLE NULL, log_lon DOUBLE NULL, log_at BIGINT NULL, UNIQUE(incident_id,user_id))",
  "CREATE TABLE IF NOT EXISTS messages(id $ai, incident_id INT, from_user INT, text TEXT, recipients TEXT NULL, created BIGINT)",
  "CREATE TABLE IF NOT EXISTS incident_log(id $ai, incident_id INT, ts BIGINT, user_id INT NULL, kind $tx, text TEXT)",
@@ -21,13 +21,14 @@ foreach ([
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
-foreach (['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL'] as $c) { try { $db->exec("ALTER TABLE participants ADD COLUMN $c"); } catch (Throwable $e) {} }
+foreach (['participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0'], 'incidents' => ['is_exercise INT DEFAULT 0']] as $t => $cs)
+  foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO roles(name,color,is_lead,is_post) VALUES(?,?,?,?)");
   foreach ([['Einsatzleitung','#d62828',1,0],['Rettungsboot','#1d7fd1',0,0],['Rettungsschlitten','#e6a100',0,0],['Sicherungs- und Beobachtungsposten','#2a9d5c',0,1]] as $r) $st->execute($r);
 }
 if (!$db->query("SELECT COUNT(*) c FROM users")->fetch()['c'])
-  $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin) VALUES(?,?,?,1)")->execute([$cfg['admin_user'], 'Administrator', password_hash($cfg['admin_pass'], PASSWORD_DEFAULT)]);
+  $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin,must_change) VALUES(?,?,?,1,1)")->execute([$cfg['admin_user'], 'Administrator', password_hash($cfg['admin_pass'], PASSWORD_DEFAULT)]);
 
 $route = $_GET['r'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: [];
@@ -44,14 +45,19 @@ if ($route === 'login') {
 }
 
 $tok = $_SERVER['HTTP_X_TOKEN'] ?? '';
-$st = $db->prepare("SELECT id,username,name,is_admin,photo FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
+$st = $db->prepare("SELECT id,username,name,is_admin,photo,exercise_mode,must_change FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
 $me = $tok ? $st->fetch() : null;
 if (!$me) fail('Nicht angemeldet', 401);
-$uid = (int)$me['id']; $me['id'] = $uid; $me['is_admin'] = (int)$me['is_admin'];
+$me = ints($me, ['id', 'is_admin', 'exercise_mode', 'must_change']); $uid = $me['id'];
+// Nach einem Zurücksetzen durch die Verwaltung ist nur der Passwortwechsel erlaubt
+if ($me['must_change'] && !in_array($route, ['me', 'me/password'])) fail('Bitte zuerst ein eigenes Passwort setzen', 403);
 
 /* ---------- Hilfsfunktionen ---------- */
 function ints($r, $ks) { foreach ($ks as $k) if (isset($r[$k])) $r[$k] = (int)$r[$k]; return $r; }
 function admin() { global $me; if (!$me['is_admin']) fail('Nur für Administratoren', 403); }
+function pwCheck($p) { if (!is_string($p) || mb_strlen($p) < 8) fail('Das Passwort muss mindestens 8 Zeichen lang sein'); }
+// Kritisch alarmieren: scharfe Einsätze immer, Übungen nur bei aktiviertem Übungsmodus
+function critical($inc) { global $me; return !(int)$inc['is_exercise'] || $me['exercise_mode']; }
 function part($incId, $u = null) { global $db, $uid; $s = $db->prepare("SELECT * FROM participants WHERE incident_id=? AND user_id=?"); $s->execute([$incId, $u ?? $uid]); return $s->fetch(); }
 function isActivePart($incId) { $p = part($incId); return $p && $p['mode'] !== 'declined' && $p['left_at'] === null; }
 function isLead($incId) { global $db, $uid; $s = $db->prepare("SELECT COUNT(*) c FROM participants p JOIN roles r ON r.id=p.role_id WHERE p.incident_id=? AND p.user_id=? AND p.left_at IS NULL AND r.is_lead=1"); $s->execute([$incId, $uid]); return $s->fetch()['c'] > 0; }
@@ -82,9 +88,10 @@ switch ($route) {
   $at = !empty($in['alarm_at']) ? (int)$in['alarm_at'] : $now;
   if ($at > $now + 60) fail('Der Alarmeingang darf nicht in der Zukunft liegen');
   if ($at < $now - 7 * 86400) fail('Der Alarmeingang liegt mehr als 7 Tage zurück');
-  $db->prepare("INSERT INTO incidents(message,lat,lon,alarm_at,created_by) VALUES(?,?,?,?,?)")->execute([$in['message'], (float)$in['lat'], (float)$in['lon'], $at, $uid]);
+  $ex = empty($in['is_exercise']) ? 0 : 1;
+  $db->prepare("INSERT INTO incidents(message,lat,lon,alarm_at,created_by,is_exercise) VALUES(?,?,?,?,?,?)")->execute([$in['message'], (float)$in['lat'], (float)$in['lon'], $at, $uid, $ex]);
   $nid = (int)$db->lastInsertId();
-  logev($nid, $uid, 'start', 'hat den Einsatz gestartet: ' . $in['message']);
+  logev($nid, $uid, 'start', 'hat den Einsatz gestartet (' . ($ex ? 'Übung' : 'scharfer Einsatz') . '): ' . $in['message']);
   out(['id' => $nid]);
 
  case 'incident/state': // Polling-Endpunkt: ?since=<letzte Nachrichten-ID>
@@ -93,7 +100,7 @@ switch ($route) {
     $last = $db->query("SELECT id,ended_at FROM incidents ORDER BY id DESC LIMIT 1")->fetch();
     out(['incident' => null, 'last_ended' => $last ?: null]);
   }
-  $inc['id'] = (int)$inc['id']; $inc['lat'] = (float)$inc['lat']; $inc['lon'] = (float)$inc['lon']; $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by'];
+  $inc['id'] = (int)$inc['id']; $inc['lat'] = (float)$inc['lat']; $inc['lon'] = (float)$inc['lon']; $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc['is_exercise'] = (int)$inc['is_exercise'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
   $id = $inc['id']; $since = (int)($_GET['since'] ?? 0);
   $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,u.name,u.photo FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
@@ -111,7 +118,7 @@ switch ($route) {
   $cf = canFlow($inc);
   out(['incident' => $inc,
        'participants' => array_map(function ($p) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
-       'marks' => $marks, 'messages' => $msgs, 'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf,
+       'marks' => $marks, 'messages' => $msgs, 'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'critical' => critical($inc),
        'log' => $cf ? logRows($id) : null, 'now' => $now]);
 
  case 'incident/join': // mode: base | direct | logistics | coordinator | declined
@@ -255,8 +262,8 @@ switch ($route) {
  case 'incident/log': admin(); out(logRows((int)($_GET['id'] ?? 0), true));
 
  case 'stats': admin();
-  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'accepted', 'declined', 'first_accept', 'first_area']), $db->query(
-   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,u.name creator,
+  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'accepted', 'declined', 'first_accept', 'first_area']), $db->query(
+   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,u.name creator,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode='declined') declined,
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='accept') first_accept,
@@ -264,22 +271,60 @@ switch ($route) {
     FROM incidents i LEFT JOIN users u ON u.id=i.created_by ORDER BY i.id DESC")->fetchAll());
   $ended = array_filter($rows, fn($r) => $r['ended_at']);
   out(['incidents' => $rows, 'totals' => [
-    'count' => count($rows), 'ended' => count($ended),
+    'count' => count($rows), 'ended' => count($ended), 'exercises' => count(array_filter($rows, fn($r) => $r['is_exercise'])),
     'avg_duration' => avg(array_map(fn($r) => $r['ended_at'] - $r['alarm_at'], $ended)),
     'avg_accepted' => avg(array_column($rows, 'accepted')),
     'avg_first_accept' => avg(array_map(fn($r) => $r['first_accept'] === null ? null : $r['first_accept'] - $r['alarm_at'], $rows)),
     'avg_first_area' => avg(array_map(fn($r) => $r['first_area'] === null ? null : $r['first_area'] - $r['alarm_at'], $rows))]]);
 
- case 'users':
-  out(array_map(fn($r) => ints($r, ['id', 'is_admin', 'active']), $db->query("SELECT id,username,name,is_admin,active FROM users ORDER BY name")->fetchAll()));
- case 'user/save': admin();
+ case 'me/password': // eigenes Passwort ändern (aktuelles Passwort nötig)
+  $s = $db->prepare("SELECT pass_hash FROM users WHERE id=?"); $s->execute([$uid]);
+  if (!password_verify($in['old'] ?? '', $s->fetch()['pass_hash'])) fail('Das aktuelle Passwort ist falsch', 403);
+  pwCheck($in['new'] ?? '');
+  if ($in['new'] === ($in['old'] ?? '')) fail('Das neue Passwort muss sich vom aktuellen unterscheiden');
+  $db->prepare("UPDATE users SET pass_hash=?, must_change=0 WHERE id=?")->execute([password_hash($in['new'], PASSWORD_DEFAULT), $uid]);
+  out(['ok' => true]);
+ case 'me/settings': // Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren
+  $db->prepare("UPDATE users SET exercise_mode=? WHERE id=?")->execute([empty($in['exercise_mode']) ? 0 : 1, $uid]);
+  out(['ok' => true]);
+
+ /* ---------- Verwaltung (nur Benutzerrolle Administrator) ---------- */
+ case 'users': admin();
+  out(array_map(fn($r) => ints($r, ['id', 'is_admin', 'active', 'exercise_mode', 'must_change']), $db->query("SELECT id,username,name,is_admin,active,exercise_mode,must_change FROM users ORDER BY active DESC, name")->fetchAll()));
+ case 'user/save': admin(); // anlegen oder Name/Benutzerrolle ändern
+  $adm = empty($in['is_admin']) ? 0 : 1; $nm = trim($in['name'] ?? '');
   if (!empty($in['id'])) {
-    $db->prepare("UPDATE users SET name=?,is_admin=?,active=? WHERE id=?")->execute([$in['name'], (int)$in['is_admin'], (int)$in['active'], $in['id']]);
-    if (!empty($in['password'])) $db->prepare("UPDATE users SET pass_hash=? WHERE id=?")->execute([password_hash($in['password'], PASSWORD_DEFAULT), $in['id']]);
+    $id = (int)$in['id'];
+    // Die eigene Rolle bleibt bestehen, damit immer mindestens ein Administrator übrig ist
+    if ($id === $uid && !$adm) fail('Die eigene Administratorrolle kann nicht entfernt werden');
+    if ($nm === '') fail('Name fehlt');
+    $db->prepare("UPDATE users SET name=?,is_admin=? WHERE id=?")->execute([$nm, $adm, $id]);
   } else {
-    if (empty($in['username']) || empty($in['password'])) fail('Benutzername und Passwort sind Pflicht');
-    try { $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin) VALUES(?,?,?,?)")->execute([$in['username'], $in['name'] ?: $in['username'], password_hash($in['password'], PASSWORD_DEFAULT), (int)($in['is_admin'] ?? 0)]); }
+    $un = trim($in['username'] ?? ''); if ($un === '') fail('Benutzername ist Pflicht');
+    pwCheck($in['password'] ?? '');
+    try { $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin,must_change) VALUES(?,?,?,?,1)")->execute([$un, $nm ?: $un, password_hash($in['password'], PASSWORD_DEFAULT), $adm]); }
     catch (PDOException $e) { fail('Benutzername existiert bereits'); }
+  }
+  out(['ok' => true]);
+ case 'user/password': admin(); // zurücksetzen: Person wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen
+  $id = (int)($in['id'] ?? 0);
+  if ($id === $uid) fail('Das eigene Passwort bitte über «Passwort ändern» setzen');
+  pwCheck($in['password'] ?? '');
+  $s = $db->prepare("UPDATE users SET pass_hash=?, must_change=1, token=NULL WHERE id=?"); $s->execute([password_hash($in['password'], PASSWORD_DEFAULT), $id]);
+  if (!$s->rowCount()) fail('Benutzer nicht gefunden', 404);
+  out(['ok' => true]);
+ case 'user/active': admin(); // Benutzer entfernen (deaktivieren) oder reaktivieren, Einsatzdaten bleiben erhalten
+  $id = (int)($in['id'] ?? 0); $a = empty($in['active']) ? 0 : 1;
+  if ($id === $uid) fail('Das eigene Konto kann nicht deaktiviert werden');
+  $s = $db->prepare("SELECT name FROM users WHERE id=?"); $s->execute([$id]); $u = $s->fetch();
+  if (!$u) fail('Benutzer nicht gefunden', 404);
+  $db->prepare("UPDATE users SET active=?" . ($a ? '' : ', token=NULL') . " WHERE id=?")->execute([$a, $id]);
+  if (!$a && ($inc = activeIncident())) { // aus laufendem Einsatz austragen
+    $p = part($inc['id'], $id);
+    if ($p && $p['left_at'] === null && $p['mode'] !== 'declined') {
+      $db->prepare("UPDATE participants SET left_at=?, role_id=NULL WHERE incident_id=? AND user_id=?")->execute([$now, $inc['id'], $id]);
+      logev($inc['id'], $uid, 'kick', 'hat ' . $u['name'] . ' aus dem Einsatz entfernt (Konto deaktiviert)');
+    }
   }
   out(['ok' => true]);
  case 'me/photo': // kleines Bild als Data-URL (Client verkleinert auf ca. 96px)

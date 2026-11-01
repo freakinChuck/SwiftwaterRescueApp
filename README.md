@@ -3,8 +3,13 @@
 ## Installation (cyon Webhosting Single)
 1. Alles per FTP/Dateimanager in ein Verzeichnis hochladen (z. B. `/public_html/rescue/`). HTTPS aktivieren (Pflicht für GPS und Benachrichtigungen).
 2. `api/config.php`: `admin_pass` ändern. Standard ist SQLite (keine Einrichtung nötig). Für MySQL im cyon-Panel eine Datenbank anlegen und DSN/Benutzer/Passwort eintragen.
-3. `rescue/` im Browser öffnen, mit `admin` anmelden, unter «Admin» Benutzer und Rollen anlegen.
+3. `rescue/admin.html` im Browser öffnen, mit `admin` anmelden, ein eigenes Passwort setzen und Benutzer und Rollen anlegen. Die Einsatz-App liegt unter `rescue/`.
 4. Das Admin-Passwort danach nicht mehr in `config.php` stehen lassen (Konto wird nur beim ersten Start angelegt).
+
+## Verwaltung, Passwörter, Übungen
+- `admin.html` (ohne Karte) ist nur für die Benutzerrolle Administrator: Benutzer anlegen, Rolle ändern, Passwort zurücksetzen, deaktivieren/reaktivieren, Spezialrollen, Einsatzstatistik.
+- Jede Person ändert ihr Passwort im Menü unter «Konto → Passwort ändern».
+- Beim Einsatzstart wählen: «Scharfer Einsatz» (immer kritischer Alarm) oder «Übung» (normale Benachrichtigung). Wer unter «Konto» den Übungsmodus aktiviert, erhält auch Übungen als kritischen Alarm.
 
 ## Karte
 Standard ist das swisstopo-Luftbild; über das Ebenen-Symbol oben rechts kann auf Landeskarte oder OpenStreetMap umgeschaltet werden (Wahl wird pro Gerät gemerkt).
