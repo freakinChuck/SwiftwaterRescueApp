@@ -1,0 +1,39 @@
+# Swiftwater Rescue – Projektkontext für Claude Code
+
+Sprache: Oberfläche, Code-Kommentare, Commits und Kommunikation auf Deutsch (Schweizer Rechtschreibung, «ss» statt «ß»).
+
+## Zweck
+Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und Lageübersicht bei Einsätzen (vermisste Person im Fliessgewässer). Grundlage ist die Anforderungsspezifikation «SwiftwaterRescue App Specs V0.1» vom 01.11.2026 (PDF, im Claude-Projekt «Swiftwater Rescue App»).
+
+## Architektur
+- `index.html`: gesamte Web-App (Vanilla JS, Leaflet via cdnjs, kein Build-Schritt). Läuft am Handy und im Browser.
+- `api/index.php`: JSON-API (PHP, PDO). Routen über `?r=<route>`, Token im Header `X-Token`.
+- `api/config.php`: DB-Konfiguration. Standard SQLite (`api/data/`), MySQL über DSN möglich. Nur Platzhalter-Passwort einchecken, echte Zugangsdaten nie committen.
+- Hosting-Vorgabe: cyon «Webhosting Single» (PHP, MySQL, keine WebSockets, kein Node-Dauerprozess). Alles muss dort laufen.
+- Aktualisierung per Polling (4 s, `incident/state`).
+- Das Schema wird beim ersten Aufruf automatisch angelegt und per `ALTER TABLE` migriert (Migrationen schlagen bei vorhandenen Spalten still fehl).
+
+## Entscheide des Auftraggebers
+- Karte: swisstopo, Standard **Luftbild** (`swisstopo_sat`), umschaltbar (Landeskarte, OSM). Anbieter müssen leicht austauschbar bleiben (`MAP_PROVIDERS`, `DEFAULT_BASE` oben in `index.html`).
+- Karte im Vollbild, alle Bedienelemente in einem versteckten Menü (☰).
+- Suchgebiet folgt dem Flusslauf (OSM-Gewässernetz via Overpass, `loadNet`), Ufergebiet `BANK_M` = 30 m je Seite, endet am ersten Sicherungs-/Beobachtungsposten (Rolle mit Flag `is_post`). Rückfall: Kreis um die PLS.
+- Fliessgeschwindigkeit: darf von allen Teilnehmenden gesetzt werden; Vorschlag aus BAFU-Abflussdaten (`flow/suggest`, via api.existenz.ch, Quelle BAFU nennen; v ≈ 0.8·Q^0.18 nur grobe Schätzung).
+- Nachrichten nur an Personen, die den Einsatz angenommen haben.
+- Alarmeingang kann beim Einsatzstart übersteuert werden.
+- «Einsatz verwalten» (beenden) darf: Rolle Einsatzleitung, Administratoren, Ersteller des Einsatzes (`canManage`). Einsatzleitung darf Einsatzkräfte entfernen (Wiedereinstieg bleibt möglich) und Rettling-Markierungen entfernen/manuell setzen.
+- Rettling-Markierung: alle Teilnehmenden markieren mit eigenem Standort (eine Markierung pro Person).
+- Einsatzlog (Beitritt, Rollen, Bewegung > 300 m, Suchgebiet erreicht, Nachrichten, Markierungen, Entfernen), Gross-Modus im Einsatz und in der History; Einsatzstatistik im Admin-Bereich.
+- Quittierte Alarme bleiben pro Gerät quittiert (`localStorage` `sw_acked`).
+
+## Wichtige Konventionen
+- Frontend: keine Neuzeichnung des Menüs, solange ein Eingabefeld Fokus hat oder das Formular «Einsatz starten» offen ist (`draw()`-Guards). Bei Änderungen am Polling darauf achten.
+- Server liefert Zahlen als Zahlen (`ints()`, Float-Casts); MySQL liefert sonst Strings, was im JS zu falschen Wahrheitswerten führt.
+- Berechtigungen immer serverseitig prüfen, das Frontend blendet nur aus.
+
+## Stand und bekannte Lücken
+- **Nie ausgeführt/getestet:** Die Entwicklung fand ohne PHP-Laufzeit und ohne Netzzugriff auf Overpass/BAFU statt. Das JS wurde nur auf Syntaxfehler geprüft. Erste Aufgabe: lokal mit `php -S` starten und die Abläufe durchtesten (Login, Einsatz, Beitritt, Standort, Suchgebiet, Log, Statistik, Markierung, Entfernen).
+- BAFU-Vorschlag: Struktur der Antwort von `api.existenz.ch/apiv1/hydro/locations` und `/latest` ist nur aus Dokumentationsschnipseln abgeleitet, Parsing in `flow/suggest` prüfen.
+- Kritischer Alarm: als Web-App nur Vollbild-Alarm mit Ton/Vibration solange die App offen ist. Echte kritische Alarme (App geschlossen, Nicht stören) brauchen eine native App mit Push (FCM/APNs, Critical Alerts) oder zumindest Web-Push.
+- Nur ein aktiver Einsatz gleichzeitig.
+- Gewässerwahl am PLS: nächstgelegener Wasserlauf, nicht korrigierbar. Auswahlschritt wäre sinnvoll.
+- Offen/Ideen: Web-Push, PLS auf Markierung verschieben, Zugriffsschutz/Rate-Limit für Login, Einsatzarchiv-Export, Sperre für entfernte Personen.
