@@ -18,6 +18,7 @@ Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und
 ## Entscheide des Auftraggebers
 - Karte: swisstopo, Standard **Luftbild** (`swisstopo_sat`), umschaltbar (Landeskarte, OSM). Anbieter müssen leicht austauschbar bleiben (`MAP_PROVIDERS`, `DEFAULT_BASE` oben in `index.html`).
 - Karte im Vollbild, alle Bedienelemente in einem versteckten Menü (☰).
+- Kartenknöpfe rechts unten: «Suchgebiet» (ganzes Gebiet), «Einsatzkräfte» (alle mit Standort, auch ausserhalb des Suchgebiets), «Personen» (Liste nach Spezialrolle gruppiert, Reihenfolge wie in der Verwaltung, ohne Rolle zuletzt). In der Liste: «Zentrieren» (`map.panTo`, Zoom bleibt) und «Folgen» (`followId`; Karte wird bei jedem Polling auf die Person geschoben, Zoom bleibt). Folgen endet über ✕, beim Verschieben der Karte von Hand (`dragstart`), bei «Suchgebiet»/«Einsatzkräfte» und wenn die Person den Einsatz verlässt. Auf schmalen Bildschirmen schliesst die Liste nach Zentrieren/Folgen.
 - Suchgebiet folgt dem Flusslauf (OSM-Gewässernetz via Overpass, `loadNet`), Ufergebiet `BANK_M` = 30 m je Seite, endet am ersten Sicherungs-/Beobachtungsposten (Rolle mit Flag `is_post`). Rückfall: Kreis um die PLS.
 - Fliessgeschwindigkeit: darf von allen Teilnehmenden gesetzt werden; Vorschlag aus BAFU-Abflussdaten (`flow/suggest`, via api.existenz.ch, Quelle BAFU nennen; v ≈ 0.8·Q^0.18 nur grobe Schätzung).
 - Nachrichten nur an Personen, die den Einsatz angenommen haben.
