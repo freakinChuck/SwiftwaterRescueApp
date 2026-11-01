@@ -12,7 +12,7 @@ $ai = $my ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMEN
 $tx = $my ? 'VARCHAR(190)' : 'TEXT';
 foreach ([
  "CREATE TABLE IF NOT EXISTS users(id $ai, username $tx UNIQUE, name $tx, pass_hash $tx, is_admin INT DEFAULT 0, active INT DEFAULT 1, photo MEDIUMTEXT, token $tx, exercise_mode INT DEFAULT 0, must_change INT DEFAULT 0)",
- "CREATE TABLE IF NOT EXISTS roles(id $ai, name $tx, color $tx, is_lead INT DEFAULT 0, active INT DEFAULT 1, is_post INT DEFAULT 0)",
+ "CREATE TABLE IF NOT EXISTS roles(id $ai, name $tx, color $tx, is_lead INT DEFAULT 0, active INT DEFAULT 1, is_post INT DEFAULT 0, can_message INT DEFAULT 1)",
  "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT, is_exercise INT DEFAULT 0)",
  "CREATE TABLE IF NOT EXISTS participants(id $ai, incident_id INT, user_id INT, mode $tx, role_id INT NULL, lat DOUBLE NULL, lon DOUBLE NULL, loc_at BIGINT NULL, left_at BIGINT NULL, log_lat DOUBLE NULL, log_lon DOUBLE NULL, log_at BIGINT NULL, fast_at BIGINT NULL, UNIQUE(incident_id,user_id))",
  "CREATE TABLE IF NOT EXISTS messages(id $ai, incident_id INT, from_user INT, text TEXT, recipients TEXT NULL, created BIGINT)",
@@ -20,10 +20,12 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS rescuee_marks(id $ai, incident_id INT, user_id INT, lat DOUBLE, lon DOUBLE, ts BIGINT, manual INT DEFAULT 0)",
  // Einrückoptionen beim Annehmen eines Einsatzes; participants.mode verweist auf code
  "CREATE TABLE IF NOT EXISTS modes(id $ai, code $tx UNIQUE, name $tx, share_location INT DEFAULT 1, active INT DEFAULT 1)",
+ // Einstellungen der Verwaltung als Schlüssel/Wert, z. B. msg_no_role
+ "CREATE TABLE IF NOT EXISTS settings(k $tx PRIMARY KEY, v TEXT)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
-foreach (['participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0'], 'incidents' => ['is_exercise INT DEFAULT 0']] as $t => $cs)
+foreach (['roles' => ['can_message INT DEFAULT 1'], 'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0'], 'incidents' => ['is_exercise INT DEFAULT 0']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO roles(name,color,is_lead,is_post) VALUES(?,?,?,?)");
@@ -77,6 +79,18 @@ function canManage($inc) { global $me, $uid; return $me['is_admin'] || (int)$inc
 function canFlow($inc) { return canManage($inc) || isActivePart((int)$inc['id']); }
 function modeRow($code) { global $db; $s = $db->prepare("SELECT * FROM modes WHERE code=?"); $s->execute([$code]); return $s->fetch() ?: null; }
 function modeShares($code) { $m = modeRow($code); return !$m || (int)$m['share_location']; }
+function setting($k, $d) { global $db; $s = $db->prepare("SELECT v FROM settings WHERE k=?"); $s->execute([$k]); $r = $s->fetch(); return $r ? $r['v'] : $d; }
+function setSetting($k, $v) { global $db, $my; $db->prepare($my ? "INSERT INTO settings(k,v) VALUES(?,?) ON DUPLICATE KEY UPDATE v=VALUES(v)" : "INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v")->execute([$k, $v]); }
+// Nachrichten senden: nur wer den Einsatz angenommen hat; wer den Einsatz verwalten darf, immer;
+// sonst je nach Spezialrolle (roles.can_message) bzw. Einstellung für Personen ohne Rolle (msg_no_role)
+function canMessage($inc) {
+  global $db; $p = part((int)$inc['id']);
+  if (!$p || $p['mode'] === 'declined' || $p['left_at'] !== null) return false;
+  if (canManage($inc)) return true;
+  if ($p['role_id'] === null) return (bool)(int)setting('msg_no_role', '1');
+  $s = $db->prepare("SELECT can_message FROM roles WHERE id=?"); $s->execute([$p['role_id']]); $r = $s->fetch();
+  return !$r || (bool)(int)$r['can_message'];
+}
 function activeIncident() { global $db; return $db->query("SELECT * FROM incidents WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1")->fetch() ?: null; }
 function logev($incId, $userId, $kind, $text) { global $db, $now; $db->prepare("INSERT INTO incident_log(incident_id,ts,user_id,kind,text) VALUES(?,?,?,?,?)")->execute([$incId, $now, $userId, $kind, $text]); }
 function hav($a, $b, $c, $d) { $p1 = deg2rad($a); $p2 = deg2rad($c); $dp = $p2 - $p1; $dl = deg2rad($d - $b); $x = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 12742000 * asin(min(1, sqrt($x))); }
@@ -106,7 +120,7 @@ if ($route === 'incident/location' && ($inc = activeIncident()) && ($p = part($i
 
 switch ($route) {
  case 'me': out(['me' => $me]);
- case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post']), $db->query("SELECT id,name,color,is_lead,is_post FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
+ case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active']), $db->query("SELECT id,code,name,share_location,active FROM modes ORDER BY id")->fetchAll()));
 
@@ -146,7 +160,7 @@ switch ($route) {
   $cf = canFlow($inc);
   out(['incident' => $inc,
        'participants' => array_map(function ($p) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
-       'marks' => $marks, 'messages' => $msgs, 'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'critical' => critical($inc),
+       'marks' => $marks, 'messages' => $msgs, 'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'can_message' => canMessage($inc), 'critical' => critical($inc),
        'log' => $cf ? logRows($id) : null, 'now' => $now]);
 
  case 'incident/join': // mode: code einer aktiven Einrückoption oder declined
@@ -284,6 +298,7 @@ switch ($route) {
  case 'incident/message': // to: leer = alle Teilnehmenden, sonst Liste von User-IDs (nur Teilnehmende)
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
   if (!isActivePart($inc['id'])) fail('Nachrichten können nur Personen senden, die den Einsatz angenommen haben');
+  if (!canMessage($inc)) fail('Deine Rolle darf keine Nachrichten senden', 403);
   if (trim($in['text'] ?? '') === '') fail('Text fehlt');
   $s = $db->prepare("SELECT user_id FROM participants WHERE incident_id=? AND mode<>'declined' AND left_at IS NULL"); $s->execute([$inc['id']]);
   $act = array_map('intval', array_column($s->fetchAll(), 'user_id'));
@@ -371,8 +386,12 @@ switch ($route) {
   $db->prepare("UPDATE users SET photo=? WHERE id=?")->execute([$in['photo'], $uid]);
   out(['ok' => true]);
  case 'role/save': admin();
-  if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), $in['id']]);
-  else $db->prepare("INSERT INTO roles(name,color,is_lead) VALUES(?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0)]);
+  if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
+  else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message) VALUES(?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1)]);
+  out(['ok' => true]);
+ case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1')]);
+ case 'settings/save': admin();
+  if (isset($in['msg_no_role'])) setSetting('msg_no_role', empty($in['msg_no_role']) ? '0' : '1');
   out(['ok' => true]);
  case 'mode/save': admin(); // Einrückoption anlegen oder ändern
   $nm = trim($in['name'] ?? ''); if ($nm === '') fail('Name fehlt');

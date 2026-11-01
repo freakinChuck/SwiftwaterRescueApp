@@ -22,10 +22,13 @@ body{height:100dvh;display:flex;flex-direction:column}
 @media(min-width:760px){body.so #chip{left:calc(400px + 1rem)}body.so #areaNote{left:calc(400px + 1rem)}}
 .rm{width:34px;height:34px;border-radius:50%;background:#2ee6d6;color:#00302c;border:3px solid #fff;display:grid;place-items:center;font-weight:800;box-shadow:0 0 0 2px #0008}
 #fitBtns{position:fixed;right:.7rem;bottom:calc(6.8rem + env(safe-area-inset-bottom));z-index:1000;display:flex;flex-direction:column;gap:.4rem}#fitBtns button{background:var(--panel);box-shadow:0 1px 4px #0008;font-size:.85rem;padding:.5rem .6rem}#fitBtns button[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}
-/* Personenliste (Knopf «Personen») und Anzeige beim Folgen */
-#people{position:fixed;right:.7rem;top:calc(7.4rem + env(safe-area-inset-top));bottom:calc(15rem + env(safe-area-inset-bottom));width:min(330px,calc(100vw - 1.4rem));z-index:1050;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px #000a;display:flex;flex-direction:column}
-#peopleHead{display:flex;align-items:center;gap:.5rem;padding:.4rem .4rem .4rem .8rem;border-bottom:1px solid var(--line)}#peopleHead b{flex:1}#peopleHead button{padding:.3rem .6rem}
-#peopleList{overflow:auto;padding:.2rem .7rem .7rem}
+/* Seitenfenster «Personen» und «Nachrichten» (Knöpfe rechts unten, immer nur eines offen) und Anzeige beim Folgen */
+#people,#msgs{position:fixed;right:.7rem;top:calc(7.4rem + env(safe-area-inset-top));bottom:calc(17.6rem + env(safe-area-inset-bottom));width:min(330px,calc(100vw - 1.4rem));z-index:1050;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px #000a;display:flex;flex-direction:column}
+.phead{display:flex;align-items:center;gap:.5rem;padding:.4rem .4rem .4rem .8rem;border-bottom:1px solid var(--line)}.phead b{flex:1}.phead button{padding:.3rem .6rem}
+#peopleList,#msgList{overflow:auto;padding:.2rem .7rem .7rem;flex:1;min-height:0}
+.mg{padding:.45rem 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.mg .t{display:block;color:var(--mut);font-size:.78rem}
+#msgForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem;display:grid;gap:.4rem}#msgForm select{width:100%;max-height:7.5rem}#msgForm .row{margin:0}
+#fitBtns .cnt{display:inline-block;min-width:1.4em;margin-left:.35rem;padding:0 .3em;border-radius:9px;background:var(--alarm);color:#fff;font-size:.75rem;font-weight:700}
 .pg{margin:.7rem 0 .2rem;font-size:.8rem;color:var(--mut);font-weight:600}
 .pp{display:flex;align-items:center;gap:.5rem;padding:.35rem 0;border-bottom:1px solid var(--line)}.pp .mk{width:30px;height:30px;font-size:.7rem;border-width:3px;flex:0 0 auto}
 .pp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.pp .nm small{display:block;color:var(--mut)}.pp button{padding:.35rem .5rem;font-size:.82rem}.pp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
@@ -79,11 +82,12 @@ function showAlarm(){if($('#alarm').style.display==='flex'||!alarmQ.length)retur
   if('Notification'in window&&Notification.permission==='granted')new Notification(t,{body:b,requireInteraction:true})}
 $('#aOk').onclick=()=>{if(curKey)ackAdd(curKey);curKey=null;$('#alarm').style.display='none';beep(false);showAlarm()};
 /* ---------- Hauptansicht ---------- */
-function toggleSheet(f){const w=$('#sheetWrap');if(!w)return;const o=f===undefined?!w.classList.contains('open'):f;w.classList.toggle('open',o);document.body.classList.toggle('so',o);if(o&&peopleOpen){peopleOpen=false;renderPeople()}}
+function toggleSheet(f){const w=$('#sheetWrap');if(!w)return;const o=f===undefined?!w.classList.contains('open'):f;w.classList.toggle('open',o);document.body.classList.toggle('so',o);if(o&&panel)togglePanel(panel,false)}
 function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);if(st&&st.incident){const x=!!st.incident.is_exercise;c.hidden=false;c.classList.toggle('ex',x);c.textContent=(x?'Übung: ':'Einsatz: ')+st.incident.message+' · '+Math.round((st.now-st.incident.alarm_at)/60)+' min'}else c.hidden=true}
-function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><button id="bFitA" title="Ganzes Suchgebiet anzeigen">Suchgebiet</button><button id="bFitF" title="Alle Einsatzkräfte mit Standort anzeigen">Einsatzkräfte</button><button id="bPeople" aria-expanded="false" aria-controls="people" title="Liste aller Personen im Einsatz">Personen</button></div><div id="followChip" hidden role="status"><span></span><button id="bUnfollow" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><div id="people" hidden role="dialog" aria-label="Personen im Einsatz"><div id="peopleHead"><b>Personen im Einsatz</b><button id="bPeopleX" aria-label="Liste schliessen">✕</button></div><div id="peopleList"></div></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
+function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><button id="bFitA" title="Ganzes Suchgebiet anzeigen">Suchgebiet</button><button id="bFitF" title="Alle Einsatzkräfte mit Standort anzeigen">Einsatzkräfte</button><button id="bPeople" aria-expanded="false" aria-controls="people" title="Liste aller Personen im Einsatz">Personen</button><button id="bMsg" aria-expanded="false" aria-controls="msgs" title="Nachrichten lesen und senden">Nachrichten<span class="cnt" id="msgCnt" hidden></span></button></div><div id="followChip" hidden role="status"><span></span><button id="bUnfollow" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><div id="people" hidden role="dialog" aria-label="Personen im Einsatz"><div class="phead"><b>Personen im Einsatz</b><button id="bPeopleX" aria-label="Liste schliessen">✕</button></div><div id="peopleList"></div></div><div id="msgs" hidden role="dialog" aria-label="Nachrichten"><div class="phead"><b>Nachrichten</b><button id="bMsgX" aria-label="Nachrichten schliessen">✕</button></div><div id="msgList" aria-live="polite"></div><div id="msgForm"></div></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
   $('#bMenu').onclick=()=>toggleSheet();$('#bFitA').onclick=fitArea;$('#bFitF').onclick=fitForces;$('#bClose').onclick=()=>toggleSheet(false);$('#chip').onclick=()=>toggleSheet(true);
-  followId=null;peopleOpen=false;$('#bPeople').onclick=()=>togglePeople();$('#bPeopleX').onclick=()=>togglePeople(false);$('#bUnfollow').onclick=stopFollow;
+  followId=null;panel=null;msgSeen=0;msgFormKey='';$('#bPeople').onclick=()=>togglePanel('people');$('#bPeopleX').onclick=()=>togglePanel('people',false);$('#bUnfollow').onclick=stopFollow;
+  $('#bMsg').onclick=()=>togglePanel('msgs');$('#bMsgX').onclick=()=>togglePanel('msgs',false);
   $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f)};
   $('#sheet').addEventListener('toggle',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k)e.target.open?openSec.add(k):openSec.delete(k)},true);
   map=L.map('map',{zoomControl:false}).setView([46.8,8.2],8);L.control.zoom({position:'bottomright'}).addTo(map);
@@ -161,19 +165,16 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     h+=sec('mine','Mein Einsatz',`<div class="row"><span>${esc(modeOf(m.mode).name)}</span><select id="rs"><option value="">Keine Spezialrolle</option>${roles.map(r=>`<option value="${r.id}" ${r.id==m.role_id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div><div class="mut">${sh?esc(locStatus||'Standort wird ermittelt …'):'Bei dieser Einrückoption wird dein Standort nicht geteilt.'}</div><div class="row">${sh?`<button id="bMan">${manual?'GPS-Standort verwenden':'Standort manuell setzen (Test)'}</button>`:''}<button id="bLv">Einsatz verlassen</button></div>`);
     {const mh=(st.marks||[]).map(x=>`<div class="msg">${x.manual?'Einsatzleitung (manuell)':esc(x.name)} · ${fmtT(x.ts)} · ${x.lat.toFixed(5)}, ${x.lon.toFixed(5)} ${(st.can_manage||x.user_id==me.id)?`<button data-mr="${x.id}">Entfernen</button>`:''}</div>`).join('')||'<div class="mut">Noch keine Markierung</div>';
     h+=sec('rescuee','Rettling markieren',`${sh?'<div class="row"><button class="pri" id="bMark">Rettling an meinem Standort markieren</button></div>':''}${st.can_manage?'<div class="row"><button id="bMarkMan">Position manuell setzen (Karte antippen)</button></div>':''}${mh}`)}
-    h+=sec('msg','Nachricht senden',`<div class="row"><input id="mt" placeholder="Nachricht" style="flex:3"></div><div class="row"><select id="mto" multiple size="3" title="Empfänger (leer = alle)">${st.participants.filter(p=>p.user_id!=me.id&&p.mode!=='declined'&&!p.left_at).map(p=>`<option value="${p.user_id}">${esc(p.name)}</option>`).join('')}</select></div><div class="mut">Empfänger: keine Auswahl = alle, die den Einsatz angenommen haben</div><div class="row"><button id="bSend">Senden</button></div>`);
     }
   if(st.can_flow)h+=sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button><button id="bSug">Vorschlag BAFU</button></div><div class="mut">${esc(suggText)}</div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`);
   if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
   const act=st.participants.filter(p=>p.mode!=='declined');
   h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table>${act.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(roleName(p)||'')}</td><td class="mut">${p.left_at?'verlassen':esc(modeOf(p.mode).name)}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}">Entfernen</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
-  h+=sec('log','Nachrichten',(window.msgs||[]).map(x=>`<div class="msg"><b>${esc(x.from_name)}</b> ${esc(x.text)}</div>`).join('')||'<div class="mut">Keine Nachrichten</div>');
   s.innerHTML=h+acc;bindAcc();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
   if(joined){$('#rs').onchange=e=>api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail);$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
-    $('#bSend').onclick=()=>{const to=[...$('#mto').selectedOptions].map(o=>+o.value);api('incident/message',{text:$('#mt').value,to}).then(()=>{$('#mt').value='';poll()}).catch(fail)};
   }
   if(st.can_flow){$('#bFl').onclick=()=>{const v=+$('#fl').value;api('incident/flow',{flow_ms:v,src:suggVal!==null&&v===suggVal?'BAFU-Vorschlag':'manuell'}).then(poll).catch(fail)};$('#bSug').onclick=suggest}
   if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail)}}
@@ -216,20 +217,44 @@ function fitArea(){toggleSheet(false);const b=areaBounds();if(!b)return alert('D
 function fitForces(){toggleSheet(false);const pts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined');
   if(!pts.length)return alert('Keine Einsatzkräfte mit bekanntem Standort.');
   stopFollow();map.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lon])),FITPAD)}
-/* ---------- Personenliste, Zentrieren und Folgen (Zoom bleibt jeweils unverändert) ---------- */
-let followId=null,peopleOpen=false;
+/* ---------- Seitenfenster «Personen» (Zentrieren, Folgen; Zoom bleibt) und «Nachrichten» ---------- */
+let followId=null,panel=null,msgSeen=0,msgFormKey=''; // panel: 'people' | 'msgs' | null
 const activePeople=()=>st&&st.incident?st.participants.filter(p=>!p.left_at&&p.mode!=='declined'):[];
-const narrow=()=>matchMedia('(max-width:759px)').matches; // Liste deckt dort die Karte ab
+const narrow=()=>matchMedia('(max-width:759px)').matches; // Seitenfenster deckt dort die Karte ab
 const ago=ts=>{const s=st.now-ts;return s<90?'gerade eben':s<5400?'vor '+Math.round(s/60)+' min':'vor '+Math.round(s/3600)+' h'};
-function togglePeople(o){peopleOpen=o===undefined?!peopleOpen:o;if(peopleOpen)toggleSheet(false);renderPeople()}
+function togglePanel(name,on){panel=(on===undefined?panel!==name:on)?name:(panel===name?null:panel);if(panel)toggleSheet(false);renderPeople();renderMsgs()}
 // gruppiert nach Spezialrolle in der Reihenfolge der Verwaltung, Personen ohne Rolle zuletzt; innerhalb alphabetisch
-function renderPeople(){const o=$('#people');if(!o)return;const on=peopleOpen&&!!(st&&st.incident);o.hidden=!on;$('#bPeople').setAttribute('aria-expanded',on);if(!on)return;
-  const act=activePeople(),grp=[...roles.map(r=>({r,items:act.filter(p=>p.role_id==r.id)})),{r:null,items:act.filter(p=>!roles.some(r=>r.id==p.role_id))}].filter(g=>g.items.length);
+const byRole=list=>[...roles.map(r=>({r,items:list.filter(p=>p.role_id==r.id)})),{r:null,items:list.filter(p=>!roles.some(r=>r.id==p.role_id))}]
+  .filter(g=>g.items.length).map(g=>({r:g.r,items:g.items.sort((a,b)=>a.name.localeCompare(b.name,'de'))}));
+function renderPeople(){const o=$('#people');if(!o)return;const on=panel==='people'&&!!(st&&st.incident);o.hidden=!on;$('#bPeople').setAttribute('aria-expanded',on);if(!on)return;
+  const grp=byRole(activePeople());
   const row=p=>{const has=p.lat!=null,f=followId===p.user_id;
     return `<div class="pp">${mk(p)}<div class="nm">${esc(p.name)}${p.user_id==me.id?' (du)':''}<small>${esc(modeOf(p.mode).name)} · ${has?'Standort '+ago(p.loc_at):'kein Standort'}</small></div>${has?`<button data-c="${p.user_id}" title="Auf der Karte zentrieren">Zentrieren</button><button data-f="${p.user_id}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>`:''}</div>`};
-  $('#peopleList').innerHTML=grp.map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.sort((a,b)=>a.name.localeCompare(b.name,'de')).map(row).join('')).join('')||'<div class="mut" style="padding:.6rem 0">Noch niemand im Einsatz.</div>'}
-function centerOn(id){const p=activePeople().find(x=>x.user_id===id);if(!p||p.lat==null)return;stopFollow();map.panTo([p.lat,p.lon]);if(narrow())togglePeople(false)}
-function toggleFollow(id){if(followId===id)return stopFollow();followId=id;followNow();if(narrow())togglePeople(false);else renderPeople()}
+  $('#peopleList').innerHTML=grp.map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.map(row).join('')).join('')||'<div class="mut" style="padding:.6rem 0">Noch niemand im Einsatz.</div>'}
+function centerOn(id){const p=activePeople().find(x=>x.user_id===id);if(!p||p.lat==null)return;stopFollow();map.panTo([p.lat,p.lon]);if(narrow())togglePanel('people',false)}
+function toggleFollow(id){if(followId===id)return stopFollow();followId=id;followNow();if(narrow())togglePanel('people',false);else renderPeople()}
+// Nachrichten: Verlauf (älteste oben) und Senden, sofern die Rolle es darf (st.can_message, vom Server); Zähler für Ungelesenes am Knopf
+function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!!(st&&st.incident),ms=window.msgs||[];o.hidden=!on;$('#bMsg').setAttribute('aria-expanded',on);
+  const key='sw_msgseen_'+(st&&st.incident?st.incident.id:0);
+  if(!msgSeen)try{msgSeen=+localStorage.getItem(key)||0}catch(e){}
+  if(on&&ms.length&&ms[ms.length-1].id>msgSeen){msgSeen=ms[ms.length-1].id;try{localStorage.setItem(key,msgSeen)}catch(e){}}
+  const unread=ms.filter(m=>m.id>msgSeen&&m.from_user!=me.id).length,c=$('#msgCnt');c.hidden=!unread;c.textContent=unread;
+  if(!on)return;
+  const L=$('#msgList'),atEnd=L.scrollHeight-L.scrollTop-L.clientHeight<30,joined=!!(st.me&&!st.me.left_at&&st.me.mode!=='declined');
+  L.innerHTML=ms.map(m=>`<div class="mg"><b>${m.from_user==me.id?'Du':esc(m.from_name)}</b> ${esc(m.text)}<span class="t">${fmtT(m.created)} · ${m.recipients?'an ausgewählte Personen':'an alle'}</span></div>`).join('')
+    ||`<div class="mut" style="padding:.6rem 0">${joined?'Noch keine Nachrichten.':'Nachrichten sehen nur Personen, die den Einsatz angenommen haben.'}</div>`;
+  if(atEnd)L.scrollTop=L.scrollHeight;
+  // Formular nur neu aufbauen, wenn sich Berechtigung oder Empfänger ändern; neue Empfänger erst nach der Eingabe,
+  // eine geänderte Berechtigung sofort (Senden ginge ohnehin nicht mehr)
+  const others=activePeople().filter(p=>p.user_id!=me.id),perm=joined+'|'+st.can_message,fk=perm+'|'+others.map(p=>p.user_id+':'+p.role_id).join(),f=$('#msgForm');
+  if(fk===msgFormKey||(msgFormKey.startsWith(perm+'|')&&f.contains(document.activeElement)))return;
+  const keepTxt=$('#mt')?$('#mt').value:'',keepTo=$('#mto')?[...$('#mto').selectedOptions].map(x=>x.value):[];msgFormKey=fk;
+  if(!joined||!st.can_message){f.innerHTML=`<div class="mut">${joined?'Deine Rolle darf keine Nachrichten senden.':'Zum Senden zuerst den Einsatz annehmen.'}</div>`;return}
+  f.innerHTML=`<select id="mto" multiple size="4" aria-label="Empfänger (keine Auswahl = alle)">${byRole(others).map(g=>`<optgroup label="${esc(g.r?g.r.name:'Ohne Spezialrolle')}">${g.items.map(p=>`<option value="${p.user_id}" ${keepTo.includes(String(p.user_id))?'selected':''}>${esc(p.name)}</option>`).join('')}</optgroup>`).join('')}</select>
+    <div class="mut">Empfänger: keine Auswahl = alle im Einsatz</div><div class="row"><input id="mt" placeholder="Nachricht" aria-label="Nachricht" style="flex:3"><button class="pri" id="bSend">Senden</button></div>`;
+  $('#mt').value=keepTxt;
+  const send=()=>{const t=$('#mt').value.trim();if(!t)return;api('incident/message',{text:t,to:[...$('#mto').selectedOptions].map(x=>+x.value)}).then(()=>{$('#mt').value='';[...$('#mto').options].forEach(x=>x.selected=false);poll()}).catch(fail)};
+  $('#bSend').onclick=send;$('#mt').onkeydown=e=>{if(e.key==='Enter')send()}}
 // bei jeder Aktualisierung: Karte auf die gefolgte Person schieben; verlässt sie den Einsatz, endet das Folgen
 function followNow(){if(followId==null)return updateFollowChip();const p=activePeople().find(x=>x.user_id===followId);if(!p)return stopFollow();
   if(p.lat!=null)map.panTo([p.lat,p.lon]);updateFollowChip()}
@@ -248,7 +273,7 @@ let timer;async function poll(){try{const nx=await api(`incident/state&since=${l
       if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
       st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&shares(nx.me.mode))track();else stop()}
     else{if(st&&st.incident){const x=st.incident.is_exercise;if(notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
-    if(st&&st.incident)creating=false;updateChip();drawMap();followNow();renderPeople();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}catch(e){console.error('Poll',e)}}
+    if(st&&st.incident)creating=false;updateChip();drawMap();followNow();renderPeople();renderMsgs();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}catch(e){console.error('Poll',e)}}
 async function render(){clearInterval(timer);if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
   try{me=(await api('me')).me}catch(e){return}
   if(me.must_change){$('#app').innerHTML='';return pwDialog(true,render)} // nach Zurücksetzen zuerst eigenes Passwort setzen
