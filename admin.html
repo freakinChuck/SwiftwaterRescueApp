@@ -3,14 +3,29 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Swiftwater Rescue – Verwaltung</title>
 <link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
 body{min-height:100dvh}
 header{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10}header h1{font-size:1.15rem;margin:0;flex:1 1 12rem}
-main{max-width:1100px;margin:0 auto;padding:1rem;display:grid;gap:1.2rem}
+main{max-width:1100px;margin:0 auto;padding:1rem;display:grid;grid-template-columns:minmax(0,1fr);gap:1.2rem} /* minmax: breite Tabellen scrollen in .tw statt die Seite zu verbreitern */
 section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:1rem}
 h2{margin:0 0 .6rem;font-size:1.1rem}h3{margin:1rem 0 .3rem;font-size:1rem}
 .tw{overflow-x:auto}th{text-align:left;padding:.3rem;color:var(--mut);font-weight:600;border-bottom:1px solid var(--line);white-space:nowrap}
 tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{padding:.35rem .6rem;margin:.1rem}
+/* Einsatzlog: scharfe Einsätze rot, Übungen blau */
+.badge.real{background:var(--alarm)}tr.art-ex td:first-child{border-left:4px solid var(--ex)}tr.art-real td:first-child{border-left:4px solid var(--alarm)}
+/* Replay */
+#replay{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
+#rpHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--line)}#rpHead h2{margin:0;font-size:1.15rem;flex:1 1 16rem}
+#rpBody{flex:1;display:flex;min-height:0}#rpMap{flex:1;min-width:0;background:#0c1c25}
+#rpSide{width:24rem;overflow:auto;border-left:1px solid var(--line);padding:.6rem}
+#rpFoot{display:flex;gap:.8rem;align-items:center;padding:.6rem 1rem;border-top:1px solid var(--line)}#rpRange{flex:1;padding:0}
+#rpTime{font-variant-numeric:tabular-nums;white-space:nowrap}
+.rpl{display:block;width:100%;text-align:left;border:0;border-left:4px solid;border-radius:0;background:none;padding:.35rem .5rem;font-size:.9rem}.rpl:hover{background:var(--panel)}.rpl .t{color:var(--mut);margin-right:.4rem}
+.rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.15rem 0}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}
+.leaflet-tooltip.rplbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px}.leaflet-tooltip.rplbl::before{display:none}
+@media(max-width:760px){#rpBody{flex-direction:column}#rpSide{width:auto;height:40%;border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
 <div id="app"></div>
 <script src="common.js"></script>
@@ -24,7 +39,7 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   if(!me.is_admin){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
-    <main><section id="sU"><h2>Benutzer</h2><div class="mut">Wird geladen …</div></section><section id="sM"><h2>Einrückoptionen</h2><div class="mut">Wird geladen …</div></section><section id="sR"><h2>Spezialrollen</h2><div class="mut">Wird geladen …</div></section><section id="sC"><h2>Koordinaten</h2><div class="mut">Wird geladen …</div></section><section id="stats"><h2>Einsatzstatistik</h2><div class="mut">Wird geladen …</div></section></main>`;
+    <main><section id="sU"><h2>Benutzer</h2><div class="mut">Wird geladen …</div></section><section id="sM"><h2>Einrückoptionen</h2><div class="mut">Wird geladen …</div></section><section id="sR"><h2>Spezialrollen</h2><div class="mut">Wird geladen …</div></section><section id="sC"><h2>Koordinaten</h2><div class="mut">Wird geladen …</div></section><section id="stats"><h2>Einsatzstatistik und Einsatzlog</h2><div class="mut">Wird geladen …</div></section></main>`;
   $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
   loadUsers();loadModes();loadRoles();loadCoords();loadStats()}
 /* ---------- Benutzer ---------- */
@@ -76,11 +91,87 @@ async function loadCoords(){const el=$('#sC');let s;try{s=await api('settings')}
   el.innerHTML=`<h2>Koordinaten</h2><label class="mut">Standard-Koordinatensystem für die Anzeige<select id="cS">${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===s.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
     <div class="mut">Gilt für alle, die in der Einsatz-App unter «Konto» nichts anderes gewählt haben. Beispiel Brugg AG: ${esc(fmtC(47.4815,8.208,s.coord_sys))}</div>`;
   $('#cS').onchange=e=>{const v=e.target.value;e.target.disabled=true;api('settings/save',{coord_sys:v}).then(loadCoords).catch(x=>{fail(x);loadCoords()})}}
-/* ---------- Einsatzstatistik ---------- */
-async function loadStats(){const el=$('#stats');try{const r=await api('stats'),t=r.totals,min=x=>x==null?'–':Math.round(x/60)+' min';
-  el.innerHTML=`<h2>Einsatzstatistik</h2><div class="mut">Einsätze: ${t.count} (davon Übungen: ${t.exercises}, beendet: ${t.ended}) · Ø Dauer ${min(t.avg_duration)} · Ø Teilnehmende ${t.avg_accepted??'–'} · Ø bis erste Annahme ${min(t.avg_first_accept)} · Ø bis Suchgebiet erreicht ${min(t.avg_first_area)}</div>
-    <div class="tw"><table><thead><tr><th>Alarm</th><th>Art</th><th>Meldung</th><th>Dauer</th><th>Angen.</th><th>Abgel.</th><th>1. Annahme</th><th>1. im Gebiet</th><th></th></tr></thead><tbody>${r.incidents.map(x=>`<tr><td>${new Date(x.alarm_at*1000).toLocaleString('de-CH')}</td><td>${x.is_exercise?'<span class="badge">Übung</span>':'Scharf'}</td><td>${esc(x.message)}</td><td>${x.ended_at?min(x.ended_at-x.alarm_at):'läuft'}</td><td>${x.accepted}</td><td>${x.declined}</td><td>${min(x.first_accept==null?null:x.first_accept-x.alarm_at)}</td><td>${min(x.first_area==null?null:x.first_area-x.alarm_at)}</td><td class="act"><button data-l="${x.id}">Log</button></td></tr>`).join('')}</tbody></table></div>`;
-  el.querySelectorAll('[data-l]').forEach(b=>b.onclick=async()=>{try{const x=r.incidents.find(x=>x.id==b.dataset.l),l=await api('incident/log&id='+x.id);openBigLog('Einsatzlog – '+x.message,()=>l,false)}catch(e){fail(e)}})}
-  catch(e){el.innerHTML='<h2>Einsatzstatistik</h2><div class="mut">Statistik nicht verfügbar: '+esc(e.message)+'</div>'}}
+/* ---------- Einsatzstatistik und Einsatzlog (getrennt nach scharfen Einsätzen und Übungen) ---------- */
+const ARTS={all:'Alle',real:'Scharfe Einsätze',ex:'Übungen'};
+let statsData=null,statsF=(()=>{try{return localStorage.getItem('sw_statsf')||'all'}catch(e){return'all'}})(); // Filter pro Gerät gemerkt
+const isArt=(x,f)=>f==='all'||(f==='ex')===!!x.is_exercise;
+async function loadStats(){const el=$('#stats');try{statsData=await api('stats')}catch(e){el.innerHTML='<h2>Einsatzstatistik</h2><div class="mut">Statistik nicht verfügbar: '+esc(e.message)+'</div>';return}renderStats()}
+function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.filter(x=>isArt(x,statsF)),min=x=>x==null?'–':Math.round(x/60)+' min';
+  const av=a=>{a=a.filter(x=>x!=null);return a.length?Math.round(a.reduce((s,x)=>s+x,0)/a.length*10)/10:null};
+  // Kennzahlen je Art, damit Übungen die Werte der scharfen Einsätze nicht verfälschen
+  const sum=(f,l)=>{const r=all.filter(x=>isArt(x,f)),e=r.filter(x=>x.ended_at);return`<div class="mut"><b>${l}: ${r.length}</b> (beendet ${e.length}) · Ø Dauer ${min(av(e.map(x=>x.ended_at-x.alarm_at)))} · Ø Teilnehmende ${av(r.map(x=>x.accepted))??'–'} · Ø bis erste Annahme ${min(av(r.map(x=>x.first_accept==null?null:x.first_accept-x.alarm_at)))} · Ø bis Suchgebiet erreicht ${min(av(r.map(x=>x.first_area==null?null:x.first_area-x.alarm_at)))}</div>`};
+  el.innerHTML=`<h2>Einsatzstatistik und Einsatzlog</h2><div class="row" style="align-items:center"><label class="mut" style="flex:0 0 auto">Anzeigen <select id="stF">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===statsF?'selected':''}>${v}</option>`).join('')}</select></label></div>
+    ${statsF!=='ex'?sum('real','Scharfe Einsätze'):''}${statsF!=='real'?sum('ex','Übungen'):''}
+    <div class="tw"><table><thead><tr><th>Alarm</th><th>Art</th><th>Meldung</th><th>Dauer</th><th>Angen.</th><th>Abgel.</th><th>1. Annahme</th><th>1. im Gebiet</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr class="art-${x.is_exercise?'ex':'real'}"><td>${new Date(x.alarm_at*1000).toLocaleString('de-CH')}</td><td>${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'}${x.record?'<br><span class="mut">● aufgezeichnet</span>':''}</td><td>${esc(x.message)}</td><td>${x.ended_at?min(x.ended_at-x.alarm_at):'läuft'}</td><td>${x.accepted}</td><td>${x.declined}</td><td>${min(x.first_accept==null?null:x.first_accept-x.alarm_at)}</td><td>${min(x.first_area==null?null:x.first_area-x.alarm_at)}</td><td class="act"><button data-l="${x.id}">Log</button>${x.record?`<button data-rp="${x.id}">Replay</button>`:''}</td></tr>`).join('')||`<tr><td colspan="9" class="mut">Keine ${statsF==='ex'?'Übungen':statsF==='real'?'scharfen Einsätze':'Einsätze'}</td></tr>`}</tbody></table></div>`;
+  $('#stF').onchange=e=>{statsF=e.target.value;try{localStorage.setItem('sw_statsf',statsF)}catch(_){}renderStats()};
+  const X=id=>all.find(x=>x.id==id);
+  el.querySelectorAll('[data-l]').forEach(b=>b.onclick=async()=>{try{const x=X(b.dataset.l),l=await api('incident/log&id='+x.id);openBigLog((x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,()=>l,false)}catch(e){fail(e)}});
+  el.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.rp))}
+/* ---------- Replay eines aufgezeichneten Einsatzes ---------- */
+// Zeitachse aus den gespeicherten Daten: Standortverläufe (track), Rettlinge (rtrack, created/removed/rescued_at), Positionen & Bereiche (created/removed), Nachrichten-Markierungen (created/unmarked), Log
+let rp=null;
+const GAP_S=120; // längere Lücken zwischen zwei Standortmeldungen nicht interpolieren, Person gilt dann als «letzter Standort»
+const durT=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')};
+const lastIdx=(a,t)=>{let lo=0,hi=a.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(a[m][1]<=t){r=m;lo=m+1}else hi=m-1}return r}; // letzter Eintrag mit ts ≤ t
+async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}catch(e){return fail(e)}
+  closeReplay();const i=d.incident,o=document.createElement('div');o.id='replay';o.setAttribute('role','dialog');o.setAttribute('aria-label','Replay');
+  o.innerHTML=`<div id="rpHead"><h2>${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} Replay – ${esc(i.message)}</h2><button id="rpPlay" class="pri">▶ Abspielen</button><select id="rpSpd" aria-label="Geschwindigkeit">${[1,5,10,30,60,120].map(v=>`<option value="${v}" ${v===30?'selected':''}>${v}× schneller</option>`).join('')}</select><label class="row" style="align-items:center;margin:0;flex:0 0 auto"><input type="checkbox" id="rpTrail" checked style="flex:0 0 auto"> <span>Spuren</span></label><button id="rpX">Schliessen</button></div>
+    <div id="rpBody"><div id="rpMap"></div><aside id="rpSide"><div id="rpInfo"></div><h3>Einsatzlog bis zu diesem Zeitpunkt</h3><div id="rpLog"></div></aside></div>
+    <div id="rpFoot"><span id="rpTime"></span><input type="range" id="rpRange" aria-label="Zeitpunkt im Einsatz"><span id="rpEnd" class="mut"></span></div>`;
+  document.body.appendChild(o);
+  // Zeitraum: Alarmeingang bis Einsatzende (läuft der Einsatz noch: bis jetzt)
+  const tr=d.track,t0=tr.length?Math.min(i.alarm_at,tr[0][1]):i.alarm_at,t1=Math.max(i.ended_at||d.now,tr.length?tr[tr.length-1][1]:0,t0+1); // track ist nach Zeit sortiert
+  const map=L.map('rpMap',{zoomControl:true}).setView([i.lat,i.lon],14),bases={};
+  Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
+  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);L.control.layers(bases,null,{position:'topright'}).addTo(map);
+  L.circleMarker([i.lat,i.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip('PLS',{permanent:true,direction:'right',className:'rplbl'}).addTo(map);
+  // Personen: Verlauf je Person, Farbe der Spezialrolle (Stand Einsatzende)
+  const people=d.participants.map(p=>({...p,col:p.color||'#cfd8dc',pts:d.track.filter(q=>q[0]===p.user_id)}));
+  const trailL=L.layerGroup().addTo(map),dynL=L.layerGroup().addTo(map),poiL=L.layerGroup().addTo(map);
+  people.forEach(p=>{p.line=L.polyline([],{color:p.col,weight:3,opacity:.75}).addTo(trailL);
+    p.mk=L.circleMarker([0,0],{radius:8,color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[8,0],className:'rplbl'})});
+  const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
+  const all=[[i.lat,i.lon],...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts)];
+  if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17});
+  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL};
+  const R=$('#rpRange');R.min=t0;R.max=t1;R.step=1;R.value=t0;R.oninput=()=>seek(+R.value);
+  $('#rpEnd').textContent=durT(t1-i.alarm_at)+(i.ended_at?'':' (läuft)');
+  $('#rpPlay').onclick=()=>playReplay(!rp.play);$('#rpX').onclick=closeReplay;
+  $('#rpTrail').onchange=e=>e.target.checked?trailL.addTo(map):map.removeLayer(trailL);
+  $('#rpLog').onclick=e=>{const b=e.target.closest('[data-ts]');if(b)seek(+b.dataset.ts)};
+  if(!d.track.length)$('#rpInfo').insertAdjacentHTML('afterend','<div class="mut">Keine Standortmeldungen aufgezeichnet.</div>');
+  drawReplay()}
+function closeReplay(){if(!rp)return;clearInterval(rp.timer);rp.map.remove();rp=null;const o=$('#replay');if(o)o.remove()}
+function playReplay(on){if(!rp)return;if(on&&rp.t>=rp.t1)rp.t=rp.t0;rp.play=on;$('#rpPlay').textContent=on?'❚❚ Pause':'▶ Abspielen';clearInterval(rp.timer);
+  if(on){rp.last=performance.now();rp.timer=setInterval(()=>{const n=performance.now(),dt=(n-rp.last)/1000;rp.last=n;rp.t=Math.min(rp.t1,rp.t+dt*+$('#rpSpd').value);if(rp.t>=rp.t1)playReplay(false);drawReplay()},200)}}
+function seek(t){if(!rp)return;rp.t=Math.max(rp.t0,Math.min(rp.t1,t));drawReplay()}
+// Escape schliesst, Leertaste spielt ab/pausiert (nicht auf Knöpfen/Reglern, die werten sie selbst aus)
+document.addEventListener('keydown',e=>{if(!rp)return;if(e.key==='Escape')return closeReplay();
+  if(e.key===' '&&!e.target.closest('input,textarea,select,button')){e.preventDefault();playReplay(!rp.play)}});
+function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==null||t<b);
+  $('#rpRange').value=Math.floor(t);$('#rpTime').textContent=new Date(t*1000).toLocaleString('de-CH')+' · T+'+durT(t-i.alarm_at);
+  // Personen: Position zum Zeitpunkt t (zwischen zwei Meldungen interpoliert), Spur bis t
+  const info=[];
+  rp.people.forEach(p=>{const k=lastIdx(p.pts,t),here=k>=0&&(p.left_at==null||t<p.left_at);
+    if(!here){rp.dynL.removeLayer(p.mk);p.line.setLatLngs(k>=0?p.pts.slice(0,k+1).map(q=>[q[2],q[3]]):[]);if(on(p.joined,p.left_at))info.push([p,'kein Standort']);return}
+    const a=p.pts[k],b=p.pts[k+1];let ll=[a[2],a[3]],age=t-a[1];
+    if(b&&b[1]-a[1]<=GAP_S){const f=(t-a[1])/(b[1]-a[1]);ll=[a[2]+(b[2]-a[2])*f,a[3]+(b[3]-a[3])*f];age=0}
+    p.mk.setLatLng(ll).setStyle({fillOpacity:age>GAP_S?.45:1});rp.dynL.addLayer(p.mk);
+    p.line.setLatLngs([...p.pts.slice(0,k+1).map(q=>[q[2],q[3]]),ll]);info.push([p,age>GAP_S?'letzte Meldung vor '+durT(age):'Standort aktuell'])});
+  // Positionen & Bereiche, Rettlinge und Nachrichten-Markierungen: nur neu zeichnen, wenn sich der sichtbare Bestand ändert
+  const pois=d.pois.filter(p=>on(p.created,p.removed)),marks=d.marks.filter(m=>m.created<=t&&(m.mark||(m.unmarked!=null&&t<m.unmarked)));
+  const res=d.rescuees.filter(r=>on(r.created,r.removed)).map(r=>{const tr=rp.rtr[r.id]||[],k=lastIdx(tr,t),pos=k>=0?[tr[k][2],tr[k][3]]:!tr.length&&on(r.loc_at)?[r.lat,r.lon]:null;return{...r,pos,ok:on(r.rescued_at)}});
+  const key=JSON.stringify([pois.map(p=>p.id),marks.map(m=>m.id),res.map(r=>[r.id,r.pos,r.ok])]);
+  if(key!==rp.poiKey){rp.poiKey=key;rp.poiL.clearLayers();
+    pois.forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:7,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'rplbl'}).addTo(rp.poiL)});
+    marks.forEach(m=>L.circleMarker([m.mark_lat,m.mark_lon],{radius:6,color:'#0f2430',weight:2,fillColor:'#2ee6d6',fillOpacity:1}).bindTooltip(esc((m.name||'')+': '+m.text.slice(0,60))).addTo(rp.poiL));
+    res.filter(r=>r.pos).forEach(r=>L.circleMarker(r.pos,{radius:9,color:'#fff',weight:2,fillColor:r.ok?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.ok?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[8,0],className:'rplbl'}).addTo(rp.poiL))}
+  const fl=d.flow.filter(f=>f.ts<=t).pop();
+  $('#rpInfo').innerHTML=`<h3 style="margin-top:0">Lage</h3><div class="mut">${fl?esc(fl.text.replace(/^setzt die /,'')):'Fliessgeschwindigkeit nicht gesetzt'}</div>
+    <div class="mut">Rettlinge: ${res.length?res.map(r=>esc(r.name)+' – '+(r.ok?'gerettet':r.pos?'Standort bekannt':'vermisst')).join(', '):'keine erfasst'}</div>
+    <h3>Einsatzkräfte (${info.length})</h3>${info.map(([p,s])=>`<div class="rpp"><i style="background:${esc(p.col)}"></i><span><b>${esc(p.name)}</b>${p.role?' · '+esc(p.role):''} <span class="mut">${s}</span></span></div>`).join('')||'<div class="mut">Noch niemand im Einsatz</div>'}`;
+  // Log: nur Einträge bis t, neueste zuerst; Klick springt zum Zeitpunkt
+  const lg=d.log.filter(x=>x.ts<=t);if(lg.length!==rp.logN){rp.logN=lg.length;
+    $('#rpLog').innerHTML=lg.reverse().map(x=>`<button class="rpl" data-ts="${x.ts}" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${fmtT(x.ts)}</span><b>${esc(x.name||'System')}</b> ${esc(x.text)}</button>`).join('')||'<div class="mut">Noch keine Einträge</div>'}}
 start();
 </script></body></html>
