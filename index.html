@@ -20,6 +20,11 @@ body{height:100dvh;display:flex;flex-direction:column}
 #areaNote{position:fixed;bottom:calc(1.2rem + env(safe-area-inset-bottom));left:.7rem;right:5rem;z-index:1000;background:#0f2430e6;border:1px solid var(--line);border-radius:6px;padding:.4rem .6rem;font-size:.85rem}
 .leaflet-top.leaflet-right{margin-top:calc(3.8rem + env(safe-area-inset-top))}
 @media(min-width:760px){body.so #chip{left:calc(400px + 1rem)}body.so #areaNote{left:calc(400px + 1rem)}}
+/* Kartenmarkierung einer Nachricht (Spitze unten links zeigt auf den Ort) */
+.mmk{width:30px;height:30px;border-radius:8px 8px 8px 0;background:#ffd23f;color:#3a2a00;border:2px solid #fff;display:grid;place-items:center;font-size:.95rem;box-shadow:0 0 0 2px #0008}
+.mmpop b{display:block}.mmpop .t{display:block;color:#666;font-size:.8rem;margin-bottom:.3rem}.mmpop button{margin-top:.5rem;padding:.35rem .6rem;background:var(--alarm);border-color:var(--alarm);color:#fff;font-weight:600}
+#mmShowRow{display:flex;gap:.5rem;align-items:center;padding:.35rem .7rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--mut)}
+.mg .lk{padding:.1rem .45rem;font-size:.75rem;margin:.25rem .3rem 0 0}
 .rm{width:34px;height:34px;border-radius:50%;background:#2ee6d6;color:#00302c;border:3px solid #fff;display:grid;place-items:center;font-weight:800;box-shadow:0 0 0 2px #0008}
 #fitBtns{position:fixed;right:.7rem;bottom:calc(6.8rem + env(safe-area-inset-bottom));z-index:1000;display:flex;flex-direction:column;gap:.4rem}#fitBtns button{background:var(--panel);box-shadow:0 1px 4px #0008;font-size:.85rem;padding:.5rem .6rem}#fitBtns button[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}
 /* Seitenfenster «Personen» und «Nachrichten» (Knöpfe rechts unten, immer nur eines offen) und Anzeige beim Folgen */
@@ -91,7 +96,7 @@ $('#aOk').onclick=()=>{if(curKey)ackAdd(curKey);curKey=null;$('#alarm').style.di
 let secReset=true;
 function toggleSheet(f){const w=$('#sheetWrap');if(!w)return;const was=w.classList.contains('open'),o=f===undefined?!was:f;if(o&&!was){secReset=true;draw()}w.classList.toggle('open',o);document.body.classList.toggle('so',o);if(o&&panel)togglePanel(panel,false)}
 function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);if(st&&st.incident){const x=!!st.incident.is_exercise;c.hidden=false;c.classList.toggle('ex',x);c.textContent=(x?'Übung: ':'Einsatz: ')+st.incident.message+' · '+Math.round((st.now-st.incident.alarm_at)/60)+' min'}else c.hidden=true}
-function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><button id="bFitA" title="Ganzes Suchgebiet anzeigen">Suchgebiet</button><button id="bFitF" title="Alle Einsatzkräfte mit Standort anzeigen">Einsatzkräfte</button><button id="bPeople" aria-expanded="false" aria-controls="people" title="Liste aller Personen im Einsatz">Personen</button><button id="bMsg" aria-expanded="false" aria-controls="msgs" title="Nachrichten lesen und senden">Nachrichten<span class="cnt" id="msgCnt" hidden></span></button></div><div id="followChip" hidden role="status"><span></span><button id="bUnfollow" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><div id="people" hidden role="dialog" aria-label="Personen im Einsatz"><div class="phead"><b>Personen im Einsatz</b><button id="bPeopleX" aria-label="Liste schliessen">✕</button></div><div id="peopleList"></div></div><div id="msgs" hidden role="dialog" aria-label="Nachrichten"><div class="phead"><b>Nachrichten</b><button id="bMsgX" aria-label="Nachrichten schliessen">✕</button></div><div id="msgList" aria-live="polite"></div><div id="msgForm"></div></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
+function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><button id="bFitA" title="Ganzes Suchgebiet anzeigen">Suchgebiet</button><button id="bFitF" title="Alle Einsatzkräfte mit Standort anzeigen">Einsatzkräfte</button><button id="bPeople" aria-expanded="false" aria-controls="people" title="Liste aller Personen im Einsatz">Personen</button><button id="bMsg" aria-expanded="false" aria-controls="msgs" title="Nachrichten lesen und senden">Nachrichten<span class="cnt" id="msgCnt" hidden></span></button></div><div id="followChip" hidden role="status"><span></span><button id="bUnfollow" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><div id="people" hidden role="dialog" aria-label="Personen im Einsatz"><div class="phead"><b>Personen im Einsatz</b><button id="bPeopleX" aria-label="Liste schliessen">✕</button></div><div id="peopleList"></div></div><div id="msgs" hidden role="dialog" aria-label="Nachrichten"><div class="phead"><b>Nachrichten</b><button id="bMsgX" aria-label="Nachrichten schliessen">✕</button></div><div id="msgList" aria-live="polite"></div><label id="mmShowRow"><input type="checkbox" id="mmShow"> Nachrichten-Markierungen auf der Karte anzeigen</label><div id="msgForm"></div></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
   $('#bMenu').onclick=()=>toggleSheet();$('#bFitA').onclick=fitArea;$('#bFitF').onclick=fitForces;$('#bClose').onclick=()=>toggleSheet(false);$('#chip').onclick=()=>toggleSheet(true);
   followId=null;panel=null;msgSeen=0;msgFormKey='';$('#bPeople').onclick=()=>togglePanel('people');$('#bPeopleX').onclick=()=>togglePanel('people',false);$('#bUnfollow').onclick=stopFollow;
   $('#bMsg').onclick=()=>togglePanel('msgs');$('#bMsgX').onclick=()=>togglePanel('msgs',false);
@@ -99,16 +104,35 @@ function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" cla
   $('#sheet').addEventListener('toggle',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k)e.target.open?openSec.add(k):openSec.delete(k)},true);
   map=L.map('map',{zoomControl:false}).setView([46.8,8.2],8);L.control.zoom({position:'bottomright'}).addTo(map);
   const bases={};Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
-  const sv=localStorage.getItem('sw_base');bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);L.control.layers(bases,null,{position:'topright'}).addTo(map);
+  const sv=localStorage.getItem('sw_base');bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);
+  // Nachrichten-Markierungen als eigene, ausblendbare Ebene (Ebenen-Symbol oder Häkchen im Nachrichten-Fenster, pro Gerät gemerkt)
+  msgLayer=L.layerGroup();msgLayerKey='';if(mmVisible())msgLayer.addTo(map);
+  L.control.layers(bases,{'Nachrichten-Markierungen':msgLayer},{position:'topright'}).addTo(map);
+  map.on('overlayadd overlayremove',e=>{if(e.layer===msgLayer)setMmVisible(e.type==='overlayadd',false)});
+  $('#mmShow').checked=mmVisible();$('#mmShow').onchange=e=>setMmVisible(e.target.checked,true);
+  $('#msgList').onclick=e=>{const b=e.target.closest('[data-goto]');if(!b)return;const[a,o]=b.dataset.goto.split(',').map(Number);stopFollow();map.panTo([a,o]);if(narrow())togglePanel('msgs',false)};
   map.on('baselayerchange',e=>{const k=Object.keys(MAP_PROVIDERS).find(k=>MAP_PROVIDERS[k].label===e.name);localStorage.setItem('sw_base',k)});
   layers={};fitted=null;map.on('zoomend',drawMap);map.on('dragstart',()=>{if(followId!=null)stopFollow()}); // von Hand verschieben beendet das Folgen
   if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}
 function mk(p){const r=roles.find(x=>x.id==p.role_id),col=r?r.color:'#8fb0bd';
   const ini=(p.name||'?').split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase();
   return `<div class="mk" style="border-color:${col};${p.photo?`background-image:url(${p.photo})`:''}">${p.photo?'':esc(ini)}</div>`}
-function drawMap(){const n=$('#areaNote');if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
+let msgLayer=null,msgLayerKey='';
+const mmVisible=()=>{try{return localStorage.getItem('sw_msgmarks')!=='0'}catch(e){return true}};
+function setMmVisible(v,apply){try{localStorage.setItem('sw_msgmarks',v?'1':'0')}catch(e){}const c=$('#mmShow');if(c)c.checked=v;if(apply&&msgLayer)v?msgLayer.addTo(map):map.removeLayer(msgLayer)}
+const canUnmark=x=>x.from_user==me.id||!!(st&&st.can_manage); // sendende Person oder Einsatzleitung (Server prüft)
+// Kartenmarkierungen der Nachrichten: nur neu zeichnen, wenn sich die Menge ändert (ein offenes Popup bleibt offen)
+function drawMsgMarks(){if(!msgLayer)return;const mm=(st&&st.incident&&st.msg_marks)||[],k=mm.map(x=>x.id).join()+'|'+!!(st&&st.can_manage);if(k===msgLayerKey)return;msgLayerKey=k;msgLayer.clearLayers();
+  mm.forEach(x=>L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="mmk">✉</div>',iconSize:[30,30],iconAnchor:[2,32]}),zIndexOffset:900})
+    .bindTooltip(esc(x.from_name)+': '+esc(x.text.length>40?x.text.slice(0,40)+'…':x.text))
+    .bindPopup(`<div class="mmpop"><b>${esc(x.from_name)}</b><span class="t">Nachricht · ${fmtT(x.created)}</span>${esc(x.text)}${canUnmark(x)?`<br><button data-mm="${x.id}">Markierung entfernen</button>`:''}</div>`).addTo(msgLayer))}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-mm]');if(!b)return;if(!confirm('Kartenmarkierung dieser Nachricht entfernen? Die Nachricht selbst bleibt erhalten.'))return;
+  api('incident/message/unmark',{id:+b.dataset.mm}).then(()=>{map.closePopup();poll()}).catch(fail)});
+// Punkt auf der Karte wählen (z. B. Markierung ohne eigenen Standort); Hinweis unten über #areaNote
+function pickPoint(text){return new Promise(res=>{if(panel)togglePanel(panel,false);toggleSheet(false);window.markPick=text;drawMap();map.once('click',e=>{window.markPick=null;drawMap();res(e.latlng)})})}
+function drawMap(){const n=$('#areaNote');drawMsgMarks();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.marker([i.lat,i.lon],{icon:L.divIcon({className:'',html:'<div class="pls"></div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map).bindTooltip('PLS');
-  try{layers.area=drawArea(i);if(layers.area)layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message}if(n){n.textContent=window.markPick?'Tippe auf die Karte, um die Position des Rettlings zu setzen.':areaInfo;n.hidden=!(areaInfo||window.markPick)}checkArea();
+  try{layers.area=drawArea(i);if(layers.area)layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message}if(n){n.textContent=window.markPick||areaInfo;n.hidden=!(areaInfo||window.markPick)}checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
   const act=st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'),groups=[];
   act.forEach(p=>{const pt=map.latLngToLayerPoint([p.lat,p.lon]);const g=groups.find(g=>g.pt.distanceTo(pt)<40);g?g.items.push(p):groups.push({pt,items:[p]})});
@@ -256,19 +280,28 @@ function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!
   const unread=ms.filter(m=>m.id>msgSeen&&m.from_user!=me.id).length,c=$('#msgCnt');c.hidden=!unread;c.textContent=unread;
   if(!on)return;
   const L=$('#msgList'),atEnd=L.scrollHeight-L.scrollTop-L.clientHeight<30,joined=!!(st.me&&!st.me.left_at&&st.me.mode!=='declined');
-  L.innerHTML=ms.map(m=>`<div class="mg${m.recipients&&msgForMe(m)?' tome':''}"><b>${m.from_user==me.id?'Du':esc(m.from_name)}</b> ${esc(m.text)}<span class="t">${fmtT(m.created)} · an ${esc(msgTo(m))}</span></div>`).join('')
+  const marked=new Set((st.msg_marks||[]).map(x=>x.id));
+  L.innerHTML=ms.map(m=>`<div class="mg${m.recipients&&msgForMe(m)?' tome':''}"><b>${m.from_user==me.id?'Du':esc(m.from_name)}</b> ${esc(m.text)}<span class="t">${fmtT(m.created)} · an ${esc(msgTo(m))}</span>`
+    +(m.lat!=null?`<button class="lk" data-goto="${m.lat},${m.lon}" title="Standort beim Senden auf der Karte zeigen">📍 Standort</button>`:'')
+    +(marked.has(m.id)?`<button class="lk" data-goto="${m.mark_lat},${m.mark_lon}" title="Kartenmarkierung zeigen">✉ Markierung</button>${canUnmark(m)?`<button class="lk" data-mm="${m.id}">Markierung entfernen</button>`:''}`:'')+'</div>').join('')
     ||`<div class="mut" style="padding:.6rem 0">${joined?'Noch keine Nachrichten.':'Nachrichten sehen nur Personen, die den Einsatz angenommen haben.'}</div>`;
   if(atEnd)L.scrollTop=L.scrollHeight;
   // Formular nur neu aufbauen, wenn sich Berechtigung oder Empfänger ändern; neue Empfänger erst nach der Eingabe,
   // eine geänderte Berechtigung sofort (Senden ginge ohnehin nicht mehr)
   const others=activePeople().filter(p=>p.user_id!=me.id),perm=joined+'|'+st.can_message,fk=perm+'|'+others.map(p=>p.user_id+':'+p.role_id).join(),f=$('#msgForm');
   if(fk===msgFormKey||(msgFormKey.startsWith(perm+'|')&&f.contains(document.activeElement)))return;
-  const keepTxt=$('#mt')?$('#mt').value:'',keepTo=$('#mto')?[...$('#mto').selectedOptions].map(x=>x.value):[];msgFormKey=fk;
+  const keepTxt=$('#mt')?$('#mt').value:'',keepTo=$('#mto')?[...$('#mto').selectedOptions].map(x=>x.value):[],keepMark=!!($('#mmark')&&$('#mmark').checked);msgFormKey=fk;
   if(!joined||!st.can_message){f.innerHTML=`<div class="mut">${joined?'Deine Rolle darf keine Nachrichten senden.':'Zum Senden zuerst den Einsatz annehmen.'}</div>`;return}
   f.innerHTML=`<select id="mto" multiple size="4" aria-label="Empfänger (keine Auswahl = alle)">${byRole(others).map(g=>`<optgroup label="${esc(g.r?g.r.name:'Ohne Spezialrolle')}">${g.items.map(p=>`<option value="${p.user_id}" ${keepTo.includes(String(p.user_id))?'selected':''}>${esc(p.name)}</option>`).join('')}</optgroup>`).join('')}</select>
-    <div class="mut">Benachrichtigt werden die ausgewählten Personen (keine Auswahl = alle). Lesen können alle im Einsatz.</div><div class="row"><input id="mt" placeholder="Nachricht" aria-label="Nachricht" style="flex:3"><button class="pri" id="bSend">Senden</button></div>`;
+    <div class="mut">Benachrichtigt werden die ausgewählten Personen (keine Auswahl = alle). Lesen können alle im Einsatz.</div>
+    <label class="row" style="align-items:center;margin:0"><input type="checkbox" id="mmark" ${keepMark?'checked':''}><span>Als Markierung auf der Karte (am eigenen Standort, sonst Punkt wählen)</span></label>
+    <div class="row"><input id="mt" placeholder="Nachricht" aria-label="Nachricht" style="flex:3"><button class="pri" id="bSend">Senden</button></div>`;
   $('#mt').value=keepTxt;
-  const send=()=>{const t=$('#mt').value.trim();if(!t)return;api('incident/message',{text:t,to:[...$('#mto').selectedOptions].map(x=>+x.value)}).then(()=>{$('#mt').value='';[...$('#mto').options].forEach(x=>x.selected=false);poll()}).catch(fail)};
+  // Markierung: am eigenen Standort (falls geteilt und bekannt), sonst Punkt auf der Karte antippen
+  const send=async()=>{const t=$('#mt').value.trim();if(!t)return;const body={text:t,to:[...$('#mto').selectedOptions].map(x=>+x.value)},picked=$('#mmark').checked;
+    if(picked){const p=shares(st.me.mode)?(lastPos||(st.me.lat!=null?{lat:st.me.lat,lon:st.me.lon}:null)):null;
+      const q=p?{lat:p.lat,lng:p.lon}:await pickPoint('Tippe auf die Karte, um die Markierung zur Nachricht zu setzen.');Object.assign(body,{mark:1,mark_lat:q.lat,mark_lon:q.lng})}
+    api('incident/message',body).then(()=>{if($('#mt'))$('#mt').value='';if($('#mmark'))$('#mmark').checked=false;if($('#mto'))[...$('#mto').options].forEach(x=>x.selected=false);if(picked&&panel!=='msgs')togglePanel('msgs',true);poll()}).catch(fail)};
   $('#bSend').onclick=send;$('#mt').onkeydown=e=>{if(e.key==='Enter')send()}}
 // bei jeder Aktualisierung: Karte auf die gefolgte Person schieben; verlässt sie den Einsatz, endet das Folgen
 function followNow(){if(followId==null)return updateFollowChip();const p=activePeople().find(x=>x.user_id===followId);if(!p)return stopFollow();
@@ -277,7 +310,7 @@ function stopFollow(){followId=null;updateFollowChip();renderPeople()}
 function updateFollowChip(){const c=$('#followChip');if(!c)return;const p=followId!=null&&activePeople().find(x=>x.user_id===followId);c.hidden=!p;if(p)c.firstChild.textContent='Folgt: '+p.name+(p.lat==null?' (kein Standort)':'')}
 function bindMarks(){const b=$('#bMark');
   if(b)b.onclick=()=>{const p=lastPos||(st.me&&st.me.lat!=null?{lat:st.me.lat,lon:st.me.lon}:null);if(!p)return alert('Dein Standort ist noch nicht bekannt. Standortfreigabe erlauben oder im Abschnitt «Mein Einsatz» den Standort manuell setzen.');api('incident/mark',{lat:p.lat,lon:p.lon}).then(poll).catch(fail)};
-  const m=$('#bMarkMan');if(m)m.onclick=()=>{toggleSheet(false);window.markPick=true;drawMap();map.once('click',e=>{window.markPick=false;api('incident/mark',{lat:e.latlng.lat,lon:e.latlng.lng,manual:1}).then(poll).catch(fail)})};
+  const m=$('#bMarkMan');if(m)m.onclick=()=>{toggleSheet(false);window.markPick='Tippe auf die Karte, um die Position des Rettlings zu setzen.';drawMap();map.once('click',e=>{window.markPick=null;api('incident/mark',{lat:e.latlng.lat,lon:e.latlng.lng,manual:1}).then(poll).catch(fail)})};
   document.querySelectorAll('#sheet [data-kick]').forEach(x=>x.onclick=()=>{const n=x.dataset.n;confirm(n+' aus dem Einsatz entfernen?')&&api('incident/kick',{user_id:+x.dataset.kick}).then(poll).catch(fail)});
   document.querySelectorAll('#sheet [data-mr]').forEach(x=>x.onclick=()=>api('incident/mark/remove',{id:+x.dataset.mr}).then(poll).catch(fail));
   // Einsatzleitung: Spezialrolle einer Einsatzkraft umstellen
