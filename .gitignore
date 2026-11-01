@@ -1,3 +1,5 @@
 api/data/*.sqlite
 api/data/hydro_locations.json
-deploy.local.json
+# Deploy-Konfigurationen (Test, Prod, …) nur lokal, Vorlage bleibt im Repo
+deploy.*.json
+!deploy.example.json
