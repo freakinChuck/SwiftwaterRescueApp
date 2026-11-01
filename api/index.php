@@ -33,7 +33,7 @@ foreach ([
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0'], 'incidents' => ['is_exercise INT DEFAULT 0']] as $t => $cs)
+foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO roles(name,color,is_lead,is_post) VALUES(?,?,?,?)");
@@ -56,6 +56,7 @@ const VEHICLE_MS = 7;    // ab ca. 25 km/h zwischen zwei Standortmeldungen gilt 
 const TRIP_MIN_M = 500;  // kürzere Fahrten und GPS-Sprünge nicht protokollieren
 const STOP_S = 90;       // so lange ohne schnelle Meldung = Fahrt beendet
 const TRIP_LOG_S = 600;  // lange Fahrten zusätzlich alle 10 Minuten protokollieren
+const COORDS = ['lv95', 'lv03', 'wgs84', 'wgs84dms']; // Koordinatensysteme für die Anzeige (Umrechnung im Frontend, COORD_SYS in common.js)
 
 if ($route === 'login') {
   $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
@@ -67,7 +68,7 @@ if ($route === 'login') {
 }
 
 $tok = $_SERVER['HTTP_X_TOKEN'] ?? '';
-$st = $db->prepare("SELECT id,username,name,is_admin,photo,exercise_mode,must_change FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
+$st = $db->prepare("SELECT id,username,name,is_admin,photo,exercise_mode,must_change,coord_sys FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
 $me = $tok ? $st->fetch() : null;
 if (!$me) fail('Nicht angemeldet', 401);
 $me = ints($me, ['id', 'is_admin', 'exercise_mode', 'must_change']); $uid = $me['id'];
@@ -151,7 +152,7 @@ function logRows($id, $asc = false) {
 if ($route === 'incident/location' && ($inc = activeIncident()) && ($p = part($inc['id'])) && !modeShares($p['mode'])) out(['ok' => true, 'shared' => false]);
 
 switch ($route) {
- case 'me': out(['me' => $me]);
+ case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95')]]); // coord_sys null = Standard der Verwaltung
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights']), $db->query("SELECT id,code,name,share_location,active,lead_rights FROM modes ORDER BY id")->fetchAll()));
@@ -501,8 +502,12 @@ switch ($route) {
   pwCheck($in['new'] ?? '');
   $db->prepare("UPDATE users SET pass_hash=?, must_change=0 WHERE id=?")->execute([password_hash($in['new'], PASSWORD_DEFAULT), $uid]);
   out(['ok' => true]);
- case 'me/settings': // Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren
-  $db->prepare("UPDATE users SET exercise_mode=? WHERE id=?")->execute([empty($in['exercise_mode']) ? 0 : 1, $uid]);
+ case 'me/settings': // nur übergebene Werte ändern. exercise_mode: Übungen wie scharfe Einsätze kritisch alarmieren; coord_sys: '' = Standard der Verwaltung, none = ausblenden
+  if (isset($in['exercise_mode'])) $db->prepare("UPDATE users SET exercise_mode=? WHERE id=?")->execute([empty($in['exercise_mode']) ? 0 : 1, $uid]);
+  if (isset($in['coord_sys'])) {
+    $c = (string)$in['coord_sys']; if ($c !== '' && $c !== 'none' && !in_array($c, COORDS, true)) fail('Unbekanntes Koordinatensystem'); // none = Koordinaten ausblenden (nur persönlich)
+    $db->prepare("UPDATE users SET coord_sys=? WHERE id=?")->execute([$c === '' ? null : $c, $uid]);
+  }
   out(['ok' => true]);
 
  /* ---------- Verwaltung (nur Benutzerrolle Administrator) ---------- */
@@ -552,9 +557,10 @@ switch ($route) {
   if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message) VALUES(?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1)]);
   out(['ok' => true]);
- case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0')]);
+ case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95')]);
  case 'settings/save': admin();
   foreach (['msg_no_role', 'msg_read_all'] as $k) if (isset($in[$k])) setSetting($k, empty($in[$k]) ? '0' : '1');
+  if (isset($in['coord_sys'])) { if (!in_array($in['coord_sys'], COORDS, true)) fail('Unbekanntes Koordinatensystem'); setSetting('coord_sys', $in['coord_sys']); }
   out(['ok' => true]);
  case 'mode/save': admin(); // Einrückoption anlegen oder ändern
   $nm = trim($in['name'] ?? ''); if ($nm === '') fail('Name fehlt');

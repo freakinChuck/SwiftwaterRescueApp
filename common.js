@@ -7,6 +7,18 @@ async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.me
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth()}if(j.error)throw new Error(j.error);return j}
 const fail=e=>alert(e.message);
 const fmtT=ts=>new Date(ts*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+/* ---------- Koordinaten ---------- */
+// Standard in der Verwaltung (settings coord_sys), pro Person übersteuerbar (users.coord_sys); Schlüssel wie auf dem Server (COORDS)
+const COORD_SYS={lv95:'LV95 (CH1903+, E / N)',lv03:'LV03 (CH1903, Y / X)',wgs84:'WGS84 Dezimalgrad',wgs84dms:'WGS84 Grad, Minuten, Sekunden'};
+// WGS84 → LV95 mit den Näherungsformeln von swisstopo (Genauigkeit ca. 1 m, nur in der Schweiz sinnvoll)
+function toLV95(lat,lon){const p=(lat*3600-169028.66)/1e4,l=(lon*3600-26782.5)/1e4;
+  return[2600072.37+211455.93*l-10938.51*l*p-.36*l*p*p-44.54*l*l*l,1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p]}
+const thou=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,"'");
+const dms=(v,pos,neg)=>{const a=Math.abs(v),d=Math.floor(a),m=Math.floor((a-d)*60),s=((a-d)*60-m)*60;return `${d}°${String(m).padStart(2,'0')}'${s.toFixed(1).padStart(4,'0')}"${v<0?neg:pos}`};
+function fmtC(lat,lon,sys){if(lat==null||lon==null||sys==='none')return''; // none: persönlich ausgeblendet
+  if(sys==='wgs84')return `${(+lat).toFixed(5)}, ${(+lon).toFixed(5)}`;
+  if(sys==='wgs84dms')return `${dms(lat,'N','S')} ${dms(lon,'E','W')}`;
+  const[e,n]=toLV95(lat,lon);return sys==='lv03'?`${thou(e-2e6)} / ${thou(n-1e6)}`:`${thou(e)} / ${thou(n)}`}
 function logout(){token=null;localStorage.removeItem('sw_token')}
 /* ---------- Anmeldung ---------- */
 function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button></div>`;
