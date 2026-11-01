@@ -47,7 +47,9 @@ const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi
 const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
 const WATER_M=80;  // Standort so nahe an der Gewässerachse gilt als «auf dem Gewässer» (Boot); zählt im Einsatzlog nicht als Fahrt
 const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
-const MODES={base:'Anfahrt via Stützpunkt',direct:'Anfahrt direkt',logistics:'Logistik',coordinator:'Koordinator KP Rück'};
+// Einrückoptionen kommen vom Server (Verwaltung → Einrückoptionen); share_location=0: Standort wird nicht geteilt
+let modes=[];
+const modeOf=k=>modes.find(x=>x.code===k)||{code:k,name:k,share_location:1,active:0},shares=k=>!!modeOf(k).share_location;
 /* ---------- Helfer ($, esc, api, fail, fmtT in common.js) ---------- */
 let msgInit=false,areaShape=null,lastRiver='',suggText='',suggVal=null,areaLogged={},creating=false,openSec=new Set(['mine','rescuee','flow','manage']),locStatus='',lastPos=null,manual=false,hb=null,me=null,roles=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,alarmQ=[],watchId=null,lastSent=0,fitted=null;
 onUnauth=()=>render();
@@ -141,27 +143,30 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+acc;$('#bNew').onclick=newView;return bindAcc()}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')} · PLS ${i.lat.toFixed(5)}, ${i.lon.toFixed(5)}</div>`;
-  if(!joined)h+=`<div class="row">${Object.entries(MODES).map(([k,v])=>`<button class="pri" data-m="${k}">Einsatz annehmen<br><small>${v}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
+  if(!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button class="pri" data-m="${esc(x.code)}">Einsatz annehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
   else{
-    h+=sec('mine','Mein Einsatz',`<div class="row"><span>${MODES[m.mode]}</span><select id="rs"><option value="">Keine Spezialrolle</option>${roles.map(r=>`<option value="${r.id}" ${r.id==m.role_id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div><div class="mut">${esc(locStatus||'Standort wird ermittelt …')}</div><div class="row"><button id="bMan">${manual?'GPS-Standort verwenden':'Standort manuell setzen (Test)'}</button><button id="bLv">Einsatz verlassen</button></div>`);
+    const sh=shares(m.mode);
+    h+=sec('mine','Mein Einsatz',`<div class="row"><span>${esc(modeOf(m.mode).name)}</span><select id="rs"><option value="">Keine Spezialrolle</option>${roles.map(r=>`<option value="${r.id}" ${r.id==m.role_id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div><div class="mut">${sh?esc(locStatus||'Standort wird ermittelt …'):'Bei dieser Einrückoption wird dein Standort nicht geteilt.'}</div><div class="row">${sh?`<button id="bMan">${manual?'GPS-Standort verwenden':'Standort manuell setzen (Test)'}</button>`:''}<button id="bLv">Einsatz verlassen</button></div>`);
     {const mh=(st.marks||[]).map(x=>`<div class="msg">${x.manual?'Einsatzleitung (manuell)':esc(x.name)} · ${fmtT(x.ts)} · ${x.lat.toFixed(5)}, ${x.lon.toFixed(5)} ${(st.can_manage||x.user_id==me.id)?`<button data-mr="${x.id}">Entfernen</button>`:''}</div>`).join('')||'<div class="mut">Noch keine Markierung</div>';
-    h+=sec('rescuee','Rettling markieren',`<div class="row"><button class="pri" id="bMark">Rettling an meinem Standort markieren</button></div>${st.can_manage?'<div class="row"><button id="bMarkMan">Position manuell setzen (Karte antippen)</button></div>':''}${mh}`)}
+    h+=sec('rescuee','Rettling markieren',`${sh?'<div class="row"><button class="pri" id="bMark">Rettling an meinem Standort markieren</button></div>':''}${st.can_manage?'<div class="row"><button id="bMarkMan">Position manuell setzen (Karte antippen)</button></div>':''}${mh}`)}
     h+=sec('msg','Nachricht senden',`<div class="row"><input id="mt" placeholder="Nachricht" style="flex:3"></div><div class="row"><select id="mto" multiple size="3" title="Empfänger (leer = alle)">${st.participants.filter(p=>p.user_id!=me.id&&p.mode!=='declined'&&!p.left_at).map(p=>`<option value="${p.user_id}">${esc(p.name)}</option>`).join('')}</select></div><div class="mut">Empfänger: keine Auswahl = alle, die den Einsatz angenommen haben</div><div class="row"><button id="bSend">Senden</button></div>`);
     }
   if(st.can_flow)h+=sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button><button id="bSug">Vorschlag BAFU</button></div><div class="mut">${esc(suggText)}</div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`);
   if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
   const act=st.participants.filter(p=>p.mode!=='declined');
-  h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table>${act.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(roleName(p)||'')}</td><td class="mut">${p.left_at?'verlassen':MODES[p.mode]}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}">Entfernen</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
+  h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table>${act.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(roleName(p)||'')}</td><td class="mut">${p.left_at?'verlassen':esc(modeOf(p.mode).name)}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}">Entfernen</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
   h+=sec('log','Nachrichten',(window.msgs||[]).map(x=>`<div class="msg"><b>${esc(x.from_name)}</b> ${esc(x.text)}</div>`).join('')||'<div class="mut">Keine Nachrichten</div>');
   s.innerHTML=h+acc;bindAcc();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
   if(joined){$('#rs').onchange=e=>api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail);$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
-    $('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
+    if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
     $('#bSend').onclick=()=>{const to=[...$('#mto').selectedOptions].map(o=>+o.value);api('incident/message',{text:$('#mt').value,to}).then(()=>{$('#mt').value='';poll()}).catch(fail)};
   }
   if(st.can_flow){$('#bFl').onclick=()=>{const v=+$('#fl').value;api('incident/flow',{flow_ms:v,src:suggVal!==null&&v===suggVal?'BAFU-Vorschlag':'manuell'}).then(poll).catch(fail)};$('#bSug').onclick=suggest}
   if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail)}}
+async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'&&shares(mode))track();await poll()}catch(e){fail(e)}}
+function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined')track();await poll()}catch(e){fail(e)}}
 // Abstand zur nächsten Gewässerachse im geladenen Gewässernetz (Meter), Infinity ohne Daten
 function waterDist(p){if(!net||!net.ways)return Infinity;const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);let best=Infinity;
@@ -210,13 +215,13 @@ let timer;async function poll(){try{const nx=await api(`incident/state&since=${l
     if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;window.msgs=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
       (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id)notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
       if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
-      st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined')track();else stop()}
+      st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&shares(nx.me.mode))track();else stop()}
     else{if(st&&st.incident){const x=st.incident.is_exercise;if(notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
     if(st&&st.incident)creating=false;updateChip();drawMap();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}catch(e){console.error('Poll',e)}}
 async function render(){clearInterval(timer);if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
   try{me=(await api('me')).me}catch(e){return}
   if(me.must_change){$('#app').innerHTML='';return pwDialog(true,render)} // nach Zurücksetzen zuerst eigenes Passwort setzen
-  try{roles=await api('roles')}catch(e){return}
+  try{roles=await api('roles');modes=await api('modes')}catch(e){return}
   shell();await poll();draw();timer=setInterval(poll,4000)}
 render();
 </script></body></html>
