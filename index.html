@@ -62,6 +62,7 @@ table.crew small{display:block;color:var(--mut)}table.crew select{width:100%;pad
 #followChip{position:fixed;top:calc(4.3rem + env(safe-area-inset-top));left:.7rem;z-index:1000;background:var(--ex);color:#fff;border-radius:6px;padding:.25rem .3rem .25rem .7rem;font-size:.9rem;display:flex;gap:.5rem;align-items:center;max-width:calc(100vw - 5rem);box-shadow:0 1px 4px #0008}
 #rdBox{position:fixed;top:calc(4.3rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:1200;background:var(--panel);border:2px solid #2ee6d6;border-radius:8px;padding:.5rem .7rem;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;width:max-content;max-width:min(30rem,calc(100vw - 1.4rem));box-shadow:0 2px 10px #000a}#rdBox[hidden]{display:none}#rdBox>div{width:100%}
 .rdt{width:100%}.rdt td{padding:.25rem .3rem}.rdt td:last-child{text-align:right;font-weight:600;white-space:nowrap}.rdt input{width:4.5rem;padding:.25rem .4rem}
+body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: Klicks auf Marker/Bereiche gehen an die Karte, keine Popups */
 .rdpt{width:26px;height:26px;border-radius:50%;background:#2ee6d6;color:#0f2430;font-weight:700;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px #0008}
 #followChip button{background:transparent;border:0;color:#fff;padding:.2rem .4rem}
 @media(min-width:760px){body.so #followChip{left:calc(400px + 1rem)}}
@@ -165,7 +166,9 @@ function drawMsgMarks(){if(!msgLayer)return;const mm=(st&&st.incident&&st.msg_ma
 document.addEventListener('click',e=>{const b=e.target.closest('[data-mm]');if(!b)return;if(!confirm('Kartenmarkierung dieser Nachricht entfernen? Die Nachricht selbst bleibt erhalten.'))return;
   api('incident/message/unmark',{id:+b.dataset.mm}).then(()=>{map.closePopup();poll()}).catch(fail)});
 // Punkt auf der Karte wählen (z. B. Markierung ohne eigenen Standort); Hinweis unten über #areaNote
-function pickPoint(text){return new Promise(res=>{if(panel)togglePanel(panel,false);toggleSheet(false);window.markPick=text;drawMap();map.once('click',e=>{window.markPick=null;drawMap();res(e.latlng)})})}
+// Punktwahl (pickPoint, Bereich zeichnen, Flussdistanz): Marker, Bereiche usw. lassen Klicks zur Karte durch, damit überall gewählt werden kann
+const pickMode=on=>{document.body.classList.toggle('picking',on);if(on)map.closePopup()};
+function pickPoint(text){return new Promise(res=>{if(panel)togglePanel(panel,false);toggleSheet(false);window.markPick=text;pickMode(true);drawMap();map.once('click',e=>{window.markPick=null;pickMode(false);drawMap();res(e.latlng)})})}
 function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.marker([i.lat,i.lon],{icon:L.divIcon({className:'',html:'<div class="pls"></div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map).bindTooltip('PLS');
   try{layers.area=drawArea(i);if(layers.area)layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message}if(n){n.textContent=window.markPick||areaInfo;n.hidden=!(areaInfo||window.markPick)}checkArea();
@@ -405,14 +408,14 @@ function newPoi(kind){const area=kind==='area';
       if(area)return startDraw(name,color);
       pickPoint(`Tippe auf die Karte, um «${name}» zu setzen.`).then(q=>api('incident/poi',{kind,name,color,pts:[[q.lat,q.lng]]})).then(()=>{togglePanel('pois',true);poll()}).catch(fail)},'Weiter')}
 function startDraw(name,color){if(panel)togglePanel(panel,false);toggleSheet(false);stopFollow();const pts=[],tmp=L.layerGroup().addTo(map),bar=$('#drawBar');
-  const add=e=>{pts.push(e.latlng);upd()},end=()=>{map.off('click',add);map.removeLayer(tmp);bar.hidden=true;map.doubleClickZoom.enable()};
+  const add=e=>{pts.push(e.latlng);upd()},end=()=>{map.off('click',add);map.removeLayer(tmp);bar.hidden=true;map.doubleClickZoom.enable();pickMode(false)};
   const upd=()=>{tmp.clearLayers();
     if(pts.length>2)L.polygon(pts,{color,weight:2,dashArray:'5',fillOpacity:.15,interactive:false}).addTo(tmp);else if(pts.length)L.polyline(pts,{color,weight:2,dashArray:'5',interactive:false}).addTo(tmp);
     pts.forEach(p=>L.circleMarker(p,{radius:5,color:'#fff',weight:2,fillColor:color,fillOpacity:1,interactive:false}).addTo(tmp));
     bar.innerHTML=`<span>Bereich «${esc(name)}»: Eckpunkte antippen (${pts.length})</span><button id="dU" ${pts.length?'':'disabled'}>Rückgängig</button><button class="pri" id="dOk" ${pts.length>2?'':'disabled'}>Fertig</button><button id="dX">Abbrechen</button>`;
     $('#dU').onclick=()=>{pts.pop();upd()};$('#dX').onclick=end;
     $('#dOk').onclick=()=>{const body={kind:'area',name,color,pts:pts.map(p=>[p.lat,p.lng])};end();api('incident/poi',body).then(()=>{togglePanel('pois',true);poll()}).catch(fail)}};
-  map.doubleClickZoom.disable();map.on('click',add);bar.hidden=false;upd()}
+  map.doubleClickZoom.disable();map.on('click',add);pickMode(true);bar.hidden=false;upd()}
 /* ---------- Flussdistanz: Distanz zwischen zwei Punkten entlang des Gewässers mit Zeitangaben ---------- */
 // Eigenes Gewässernetz (Overpass, Rechteck um beide Punkte), unabhängig vom Suchgebiet und auch ohne Einsatz nutzbar. OSM-Wege zeigen in Fliessrichtung.
 const RD_MAX_M=50000;      // maximale Luftlinie zwischen den Punkten (Grösse der Overpass-Abfrage)
@@ -422,12 +425,12 @@ let rd=null,rdNet=null;     // rd: laufende Messung {step a|b|load|done, a, b, r
 const kmT=m=>m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?2:1)+' km';
 const durS=s=>{if(!isFinite(s))return'–';const m=Math.round(s/60);return m<1?'< 1 min':m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min'};
 function rdOpen(){if(panel)togglePanel(panel,false);toggleSheet(false);stopFollow();rdClose();
-  rd={step:'a',layer:L.layerGroup().addTo(map)};map.doubleClickZoom.disable();map.on('click',rdClick);rdRender()}
-function rdClose(){if(!rd)return;map.off('click',rdClick);map.doubleClickZoom.enable();map.removeLayer(rd.layer);rd=null;$('#rdBox').hidden=true}
+  rd={step:'a',layer:L.layerGroup().addTo(map)};map.doubleClickZoom.disable();map.on('click',rdClick);pickMode(true);rdRender()}
+function rdClose(){if(!rd)return;map.off('click',rdClick);map.doubleClickZoom.enable();pickMode(false);map.removeLayer(rd.layer);rd=null;$('#rdBox').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&rd&&!big)rdClose()});
 const rdPin=(ll,t)=>L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="rdpt">${t}</div>`,iconSize:[26,26],iconAnchor:[13,13]}),interactive:false,zIndexOffset:2000});
 function rdClick(e){if(rd.step==='a'){rd.a=e.latlng;rdPin(rd.a,'A').addTo(rd.layer);rd.step='b';rdRender()}
-  else if(rd.step==='b'){rd.b=e.latlng;rdPin(rd.b,'B').addTo(rd.layer);map.off('click',rdClick);map.doubleClickZoom.enable();rdCalc()}}
+  else if(rd.step==='b'){rd.b=e.latlng;rdPin(rd.b,'B').addTo(rd.layer);map.off('click',rdClick);map.doubleClickZoom.enable();pickMode(false);rdCalc()}}
 async function rdCalc(){const cur=rd,air=cur.a.distanceTo(cur.b);cur.air=air;
   if(air>RD_MAX_M){cur.err=`Die Punkte liegen ${kmT(air)} auseinander (Luftlinie), möglich sind höchstens ${RD_MAX_M/1000} km.`;cur.step='done';return rdRender()}
   cur.step='load';rdRender();

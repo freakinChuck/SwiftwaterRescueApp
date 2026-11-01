@@ -37,6 +37,7 @@ Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und
   - Weg: zuerst in Fliessrichtung (OSM-Wege zeigen flussabwärts), sonst umgekehrt, sonst ohne Richtung (Zusammenfluss).
   - Anzeige in `#rdBox`: Distanz entlang Gewässer und Luftlinie, Richtung, Koordinaten, Treibzeit mit der Fliessgeschwindigkeit (die des Einsatzes, sonst Eingabe, pro Gerät gemerkt in `sw_rdflow`) und Dauer für die Vergleichsgeschwindigkeiten.
   - Die Vergleichsgeschwindigkeiten stellt man in der Verwaltung ein (Abschnitt «Flussdistanz», Einstellung `rd_speeds`, 1–6 Werte zwischen 1 und 200 km/h, Standard 10, 20, 30). Die Einsatz-App erhält sie über `me`.
+  - Während der Punktwahl (Flussdistanz, `pickPoint`, Bereich zeichnen) setzt `pickMode` die Klasse `picking` am `body`. Dann lassen Marker und Bereiche Klicks zur Karte durch (keine Popups), und es kann überall gewählt werden.
   - Höchstens `RD_MAX_M` = 50 km Luftlinie. Nur im Frontend, der Server speichert nichts.
 - Fliessgeschwindigkeit: darf von allen Teilnehmenden gesetzt werden, nur manuelle Eingabe (der frühere BAFU-Vorschlag `flow/suggest` wurde auf Wunsch des Auftraggebers entfernt).
 - Nachrichten nur an Personen, die den Einsatz angenommen haben; alle von ihnen sehen alle Nachrichten, benachrichtigt werden nur die markierten Empfänger.
