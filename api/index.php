@@ -14,10 +14,15 @@ $tx = $my ? 'VARCHAR(190)' : 'TEXT';
 foreach ([
  "CREATE TABLE IF NOT EXISTS users(id $ai, username $tx UNIQUE, name $tx, pass_hash $tx, is_admin INT DEFAULT 0, active INT DEFAULT 1, photo MEDIUMTEXT, token $tx, exercise_mode INT DEFAULT 0, must_change INT DEFAULT 0)",
  "CREATE TABLE IF NOT EXISTS roles(id $ai, name $tx, color $tx, is_lead INT DEFAULT 0, active INT DEFAULT 1, is_post INT DEFAULT 0, can_message INT DEFAULT 1)",
- "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT, is_exercise INT DEFAULT 0)",
+ // Aufzeichnung fürs Replay in der Verwaltung: record = aktueller Zustand (0 aus/beendet, 1 läuft, 2 pausiert), recorded=1 sobald Daten vorhanden sind
+ "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT, is_exercise INT DEFAULT 0, record INT DEFAULT 0, recorded INT DEFAULT 0)",
+ // Aufzeichnung: Standortverlauf je Einsatzkraft (user_id) bzw. markierte Standorte je Rettling (rescuee_id)
+ "CREATE TABLE IF NOT EXISTS track(id $ai, incident_id INT, user_id INT NULL, rescuee_id INT NULL, ts BIGINT, lat DOUBLE, lon DOUBLE)",
+ // Zeiträume, in denen aufgezeichnet wurde (stop NULL = läuft); Pausen liegen dazwischen
+ "CREATE TABLE IF NOT EXISTS rec_periods(id $ai, incident_id INT, start BIGINT, stop BIGINT NULL)",
  "CREATE TABLE IF NOT EXISTS participants(id $ai, incident_id INT, user_id INT, mode $tx, role_id INT NULL, lat DOUBLE NULL, lon DOUBLE NULL, loc_at BIGINT NULL, left_at BIGINT NULL, log_lat DOUBLE NULL, log_lon DOUBLE NULL, log_at BIGINT NULL, fast_at BIGINT NULL, UNIQUE(incident_id,user_id))",
  // lat/lon: Standort der sendenden Person beim Senden; mark=1: als Markierung auf der Karte (mark_lat/mark_lon)
- "CREATE TABLE IF NOT EXISTS messages(id $ai, incident_id INT, from_user INT, text TEXT, recipients TEXT NULL, created BIGINT, lat DOUBLE NULL, lon DOUBLE NULL, mark INT DEFAULT 0, mark_lat DOUBLE NULL, mark_lon DOUBLE NULL)",
+ "CREATE TABLE IF NOT EXISTS messages(id $ai, incident_id INT, from_user INT, text TEXT, recipients TEXT NULL, created BIGINT, lat DOUBLE NULL, lon DOUBLE NULL, mark INT DEFAULT 0, mark_lat DOUBLE NULL, mark_lon DOUBLE NULL, unmarked BIGINT NULL)",
  "CREATE TABLE IF NOT EXISTS incident_log(id $ai, incident_id INT, ts BIGINT, user_id INT NULL, kind $tx, text TEXT)",
  "CREATE TABLE IF NOT EXISTS rescuee_marks(id $ai, incident_id INT, user_id INT, lat DOUBLE, lon DOUBLE, ts BIGINT, manual INT DEFAULT 0)",
  // Einrückoptionen beim Annehmen eines Einsatzes; participants.mode verweist auf code
@@ -33,8 +38,9 @@ foreach ([
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0']] as $t => $cs)
+foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
+try { $db->exec("CREATE INDEX track_inc ON track(incident_id,ts)"); } catch (Throwable $e) {} // schlägt bei vorhandenem Index still fehl
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO roles(name,color,is_lead,is_post) VALUES(?,?,?,?)");
   foreach ([['Einsatzleitung','#d62828',1,0],['Rettungsboot','#1d7fd1',0,0],['Rettungsschlitten','#e6a100',0,0],['Sicherungs- und Beobachtungsposten','#2a9d5c',0,1]] as $r) $st->execute($r);
@@ -112,6 +118,11 @@ function canMessage($inc) {
 }
 function activeIncident() { global $db; return $db->query("SELECT * FROM incidents WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1")->fetch() ?: null; }
 function rescuee($inc, $id) { global $db; $s = $db->prepare("SELECT * FROM rescuees WHERE id=? AND incident_id=? AND removed IS NULL"); $s->execute([(int)$id, $inc['id']]); return $s->fetch() ?: fail('Rettling nicht gefunden', 404); }
+// Aufzeichnung umschalten: Zeitraum öffnen (an) bzw. schliessen (aus), record = neuer Zustand
+function setRec($incId, $state) { global $db, $now;
+  $db->prepare("UPDATE rec_periods SET stop=? WHERE incident_id=? AND stop IS NULL")->execute([$now, $incId]);
+  if ($state === 1) $db->prepare("INSERT INTO rec_periods(incident_id,start) VALUES(?,?)")->execute([$incId, $now]);
+  $db->prepare("UPDATE incidents SET record=?" . ($state === 1 ? ', recorded=1' : '') . " WHERE id=?")->execute([$state, $incId]); }
 function logev($incId, $userId, $kind, $text) { global $db, $now; $db->prepare("INSERT INTO incident_log(incident_id,ts,user_id,kind,text) VALUES(?,?,?,?,?)")->execute([$incId, $now, $userId, $kind, $text]); }
 function hav($a, $b, $c, $d) { $p1 = deg2rad($a); $p2 = deg2rad($c); $dp = $p2 - $p1; $dl = deg2rad($d - $b); $x = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 12742000 * asin(min(1, sqrt($x))); }
 function avg($a) { $a = array_values(array_filter($a, fn($x) => $x !== null)); return $a ? round(array_sum($a) / count($a), 1) : null; }
@@ -163,10 +174,11 @@ switch ($route) {
   $at = !empty($in['alarm_at']) ? (int)$in['alarm_at'] : $now;
   if ($at > $now + 60) fail('Der Alarmeingang darf nicht in der Zukunft liegen');
   if ($at < $now - 7 * 86400) fail('Der Alarmeingang liegt mehr als 7 Tage zurück');
-  $ex = empty($in['is_exercise']) ? 0 : 1;
+  $ex = empty($in['is_exercise']) ? 0 : 1; $rec = empty($in['record']) ? 0 : 1;
   $db->prepare("INSERT INTO incidents(message,lat,lon,alarm_at,created_by,is_exercise) VALUES(?,?,?,?,?,?)")->execute([$in['message'], (float)$in['lat'], (float)$in['lon'], $at, $uid, $ex]);
   $nid = (int)$db->lastInsertId();
-  logev($nid, $uid, 'start', 'hat den Einsatz gestartet (' . ($ex ? 'Übung' : 'scharfer Einsatz') . '): ' . $in['message']);
+  if ($rec) setRec($nid, 1);
+  logev($nid, $uid, 'start', 'hat den Einsatz gestartet (' . ($ex ? 'Übung' : 'scharfer Einsatz') . ($rec ? ', mit Aufzeichnung' : '') . '): ' . $in['message']);
   out(['id' => $nid]);
 
  case 'incident/state': // Polling-Endpunkt: ?since=<letzte Nachrichten-ID>
@@ -175,7 +187,7 @@ switch ($route) {
     $last = $db->query("SELECT id,ended_at FROM incidents ORDER BY id DESC LIMIT 1")->fetch();
     out(['incident' => null, 'last_ended' => $last ?: null]);
   }
-  $inc['id'] = (int)$inc['id']; $inc['lat'] = (float)$inc['lat']; $inc['lon'] = (float)$inc['lon']; $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc['is_exercise'] = (int)$inc['is_exercise'];
+  $inc['id'] = (int)$inc['id']; $inc['lat'] = (float)$inc['lat']; $inc['lon'] = (float)$inc['lon']; $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc['is_exercise'] = (int)$inc['is_exercise']; $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
   $id = $inc['id']; $since = (int)($_GET['since'] ?? 0);
   $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,u.name,u.photo FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
@@ -264,6 +276,7 @@ switch ($route) {
   $p = part($inc['id']); if (!$p || $p['left_at'] !== null || $p['mode'] === 'declined') out(['ok' => true]);
   $la = (float)$in['lat']; $lo = (float)$in['lon'];
   $db->prepare("UPDATE participants SET lat=?,lon=?,loc_at=? WHERE incident_id=? AND user_id=?")->execute([$la, $lo, $now, $inc['id'], $uid]);
+  if ((int)$inc['record'] === 1) $db->prepare("INSERT INTO track(incident_id,user_id,ts,lat,lon) VALUES(?,?,?,?,?)")->execute([$inc['id'], $uid, $now, $la, $lo]);
   // Fahrt erkennen: Start = letzte Position vor der ersten schnellen Meldung (log_*), fast_at = letzte schnelle Meldung
   $dt = $p['loc_at'] !== null ? $now - (int)$p['loc_at'] : 0;
   $fast = $dt >= 4 && empty($in['water']) && empty($in['manual']) && hav((float)$p['lat'], (float)$p['lon'], $la, $lo) / $dt >= VEHICLE_MS;
@@ -382,6 +395,7 @@ switch ($route) {
     [$la, $lo] = [round((float)$in['lat'], 7), round((float)$in['lon'], 7)];
   }
   $db->prepare("UPDATE rescuees SET lat=?, lon=?, loc_at=?, loc_by=? WHERE id=?")->execute([$la, $lo, $now, $uid, $r['id']]);
+  if ((int)$inc['record'] === 1) $db->prepare("INSERT INTO track(incident_id,rescuee_id,ts,lat,lon) VALUES(?,?,?,?,?)")->execute([$inc['id'], $r['id'], $now, $la, $lo]); // frühere Standorte fürs Replay
   logev($inc['id'], $uid, 'resmark', sprintf('markiert den Standort von «%s» %s (%.5F, %.5F)', $r['name'], !empty($in['own']) ? 'am eigenen Standort' : 'auf der Karte', $la, $lo));
   out(['ok' => true]);
 
@@ -439,21 +453,65 @@ switch ($route) {
   $s = $db->prepare("SELECT * FROM messages WHERE id=? AND incident_id=? AND mark=1"); $s->execute([(int)($in['id'] ?? 0), $inc['id']]); $m = $s->fetch();
   if (!$m) fail('Markierung nicht gefunden', 404);
   if ((int)$m['from_user'] !== $uid && !canManage($inc)) fail('Nur wer die Nachricht gesendet hat oder die Einsatzleitung kann die Markierung entfernen', 403);
-  $db->prepare("UPDATE messages SET mark=0 WHERE id=?")->execute([$m['id']]);
+  $db->prepare("UPDATE messages SET mark=0, unmarked=? WHERE id=?")->execute([$now, $m['id']]);
   logev($inc['id'], $uid, 'markdel', 'entfernt die Kartenmarkierung der Nachricht «' . mb_substr($m['text'], 0, 60) . '»');
   out(['ok' => true]);
 
+ case 'incident/record': // Aufzeichnung steuern (Einsatzleitung): start (auch nach «beenden» wieder), pause, resume, stop
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (!canManage($inc)) fail('Nur die Einsatzleitung kann die Aufzeichnung steuern', 403);
+  $cur = (int)$inc['record']; $a = (string)($in['action'] ?? '');
+  // erlaubte Übergänge: Ziel-Zustand und Log-Text je Aktion
+  $T = ['start' => [[0], 1, (int)$inc['recorded'] ? 'nimmt die Aufzeichnung wieder auf' : 'startet die Aufzeichnung'], 'pause' => [[1], 2, 'pausiert die Aufzeichnung'],
+        'resume' => [[2], 1, 'setzt die Aufzeichnung fort'], 'stop' => [[1, 2], 0, 'beendet die Aufzeichnung']];
+  if (!isset($T[$a])) fail('Unbekannte Aktion');
+  if (!in_array($cur, $T[$a][0], true)) out(['ok' => true, 'record' => $cur]); // schon im gewünschten Zustand, z. B. gleichzeitig von zwei Personen
+  setRec((int)$inc['id'], $T[$a][1]);
+  logev($inc['id'], $uid, 'rec', $T[$a][2]);
+  out(['ok' => true, 'record' => $T[$a][1]]);
+
  case 'incident/end':
   $inc = activeIncident(); if (!$inc || !canManage($inc)) fail('Nur Einsatzleitung, Administratoren oder die Person, die den Einsatz gestartet hat, können den Einsatz beenden', 403);
+  if ((int)$inc['record']) setRec((int)$inc['id'], 0); // laufende Aufzeichnung endet mit dem Einsatz
   $db->prepare("UPDATE incidents SET ended_at=? WHERE id=?")->execute([$now, $inc['id']]);
   logev($inc['id'], $uid, 'end', 'hat den Einsatz beendet');
   out(['ok' => true]);
 
  case 'incident/log': admin(); out(logRows((int)($_GET['id'] ?? 0), true));
 
+ case 'incident/replay': admin(); // alle Daten eines aufgezeichneten Einsatzes für das Replay in der Verwaltung
+  $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([(int)($_GET['id'] ?? 0)]); $inc = $s->fetch();
+  if (!$inc) fail('Einsatz nicht gefunden', 404);
+  if (!(int)$inc['recorded']) fail('Für diesen Einsatz gibt es keine Aufzeichnung');
+  $id = (int)$inc['id']; $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
+  // Spezialrolle: Stand am Ende (Rollenwechsel stehen im Log); joined = erste Annahme
+  $parts = array_map(fn($r) => ints($r, ['user_id', 'role_id', 'left_at', 'joined']), $q(
+    "SELECT p.user_id,p.mode,p.role_id,p.left_at,u.name,r.name role,r.color,m.name mode_name,(SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=p.incident_id AND l.user_id=p.user_id AND l.kind='accept') joined
+     FROM participants p JOIN users u ON u.id=p.user_id LEFT JOIN roles r ON r.id=p.role_id LEFT JOIN modes m ON m.code=p.mode WHERE p.incident_id=? AND p.mode<>'declined'"));
+  // Verlauf kompakt als [id, ts, lat, lon]
+  $tr = ['u' => [], 'r' => []];
+  foreach ($q("SELECT user_id,rescuee_id,ts,lat,lon FROM track WHERE incident_id=? ORDER BY ts,id") as $r)
+    $r['user_id'] !== null ? $tr['u'][] = [(int)$r['user_id'], (int)$r['ts'], (float)$r['lat'], (float)$r['lon']] : $tr['r'][] = [(int)$r['rescuee_id'], (int)$r['ts'], (float)$r['lat'], (float)$r['lon']];
+  $pois = array_map(fn($r) => ['pts' => json_decode($r['pts'], true)] + ints($r, ['id', 'created', 'removed']), $q("SELECT id,kind,name,color,pts,created,removed FROM pois WHERE incident_id=? ORDER BY id"));
+  $res = array_map(fn($r) => floats(ints($r, ['id', 'created', 'removed', 'loc_at', 'rescued_at']), ['lat', 'lon']), $q("SELECT id,name,descr,lat,lon,loc_at,rescued_at,created,removed FROM rescuees WHERE incident_id=? ORDER BY id"));
+  $marks = array_map(fn($r) => floats(ints($r, ['id', 'created', 'unmarked', 'mark']), ['mark_lat', 'mark_lon']), $q("SELECT m.id,m.text,m.created,m.mark,m.unmarked,m.mark_lat,m.mark_lon,u.name FROM messages m LEFT JOIN users u ON u.id=m.from_user WHERE m.incident_id=? AND m.mark_lat IS NOT NULL ORDER BY m.id"));
+  $flow = array_map(fn($r) => ints($r, ['ts']), $q("SELECT ts,text FROM incident_log WHERE incident_id=? AND kind='flow' ORDER BY ts,id"));
+  $per = array_map(fn($r) => ints($r, ['start', 'stop']), $q("SELECT start,stop FROM rec_periods WHERE incident_id=? ORDER BY start,id"));
+  $inc = floats(ints($inc, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded']), ['lat', 'lon', 'flow_ms']);
+  out(['incident' => $inc, 'periods' => $per, 'participants' => $parts, 'track' => $tr['u'], 'rtrack' => $tr['r'], 'pois' => $pois, 'rescuees' => $res, 'marks' => $marks, 'flow' => $flow, 'log' => logRows($id, true), 'now' => $now]);
+
+ case 'incident/replay/delete': admin(); // Aufzeichnung eines Einsatzes löschen (Standortverläufe und Zeiträume); Log, Nachrichten usw. bleiben
+  $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([(int)($in['id'] ?? 0)]); $inc = $s->fetch();
+  if (!$inc) fail('Einsatz nicht gefunden', 404);
+  if (!(int)$inc['recorded']) fail('Für diesen Einsatz gibt es keine Aufzeichnung');
+  foreach (['track', 'rec_periods'] as $t) $db->prepare("DELETE FROM $t WHERE incident_id=?")->execute([$inc['id']]);
+  $db->prepare("UPDATE incidents SET record=0, recorded=0 WHERE id=?")->execute([$inc['id']]); // läuft der Einsatz noch, endet auch die Aufzeichnung
+  logev($inc['id'], $uid, 'rec', 'löscht die Aufzeichnung' . ($inc['ended_at'] === null ? ' (Aufzeichnung beendet)' : ''));
+  out(['ok' => true]);
+
  case 'stats': admin();
-  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'accepted', 'declined', 'first_accept', 'first_area']), $db->query(
-   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,u.name creator,
+  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area']), $db->query(
+   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.record,i.recorded,u.name creator,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode='declined') declined,
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='accept') first_accept,

@@ -75,13 +75,7 @@ table.crew small{display:block;color:var(--mut)}table.crew select{width:100%;pad
 <script src="common.js"></script>
 <script>
 /* ---------- Konfiguration ---------- */
-// Kartenanbieter austauschbar: aktiven Eintrag über MAP_PROVIDER wählen oder neuen ergänzen.
-const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
-const MAP_PROVIDERS={
-  swisstopo_sat:{label:'Luftbild (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
-  swisstopo:{label:'Landeskarte (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
-  osm:{label:'OpenStreetMap',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap',maxZoom:19}
-};
+// Kartenanbieter (MAP_PROVIDERS, DEFAULT_BASE) in common.js, gemeinsam mit dem Replay der Verwaltung
 // Gewässernetz (OpenStreetMap via Overpass). Austauschbar: Funktion loadNet() liefert Wege als {id,nodes[],geometry[{lat,lon}]} in Fliessrichtung.
 const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
 const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
@@ -251,7 +245,7 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
   if(secReset){secReset=false;openSec=new Set(['mine']);if(!i.flow_ms)openSec.add('flow')}
-  let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}${esc(fcs(i.lat,i.lon,' · PLS '))}</div>`;
+  let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}${esc(fcs(i.lat,i.lon,' · PLS '))}${i.record===1?' · <b>● wird aufgezeichnet</b> (Standortverläufe für das Replay)':i.record===2?' · <b>❚❚ Aufzeichnung pausiert</b>':''}</div>`;
   if(!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button class="pri" data-m="${esc(x.code)}">Einsatz annehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
   // Reihenfolge im Menü: Mein Einsatz, Fliessgeschwindigkeit & Suchgebiet, danach der Rest
   const flowSec=st.can_flow?sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button></div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`):'';
@@ -265,7 +259,9 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     }
   // «Einsatz verwalten» und «Einsatzkräfte» (Rollen setzen, entfernen) nur für die Einsatzleitung (can_manage);
   // alle anderen sehen die Einsatzkräfte über den Kartenknopf «Personen»
-  if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
+  // Aufzeichnung fürs Replay: record 0 aus/beendet, 1 läuft, 2 pausiert; nach «Beenden» jederzeit wieder aufnehmbar
+  const REC={0:[i.recorded?'Beendet. Bisherige Aufzeichnung bleibt für das Replay erhalten.':'Aus',[['start',i.recorded?'Wieder aufnehmen':'Aufzeichnung starten']]],1:['● Läuft',[['pause','Pausieren'],['stop','Beenden']]],2:['❚❚ Pausiert',[['resume','Fortsetzen'],['stop','Beenden']]]}[i.record]||['?',[]];
+  if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<h4 style="margin:.3rem 0">Aufzeichnung (Replay in der Verwaltung)</h4><div class="mut">${esc(REC[0])}</div><div class="row">${REC[1].map(([a,l])=>`<button data-rec="${a}">${l}</button>`).join('')}</div><div class="mut">Gespeichert werden die Standortverläufe aller Teilnehmenden, solange die Aufzeichnung läuft.</div><div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
   const act=st.participants.filter(p=>p.mode!=='declined');
   if(st.can_manage)h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table class="crew">${act.map(p=>`<tr><td>${esc(p.name)}<small>${p.left_at?'verlassen':esc(modeOf(p.mode).name)}</small></td><td>${p.left_at?esc(roleName(p)||''):leadMode(p.mode)?'<span class="mut">Rechte der Einsatzleitung</span>':st.can_manage?roleSel('',p.role_id,`data-rset="${p.user_id}" aria-label="Spezialrolle von ${esc(p.name)}"`):esc(roleName(p)||'')}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}" data-n="${esc(p.name)}" aria-label="${esc(p.name)} aus dem Einsatz entfernen" title="Aus dem Einsatz entfernen">✕</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
@@ -275,7 +271,8 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
   }
   if(st.can_flow)$('#bFl').onclick=()=>api('incident/flow',{flow_ms:+$('#fl').value}).then(poll).catch(fail);
-  if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail)}}
+  if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail);
+    $('#sheet').querySelectorAll('[data-rec]').forEach(b=>b.onclick=()=>{b.disabled=true;api('incident/record',{action:b.dataset.rec}).then(poll).catch(e=>{b.disabled=false;fail(e)})})}}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'&&shares(mode))track();await poll()}catch(e){fail(e)}}
 function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined')track();await poll()}catch(e){fail(e)}}
@@ -290,10 +287,12 @@ function track(){if(watchId!=null||hb)return;
   hb=setInterval(()=>{if(lastPos&&Date.now()-lastSent>10000)sendPos(lastPos)},5000)}
 function stop(){if(watchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(watchId);watchId=null;clearInterval(hb);hb=null}
 function photo(e){const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d'),s=Math.min(img.width,img.height);x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,96,96);api('me/photo',{photo:c.toDataURL('image/jpeg',.8)}).then(()=>alert('Profilbild gespeichert')).catch(fail)};img.src=URL.createObjectURL(f)}
-function newView(){creating=true;$('#sheet').innerHTML=`<h3>Einsatz starten</h3><div class="row"><select id="nex" aria-label="Art des Einsatzes"><option value="0">Scharfer Einsatz (kritische Alarmierung)</option><option value="1">Übung (normale Benachrichtigung)</option></select></div><div class="row"><textarea id="nm" placeholder="Meldung" rows="2"></textarea></div><div class="row"><input id="nlat" placeholder="Breite (PLS)"><input id="nlon" placeholder="Länge (PLS)"></div><div class="row"><label class="mut">Alarmeingang (Standard: jetzt)<input id="nat" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></label></div><div class="mut">PLS: auf die Karte tippen oder Koordinaten eingeben.</div><div class="row"><button class="pri" id="nGo">Alarm auslösen</button><button id="nX">Abbrechen</button></div>`;
+function newView(){creating=true;$('#sheet').innerHTML=`<h3>Einsatz starten</h3><div class="row"><select id="nex" aria-label="Art des Einsatzes"><option value="0">Scharfer Einsatz (kritische Alarmierung)</option><option value="1">Übung (normale Benachrichtigung)</option></select></div><label class="row" style="align-items:center"><input type="checkbox" id="nrec" style="flex:0 0 auto"> <span>Aufzeichnen (Replay in der Verwaltung)</span></label><div class="mut">Speichert die Standortverläufe aller Teilnehmenden für die spätere Auswertung.</div><div class="row"><textarea id="nm" placeholder="Meldung" rows="2"></textarea></div><div class="row"><input id="nlat" placeholder="Breite (PLS)"><input id="nlon" placeholder="Länge (PLS)"></div><div class="row"><label class="mut">Alarmeingang (Standard: jetzt)<input id="nat" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></label></div><div class="mut">PLS: auf die Karte tippen oder Koordinaten eingeben.</div><div class="row"><button class="pri" id="nGo">Alarm auslösen</button><button id="nX">Abbrechen</button></div>`;
+  // Übungen standardmässig aufzeichnen, solange die Person das Häkchen nicht selbst gesetzt hat
+  let recSet=false;$('#nrec').onchange=()=>{recSet=true};$('#nex').onchange=e=>{if(!recSet)$('#nrec').checked=e.target.value==='1'};
   let pin;map.once('click',function f(e){$('#nlat').value=e.latlng.lat.toFixed(6);$('#nlon').value=e.latlng.lng.toFixed(6);pin&&map.removeLayer(pin);pin=L.marker(e.latlng).addTo(map);map.once('click',f)});
   $('#nX').onclick=()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);draw()};
-  $('#nGo').onclick=()=>api('incident/start',{is_exercise:+$('#nex').value,message:$('#nm').value,lat:+$('#nlat').value,lon:+$('#nlon').value,alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined}).then(()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);poll()}).catch(fail)}
+  $('#nGo').onclick=()=>api('incident/start',{is_exercise:+$('#nex').value,record:$('#nrec').checked?1:0,message:$('#nm').value,lat:+$('#nlat').value,lon:+$('#nlon').value,alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined}).then(()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);poll()}).catch(fail)}
 /* ---------- Suchgebiet erreicht, Vorschlag ---------- */
 function inPoly(p,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.lat>p.lat)!==(b.lat>p.lat)&&p.lng<(b.lng-a.lng)*(p.lat-a.lat)/(b.lat-a.lat)+a.lng)c=!c}return c}
 function checkArea(){if(!st||!st.incident||!areaShape||!areaShape.polys||areaLogged[st.incident.id])return;const m=st.me;if(!m||m.left_at||m.mode==='declined')return;
