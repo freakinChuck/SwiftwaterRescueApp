@@ -22,7 +22,6 @@ body{height:100dvh;display:flex;flex-direction:column}
 @media(min-width:760px){body.so #chip{left:calc(400px + 1rem)}body.so #areaNote{left:calc(400px + 1rem)}}
 /* Kartenmarkierung einer Nachricht (Spitze unten links zeigt auf den Ort) */
 .foot{margin-top:1rem;padding-top:.6rem;border-top:1px solid var(--line);font-size:.78rem;color:var(--mut);display:grid;gap:.25rem}.foot b{color:var(--tx)}
-.rights{margin-top:.35rem;font-size:.85rem;line-height:1.45}.badge.lead{background:#d62828}
 .mmk{width:30px;height:30px;border-radius:8px 8px 8px 0;background:#ffd23f;color:#3a2a00;border:2px solid #fff;display:grid;place-items:center;font-size:.95rem;box-shadow:0 0 0 2px #0008}
 .mmpop b{display:block}.mmpop .t{display:block;color:#666;font-size:.8rem;margin-bottom:.3rem}.mmpop button{margin-top:.5rem;padding:.35rem .6rem;background:var(--alarm);border-color:var(--alarm);color:#fff;font-weight:600}
 #mmShowRow{display:flex;gap:.5rem;align-items:center;padding:.35rem .7rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--mut)}
@@ -193,18 +192,16 @@ function footInfo(){const i=st&&st.incident,m=i&&st.me,joined=!!(m&&!m.left_at&&
     add(st.can_manage,'Einsatz verwalten und beenden');add(st.can_manage,'Spezialrollen setzen');add(st.can_manage,'Einsatzkräfte entfernen');add(st.can_manage,'Rettling manuell setzen, Markierungen entfernen');
     add(st.can_flow,'Fliessgeschwindigkeit setzen');add(joined,'Nachrichten lesen');add(joined&&st.can_message,'Nachrichten senden');add(sh,'Standort teilen');add(sh,'Rettling am eigenen Standort markieren');
     if(r&&r.is_post)yes.push('Posten: Suchgebiet endet am eigenen Standort');
+    if(st.can_manage)rows.push(['Einsatzleitung',leadWhy(i,m,joined)]);
     rows.push(['Darf',yes.join(' · ')||'–']);if(no.length)rows.push(['Darf nicht',no.join(' · ')])}
   return `<div class="foot">${rows.map(([k,v])=>`<div><b>${k}:</b> ${esc(v)}</div>`).join('')}</div>`}
-// Eigene Sonderrechte und Einschränkungen in diesem Einsatz mit Grund (nur Anzeige, massgebend sind die Prüfungen auf dem Server)
-function rightsLine(i,m,joined){const why=[],lim=[],r=joined&&roles.find(x=>x.id==m.role_id);
+// Grund für die Rechte der Einsatzleitung (nur Anzeige, massgebend sind die Prüfungen auf dem Server)
+function leadWhy(i,m,joined){const why=[],r=joined&&roles.find(x=>x.id==m.role_id);
   if(joined&&leadMode(m.mode))why.push('Einrückoption '+modeOf(m.mode).name);
   if(r&&r.is_lead)why.push('Spezialrolle '+r.name);
   if(me.is_admin)why.push('Administrator');
   if(i.created_by===me.id)why.push('hat den Einsatz gestartet');
-  if(joined&&!st.can_message)lim.push('darf keine Nachrichten senden');
-  if(joined&&!shares(m.mode))lim.push('Standort wird nicht geteilt');
-  return `<div class="rights"><b>Sonderrechte:</b> ${st.can_manage?`<span class="badge lead">Einsatzleitung</span> <span class="mut">(${esc(why.join(', ')||'laut Server')}): Einsatz verwalten und beenden, Spezialrollen setzen, Einsatzkräfte entfernen, Markierungen verwalten, Nachrichten immer senden</span>`:'<span class="mut">keine</span>'}`
-    +(lim.length?`<br><b>Einschränkungen:</b> <span class="mut">${esc(lim.join(' · '))}</span>`:'')+'</div>'}
+  return why.join(', ')||'laut Server'}
 function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
   const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button>${me.is_admin?'<button id="bAdm">Verwaltung</button>':''}<button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`);
   const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();stop();render()};if($('#bAdm'))$('#bAdm').onclick=()=>{location.href='admin.html'};
@@ -213,7 +210,7 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
   if(secReset){secReset=false;openSec=new Set(['mine']);if(!i.flow_ms)openSec.add('flow')}
-  let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')} · PLS ${i.lat.toFixed(5)}, ${i.lon.toFixed(5)}</div>${rightsLine(i,m,joined)}`;
+  let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')} · PLS ${i.lat.toFixed(5)}, ${i.lon.toFixed(5)}</div>`;
   if(!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button class="pri" data-m="${esc(x.code)}">Einsatz annehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
   // Reihenfolge im Menü: Mein Einsatz, Fliessgeschwindigkeit & Suchgebiet, danach der Rest
   const flowSec=st.can_flow?sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button><button id="bSug">Vorschlag BAFU</button></div><div class="mut">${esc(suggText)}</div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`):'';
