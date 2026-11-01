@@ -21,6 +21,7 @@ body{height:100dvh;display:flex;flex-direction:column}
 .leaflet-top.leaflet-right{margin-top:calc(3.8rem + env(safe-area-inset-top))}
 @media(min-width:760px){body.so #chip{left:calc(400px + 1rem)}body.so #areaNote{left:calc(400px + 1rem)}}
 /* Kartenmarkierung einer Nachricht (Spitze unten links zeigt auf den Ort) */
+.foot{margin-top:1rem;padding-top:.6rem;border-top:1px solid var(--line);font-size:.78rem;color:var(--mut);display:grid;gap:.25rem}.foot b{color:var(--tx)}
 .mmk{width:30px;height:30px;border-radius:8px 8px 8px 0;background:#ffd23f;color:#3a2a00;border:2px solid #fff;display:grid;place-items:center;font-size:.95rem;box-shadow:0 0 0 2px #0008}
 .mmpop b{display:block}.mmpop .t{display:block;color:#666;font-size:.8rem;margin-bottom:.3rem}.mmpop button{margin-top:.5rem;padding:.35rem .6rem;background:var(--alarm);border-color:var(--alarm);color:#fff;font-weight:600}
 #mmShowRow{display:flex;gap:.5rem;align-items:center;padding:.35rem .7rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--mut)}
@@ -183,11 +184,29 @@ function drawArea(i){areaInfo='';areaShape=null;const D=(i.flow_ms||0)*(st.now-i
   return g}
 const roleName=p=>(roles.find(r=>r.id==p.role_id)||{}).name;
 const sec=(k,t,b)=>`<details data-k="${k}" ${openSec.has(k)?'open':''}><summary>${t}</summary>${b}</details>`;
+// Fusszeile im Menü (immer sichtbar): Server, angemeldete Person, alle aktuellen Rechte im Einsatz
+function footInfo(){const i=st&&st.incident,m=i&&st.me,joined=!!(m&&!m.left_at&&m.mode!=='declined'),r=joined&&roles.find(x=>x.id==m.role_id),sh=joined&&shares(m.mode);
+  const rows=[['Server',location.host+location.pathname.replace(/[^/]*$/,'')],['Angemeldet',`${me.name} (${me.username}) · ${me.is_admin?'Administrator':'Einsatzkraft'}${me.exercise_mode?' · Übungsmodus an':''}`]];
+  if(i){rows.push(['Im Einsatz',joined?modeOf(m.mode).name+(leadMode(m.mode)?' (Rechte der Einsatzleitung)':'')+(r?' · Spezialrolle '+r.name:''):'nicht angenommen']);
+    const yes=[],no=[],add=(c,t)=>(c?yes:no).push(t);
+    add(st.can_manage,'Einsatz verwalten und beenden');add(st.can_manage,'Spezialrollen setzen');add(st.can_manage,'Einsatzkräfte entfernen');add(st.can_manage,'Rettling manuell setzen, Markierungen entfernen');
+    add(st.can_flow,'Fliessgeschwindigkeit setzen');add(!!st.can_read_messages,'Nachrichten lesen');add(joined&&st.can_message,'Nachrichten senden');add(sh,'Standort teilen');add(sh,'Rettling am eigenen Standort markieren');
+    if(r&&r.is_post)yes.push('Posten: Suchgebiet endet am eigenen Standort');
+    if(st.can_manage)rows.push(['Einsatzleitung',leadWhy(i,m,joined)]);
+    rows.push(['Darf',yes.join(' · ')||'–']);if(no.length)rows.push(['Darf nicht',no.join(' · ')])}
+  return `<div class="foot">${rows.map(([k,v])=>`<div><b>${k}:</b> ${esc(v)}</div>`).join('')}</div>`}
+// Grund für die Rechte der Einsatzleitung (nur Anzeige, massgebend sind die Prüfungen auf dem Server)
+function leadWhy(i,m,joined){const why=[],r=joined&&roles.find(x=>x.id==m.role_id);
+  if(joined&&leadMode(m.mode))why.push('Einrückoption '+modeOf(m.mode).name);
+  if(r&&r.is_lead)why.push('Spezialrolle '+r.name);
+  if(me.is_admin)why.push('Administrator');
+  if(i.created_by===me.id)why.push('hat den Einsatz gestartet');
+  return why.join(', ')||'laut Server'}
 function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
   const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button>${me.is_admin?'<button id="bAdm">Verwaltung</button>':''}<button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`);
   const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();stop();render()};if($('#bAdm'))$('#bAdm').onclick=()=>{location.href='admin.html'};
     $('#exm').onchange=e=>{const v=e.target.checked?1:0;api('me/settings',{exercise_mode:v}).then(()=>{me.exercise_mode=v;e.target.blur();return poll()}).catch(x=>{e.target.checked=!v;fail(x)})}};
-  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+acc;$('#bNew').onclick=newView;return bindAcc()}
+  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+acc+footInfo();$('#bNew').onclick=newView;return bindAcc()}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
   if(secReset){secReset=false;openSec=new Set(['mine']);if(!i.flow_ms)openSec.add('flow')}
@@ -203,11 +222,13 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     {const mh=(st.marks||[]).map(x=>`<div class="msg">${x.manual?'Einsatzleitung (manuell)':esc(x.name)} · ${fmtT(x.ts)} · ${x.lat.toFixed(5)}, ${x.lon.toFixed(5)} ${(st.can_manage||x.user_id==me.id)?`<button data-mr="${x.id}">Entfernen</button>`:''}</div>`).join('')||'<div class="mut">Noch keine Markierung</div>';
     h+=sec('rescuee','Rettling markieren',`${sh?'<div class="row"><button class="pri" id="bMark">Rettling an meinem Standort markieren</button></div>':''}${st.can_manage?'<div class="row"><button id="bMarkMan">Position manuell setzen (Karte antippen)</button></div>':''}${mh}`)}
     }
+  // «Einsatz verwalten» und «Einsatzkräfte» (Rollen setzen, entfernen) nur für die Einsatzleitung (can_manage);
+  // alle anderen sehen die Einsatzkräfte über den Kartenknopf «Personen»
   if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
   const act=st.participants.filter(p=>p.mode!=='declined');
-  h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table class="crew">${act.map(p=>`<tr><td>${esc(p.name)}<small>${p.left_at?'verlassen':esc(modeOf(p.mode).name)}</small></td><td>${p.left_at?esc(roleName(p)||''):leadMode(p.mode)?'<span class="mut">Rechte der Einsatzleitung</span>':st.can_manage?roleSel('',p.role_id,`data-rset="${p.user_id}" aria-label="Spezialrolle von ${esc(p.name)}"`):esc(roleName(p)||'')}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}" data-n="${esc(p.name)}" aria-label="${esc(p.name)} aus dem Einsatz entfernen" title="Aus dem Einsatz entfernen">✕</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
+  if(st.can_manage)h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table class="crew">${act.map(p=>`<tr><td>${esc(p.name)}<small>${p.left_at?'verlassen':esc(modeOf(p.mode).name)}</small></td><td>${p.left_at?esc(roleName(p)||''):leadMode(p.mode)?'<span class="mut">Rechte der Einsatzleitung</span>':st.can_manage?roleSel('',p.role_id,`data-rset="${p.user_id}" aria-label="Spezialrolle von ${esc(p.name)}"`):esc(roleName(p)||'')}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}" data-n="${esc(p.name)}" aria-label="${esc(p.name)} aus dem Einsatz entfernen" title="Aus dem Einsatz entfernen">✕</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
-  s.innerHTML=h+acc;bindAcc();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
+  s.innerHTML=h+acc+footInfo();bindAcc();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
   if(joined){if($('#rs'))$('#rs').onchange=e=>{e.target.blur();api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail)};$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
@@ -284,7 +305,7 @@ function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!
   L.innerHTML=ms.map(m=>`<div class="mg${m.recipients&&msgForMe(m)?' tome':''}"><b>${m.from_user==me.id?'Du':esc(m.from_name)}</b> ${esc(m.text)}<span class="t">${fmtT(m.created)} · an ${esc(msgTo(m))}</span>`
     +(m.lat!=null?`<button class="lk" data-goto="${m.lat},${m.lon}" title="Standort beim Senden auf der Karte zeigen">📍 Standort</button>`:'')
     +(marked.has(m.id)?`<button class="lk" data-goto="${m.mark_lat},${m.mark_lon}" title="Kartenmarkierung zeigen">✉ Markierung</button>${canUnmark(m)?`<button class="lk" data-mm="${m.id}">Markierung entfernen</button>`:''}`:'')+'</div>').join('')
-    ||`<div class="mut" style="padding:.6rem 0">${joined?'Noch keine Nachrichten.':'Nachrichten sehen nur Personen, die den Einsatz angenommen haben.'}</div>`;
+    ||`<div class="mut" style="padding:.6rem 0">${st.can_read_messages?'Noch keine Nachrichten.':'Nachrichten sehen nur Personen, die den Einsatz angenommen haben.'}</div>`;
   if(atEnd)L.scrollTop=L.scrollHeight;
   // Formular nur neu aufbauen, wenn sich Berechtigung oder Empfänger ändern; neue Empfänger erst nach der Eingabe,
   // eine geänderte Berechtigung sofort (Senden ginge ohnehin nicht mehr)
@@ -320,7 +341,7 @@ function bindMarks(){const b=$('#bMark');
 let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
     if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;window.msgs=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
       // alle sehen alle Nachrichten, benachrichtigt werden nur die markierten Empfänger (bzw. alle bei «an alle»)
-      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id&&msgForMe(m))notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
+      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id&&nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&msgForMe(m))notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
       if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
       st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&shares(nx.me.mode))track();else stop()}
     else{if(st&&st.incident){const x=st.incident.is_exercise;if(notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
