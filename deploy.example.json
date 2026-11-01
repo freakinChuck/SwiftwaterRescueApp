@@ -1,0 +1,6 @@
+{
+  "host": "swiftwater-tst.slrg-freiamt-reusstal.ch",
+  "user": "SSH-BENUTZER",
+  "key": "C:\\Users\\NAME\\.ssh\\swiftwater-tst",
+  "path": "~/public_html/swiftwater-tst"
+}
