@@ -108,11 +108,22 @@ function placeName($la, $lo) {
   foreach (['village', 'town', 'city', 'suburb', 'hamlet', 'municipality'] as $k) if (!empty($r['address'][$k])) return $r['address'][$k];
   return sprintf('%.4F, %.4F', $la, $lo);
 }
+// Einsatzprotokoll: Log-Einträge plus alle Nachrichten im Volltext mit Empfängern (aus der Nachrichtentabelle,
+// daher auch für ältere Einsätze vollständig); sortiert nach Zeit
 function logRows($id, $asc = false) {
   global $db;
-  $s = $db->prepare("SELECT l.id,l.ts,l.kind,l.text,u.name FROM incident_log l LEFT JOIN users u ON u.id=l.user_id WHERE l.incident_id=? ORDER BY l.id " . ($asc ? 'ASC' : 'DESC') . " LIMIT 500");
+  $s = $db->prepare("SELECT l.id,l.ts,l.kind,l.text,u.name FROM incident_log l LEFT JOIN users u ON u.id=l.user_id WHERE l.incident_id=? AND l.kind<>'message' ORDER BY l.id DESC LIMIT 500");
   $s->execute([$id]);
-  return array_map(fn($r) => ints($r, ['id', 'ts']), $s->fetchAll());
+  $rows = array_map(fn($r) => ints($r, ['id', 'ts']), $s->fetchAll());
+  $names = $db->query("SELECT id,name FROM users")->fetchAll(PDO::FETCH_KEY_PAIR);
+  $m = $db->prepare("SELECT m.id,m.created,m.text,m.recipients,u.name FROM messages m LEFT JOIN users u ON u.id=m.from_user WHERE m.incident_id=? ORDER BY m.id DESC LIMIT 500");
+  $m->execute([$id]);
+  foreach ($m->fetchAll() as $r) {
+    $to = $r['recipients'] === null ? 'alle' : implode(', ', array_map(fn($u) => $names[$u] ?? '?', json_decode($r['recipients'], true) ?: []));
+    $rows[] = ['id' => 1000000000 + (int)$r['id'], 'ts' => (int)$r['created'], 'kind' => 'message', 'text' => "Nachricht an $to: " . $r['text'], 'name' => $r['name']];
+  }
+  usort($rows, fn($a, $b) => $asc ? [$a['ts'], $a['id']] <=> [$b['ts'], $b['id']] : [$b['ts'], $b['id']] <=> [$a['ts'], $a['id']]);
+  return array_slice($rows, 0, 1000);
 }
 
 // Einrückoption ohne Standortfreigabe: Standortmeldungen werden nicht gespeichert (serverseitig erzwungen)
@@ -149,10 +160,10 @@ switch ($route) {
   $ps->execute([$id]);
   $isP = isActivePart($id);
   $msgs = [];
-  if ($isP) { // Nachrichten sehen nur Personen, die den Einsatz angenommen haben
+  if ($isP) { // alle, die den Einsatz angenommen haben, sehen alle Nachrichten; recipients = wer benachrichtigt wird (null = alle)
     $ms = $db->prepare("SELECT m.id,m.from_user,m.text,m.created,m.recipients,u.name from_name FROM messages m JOIN users u ON u.id=m.from_user WHERE m.incident_id=? AND m.id>? ORDER BY m.id");
     $ms->execute([$id, $since]);
-    $msgs = array_values(array_filter(array_map(fn($m) => ints($m, ['id', 'from_user', 'created']), $ms->fetchAll()), fn($m) => $m['recipients'] === null || in_array($uid, json_decode($m['recipients'], true))));
+    $msgs = array_map(fn($m) => ints($m, ['id', 'from_user', 'created']), $ms->fetchAll());
   }
   $mk = $db->prepare("SELECT m.id,m.user_id,m.lat,m.lon,m.ts,m.manual,u.name FROM rescuee_marks m LEFT JOIN users u ON u.id=m.user_id WHERE m.incident_id=? ORDER BY m.id");
   $mk->execute([$id]);
@@ -305,8 +316,7 @@ switch ($route) {
   $to = null;
   if (!empty($in['to'])) { $to = array_values(array_intersect(array_map('intval', $in['to']), $act)); if (!$to) fail('Die gewählten Personen haben den Einsatz nicht angenommen'); }
   $db->prepare("INSERT INTO messages(incident_id,from_user,text,recipients,created) VALUES(?,?,?,?,?)")->execute([$inc['id'], $uid, $in['text'], $to === null ? null : json_encode($to), $now]);
-  logev($inc['id'], $uid, 'message', 'sendet Nachricht an ' . ($to === null ? 'alle' : count($to) . ' Person(en)') . ': ' . mb_substr($in['text'], 0, 120));
-  out(['ok' => true]);
+  out(['ok' => true]); // im Einsatzprotokoll erscheint die Nachricht über logRows()
 
  case 'incident/end':
   $inc = activeIncident(); if (!$inc || !canManage($inc)) fail('Nur Einsatzleitung, Administratoren oder die Person, die den Einsatz gestartet hat, können den Einsatz beenden', 403);

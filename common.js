@@ -42,7 +42,7 @@ function openBigLog(title,get,live){big={title,get,live,desc:true,filter:'all',c
 function closeBigLog(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});const o=$('#bigLog');if(o)o.remove();big=null}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&big)closeBigLog()});
 function renderBigLog(){const o=$('#bigLog');if(!big||!o)return;const got=big.get();if(got)big.cache=got;
-  const g=KIND_GROUPS[big.filter][1],all=big.cache,l=all.filter(x=>!g||g.includes(x.kind)).sort((a,b)=>big.desc?b.id-a.id:a.id-b.id);
+  const g=KIND_GROUPS[big.filter][1],all=big.cache,l=all.filter(x=>!g||g.includes(x.kind)).sort((a,b)=>(big.desc?-1:1)*(a.ts-b.ts||a.id-b.id)); // Log und Nachrichten gemischt, daher nach Zeit
   $('#bigT').textContent=`${big.title} · ${l.length} von ${all.length} Einträgen${big.live&&!got?' · Einsatz beendet':''}`;
   $('#bigS').textContent=big.desc?'Neueste zuerst':'Älteste zuerst';
   $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}

@@ -26,7 +26,7 @@ body{height:100dvh;display:flex;flex-direction:column}
 #people,#msgs{position:fixed;right:.7rem;top:calc(7.4rem + env(safe-area-inset-top));bottom:calc(17.6rem + env(safe-area-inset-bottom));width:min(330px,calc(100vw - 1.4rem));z-index:1050;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px #000a;display:flex;flex-direction:column}
 .phead{display:flex;align-items:center;gap:.5rem;padding:.4rem .4rem .4rem .8rem;border-bottom:1px solid var(--line)}.phead b{flex:1}.phead button{padding:.3rem .6rem}
 #peopleList,#msgList{overflow:auto;padding:.2rem .7rem .7rem;flex:1;min-height:0}
-.mg{padding:.45rem 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.mg .t{display:block;color:var(--mut);font-size:.78rem}
+.mg{padding:.45rem 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.mg .t{display:block;color:var(--mut);font-size:.78rem}.mg.tome{border-left:4px solid var(--ex);padding-left:.5rem}
 #msgForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem;display:grid;gap:.4rem}#msgForm select{width:100%;max-height:7.5rem}#msgForm .row{margin:0}
 #fitBtns .cnt{display:inline-block;min-width:1.4em;margin-left:.35rem;padding:0 .3em;border-radius:9px;background:var(--alarm);color:#fff;font-size:.75rem;font-weight:700}
 .pg{margin:.7rem 0 .2rem;font-size:.8rem;color:var(--mut);font-weight:600}
@@ -233,6 +233,9 @@ function renderPeople(){const o=$('#people');if(!o)return;const on=panel==='peop
   $('#peopleList').innerHTML=grp.map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.map(row).join('')).join('')||'<div class="mut" style="padding:.6rem 0">Noch niemand im Einsatz.</div>'}
 function centerOn(id){const p=activePeople().find(x=>x.user_id===id);if(!p||p.lat==null)return;stopFollow();map.panTo([p.lat,p.lon]);if(narrow())togglePanel('people',false)}
 function toggleFollow(id){if(followId===id)return stopFollow();followId=id;followNow();if(narrow())togglePanel('people',false);else renderPeople()}
+const msgIds=m=>{try{return(JSON.parse(m.recipients)||[]).map(Number)}catch(e){return[]}};
+const msgForMe=m=>!m.recipients||msgIds(m).includes(me.id); // Benachrichtigung nur für markierte Empfänger
+const msgTo=m=>!m.recipients?'alle':msgIds(m).map(id=>id===me.id?'dich':((st.participants||[]).find(p=>p.user_id===id)||{name:'?'}).name).join(', ');
 // Nachrichten: Verlauf (älteste oben) und Senden, sofern die Rolle es darf (st.can_message, vom Server); Zähler für Ungelesenes am Knopf
 function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!!(st&&st.incident),ms=window.msgs||[];o.hidden=!on;$('#bMsg').setAttribute('aria-expanded',on);
   const key='sw_msgseen_'+(st&&st.incident?st.incident.id:0);
@@ -241,7 +244,7 @@ function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!
   const unread=ms.filter(m=>m.id>msgSeen&&m.from_user!=me.id).length,c=$('#msgCnt');c.hidden=!unread;c.textContent=unread;
   if(!on)return;
   const L=$('#msgList'),atEnd=L.scrollHeight-L.scrollTop-L.clientHeight<30,joined=!!(st.me&&!st.me.left_at&&st.me.mode!=='declined');
-  L.innerHTML=ms.map(m=>`<div class="mg"><b>${m.from_user==me.id?'Du':esc(m.from_name)}</b> ${esc(m.text)}<span class="t">${fmtT(m.created)} · ${m.recipients?'an ausgewählte Personen':'an alle'}</span></div>`).join('')
+  L.innerHTML=ms.map(m=>`<div class="mg${m.recipients&&msgForMe(m)?' tome':''}"><b>${m.from_user==me.id?'Du':esc(m.from_name)}</b> ${esc(m.text)}<span class="t">${fmtT(m.created)} · an ${esc(msgTo(m))}</span></div>`).join('')
     ||`<div class="mut" style="padding:.6rem 0">${joined?'Noch keine Nachrichten.':'Nachrichten sehen nur Personen, die den Einsatz angenommen haben.'}</div>`;
   if(atEnd)L.scrollTop=L.scrollHeight;
   // Formular nur neu aufbauen, wenn sich Berechtigung oder Empfänger ändern; neue Empfänger erst nach der Eingabe,
@@ -251,7 +254,7 @@ function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!
   const keepTxt=$('#mt')?$('#mt').value:'',keepTo=$('#mto')?[...$('#mto').selectedOptions].map(x=>x.value):[];msgFormKey=fk;
   if(!joined||!st.can_message){f.innerHTML=`<div class="mut">${joined?'Deine Rolle darf keine Nachrichten senden.':'Zum Senden zuerst den Einsatz annehmen.'}</div>`;return}
   f.innerHTML=`<select id="mto" multiple size="4" aria-label="Empfänger (keine Auswahl = alle)">${byRole(others).map(g=>`<optgroup label="${esc(g.r?g.r.name:'Ohne Spezialrolle')}">${g.items.map(p=>`<option value="${p.user_id}" ${keepTo.includes(String(p.user_id))?'selected':''}>${esc(p.name)}</option>`).join('')}</optgroup>`).join('')}</select>
-    <div class="mut">Empfänger: keine Auswahl = alle im Einsatz</div><div class="row"><input id="mt" placeholder="Nachricht" aria-label="Nachricht" style="flex:3"><button class="pri" id="bSend">Senden</button></div>`;
+    <div class="mut">Benachrichtigt werden die ausgewählten Personen (keine Auswahl = alle). Lesen können alle im Einsatz.</div><div class="row"><input id="mt" placeholder="Nachricht" aria-label="Nachricht" style="flex:3"><button class="pri" id="bSend">Senden</button></div>`;
   $('#mt').value=keepTxt;
   const send=()=>{const t=$('#mt').value.trim();if(!t)return;api('incident/message',{text:t,to:[...$('#mto').selectedOptions].map(x=>+x.value)}).then(()=>{$('#mt').value='';[...$('#mto').options].forEach(x=>x.selected=false);poll()}).catch(fail)};
   $('#bSend').onclick=send;$('#mt').onkeydown=e=>{if(e.key==='Enter')send()}}
@@ -269,7 +272,8 @@ function bindMarks(){const b=$('#bMark');
 // Alarmierungsart kommt vom Server (critical): scharfer Einsatz immer kritisch, Übung nur mit Übungsmodus
 let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
     if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;window.msgs=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
-      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id)notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
+      // alle sehen alle Nachrichten, benachrichtigt werden nur die markierten Empfänger (bzw. alle bei «an alle»)
+      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id&&msgForMe(m))notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
       if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
       st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&shares(nx.me.mode))track();else stop()}
     else{if(st&&st.incident){const x=st.incident.is_exercise;if(notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
