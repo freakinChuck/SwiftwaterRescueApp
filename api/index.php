@@ -132,6 +132,36 @@ function http_get($url) {
   if (function_exists('curl_init')) { $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']); $r = curl_exec($c); curl_close($c); return $r; }
   return @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 10, 'header' => "User-Agent: SwiftwaterRescue/0.1\r\n"]]));
 }
+// Gewässernetz (OSM via Overpass) über den Server mit Datei-Cache in api/data/overpass/, damit gleiche Abfragen (z. B. Suchgebiet aller Geräte
+// eines Einsatzes) nur einmal zu Overpass gehen. Haltedauer: Einstellung overpass_ttl in Minuten (Standard 120, 0 = kein Cache).
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const OVERPASS_KEEP_S = 7 * 86400; // abgelaufene Einträge so lange als Rückfall behalten, falls Overpass nicht erreichbar ist
+function overpassQuery($in) { // Abfrage aus Parametern bauen (keine freien Abfragen über den Server)
+  $f = fn($x) => sprintf('%.5F', (float)$x);
+  if (isset($in['around'])) {
+    [$r, $la, $lo] = array_map('floatval', array_values((array)$in['around']) + [0, 0, 0]);
+    if ($r < 100 || $r > 30000 || abs($la) > 90 || abs($lo) > 180) fail('Ungültiger Umkreis');
+    $sel = 'around:' . (int)round($r) . ',' . $f($la) . ',' . $f($lo);
+  } elseif (isset($in['bbox'])) {
+    [$s, $w, $n, $e] = array_map('floatval', array_values((array)$in['bbox']) + [0, 0, 0, 0]);
+    if ($s >= $n || $w >= $e || $n - $s > 1 || $e - $w > 1.5 || abs($s) > 90 || abs($n) > 90 || abs($w) > 180 || abs($e) > 180) fail('Ungültiger Ausschnitt');
+    $sel = implode(',', array_map($f, [$s, $w, $n, $e]));
+  } else fail('Ausschnitt fehlt');
+  return '[out:json][timeout:25];way(' . $sel . ')["waterway"~"^(river|stream|canal)$"];out geom;';
+}
+function overpassFetch($q) { // erste Antwort mit elements, sonst null
+  foreach (OVERPASS as $url) {
+    if (function_exists('curl_init')) {
+      $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 30, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
+      $r = curl_exec($c); $ok = curl_getinfo($c, CURLINFO_HTTP_CODE) === 200; curl_close($c);
+    } else {
+      $r = @file_get_contents($url, false, stream_context_create(['http' => ['method' => 'POST', 'timeout' => 30, 'header' => "Content-Type: application/x-www-form-urlencoded\r\nUser-Agent: SwiftwaterRescue/0.1\r\n", 'content' => http_build_query(['data' => $q])]]));
+      $ok = $r !== false;
+    }
+    if ($ok && is_string($r) && isset(json_decode($r, true)['elements'])) return $r;
+  }
+  return null;
+}
 // Ortsname zu Koordinaten: swisstopo-Ortschaftenverzeichnis, ausserhalb der Schweiz OpenStreetMap (Nominatim), sonst Koordinaten
 function placeName($la, $lo) {
   $r = json_decode(http_get('https://api3.geo.admin.ch/rest/services/api/MapServer/identify?geometryType=esriGeometryPoint&sr=4326&tolerance=0&returnGeometry=false&lang=de&layers=all:ch.swisstopo-vd.ortschaftenverzeichnis_plz&geometry=' . sprintf('%.6F,%.6F', $lo, $la)) ?: '', true);
@@ -169,6 +199,23 @@ switch ($route) {
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights']), $db->query("SELECT id,code,name,share_location,active,lead_rights FROM modes ORDER BY id")->fetchAll()));
+
+ case 'overpass': // Gewässernetz für Suchgebiet und Flussdistanz (alle angemeldeten Personen): around [m, lat, lon] oder bbox [s, w, n, e]; Antwort wie Overpass
+  $q = overpassQuery($in); $ttl = max(0, (int)setting('overpass_ttl', '120')) * 60;
+  $dir = __DIR__ . '/data/overpass'; if (!is_dir($dir)) @mkdir($dir, 0775, true);
+  $file = "$dir/" . sha1($q) . '.json';
+  $hit = function () use ($ttl, $file) { clearstatcache(true, $file); if (!$ttl || !is_file($file) || time() - filemtime($file) >= $ttl) return false; header('X-Cache: HIT'); readfile($file); exit; };
+  $hit();
+  // Sperre je Abfrage: gleichzeitige Anfragen warten auf die erste und lesen danach den Cache, statt selbst zu Overpass zu gehen
+  $lk = @fopen("$file.lock", 'c'); if ($lk) flock($lk, LOCK_EX);
+  $hit();
+  foreach (array_merge(glob("$dir/*.json") ?: [], glob("$dir/*.lock") ?: []) as $x) if ($now - filemtime($x) > max($ttl, OVERPASS_KEEP_S)) @unlink($x); // aufräumen, auch als Rückfall zu alt
+  set_time_limit(90);
+  $r = overpassFetch($q);
+  if ($r !== null) { if ($ttl && file_put_contents("$file.tmp", $r) !== false) rename("$file.tmp", $file); header('X-Cache: MISS'); echo $r; }
+  elseif (is_file($file)) { header('X-Cache: STALE'); readfile($file); } // Overpass nicht erreichbar: abgelaufene Daten sind besser als keine
+  else fail('Overpass antwortet nicht', 502); // Frontend ergänzt «Gewässerdaten nicht verfügbar»
+  exit;
 
  case 'incident/start':
   if (activeIncident()) fail('Es läuft bereits ein Einsatz');
@@ -588,8 +635,12 @@ switch ($route) {
   if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message) VALUES(?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1)]);
   out(['ok' => true]);
- case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds()]);
+ case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'overpass_ttl' => (int)setting('overpass_ttl', '120')]);
  case 'settings/save': admin();
+  if (isset($in['overpass_ttl'])) { // Haltedauer des Overpass-Caches in Minuten, 0 = kein Cache, höchstens 7 Tage
+    if (!is_numeric($in['overpass_ttl']) || (int)$in['overpass_ttl'] < 0 || (int)$in['overpass_ttl'] > 10080) fail('Haltedauer: 0 bis 10080 Minuten');
+    setSetting('overpass_ttl', (string)(int)$in['overpass_ttl']);
+  }
   if (isset($in['rd_speeds'])) { // 1–6 Geschwindigkeiten zwischen 1 und 200 km/h, sortiert und ohne Duplikate
     foreach ((array)$in['rd_speeds'] as $x) if (!is_numeric($x)) fail('Nur Zahlen sind erlaubt (km/h)');
     $v = array_values(array_unique(array_map(fn($x) => round((float)$x, 1), (array)$in['rd_speeds'])));
