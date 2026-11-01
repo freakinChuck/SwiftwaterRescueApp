@@ -3,6 +3,14 @@
 $cfg = require __DIR__ . '/config.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
+// iOS-/Android-App (Capacitor): Oberfläche läuft lokal in der App und ruft die API von dort auf.
+// Anmeldung per Token-Header (keine Cookies), daher ist CORS für diese Ursprünge unkritisch.
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $cfg['app_origins'] ?? ['capacitor://localhost', 'https://localhost', 'http://localhost'], true)) {
+  header("Access-Control-Allow-Origin: $origin"); header('Vary: Origin');
+  header('Access-Control-Allow-Headers: X-Token, Content-Type'); header('Access-Control-Allow-Methods: GET, POST, OPTIONS'); header('Access-Control-Max-Age: 86400');
+}
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') { http_response_code(204); exit; }
 function out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE); exit; }
 function fail($m, $c = 400) { out(['error' => $m], $c); }
 
@@ -35,6 +43,7 @@ $in = json_decode(file_get_contents('php://input'), true) ?: [];
 $now = time();
 $MODES = ['base' => 'Anfahrt via Stützpunkt', 'direct' => 'Anfahrt direkt', 'logistics' => 'Logistik', 'coordinator' => 'Koordinator KP Rück'];
 
+if ($route === 'info') out(['app' => 'swiftwater', 'name' => $cfg['install_name'] ?? null]); // App prüft damit die eingegebene Adresse
 if ($route === 'login') {
   $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
   $u = $st->fetch();

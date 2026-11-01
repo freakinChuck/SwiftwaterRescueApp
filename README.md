@@ -11,6 +11,28 @@
 - Jede Person ändert ihr Passwort im Menü unter «Konto → Passwort ändern».
 - Beim Einsatzstart wählen: «Scharfer Einsatz» (immer kritischer Alarm) oder «Übung» (normale Benachrichtigung). Wer unter «Konto» den Übungsmodus aktiviert, erhält auch Übungen als kritischen Alarm.
 
+## iOS- und Android-App
+Die Apps (Capacitor 8) enthalten die Oberfläche der Einsatz-App. Beim ersten Start gibt man die Adresse der Installation ein (z. B. `https://wasserrettung.ch/rescue`). Unter «Konto → Installationen» lassen sich weitere Installationen hinzufügen, wechseln oder entfernen. Die nicht aktiven Installationen werden im Hintergrund auf neue Einsätze geprüft. Optional in `api/config.php`: `install_name` als Anzeigename.
+
+Lokal entwickeln (Node.js 22 oder neuer):
+```
+npm ci
+npm run android   # Web-Inhalt kopieren, synchronisieren, Android Studio öffnen
+npm run ios       # dasselbe für Xcode (nur auf dem Mac, Xcode 26)
+```
+Nach Änderungen an `index.html`, `common.js` oder `common.css` jeweils `npm run sync` ausführen.
+
+### CI (GitHub Actions, `.github/workflows/mobile-apps.yml`)
+Läuft bei Pull Requests, bei Pushes auf `main` und manuell («Run workflow»). Die Ergebnisse stehen im Lauf unter «Artifacts»:
+- `android-debug-apk-…`: installierbare Test-APK (auf dem Handy «Installation aus unbekannten Quellen» erlauben).
+- `ios-simulator-app-…`: unsignierte App für den iOS-Simulator (auf dem Mac entpacken, in den Simulator ziehen). Zum Installieren auf iPhones ist eine Signierung mit Apple-Developer-Konto nötig (noch nicht eingerichtet).
+
+Signierter Android-Release (APK und AAB für Google Play): unter GitHub → Settings → Secrets and variables → Actions diese Secrets anlegen, dann baut die CI ihn automatisch mit:
+- `ANDROID_KEYSTORE_BASE64`: Keystore-Datei Base64-kodiert
+- `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
+
+Versionsnummer: `version` in `package.json`, Build-Nummer = Nummer des CI-Laufs.
+
 ## Karte
 Standard ist das swisstopo-Luftbild; über das Ebenen-Symbol oben rechts kann auf Landeskarte oder OpenStreetMap umgeschaltet werden (Wahl wird pro Gerät gemerkt).
 

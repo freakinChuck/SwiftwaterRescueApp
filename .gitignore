@@ -1,2 +1,4 @@
 api/data/*.sqlite
 api/data/hydro_locations.json
+node_modules/
+www/

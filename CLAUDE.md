@@ -8,6 +8,10 @@ Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und
 ## Architektur
 - `index.html`: Einsatz-App mit Karte (Vanilla JS, Leaflet via cdnjs, kein Build-Schritt). Läuft am Handy und im Browser.
 - `admin.html`: Verwaltung ohne Karte (Benutzer, Spezialrollen, Einsatzstatistik/-log), nur für die Benutzerrolle Administrator.
+- iOS-/Android-App: Capacitor 8 (`capacitor.config.json`, `android/`, `ios/` mit Swift Package Manager). `npm run build` kopiert `index.html`, `common.js`, `common.css` nach `www/` (nicht eingecheckt), `npx cap sync` übernimmt sie in die nativen Projekte. Kein Bundler, `window.Capacitor` wird von der App eingefügt (`IS_APP`).
+- In der App gibt man beim ersten Start die Adresse einer Installation ein (geprüft über Route `info`). Mehrere Installationen möglich (`sw_installs`, je eigenes Token), eine ist aktiv; die anderen werden alle 15 s auf neue Einsätze geprüft (`watchOthers`). Quittier-Schlüssel sind pro Installation getrennt (`AK()`). Die Verwaltung öffnet in der App den Browser (`admin.html` auf dem Server).
+- API erlaubt CORS für die App-Ursprünge `capacitor://localhost` (iOS) und `https://localhost` (Android), anpassbar über `app_origins` in `config.php`.
+- CI: `.github/workflows/mobile-apps.yml` (GitHub Actions). AppVeyor wurde verworfen, weil dort für iOS nur Xcode 15.2 verfügbar ist.
 - `common.js` / `common.css`: gemeinsamer Code beider Seiten (`api()`, Anmeldung, Dialoge inkl. Passwort ändern, Einsatzlog im Gross-Modus).
 - `api/index.php`: JSON-API (PHP, PDO). Routen über `?r=<route>`, Token im Header `X-Token`.
 - `api/config.php`: DB-Konfiguration. Standard SQLite (`api/data/`), MySQL über DSN möglich. Nur Platzhalter-Passwort einchecken, echte Zugangsdaten nie committen.
@@ -39,6 +43,7 @@ Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und
 ## Stand und bekannte Lücken
 - **Nie ausgeführt/getestet:** Die Entwicklung fand ohne PHP-Laufzeit und ohne Netzzugriff auf Overpass/BAFU statt. Das JS wurde nur auf Syntaxfehler geprüft. Erste Aufgabe: lokal mit `php -S` starten und die Abläufe durchtesten (Login, Einsatz, Beitritt, Standort, Suchgebiet, Log, Statistik, Markierung, Entfernen).
 - BAFU-Vorschlag: Struktur der Antwort von `api.existenz.ch/apiv1/hydro/locations` und `/latest` ist nur aus Dokumentationsschnipseln abgeleitet, Parsing in `flow/suggest` prüfen.
+- Apps: noch ohne Push (geplant: FCM/APNs, Critical Alerts), ohne eigenes App-Icon, iOS nur unsignierter Simulator-Build in der CI. Alarm wie in der Web-App nur bei offener App; `navigator.vibrate` wirkt auf iOS nicht.
 - Kritischer Alarm: als Web-App nur Vollbild-Alarm mit Ton/Vibration solange die App offen ist. Echte kritische Alarme (App geschlossen, Nicht stören) brauchen eine native App mit Push (FCM/APNs, Critical Alerts) oder zumindest Web-Push.
 - Nur ein aktiver Einsatz gleichzeitig.
 - Gewässerwahl am PLS: nächstgelegener Wasserlauf, nicht korrigierbar. Auswahlschritt wäre sinnvoll.

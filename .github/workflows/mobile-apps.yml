@@ -1,0 +1,104 @@
+# Baut die iOS- und Android-App (Capacitor) und stellt die Ergebnisse als Artefakte bereit.
+# Test-Builds: Android-Debug-APK (installierbar), iOS-Simulator-App (unsigniert).
+# Android-Release (signiert, AAB für Google Play) zusätzlich, sobald die Keystore-Secrets hinterlegt sind (siehe README).
+name: Mobile-Apps
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_NUMBER: ${{ github.run_number }}
+
+jobs:
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: Abhängigkeiten und Web-Inhalt
+        run: |
+          npm ci
+          npm run build
+          npx cap sync android
+          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+      - name: Debug-APK bauen
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - name: Release bauen (signiert)
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/release.jks"
+          ./gradlew assembleRelease bundleRelease --no-daemon
+          rm -f "$RUNNER_TEMP/release.jks"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-debug-apk-${{ env.APP_VERSION }}-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: env.HAS_KEYSTORE == 'true'
+        with:
+          name: android-release-${{ env.APP_VERSION }}-${{ github.run_number }}
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+
+  ios:
+    name: iOS
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Abhängigkeiten und Web-Inhalt
+        run: |
+          npm ci
+          npm run build
+          npx cap sync ios
+          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+      - name: Simulator-Build (unsigniert)
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            build | xcbeautify
+          cd "$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator"
+          zip -qry "$RUNNER_TEMP/SwiftwaterRescue-Simulator.zip" App.app
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ios-simulator-app-${{ env.APP_VERSION }}-${{ github.run_number }}
+          path: ${{ runner.temp }}/SwiftwaterRescue-Simulator.zip
+          if-no-files-found: error

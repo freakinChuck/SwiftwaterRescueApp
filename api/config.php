@@ -6,4 +6,5 @@ return [
   'db_pass' => null,
   'admin_user' => 'admin',
   'admin_pass' => 'BITTE-AENDERN',   // Nur für das erstmalige Anlegen des Admin-Kontos
+  'install_name' => null,            // Anzeigename in der App, z. B. 'Wasserrettung Musterstadt' (Standard: Hostname)
 ];

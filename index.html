@@ -134,8 +134,10 @@ function drawArea(i){areaInfo='';areaShape=null;const D=(i.flow_ms||0)*(st.now-i
 const roleName=p=>(roles.find(r=>r.id==p.role_id)||{}).name;
 const sec=(k,t,b)=>`<details data-k="${k}" ${openSec.has(k)?'open':''}><summary>${t}</summary>${b}</details>`;
 function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
-  const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button>${me.is_admin?'<button id="bAdm">Verwaltung</button>':''}<button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`);
-  const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();stop();render()};if($('#bAdm'))$('#bAdm').onclick=()=>{location.href='admin.html'};
+  const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button>${me.is_admin?'<button id="bAdm">Verwaltung</button>':''}${IS_APP?'<button id="bIns">Installationen</button>':''}<button id="bOut">Abmelden</button></div>${IS_APP?`<div class="mut">Installation: ${esc(cur.name)}</div>`:''}<input type="file" id="ph" accept="image/*" hidden>`);
+  const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();stop();render()};
+    if($('#bAdm'))$('#bAdm').onclick=()=>{location.href=IS_APP?cur.url+'/admin.html':'admin.html'}; // in der App öffnet sich der Browser
+    if($('#bIns'))$('#bIns').onclick=()=>installsDialog(render);
     $('#exm').onchange=e=>{const v=e.target.checked?1:0;api('me/settings',{exercise_mode:v}).then(()=>{me.exercise_mode=v;e.target.blur();return poll()}).catch(x=>{e.target.checked=!v;fail(x)})}};
   if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+acc;$('#bNew').onclick=newView;return bindAcc()}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
@@ -202,17 +204,28 @@ function bindMarks(){const b=$('#bMark');
   document.querySelectorAll('#sheet [data-mr]').forEach(x=>x.onclick=()=>api('incident/mark/remove',{id:+x.dataset.mr}).then(poll).catch(fail))}
 /* ---------- Polling ---------- */
 // Alarmierungsart kommt vom Server (critical): scharfer Einsatz immer kritisch, Übung nur mit Übungsmodus
-let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
-    if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;window.msgs=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
-      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id)notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
-      if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
+// Quittier-Schlüssel je Installation trennen (in der App teilen sich mehrere Installationen ein Gerät)
+const AK=k=>(IS_APP&&cur?cur.id+'|':'')+k;
+let timer,timer2;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
+    if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;window.msgs=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,AK('i:'+i.id),cr))toggleSheet(true)}
+      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id)notify('Nachricht von '+m.from_name,m.text,AK('m:'+m.id),cr)});msgInit=true;
+      if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.',AK('k:'+i.id+':'+nx.me.left_at),cr))toggleSheet(true);
       st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined')track();else stop()}
-    else{if(st&&st.incident){const x=st.incident.is_exercise;if(notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
+    else{if(st&&st.incident){const x=st.incident.is_exercise;if(notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.',AK('e:'+st.incident.id),st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
     if(st&&st.incident)creating=false;updateChip();drawMap();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}catch(e){console.error('Poll',e)}}
-async function render(){clearInterval(timer);if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
+// App: weitere angemeldete Installationen auf neue Einsätze prüfen (Wechsel über Konto → Installationen)
+async function watchOthers(){for(const x of installs){if(x===cur||!x.token)continue;
+  try{const r=await api('incident/state&since=999999999',null,x),i=r.incident;x.alert=!!i;
+    if(i)notify((i.is_exercise?'ÜBUNG':'EINSATZ')+' – '+x.name,i.message+' (Wechseln: Menü → Konto → Installationen)',x.id+'|i:'+i.id,r.critical!==false)}catch(e){}}
+  saveInstalls()}
+async function render(){clearInterval(timer);clearInterval(timer2);stop();
+  // Zustand der vorherigen Installation verwerfen (Wechsel in der App)
+  st=null;creating=false;lastIncId=null;lastMsg=0;window.msgs=[];net=null;areaLogged={};fitted=null;manual=false;lastPos=null;locStatus='';
+  if(IS_APP&&!cur)return installView($('#app'),render);
+  if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
   try{me=(await api('me')).me}catch(e){return}
   if(me.must_change){$('#app').innerHTML='';return pwDialog(true,render)} // nach Zurücksetzen zuerst eigenes Passwort setzen
   try{roles=await api('roles')}catch(e){return}
-  shell();await poll();draw();timer=setInterval(poll,4000)}
+  shell();await poll();draw();timer=setInterval(poll,4000);if(IS_APP){watchOthers();timer2=setInterval(watchOthers,15000)}}
 render();
 </script></body></html>

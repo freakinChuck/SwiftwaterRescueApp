@@ -1,0 +1,7 @@
+* text=auto
+# Shell-Skripte müssen in der CI (Linux/macOS) Unix-Zeilenenden haben
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
