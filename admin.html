@@ -60,7 +60,8 @@ async function loadModes(){const el=$('#sM');let modes;try{modes=await api('mode
 async function loadRoles(){const el=$('#sR');try{roles=await api('roles')}catch(e){el.innerHTML='<h2>Spezialrollen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   el.innerHTML=`<h2>Spezialrollen im Einsatz</h2><div class="tw"><table><tbody>${roles.map(r=>`<tr><td><span style="color:${esc(r.color)}">●</span> ${esc(r.name)}${r.is_lead?' <span class="mut">(Einsatzleitung: darf Einsatz verwalten)</span>':''}${r.is_post?' <span class="mut">(Posten: Suchgebiet endet hier)</span>':''}${r.can_message||r.is_lead?'':' <span class="mut">(darf keine Nachrichten senden)</span>'}</td><td class="act"><button data-r="${r.id}">Bearbeiten</button></td></tr>`).join('')}</tbody></table></div>
     <h3>Nachrichten senden</h3><label class="row" style="align-items:center"><input type="checkbox" id="msgNoRole" disabled> <span>Personen ohne Spezialrolle dürfen Nachrichten senden</span></label>
-    <div class="mut">Pro Spezialrolle unter «Bearbeiten» einstellbar. Einsatzleitung, Administratoren und wer den Einsatz gestartet hat, dürfen immer senden. Lesen dürfen alle, die den Einsatz angenommen haben.</div>
+    <label class="row" style="align-items:center"><input type="checkbox" id="msgReadAll" disabled> <span>Personen, die den Einsatz nicht angenommen haben, dürfen Nachrichten lesen (ohne Benachrichtigung, ohne Senden)</span></label>
+    <div class="mut">Pro Spezialrolle unter «Bearbeiten» einstellbar. Einsatzleitung, Administratoren und wer den Einsatz gestartet hat, dürfen immer senden. Lesen dürfen alle, die den Einsatz angenommen haben, mit der Einstellung oben auch alle übrigen.</div>
     <h3>Neue Rolle</h3><div class="row"><input id="rn" placeholder="Rollenname" aria-label="Rollenname"><input id="rc" type="color" value="#8888ff" aria-label="Farbe" style="flex:0 0 4rem"><button id="rA">Rolle anlegen</button></div>`;
   $('#rA').onclick=()=>api('role/save',{name:$('#rn').value,color:$('#rc').value}).then(loadRoles).catch(fail);
   el.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=roles.find(x=>x.id==b.dataset.r);
@@ -68,8 +69,8 @@ async function loadRoles(){const el=$('#sR');try{roles=await api('roles')}catch(
       <label class="chk"><input type="checkbox" id="rL" ${r.is_lead?'checked':''}> Einsatzleitung (darf Einsatz verwalten)</label><label class="chk"><input type="checkbox" id="rP" ${r.is_post?'checked':''}> Sicherungs-/Beobachtungsposten (Suchgebiet endet hier)</label><label class="chk"><input type="checkbox" id="rM" ${r.can_message?'checked':''}> Darf Nachrichten senden</label><label class="chk"><input type="checkbox" id="rD"> Rolle deaktivieren</label>`,
       async d=>{const n=$('#rN',d).value.trim();if(!n)throw new Error('Name fehlt');await api('role/save',{id:r.id,name:n,color:$('#rC',d).value,is_lead:$('#rL',d).checked?1:0,is_post:$('#rP',d).checked?1:0,can_message:$('#rM',d).checked?1:0,active:$('#rD',d).checked?0:1});loadRoles()})});
   // Einstellung für Personen ohne Spezialrolle, wird sofort gespeichert
-  api('settings').then(s=>{const c=$('#msgNoRole');c.checked=!!s.msg_no_role;c.disabled=false;
-    c.onchange=()=>{c.disabled=true;api('settings/save',{msg_no_role:c.checked?1:0}).catch(e=>{c.checked=!c.checked;fail(e)}).finally(()=>{c.disabled=false})}}).catch(fail)}
+  api('settings').then(s=>[['#msgNoRole','msg_no_role'],['#msgReadAll','msg_read_all']].forEach(([id,k])=>{const c=$(id);c.checked=!!s[k];c.disabled=false;
+    c.onchange=()=>{c.disabled=true;api('settings/save',{[k]:c.checked?1:0}).catch(e=>{c.checked=!c.checked;fail(e)}).finally(()=>{c.disabled=false})}})).catch(fail)}
 /* ---------- Einsatzstatistik ---------- */
 async function loadStats(){const el=$('#stats');try{const r=await api('stats'),t=r.totals,min=x=>x==null?'–':Math.round(x/60)+' min';
   el.innerHTML=`<h2>Einsatzstatistik</h2><div class="mut">Einsätze: ${t.count} (davon Übungen: ${t.exercises}, beendet: ${t.ended}) · Ø Dauer ${min(t.avg_duration)} · Ø Teilnehmende ${t.avg_accepted??'–'} · Ø bis erste Annahme ${min(t.avg_first_accept)} · Ø bis Suchgebiet erreicht ${min(t.avg_first_area)}</div>
