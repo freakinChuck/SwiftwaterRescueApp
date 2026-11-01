@@ -19,12 +19,14 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS incident_log(id $ai, incident_id INT, ts BIGINT, user_id INT NULL, kind $tx, text TEXT)",
  "CREATE TABLE IF NOT EXISTS rescuee_marks(id $ai, incident_id INT, user_id INT, lat DOUBLE, lon DOUBLE, ts BIGINT, manual INT DEFAULT 0)",
  // Einrückoptionen beim Annehmen eines Einsatzes; participants.mode verweist auf code
- "CREATE TABLE IF NOT EXISTS modes(id $ai, code $tx UNIQUE, name $tx, share_location INT DEFAULT 1, active INT DEFAULT 1)",
+ // lead_rights: Option mit den Rechten der Einsatzleitung, aber ohne Spezialrolle (z. B. Koordinator KP Rück)
+ "CREATE TABLE IF NOT EXISTS modes(id $ai, code $tx UNIQUE, name $tx, share_location INT DEFAULT 1, active INT DEFAULT 1, lead_rights INT DEFAULT 0)",
  // Einstellungen der Verwaltung als Schlüssel/Wert, z. B. msg_no_role
  "CREATE TABLE IF NOT EXISTS settings(k $tx PRIMARY KEY, v TEXT)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
+try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 foreach (['roles' => ['can_message INT DEFAULT 1'], 'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0'], 'incidents' => ['is_exercise INT DEFAULT 0']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
@@ -32,8 +34,8 @@ if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   foreach ([['Einsatzleitung','#d62828',1,0],['Rettungsboot','#1d7fd1',0,0],['Rettungsschlitten','#e6a100',0,0],['Sicherungs- und Beobachtungsposten','#2a9d5c',0,1]] as $r) $st->execute($r);
 }
 if (!$db->query("SELECT COUNT(*) c FROM modes")->fetch()['c']) { // bisherige feste Optionen, Codes bleiben für bestehende Einsätze gültig
-  $st = $db->prepare("INSERT INTO modes(code,name,share_location) VALUES(?,?,?)");
-  foreach ([['base','Anfahrt via Stützpunkt',1],['direct','Anfahrt direkt',1],['logistics','Logistik',1],['coordinator','Koordinator KP Rück',0]] as $r) $st->execute($r);
+  $st = $db->prepare("INSERT INTO modes(code,name,share_location,lead_rights) VALUES(?,?,?,?)");
+  foreach ([['base','Anfahrt via Stützpunkt',1,0],['direct','Anfahrt direkt',1,0],['logistics','Logistik',1,0],['coordinator','Koordinator KP Rück',0,1]] as $r) $st->execute($r);
 }
 if (!$db->query("SELECT COUNT(*) c FROM users")->fetch()['c'])
   $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin,must_change) VALUES(?,?,?,1,1)")->execute([$cfg['admin_user'], 'Administrator', password_hash($cfg['admin_pass'], PASSWORD_DEFAULT)]);
@@ -74,7 +76,16 @@ function pwCheck($p) { if (!is_string($p) || $p === '') fail('Das Passwort darf 
 function critical($inc) { global $me; return !(int)$inc['is_exercise'] || $me['exercise_mode']; }
 function part($incId, $u = null) { global $db, $uid; $s = $db->prepare("SELECT * FROM participants WHERE incident_id=? AND user_id=?"); $s->execute([$incId, $u ?? $uid]); return $s->fetch(); }
 function isActivePart($incId) { $p = part($incId); return $p && $p['mode'] !== 'declined' && $p['left_at'] === null; }
-function isLead($incId) { global $db, $uid; $s = $db->prepare("SELECT COUNT(*) c FROM participants p JOIN roles r ON r.id=p.role_id WHERE p.incident_id=? AND p.user_id=? AND p.left_at IS NULL AND r.is_lead=1"); $s->execute([$incId, $uid]); return $s->fetch()['c'] > 0; }
+// Einsatzleitung: Spezialrolle mit is_lead oder Einrückoption mit lead_rights (z. B. Koordinator KP Rück)
+function isLead($incId) {
+  global $db; $p = part($incId);
+  if (!$p || $p['left_at'] !== null || $p['mode'] === 'declined') return false;
+  if (leadMode($p['mode'])) return true;
+  if ($p['role_id'] === null) return false;
+  $s = $db->prepare("SELECT is_lead FROM roles WHERE id=?"); $s->execute([$p['role_id']]); $r = $s->fetch();
+  return $r && (int)$r['is_lead'];
+}
+function leadMode($code) { $m = modeRow($code); return $m && (int)$m['lead_rights']; }
 function canManage($inc) { global $me, $uid; return $me['is_admin'] || (int)$inc['created_by'] === $uid || isLead((int)$inc['id']); }
 function canFlow($inc) { return canManage($inc) || isActivePart((int)$inc['id']); }
 function modeRow($code) { global $db; $s = $db->prepare("SELECT * FROM modes WHERE code=?"); $s->execute([$code]); return $s->fetch() ?: null; }
@@ -133,7 +144,7 @@ switch ($route) {
  case 'me': out(['me' => $me]);
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
-  out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active']), $db->query("SELECT id,code,name,share_location,active FROM modes ORDER BY id")->fetchAll()));
+  out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights']), $db->query("SELECT id,code,name,share_location,active,lead_rights FROM modes ORDER BY id")->fetchAll()));
 
  case 'incident/start':
   if (activeIncident()) fail('Es läuft bereits ein Einsatz');
@@ -184,6 +195,7 @@ switch ($route) {
                    : "INSERT INTO participants(incident_id,user_id,mode) VALUES(?,?,?) ON CONFLICT(incident_id,user_id) DO UPDATE SET mode=excluded.mode, left_at=NULL")->execute([$inc['id'], $uid, $mode]);
   // Option ohne Standortfreigabe (z. B. Koordinator KP Rück): bisherigen Standort von der Karte nehmen
   if ($m && !(int)$m['share_location']) $db->prepare("UPDATE participants SET lat=NULL, lon=NULL, loc_at=NULL WHERE incident_id=? AND user_id=?")->execute([$inc['id'], $uid]);
+  if ($m && (int)$m['lead_rights']) $db->prepare("UPDATE participants SET role_id=NULL WHERE incident_id=? AND user_id=?")->execute([$inc['id'], $uid]); // Leitungsrechte ohne Spezialrolle
   if (!$prev || $prev['mode'] !== $mode || $prev['left_at'] !== null) {
     if ($mode === 'declined') logev($inc['id'], $uid, 'decline', 'hat den Einsatz abgelehnt');
     else logev($inc['id'], $uid, 'accept', ($prev && $prev['left_at'] !== null ? 'ist wieder eingestiegen' : 'hat den Einsatz angenommen') . ' (' . $m['name'] . ')');
@@ -197,13 +209,28 @@ switch ($route) {
   if ($p && $p['left_at'] === null && $p['mode'] !== 'declined') logev($inc['id'], $uid, 'leave', 'hat den Einsatz verlassen');
   out(['ok' => true]);
 
- case 'incident/role': // role_id oder null
+ case 'incident/role': // eigene Spezialrolle: role_id oder null
   $inc = activeIncident(); $p = $inc ? part($inc['id']) : null; if (!$p) fail('Nicht im Einsatz');
+  if (leadMode($p['mode'])) fail('Mit dieser Einrückoption gibt es keine Spezialrolle');
   $rid = !empty($in['role_id']) ? (int)$in['role_id'] : null;
   if ($rid !== ($p['role_id'] !== null ? (int)$p['role_id'] : null)) {
     $db->prepare("UPDATE participants SET role_id=? WHERE incident_id=? AND user_id=?")->execute([$rid, $inc['id'], $uid]);
     if ($rid) { $s = $db->prepare("SELECT name FROM roles WHERE id=?"); $s->execute([$rid]); logev($inc['id'], $uid, 'role', 'übernimmt die Rolle ' . ($s->fetch()['name'] ?? '?')); }
     else logev($inc['id'], $uid, 'role', 'legt die Spezialrolle ab');
+  }
+  out(['ok' => true]);
+
+ case 'incident/role/set': // Einsatzleitung setzt die Spezialrolle einer Einsatzkraft: user_id, role_id oder null
+  $inc = activeIncident(); if (!$inc || !canManage($inc)) fail('Nur die Einsatzleitung kann Spezialrollen anderer Personen ändern', 403);
+  $t = (int)($in['user_id'] ?? 0); $p = part($inc['id'], $t);
+  if (!$p || $p['left_at'] !== null || $p['mode'] === 'declined') fail('Die Person ist nicht im Einsatz');
+  if (leadMode($p['mode'])) fail('Mit dieser Einrückoption gibt es keine Spezialrolle');
+  $rid = !empty($in['role_id']) ? (int)$in['role_id'] : null; $rn = null;
+  if ($rid) { $s = $db->prepare("SELECT name FROM roles WHERE id=? AND active=1"); $s->execute([$rid]); $rn = $s->fetch()['name'] ?? null; if ($rn === null) fail('Unbekannte Spezialrolle'); }
+  if ($rid !== ($p['role_id'] !== null ? (int)$p['role_id'] : null)) {
+    $db->prepare("UPDATE participants SET role_id=? WHERE incident_id=? AND user_id=?")->execute([$rid, $inc['id'], $t]);
+    $s = $db->prepare("SELECT name FROM users WHERE id=?"); $s->execute([$t]); $who = $s->fetch()['name'] ?? '?';
+    logev($inc['id'], $uid, 'role', $rid ? "teilt $who die Rolle $rn zu" : "entfernt die Spezialrolle von $who");
   }
   out(['ok' => true]);
 
@@ -405,16 +432,16 @@ switch ($route) {
   out(['ok' => true]);
  case 'mode/save': admin(); // Einrückoption anlegen oder ändern
   $nm = trim($in['name'] ?? ''); if ($nm === '') fail('Name fehlt');
-  $s = $db->prepare("SELECT * FROM modes WHERE id=?"); $s->execute([(int)($in['id'] ?? 0)]); $old = $s->fetch() ?: ['share_location' => 1, 'active' => 1];
+  $s = $db->prepare("SELECT * FROM modes WHERE id=?"); $s->execute([(int)($in['id'] ?? 0)]); $old = $s->fetch() ?: ['share_location' => 1, 'active' => 1, 'lead_rights' => 0];
   $flag = fn($k) => isset($in[$k]) ? (empty($in[$k]) ? 0 : 1) : (int)$old[$k]; // nicht übergeben = bisheriger Wert
-  $sh = $flag('share_location'); $ac = $flag('active');
+  $sh = $flag('share_location'); $ac = $flag('active'); $lr = $flag('lead_rights');
   if (!empty($in['id'])) {
     $id = (int)$in['id']; if (empty($old['id'])) fail('Einrückoption nicht gefunden', 404);
     $s = $db->prepare("SELECT COUNT(*) c FROM modes WHERE active=1 AND id<>?"); $s->execute([$id]);
     if (!$ac && !$s->fetch()['c']) fail('Mindestens eine Einrückoption muss aktiv bleiben');
-    $db->prepare("UPDATE modes SET name=?,share_location=?,active=? WHERE id=?")->execute([$nm, $sh, $ac, $id]);
+    $db->prepare("UPDATE modes SET name=?,share_location=?,active=?,lead_rights=? WHERE id=?")->execute([$nm, $sh, $ac, $lr, $id]);
   } else {
-    $db->prepare("INSERT INTO modes(code,name,share_location,active) VALUES(?,?,?,1)")->execute(['neu-' . bin2hex(random_bytes(6)), $nm, $sh]);
+    $db->prepare("INSERT INTO modes(code,name,share_location,active,lead_rights) VALUES(?,?,?,1,?)")->execute(['neu-' . bin2hex(random_bytes(6)), $nm, $sh, $lr]);
     $id = (int)$db->lastInsertId(); $db->prepare("UPDATE modes SET code=? WHERE id=?")->execute(['m' . $id, $id]);
   }
   out(['ok' => true]);
