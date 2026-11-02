@@ -13,7 +13,9 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 .msg{padding:.4rem 0;border-bottom:1px solid var(--line)}table{width:100%;border-collapse:collapse}td{padding:.3rem;border-bottom:1px solid var(--line)}
 /* Dialoge (Passwort, Bearbeiten) */
 .dlg{position:fixed;inset:0;z-index:6000;background:#000b;display:grid;place-items:center;padding:1rem}
-.dlg .card{margin:0;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.dlg .card{margin:0;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;max-height:calc(100dvh - 2rem);overflow-y:auto;overscroll-behavior:contain}
+/* lange Dialoge scrollen im Fenster, Speichern/Abbrechen bleiben unten sichtbar */
+.dlg .card>.row:last-child{position:sticky;bottom:calc(-1.2rem - 1px);z-index:1;background:var(--panel);margin:0 0 -1.2rem;padding:.6rem 0 1.2rem;border-top:1px solid var(--line)}
 .dlg label{display:grid;gap:.3rem}.dlg label.chk{display:flex;align-items:center;gap:.5rem}
 /* Einsatzlog im Gross-Modus */
 #bigLog{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
