@@ -15,6 +15,35 @@ const MAP_PROVIDERS={
   osm:{label:'OpenStreetMap',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap',maxZoom:19}
 };
 const fmtT=ts=>new Date(ts*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+/* ---------- Suchgebiet entlang des Flusslaufs (Einsatz-App und öffentliche Ansicht) ---------- */
+const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
+const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
+// Radius des Gewässernetzes für eine Driftdistanz D, auf 1 km aufgerundet, damit alle Geräte dieselbe Abfrage stellen (Server-Cache)
+const netRadius=D=>Math.ceil(Math.min(Math.max(5000,D*1.3),30000)/1000)*1000;
+const geoDist=(a,b)=>L.latLng(a.lat,a.lon).distanceTo([b.lat,b.lon]);
+// Overpass-Antwort → Wege und Verknüpfungen über gemeinsame Knoten
+function riverNet(j){if(!j||!j.elements)throw new Error('ungültige Antwort');
+  const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();
+  ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));return{ways,byNode}}
+// Weg ab Punkt k flussabwärts über rem Meter, an Verzweigungen alle Äste
+function riverFollow(net,w,k,rem,seen){const pts=[w.geometry[k]];seen=new Set(seen).add(w.id);
+  for(let j=k+1;j<w.geometry.length;j++){const a=w.geometry[j-1],b=w.geometry[j],d=geoDist(a,b);
+    if(d>=rem){const f=rem/d;pts.push({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});return[pts]}
+    pts.push(b);rem-=d}
+  const nexts=(net.byNode.get(w.nodes[w.nodes.length-1])||[]).filter(e=>!seen.has(e.w.id)&&e.k<e.w.geometry.length-1);
+  if(!nexts.length)return[pts];
+  return nexts.flatMap(e=>riverFollow(net,e.w,e.k,rem,seen).map(br=>pts.concat(br.slice(1))))}
+function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/180),P=pts.map(p=>C.project(L.latLng(p.lat,p.lon))),A=[],B=[];
+  P.forEach((p,j)=>{const a=P[Math.max(0,j-1)],b=P[Math.min(P.length-1,j+1)];let dx=b.x-a.x,dy=b.y-a.y;const n=Math.hypot(dx,dy)||1;dx/=n;dy/=n;
+    A.push(C.unproject(L.point(p.x-dy*k,p.y+dx*k)));B.push(C.unproject(L.point(p.x+dy*k,p.y-dx*k)))});return A.concat(B.reverse())}
+// Suchgebiet ab PLS (i) über die Driftdistanz D, endet am ersten Posten (posts: [{lat,lon,name}]); null = kein Gewässer nahe der PLS
+function riverArea(net,i,D,posts){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
+  if(!best||bd>SNAP_M)return null;const r={lines:[],polys:[],cutBy:null,maxLen:0};
+  riverFollow(net,best.w,best.k,D,new Set()).forEach(pts=>{
+    for(let j=0;j<pts.length;j++){const po=posts.find(p=>geoDist(pts[j],p)<120);if(po){pts=pts.slice(0,j+1);r.cutBy=po.name;break}}
+    if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=geoDist(pts[j-1],pts[j]);r.maxLen=Math.max(r.maxLen,len);
+    r.lines.push(pts);r.polys.push(corridor(pts,BANK_M))});
+  return r}
 /* ---------- Koordinaten ---------- */
 // Standard in der Verwaltung (settings coord_sys), pro Person übersteuerbar (users.coord_sys); Schlüssel wie auf dem Server (COORDS)
 const COORD_SYS={lv95:'LV95 (CH1903+, E / N)',lv03:'LV03 (CH1903, Y / X)',wgs84:'WGS84 Dezimalgrad',wgs84dms:'WGS84 Grad, Minuten, Sekunden'};
@@ -50,8 +79,8 @@ function pwDialog(forced,done){
     'Speichern',forced?'Abmelden':'Abbrechen',forced?()=>{logout();done&&done()}:null)}
 /* ---------- Einsatzlog im Gross-Modus ---------- */
 let big=null;
-const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],poi:['Positionen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung',['start','end','flow','rec']]};
-const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0'};
+const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],poi:['Positionen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub']]};
+const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0',pub:'#7dd3fc'};
 function openBigLog(title,get,live){big={title,get,live,desc:true,filter:'all',cache:[]};let o=$('#bigLog');if(o)o.remove();
   o=document.createElement('div');o.id='bigLog';o.setAttribute('role','dialog');o.setAttribute('aria-label','Einsatzlog');
   o.innerHTML=`<div id="bigHead"><h2 id="bigT"></h2><select id="bigF" aria-label="Filter">${Object.entries(KIND_GROUPS).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('')}</select><button id="bigS"></button><button id="bigFs">Vollbild</button><button id="bigX" class="pri">Schliessen</button></div><div id="bigList"></div>`;

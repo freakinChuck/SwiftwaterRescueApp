@@ -25,6 +25,9 @@ Beim ersten Mal auf dem Server `api/config.php` von Hand anlegen (Vorlage im Rep
 - Jede Person ändert ihr Passwort im Menü unter «Konto → Passwort ändern».
 - Beim Einsatzstart wählen: «Scharfer Einsatz» (immer kritischer Alarm) oder «Übung» (normale Benachrichtigung). Wer unter «Konto» den Übungsmodus aktiviert, erhält auch Übungen als kritischen Alarm.
 
+## Öffentliche Ansicht (Public Mode)
+Die Einsatzleitung kann einen laufenden Einsatz oder eine Übung im Menü unter «Einsatz verwalten» öffentlich machen. Wer den Link (`public.html?k=…`) hat, sieht ohne Anmeldung die Karte mit Standorten, Positionen, Bereichen und Rettlingen, aber keine Nachrichten und kein Einsatzlog. Standardmässig anonym: statt Namen nur Spezialrolle bzw. Einrückoption. Ausschalten macht den Link ungültig.
+
 ## Karte
 Standard ist das swisstopo-Luftbild; über das Ebenen-Symbol oben rechts kann auf Landeskarte oder OpenStreetMap umgeschaltet werden (Wahl wird pro Gerät gemerkt).
 

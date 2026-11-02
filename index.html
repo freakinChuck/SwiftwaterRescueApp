@@ -81,9 +81,8 @@ body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: K
 /* ---------- Konfiguration ---------- */
 // Kartenanbieter (MAP_PROVIDERS, DEFAULT_BASE) in common.js, gemeinsam mit dem Replay der Verwaltung
 // Gewässernetz (OpenStreetMap via Overpass). Austauschbar: Funktion loadNet() liefert Wege als {id,nodes[],geometry[{lat,lon}]} in Fliessrichtung.
-const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
+// BANK_M (Ufergebiet) und SNAP_M (max. Distanz PLS zum Gewässer) in common.js
 const WATER_M=80;  // Standort so nahe an der Gewässerachse gilt als «auf dem Gewässer» (Boot); zählt im Einsatzlog nicht als Fahrt
-const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
 // Einrückoptionen kommen vom Server (Verwaltung → Einrückoptionen); share_location=0: Standort wird nicht geteilt
 let modes=[];
 const modeOf=k=>modes.find(x=>x.code===k)||{code:k,name:k,share_location:1,active:0,lead_rights:0},shares=k=>!!modeOf(k).share_location;
@@ -183,40 +182,23 @@ function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if
 /* ---------- Suchgebiet entlang des Flusslaufs ---------- */
 let net=null,netLoading=false,areaInfo='';
 // Gewässernetz über den Server (Cache, siehe Route overpass); Radius auf 1 km aufgerundet, damit alle Geräte eines Einsatzes dieselbe Abfrage stellen
-async function loadNet(i,R){netLoading=true;R=Math.ceil(R/1000)*1000;
-  try{const j=await api('overpass',{around:[R,i.lat,i.lon]});if(!j.elements)throw new Error('ungültige Antwort');
-    const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();
-    ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));
-    net={inc:i.id,R,ways,byNode};netLoading=false;drawMap();draw();return}
+// Berechnung (riverNet, riverArea, netRadius) in common.js, gemeinsam mit der öffentlichen Ansicht
+async function loadNet(i,R){netLoading=true;
+  try{const n=riverNet(await api('overpass',{around:[R,i.lat,i.lon]}));net={inc:i.id,R,...n};netLoading=false;drawMap();draw();return}
   catch(e){net={inc:i.id,R,fail:true,err:e.message,retryAt:Date.now()+20000};netLoading=false;drawMap();draw()}}
 const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
-function follow(w,k,rem,seen){const pts=[w.geometry[k]];seen=new Set(seen).add(w.id);
-  for(let j=k+1;j<w.geometry.length;j++){const a=w.geometry[j-1],b=w.geometry[j],d=dist(a,b);
-    if(d>=rem){const f=rem/d;pts.push({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});return[pts]}
-    pts.push(b);rem-=d}
-  const nexts=(net.byNode.get(w.nodes[w.nodes.length-1])||[]).filter(e=>!seen.has(e.w.id)&&e.k<e.w.geometry.length-1);
-  if(!nexts.length)return[pts];
-  return nexts.flatMap(e=>follow(e.w,e.k,rem,seen).map(br=>pts.concat(br.slice(1))))}
-function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/180),P=pts.map(p=>C.project(L.latLng(p.lat,p.lon))),A=[],B=[];
-  P.forEach((p,j)=>{const a=P[Math.max(0,j-1)],b=P[Math.min(P.length-1,j+1)];let dx=b.x-a.x,dy=b.y-a.y;const n=Math.hypot(dx,dy)||1;dx/=n;dy/=n;
-    A.push(C.unproject(L.point(p.x-dy*k,p.y+dx*k)));B.push(C.unproject(L.point(p.x+dy*k,p.y-dx*k)))});return A.concat(B.reverse())}
 function circleArea(i,D,why){areaShape={circle:{lat:i.lat,lon:i.lon,r:D}};areaInfo=why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.';
   return L.circle([i.lat,i.lon],{radius:D,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6'})}
 function drawArea(i){areaInfo='';areaShape=null;const D=(i.flow_ms||0)*(st.now-i.alarm_at);if(D<=0){areaInfo='Fliessgeschwindigkeit fehlt.';return null}
-  const need=Math.min(Math.max(5000,D*1.3),30000);
-  if(!netLoading&&(!net||net.inc!==i.id||(!net.fail&&net.R<D*1.1&&net.R<30000)||(net.fail&&Date.now()>net.retryAt)))loadNet(i,need);
+  if(!netLoading&&(!net||net.inc!==i.id||(!net.fail&&net.R<D*1.1&&net.R<30000)||(net.fail&&Date.now()>net.retryAt)))loadNet(i,netRadius(D));
   if(!net||net.inc!==i.id)return circleArea(i,D,'Gewässerdaten werden geladen.');
   if(net.fail)return circleArea(i,D,'Gewässerdaten nicht verfügbar ('+net.err+'), neuer Versuch folgt.');
-  let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=dist(g,{lat:i.lat,lon:i.lon});if(d<bd){bd=d;best={w,k}}}));
-  if(!best||bd>SNAP_M)return circleArea(i,D,'Kein Gewässer nahe der PLS.');
-  areaShape={polys:[]};const posts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&(roles.find(r=>r.id==p.role_id)||{}).is_post);let cutBy=null,maxLen=0;
-  const g=L.layerGroup();
-  follow(best.w,best.k,D,new Set()).forEach(pts=>{
-    for(let j=0;j<pts.length;j++){const po=posts.find(p=>dist(pts[j],{lat:p.lat,lon:p.lon})<120);if(po){pts=pts.slice(0,j+1);cutBy=po.name;break}}
-    if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=dist(pts[j-1],pts[j]);maxLen=Math.max(maxLen,len);
-    const cp=corridor(pts,BANK_M);areaShape.polys.push(cp);g.addLayer(L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false}));
-    g.addLayer(L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#ff4d2e',weight:3,interactive:false}))});
-  areaInfo=`Suchgebiet: ${(maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(cutBy?`, endet am Posten ${cutBy}.`:'.');
+  const posts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&(roles.find(r=>r.id==p.role_id)||{}).is_post);
+  const a=riverArea(net,i,D,posts);if(!a)return circleArea(i,D,'Kein Gewässer nahe der PLS.');
+  areaShape={polys:a.polys};const g=L.layerGroup();
+  a.polys.forEach(cp=>g.addLayer(L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false})));
+  a.lines.forEach(pts=>g.addLayer(L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#ff4d2e',weight:3,interactive:false})));
+  areaInfo=`Suchgebiet: ${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet am Posten ${a.cutBy}.`:'.');
   return g}
 const roleName=p=>(roles.find(r=>r.id==p.role_id)||{}).name;
 const sec=(k,t,b)=>`<details data-k="${k}" ${openSec.has(k)?'open':''}><summary>${t}</summary>${b}</details>`;
@@ -225,7 +207,7 @@ function footInfo(){const i=st&&st.incident,m=i&&st.me,joined=!!(m&&!m.left_at&&
   const rows=[['Server',location.host+location.pathname.replace(/[^/]*$/,'')],['Angemeldet',`${me.name} (${me.username}) · ${me.is_admin?'Administrator':'Einsatzkraft'}${me.exercise_mode?' · Übungsmodus an':''}`]];
   if(i){rows.push(['Im Einsatz',joined?modeOf(m.mode).name+(leadMode(m.mode)?' (Rechte der Einsatzleitung)':'')+(r?' · Spezialrolle '+r.name:''):'nicht angenommen']);
     const yes=[],no=[],add=(c,t)=>(c?yes:no).push(t);
-    add(st.can_manage,'Einsatz verwalten und beenden');add(st.can_manage,'Spezialrollen setzen');add(st.can_manage,'Einsatzkräfte entfernen');add(st.can_manage,'Rettlinge entfernen');add(st.can_manage,'Positionen und Bereiche markieren');
+    add(st.can_manage,'Einsatz verwalten und beenden');add(st.can_manage,'Spezialrollen setzen');add(st.can_manage,'Einsatzkräfte entfernen');add(st.can_manage,'Rettlinge entfernen');add(st.can_manage,'Positionen und Bereiche markieren');add(st.can_manage,'Öffentliche Ansicht steuern');
     add(st.can_flow,'Fliessgeschwindigkeit setzen');add(!!st.can_read_messages,'Nachrichten lesen');add(joined&&st.can_message,'Nachrichten senden');add(sh,'Standort teilen');
     add(canRes(),'Rettlinge erfassen, Standort und «gerettet» markieren');
     if(r&&r.is_post)yes.push('Posten: Suchgebiet endet am eigenen Standort');
@@ -252,7 +234,7 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
   if(secReset){secReset=false;openSec=new Set(['mine']);if(!i.flow_ms)openSec.add('flow')}
-  let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}${esc(fcs(i.lat,i.lon,' · PLS '))}${i.record===1?' · <b>● wird aufgezeichnet</b> (Standortverläufe für das Replay)':i.record===2?' · <b>❚❚ Aufzeichnung pausiert</b>':''}</div>`;
+  let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}${esc(fcs(i.lat,i.lon,' · PLS '))}${i.record===1?' · <b>● wird aufgezeichnet</b> (Standortverläufe für das Replay)':i.record===2?' · <b>❚❚ Aufzeichnung pausiert</b>':''}${i.public?` · <b>🌐 öffentlich sichtbar</b> (${i.public_anon?'ohne Namen':'mit Namen'})`:''}</div>`;
   if(!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button class="pri" data-m="${esc(x.code)}">Einsatz annehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
   // Reihenfolge im Menü: Mein Einsatz, Fliessgeschwindigkeit & Suchgebiet, danach der Rest
   const flowSec=st.can_flow?sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button></div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`):'';
@@ -268,7 +250,7 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   // alle anderen sehen die Einsatzkräfte über den Kartenknopf «Personen»
   // Aufzeichnung fürs Replay: record 0 aus/beendet, 1 läuft, 2 pausiert; nach «Beenden» jederzeit wieder aufnehmbar
   const REC={0:[i.recorded?'Beendet. Bisherige Aufzeichnung bleibt für das Replay erhalten.':'Aus',[['start',i.recorded?'Wieder aufnehmen':'Aufzeichnung starten']]],1:['● Läuft',[['pause','Pausieren'],['stop','Beenden']]],2:['❚❚ Pausiert',[['resume','Fortsetzen'],['stop','Beenden']]]}[i.record]||['?',[]];
-  if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<h4 style="margin:.3rem 0">Aufzeichnung (Replay in der Verwaltung)</h4><div class="mut">${esc(REC[0])}</div><div class="row">${REC[1].map(([a,l])=>`<button data-rec="${a}">${l}</button>`).join('')}</div><div class="mut">Gespeichert werden die Standortverläufe aller Teilnehmenden, solange die Aufzeichnung läuft.</div><div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
+  if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<h4 style="margin:.3rem 0">Aufzeichnung (Replay in der Verwaltung)</h4><div class="mut">${esc(REC[0])}</div><div class="row">${REC[1].map(([a,l])=>`<button data-rec="${a}">${l}</button>`).join('')}</div><div class="mut">Gespeichert werden die Standortverläufe aller Teilnehmenden, solange die Aufzeichnung läuft.</div>${pubSec(i)}<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
   const act=st.participants.filter(p=>p.mode!=='declined');
   if(st.can_manage)h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table class="crew">${act.map(p=>`<tr><td>${esc(p.name)}<small>${p.left_at?'verlassen':esc(modeOf(p.mode).name)}</small></td><td>${p.left_at?esc(roleName(p)||''):leadMode(p.mode)?'<span class="mut">Rechte der Einsatzleitung</span>':st.can_manage?roleSel('',p.role_id,`data-rset="${p.user_id}" aria-label="Spezialrolle von ${esc(p.name)}"`):esc(roleName(p)||'')}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}" data-n="${esc(p.name)}" aria-label="${esc(p.name)} aus dem Einsatz entfernen" title="Aus dem Einsatz entfernen">✕</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
@@ -279,7 +261,16 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   }
   if(st.can_flow)$('#bFl').onclick=()=>api('incident/flow',{flow_ms:+$('#fl').value}).then(poll).catch(fail);
   if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail);
-    $('#sheet').querySelectorAll('[data-rec]').forEach(b=>b.onclick=()=>{b.disabled=true;api('incident/record',{action:b.dataset.rec}).then(poll).catch(e=>{b.disabled=false;fail(e)})})}}
+    $('#sheet').querySelectorAll('[data-rec]').forEach(b=>b.onclick=()=>{b.disabled=true;api('incident/record',{action:b.dataset.rec}).then(poll).catch(e=>{b.disabled=false;fail(e)})});
+    // Öffentliche Ansicht ein/aus und anonym (Namen ausblenden); Häkchen verlieren den Fokus, damit das Menü wieder neu gezeichnet wird
+    ['pubOn','pubAnon'].forEach(k=>{const c=$('#'+k);if(c)c.onchange=()=>{c.blur();if(k==='pubOn'&&c.checked&&!confirm('Öffentliche Ansicht einschalten?\n\nWer den Link hat, sieht ohne Anmeldung die Karte mit den Standorten der Einsatzkräfte, Positionen, Bereichen und Rettlingen (keine Nachrichten, kein Einsatzlog).')){c.checked=false;return}
+      api('incident/public',k==='pubOn'?{on:c.checked}:{anon:c.checked}).then(poll).catch(e=>{fail(e);poll()})}});
+    if($('#bPubCp'))$('#bPubCp').onclick=()=>{const t=$('#pubUrl');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>alert('Link kopiert.')).catch(()=>{try{document.execCommand('copy');alert('Link kopiert.')}catch(e){}})}}}
+// Öffentliche Ansicht (Public Mode, nur Einsatzleitung): Link public.html?k=<public_token> zum Zuschauen ohne Login
+const pubUrl=t=>location.origin+location.pathname.replace(/[^/]*$/,'')+'public.html?k='+t;
+function pubSec(i){const u=i.public&&i.public_token?pubUrl(i.public_token):'';
+  return `<h4 style="margin:.8rem 0 .3rem">Öffentliche Ansicht (ohne Login)</h4><label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubOn" ${i.public?'checked':''}> Zuschauen ohne Anmeldung erlauben</label><label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubAnon" ${i.public_anon?'checked':''}> Anonym: Namen ausblenden (nur Spezialrolle bzw. Einrückoption)</label>
+    ${u?`<div class="row"><input id="pubUrl" readonly value="${esc(u)}" aria-label="Link zur öffentlichen Ansicht" onfocus="this.select()"><button id="bPubCp">Link kopieren</button><a class="btn" href="${esc(u)}" target="_blank" rel="noopener">Öffnen</a></div>`:''}<div class="mut">Sichtbar sind Karte, Standorte, Positionen, Bereiche und Rettlinge, keine Nachrichten und kein Einsatzlog. Ausschalten macht den Link ungültig.</div>`}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'&&shares(mode))track();await poll()}catch(e){fail(e)}}
 function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined')track();await poll()}catch(e){fail(e)}}

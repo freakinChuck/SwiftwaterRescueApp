@@ -9,13 +9,17 @@ function fail($m, $c = 400) { out(['error' => $m], $c); }
 
 $db = new PDO($cfg['dsn'], $cfg['db_user'], $cfg['db_pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 $my = str_starts_with($cfg['dsn'], 'mysql');
+// SQLite im WAL-Modus: Lesende blockieren Schreibende nicht (und umgekehrt). Sonst sperrt ein langer Request (z. B. Overpass) mit offenem
+// Lesezugriff die Datenbank, sobald jemand schreiben will, und alle weiteren Requests laufen nach dem Timeout in einen Serverfehler.
+if (!$my) { $db->exec('PRAGMA journal_mode=WAL'); $db->exec('PRAGMA busy_timeout=10000'); }
 $ai = $my ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
 $tx = $my ? 'VARCHAR(190)' : 'TEXT';
 foreach ([
  "CREATE TABLE IF NOT EXISTS users(id $ai, username $tx UNIQUE, name $tx, pass_hash $tx, is_admin INT DEFAULT 0, active INT DEFAULT 1, photo MEDIUMTEXT, token $tx, exercise_mode INT DEFAULT 0, must_change INT DEFAULT 0)",
  "CREATE TABLE IF NOT EXISTS roles(id $ai, name $tx, color $tx, is_lead INT DEFAULT 0, active INT DEFAULT 1, is_post INT DEFAULT 0, can_message INT DEFAULT 1)",
  // Aufzeichnung fürs Replay in der Verwaltung: record = aktueller Zustand (0 aus/beendet, 1 läuft, 2 pausiert), recorded=1 sobald Daten vorhanden sind
- "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT, is_exercise INT DEFAULT 0, record INT DEFAULT 0, recorded INT DEFAULT 0)",
+ // Öffentliche Ansicht ohne Login (public.html?k=<public_token>): public_token NULL = aus; public_anon=1 blendet Namen aus
+ "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT, is_exercise INT DEFAULT 0, record INT DEFAULT 0, recorded INT DEFAULT 0, public_token $tx NULL, public_anon INT DEFAULT 1)",
  // Aufzeichnung: Standortverlauf je Einsatzkraft (user_id) bzw. markierte Standorte je Rettling (rescuee_id)
  "CREATE TABLE IF NOT EXISTS track(id $ai, incident_id INT, user_id INT NULL, rescuee_id INT NULL, ts BIGINT, lat DOUBLE, lon DOUBLE)",
  // Zeiträume, in denen aufgezeichnet wurde (stop NULL = läuft); Pausen liegen dazwischen
@@ -38,7 +42,7 @@ foreach ([
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0']] as $t => $cs)
+foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 try { $db->exec("CREATE INDEX track_inc ON track(incident_id,ts)"); } catch (Throwable $e) {} // schlägt bei vorhandenem Index still fehl
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
@@ -63,6 +67,9 @@ const TRIP_MIN_M = 500;  // kürzere Fahrten und GPS-Sprünge nicht protokollier
 const STOP_S = 90;       // so lange ohne schnelle Meldung = Fahrt beendet
 const TRIP_LOG_S = 600;  // lange Fahrten zusätzlich alle 10 Minuten protokollieren
 const COORDS = ['lv95', 'lv03', 'wgs84', 'wgs84dms']; // Koordinatensysteme für die Anzeige (Umrechnung im Frontend, COORD_SYS in common.js)
+// Gewässernetz (OSM via Overpass) über den Server mit Datei-Cache in api/data/overpass/ (overpassServe)
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const OVERPASS_KEEP_S = 7 * 86400; // abgelaufene Einträge so lange als Rückfall behalten, falls Overpass nicht erreichbar ist
 
 if ($route === 'login') {
   $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
@@ -73,9 +80,44 @@ if ($route === 'login') {
   out(['token' => $t]);
 }
 
+// Öffentliche Ansicht (Public Mode): ohne Anmeldung, nur lesend, nur mit dem geheimen Link der Einsatzleitung (k = public_token).
+// Geliefert wird nur, was zum Zuschauen nötig ist: keine Nachrichten, kein Log, keine Profilbilder, keine Benutzer-IDs.
+// Anonym (public_anon=1): statt Namen nur Spezialrolle bzw. Einrückoption, Rettlinge nummeriert und ohne Beschreibung.
+function pubIncident() { global $db; $k = (string)($_GET['k'] ?? '');
+  $s = $db->prepare("SELECT * FROM incidents WHERE public_token=?"); $s->execute([$k]); $inc = $s->fetch(); $s->closeCursor();
+  if (!preg_match('/^[0-9a-f]{32}$/', $k) || !$inc) fail('Dieser Link ist ungültig oder die öffentliche Ansicht wurde beendet.', 404);
+  return $inc; }
+// Gewässernetz fürs Suchgebiet: nur um die PLS des laufenden Einsatzes, Radius m wie in der Einsatz-App (netRadius), gleicher Cache
+if ($route === 'public/net') {
+  $inc = pubIncident(); if ($inc['ended_at'] !== null) fail('Der Einsatz ist beendet.', 404);
+  $r = (int)(ceil(min(max(5000, (float)($_GET['m'] ?? 0)), 30000) / 1000) * 1000);
+  overpassServe(overpassQuery(['around' => [$r, $inc['lat'], $inc['lon']]]));
+}
+if ($route === 'public/state') {
+  $inc = pubIncident();
+  $pi = ['message' => $inc['message'], 'is_exercise' => (int)$inc['is_exercise'], 'alarm_at' => (int)$inc['alarm_at'], 'ended_at' => $inc['ended_at'] === null ? null : (int)$inc['ended_at']];
+  if ($inc['ended_at'] !== null) out(['incident' => $pi, 'now' => $now]);
+  $id = (int)$inc['id']; $anon = (int)$inc['public_anon'] === 1;
+  $pi += ['lat' => (float)$inc['lat'], 'lon' => (float)$inc['lon'], 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms']];
+  $roles = array_map(fn($r) => ints($r, ['id', 'is_post']), $db->query("SELECT id,name,color,is_post FROM roles ORDER BY id")->fetchAll());
+  $rn = array_column($roles, 'name', 'id');
+  $ps = $db->prepare("SELECT p.id pid,p.role_id,p.lat,p.lon,p.loc_at,u.name,m.name mode_name FROM participants p JOIN users u ON u.id=p.user_id LEFT JOIN modes m ON m.code=p.mode WHERE p.incident_id=? AND p.mode<>'declined' AND p.left_at IS NULL ORDER BY p.id");
+  $ps->execute([$id]); $parts = [];
+  foreach ($ps->fetchAll() as $p) { // id = Teilnahme (participants.id), stabil fürs Folgen, keine Benutzer-ID
+    $rid = $p['role_id'] === null ? null : (int)$p['role_id'];
+    $parts[] = ['id' => (int)$p['pid'], 'name' => $anon ? ($rid !== null && isset($rn[$rid]) ? $rn[$rid] : ($p['mode_name'] ?: 'Einsatzkraft')) : $p['name'], 'mode_name' => $p['mode_name'], 'role_id' => $rid,
+                'lat' => $p['lat'] === null ? null : (float)$p['lat'], 'lon' => $p['lon'] === null ? null : (float)$p['lon'], 'loc_at' => $p['loc_at'] === null ? null : (int)$p['loc_at']];
+  }
+  $po = $db->prepare("SELECT id,kind,name,color,pts FROM pois WHERE incident_id=? AND removed IS NULL ORDER BY id"); $po->execute([$id]);
+  $pois = array_map(fn($p) => ['pts' => json_decode($p['pts'], true) ?: []] + ints($p, ['id']), $po->fetchAll());
+  $rq = $db->prepare("SELECT id,name,descr,lat,lon,loc_at,rescued_at FROM rescuees WHERE incident_id=? AND removed IS NULL ORDER BY id"); $rq->execute([$id]); $res = [];
+  foreach ($rq->fetchAll() as $n => $r) $res[] = floats(ints(['name' => $anon ? 'Rettling ' . ($n + 1) : $r['name'], 'descr' => $anon ? null : $r['descr']] + $r, ['id', 'loc_at', 'rescued_at']), ['lat', 'lon']);
+  out(['incident' => $pi, 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'now' => $now]);
+}
+
 $tok = $_SERVER['HTTP_X_TOKEN'] ?? '';
 $st = $db->prepare("SELECT id,username,name,is_admin,photo,exercise_mode,must_change,coord_sys FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
-$me = $tok ? $st->fetch() : null;
+$me = $tok ? $st->fetch() : null; $st->closeCursor(); // Lesezugriff sofort beenden, nicht erst am Ende des Requests
 if (!$me) fail('Nicht angemeldet', 401);
 $me = ints($me, ['id', 'is_admin', 'exercise_mode', 'must_change']); $uid = $me['id'];
 // Nach einem Zurücksetzen durch die Verwaltung ist nur der Passwortwechsel erlaubt
@@ -132,10 +174,25 @@ function http_get($url) {
   if (function_exists('curl_init')) { $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']); $r = curl_exec($c); curl_close($c); return $r; }
   return @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 10, 'header' => "User-Agent: SwiftwaterRescue/0.1\r\n"]]));
 }
-// Gewässernetz (OSM via Overpass) über den Server mit Datei-Cache in api/data/overpass/, damit gleiche Abfragen (z. B. Suchgebiet aller Geräte
-// eines Einsatzes) nur einmal zu Overpass gehen. Haltedauer: Einstellung overpass_ttl in Minuten (Standard 120, 0 = kein Cache).
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
-const OVERPASS_KEEP_S = 7 * 86400; // abgelaufene Einträge so lange als Rückfall behalten, falls Overpass nicht erreichbar ist
+// Gewässernetz über den Server mit Datei-Cache, damit gleiche Abfragen (z. B. Suchgebiet aller Geräte eines Einsatzes) nur einmal
+// zu Overpass gehen. Haltedauer: Einstellung overpass_ttl in Minuten (Standard 120, 0 = kein Cache).
+function overpassServe($q) { global $now;
+  $ttl = max(0, (int)setting('overpass_ttl', '120')) * 60;
+  $dir = __DIR__ . '/data/overpass'; if (!is_dir($dir)) @mkdir($dir, 0775, true);
+  $file = "$dir/" . sha1($q) . '.json';
+  $hit = function () use ($ttl, $file) { clearstatcache(true, $file); if (!$ttl || !is_file($file) || time() - filemtime($file) >= $ttl) return false; header('X-Cache: HIT'); readfile($file); exit; };
+  $hit();
+  // Sperre je Abfrage: gleichzeitige Anfragen warten auf die erste und lesen danach den Cache, statt selbst zu Overpass zu gehen
+  $lk = @fopen("$file.lock", 'c'); if ($lk) flock($lk, LOCK_EX);
+  $hit();
+  foreach (array_merge(glob("$dir/*.json") ?: [], glob("$dir/*.lock") ?: []) as $x) if ($now - filemtime($x) > max($ttl, OVERPASS_KEEP_S)) @unlink($x); // aufräumen, auch als Rückfall zu alt
+  set_time_limit(90);
+  $r = overpassFetch($q);
+  if ($r !== null) { if ($ttl && file_put_contents("$file.tmp", $r) !== false) rename("$file.tmp", $file); header('X-Cache: MISS'); echo $r; }
+  elseif (is_file($file)) { header('X-Cache: STALE'); readfile($file); } // Overpass nicht erreichbar: abgelaufene Daten sind besser als keine
+  else fail('Overpass antwortet nicht', 502); // Frontend ergänzt «Gewässerdaten nicht verfügbar»
+  exit;
+}
 function overpassQuery($in) { // Abfrage aus Parametern bauen (keine freien Abfragen über den Server)
   $f = fn($x) => sprintf('%.5F', (float)$x);
   if (isset($in['around'])) {
@@ -201,21 +258,7 @@ switch ($route) {
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights']), $db->query("SELECT id,code,name,share_location,active,lead_rights FROM modes ORDER BY id")->fetchAll()));
 
  case 'overpass': // Gewässernetz für Suchgebiet und Flussdistanz (alle angemeldeten Personen): around [m, lat, lon] oder bbox [s, w, n, e]; Antwort wie Overpass
-  $q = overpassQuery($in); $ttl = max(0, (int)setting('overpass_ttl', '120')) * 60;
-  $dir = __DIR__ . '/data/overpass'; if (!is_dir($dir)) @mkdir($dir, 0775, true);
-  $file = "$dir/" . sha1($q) . '.json';
-  $hit = function () use ($ttl, $file) { clearstatcache(true, $file); if (!$ttl || !is_file($file) || time() - filemtime($file) >= $ttl) return false; header('X-Cache: HIT'); readfile($file); exit; };
-  $hit();
-  // Sperre je Abfrage: gleichzeitige Anfragen warten auf die erste und lesen danach den Cache, statt selbst zu Overpass zu gehen
-  $lk = @fopen("$file.lock", 'c'); if ($lk) flock($lk, LOCK_EX);
-  $hit();
-  foreach (array_merge(glob("$dir/*.json") ?: [], glob("$dir/*.lock") ?: []) as $x) if ($now - filemtime($x) > max($ttl, OVERPASS_KEEP_S)) @unlink($x); // aufräumen, auch als Rückfall zu alt
-  set_time_limit(90);
-  $r = overpassFetch($q);
-  if ($r !== null) { if ($ttl && file_put_contents("$file.tmp", $r) !== false) rename("$file.tmp", $file); header('X-Cache: MISS'); echo $r; }
-  elseif (is_file($file)) { header('X-Cache: STALE'); readfile($file); } // Overpass nicht erreichbar: abgelaufene Daten sind besser als keine
-  else fail('Overpass antwortet nicht', 502); // Frontend ergänzt «Gewässerdaten nicht verfügbar»
-  exit;
+  overpassServe(overpassQuery($in));
 
  case 'incident/start':
   if (activeIncident()) fail('Es läuft bereits ein Einsatz');
@@ -266,6 +309,9 @@ switch ($route) {
   $rq->execute([$id]);
   $rescuees = array_map(fn($r) => floats(ints($r, ['id', 'loc_at', 'loc_by', 'rescued_at', 'rescued_by', 'created_by', 'created']), ['lat', 'lon']), $rq->fetchAll());
   $cf = canFlow($inc);
+  // Öffentliche Ansicht: alle sehen, ob sie eingeschaltet ist (public); den geheimen Link (public_token) nur die Einsatzleitung
+  $inc['public'] = $inc['public_token'] !== null ? 1 : 0; $inc['public_anon'] = (int)$inc['public_anon'];
+  if (!canManage($inc)) unset($inc['public_token']);
   out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees,
        'participants' => array_map(function ($p) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
        'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'can_message' => canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc),
@@ -518,6 +564,19 @@ switch ($route) {
   setRec((int)$inc['id'], $T[$a][1]);
   logev($inc['id'], $uid, 'rec', $T[$a][2]);
   out(['ok' => true, 'record' => $T[$a][1]]);
+
+ case 'incident/public': // Öffentliche Ansicht (nur Einsatzleitung): on = ein/aus, anon = Namen ausblenden. Ausschalten macht den Link ungültig, beim nächsten Einschalten gibt es einen neuen.
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (!canManage($inc)) fail('Nur die Einsatzleitung kann die öffentliche Ansicht steuern', 403);
+  $was = $inc['public_token'] !== null; $wasAnon = (int)$inc['public_anon'] === 1;
+  $on = array_key_exists('on', $in) ? !empty($in['on']) : $was; $anon = array_key_exists('anon', $in) ? !empty($in['anon']) : $wasAnon;
+  $t = $on ? ($inc['public_token'] ?? bin2hex(random_bytes(16))) : null;
+  $db->prepare("UPDATE incidents SET public_token=?, public_anon=? WHERE id=?")->execute([$t, $anon ? 1 : 0, $inc['id']]);
+  $how = $anon ? 'anonym, ohne Namen' : 'mit Namen';
+  if ($on && !$was) logev($inc['id'], $uid, 'pub', "schaltet die öffentliche Ansicht ein ($how)");
+  elseif (!$on && $was) logev($inc['id'], $uid, 'pub', 'schaltet die öffentliche Ansicht aus');
+  elseif ($on && $anon !== $wasAnon) logev($inc['id'], $uid, 'pub', "stellt die öffentliche Ansicht um ($how)");
+  out(['ok' => true, 'public_token' => $t]);
 
  case 'incident/end':
   $inc = activeIncident(); if (!$inc || !canManage($inc)) fail('Nur Einsatzleitung, Administratoren oder die Person, die den Einsatz gestartet hat, können den Einsatz beenden', 403);
