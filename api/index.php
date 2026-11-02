@@ -19,7 +19,7 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS roles(id $ai, name $tx, color $tx, is_lead INT DEFAULT 0, active INT DEFAULT 1, is_post INT DEFAULT 0, can_message INT DEFAULT 1)",
  // Aufzeichnung fürs Replay in der Verwaltung: record = aktueller Zustand (0 aus/beendet, 1 läuft, 2 pausiert), recorded=1 sobald Daten vorhanden sind
  // Öffentliche Ansicht ohne Login (public.html?k=<public_token>): public_token NULL = aus; public_anon=1 blendet Namen aus
- "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT, is_exercise INT DEFAULT 0, record INT DEFAULT 0, recorded INT DEFAULT 0, public_token $tx NULL, public_anon INT DEFAULT 1)",
+ "CREATE TABLE IF NOT EXISTS incidents(id $ai, message TEXT, lat DOUBLE, lon DOUBLE, alarm_at BIGINT, ended_at BIGINT NULL, flow_ms DOUBLE NULL, created_by INT, is_exercise INT DEFAULT 0, record INT DEFAULT 0, recorded INT DEFAULT 0, public_token $tx NULL, public_anon INT DEFAULT 1, pls_at BIGINT NULL)",
  // Aufzeichnung: Standortverlauf je Einsatzkraft (user_id) bzw. markierte Standorte je Rettling (rescuee_id)
  "CREATE TABLE IF NOT EXISTS track(id $ai, incident_id INT, user_id INT NULL, rescuee_id INT NULL, ts BIGINT, lat DOUBLE, lon DOUBLE)",
  // Zeiträume, in denen aufgezeichnet wurde (stop NULL = läuft); Pausen liegen dazwischen
@@ -38,13 +38,14 @@ foreach ([
  // Positionen und Bereiche der Einsatzleitung: kind point|area, pts = JSON [[lat,lon],…]; removed = Zeitpunkt des Entfernens
  "CREATE TABLE IF NOT EXISTS pois(id $ai, incident_id INT, kind $tx, name $tx, color $tx, pts TEXT, created_by INT, created BIGINT, removed BIGINT NULL)",
  // Rettlinge (vermisste Personen) eines Einsatzes: letzter markierter Standort (lat/lon, loc_at, loc_by), gerettet (rescued_at, rescued_by); removed = entfernt
- "CREATE TABLE IF NOT EXISTS rescuees(id $ai, incident_id INT, name $tx, descr TEXT, lat DOUBLE NULL, lon DOUBLE NULL, loc_at BIGINT NULL, loc_by INT NULL, rescued_at BIGINT NULL, rescued_by INT NULL, created_by INT, created BIGINT, removed BIGINT NULL)",
+// pls_lat/pls_lon/pls_at: eigener PLS mit Zeitpunkt (Issue #24), NULL = PLS des Einsatzes
+ "CREATE TABLE IF NOT EXISTS rescuees(id $ai, incident_id INT, name $tx, descr TEXT, lat DOUBLE NULL, lon DOUBLE NULL, loc_at BIGINT NULL, loc_by INT NULL, rescued_at BIGINT NULL, rescued_by INT NULL, created_by INT, created BIGINT, removed BIGINT NULL, pls_lat DOUBLE NULL, pls_lon DOUBLE NULL, pls_at BIGINT NULL)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1']] as $t => $cs)
+foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL'], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 try { $db->exec("CREATE INDEX track_inc ON track(incident_id,ts)"); } catch (Throwable $e) {} // schlägt bei vorhandenem Index still fehl
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
@@ -91,18 +92,20 @@ function pubIncident() { global $db; $k = (string)($_GET['k'] ?? '');
   $s = $db->prepare("SELECT * FROM incidents WHERE public_token=?"); $s->execute([$k]); $inc = $s->fetch(); $s->closeCursor();
   if (!preg_match('/^[0-9a-f]{32}$/', $k) || !$inc) fail('Dieser Link ist ungültig oder die öffentliche Ansicht wurde beendet.', 404);
   return $inc; }
-// Gewässernetz fürs Suchgebiet: nur um die PLS des laufenden Einsatzes, Radius m wie in der Einsatz-App (netRadius), gleicher Cache
+// Gewässernetz fürs Suchgebiet: nur um einen PLS des Suchgebiets (la/lo, siehe plsSources) des laufenden Einsatzes, Radius m wie in der Einsatz-App (netRadius), gleicher Cache
 if ($route === 'public/net') {
   $inc = pubIncident(); if ($inc['ended_at'] !== null) fail('Der Einsatz ist beendet.', 404);
   $r = (int)(ceil(min(max(5000, (float)($_GET['m'] ?? 0)), 30000) / 1000) * 1000);
-  overpassServe(overpassQuery(['around' => [$r, $inc['lat'], $inc['lon']]]));
+  $la = (float)($_GET['la'] ?? 0); $lo = (float)($_GET['lo'] ?? 0);
+  $src = array_values(array_filter(plsSources($inc, incRescuees((int)$inc['id'])), fn($s) => abs($s['lat'] - $la) < 1e-6 && abs($s['lon'] - $lo) < 1e-6))[0] ?? fail('Kein PLS für das Suchgebiet', 404);
+  overpassServe(overpassQuery(['around' => [$r, $src['lat'], $src['lon']]]));
 }
 if ($route === 'public/state') {
   $inc = pubIncident();
   $pi = ['message' => $inc['message'], 'is_exercise' => (int)$inc['is_exercise'], 'alarm_at' => (int)$inc['alarm_at'], 'ended_at' => $inc['ended_at'] === null ? null : (int)$inc['ended_at']];
   if ($inc['ended_at'] !== null) out(['incident' => $pi, 'now' => $now]);
   $id = (int)$inc['id']; $anon = (int)$inc['public_anon'] === 1;
-  $pi += ['lat' => (float)$inc['lat'], 'lon' => (float)$inc['lon'], 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms']];
+  $pi += ['lat' => $inc['lat'] === null ? null : (float)$inc['lat'], 'lon' => $inc['lon'] === null ? null : (float)$inc['lon'], 'pls_at' => plsAt($inc), 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms']];
   $roles = array_map(fn($r) => ints($r, ['id', 'is_post']), $db->query("SELECT id,name,color,is_post FROM roles ORDER BY id")->fetchAll());
   $rn = array_column($roles, 'name', 'id');
   $ps = $db->prepare("SELECT p.id pid,p.role_id,p.lat,p.lon,p.loc_at,u.name,m.name mode_name FROM participants p JOIN users u ON u.id=p.user_id LEFT JOIN modes m ON m.code=p.mode WHERE p.incident_id=? AND p.mode<>'declined' AND p.left_at IS NULL ORDER BY p.id");
@@ -114,9 +117,9 @@ if ($route === 'public/state') {
   }
   $po = $db->prepare("SELECT id,kind,name,color,pts FROM pois WHERE incident_id=? AND removed IS NULL ORDER BY id"); $po->execute([$id]);
   $pois = array_map(fn($p) => ['pts' => json_decode($p['pts'], true) ?: []] + ints($p, ['id']), $po->fetchAll());
-  $rq = $db->prepare("SELECT id,name,descr,lat,lon,loc_at,rescued_at FROM rescuees WHERE incident_id=? AND removed IS NULL ORDER BY id"); $rq->execute([$id]); $res = [];
-  foreach ($rq->fetchAll() as $n => $r) $res[] = floats(ints(['name' => $anon ? 'Rettling ' . ($n + 1) : $r['name'], 'descr' => $anon ? null : $r['descr']] + $r, ['id', 'loc_at', 'rescued_at']), ['lat', 'lon']);
-  out(['incident' => $pi, 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'now' => $now]);
+  $res = [];
+  foreach (incRescuees($id) as $n => $r) $res[] = ['name' => $anon ? 'Rettling ' . ($n + 1) : $r['name'], 'descr' => $anon ? null : $r['descr']] + array_intersect_key($r, array_flip(['id', 'lat', 'lon', 'loc_at', 'rescued_at', 'pls_lat', 'pls_lon', 'pls_at']));
+  out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'now' => $now]);
 }
 
 $tok = $_SERVER['HTTP_X_TOKEN'] ?? '';
@@ -163,6 +166,36 @@ function canMessage($inc) {
   return !$r || (bool)(int)$r['can_message'];
 }
 function activeIncident() { global $db; return $db->query("SELECT * FROM incidents WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1")->fetch() ?: null; }
+// Rettlinge eines Einsatzes (ohne entfernte), Zahlen als Zahlen
+function incRescuees($id) { global $db;
+  $s = $db->prepare("SELECT r.id,r.name,r.descr,r.lat,r.lon,r.loc_at,r.loc_by,r.rescued_at,r.rescued_by,r.created_by,r.created,r.pls_lat,r.pls_lon,r.pls_at,a.name loc_name,b.name rescued_name FROM rescuees r LEFT JOIN users a ON a.id=r.loc_by LEFT JOIN users b ON b.id=r.rescued_by WHERE r.incident_id=? AND r.removed IS NULL ORDER BY r.id");
+  $s->execute([$id]); return array_map(fn($r) => floats(ints($r, ['id', 'loc_at', 'loc_by', 'rescued_at', 'rescued_by', 'created_by', 'created', 'pls_at']), ['lat', 'lon', 'pls_lat', 'pls_lon']), $s->fetchAll()); }
+// Zeitpunkt des Einsatz-PLS (Beginn der Drift): eigener Zeitpunkt, sonst Alarmeingang
+function plsAt($inc) { return (int)($inc['pls_at'] ?? $inc['alarm_at']); }
+// PLS fürs Suchgebiet (Issue #24): Gibt es Rettlinge, zählen nur die vermissten (kein Standort, nicht gerettet), je mit eigenem PLS
+// oder dem des Einsatzes; ohne Rettlinge der PLS des Einsatzes. Gleiche PLS (Ort und Zeit) werden zusammengefasst, names = Rettlinge.
+function plsSources($inc, $res) {
+  $ip = $inc['lat'] !== null ? ['lat' => (float)$inc['lat'], 'lon' => (float)$inc['lon'], 'at' => plsAt($inc), 'own' => 0] : null;
+  if (!$res) return $ip ? [$ip + ['names' => []]] : [];
+  $out = [];
+  foreach ($res as $r) {
+    if ($r['rescued_at'] !== null || $r['lat'] !== null) continue;
+    $p = $r['pls_lat'] !== null ? ['lat' => (float)$r['pls_lat'], 'lon' => (float)$r['pls_lon'], 'at' => (int)$r['pls_at'], 'own' => 1] : $ip;
+    if (!$p) continue;
+    $k = sprintf('%.7F,%.7F,%d', $p['lat'], $p['lon'], $p['at']);
+    $out[$k] = $out[$k] ?? $p + ['names' => []]; $out[$k]['names'][] = $r['name'];
+  }
+  return array_values($out);
+}
+// PLS aus der Anfrage (lat, lon, at): Koordinaten gültig, Zeitpunkt höchstens 7 Tage zurück und nicht in der Zukunft (fehlt = $def)
+function plsIn($p, $def) { global $now;
+  if (!is_array($p) || !isset($p['lat'], $p['lon']) || !is_numeric($p['lat']) || !is_numeric($p['lon']) || abs($p['lat']) > 90 || abs($p['lon']) > 180) fail('Ungültige Koordinaten für den PLS');
+  $at = !empty($p['at']) ? (int)$p['at'] : $def;
+  if ($at > $now + 60) fail('Der Zeitpunkt des PLS darf nicht in der Zukunft liegen');
+  if ($at < $now - 7 * 86400) fail('Der Zeitpunkt des PLS liegt mehr als 7 Tage zurück');
+  return [round((float)$p['lat'], 7), round((float)$p['lon'], 7), $at]; }
+// Zeit für Log-Texte (Schweizer Zeit)
+function hm($t) { return (new DateTime('@' . $t))->setTimezone(new DateTimeZone('Europe/Zurich'))->format('d.m. H:i'); }
 function rescuee($inc, $id) { global $db; $s = $db->prepare("SELECT * FROM rescuees WHERE id=? AND incident_id=? AND removed IS NULL"); $s->execute([(int)$id, $inc['id']]); return $s->fetch() ?: fail('Rettling nicht gefunden', 404); }
 // Aufzeichnung beim Einsatzstart vorausgewählt: [scharfer Einsatz, Übung] (Einstellungen rec_real, rec_ex)
 function recDefault() { return [(int)setting('rec_real', '0'), (int)setting('rec_ex', '1')]; }
@@ -295,15 +328,17 @@ switch ($route) {
 
  case 'incident/start':
   if (activeIncident()) fail('Es läuft bereits ein Einsatz');
-  if (trim($in['message'] ?? '') === '' || !isset($in['lat'], $in['lon'])) fail('Meldung und Standort (PLS) sind Pflicht');
+  if (trim($in['message'] ?? '') === '') fail('Die Meldung ist Pflicht');
   $at = !empty($in['alarm_at']) ? (int)$in['alarm_at'] : $now;
   if ($at > $now + 60) fail('Der Alarmeingang darf nicht in der Zukunft liegen');
   if ($at < $now - 7 * 86400) fail('Der Alarmeingang liegt mehr als 7 Tage zurück');
+  // PLS optional (Issue #24): ohne PLS gibt es ein Suchgebiet erst mit dem PLS eines Rettlings; Zeitpunkt des PLS = Alarmeingang
+  $pls = isset($in['lat'], $in['lon']) && $in['lat'] !== '' && $in['lon'] !== '' ? plsIn($in, $at) : [null, null];
   $ex = empty($in['is_exercise']) ? 0 : 1; $rec = empty($in['record']) ? 0 : 1;
-  $db->prepare("INSERT INTO incidents(message,lat,lon,alarm_at,created_by,is_exercise) VALUES(?,?,?,?,?,?)")->execute([$in['message'], (float)$in['lat'], (float)$in['lon'], $at, $uid, $ex]);
+  $db->prepare("INSERT INTO incidents(message,lat,lon,alarm_at,created_by,is_exercise) VALUES(?,?,?,?,?,?)")->execute([$in['message'], $pls[0], $pls[1], $at, $uid, $ex]);
   $nid = (int)$db->lastInsertId();
   if ($rec) setRec($nid, 1);
-  logev($nid, $uid, 'start', 'hat den Einsatz gestartet (' . ($ex ? 'Übung' : 'scharfer Einsatz') . ($rec ? ', mit Aufzeichnung' : '') . '): ' . $in['message']);
+  logev($nid, $uid, 'start', 'hat den Einsatz gestartet (' . ($ex ? 'Übung' : 'scharfer Einsatz') . ($rec ? ', mit Aufzeichnung' : '') . ($pls[0] === null ? ', ohne PLS' : '') . '): ' . $in['message']);
   out(['id' => $nid]);
 
  case 'incident/state': // Polling-Endpunkt: ?since=<letzte Nachrichten-ID>
@@ -312,7 +347,7 @@ switch ($route) {
     $last = $db->query("SELECT id,ended_at FROM incidents ORDER BY id DESC LIMIT 1")->fetch();
     out(['incident' => null, 'last_ended' => $last ?: null]);
   }
-  $inc['id'] = (int)$inc['id']; $inc['lat'] = (float)$inc['lat']; $inc['lon'] = (float)$inc['lon']; $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc['is_exercise'] = (int)$inc['is_exercise']; $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
+  $inc['id'] = (int)$inc['id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc['is_exercise'] = (int)$inc['is_exercise']; $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
   $id = $inc['id']; $since = (int)($_GET['since'] ?? 0);
   $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,u.name,u.photo FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
@@ -338,14 +373,12 @@ switch ($route) {
   $po->execute([$id]);
   $pois = array_map(fn($p) => array_merge(ints($p, ['id', 'created_by', 'created']), ['pts' => json_decode($p['pts'], true) ?: []]), $po->fetchAll());
   // Rettlinge: für alle sichtbar, immer vollständig
-  $rq = $db->prepare("SELECT r.id,r.name,r.descr,r.lat,r.lon,r.loc_at,r.loc_by,r.rescued_at,r.rescued_by,r.created_by,r.created,a.name loc_name,b.name rescued_name FROM rescuees r LEFT JOIN users a ON a.id=r.loc_by LEFT JOIN users b ON b.id=r.rescued_by WHERE r.incident_id=? AND r.removed IS NULL ORDER BY r.id");
-  $rq->execute([$id]);
-  $rescuees = array_map(fn($r) => floats(ints($r, ['id', 'loc_at', 'loc_by', 'rescued_at', 'rescued_by', 'created_by', 'created']), ['lat', 'lon']), $rq->fetchAll());
+  $rescuees = incRescuees($id);
   $cf = canFlow($inc);
   // Öffentliche Ansicht: alle sehen, ob sie eingeschaltet ist (public); den geheimen Link (public_token) nur die Einsatzleitung
   $inc['public'] = $inc['public_token'] !== null ? 1 : 0; $inc['public_anon'] = (int)$inc['public_anon'];
   if (!canManage($inc)) unset($inc['public_token']);
-  out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees,
+  out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees, 'sources' => plsSources($inc, $rescuees),
        'participants' => array_map(function ($p) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
        'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'can_message' => canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc),
        'log' => $cf ? logRows($id) : null, 'now' => $now]);
@@ -494,20 +527,28 @@ switch ($route) {
   out(['ok' => true]);
 
  // Rettlinge: erfassen, bearbeiten, Standort und «gerettet» markieren dürfen alle im Einsatz, entfernen nur die Einsatzleitung
- case 'incident/rescuee/save': // id fehlt = neu; name, descr
+ case 'incident/rescuee/save': // id fehlt = neu; name, descr; pls: {lat, lon, at} = eigener PLS, null = PLS des Einsatzes, fehlt = unverändert
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
   if (!isActivePart($inc['id']) && !canManage($inc)) fail('Nur Personen, die den Einsatz angenommen haben, können Rettlinge erfassen', 403);
   $name = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); $descr = mb_substr(trim((string)($in['descr'] ?? '')), 0, 1000);
   if ($name === '') fail('Name fehlt');
+  $hasPls = array_key_exists('pls', $in); $pls = $hasPls && $in['pls'] !== null ? plsIn($in['pls'], plsAt($inc)) : [null, null, null];
+  $plsTxt = fn($n) => $pls[0] === null ? "übernimmt für «{$n}» den PLS des Einsatzes" : sprintf('setzt den PLS von «%s» (%.5F, %.5F, %s)', $n, $pls[0], $pls[1], hm($pls[2]));
   if (!empty($in['id'])) {
     $r = rescuee($inc, $in['id']);
     $db->prepare("UPDATE rescuees SET name=?, descr=? WHERE id=?")->execute([$name, $descr, $r['id']]);
     if ($r['name'] !== $name || (string)$r['descr'] !== $descr) logev($inc['id'], $uid, 'rescuee', ($r['name'] !== $name ? "ändert den Rettling «{$r['name']}» zu «{$name}»" : "ändert die Beschreibung von «{$name}»") . ($descr !== '' ? ": {$descr}" : ''));
+    $old = [$r['pls_lat'] === null ? null : round((float)$r['pls_lat'], 7), $r['pls_lon'] === null ? null : round((float)$r['pls_lon'], 7), $r['pls_at'] === null ? null : (int)$r['pls_at']];
+    if ($hasPls && $old !== $pls) {
+      $db->prepare("UPDATE rescuees SET pls_lat=?, pls_lon=?, pls_at=? WHERE id=?")->execute([...$pls, $r['id']]);
+      logev($inc['id'], $uid, 'rescuee', $plsTxt($name));
+    }
     out(['ok' => true, 'id' => (int)$r['id']]);
   }
-  $db->prepare("INSERT INTO rescuees(incident_id,name,descr,created_by,created) VALUES(?,?,?,?,?)")->execute([$inc['id'], $name, $descr, $uid, $now]);
+  $db->prepare("INSERT INTO rescuees(incident_id,name,descr,created_by,created,pls_lat,pls_lon,pls_at) VALUES(?,?,?,?,?,?,?,?)")->execute([$inc['id'], $name, $descr, $uid, $now, ...$pls]);
   $rid = (int)$db->lastInsertId();
   logev($inc['id'], $uid, 'rescuee', "erfasst den Rettling «{$name}»" . ($descr !== '' ? ": {$descr}" : ''));
+  if ($pls[0] !== null) logev($inc['id'], $uid, 'rescuee', $plsTxt($name));
   out(['ok' => true, 'id' => $rid]);
 
  case 'incident/rescuee/locate': // own=1: eigener geteilter Standort (serverseitig), sonst lat/lon (auf der Karte gewählt)
@@ -611,6 +652,19 @@ switch ($route) {
   elseif ($on && $anon !== $wasAnon) logev($inc['id'], $uid, 'pub', "stellt die öffentliche Ansicht um ($how)");
   out(['ok' => true, 'public_token' => $t]);
 
+ case 'incident/pls': // PLS des Einsatzes setzen, verschieben oder entfernen (Einsatzleitung): lat, lon, at (fehlt = Alarmeingang) oder clear=1
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (!canManage($inc)) fail('Nur die Einsatzleitung kann den PLS des Einsatzes ändern', 403);
+  if (!empty($in['clear'])) {
+    $db->prepare("UPDATE incidents SET lat=NULL, lon=NULL, pls_at=NULL WHERE id=?")->execute([$inc['id']]);
+    logev($inc['id'], $uid, 'pls', 'entfernt den PLS des Einsatzes');
+    out(['ok' => true]);
+  }
+  [$la, $lo, $at] = plsIn($in, (int)$inc['alarm_at']);
+  $db->prepare("UPDATE incidents SET lat=?, lon=?, pls_at=? WHERE id=?")->execute([$la, $lo, $at === (int)$inc['alarm_at'] ? null : $at, $inc['id']]);
+  logev($inc['id'], $uid, 'pls', sprintf('%s den PLS des Einsatzes (%.5F, %.5F, %s)', $inc['lat'] === null ? 'setzt' : 'ändert', $la, $lo, hm($at)));
+  out(['ok' => true]);
+
  case 'incident/end':
   $inc = activeIncident(); if (!$inc || !canManage($inc)) fail('Nur Einsatzleitung, Administratoren oder die Person, die den Einsatz gestartet hat, können den Einsatz beenden', 403);
   if ((int)$inc['record']) setRec((int)$inc['id'], 0); // laufende Aufzeichnung endet mit dem Einsatz
@@ -634,11 +688,11 @@ switch ($route) {
   foreach ($q("SELECT user_id,rescuee_id,ts,lat,lon FROM track WHERE incident_id=? ORDER BY ts,id") as $r)
     $r['user_id'] !== null ? $tr['u'][] = [(int)$r['user_id'], (int)$r['ts'], (float)$r['lat'], (float)$r['lon']] : $tr['r'][] = [(int)$r['rescuee_id'], (int)$r['ts'], (float)$r['lat'], (float)$r['lon']];
   $pois = array_map(fn($r) => ['pts' => json_decode($r['pts'], true)] + ints($r, ['id', 'created', 'removed']), $q("SELECT id,kind,name,color,pts,created,removed FROM pois WHERE incident_id=? ORDER BY id"));
-  $res = array_map(fn($r) => floats(ints($r, ['id', 'created', 'removed', 'loc_at', 'rescued_at']), ['lat', 'lon']), $q("SELECT id,name,descr,lat,lon,loc_at,rescued_at,created,removed FROM rescuees WHERE incident_id=? ORDER BY id"));
+  $res = array_map(fn($r) => floats(ints($r, ['id', 'created', 'removed', 'loc_at', 'rescued_at', 'pls_at']), ['lat', 'lon', 'pls_lat', 'pls_lon']), $q("SELECT id,name,descr,lat,lon,loc_at,rescued_at,created,removed,pls_lat,pls_lon,pls_at FROM rescuees WHERE incident_id=? ORDER BY id"));
   $marks = array_map(fn($r) => floats(ints($r, ['id', 'created', 'unmarked', 'mark']), ['mark_lat', 'mark_lon']), $q("SELECT m.id,m.text,m.created,m.mark,m.unmarked,m.mark_lat,m.mark_lon,u.name FROM messages m LEFT JOIN users u ON u.id=m.from_user WHERE m.incident_id=? AND m.mark_lat IS NOT NULL ORDER BY m.id"));
   $flow = array_map(fn($r) => ints($r, ['ts']), $q("SELECT ts,text FROM incident_log WHERE incident_id=? AND kind='flow' ORDER BY ts,id"));
   $per = array_map(fn($r) => ints($r, ['start', 'stop']), $q("SELECT start,stop FROM rec_periods WHERE incident_id=? ORDER BY start,id"));
-  $inc = floats(ints($inc, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded']), ['lat', 'lon', 'flow_ms']);
+  $inc = floats(ints($inc, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded']), ['lat', 'lon', 'flow_ms']); $inc['pls_at'] = plsAt($inc);
   out(['incident' => $inc, 'periods' => $per, 'participants' => $parts, 'track' => $tr['u'], 'rtrack' => $tr['r'], 'pois' => $pois, 'rescuees' => $res, 'marks' => $marks, 'flow' => $flow, 'log' => logRows($id, true), 'now' => $now]);
 
  case 'incident/replay/delete': admin(); // Aufzeichnung eines Einsatzes löschen (Standortverläufe und Zeiträume); Log, Nachrichten usw. bleiben

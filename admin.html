@@ -165,10 +165,12 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   document.body.appendChild(o);
   // Zeitraum: Alarmeingang bis Einsatzende (läuft der Einsatz noch: bis jetzt)
   const tr=d.track,t0=tr.length?Math.min(i.alarm_at,tr[0][1]):i.alarm_at,t1=Math.max(i.ended_at||d.now,tr.length?tr[tr.length-1][1]:0,t0+1); // track ist nach Zeit sortiert
-  const map=L.map('rpMap',{zoomControl:true}).setView([i.lat,i.lon],14),bases={};
+  // PLS des Einsatzes und eigene PLS der Rettlinge (Issue #24, Stand Einsatzende)
+  const pls=[...(i.lat!=null?[[i.lat,i.lon,'PLS']]:[]),...d.rescuees.filter(r=>r.pls_lat!=null&&!r.removed).map(r=>[r.pls_lat,r.pls_lon,'PLS '+r.name])];
+  const map=L.map('rpMap',{zoomControl:true}).setView(pls.length?pls[0]:[46.8,8.2],pls.length?14:8),bases={};
   Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
   let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);L.control.layers(bases,null,{position:'topright'}).addTo(map);
-  L.circleMarker([i.lat,i.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip('PLS',{permanent:true,direction:'right',className:'rplbl'}).addTo(map);
+  pls.forEach(([la,lo,t])=>L.circleMarker([la,lo],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip(esc(t),{permanent:true,direction:'right',className:'rplbl'}).addTo(map));
   // Personen: Verlauf je Person, Farbe der Spezialrolle (Stand Einsatzende)
   // Aufgezeichnete Zeiträume [start, stop]; ausserhalb (Pause/aus) keine Standorte, Spuren und Interpolation enden dort
   const per=d.periods.map(p=>[p.start,p.stop??t1]),perIdx=ts=>per.length?per.findIndex(p=>p[0]<=ts&&ts<=p[1]):0;
@@ -177,7 +179,7 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   people.forEach(p=>{p.line=L.polyline([],{color:p.col,weight:3,opacity:.75}).addTo(trailL);
     p.mk=L.circleMarker([0,0],{radius:8,color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[8,0],className:'rplbl'})});
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
-  const all=[[i.lat,i.lon],...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts)];
+  const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts)];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17});
   rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,perIdx,follow:null,pKey:null};
   // Personenliste wie in der Einsatz-App: «Zentrieren» und «Folgen» (Karte folgt der Person beim Abspielen); Verschieben von Hand oder ✕ beendet das Folgen

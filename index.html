@@ -69,7 +69,7 @@ body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: K
 @media(min-width:760px){body.so #followChip{left:calc(400px + 1rem)}}
 .mk{width:38px;height:38px;border-radius:50%;border:4px solid #888;background:#0c1c25 center/cover;display:grid;place-items:center;font-weight:700;font-size:.8rem;box-shadow:0 0 0 2px #0008}
 .mk.cl{border-radius:8px;background:#fff;color:#000}
-.pls{width:22px;height:22px;background:var(--alarm);border:3px solid #fff;transform:rotate(45deg)}
+.pls{width:22px;height:22px;background:var(--alarm);border:3px solid #fff;transform:rotate(45deg)}.pls.off,.plsw.off{opacity:.45}
 #alarm{position:fixed;inset:0;background:var(--alarm);color:#fff;display:none;flex-direction:column;justify-content:center;padding:2rem;gap:1rem;z-index:9999;animation:bl 1s steps(2) infinite}
 @keyframes bl{50%{background:#8f1d0a}}@media(prefers-reduced-motion:reduce){#alarm{animation:none}}
 #alarm button{background:#fff;color:#000;font-weight:700;padding:1rem}#alarm h2{margin:0;font-size:1.8rem}
@@ -123,7 +123,7 @@ function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" cla
   $('#bPoi').onclick=()=>togglePanel('pois');$('#bPoiX').onclick=()=>togglePanel('pois',false);
   $('#bRes').onclick=()=>togglePanel('res');$('#bResX').onclick=()=>togglePanel('res',false);
   rd=null;$('#bRd').onclick=rdOpen; // Flussdistanz (zusätzlich im ☰-Menü, auch ohne Einsatz)
-  $('#poiList').onclick=e=>{const b=e.target.closest('[data-pg],[data-pls]');if(!b)return;if(b.dataset.pg)return showPoi(+b.dataset.pg);stopFollow();map.panTo([st.incident.lat,st.incident.lon]);if(narrow())togglePanel('pois',false)};
+  $('#poiList').onclick=e=>{const b=e.target.closest('[data-pg],[data-pls]');if(!b)return;if(b.dataset.pg)return showPoi(+b.dataset.pg);stopFollow();map.panTo(b.dataset.pls.split(',').map(Number));if(narrow())togglePanel('pois',false)};
   $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
   $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f)};
   $('#sheet').addEventListener('toggle',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k)e.target.open?openSec.add(k):openSec.delete(k)},true);
@@ -170,7 +170,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-mm]');if(!
 const pickMode=on=>{document.body.classList.toggle('picking',on);if(on)map.closePopup()};
 function pickPoint(text){return new Promise(res=>{if(panel)togglePanel(panel,false);toggleSheet(false);window.markPick=text;pickMode(true);drawMap();map.once('click',e=>{window.markPick=null;pickMode(false);drawMap();res(e.latlng)})})}
 function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
-  layers.pls=L.marker([i.lat,i.lon],{icon:L.divIcon({className:'',html:'<div class="pls"></div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map).bindTooltip('PLS');
+  layers.pls=L.layerGroup(plsList().map(p=>L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))))).addTo(map);
   try{layers.area=drawArea(i);if(layers.area)layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message}if(n){n.textContent=window.markPick||areaInfo;n.hidden=!(areaInfo||window.markPick)}checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
   const act=st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'),groups=[];
@@ -179,27 +179,24 @@ function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if
     if(g.items.length===1)return L.marker(ll,{icon:L.divIcon({className:'',html:mk(a),iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(esc(a.name)+(roleName(a)?' – '+esc(roleName(a)):''));
     return L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="mk cl">${g.items.length}</div>`,iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(g.items.map(x=>esc(x.name)).join(', '))})).addTo(map);
   layers.rm=L.layerGroup((st.marks||[]).map(x=>L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="rm">R</div>',iconSize:[34,34],iconAnchor:[17,17]}),zIndexOffset:1000}).bindTooltip('Rettling – '+(x.manual?'manuell (Einsatzleitung)':esc(x.name))+' · '+fmtT(x.ts)))).addTo(map);
-  if(fitted!==i.id){fitted=i.id;map.setView([i.lat,i.lon],14)}}
+  if(fitted!==i.id){const p=plsList()[0];if(p){fitted=i.id;map.setView([p.lat,p.lon],14)}}}
+// Alle PLS (Issue #24): der des Einsatzes und die eigenen der Rettlinge; on = zählt fürs Suchgebiet (sources)
+function plsList(){const i=st.incident,src=st.sources||[],l=[];
+  if(i.lat!=null)l.push({lat:i.lat,lon:i.lon,at:i.pls_at,label:'PLS des Einsatzes',on:src.some(s=>!s.own)});
+  (st.rescuees||[]).filter(r=>r.pls_lat!=null).forEach(r=>l.push({lat:r.pls_lat,lon:r.pls_lon,at:r.pls_at,label:'PLS «'+r.name+'»',on:resSt(r)==='miss'}));return l}
 /* ---------- Suchgebiet entlang des Flusslaufs ---------- */
-let net=null,netLoading=false,areaInfo='';
-// Gewässernetz über den Server (Cache, siehe Route overpass); Radius auf 1 km aufgerundet, damit alle Geräte eines Einsatzes dieselbe Abfrage stellen
-// Berechnung (riverNet, riverArea, netRadius) in common.js, gemeinsam mit der öffentlichen Ansicht
-async function loadNet(i,R){netLoading=true;
-  try{const n=riverNet(await overpassNet('overpass',{around:[R,i.lat,i.lon]},'overpass/put'));net={inc:i.id,R,...n};netLoading=false;drawMap();draw();return}
-  catch(e){net={inc:i.id,R,fail:true,err:e.message,retryAt:Date.now()+20000};netLoading=false;drawMap();draw()}}
+let areaInfo='',netsInc=null;const nets=new Map();
+// Gewässernetz je PLS über den Server (Cache, siehe Route overpass); Radius auf 1 km aufgerundet, damit alle Geräte eines Einsatzes dieselbe Abfrage stellen
+// Berechnung (riverNet, riverArea, netRadius, searchArea) in common.js, gemeinsam mit der öffentlichen Ansicht
 const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
-function circleArea(i,D,why){areaShape={circle:{lat:i.lat,lon:i.lon,r:D}};areaInfo=why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.';
-  return L.circle([i.lat,i.lon],{radius:D,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6'})}
-function drawArea(i){areaInfo='';areaShape=null;const D=(i.flow_ms||0)*(st.now-i.alarm_at);if(D<=0){areaInfo='Fliessgeschwindigkeit fehlt.';return null}
-  if(!netLoading&&(!net||net.inc!==i.id||(!net.fail&&net.R<D*1.1&&net.R<30000)||(net.fail&&Date.now()>net.retryAt)))loadNet(i,netRadius(D));
-  if(!net||net.inc!==i.id)return circleArea(i,D,'Gewässerdaten werden geladen.');
-  if(net.fail)return circleArea(i,D,'Gewässerdaten nicht verfügbar ('+net.err+'), neuer Versuch folgt.');
+// Suchgebiet = Gebiete aller vermissten Rettlinge (sources vom Server), ohne Rettlinge um den PLS des Einsatzes
+function drawArea(i){if(netsInc!==i.id){nets.clear();netsInc=i.id}
   const posts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&(roles.find(r=>r.id==p.role_id)||{}).is_post);
-  const a=riverArea(net,i,D,posts);if(!a)return circleArea(i,D,'Kein Gewässer nahe der PLS.');
-  areaShape={polys:a.polys};const g=L.layerGroup();
+  const a=searchArea(st.sources||[],nets,i.flow_ms,st.now,posts,(s,R)=>overpassNet('overpass',{around:[R,s.lat,s.lon]},'overpass/put'),()=>{drawMap();draw()},st.rescuees);
+  areaInfo=a.info.join(' ');areaShape=a.polys.length||a.circles.length?{polys:a.polys,circles:a.circles}:null;if(!areaShape)return null;const g=L.layerGroup();
+  a.circles.forEach(c=>g.addLayer(L.circle([c.lat,c.lon],{radius:c.r,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false})));
   a.polys.forEach(cp=>g.addLayer(L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false})));
   a.lines.forEach(pts=>g.addLayer(L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#ff4d2e',weight:3,interactive:false})));
-  areaInfo=`Suchgebiet: ${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet am Posten ${a.cutBy}.`:'.');
   return g}
 const roleName=p=>(roles.find(r=>r.id==p.role_id)||{}).name;
 const sec=(k,t,b)=>`<details data-k="${k}" ${openSec.has(k)?'open':''}><summary>${t}</summary>${b}</details>`;
@@ -251,7 +248,7 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   // alle anderen sehen die Einsatzkräfte über den Kartenknopf «Einsatzkräfte»
   // Aufzeichnung fürs Replay: record 0 aus/beendet, 1 läuft, 2 pausiert; nach «Beenden» jederzeit wieder aufnehmbar
   const REC={0:[i.recorded?'Beendet. Bisherige Aufzeichnung bleibt für das Replay erhalten.':'Aus',[['start',i.recorded?'Wieder aufnehmen':'Aufzeichnung starten']]],1:['● Läuft',[['pause','Pausieren'],['stop','Beenden']]],2:['❚❚ Pausiert',[['resume','Fortsetzen'],['stop','Beenden']]]}[i.record]||['?',[]];
-  if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<h4 style="margin:.3rem 0">Aufzeichnung (Replay in der Verwaltung)</h4><div class="mut">${esc(REC[0])}</div><div class="row">${REC[1].map(([a,l])=>`<button data-rec="${a}">${l}</button>`).join('')}</div><div class="mut">Gespeichert werden die Standortverläufe aller Teilnehmenden, solange die Aufzeichnung läuft.</div>${pubSec(i)}<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
+  if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<h4 style="margin:.3rem 0">PLS des Einsatzes</h4><div class="mut">${i.lat!=null?`${esc(fc(i.lat,i.lon)||'gesetzt')} · Drift ab ${fmtDT(i.pls_at)}`:'Nicht gesetzt. Ohne PLS des Einsatzes braucht jeder Rettling einen eigenen PLS.'}</div><div class="row"><button id="bPls">${i.lat!=null?'PLS verschieben':'PLS setzen'}</button>${i.lat!=null?'<button id="bPlsX">PLS entfernen</button>':''}</div><div class="mut">Gilt für alle Rettlinge ohne eigenen PLS.</div><h4 style="margin:.3rem 0">Aufzeichnung (Replay in der Verwaltung)</h4><div class="mut">${esc(REC[0])}</div><div class="row">${REC[1].map(([a,l])=>`<button data-rec="${a}">${l}</button>`).join('')}</div><div class="mut">Gespeichert werden die Standortverläufe aller Teilnehmenden, solange die Aufzeichnung läuft.</div>${pubSec(i)}<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
   const act=st.participants.filter(p=>p.mode!=='declined');
   if(st.can_manage)h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table class="crew">${act.map(p=>`<tr><td>${esc(p.name)}<small>${p.left_at?'verlassen':esc(modeOf(p.mode).name)}</small></td><td>${p.left_at?esc(roleName(p)||''):leadMode(p.mode)?'<span class="mut">Rechte der Einsatzleitung</span>':st.can_manage?roleSel('',p.role_id,`data-rset="${p.user_id}" aria-label="Spezialrolle von ${esc(p.name)}"`):esc(roleName(p)||'')}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}" data-n="${esc(p.name)}" aria-label="${esc(p.name)} aus dem Einsatz entfernen" title="Aus dem Einsatz entfernen">✕</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
@@ -262,6 +259,8 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   }
   if(st.can_flow)$('#bFl').onclick=()=>api('incident/flow',{flow_ms:+$('#fl').value}).then(poll).catch(fail);
   if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail);
+    $('#bPls').onclick=()=>plsPick('PLS des Einsatzes',i.lat!=null?i.pls_at:i.alarm_at,(lat,lon,at)=>api('incident/pls',{lat,lon,at}));
+    if($('#bPlsX'))$('#bPlsX').onclick=()=>confirm('PLS des Einsatzes entfernen? Rettlinge ohne eigenen PLS haben dann kein Suchgebiet mehr.')&&api('incident/pls',{clear:1}).then(poll).catch(fail);
     $('#sheet').querySelectorAll('[data-rec]').forEach(b=>b.onclick=()=>{b.disabled=true;api('incident/record',{action:b.dataset.rec}).then(poll).catch(e=>{b.disabled=false;fail(e)})});
     // Öffentliche Ansicht ein/aus und anonym (Namen ausblenden); Häkchen verlieren den Fokus, damit das Menü wieder neu gezeichnet wird
     ['pubOn','pubAnon'].forEach(k=>{const c=$('#'+k);if(c)c.onchange=()=>{c.blur();if(k==='pubOn'&&c.checked&&!confirm('Öffentliche Ansicht einschalten?\n\nWer den Link hat, sieht ohne Anmeldung die Karte mit den Standorten der Einsatzkräfte, Positionen, Bereichen und Rettlingen (keine Nachrichten, kein Einsatzlog).')){c.checked=false;return}
@@ -276,8 +275,8 @@ async function join(mode){try{await api('incident/join',{mode});if(mode!=='decli
 function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined')track();await poll()}catch(e){fail(e)}}
 // Abstand zur nächsten Gewässerachse im geladenen Gewässernetz (Meter), Infinity ohne Daten
-function waterDist(p){if(!net||!net.ways)return Infinity;const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);let best=Infinity;
-  net.ways.forEach(w=>{const g=w.geometry;for(let j=1;j<g.length;j++){const ax=(g[j-1].lon-p.lon)*kx,ay=(g[j-1].lat-p.lat)*ky,dx=(g[j].lon-g[j-1].lon)*kx,dy=(g[j].lat-g[j-1].lat)*ky,L=dx*dx+dy*dy,t=L?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L)):0;best=Math.min(best,Math.hypot(ax+t*dx,ay+t*dy))}});return best}
+function waterDist(p){const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);let best=Infinity;
+  [...nets.values()].flatMap(n=>n.ways||[]).forEach(w=>{const g=w.geometry;for(let j=1;j<g.length;j++){const ax=(g[j-1].lon-p.lon)*kx,ay=(g[j-1].lat-p.lat)*ky,dx=(g[j].lon-g[j-1].lon)*kx,dy=(g[j].lat-g[j-1].lat)*ky,L=dx*dx+dy*dy,t=L?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L)):0;best=Math.min(best,Math.hypot(ax+t*dx,ay+t*dy))}});return best}
 function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',{lat:p.lat,lon:p.lon,water:waterDist(p)<WATER_M?1:0,manual:manual?1:0}).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
 function track(){if(watchId!=null||hb)return;
   if(!navigator.geolocation){locStatus='Dieses Gerät kann den Standort nicht bestimmen (Test: manuell setzen).';return}
@@ -286,29 +285,28 @@ function track(){if(watchId!=null||hb)return;
   hb=setInterval(()=>{if(lastPos&&Date.now()-lastSent>10000)sendPos(lastPos)},5000)}
 function stop(){if(watchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(watchId);watchId=null;clearInterval(hb);hb=null}
 function photo(e){const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d'),s=Math.min(img.width,img.height);x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,96,96);api('me/photo',{photo:c.toDataURL('image/jpeg',.8)}).then(()=>alert('Profilbild gespeichert')).catch(fail)};img.src=URL.createObjectURL(f)}
-function newView(){creating=true;$('#sheet').innerHTML=`<h3>Einsatz starten</h3><div class="row"><select id="nex" aria-label="Art des Einsatzes"><option value="0">Scharfer Einsatz (kritische Alarmierung)</option><option value="1">Übung (normale Benachrichtigung)</option></select></div><label class="row" style="align-items:center"><input type="checkbox" id="nrec" style="flex:0 0 auto"> <span>Aufzeichnen (Replay in der Verwaltung)</span></label><div class="mut">Speichert die Standortverläufe aller Teilnehmenden für die spätere Auswertung.</div><div class="row"><textarea id="nm" placeholder="Meldung" rows="2"></textarea></div><div class="row"><input id="nlat" placeholder="Breite (PLS)"><input id="nlon" placeholder="Länge (PLS)"></div><div class="row"><label class="mut">Alarmeingang (Standard: jetzt)<input id="nat" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></label></div><div class="mut">PLS: auf die Karte tippen oder Koordinaten eingeben.</div><div class="row"><button class="pri" id="nGo">Alarm auslösen</button><button id="nX">Abbrechen</button></div>`;
+function newView(){creating=true;$('#sheet').innerHTML=`<h3>Einsatz starten</h3><div class="row"><select id="nex" aria-label="Art des Einsatzes"><option value="0">Scharfer Einsatz (kritische Alarmierung)</option><option value="1">Übung (normale Benachrichtigung)</option></select></div><label class="row" style="align-items:center"><input type="checkbox" id="nrec" style="flex:0 0 auto"> <span>Aufzeichnen (Replay in der Verwaltung)</span></label><div class="mut">Speichert die Standortverläufe aller Teilnehmenden für die spätere Auswertung.</div><div class="row"><textarea id="nm" placeholder="Meldung" rows="2"></textarea></div><div class="row"><input id="nlat" placeholder="Breite (PLS, optional)"><input id="nlon" placeholder="Länge (PLS, optional)"></div><div class="row"><label class="mut">Alarmeingang (Standard: jetzt)<input id="nat" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></label></div><div class="mut">PLS (optional): auf die Karte tippen oder Koordinaten eingeben. Ohne PLS entsteht das Suchgebiet erst mit dem PLS eines Rettlings.</div><div class="row"><button class="pri" id="nGo">Alarm auslösen</button><button id="nX">Abbrechen</button></div>`;
   // Vorauswahl je Art aus der Verwaltung (rec_default: [scharf, Übung], Standard nur Übungen), solange die Person das Häkchen nicht selbst gesetzt hat
   const recDef=()=>!!((me&&me.rec_default)||[0,1])[+$('#nex').value];$('#nrec').checked=recDef();
   let recSet=false;$('#nrec').onchange=()=>{recSet=true};$('#nex').onchange=()=>{if(!recSet)$('#nrec').checked=recDef()};
   let pin;map.once('click',function f(e){$('#nlat').value=e.latlng.lat.toFixed(6);$('#nlon').value=e.latlng.lng.toFixed(6);pin&&map.removeLayer(pin);pin=L.marker(e.latlng).addTo(map);map.once('click',f)});
   $('#nX').onclick=()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);draw()};
-  $('#nGo').onclick=()=>api('incident/start',{is_exercise:+$('#nex').value,record:$('#nrec').checked?1:0,message:$('#nm').value,lat:+$('#nlat').value,lon:+$('#nlon').value,alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined}).then(()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);poll()}).catch(fail)}
+  $('#nGo').onclick=()=>api('incident/start',{is_exercise:+$('#nex').value,record:$('#nrec').checked?1:0,message:$('#nm').value,...($('#nlat').value.trim()||$('#nlon').value.trim()?{lat:+$('#nlat').value,lon:+$('#nlon').value}:{}),alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined}).then(()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);poll()}).catch(fail)}
 /* ---------- Suchgebiet erreicht, Vorschlag ---------- */
 function inPoly(p,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.lat>p.lat)!==(b.lat>p.lat)&&p.lng<(b.lng-a.lng)*(p.lat-a.lat)/(b.lat-a.lat)+a.lng)c=!c}return c}
 function checkArea(){if(!st||!st.incident||!areaShape||!areaShape.polys||areaLogged[st.incident.id])return;const m=st.me;if(!m||m.left_at||m.mode==='declined')return;
   const pos=lastPos?{lat:lastPos.lat,lng:lastPos.lon}:(m.lat!=null?{lat:m.lat,lng:m.lon}:null);if(!pos)return;
   if(areaShape.polys.some(pl=>inPoly(pos,pl))){const id=st.incident.id;areaLogged[id]=true;api('incident/event',{kind:'area'}).catch(()=>{areaLogged[id]=false})}}
 function areaBounds(){if(!areaShape)return null;
-  if(areaShape.circle){const c=areaShape.circle;return L.latLng(c.lat,c.lon).toBounds(c.r*2)}
-  if(areaShape.polys&&areaShape.polys.length)return L.latLngBounds(areaShape.polys.flat().map(p=>[p.lat,p.lng]));return null}
-function inArea(pt){if(!areaShape)return false;if(areaShape.circle){const c=areaShape.circle;return map.distance([pt.lat,pt.lng],[c.lat,c.lon])<=c.r}return(areaShape.polys||[]).some(pl=>inPoly(pt,pl))}
+  const b=L.latLngBounds([]);areaShape.circles.forEach(c=>b.extend(L.latLng(c.lat,c.lon).toBounds(c.r*2)));areaShape.polys.flat().forEach(p=>b.extend([p.lat,p.lng]));return b.isValid()?b:null}
+function inArea(pt){if(!areaShape)return false;return areaShape.circles.some(c=>map.distance([pt.lat,pt.lng],[c.lat,c.lon])<=c.r)||areaShape.polys.some(pl=>inPoly(pt,pl))}
 const FITPAD={paddingTopLeft:[50,90],paddingBottomRight:[80,50],maxZoom:17};
 // Kartenknopf «Kamerafokus»: Auswahl Suchgebiet / Einsatzkräfte; schliesst bei Auswahl, Klick daneben oder Escape
 function camMenu(on){const m=$('#camMenu'),b=$('#bCam');if(!m)return;on=on===undefined?m.hidden:on;m.hidden=!on;b.setAttribute('aria-expanded',on);if(on)m.querySelector('button').focus()}
 document.addEventListener('click',e=>{if(!e.target.closest('#camWrap'))camMenu(false)});
 document.addEventListener('keydown',e=>{const m=$('#camMenu');if(e.key==='Escape'&&m&&!m.hidden){camMenu(false);$('#bCam').focus()}});
-function fitArea(){toggleSheet(false);const b=areaBounds();if(!b)return alert('Das Suchgebiet ist noch nicht berechnet. Zuerst die Fliessgeschwindigkeit setzen.');
-  stopFollow();b.extend([st.incident.lat,st.incident.lon]);map.fitBounds(b,FITPAD)}
+function fitArea(){toggleSheet(false);const b=areaBounds();if(!b)return alert('Das Suchgebiet ist noch nicht berechnet. '+(areaInfo||'Zuerst die Fliessgeschwindigkeit setzen.'));
+  stopFollow();(st.sources||[]).forEach(s=>b.extend([s.lat,s.lon]));map.fitBounds(b,FITPAD)}
 // Alle Einsatzkräfte mit bekanntem Standort, egal ob im Suchgebiet
 function fitForces(){toggleSheet(false);const pts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined');
   if(!pts.length)return alert('Keine Einsatzkräfte mit bekanntem Standort.');
@@ -388,7 +386,7 @@ function renderPois(){const o=$('#pois');if(!o)return;const on=panel==='pois'&&!
   const ps=st.pois||[],grp=[['point','Positionen'],['area','Bereiche']].map(([k,t])=>({k,t,items:ps.filter(p=>p.kind===k)}));
   const row=p=>`<div class="pi"><input type="checkbox" data-pv="${p.id}" ${poiHide.has(p.id)?'':'checked'} aria-label="${esc(p.name)} auf der Karte anzeigen"><span class="sw" style="background:${p.color}"></span><div class="nm">${esc(p.name)}<small>${esc(poiInfo(p))}</small></div><button data-pg="${p.id}" title="Auf der Karte zeigen">Zeigen</button>${st.can_manage?`<button data-pdel="${p.id}" aria-label="${esc(p.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div>`;
   // PLS (Point last seen) als eigene Kategorie zuoberst, nicht ausblendbar
-  const i=st.incident,pls=`<div class="pg">Point last seen (PLS) · immer sichtbar</div><div class="pi"><span class="nochk"></span><span class="plsw"></span><div class="nm">PLS<small>${esc(fcs(i.lat,i.lon,'',' · '))}Alarmeingang ${fmtT(i.alarm_at)}</small></div><button data-pls title="Auf der Karte zeigen">Zeigen</button></div>`;
+  const pl=plsList(),pls=`<div class="pg">Point last seen (PLS) · immer sichtbar</div>`+(pl.map(p=>`<div class="pi"><span class="nochk"></span><span class="plsw${p.on?'':' off'}"></span><div class="nm">${esc(p.label)}<small>${esc(fcs(p.lat,p.lon,'',' · '))}Drift ab ${fmtDT(p.at)}${p.on?'':' · zählt nicht fürs Suchgebiet'}</small></div><button data-pls="${p.lat},${p.lon}" title="Auf der Karte zeigen">Zeigen</button></div>`).join('')||'<div class="mut">Kein PLS gesetzt</div>');
   $('#poiList').innerHTML=pls+grp.map(g=>`<label class="pg"><input type="checkbox" data-pgrp="${g.k}" ${g.items.length&&g.items.every(p=>!poiHide.has(p.id))?'checked':''} ${g.items.length?'':'disabled'} aria-label="Alle ${g.t} anzeigen"> ${g.t} (${g.items.length})</label>`+(g.items.map(row).join('')||'<div class="mut">Keine</div>')).join('');
   const f=$('#poiForm'),ok=!!st.can_manage;f.hidden=!ok;if(ok&&!$('#bPoiP')){f.innerHTML='<div class="row" style="margin:0"><button class="pri" id="bPoiP">+ Position</button><button class="pri" id="bPoiA">+ Bereich</button></div>';$('#bPoiP').onclick=()=>newPoi('point');$('#bPoiA').onclick=()=>newPoi('area')}}
 function showPoi(id){const p=(st.pois||[]).find(x=>x.id===id);if(!p)return;stopFollow();if(poiHide.has(id))setPoiHidden([id],false);
@@ -489,6 +487,8 @@ function rdRender(){const box=$('#rdBox');if(!rd){box.hidden=true;return}box.hid
 let resLayer=null,resKey='';
 const canRes=()=>!!(st&&st.incident&&(st.can_manage||(st.me&&!st.me.left_at&&st.me.mode!=='declined')));
 const resSt=r=>r.rescued_at?'ok':r.lat!=null?'loc':'miss',RES_ST={miss:'Vermisst',loc:'Standort bekannt',ok:'Gerettet'};
+// PLS eines Rettlings: eigener oder der des Einsatzes (Issue #24)
+const resPls=r=>r.pls_lat!=null?'Eigener PLS'+fcs(r.pls_lat,r.pls_lon)+' · Drift ab '+fmtDT(r.pls_at):st.incident.lat!=null?'PLS des Einsatzes':'Kein PLS';
 const resInfo=r=>(r.rescued_at?`Gerettet ${fmtT(r.rescued_at)} · ${r.rescued_name||''}`:r.lat!=null?`Standort ${ago(r.loc_at)} · ${r.loc_name||''}`:'Noch kein Standort')+fcs(r.lat,r.lon);
 function drawRes(){if(!resLayer)return;const rs=((st&&st.incident&&st.rescuees)||[]).filter(r=>r.lat!=null),k=JSON.stringify(rs.map(r=>[r.id,r.name,r.descr,r.lat,r.lon,r.loc_at,r.rescued_at]))+canRes();if(k===resKey)return;resKey=k;resLayer.clearLayers();
   rs.forEach(r=>{const ok=!!r.rescued_at;L.marker([r.lat,r.lon],{icon:L.divIcon({className:'',html:`<div class="rsk${ok?' ok':''}">${ok?'✓':'R'}</div>`,iconSize:[32,32],iconAnchor:[16,16]}),zIndexOffset:ok?950:1100})
@@ -497,19 +497,34 @@ function drawRes(){if(!resLayer)return;const rs=((st&&st.incident&&st.rescuees)|
 function renderRes(){const o=$('#res');if(!o)return;const on=panel==='res'&&!!(st&&st.incident),rs=(st&&st.incident&&st.rescuees)||[];o.hidden=!on;$('#bRes').setAttribute('aria-expanded',on);
   const open=rs.filter(r=>!r.rescued_at).length,c=$('#resCnt');c.hidden=!open;c.textContent=open;
   if(!on)return;const can=canRes(),own=can&&st.me&&!st.me.left_at&&shares(st.me.mode);
-  const row=r=>{const s=resSt(r);return `<div class="rs${s==='ok'?' done':''}"><div class="hd"><b>${esc(r.name)}</b><span class="st ${s}">${RES_ST[s]}</span></div>${r.descr?`<div class="ds">${esc(r.descr)}</div>`:''}<small>${esc(resInfo(r))}</small><div class="bt">`
+  const row=r=>{const s=resSt(r);return `<div class="rs${s==='ok'?' done':''}"><div class="hd"><b>${esc(r.name)}</b><span class="st ${s}">${RES_ST[s]}</span></div>${r.descr?`<div class="ds">${esc(r.descr)}</div>`:''}<small>${esc(resInfo(r))}</small><small>${esc(resPls(r))}</small><div class="bt">`
     +(can&&s!=='ok'?`${own?`<button class="pri" data-rl="${r.id}" title="Standort des Rettlings = mein aktueller Standort">📍 Mein Standort</button>`:''}<button data-rp="${r.id}" title="Standort auf der Karte antippen">Auf Karte</button><button class="pri" data-rr="${r.id}" data-v="1">Gerettet</button>`:'')
     +(r.lat!=null?`<button data-rg="${r.id}" title="Auf der Karte zeigen">Zeigen</button>`:'')+(can&&s==='ok'?`<button data-rr="${r.id}" data-v="0">Zurücknehmen</button>`:'')
-    +(can?`<button data-re="${r.id}" aria-label="${esc(r.name)} bearbeiten" title="Name und Beschreibung ändern">✎</button>`:'')+(st.can_manage?`<button data-rd="${r.id}" aria-label="${esc(r.name)} entfernen" title="Für alle entfernen">✕</button>`:'')+'</div></div>'};
+    +(can?`<button data-rpls="${r.id}" title="Eigenen PLS mit Zeitpunkt auf der Karte setzen">PLS</button><button data-re="${r.id}" aria-label="${esc(r.name)} bearbeiten" title="Name, Beschreibung und PLS ändern">✎</button>`:'')+(st.can_manage?`<button data-rd="${r.id}" aria-label="${esc(r.name)} entfernen" title="Für alle entfernen">✕</button>`:'')+'</div></div>'};
   $('#resList').innerHTML=['miss','loc','ok'].map(s=>{const l=rs.filter(r=>resSt(r)===s);return l.length?`<div class="pg">${RES_ST[s]} (${l.length})</div>`+l.map(row).join(''):''}).join('')
     ||`<div class="mut" style="padding:.6rem 0">Noch keine Rettlinge erfasst.</div>`;
   $('#resForm').hidden=!can}
-function editRes(id){const r=((st&&st.rescuees)||[]).find(x=>x.id===id)||{name:'',descr:''};
-  dlg(id?'Rettling bearbeiten':'Rettling erfassen',`<label class="mut">Name<input id="rsN" maxlength="80" placeholder="z. B. Person 1, Kind, Kanufahrer" value="${esc(r.name)}"></label><label class="mut">Beschreibung (Merkmale, Kleidung, Alter …)<textarea id="rsD" rows="4" maxlength="1000">${esc(r.descr||'')}</textarea></label>`,
-    async d=>{const name=$('#rsN',d).value.trim();if(!name)throw new Error('Bitte einen Namen eingeben.');await api('incident/rescuee/save',{id:id||undefined,name,descr:$('#rsD',d).value});togglePanel('res',true);poll()})}
+// Erfassen/Bearbeiten: PLS des Einsatzes übernehmen oder eigener PLS (Ort über «PLS»/auf der Karte, Zeitpunkt hier änderbar)
+function editRes(id){const r=((st&&st.rescuees)||[]).find(x=>x.id===id)||{name:'',descr:'',pls_lat:null},i=st.incident,own=r.pls_lat!=null;
+  const plsH=own?`<label class="mut">Eigener PLS${esc(fcs(r.pls_lat,r.pls_lon,' · '))}, Drift ab<input id="rsT" type="datetime-local" value="${dtLocal(r.pls_at)}"></label><label class="row" style="align-items:center"><input type="checkbox" id="rsI" style="flex:0 0 auto"> <span>Stattdessen den PLS des Einsatzes übernehmen</span></label>`
+    :`<div class="mut">PLS: ${i.lat!=null?'der des Einsatzes'+esc(fcs(i.lat,i.lon,' (',')'))+', Drift ab '+fmtDT(i.pls_at):'noch keiner (der Einsatz hat keinen PLS)'}</div><label class="row" style="align-items:center"><input type="checkbox" id="rsP" style="flex:0 0 auto" ${i.lat==null?'checked':''}> <span>${id?'Eigenen PLS auf der Karte setzen':'Danach eigenen PLS auf der Karte setzen'}</span></label>`;
+  dlg(id?'Rettling bearbeiten':'Rettling erfassen',`<label class="mut">Name<input id="rsN" maxlength="80" placeholder="z. B. Person 1, Kind, Kanufahrer" value="${esc(r.name)}"></label><label class="mut">Beschreibung (Merkmale, Kleidung, Alter …)<textarea id="rsD" rows="4" maxlength="1000">${esc(r.descr||'')}</textarea></label>${plsH}`,
+    async d=>{const name=$('#rsN',d).value.trim(),descr=$('#rsD',d).value;if(!name)throw new Error('Bitte einen Namen eingeben.');const body={id:id||undefined,name,descr};
+      if(own)body.pls=$('#rsI',d).checked?null:{lat:r.pls_lat,lon:r.pls_lon,at:dtTs($('#rsT',d).value)||r.pls_at};
+      const pick=!own&&$('#rsP',d).checked,res=await api('incident/rescuee/save',body);togglePanel('res',true);await poll();
+      if(pick)setTimeout(()=>resPlsPick(res.id,name,descr),0)})}
+// Eigener PLS eines Rettlings: Punkt auf der Karte, danach Zeitpunkt (Standard: der des bisherigen PLS)
+function resPlsPick(id,name,descr){const r=resOf(id),at=r&&r.pls_lat!=null?r.pls_at:st.incident.pls_at;
+  plsPick(`PLS von «${name}»`,at,(lat,lon,t)=>api('incident/rescuee/save',{id,name,descr,pls:{lat,lon,at:t}}).then(()=>togglePanel('res',true)))}
+// PLS wählen: Punkt antippen, dann Zeitpunkt bestätigen; save(lat, lon, at)
+function plsPick(what,at,save){pickPoint(`Tippe auf die Karte, um den ${what} zu setzen.`).then(q=>
+  dlg(what,`<div class="mut">${esc(fc(q.lat,q.lng)||'')}</div><label class="mut">Zeitpunkt (Beginn der Drift)<input id="plT" type="datetime-local" value="${dtLocal(at||st.now)}"></label><div class="mut">Ab diesem Zeitpunkt wird die Driftdistanz mit der Fliessgeschwindigkeit berechnet.</div>`,
+    async d=>{const t=dtTs($('#plT',d).value);if(!t)throw new Error('Bitte einen Zeitpunkt eingeben.');await save(+q.lat.toFixed(7),+q.lng.toFixed(7),t);poll()})).catch(fail)}
+const dtLocal=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16),dtTs=v=>Math.floor(new Date(v).getTime()/1000)||0;
 const resOf=id=>((st&&st.rescuees)||[]).find(x=>x.id===id);
-document.addEventListener('click',e=>{const b=e.target.closest('[data-rl],[data-rp],[data-rr],[data-rg],[data-re],[data-rd]');if(!b)return;const d=b.dataset,id=+(d.rl||d.rp||d.rr||d.rg||d.re||d.rd),r=resOf(id);
+document.addEventListener('click',e=>{const b=e.target.closest('[data-rl],[data-rp],[data-rr],[data-rg],[data-re],[data-rd],[data-rpls]');if(!b)return;const d=b.dataset,id=+(d.rl||d.rp||d.rr||d.rg||d.re||d.rd||d.rpls),r=resOf(id);
   if(d.re!==undefined)return editRes(id);if(!r)return;
+  if(d.rpls)return resPlsPick(id,r.name,r.descr||'');
   if(d.rg){stopFollow();map.panTo([r.lat,r.lon]);if(narrow())togglePanel('res',false);return}
   if(d.rl)return api('incident/rescuee/locate',{id,own:1}).then(poll).catch(fail);
   if(d.rp)return pickPoint(`Tippe auf die Karte, um den Standort von «${r.name}» zu setzen.`).then(q=>api('incident/rescuee/locate',{id,lat:q.lat,lon:q.lng})).then(()=>{togglePanel('res',true);poll()}).catch(fail);

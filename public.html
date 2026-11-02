@@ -27,10 +27,10 @@ html,body{height:100%}body{display:flex;flex-direction:column}
 // Daten über die Route public/state (ohne Anmeldung); Aktualisierung alle 5 s.
 // Suchgebiet wie in der Einsatz-App (riverArea in common.js), Gewässernetz über public/net (gleicher Server-Cache).
 const K=new URLSearchParams(location.search).get('k')||'';
-let map=null,lay=null,ps=null,cs='lv95',timer=null,fitted=false,followId=null,net=null,netLoading=false,areaInfo='';
+let map=null,lay=null,ps=null,cs='lv95',timer=null,fitted=false,followId=null,areaInfo='';const nets=new Map();
 const ago=ts=>{const s=Math.max(0,ps.now-ts);return s<60?'vor '+s+' s':s<3600?'vor '+Math.round(s/60)+' min':'vor '+Math.floor(s/3600)+' h'};
 function stopWith(t,b){clearInterval(timer);$('#pbBody').innerHTML=`<div id="pbMsg" class="card"><h2>${esc(t)}</h2><div class="mut">${esc(b)}</div></div>`;map=null}
-function initMap(i){map=L.map('pbMap').setView([i.lat,i.lon],14);const bases={};
+function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.lon]:[46.8,8.2],p?14:8);const bases={};
   Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
   let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);L.control.layers(bases,null,{position:'topright'}).addTo(map);
   map.on('baselayerchange',e=>{const k=Object.keys(MAP_PROVIDERS).find(k=>MAP_PROVIDERS[k].label===e.name);try{localStorage.setItem('sw_base',k)}catch(_){}});
@@ -41,40 +41,37 @@ function initMap(i){map=L.map('pbMap').setView([i.lat,i.lon],14);const bases={};
 // Folgen: Karte bleibt bei jeder Aktualisierung auf der Person (Zoom bleibt); endet über ✕, beim Verschieben oder wenn die Person den Einsatz verlässt
 function toggleFollow(id){followId=followId===id?null:id;draw()}
 function stopFollow(){followId=null;draw()}
-async function loadNet(R){netLoading=true;
-  try{net={R,...riverNet(await overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R))}}catch(e){net={R,fail:true,err:e.message,retryAt:Date.now()+20000}}
-  netLoading=false;if(ps)draw()}
-function drawArea(d){const i=d.incident,D=(i.flow_ms||0)*(d.now-i.alarm_at);areaInfo='';if(D<=0){areaInfo='Suchgebiet: Fliessgeschwindigkeit fehlt.';return}
-  if(!netLoading&&(!net||(!net.fail&&net.R<D*1.1&&net.R<30000)||(net.fail&&Date.now()>net.retryAt)))loadNet(netRadius(D));
-  const circle=why=>{areaInfo=why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.';L.circle([i.lat,i.lon],{radius:D,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false}).addTo(lay)};
-  if(!net)return circle('Gewässerdaten werden geladen.');
-  if(net.fail)return circle('Gewässerdaten nicht verfügbar, neuer Versuch folgt.');
-  const posts=d.participants.filter(p=>p.lat!=null&&(d.roles.find(r=>r.id===p.role_id)||{}).is_post);
-  const a=riverArea(net,i,D,posts);if(!a)return circle('Kein Gewässer nahe der PLS.');
+// Suchgebiet aus allen PLS der vermissten Rettlinge (sources, Issue #24), Gewässernetz je PLS über public/net
+function drawArea(d){const i=d.incident,posts=d.participants.filter(p=>p.lat!=null&&(d.roles.find(r=>r.id===p.role_id)||{}).is_post);
+  const a=searchArea(d.sources||[],nets,i.flow_ms,d.now,posts,(s,R)=>overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R+'&la='+s.lat+'&lo='+s.lon),()=>{if(ps)draw()},d.rescuees);
+  areaInfo=a.info.join(' ');
+  a.circles.forEach(c=>L.circle([c.lat,c.lon],{radius:c.r,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false}).addTo(lay));
   a.polys.forEach(cp=>L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false}).addTo(lay));
-  a.lines.forEach(pts=>L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#ff4d2e',weight:3,interactive:false}).addTo(lay));
-  areaInfo=`Suchgebiet: ${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet am Posten ${a.cutBy}.`:'.')}
+  a.lines.forEach(pts=>L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#ff4d2e',weight:3,interactive:false}).addTo(lay))}
+// Alle PLS: der des Einsatzes und die eigenen der Rettlinge; on = zählt fürs Suchgebiet
+function plsList(d){const i=d.incident,l=[];if(i.lat!=null)l.push({lat:i.lat,lon:i.lon,at:i.pls_at,label:'PLS',on:(d.sources||[]).some(s=>!s.own)});
+  d.rescuees.filter(r=>r.pls_lat!=null).forEach(r=>l.push({lat:r.pls_lat,lon:r.pls_lon,at:r.pls_at,label:'PLS '+r.name,on:!r.rescued_at&&r.lat==null}));return l}
 async function load(){let d;try{d=await api('public/state&k='+encodeURIComponent(K))}catch(e){return stopWith('Öffentliche Ansicht nicht verfügbar',e.message)}
   ps=d;const i=d.incident;cs=d.coord_sys||'lv95';
   $('#pbTitle').innerHTML=`${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} ${esc(i.message)}`;document.title=(i.is_exercise?'Übung: ':'Einsatz: ')+i.message;
   if(i.ended_at)return stopWith(i.is_exercise?'Die Übung ist beendet.':'Der Einsatz ist beendet.','Die öffentliche Ansicht zeigt nur laufende Einsätze.');
   $('#pbTime').textContent='seit '+Math.round((d.now-i.alarm_at)/60)+' min · öffentliche Ansicht, nur lesen';
-  if(!map)initMap(i);draw()}
+  if(!map)initMap(d);draw()}
 function draw(){const d=ps,i=d.incident,col=p=>(d.roles.find(r=>r.id===p.role_id)||{}).color||'#cfd8dc',ll=(a,b)=>`data-ll="${a},${b}"`;lay.clearLayers();
   drawArea(d);
-  L.circleMarker([i.lat,i.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip('PLS',{permanent:true,direction:'right',className:'pblbl'}).addTo(lay);
+  const pl=plsList(d);pl.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:p.on?1:.4,opacity:p.on?1:.5}).bindTooltip(esc(p.label),{permanent:true,direction:'right',className:'pblbl'}).addTo(lay));
   d.pois.forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:7,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'pblbl'}).addTo(lay)});
   d.rescuees.filter(r=>r.lat!=null).forEach(r=>L.circleMarker([r.lat,r.lon],{radius:9,color:'#fff',weight:2,fillColor:r.rescued_at?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.rescued_at?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[8,0],className:'pblbl'}).addTo(lay));
   const withPos=d.participants.filter(p=>p.lat!=null);
   withPos.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:8,color:'#0f2430',weight:2,fillColor:col(p),fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[8,0],className:'pblbl'}).addTo(lay));
-  if(!fitted){fitted=true;const all=[[i.lat,i.lon],...withPos.map(p=>[p.lat,p.lon])];if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:16})}
+  if(!fitted){const all=[...pl.map(p=>[p.lat,p.lon]),...withPos.map(p=>[p.lat,p.lon])];if(all.length)fitted=true;if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:16});else if(all.length)map.setView(all[0],14)}
   const fp=followId!=null&&d.participants.find(p=>p.id===followId);if(!fp)followId=null;else if(fp.lat!=null)map.panTo([fp.lat,fp.lon]);
   $('#pbFollow').hidden=!fp;if(fp)$('#pbFollow b').textContent=fp.name+(fp.lat==null?' (kein Standort)':'');
   // Seitenleiste: Lage, Einsatzkräfte nach Spezialrolle (ohne Rolle zuletzt), Rettlinge
   const grp=[...d.roles.map(r=>({r,items:d.participants.filter(p=>p.role_id===r.id)})),{r:null,items:d.participants.filter(p=>!d.roles.some(r=>r.id===p.role_id))}].filter(g=>g.items.length);
   const row=p=>`<div class="pp"><i style="background:${esc(col(p))}"></i><span class="nm">${esc(p.name)}<small>${d.anon?'':esc(p.mode_name||'')+' · '}${p.lat!=null?'Standort '+ago(p.loc_at)+(fmtC(p.lat,p.lon,cs)?' · '+esc(fmtC(p.lat,p.lon,cs)):''):'kein Standort'}</small></span>${p.lat!=null?`<button ${ll(p.lat,p.lon)}>Zentrieren</button>`:''}<button data-f="${p.id}"${followId===p.id?' class="pri"':''}>${followId===p.id?'Folgt ✕':'Folgen'}</button></div>`;
   const rs=d.rescuees.map(r=>`<div class="pp"><i style="background:${r.rescued_at?'#35c27a':r.lat!=null?'#ff9f1c':'#ff4d2e'}"></i><span class="nm">${esc(r.name)}<small>${r.rescued_at?'gerettet':r.lat!=null?'Standort bekannt':'vermisst'}${r.descr?' · '+esc(r.descr):''}</small></span>${r.lat!=null?`<button ${ll(r.lat,r.lon)}>Zentrieren</button>`:''}</div>`).join('');
-  $('#pbSide').innerHTML=`<h3>Lage</h3><div class="mut">Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}</div><div class="mut">PLS ${esc(fmtC(i.lat,i.lon,cs))} <button ${ll(i.lat,i.lon)} style="padding:.15rem .4rem;font-size:.8rem">Zeigen</button></div><div class="mut">${i.flow_ms?'Fliessgeschwindigkeit '+i.flow_ms+' m/s':'Fliessgeschwindigkeit nicht gesetzt'}</div>${areaInfo&&i.flow_ms?`<div class="mut">${esc(areaInfo)}</div>`:''}${d.anon?'<div class="mut">Namen sind ausgeblendet.</div>':''}
+  $('#pbSide').innerHTML=`<h3>Lage</h3><div class="mut">Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}</div>${pl.map(p=>`<div class="mut">${esc(p.label)} ${esc(fmtC(p.lat,p.lon,cs))} · ab ${fmtDT(p.at)} <button ${ll(p.lat,p.lon)} style="padding:.15rem .4rem;font-size:.8rem">Zeigen</button></div>`).join('')||'<div class="mut">Kein PLS gesetzt</div>'}<div class="mut">${i.flow_ms?'Fliessgeschwindigkeit '+i.flow_ms+' m/s':'Fliessgeschwindigkeit nicht gesetzt'}</div>${areaInfo&&i.flow_ms?`<div class="mut">${esc(areaInfo)}</div>`:''}${d.anon?'<div class="mut">Namen sind ausgeblendet.</div>':''}
     <h3>Einsatzkräfte (${d.participants.length})</h3>${grp.map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.map(row).join('')).join('')||'<div class="mut">Noch niemand im Einsatz</div>'}
     <h3>Rettlinge (${d.rescuees.length})</h3>${rs||'<div class="mut">Keine erfasst</div>'}`}
 if(!K)stopWith('Öffentliche Ansicht nicht verfügbar','Der Link ist unvollständig.');else{load();timer=setInterval(load,5000)}
