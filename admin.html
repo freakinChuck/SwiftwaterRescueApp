@@ -227,25 +227,33 @@ async function loadEx(){const el=$('#sEx');let ps,us,ros,xt;try{[ps,us,ros,xt]=a
     <div class="row"><button class="pri" id="exA">Neue Übung</button></div>
     ${ps.map(p=>{const[s,c]=stat(p);return`<div class="exp"><h3>${esc(p.title)} <span class="badge ${c}">${s}</span>${p.alarm_at?` <span class="mut" style="font-weight:400">${esc(new Date(p.alarm_at*1000).toLocaleString('de-CH'))}</span>`:''}</h3>
       <div class="mut">Aufgebotsmeldung: ${esc(p.message)}</div>
-      <div class="mut">Übungsleitung: ${esc(p.leads.map(un).join(', '))} · Aufzeichnung: ${p.record?'ja':'nein'} · Öffentliche Ansicht: ${p.public_token?(p.public_anon?'ja, anonym':'ja, mit Namen'):'nein'}</div>
+      <div class="mut">Übungsleitung: ${esc(p.leads.map(un).join(', '))} · Alarmiert: ${p.invite?esc(p.invite.length+(p.invite.length===1?' Person: ':' Personen: ')+p.invite.map(un).join(', ')):'alle'} · Aufzeichnung: ${p.record?'ja':'nein'} · Öffentliche Ansicht: ${p.public_token?(p.public_anon?'ja, anonym':'ja, mit Namen'):'nein'}</div>
       ${p.public_token&&!p.ended_at?`<div class="row"><input readonly value="${esc(pubLink(p.public_token))}" aria-label="Öffentlicher Link" onfocus="this.select()"><a class="btn" href="${esc(pubLink(p.public_token))}" target="_blank" rel="noopener">Öffnen</a></div>`:''}
       <div class="tw"><table><thead><tr><th>Element</th><th>Standort</th><th>Meldung</th><th>Status</th><th></th></tr></thead><tbody>${p.injects.map(j=>inj(p,j)).join('')||'<tr><td colspan="5" class="mut">Noch keine Elemente</td></tr>'}</tbody></table></div>
       <div data-mapbox="${p.id}" hidden><div class="exmap"></div><div class="mut exleg">${Object.entries(EXK).map(([k,t])=>`<span><i style="background:${EXC[k]}"></i>${t}</span>`).join('')}<span>blass = freigegeben · gestrichelt = Sichtung des Rettlings</span></div></div>
       <div class="row">${p.injects.length?`<button data-pm="${p.id}" aria-pressed="false">Karte</button>`:''}${p.ended_at?'':`<button data-ja="${p.id}">+ Element</button>`}${p.incident_id==null?`<button data-pe="${p.id}">Übung bearbeiten</button>`:''}<button data-pc="${p.id}">Kopieren</button>${p.incident_id!=null&&!p.ended_at?'':`<button data-pr="${p.id}">Entfernen</button>`}</div></div>`}).join('')||'<div class="mut">Noch keine vorbereiteten Übungen.</div>'}`;
-  // Übungsleitung: Suchfeld mit Trefferliste statt Häkchen pro Person, damit es auch mit vielen Benutzern übersichtlich bleibt
-  const editP=p=>{const act=us.filter(u=>u.active);let ld=(p.leads||[me.id]).filter(id=>act.some(u=>u.id===id));
+  // Personenauswahl (Übungsleitung, Aufgebotene): Suchfeld mit Trefferliste statt Häkchen pro Person, damit es auch mit vielen Benutzern übersichtlich bleibt
+  // x = Präfix der Element-IDs, sel = Auswahl, skip = zusätzlich nicht wählbar; liefert die aktuelle Auswahl
+  const pplPick=(d,x,sel,skip,empty)=>{const k=x.toLowerCase(),act=us.filter(u=>u.active),q=$('#'+x+'q',d);sel=sel.filter(id=>act.some(u=>u.id===id));
+    const draw=()=>{$('#'+x+'s',d).innerHTML=sel.map(id=>`<span class="lchip">${esc(un(id))}<button data-${k}x="${id}" aria-label="${esc(un(id))} entfernen" title="Entfernen">✕</button></span>`).join('')||`<span class="mut">${empty}</span>`;
+      const s=q.value.trim().toLowerCase(),m=s?act.filter(u=>!sel.includes(u.id)&&!skip().includes(u.id)&&(u.name+' '+u.username).toLowerCase().includes(s)):[];
+      $('#'+x+'r',d).innerHTML=m.slice(0,8).map(u=>`<button data-${k}a="${u.id}">${esc(u.name)} <span class="mut">${esc(u.username)}</span></button>`).join('')+(m.length>8?`<div class="mut">${m.length-8} weitere, Suche verfeinern</div>`:s&&!m.length?'<div class="mut">Keine passende Person</div>':'')};
+    q.oninput=draw;q.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const b=$(`#${x}r [data-${k}a]`,d);b&&b.click()}}; // Enter übernimmt den ersten Treffer
+    d.addEventListener('click',e=>{const a=e.target.closest(`[data-${k}a]`),r=e.target.closest(`[data-${k}x]`);
+      if(a){sel.push(+a.dataset[k+'a']);q.value='';draw();q.focus()}else if(r){sel=sel.filter(i=>i!==+r.dataset[k+'x']);draw()}});draw();return{get:()=>sel,draw}};
+  const editP=p=>{let L,I;
     const d=dlg(p.id?'Übung bearbeiten':'Neue Übung',`<label class="mut">Titel (für Verwaltung, Übungsleitung und Warteseite des öffentlichen Links)<input id="pT" maxlength="120" value="${esc(p.title||'')}" placeholder="z. B. Übung Aare Olten, Herbst"></label>
       <label class="mut">Aufgebotsmeldung (Alarm beim Start)<textarea id="pM" rows="3">${esc(p.message||'')}</textarea></label>
       <div class="mut">Übungsleitung (Rechte der Einsatzleitung, nimmt nicht teil)</div><div id="pLs" class="lsel"></div><input id="pLq" type="search" autocomplete="off" placeholder="Person hinzufügen: Name oder Benutzername suchen" aria-label="Person als Übungsleitung hinzufügen"><div id="pLr" class="lres"></div>
+      <div class="mut">Alarmieren beim Start (teilnehmen können trotzdem alle)</div><div class="row"><label class="chk"><input type="radio" name="pIm" value="all" ${p.invite?'':'checked'}> Alle</label><label class="chk"><input type="radio" name="pIm" value="sel" ${p.invite?'checked':''}> Nur aufgebotene Personen</label></div>
+      <div id="pIb"><div id="pIs" class="lsel"></div><input id="pIq" type="search" autocomplete="off" placeholder="Person aufbieten: Name oder Benutzername suchen" aria-label="Person aufbieten"><div id="pIr" class="lres"></div></div>
       ${features('rec')?`<label class="chk"><input type="checkbox" id="pR" ${p.record??1?'checked':''}> Aufzeichnen (Replay)</label>`:''}
       <label class="chk"><input type="checkbox" id="pP" ${p.public_token?'checked':''}> Öffentliche Ansicht vorbereiten (Link schon vor dem Start)</label><label class="chk"><input type="checkbox" id="pA" ${p.public_anon??1?'checked':''}> Anonym: Namen ausblenden</label>`,
-    async d=>{await api('ex/plan/save',{id:p.id,title:$('#pT',d).value,message:$('#pM',d).value,leads:ld,record:$('#pR',d)?($('#pR',d).checked?1:0):(p.record??1),public:$('#pP',d).checked?1:0,public_anon:$('#pA',d).checked?1:0});loadEx()});
-    const q=$('#pLq',d),drawL=()=>{$('#pLs',d).innerHTML=ld.map(id=>`<span class="lchip">${esc(un(id))}<button data-lx="${id}" aria-label="${esc(un(id))} entfernen" title="Entfernen">✕</button></span>`).join('')||'<span class="mut">Noch niemand ausgewählt</span>';
-      const s=q.value.trim().toLowerCase(),m=s?act.filter(u=>!ld.includes(u.id)&&(u.name+' '+u.username).toLowerCase().includes(s)):[];
-      $('#pLr',d).innerHTML=m.slice(0,8).map(u=>`<button data-la="${u.id}">${esc(u.name)} <span class="mut">${esc(u.username)}</span></button>`).join('')+(m.length>8?`<div class="mut">${m.length-8} weitere, Suche verfeinern</div>`:s&&!m.length?'<div class="mut">Keine passende Person</div>':'')};
-    q.oninput=drawL;q.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const b=$('#pLr [data-la]',d);b&&b.click()}}; // Enter übernimmt den ersten Treffer
-    d.addEventListener('click',e=>{const a=e.target.closest('[data-la]'),x=e.target.closest('[data-lx]');
-      if(a){ld.push(+a.dataset.la);q.value='';drawL();q.focus()}else if(x){ld=ld.filter(i=>i!==+x.dataset.lx);drawL()}});drawL()};
+    async d=>{await api('ex/plan/save',{id:p.id,title:$('#pT',d).value,message:$('#pM',d).value,leads:L.get(),invite:$('[name=pIm]:checked',d).value==='sel'?I.get():null,record:$('#pR',d)?($('#pR',d).checked?1:0):(p.record??1),public:$('#pP',d).checked?1:0,public_anon:$('#pA',d).checked?1:0});loadEx()});
+    L=pplPick(d,'pL',p.leads||[me.id],()=>[],'Noch niemand ausgewählt');I=pplPick(d,'pI',p.invite||[],()=>L.get(),'Noch niemand aufgeboten');
+    // die Übungsleitung wird nicht alarmiert, also nicht aufbieten; Liste nur bei «Nur aufgebotene Personen»
+    const im=()=>{$('#pIb',d).hidden=$('[name=pIm]:checked',d).value!=='sel'};d.addEventListener('change',e=>{if(e.target.name==='pIm')im()});im();
+    d.addEventListener('click',e=>{if(e.target.closest('[data-pla]')){const l=L.get(),v=I.get();for(let k=v.length-1;k>=0;k--)if(l.includes(v[k]))v.splice(k,1);I.draw()}})};
   // Sichtung: neuer Rettling, unbekannter Rettling oder einer, den ein anderes Element der Übung erfasst
   // externe Einsatzkraft: Vorlage aus der Verwaltung übernehmen (Name, Beschreibung, Rolle, Kürzel, Farbe, Standort falls vorhanden); entfernen: eine externe Einsatzkraft dieser Übung
   const editJ=(p,j)=>{const rs=p.injects.filter(x=>exOwn(x)&&x.id!==j.id),sm=j.kind==='seen'?(j.ref_id??(j.name?'new':'unk')):rs.length?rs[0].id:'new',xs=p.injects.filter(x=>x.kind==='ext'&&x.id!==j.id),xa=xt.filter(x=>x.active),xe=j.kind==='ext'?j:{};
