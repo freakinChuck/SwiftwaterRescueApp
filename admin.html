@@ -43,9 +43,9 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   if(!me.is_admin){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
-    <main><section id="sU"><h2>Benutzer</h2><div class="mut">Wird geladen …</div></section><section id="sM"><h2>Einrückoptionen</h2><div class="mut">Wird geladen …</div></section><section id="sR"><h2>Spezialrollen</h2><div class="mut">Wird geladen …</div></section><section id="sX"><h2>Externe Einsatzkräfte</h2><div class="mut">Wird geladen …</div></section><section id="sC"><h2>Koordinaten</h2><div class="mut">Wird geladen …</div></section><section id="sA"><h2>Aufzeichnung</h2><div class="mut">Wird geladen …</div></section><section id="sF"><h2>Flussdistanz</h2><div class="mut">Wird geladen …</div></section><section id="sO"><h2>Gewässerdaten</h2><div class="mut">Wird geladen …</div></section><section id="stats"><h2>Einsatzstatistik und Einsatzlog</h2><div class="mut">Wird geladen …</div></section></main>`;
+    <main><section id="sU"><h2>Benutzer</h2><div class="mut">Wird geladen …</div></section><section id="sM"><h2>Einrückoptionen</h2><div class="mut">Wird geladen …</div></section><section id="sFn"><h2>Funktionen</h2><div class="mut">Wird geladen …</div></section><section id="sR"><h2>Spezialrollen</h2><div class="mut">Wird geladen …</div></section><section id="sX"><h2>Externe Einsatzkräfte</h2><div class="mut">Wird geladen …</div></section><section id="sC"><h2>Koordinaten</h2><div class="mut">Wird geladen …</div></section><section id="sA"><h2>Aufzeichnung</h2><div class="mut">Wird geladen …</div></section><section id="sF"><h2>Flussdistanz</h2><div class="mut">Wird geladen …</div></section><section id="sO"><h2>Gewässerdaten</h2><div class="mut">Wird geladen …</div></section><section id="stats"><h2>Einsatzstatistik und Einsatzlog</h2><div class="mut">Wird geladen …</div></section></main>`;
   $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
-  loadUsers();loadModes();loadRoles();loadExt();loadCoords();loadRec();loadRd();loadOp();loadStats()}
+  loadUsers();loadModes();loadFeat();loadRoles();loadExt();loadCoords();loadRec();loadRd();loadOp();loadStats()}
 /* ---------- Benutzer ---------- */
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
@@ -118,6 +118,16 @@ async function loadRec(){const el=$('#sA');let s;try{s=await api('settings')}cat
     <div class="mut">Wer den Einsatz startet, kann die Vorauswahl ändern. Die Einsatzleitung kann die Aufzeichnung auch später starten, pausieren oder beenden. Die Einsatz-App übernimmt die Einstellung beim nächsten Laden.</div>`;
   [['#recR','rec_real'],['#recE','rec_ex']].forEach(([id,k])=>{const c=$(id);c.checked=!!s[k];
     c.onchange=()=>{c.disabled=true;api('settings/save',{[k]:c.checked?1:0}).catch(e=>{c.checked=!c.checked;fail(e)}).finally(()=>{c.disabled=false})}})}
+/* ---------- Funktionen (Issue #35): je für scharfe Einsätze und Übungen ein- oder ausschalten ---------- */
+// Liste und Bezeichnungen kommen vom Server (FEATURES in api/index.php); gespeichert werden die ausgeschalteten je Art
+async function loadFeat(){const el=$('#sFn');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Funktionen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const fs=s.features||[];
+  el.innerHTML=`<h2>Funktionen</h2><div class="mut">Ausgeschaltete Funktionen erscheinen in der Einsatz-App nicht (Kartenknopf, Fenster, Kartenebene, Menü), und der Server lehnt sie ab. Die Einstellung gilt sofort, auch im laufenden Einsatz. Bereits erfasste Daten bleiben erhalten (Einsatzlog, Replay). Beim Ausschalten endet eine laufende Aufzeichnung, und der Link der öffentlichen Ansicht wird ungültig.</div>
+    <div class="tw"><table><thead><tr><th>Funktion</th><th>Scharfe Einsätze</th><th>Übungen</th></tr></thead><tbody>${fs.map(f=>`<tr><td>${esc(f.name)}</td>${['real','ex'].map(t=>`<td><input type="checkbox" data-fk="${esc(f.k)}" data-ft="${t}" ${f[t]?'checked':''} aria-label="${esc(f.name)}: ${t==='ex'?'Übungen':'Scharfe Einsätze'}"></td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="mut">Die Flussdistanz gibt es auch ohne laufenden Einsatz (☰ → Werkzeuge). Dort ist sie verfügbar, solange sie für scharfe Einsätze oder Übungen eingeschaltet ist. Für beide aus, verschwindet sie ganz.</div>`;
+  el.onchange=e=>{const c=e.target;if(!c.dataset.fk)return;const all=[...el.querySelectorAll('[data-fk]')],off={real:[],ex:[]};
+    all.forEach(x=>{if(!x.checked)off[x.dataset.ft].push(x.dataset.fk)});all.forEach(x=>x.disabled=true);
+    api('settings/save',{features:off}).catch(e=>{c.checked=!c.checked;fail(e)}).finally(()=>all.forEach(x=>x.disabled=false))}}
 /* ---------- Werkzeug Flussdistanz: angezeigte Vergleichsgeschwindigkeiten ---------- */
 async function loadRd(){const el=$('#sF');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Flussdistanz</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   el.innerHTML=`<h2>Flussdistanz</h2><div class="mut">Das Werkzeug «Flussdistanz» in der Einsatz-App zeigt neben der Treibzeit mit der Fliessgeschwindigkeit die Dauer für diese Geschwindigkeiten (z. B. Boot, Fahrzeug).</div>
@@ -163,7 +173,7 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
   el.querySelectorAll('[data-l]').forEach(b=>b.onclick=async()=>{try{const x=X(b.dataset.l),l=await api('incident/log&id='+x.id);openBigLog((x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,()=>l,false)}catch(e){fail(e)}});
   el.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.rp));
   el.querySelectorAll('[data-rpd]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.rpd);
-    if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Positionen und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
+    if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Markierungen, Bereiche und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
       api('incident/replay/delete',{id:x.id}).then(loadStats).catch(fail)})}
 /* ---------- Replay eines aufgezeichneten Einsatzes ---------- */
 // Zeitachse aus den gespeicherten Daten: Standortverläufe (track), Rettlinge (rtrack, created/removed/rescued_at), Positionen & Bereiche (created/removed), Nachrichten-Markierungen (created/unmarked), Log

@@ -26,10 +26,13 @@ body{height:100dvh;display:flex;flex-direction:column}
 .foot{margin-top:1rem;padding-top:.6rem;border-top:1px solid var(--line);font-size:.78rem;color:var(--mut);display:grid;gap:.25rem}.foot b{color:var(--tx)}
 .mmk{width:30px;height:30px;border-radius:8px 8px 8px 0;background:#ffd23f;color:#3a2a00;border:2px solid #fff;display:grid;place-items:center;font-size:.95rem;box-shadow:0 0 0 2px #0008}
 .mmpop b{display:block}.mmpop .t{display:block;color:#666;font-size:.8rem;margin-bottom:.3rem}.mmpop button{margin-top:.5rem;padding:.35rem .6rem;background:var(--alarm);border-color:var(--alarm);color:#fff;font-weight:600}
+#bView{left:auto;right:.7rem;display:grid;place-items:center}#bView[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}
+#viewBox{position:fixed;top:calc(4rem + env(safe-area-inset-top));right:.7rem;z-index:1200;width:min(290px,calc(100vw - 1.4rem));max-height:calc(100dvh - 5rem - env(safe-area-inset-top));overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 2px 10px #000a;padding:.5rem .7rem .7rem}
+#viewBox .vh{display:flex;justify-content:space-between;align-items:center}#viewBox h4{margin:.6rem 0 .2rem;font-size:.8rem;color:var(--mut)}#viewBox label{display:flex;gap:.5rem;align-items:center;padding:.25rem 0}#viewBox .row{margin:.3rem 0}#viewBox .row button{font-size:.82rem;padding:.35rem .4rem}
 #mmShowRow{display:flex;gap:.5rem;align-items:center;padding:.35rem .7rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--mut)}
 .mg .lk{padding:.1rem .45rem;font-size:.75rem;margin:.25rem .3rem 0 0}
 .rm{width:34px;height:34px;border-radius:50%;background:#2ee6d6;color:#00302c;border:3px solid #fff;display:grid;place-items:center;font-weight:800;box-shadow:0 0 0 2px #0008}
-#fitBtns{position:fixed;right:.7rem;bottom:calc(9.6rem + env(safe-area-inset-bottom));z-index:1000;display:flex;flex-direction:column;gap:.4rem}#fitBtns button{background:var(--panel);box-shadow:0 1px 4px #0008;font-size:.85rem;padding:.5rem .6rem}#fitBtns button[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}
+#fitBtns{position:fixed;right:.7rem;bottom:calc(9.6rem + env(safe-area-inset-bottom));z-index:1000;display:flex;flex-direction:column;gap:.4rem}#fitBtns button{background:var(--panel);box-shadow:0 1px 4px #0008;font-size:.85rem;padding:.5rem .6rem}#fitBtns button[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}#fitList{display:flex;flex-direction:column;gap:.4rem}#fitList[hidden]{display:none}#fitBtns #bFold{align-self:flex-end;min-width:46px;font-size:1.1rem;padding:.3rem .6rem;background:var(--panel);border-color:var(--line)}
 /* «Kamerafokus»: Auswahl öffnet sich links neben dem Knopf */
 #camWrap{position:relative;display:flex;flex-direction:column}#camMenu{position:absolute;right:calc(100% + .4rem);top:0;display:flex;flex-direction:column;gap:.4rem;white-space:nowrap}#camMenu[hidden]{display:none}
 /* Seitenfenster «Einsatzkräfte» und «Nachrichten» (Knöpfe rechts unten, immer nur eines offen) und Anzeige beim Folgen */
@@ -43,7 +46,7 @@ body{height:100dvh;display:flex;flex-direction:column}
 .rs{padding:.45rem 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.rs .hd{display:flex;gap:.4rem;align-items:baseline}.rs .hd b{flex:1}.rs .ds{white-space:pre-wrap;font-size:.88rem}.rs small{display:block;color:var(--mut)}
 .rs .st{font-size:.72rem;font-weight:700;padding:0 .4em;border-radius:4px;color:#fff;background:var(--alarm)}.rs .st.loc{background:#ff9f1c;color:#2a1600}.rs .st.ok{background:#35c27a;color:#002b14}
 .rs .bt{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem}.rs button{padding:.3rem .5rem;font-size:.82rem}.rs.done{opacity:.75}#resForm,#peopleForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem}.xtl{display:grid;gap:.3rem;max-height:55vh;overflow:auto}.xtl .pg{margin:.4rem 0 0}.xt{display:flex;gap:.3rem}.xt>button:first-child{flex:1;text-align:left}.xt small{display:block;color:var(--mut);font-weight:400}#resForm[hidden],#peopleForm[hidden]{display:none}
-/* Positionen und Bereiche der Einsatzleitung: Fähnchen (Spitze unten links), Beschriftung, Liste, Zeichenleiste */
+/* Markierungen und Bereiche der Einsatzleitung: Fähnchen (Spitze unten links), Beschriftung, Liste, Zeichenleiste */
 .poi{width:28px;height:28px;border-radius:8px 8px 8px 0;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:.9rem;box-shadow:0 0 0 2px #0008;text-shadow:0 0 2px #000}
 .leaflet-tooltip.poilbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px}.leaflet-tooltip.poilbl::before{display:none}
 .pi{display:flex;align-items:center;gap:.45rem;padding:.35rem 0;border-bottom:1px solid var(--line)}.pi .sw{width:14px;height:14px;border-radius:3px;flex:0 0 auto}.pi .nm{flex:1;min-width:0;overflow-wrap:anywhere}.pi .nm small{display:block;color:var(--mut)}.pi button{padding:.3rem .5rem;font-size:.82rem}
@@ -118,28 +121,32 @@ $('#aOk').onclick=()=>{if(curKey)ackAdd(curKey);curKey=null;$('#alarm').style.di
 // Beim Öffnen des Menüs Abschnitte zurücksetzen (siehe draw: secReset)
 let secReset=true;
 function toggleSheet(f){const w=$('#sheetWrap');if(!w)return;const was=w.classList.contains('open'),o=f===undefined?!was:f;if(o&&!was){secReset=true;draw()}w.classList.toggle('open',o);document.body.classList.toggle('so',o);if(o&&panel)togglePanel(panel,false)}
-function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);if(st&&st.incident){const x=!!st.incident.is_exercise;c.hidden=false;c.classList.toggle('ex',x);c.textContent=(x?'Übung: ':'Einsatz: ')+st.incident.message+' · '+Math.round((st.now-st.incident.alarm_at)/60)+' min'}else c.hidden=true}
-function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><div id="camWrap"><button id="bCam" aria-expanded="false" aria-haspopup="menu" aria-controls="camMenu" title="Kartenausschnitt wählen">Kamerafokus</button><div id="camMenu" role="menu" hidden></div></div><button id="bPeople" aria-expanded="false" aria-controls="people" title="Liste aller Einsatzkräfte">Einsatzkräfte<span class="cnt n" id="peopleCnt" hidden></span></button><button id="bRes" aria-expanded="false" aria-controls="res" title="Rettlinge: Standort oder «gerettet» markieren">Rettlinge<span class="cnt" id="resCnt" hidden></span></button><button id="bMsg" aria-expanded="false" aria-controls="msgs" title="Nachrichten lesen und senden">Nachrichten<span class="cnt" id="msgCnt" hidden></span></button><button id="bPoi" aria-expanded="false" aria-controls="pois" title="Positionen und Bereiche der Einsatzleitung">Positionen &amp; Bereiche</button><button id="bRd" title="Distanz und Zeiten zwischen zwei Punkten entlang des Gewässers">Flussdistanz</button></div><div id="rdBox" hidden role="dialog" aria-label="Flussdistanz" aria-live="polite"></div><div id="pois" hidden role="dialog" aria-label="Positionen und Bereiche"><div class="phead"><b>Positionen &amp; Bereiche</b><button id="bPoiX" aria-label="Liste schliessen">✕</button></div><div id="poiList"></div><div id="poiForm"></div></div><div id="res" hidden role="dialog" aria-label="Rettlinge"><div class="phead"><b>Rettlinge</b><button id="bResX" aria-label="Liste schliessen">✕</button></div><div id="resList"></div><div id="resForm"><button class="pri" data-re="0">+ Rettling erfassen</button></div></div><div id="drawBar" hidden role="status"></div><div id="followChip" hidden role="status"><span></span><button id="bUnfollow" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><div id="people" hidden role="dialog" aria-label="Einsatzkräfte"><div class="phead"><b>Einsatzkräfte</b><button id="bPeopleX" aria-label="Liste schliessen">✕</button></div><div id="peopleList"></div><div id="peopleForm" hidden><button class="pri" data-xe="0">+ Externe Einsatzkraft</button></div></div><div id="msgs" hidden role="dialog" aria-label="Nachrichten"><div class="phead"><b>Nachrichten</b><button id="bMsgX" aria-label="Nachrichten schliessen">✕</button></div><div id="msgList" aria-live="polite"></div><label id="mmShowRow"><input type="checkbox" id="mmShow"> Nachrichten-Markierungen auf der Karte anzeigen</label><div id="msgForm"></div></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
-  $('#bMenu').onclick=()=>toggleSheet();const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOpen=!areaOpen;drawNote()}};an.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&an.classList.contains('more')){e.preventDefault();an.onclick()}};$('#bCam').onclick=()=>camMenu();$('#camMenu').onclick=e=>{const b=e.target.closest('[data-cam]');if(!b)return;camMenu(false);const k=b.dataset.cam;k==='f'?fitForces():fitArea(k||null)};$('#bClose').onclick=()=>toggleSheet(false);$('#chip').onclick=()=>toggleSheet(true);
+function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);
+  [['bRes','res'],['bMsg','msg'],['bPoi','poi'],['bRd','rd']].forEach(([b,k])=>$('#'+b).hidden=!feat(k));if(panel&&PANEL_FEAT[panel]&&!feat(PANEL_FEAT[panel]))togglePanel(panel,false); // ausgeschaltete Funktionen (Issue #35)
+  if(st&&st.incident){const x=!!st.incident.is_exercise;c.hidden=false;c.classList.toggle('ex',x);c.textContent=(x?'Übung: ':'Einsatz: ')+st.incident.message+' · '+Math.round((st.now-st.incident.alarm_at)/60)+' min'}else c.hidden=true}
+function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" class="fab" aria-label="Menü">☰</button><button id="bView" class="fab" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button><div id="viewBox" hidden></div><div id="chip" hidden></div><div id="areaNote" hidden></div><div id="fitBtns" hidden><button id="bFold" aria-expanded="true" aria-controls="fitList"><span class="ar" aria-hidden="true">»</span><span class="cnt" id="foldCnt" hidden></span></button><div id="fitList"><div id="camWrap"><button id="bCam" aria-expanded="false" aria-haspopup="menu" aria-controls="camMenu" title="Kartenausschnitt wählen">Kamerafokus</button><div id="camMenu" role="menu" hidden></div></div><button id="bPeople" aria-expanded="false" aria-controls="people" title="Liste aller Einsatzkräfte">Einsatzkräfte<span class="cnt n" id="peopleCnt" hidden></span></button><button id="bRes" aria-expanded="false" aria-controls="res" title="Rettlinge: Standort oder «gerettet» markieren">Rettlinge<span class="cnt" id="resCnt" hidden></span></button><button id="bMsg" aria-expanded="false" aria-controls="msgs" title="Nachrichten lesen und senden">Nachrichten<span class="cnt" id="msgCnt" hidden></span></button><button id="bPoi" aria-expanded="false" aria-controls="pois" title="Markierungen und Bereiche der Einsatzleitung">Markierungen</button><button id="bRd" title="Distanz und Zeiten zwischen zwei Punkten entlang des Gewässers">Flussdistanz</button></div></div><div id="rdBox" hidden role="dialog" aria-label="Flussdistanz" aria-live="polite"></div><div id="pois" hidden role="dialog" aria-label="Markierungen"><div class="phead"><b>Markierungen</b><button id="bPoiX" aria-label="Liste schliessen">✕</button></div><div id="poiList"></div><div id="poiForm"></div></div><div id="res" hidden role="dialog" aria-label="Rettlinge"><div class="phead"><b>Rettlinge</b><button id="bResX" aria-label="Liste schliessen">✕</button></div><div id="resList"></div><div id="resForm"><button class="pri" data-re="0">+ Rettling erfassen</button></div></div><div id="drawBar" hidden role="status"></div><div id="followChip" hidden role="status"><span></span><button id="bUnfollow" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><div id="people" hidden role="dialog" aria-label="Einsatzkräfte"><div class="phead"><b>Einsatzkräfte</b><button id="bPeopleX" aria-label="Liste schliessen">✕</button></div><div id="peopleList"></div><div id="peopleForm" hidden><button class="pri" data-xe="0">+ Externe Einsatzkraft</button></div></div><div id="msgs" hidden role="dialog" aria-label="Nachrichten"><div class="phead"><b>Nachrichten</b><button id="bMsgX" aria-label="Nachrichten schliessen">✕</button></div><div id="msgList" aria-live="polite"></div><label id="mmShowRow"><input type="checkbox" id="mmShow"> Nachrichten-Markierungen auf der Karte anzeigen</label><div id="msgForm"></div></div><div id="sheetWrap"><div id="sheetBar"><b>Swiftwater Rescue</b><button id="bClose" aria-label="Menü schliessen">✕</button></div><div id="sheet"></div></div>`;
+  $('#bMenu').onclick=()=>toggleSheet();$('#bView').onclick=()=>viewBox();
+  $('#viewBox').onclick=e=>{const a=e.target.closest('[data-va]');if(a)setVis(viewCats().map(v=>v[0]),a.dataset.va==='1');if(e.target.closest('#bViewX'))viewBox(false)};
+  $('#viewBox').onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked)};
+const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOpen=!areaOpen;drawNote()}};an.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&an.classList.contains('more')){e.preventDefault();an.onclick()}};$('#bCam').onclick=()=>camMenu();$('#camMenu').onclick=e=>{const b=e.target.closest('[data-cam]');if(!b)return;camMenu(false);const k=b.dataset.cam;k==='f'?fitForces():fitArea(k||null)};$('#bClose').onclick=()=>toggleSheet(false);$('#chip').onclick=()=>toggleSheet(true);
   followId=null;panel=null;msgSeen=0;msgFormKey='';$('#bPeople').onclick=()=>togglePanel('people');$('#bPeopleX').onclick=()=>togglePanel('people',false);$('#bUnfollow').onclick=stopFollow;
   $('#bMsg').onclick=()=>togglePanel('msgs');$('#bMsgX').onclick=()=>togglePanel('msgs',false);
   $('#bPoi').onclick=()=>togglePanel('pois');$('#bPoiX').onclick=()=>togglePanel('pois',false);
   $('#bRes').onclick=()=>togglePanel('res');$('#bResX').onclick=()=>togglePanel('res',false);
+  $('#bFold').onclick=()=>setBtnFold(!btnFold);updFold();
   rd=null;$('#bRd').onclick=rdOpen; // Flussdistanz (zusätzlich im ☰-Menü, auch ohne Einsatz)
   $('#poiList').onclick=e=>{const b=e.target.closest('[data-pg],[data-pls]');if(!b)return;if(b.dataset.pg)return showPoi(+b.dataset.pg);stopFollow();map.panTo(b.dataset.pls.split(',').map(Number));if(narrow())togglePanel('pois',false)};
   $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
   $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.pf)setPplFold(b.dataset.pf);else if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f)};
   $('#sheet').addEventListener('toggle',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k)e.target.open?openSec.add(k):openSec.delete(k)},true);
   map=L.map('map',{zoomControl:false,rotate:true,touchRotate:true,rotateControl:false}).setView([46.8,8.2],8);L.control.zoom({position:'bottomright'}).addTo(map);addCompass();
-  const bases={};Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
-  const sv=localStorage.getItem('sw_base');bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);
-  // Nachrichten-Markierungen als eigene, ausblendbare Ebene (Ebenen-Symbol oder Häkchen im Nachrichten-Fenster, pro Gerät gemerkt)
+  // Grundkarte: Auswahl im Fenster «Ansicht» (setBase), pro Gerät gemerkt (sw_base)
+  baseLayers={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>baseLayers[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
+  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}baseKey=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;baseLayers[baseKey].addTo(map);
+  // Nachrichten-Markierungen als eigene, ausblendbare Ebene (Fenster «Ansicht» oder Häkchen im Nachrichten-Fenster, pro Gerät gemerkt)
   msgLayer=L.layerGroup();msgLayerKey='';if(mmVisible())msgLayer.addTo(map);poiLayer=L.layerGroup().addTo(map);poiKey='';resLayer=L.layerGroup().addTo(map);resKey='';
-  L.control.layers(bases,{'Nachrichten-Markierungen':msgLayer},{position:'topright'}).addTo(map);
-  map.on('overlayadd overlayremove',e=>{if(e.layer===msgLayer)setMmVisible(e.type==='overlayadd',false)});
   $('#mmShow').checked=mmVisible();$('#mmShow').onchange=e=>setMmVisible(e.target.checked,true);
   $('#msgList').onclick=e=>{const b=e.target.closest('[data-goto]');if(!b)return;const[a,o]=b.dataset.goto.split(',').map(Number);stopFollow();map.panTo([a,o]);if(narrow())togglePanel('msgs',false)};
-  map.on('baselayerchange',e=>{const k=Object.keys(MAP_PROVIDERS).find(k=>MAP_PROVIDERS[k].label===e.name);localStorage.setItem('sw_base',k)});
   layers={};fitted=null;map.on('zoomend',drawMap);map.on('dragstart',()=>{if(followId!=null)stopFollow()}); // von Hand verschieben beendet das Folgen
   if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}
 // Karte drehen (leaflet-rotate): zwei Finger am Handy, Shift + Mausrad oder Ziehen am Kompass am Computer; Klick auf den Kompass richtet nach Norden aus
@@ -161,7 +168,7 @@ function mk(p){const r=roles.find(x=>x.id==p.role_id),fc=p.ext&&p.color,col=r?r.
   return `<div class="mk${p.ext?' ext':''}${ini.length>2?' sm':''}" style="border-color:${col};${fc?`background-color:${fc};color:${txtOn(fc)};`:''}${p.photo?`background-image:url(${p.photo})`:''}">${p.photo?'':esc(ini)}</div>`}
 let msgLayer=null,msgLayerKey='';
 const mmVisible=()=>{try{return localStorage.getItem('sw_msgmarks')!=='0'}catch(e){return true}};
-function setMmVisible(v,apply){try{localStorage.setItem('sw_msgmarks',v?'1':'0')}catch(e){}const c=$('#mmShow');if(c)c.checked=v;if(apply&&msgLayer)v?msgLayer.addTo(map):map.removeLayer(msgLayer)}
+function setMmVisible(v,apply){try{localStorage.setItem('sw_msgmarks',v?'1':'0')}catch(e){}const c=$('#mmShow');if(c)c.checked=v;const c2=$('#viewBox [data-vk="mm"]');if(c2)c2.checked=v;if(apply&&msgLayer)v?msgLayer.addTo(map):map.removeLayer(msgLayer)}
 const canUnmark=x=>x.from_user==me.id||!!(st&&st.can_manage); // sendende Person oder Einsatzleitung (Server prüft)
 // Kartenmarkierungen der Nachrichten: nur neu zeichnen, wenn sich die Menge ändert (ein offenes Popup bleibt offen)
 function drawMsgMarks(){if(!msgLayer)return;const mm=(st&&st.incident&&st.msg_marks)||[],k=mm.map(x=>x.id).join()+'|'+!!(st&&st.can_manage);if(k===msgLayerKey)return;msgLayerKey=k;msgLayer.clearLayers();
@@ -172,6 +179,35 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-mm]');if(!
   api('incident/message/unmark',{id:+b.dataset.mm}).then(()=>{map.closePopup();poll()}).catch(fail)});
 // Punkt auf der Karte wählen (z. B. Markierung ohne eigenen Standort); Hinweis unten über #areaNote
 // Punktwahl (pickPoint, Bereich zeichnen, Flussdistanz): Marker, Bereiche usw. lassen Klicks zur Karte durch, damit überall gewählt werden kann
+/* ---------- Kartenknöpfe einklappen (Issue #42) ---------- */
+// vor allem am Handy, wo die Knöpfe viel Karte verdecken; pro Gerät gemerkt (localStorage sw_btnfold). Eingeklappt zeigt der Knopf die Summe der roten Zähler (Rettlinge, ungelesene Nachrichten)
+let btnFold=(()=>{try{return localStorage.getItem('sw_btnfold')==='1'}catch(e){return false}})();
+function setBtnFold(v){btnFold=v;try{localStorage.setItem('sw_btnfold',v?'1':'0')}catch(e){}if(v)camMenu(false);updFold()}
+function updFold(){const b=$('#bFold');if(!b)return;$('#fitList').hidden=btnFold;b.setAttribute('aria-expanded',!btnFold);$('.ar',b).textContent=btnFold?'«':'»';
+  const t=btnFold?'Kartenknöpfe einblenden':'Kartenknöpfe ausblenden';b.title=t;b.setAttribute('aria-label',t);
+  const n=btnFold?['#resCnt','#msgCnt'].reduce((s,id)=>{const c=$(id);return s+(c&&!c.hidden&&!c.closest('button').hidden?+c.textContent||0:0)},0):0,c=$('#foldCnt');c.hidden=!n;c.textContent=n}
+/* ---------- Funktionen (Issue #35) ---------- */
+// im Einsatz features aus incident/state; ohne Einsatz an, wenn für scharfe Einsätze oder Übungen eingeschaltet (features {real, ex} aus incident/state, vor dem ersten Polling me.features). Unbekannte Schlüssel = an
+const feat=k=>{const f=st&&st.incident&&st.features;if(f)return f[k]!==0;const m=(st&&!st.incident&&st.features)||(me&&me.features);return !m||m.real[k]!==0||m.ex[k]!==0};
+const PANEL_FEAT={res:'res',msgs:'msg',pois:'poi'};
+/* ---------- Ansicht (Issue #34): Grundkarte und Kartenelemente ein- und ausblenden ---------- */
+// pro Gerät gemerkt: sw_base (Grundkarte), sw_view (ausgeblendete Kategorien), Nachrichten-Markierungen wie bisher in sw_msgmarks.
+// Kategorien ausgeschalteter Funktionen fehlen; das Ausblenden einzelner Markierungen und Bereiche gilt zusätzlich. Nur die Karte, die Listen bleiben.
+let baseLayers={},baseKey=null;
+const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['area','Suchgebiet'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['mm','Nachrichten-Markierungen','msg']];
+const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_view')||'[]'))}catch(e){return new Set()}})();
+const vis=k=>k==='mm'?mmVisible():!viewHide.has(k);
+const viewCats=()=>VIEW.filter(v=>!v[2]||feat(v[2]));
+function setVis(keys,on){keys.forEach(k=>{if(k==='mm')setMmVisible(on,true);else on?viewHide.delete(k):viewHide.add(k)});try{localStorage.setItem('sw_view',JSON.stringify([...viewHide]))}catch(e){}
+  drawMap();const b=$('#viewBox');if(b)b.querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk))}
+function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(baseLayers[baseKey]);baseKey=k;baseLayers[k].addTo(map);try{localStorage.setItem('sw_base',k)}catch(e){}}
+function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#bView').setAttribute('aria-expanded',on);if(!on)return;
+  const inc=!!(st&&st.incident);
+  b.innerHTML='<div class="vh"><b>Ansicht</b><button id="bViewX" aria-label="Ansicht schliessen">✕</button></div><h4>Grundkarte</h4>'
+    +Object.entries(MAP_PROVIDERS).map(([k,P])=>`<label><input type="radio" name="vbase" value="${k}" ${k===baseKey?'checked':''}> ${esc(P.label)}</label>`).join('')
+    +(inc?'<h4>Auf der Karte</h4><div class="row"><button data-va="1">Alle einblenden</button><button data-va="0">Alle ausblenden</button></div>'+viewCats().map(([k,t])=>`<label><input type="checkbox" data-vk="${k}" ${vis(k)?'checked':''}> ${t}</label>`).join(''):'')}
+document.addEventListener('click',e=>{const b=$('#viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#bView'))viewBox(false)});
+document.addEventListener('keydown',e=>{const b=$('#viewBox');if(e.key==='Escape'&&b&&!b.hidden){viewBox(false);$('#bView').focus()}});
 const pickMode=on=>{document.body.classList.toggle('picking',on);if(on)map.closePopup()};
 function pickPoint(text){return new Promise(res=>{if(panel)togglePanel(panel,false);toggleSheet(false);window.markPick=text;pickMode(true);drawMap();map.once('click',e=>{window.markPick=null;pickMode(false);drawMap();res(e.latlng)})})}
 // Hinweis unten: Punktwahl, sonst Suchgebiet; bei mehreren PLS Kurzfassung, Klick zeigt alle Zeilen (areaOpen)
@@ -180,16 +216,21 @@ function drawNote(){const n=$('#areaNote');if(!n)return;const pick=window.markPi
   n.innerHTML=pick?esc(pick):!more?esc(areaInfo):areaOpen?areaLines.map(l=>`<div class="ln">${esc(l)}</div>`).join('')+'<div class="tg">▴ weniger</div>':`${esc(areaShort)} <span class="tg">▸ Details</span>`;
   n.hidden=!(areaInfo||pick)}
 function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
-  layers.pls=L.layerGroup(plsList().map(p=>L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))))).addTo(map);
-  try{layers.area=drawArea(i);if(layers.area)layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
+  layers.pls=L.layerGroup(plsList().map(p=>L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at)))));if(vis('pls'))layers.pls.addTo(map);
+  try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
-  const act=[...st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'),...extList()],groups=[];
+  const act=[...(vis('app')?st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'):[]),...(vis('ext')?extList():[])],groups=[];
   act.forEach(p=>{const pt=map.latLngToLayerPoint([p.lat,p.lon]);const g=groups.find(g=>g.pt.distanceTo(pt)<40);g?g.items.push(p):groups.push({pt,items:[p]})});
   layers.pp=L.layerGroup(groups.map(g=>{const a=g.items[0];const ll=[a.lat,a.lon];
     if(g.items.length===1)return L.marker(ll,{icon:L.divIcon({className:'',html:mk(a),iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(esc(a.name)+(roleName(a)?' – '+esc(roleName(a)):'')+(a.ext?' · extern':''));
     return L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="mk cl">${g.items.length}</div>`,iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(g.items.map(x=>esc(x.name)).join(', '))})).addTo(map);
-  layers.rm=L.layerGroup((st.marks||[]).map(x=>L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="rm">R</div>',iconSize:[34,34],iconAnchor:[17,17]}),zIndexOffset:1000}).bindTooltip('Rettling – '+(x.manual?'manuell (Einsatzleitung)':esc(x.name))+' · '+fmtT(x.ts)))).addTo(map);
-  if(fitted!==i.id){const p=plsList()[0];if(p){fitted=i.id;map.setView([p.lat,p.lon],14)}}}
+  layers.rm=L.layerGroup((vis('res')&&st.marks||[]).map(x=>L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="rm">R</div>',iconSize:[34,34],iconAnchor:[17,17]}),zIndexOffset:1000}).bindTooltip('Rettling – '+(x.manual?'manuell (Einsatzleitung)':esc(x.name))+' · '+fmtT(x.ts)))).addTo(map);
+  if(fitted!==i.id)startView(i)}
+// Startansicht beim Öffnen des Einsatzes: Übersicht über alle aktiven Positionen (Einsatzkräfte mit Standort inkl. Externe, nicht gerettete Rettlinge mit Standort, PLS fürs Suchgebiet).
+// Nur einmal pro Einsatz; gibt es noch keine Position, wird es beim nächsten Polling erneut versucht.
+function startView(i){const pts=[...st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'),...extList(),...(st.rescuees||[]).filter(r=>r.lat!=null&&!r.rescued_at),...plsList().filter(p=>p.on)].map(p=>[p.lat,p.lon]);
+  if(!pts.length){const p=plsList()[0];if(!p)return;pts.push([p.lat,p.lon])} // sonst irgendein PLS
+  fitted=i.id;if(pts.length===1)map.setView(pts[0],15);else map.fitBounds(L.latLngBounds(pts),FITPAD)}
 // Alle PLS (Issue #24): der des Einsatzes und die eigenen der Rettlinge; on = zählt fürs Suchgebiet (sources)
 function plsList(){const i=st.incident,src=st.sources||[],l=[];
   if(i.lat!=null)l.push({lat:i.lat,lon:i.lon,at:i.pls_at,label:'PLS des Einsatzes',on:src.some(s=>!s.own)});
@@ -215,7 +256,7 @@ function footInfo(){const i=st&&st.incident,m=i&&st.me,joined=!!(m&&!m.left_at&&
   const rows=[['Server',location.host+location.pathname.replace(/[^/]*$/,'')],['Angemeldet',`${me.name} (${me.username}) · ${me.is_admin?'Administrator':'Einsatzkraft'}${me.exercise_mode?' · Übungsmodus an':''}`]];
   if(i){rows.push(['Im Einsatz',joined?modeOf(m.mode).name+(leadMode(m.mode)?' (Rechte der Einsatzleitung)':'')+(r?' · Spezialrolle '+r.name:''):'nicht angenommen']);
     const yes=[],no=[],add=(c,t)=>(c?yes:no).push(t);
-    add(st.can_manage,'Einsatz verwalten und beenden');add(st.can_manage,'Spezialrollen setzen');add(st.can_manage,'Einsatzkräfte entfernen');add(st.can_manage,'Rettlinge entfernen');add(st.can_manage,'Positionen und Bereiche markieren');add(st.can_manage,'Externe Einsatzkräfte erfassen');add(st.can_manage,'Öffentliche Ansicht steuern');
+    add(st.can_manage,'Einsatz verwalten und beenden');add(st.can_manage,'Spezialrollen setzen');add(st.can_manage,'Einsatzkräfte entfernen');add(st.can_manage,'Rettlinge entfernen');add(st.can_manage,'Markierungen und Bereiche setzen');add(st.can_manage,'Externe Einsatzkräfte erfassen');add(st.can_manage,'Öffentliche Ansicht steuern');
     add(st.can_flow,'Fliessgeschwindigkeit setzen');add(!!st.can_read_messages,'Nachrichten lesen');add(joined&&st.can_message,'Nachrichten senden');add(sh,'Standort teilen');
     add(canRes(),'Rettlinge erfassen, Standort und «gerettet» markieren');
     if(r&&r.is_post)yes.push('Posten: Suchgebiet endet am eigenen Standort');
@@ -236,8 +277,8 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     // eigenes Koordinatensystem ('' = Standard der Verwaltung); Kartenebenen neu aufbauen, damit Popups die neue Anzeige zeigen
     $('#csys').onchange=e=>{const v=e.target.value,old=me.coord_sys;e.target.blur();me.coord_sys=v||null;poiKey=resKey='';api('me/settings',{coord_sys:v}).then(poll).catch(x=>{me.coord_sys=old;fail(x);poll()})}};
   // Werkzeuge: auch ohne Einsatz verfügbar (im Einsatz zusätzlich über den Kartenknopf)
-  const tools=sec('tools','Werkzeuge',`<div class="row"><button id="bRdM">Flussdistanz messen</button></div><div class="mut">Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei ${rdSpeeds().join(', ')} km/h.</div>`);
-  const bindTools=()=>{$('#bRdM').onclick=rdOpen};
+  const tools=!feat('rd')?'':sec('tools','Werkzeuge',`<div class="row"><button id="bRdM">Flussdistanz messen</button></div><div class="mut">Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei ${rdSpeeds().join(', ')} km/h.</div>`);
+  const bindTools=()=>{if($('#bRdM'))$('#bRdM').onclick=rdOpen};
   if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+tools+acc+footInfo();$('#bNew').onclick=newView;bindTools();return bindAcc()}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
@@ -258,7 +299,7 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   // alle anderen sehen die Einsatzkräfte über den Kartenknopf «Einsatzkräfte»
   // Aufzeichnung fürs Replay: record 0 aus/beendet, 1 läuft, 2 pausiert; nach «Beenden» jederzeit wieder aufnehmbar
   const REC={0:[i.recorded?'Beendet. Bisherige Aufzeichnung bleibt für das Replay erhalten.':'Aus',[['start',i.recorded?'Wieder aufnehmen':'Aufzeichnung starten']]],1:['● Läuft',[['pause','Pausieren'],['stop','Beenden']]],2:['❚❚ Pausiert',[['resume','Fortsetzen'],['stop','Beenden']]]}[i.record]||['?',[]];
-  if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<h4 style="margin:.3rem 0">PLS des Einsatzes</h4><div class="mut">${i.lat!=null?`${esc(fc(i.lat,i.lon)||'gesetzt')} · Drift ab ${fmtDT(i.pls_at)}`:'Nicht gesetzt. Ohne PLS des Einsatzes braucht jeder Rettling einen eigenen PLS.'}</div><div class="row"><button id="bPls">${i.lat!=null?'PLS verschieben':'PLS setzen'}</button>${i.lat!=null?'<button id="bPlsX">PLS entfernen</button>':''}</div><div class="mut">Gilt für alle Rettlinge ohne eigenen PLS.</div><h4 style="margin:.3rem 0">Aufzeichnung (Replay in der Verwaltung)</h4><div class="mut">${esc(REC[0])}</div><div class="row">${REC[1].map(([a,l])=>`<button data-rec="${a}">${l}</button>`).join('')}</div><div class="mut">Gespeichert werden die Standortverläufe aller Teilnehmenden, solange die Aufzeichnung läuft.</div>${pubSec(i)}<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
+  if(st.can_manage)h+=sec('manage','Einsatz verwalten',`<h4 style="margin:.3rem 0">PLS des Einsatzes</h4><div class="mut">${i.lat!=null?`${esc(fc(i.lat,i.lon)||'gesetzt')} · Drift ab ${fmtDT(i.pls_at)}`:'Nicht gesetzt. Ohne PLS des Einsatzes braucht jeder Rettling einen eigenen PLS.'}</div><div class="row"><button id="bPls">${i.lat!=null?'PLS verschieben':'PLS setzen'}</button>${i.lat!=null?'<button id="bPlsX">PLS entfernen</button>':''}</div><div class="mut">Gilt für alle Rettlinge ohne eigenen PLS.</div>${feat('rec')?`<h4 style="margin:.3rem 0">Aufzeichnung (Replay in der Verwaltung)</h4><div class="mut">${esc(REC[0])}</div><div class="row">${REC[1].map(([a,l])=>`<button data-rec="${a}">${l}</button>`).join('')}</div><div class="mut">Gespeichert werden die Standortverläufe aller Teilnehmenden, solange die Aufzeichnung läuft.</div>`:''}${feat('pub')?pubSec(i):''}<div class="row"><button class="pri" id="bEnd">Einsatz beenden</button></div>`);
   const act=st.participants.filter(p=>p.mode!=='declined');
   if(st.can_manage)h+=sec('crew',`Einsatzkräfte (${act.filter(p=>!p.left_at).length})`,`<table class="crew">${act.map(p=>`<tr><td>${esc(p.name)}<small>${p.left_at?'verlassen':esc(modeOf(p.mode).name)}</small></td><td>${p.left_at?esc(roleName(p)||''):leadMode(p.mode)?'<span class="mut">Rechte der Einsatzleitung</span>':st.can_manage?roleSel('',p.role_id,`data-rset="${p.user_id}" aria-label="Spezialrolle von ${esc(p.name)}"`):esc(roleName(p)||'')}</td>${st.can_manage&&!p.left_at&&p.user_id!=me.id?`<td><button data-kick="${p.user_id}" data-n="${esc(p.name)}" aria-label="${esc(p.name)} aus dem Einsatz entfernen" title="Aus dem Einsatz entfernen">✕</button></td>`:'<td></td>'}</tr>`).join('')}</table>`);
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
@@ -273,14 +314,14 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     if($('#bPlsX'))$('#bPlsX').onclick=()=>confirm('PLS des Einsatzes entfernen? Rettlinge ohne eigenen PLS haben dann kein Suchgebiet mehr.')&&api('incident/pls',{clear:1}).then(poll).catch(fail);
     $('#sheet').querySelectorAll('[data-rec]').forEach(b=>b.onclick=()=>{b.disabled=true;api('incident/record',{action:b.dataset.rec}).then(poll).catch(e=>{b.disabled=false;fail(e)})});
     // Öffentliche Ansicht ein/aus und anonym (Namen ausblenden); Häkchen verlieren den Fokus, damit das Menü wieder neu gezeichnet wird
-    ['pubOn','pubAnon'].forEach(k=>{const c=$('#'+k);if(c)c.onchange=()=>{c.blur();if(k==='pubOn'&&c.checked&&!confirm('Öffentliche Ansicht einschalten?\n\nWer den Link hat, sieht ohne Anmeldung die Karte mit den Standorten der Einsatzkräfte, Positionen, Bereichen und Rettlingen (keine Nachrichten, kein Einsatzlog).')){c.checked=false;return}
+    ['pubOn','pubAnon'].forEach(k=>{const c=$('#'+k);if(c)c.onchange=()=>{c.blur();if(k==='pubOn'&&c.checked&&!confirm('Öffentliche Ansicht einschalten?\n\nWer den Link hat, sieht ohne Anmeldung die Karte mit den Standorten der Einsatzkräfte, Markierungen, Bereichen und Rettlingen (keine Nachrichten, kein Einsatzlog).')){c.checked=false;return}
       api('incident/public',k==='pubOn'?{on:c.checked}:{anon:c.checked}).then(poll).catch(e=>{fail(e);poll()})}});
     if($('#bPubCp'))$('#bPubCp').onclick=()=>{const t=$('#pubUrl');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>alert('Link kopiert.')).catch(()=>{try{document.execCommand('copy');alert('Link kopiert.')}catch(e){}})}}}
 // Öffentliche Ansicht (Public Mode, nur Einsatzleitung): Link public.html?k=<public_token> zum Zuschauen ohne Login
 const pubUrl=t=>location.origin+location.pathname.replace(/[^/]*$/,'')+'public.html?k='+t;
 function pubSec(i){const u=i.public&&i.public_token?pubUrl(i.public_token):'';
   return `<h4 style="margin:.8rem 0 .3rem">Öffentliche Ansicht (ohne Login)</h4><label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubOn" ${i.public?'checked':''}> Zuschauen ohne Anmeldung erlauben</label><label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubAnon" ${i.public_anon?'checked':''}> Anonym: Namen ausblenden (nur Spezialrolle bzw. Einrückoption)</label>
-    ${u?`<div class="row"><input id="pubUrl" readonly value="${esc(u)}" aria-label="Link zur öffentlichen Ansicht" onfocus="this.select()"><button id="bPubCp">Link kopieren</button><a class="btn" href="${esc(u)}" target="_blank" rel="noopener">Öffnen</a></div>`:''}<div class="mut">Sichtbar sind Karte, Standorte, Positionen, Bereiche und Rettlinge, keine Nachrichten und kein Einsatzlog. Ausschalten macht den Link ungültig.</div>`}
+    ${u?`<div class="row"><input id="pubUrl" readonly value="${esc(u)}" aria-label="Link zur öffentlichen Ansicht" onfocus="this.select()"><button id="bPubCp">Link kopieren</button><a class="btn" href="${esc(u)}" target="_blank" rel="noopener">Öffnen</a></div>`:''}<div class="mut">Sichtbar sind Karte, Standorte, Markierungen, Bereiche und Rettlinge, keine Nachrichten und kein Einsatzlog. Ausschalten macht den Link ungültig.</div>`}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'&&shares(mode))track();await poll()}catch(e){fail(e)}}
 function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined')track();await poll()}catch(e){fail(e)}}
@@ -297,8 +338,10 @@ function stop(){if(watchId!=null&&navigator.geolocation)navigator.geolocation.cl
 function photo(e){const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d'),s=Math.min(img.width,img.height);x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,96,96);api('me/photo',{photo:c.toDataURL('image/jpeg',.8)}).then(()=>alert('Profilbild gespeichert')).catch(fail)};img.src=URL.createObjectURL(f)}
 function newView(){creating=true;$('#sheet').innerHTML=`<h3>Einsatz starten</h3><div class="row"><select id="nex" aria-label="Art des Einsatzes"><option value="0">Scharfer Einsatz (kritische Alarmierung)</option><option value="1">Übung (normale Benachrichtigung)</option></select></div><label class="row" style="align-items:center"><input type="checkbox" id="nrec" style="flex:0 0 auto"> <span>Aufzeichnen (Replay in der Verwaltung)</span></label><div class="mut">Speichert die Standortverläufe aller Teilnehmenden für die spätere Auswertung.</div><div class="row"><textarea id="nm" placeholder="Meldung" rows="2"></textarea></div><div class="row"><input id="nlat" placeholder="Breite (PLS, optional)"><input id="nlon" placeholder="Länge (PLS, optional)"></div><div class="row"><label class="mut">Alarmeingang (Standard: jetzt)<input id="nat" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></label></div><div class="mut">PLS (optional): auf die Karte tippen oder Koordinaten eingeben. Ohne PLS entsteht das Suchgebiet erst mit dem PLS eines Rettlings.</div><div class="row"><button class="pri" id="nGo">Alarm auslösen</button><button id="nX">Abbrechen</button></div>`;
   // Vorauswahl je Art aus der Verwaltung (rec_default: [scharf, Übung], Standard nur Übungen), solange die Person das Häkchen nicht selbst gesetzt hat
+  // ausgeschaltete Aufzeichnung (Funktionen, Issue #35): Häkchen samt Hinweis ausblenden, der Server zeichnet dann nicht auf
   const recDef=()=>!!((me&&me.rec_default)||[0,1])[+$('#nex').value];$('#nrec').checked=recDef();
-  let recSet=false;$('#nrec').onchange=()=>{recSet=true};$('#nex').onchange=()=>{if(!recSet)$('#nrec').checked=recDef()};
+  const recRow=$('#nrec').closest('label'),recShow=()=>{const f=me&&me.features,on=!f||(+$('#nex').value?f.ex:f.real).rec!==0;recRow.style.display=recRow.nextElementSibling.style.display=on?'':'none'};recShow();
+  let recSet=false;$('#nrec').onchange=()=>{recSet=true};$('#nex').onchange=()=>{if(!recSet)$('#nrec').checked=recDef();recShow()};
   let pin;map.once('click',function f(e){$('#nlat').value=e.latlng.lat.toFixed(6);$('#nlon').value=e.latlng.lng.toFixed(6);pin&&map.removeLayer(pin);pin=L.marker(e.latlng).addTo(map);map.once('click',f)});
   $('#nX').onclick=()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);draw()};
   $('#nGo').onclick=()=>api('incident/start',{is_exercise:+$('#nex').value,record:$('#nrec').checked?1:0,message:$('#nm').value,...($('#nlat').value.trim()||$('#nlon').value.trim()?{lat:+$('#nlat').value,lon:+$('#nlon').value}:{}),alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined}).then(()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);poll()}).catch(fail)}
@@ -347,8 +390,8 @@ function renderPeople(){const o=$('#people');if(!o)return;const on=panel==='peop
   // zwei Gruppen (mit App / extern), je zusammenklappbar, darin nach Spezialrolle
   const roleGrp=list=>byRole(list).map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.map(p=>p.ext?xrow(p):row(p)).join('')).join('');
   const xl=extList(),fold=(k,t,list,empty)=>{const c=pplFold.has(k);return `<button class="pfold" data-pf="${k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button>`+(c?'':roleGrp(list)||`<div class="mut" style="padding:.4rem 0">${empty}</div>`)};
-  $('#peopleList').innerHTML=fold('int','Einsatzkräfte mit App',ap,'Noch niemand im Einsatz.')+(xl.length||st.can_manage?fold('ext','Externe Einsatzkräfte',xl,'Keine erfasst.'):'');
-  $('#peopleForm').hidden=!st.can_manage}
+  $('#peopleList').innerHTML=fold('int','Einsatzkräfte mit App',ap,'Noch niemand im Einsatz.')+(feat('ext')&&(xl.length||st.can_manage)?fold('ext','Externe Einsatzkräfte',xl,'Keine erfasst.'):'');
+  $('#peopleForm').hidden=!(st.can_manage&&feat('ext'))}
 // zugeklappte Gruppen im Fenster «Einsatzkräfte», pro Gerät gemerkt (localStorage sw_pplfold)
 const pplFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pplfold')||'[]'))}catch(e){return new Set()}})();
 function setPplFold(k){pplFold.has(k)?pplFold.delete(k):pplFold.add(k);try{localStorage.setItem('sw_pplfold',JSON.stringify([...pplFold]))}catch(e){}renderPeople()}
@@ -390,7 +433,7 @@ function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!
   const key='sw_msgseen_'+(st&&st.incident?st.incident.id:0);
   if(!msgSeen)try{msgSeen=+localStorage.getItem(key)||0}catch(e){}
   if(on&&ms.length&&ms[ms.length-1].id>msgSeen){msgSeen=ms[ms.length-1].id;try{localStorage.setItem(key,msgSeen)}catch(e){}}
-  const unread=ms.filter(m=>m.id>msgSeen&&m.from_user!=me.id).length,c=$('#msgCnt');c.hidden=!unread;c.textContent=unread;
+  const unread=ms.filter(m=>m.id>msgSeen&&m.from_user!=me.id).length,c=$('#msgCnt');c.hidden=!unread;c.textContent=unread;updFold();
   if(!on)return;
   const L=$('#msgList'),atEnd=L.scrollHeight-L.scrollTop-L.clientHeight<30,joined=!!(st.me&&!st.me.left_at&&st.me.mode!=='declined');
   const marked=new Set((st.msg_marks||[]).map(x=>x.id));
@@ -421,7 +464,7 @@ function followNow(){if(followId==null)return updateFollowChip();const p=activeP
   if(p.lat!=null)map.panTo([p.lat,p.lon]);updateFollowChip()}
 function stopFollow(){followId=null;updateFollowChip();renderPeople()}
 function updateFollowChip(){const c=$('#followChip');if(!c)return;const p=followId!=null&&activePeople().find(x=>x.user_id===followId);c.hidden=!p;if(p)c.firstChild.textContent='Folgt: '+p.name+(p.lat==null?' (kein Standort)':'')}
-/* ---------- Positionen und Bereiche der Einsatzleitung (Kartenknopf «Positionen & Bereiche») ---------- */
+/* ---------- Markierungen und Bereiche der Einsatzleitung (Kartenknopf «Markierungen») ---------- */
 // für alle sichtbar; ein-/ausblenden pro Gerät und Einsatz (localStorage sw_poihide_<id>, gespeichert werden nur die ausgeblendeten, Neues ist also immer sichtbar)
 const POI_COLORS=[['#ff9f1c','Orange'],['#ff4d2e','Rot'],['#ffd23f','Gelb'],['#35c27a','Grün'],['#1d7fd1','Blau'],['#c78cff','Violett']];
 let poiLayer=null,poiKey='',poiHide=new Set(),poiHideInc=null;
@@ -429,27 +472,27 @@ function poiHideLoad(){const id=st&&st.incident?st.incident.id:0;if(poiHideInc==
 function setPoiHidden(ids,hide){poiHideLoad();ids.forEach(id=>hide?poiHide.add(id):poiHide.delete(id));try{localStorage.setItem('sw_poihide_'+poiHideInc,JSON.stringify([...poiHide]))}catch(e){}drawPois();renderPois()}
 const haOf=pts=>{const k=111320*Math.cos(pts[0][0]*Math.PI/180);let a=0;pts.forEach((p,j)=>{const q=pts[(j+1)%pts.length];a+=p[1]*k*q[0]*111320-q[1]*k*p[0]*111320});return Math.abs(a)/2/1e4};
 const poiInfo=p=>{const a=p.kind==='area',c=a?L.latLngBounds(p.pts).getCenter():{lat:p.pts[0][0],lng:p.pts[0][1]};
-  return (a?'Bereich, ca. '+haOf(p.pts).toFixed(1)+' ha'+fcs(c.lat,c.lng,' · Mitte '):'Position'+fcs(c.lat,c.lng))+' · '+(p.by_name||'')+' · '+fmtT(p.created)};
+  return (a?'Bereich, ca. '+haOf(p.pts).toFixed(1)+' ha'+fcs(c.lat,c.lng,' · Mitte '):'Markierung'+fcs(c.lat,c.lng))+' · '+(p.by_name||'')+' · '+fmtT(p.created)};
 // Karte: nur neu zeichnen, wenn sich Inhalt, Sichtbarkeit oder Berechtigung ändern (ein offenes Popup bleibt offen)
-function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color]))+[...poiHide]+!!(st&&st.can_manage);if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
-  ps.filter(p=>!poiHide.has(p.id)).forEach(p=>{const area=p.kind==='area';
+function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color]))+[...poiHide]+vis('pt')+vis('ar')+!!(st&&st.can_manage);if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
+  ps.filter(p=>!poiHide.has(p.id)&&vis(p.kind==='area'?'ar':'pt')).forEach(p=>{const area=p.kind==='area';
     const l=area?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.marker(p.pts[0],{icon:L.divIcon({className:'',html:`<div class="poi" style="background:${p.color}">⚑</div>`,iconSize:[28,28],iconAnchor:[2,30]}),zIndexOffset:800});
     l.bindTooltip(esc(p.name),{permanent:true,direction:area?'center':'right',className:'poilbl',offset:area?[0,0]:[14,-16]})
      .bindPopup(`<div class="mmpop"><b>${esc(p.name)}</b><span class="t">${esc(poiInfo(p))}</span>${st.can_manage?`<button data-pdel="${p.id}">Entfernen</button>`:''}</div>`).addTo(poiLayer)})}
 function renderPois(){const o=$('#pois');if(!o)return;const on=panel==='pois'&&!!(st&&st.incident);o.hidden=!on;$('#bPoi').setAttribute('aria-expanded',on);if(!on)return;poiHideLoad();
-  const ps=st.pois||[],grp=[['point','Positionen'],['area','Bereiche']].map(([k,t])=>({k,t,items:ps.filter(p=>p.kind===k)}));
+  const ps=st.pois||[],grp=[['point','Markierungen'],['area','Bereiche']].map(([k,t])=>({k,t,items:ps.filter(p=>p.kind===k)}));
   const row=p=>`<div class="pi"><input type="checkbox" data-pv="${p.id}" ${poiHide.has(p.id)?'':'checked'} aria-label="${esc(p.name)} auf der Karte anzeigen"><span class="sw" style="background:${p.color}"></span><div class="nm">${esc(p.name)}<small>${esc(poiInfo(p))}</small></div><button data-pg="${p.id}" title="Auf der Karte zeigen">Zeigen</button>${st.can_manage?`<button data-pdel="${p.id}" aria-label="${esc(p.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div>`;
   // PLS (Point last seen) als eigene Kategorie zuoberst, nicht ausblendbar
   const pl=plsList(),pls=`<div class="pg">Point last seen (PLS) · immer sichtbar</div>`+(pl.map(p=>`<div class="pi"><span class="nochk"></span><span class="plsw${p.on?'':' off'}"></span><div class="nm">${esc(p.label)}<small>${esc(fcs(p.lat,p.lon,'',' · '))}Drift ab ${fmtDT(p.at)}${p.on?'':' · zählt nicht fürs Suchgebiet'}</small></div><button data-pls="${p.lat},${p.lon}" title="Auf der Karte zeigen">Zeigen</button></div>`).join('')||'<div class="mut">Kein PLS gesetzt</div>');
   $('#poiList').innerHTML=pls+grp.map(g=>`<label class="pg"><input type="checkbox" data-pgrp="${g.k}" ${g.items.length&&g.items.every(p=>!poiHide.has(p.id))?'checked':''} ${g.items.length?'':'disabled'} aria-label="Alle ${g.t} anzeigen"> ${g.t} (${g.items.length})</label>`+(g.items.map(row).join('')||'<div class="mut">Keine</div>')).join('');
-  const f=$('#poiForm'),ok=!!st.can_manage;f.hidden=!ok;if(ok&&!$('#bPoiP')){f.innerHTML='<div class="row" style="margin:0"><button class="pri" id="bPoiP">+ Position</button><button class="pri" id="bPoiA">+ Bereich</button></div>';$('#bPoiP').onclick=()=>newPoi('point');$('#bPoiA').onclick=()=>newPoi('area')}}
-function showPoi(id){const p=(st.pois||[]).find(x=>x.id===id);if(!p)return;stopFollow();if(poiHide.has(id))setPoiHidden([id],false);
+  const f=$('#poiForm'),ok=!!st.can_manage;f.hidden=!ok;if(ok&&!$('#bPoiP')){f.innerHTML='<div class="row" style="margin:0"><button class="pri" id="bPoiP">+ Markierung</button><button class="pri" id="bPoiA">+ Bereich</button></div>';$('#bPoiP').onclick=()=>newPoi('point');$('#bPoiA').onclick=()=>newPoi('area')}}
+function showPoi(id){const p=(st.pois||[]).find(x=>x.id===id);if(!p)return;stopFollow();if(poiHide.has(id))setPoiHidden([id],false);const vk=p.kind==='area'?'ar':'pt';if(!vis(vk))setVis([vk],true);
   if(p.kind==='area')map.fitBounds(L.latLngBounds(p.pts),FITPAD);else map.panTo(p.pts[0]);if(narrow())togglePanel('pois',false)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pdel]');if(!b)return;const p=((st&&st.pois)||[]).find(x=>x.id==b.dataset.pdel);
-  if(!p||!confirm(`${p.kind==='area'?'Bereich':'Position'} «${p.name}» für alle entfernen?`))return;api('incident/poi/remove',{id:p.id}).then(()=>{map.closePopup();poll()}).catch(fail)});
+  if(!p||!confirm(`${p.kind==='area'?'Bereich':'Markierung'} «${p.name}» für alle entfernen?`))return;api('incident/poi/remove',{id:p.id}).then(()=>{map.closePopup();poll()}).catch(fail)});
 // Neu (nur Einsatzleitung): Bezeichnung und Farbe, danach Punkt antippen bzw. Eckpunkte zeichnen
 function newPoi(kind){const area=kind==='area';
-  dlg(area?'Bereich markieren':'Position markieren',`<label class="mut">Bezeichnung<input id="poiN" maxlength="80" placeholder="${area?'z. B. Suchsektor Nord':'z. B. Treffpunkt Boote'}"></label><label class="mut">Farbe<select id="poiC">${POI_COLORS.map(([c,n])=>`<option value="${c}">${n}</option>`).join('')}</select></label><div class="mut">${area?'Danach die Eckpunkte des Bereichs auf der Karte antippen.':'Danach die Position auf der Karte antippen.'}</div>`,
+  dlg(area?'Bereich markieren':'Markierung setzen',`<label class="mut">Bezeichnung<input id="poiN" maxlength="80" placeholder="${area?'z. B. Suchsektor Nord':'z. B. Treffpunkt Boote'}"></label><label class="mut">Farbe<select id="poiC">${POI_COLORS.map(([c,n])=>`<option value="${c}">${n}</option>`).join('')}</select></label><div class="mut">${area?'Danach die Eckpunkte des Bereichs auf der Karte antippen.':'Danach den Punkt auf der Karte antippen.'}</div>`,
     async d=>{const name=$('#poiN',d).value.trim(),color=$('#poiC',d).value;if(!name)throw new Error('Bitte eine Bezeichnung eingeben.');
       if(area)return startDraw(name,color);
       pickPoint(`Tippe auf die Karte, um «${name}» zu setzen.`).then(q=>api('incident/poi',{kind,name,color,pts:[[q.lat,q.lng]]})).then(()=>{togglePanel('pois',true);poll()}).catch(fail)},'Weiter')}
@@ -470,7 +513,7 @@ const rdSpeeds=()=>(me&&me.rd_speeds&&me.rd_speeds.length?me.rd_speeds:[10,20,30
 let rd=null,rdNet=null;     // rd: laufende Messung {step a|b|load|done, a, b, res, err, layer}; rdNet: zuletzt geladenes Netz {bb, g}
 const kmT=m=>m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?2:1)+' km';
 const durS=s=>{if(!isFinite(s))return'–';const m=Math.round(s/60);return m<1?'< 1 min':m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min'};
-function rdOpen(){if(panel)togglePanel(panel,false);toggleSheet(false);stopFollow();rdClose();
+function rdOpen(){if(!feat('rd'))return;if(panel)togglePanel(panel,false);toggleSheet(false);stopFollow();rdClose();
   rd={step:'a',layer:L.layerGroup().addTo(map)};map.doubleClickZoom.disable();map.on('click',rdClick);pickMode(true);rdRender()}
 function rdClose(){if(!rd)return;map.off('click',rdClick);map.doubleClickZoom.enable();pickMode(false);map.removeLayer(rd.layer);rd=null;$('#rdBox').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&rd&&!big)rdClose()});
@@ -544,12 +587,12 @@ const resSt=r=>r.rescued_at?'ok':r.lat!=null?'loc':'miss',RES_ST={miss:'Vermisst
 // PLS eines Rettlings: eigener oder der des Einsatzes (Issue #24)
 const resPls=r=>r.pls_lat!=null?'Eigener PLS'+fcs(r.pls_lat,r.pls_lon)+' · Drift ab '+fmtDT(r.pls_at):st.incident.lat!=null?'PLS des Einsatzes':'Kein PLS';
 const resInfo=r=>(r.rescued_at?`Gerettet ${fmtT(r.rescued_at)} · ${r.rescued_name||''}`:r.lat!=null?`Standort ${ago(r.loc_at)} · ${r.loc_name||''}`:'Noch kein Standort')+fcs(r.lat,r.lon);
-function drawRes(){if(!resLayer)return;const rs=((st&&st.incident&&st.rescuees)||[]).filter(r=>r.lat!=null),k=JSON.stringify(rs.map(r=>[r.id,r.name,r.descr,r.lat,r.lon,r.loc_at,r.rescued_at]))+canRes();if(k===resKey)return;resKey=k;resLayer.clearLayers();
+function drawRes(){if(!resLayer)return;const rs=(vis('res')&&st&&st.incident&&st.rescuees||[]).filter(r=>r.lat!=null),k=JSON.stringify(rs.map(r=>[r.id,r.name,r.descr,r.lat,r.lon,r.loc_at,r.rescued_at]))+canRes();if(k===resKey)return;resKey=k;resLayer.clearLayers();
   rs.forEach(r=>{const ok=!!r.rescued_at;L.marker([r.lat,r.lon],{icon:L.divIcon({className:'',html:`<div class="rsk${ok?' ok':''}">${ok?'✓':'R'}</div>`,iconSize:[32,32],iconAnchor:[16,16]}),zIndexOffset:ok?950:1100})
     .bindTooltip(esc(r.name),{permanent:true,direction:'right',className:'poilbl',offset:[14,0]})
     .bindPopup(`<div class="mmpop"><b>${esc(r.name)}</b><span class="t">${RES_ST[resSt(r)]} · ${esc(resInfo(r))}</span>${r.descr?esc(r.descr):''}${canRes()?`<br><button data-rr="${r.id}" data-v="${ok?0:1}">${ok?'«Gerettet» zurücknehmen':'Gerettet'}</button>`:''}</div>`).addTo(resLayer)})}
 function renderRes(){const o=$('#res');if(!o)return;const on=panel==='res'&&!!(st&&st.incident),rs=(st&&st.incident&&st.rescuees)||[];o.hidden=!on;$('#bRes').setAttribute('aria-expanded',on);
-  const open=rs.filter(r=>!r.rescued_at).length,c=$('#resCnt');c.hidden=!open;c.textContent=open;
+  const open=rs.filter(r=>!r.rescued_at).length,c=$('#resCnt');c.hidden=!open;c.textContent=open;updFold();
   if(!on)return;const can=canRes(),own=can&&st.me&&!st.me.left_at&&shares(st.me.mode);
   const row=r=>{const s=resSt(r);return `<div class="rs${s==='ok'?' done':''}"><div class="hd"><b>${esc(r.name)}</b><span class="st ${s}">${RES_ST[s]}</span></div>${r.descr?`<div class="ds">${esc(r.descr)}</div>`:''}<small>${esc(resInfo(r))}</small><small>${esc(resPls(r))}</small><div class="bt">`
     +(can&&s!=='ok'?`${own?`<button class="pri" data-rl="${r.id}" title="Standort des Rettlings = mein aktueller Standort">📍 Fundort = mein Standort</button>`:''}<button data-rp="${r.id}" title="Fundort des Rettlings auf der Karte antippen">📍 Fundort auf Karte</button><button class="pri" data-rr="${r.id}" data-v="1">Gerettet</button>`:'')

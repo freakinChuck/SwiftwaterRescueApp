@@ -78,6 +78,13 @@ const COORDS = ['lv95', 'lv03', 'wgs84', 'wgs84dms']; // Koordinatensysteme für
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 // Reihenfolge der Abfrage: Einstellung overpass_urls (JSON-Liste, in der Verwaltung unter «Gewässerdaten»), leer = OVERPASS
 function overpassUrls() { $v = json_decode(setting('overpass_urls', ''), true); return is_array($v) && $v ? $v : OVERPASS; }
+// Abschaltbare Funktionen (Issue #35), je für scharfe Einsätze und Übungen getrennt (Abschnitt «Funktionen» in der Verwaltung).
+// Neue Funktionen hier aufnehmen (Schlüssel => Bezeichnung) und ihre Routen in FEATURE_ROUTES; das Frontend liest features aus incident/state bzw. me.
+const FEATURES = ['res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
+                  'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)'];
+const FEATURE_ROUTES = ['incident/mark' => 'res', 'incident/mark/remove' => 'res', 'incident/rescuee/save' => 'res', 'incident/rescuee/locate' => 'res', 'incident/rescuee/rescued' => 'res', 'incident/rescuee/remove' => 'res',
+                        'incident/message' => 'msg', 'incident/message/unmark' => 'msg', 'incident/poi' => 'poi', 'incident/poi/remove' => 'poi',
+                        'incident/external/save' => 'ext', 'incident/external/remove' => 'ext', 'incident/public' => 'pub', 'incident/record' => 'rec'];
 const OVERPASS_KEEP_S = 7 * 86400; // abgelaufene Einträge so lange als Rückfall behalten, falls Overpass nicht erreichbar ist
 
 if ($route === 'login') {
@@ -94,14 +101,14 @@ if ($route === 'login') {
 // Anonym (public_anon=1): statt Namen nur Spezialrolle bzw. Einrückoption, Rettlinge nummeriert und ohne Beschreibung.
 function pubIncident() { global $db; $k = (string)($_GET['k'] ?? '');
   $s = $db->prepare("SELECT * FROM incidents WHERE public_token=?"); $s->execute([$k]); $inc = $s->fetch(); $s->closeCursor();
-  if (!preg_match('/^[0-9a-f]{32}$/', $k) || !$inc) fail('Dieser Link ist ungültig oder die öffentliche Ansicht wurde beendet.', 404);
+  if (!preg_match('/^[0-9a-f]{32}$/', $k) || !$inc || !feature($inc, 'pub')) fail('Dieser Link ist ungültig oder die öffentliche Ansicht wurde beendet.', 404);
   return $inc; }
 // Gewässernetz fürs Suchgebiet: nur um einen PLS des Suchgebiets (la/lo, siehe plsSources) des laufenden Einsatzes, Radius m wie in der Einsatz-App (netRadius), gleicher Cache
 if ($route === 'public/net') {
   $inc = pubIncident(); if ($inc['ended_at'] !== null) fail('Der Einsatz ist beendet.', 404);
   $r = (int)(ceil(min(max(5000, (float)($_GET['m'] ?? 0)), 30000) / 1000) * 1000);
   $la = (float)($_GET['la'] ?? 0); $lo = (float)($_GET['lo'] ?? 0);
-  $src = array_values(array_filter(plsSources($inc, incRescuees((int)$inc['id'])), fn($s) => abs($s['lat'] - $la) < 1e-6 && abs($s['lon'] - $lo) < 1e-6))[0] ?? fail('Kein PLS für das Suchgebiet', 404);
+  $src = array_values(array_filter(plsSources($inc, incRes($inc)), fn($s) => abs($s['lat'] - $la) < 1e-6 && abs($s['lon'] - $lo) < 1e-6))[0] ?? fail('Kein PLS für das Suchgebiet', 404);
   overpassServe(overpassQuery(['around' => [$r, $src['lat'], $src['lon']]]));
 }
 if ($route === 'public/state') {
@@ -119,12 +126,12 @@ if ($route === 'public/state') {
     $parts[] = ['id' => (int)$p['pid'], 'name' => $anon ? ($rid !== null && isset($rn[$rid]) ? $rn[$rid] : ($p['mode_name'] ?: 'Einsatzkraft')) : $p['name'], 'mode_name' => $p['mode_name'], 'role_id' => $rid,
                 'lat' => $p['lat'] === null ? null : (float)$p['lat'], 'lon' => $p['lon'] === null ? null : (float)$p['lon'], 'loc_at' => $p['loc_at'] === null ? null : (int)$p['loc_at']];
   }
-  foreach (incExternals($id) as $e) // externe Einsatzkräfte (Issue #39): id negativ, damit sie sich nicht mit Teilnahmen überschneidet; ohne Beschreibung
+  foreach (feature($inc, 'ext') ? incExternals($id) : [] as $e) // externe Einsatzkräfte (Issue #39): id negativ, damit sie sich nicht mit Teilnahmen überschneidet; ohne Beschreibung
     $parts[] = ['id' => -$e['id'], 'name' => $anon ? ($e['role_id'] !== null && isset($rn[$e['role_id']]) ? $rn[$e['role_id']] : 'Externe Einsatzkraft') : $e['name'], 'mode_name' => 'Extern', 'role_id' => $e['role_id'], 'lat' => $e['lat'], 'lon' => $e['lon'], 'loc_at' => $e['moved'] ?? $e['created'], 'ext' => 1, 'color' => $e['color']];
   $po = $db->prepare("SELECT id,kind,name,color,pts FROM pois WHERE incident_id=? AND removed IS NULL ORDER BY id"); $po->execute([$id]);
-  $pois = array_map(fn($p) => ['pts' => json_decode($p['pts'], true) ?: []] + ints($p, ['id']), $po->fetchAll());
+  $pois = !feature($inc, 'poi') ? [] : array_map(fn($p) => ['pts' => json_decode($p['pts'], true) ?: []] + ints($p, ['id']), $po->fetchAll());
   $res = [];
-  foreach (incRescuees($id) as $n => $r) $res[] = ['name' => $anon ? 'Rettling ' . ($n + 1) : $r['name'], 'descr' => $anon ? null : $r['descr']] + array_intersect_key($r, array_flip(['id', 'lat', 'lon', 'loc_at', 'rescued_at', 'pls_lat', 'pls_lon', 'pls_at']));
+  foreach (incRes($inc) as $n => $r) $res[] = ['name' => $anon ? 'Rettling ' . ($n + 1) : $r['name'], 'descr' => $anon ? null : $r['descr']] + array_intersect_key($r, array_flip(['id', 'lat', 'lon', 'loc_at', 'rescued_at', 'pls_lat', 'pls_lon', 'pls_at']));
   out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'now' => $now]);
 }
 
@@ -217,6 +224,13 @@ function hm($t) { return (new DateTime('@' . $t))->setTimezone(new DateTimeZone(
 function rescuee($inc, $id) { global $db; $s = $db->prepare("SELECT * FROM rescuees WHERE id=? AND incident_id=? AND removed IS NULL"); $s->execute([(int)$id, $inc['id']]); return $s->fetch() ?: fail('Rettling nicht gefunden', 404); }
 // Aufzeichnung beim Einsatzstart vorausgewählt: [scharfer Einsatz, Übung] (Einstellungen rec_real, rec_ex)
 function recDefault() { return [(int)setting('rec_real', '0'), (int)setting('rec_ex', '1')]; }
+// Funktionen (FEATURES): Einstellung features = JSON {"real": [ausgeschaltete Schlüssel], "ex": [...]}; gespeichert werden nur die ausgeschalteten, Neues ist also an
+function featOff() { $v = json_decode(setting('features', ''), true) ?: []; $o = [];
+  foreach (['real', 'ex'] as $t) $o[$t] = array_values(array_intersect(array_keys(FEATURES), (array)($v[$t] ?? []))); return $o; }
+function features($ex) { $off = featOff()[$ex ? 'ex' : 'real']; $r = []; foreach (FEATURES as $k => $_) $r[$k] = in_array($k, $off, true) ? 0 : 1; return $r; }
+function feature($inc, $k) { return (bool)features((int)$inc['is_exercise'])[$k]; }
+// Rettlinge des Einsatzes, leer bei ausgeschalteter Funktion (dann zählt fürs Suchgebiet nur der PLS des Einsatzes)
+function incRes($inc) { return feature($inc, 'res') ? incRescuees((int)$inc['id']) : []; }
 // Werkzeug Flussdistanz: Vergleichsgeschwindigkeiten in km/h (Einstellung rd_speeds, kommagetrennt)
 function rdSpeeds() { return array_map('floatval', array_filter(explode(',', setting('rd_speeds', '10,20,30')), 'strlen')); }
 // Aufzeichnung umschalten: Zeitraum öffnen (an) bzw. schliessen (aus), record = neuer Zustand
@@ -333,8 +347,12 @@ function logRows($id, $asc = false) {
 // Einrückoption ohne Standortfreigabe: Standortmeldungen werden nicht gespeichert (serverseitig erzwungen)
 if ($route === 'incident/location' && ($inc = activeIncident()) && ($p = part($inc['id'])) && !modeShares($p['mode'])) out(['ok' => true, 'shared' => false]);
 
+// ausgeschaltete Funktionen serverseitig sperren (FEATURE_ROUTES)
+if (array_key_exists($route, FEATURE_ROUTES) && ($inc = activeIncident()) && !feature($inc, FEATURE_ROUTES[$route]))
+  fail('Die Funktion «' . FEATURES[FEATURE_ROUTES[$route]] . '» ist für ' . ((int)$inc['is_exercise'] ? 'Übungen' : 'scharfe Einsätze') . ' ausgeschaltet', 403);
+
 switch ($route) {
- case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_default' => recDefault()]]); // coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; rec_default für «Einsatz starten»
+ case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_default' => recDefault(), 'features' => ['real' => features(0), 'ex' => features(1)]]]); // coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; features je Art (real, ex) für «Einsatz starten» und die Flussdistanz ohne Einsatz; rec_default für «Einsatz starten»
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts FROM modes ORDER BY id")->fetchAll()));
@@ -352,7 +370,7 @@ switch ($route) {
   if ($at < $now - 7 * 86400) fail('Der Alarmeingang liegt mehr als 7 Tage zurück');
   // PLS optional (Issue #24): ohne PLS gibt es ein Suchgebiet erst mit dem PLS eines Rettlings; Zeitpunkt des PLS = Alarmeingang
   $pls = isset($in['lat'], $in['lon']) && $in['lat'] !== '' && $in['lon'] !== '' ? plsIn($in, $at) : [null, null];
-  $ex = empty($in['is_exercise']) ? 0 : 1; $rec = empty($in['record']) ? 0 : 1;
+  $ex = empty($in['is_exercise']) ? 0 : 1; $rec = empty($in['record']) || !features($ex)['rec'] ? 0 : 1;
   $db->prepare("INSERT INTO incidents(message,lat,lon,alarm_at,created_by,is_exercise) VALUES(?,?,?,?,?,?)")->execute([$in['message'], $pls[0], $pls[1], $at, $uid, $ex]);
   $nid = (int)$db->lastInsertId();
   if ($rec) setRec($nid, 1);
@@ -363,17 +381,17 @@ switch ($route) {
   $inc = activeIncident();
   if (!$inc) {
     $last = $db->query("SELECT id,ended_at FROM incidents ORDER BY id DESC LIMIT 1")->fetch();
-    out(['incident' => null, 'last_ended' => $last ?: null]);
+    out(['incident' => null, 'last_ended' => $last ?: null, 'features' => ['real' => features(0), 'ex' => features(1)]]); // features: Flussdistanz ohne Einsatz
   }
   $inc['id'] = (int)$inc['id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc['is_exercise'] = (int)$inc['is_exercise']; $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
-  $id = $inc['id']; $since = (int)($_GET['since'] ?? 0);
+  $id = $inc['id']; $since = (int)($_GET['since'] ?? 0); $F = features($inc['is_exercise']); // ausgeschaltete Funktionen liefern nichts
   $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,u.name,u.photo FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
   $ps->execute([$id]);
   $isP = isActivePart($id);
   $msgs = []; $msgMarks = [];
   // Lesen: alle, die den Einsatz angenommen haben; mit Einstellung msg_read_all auch alle anderen angemeldeten Personen
-  $canRead = $isP || setting('msg_read_all', '0') === '1';
+  $canRead = $F['msg'] && ($isP || setting('msg_read_all', '0') === '1');
   if ($canRead) { // recipients = wer benachrichtigt wird (null = alle)
     $ms = $db->prepare("SELECT m.id,m.from_user,m.text,m.created,m.recipients,m.lat,m.lon,m.mark_lat,m.mark_lon,u.name from_name FROM messages m JOIN users u ON u.id=m.from_user WHERE m.incident_id=? AND m.id>? ORDER BY m.id");
     $ms->execute([$id, $since]);
@@ -385,21 +403,21 @@ switch ($route) {
   }
   $mk = $db->prepare("SELECT m.id,m.user_id,m.lat,m.lon,m.ts,m.manual,u.name FROM rescuee_marks m LEFT JOIN users u ON u.id=m.user_id WHERE m.incident_id=? ORDER BY m.id");
   $mk->execute([$id]);
-  $marks = array_map(fn($m) => ints(array_merge($m, ['lat' => (float)$m['lat'], 'lon' => (float)$m['lon']]), ['id', 'user_id', 'ts', 'manual']), $mk->fetchAll());
+  $marks = !$F['res'] ? [] : array_map(fn($m) => ints(array_merge($m, ['lat' => (float)$m['lat'], 'lon' => (float)$m['lon']]), ['id', 'user_id', 'ts', 'manual']), $mk->fetchAll());
   // Positionen und Bereiche der Einsatzleitung: für alle sichtbar, immer vollständig (Entfernen kommt bei allen an)
   $po = $db->prepare("SELECT p.id,p.kind,p.name,p.color,p.pts,p.created_by,p.created,u.name by_name FROM pois p LEFT JOIN users u ON u.id=p.created_by WHERE p.incident_id=? AND p.removed IS NULL ORDER BY p.id");
   $po->execute([$id]);
-  $pois = array_map(fn($p) => array_merge(ints($p, ['id', 'created_by', 'created']), ['pts' => json_decode($p['pts'], true) ?: []]), $po->fetchAll());
+  $pois = !$F['poi'] ? [] : array_map(fn($p) => array_merge(ints($p, ['id', 'created_by', 'created']), ['pts' => json_decode($p['pts'], true) ?: []]), $po->fetchAll());
   // Rettlinge: für alle sichtbar, immer vollständig
-  $rescuees = incRescuees($id);
+  $rescuees = incRes($inc);
   $cf = canFlow($inc);
   // Öffentliche Ansicht: alle sehen, ob sie eingeschaltet ist (public); den geheimen Link (public_token) nur die Einsatzleitung
   $inc['public'] = $inc['public_token'] !== null ? 1 : 0; $inc['public_anon'] = (int)$inc['public_anon'];
   if (!canManage($inc)) unset($inc['public_token']);
   // Externe Einsatzkräfte für alle; Vorlagen nur für die Einsatzleitung (nur sie erfasst Externe)
   // Einsatz-Vorlagen: von Hand erfasste Externe dieses Einsatzes (auch entfernte), je Name die neuste, ohne Standort und ohne Namen der Verwaltungsvorlagen
-  $ext = incExternals($id); $tpl = []; $itpl = [];
-  if (canManage($inc)) {
+  $ext = $F['ext'] ? incExternals($id) : []; $tpl = []; $itpl = [];
+  if ($F['ext'] && canManage($inc)) {
     $tpl = array_map(fn($r) => floats(ints($r, ['id', 'role_id']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,abbr,color,lat,lon FROM ext_templates WHERE active=1 ORDER BY name")->fetchAll());
     $seen = array_fill_keys(array_map(fn($t) => mb_strtolower($t['name']), $tpl), 1);
     $s = $db->prepare("SELECT name,descr,role_id,abbr,color FROM externals WHERE incident_id=? AND manual=1 ORDER BY id DESC"); $s->execute([$id]);
@@ -408,7 +426,7 @@ switch ($route) {
   }
   out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
        'participants' => array_map(function ($p) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
-       'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'can_message' => canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc),
+       'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'features' => $F,
        'log' => $cf ? logRows($id) : null, 'now' => $now]);
 
  case 'incident/join': // mode: code einer aktiven Einrückoption oder declined
@@ -522,7 +540,7 @@ switch ($route) {
 
  case 'incident/poi': // Position (kind=point, 1 Punkt) oder Bereich (kind=area, Polygon mit 3–200 Punkten) markieren: nur Einsatzleitung
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
-  if (!canManage($inc)) fail('Nur die Einsatzleitung kann Positionen und Bereiche markieren', 403);
+  if (!canManage($inc)) fail('Nur die Einsatzleitung kann Markierungen und Bereiche setzen', 403);
   $kind = ($in['kind'] ?? '') === 'area' ? 'area' : 'point';
   $name = trim((string)($in['name'] ?? ''));
   if ($name === '') fail('Bezeichnung fehlt');
@@ -533,10 +551,10 @@ switch ($route) {
     if (!is_array($q) || count($q) !== 2 || !is_numeric($q[0]) || !is_numeric($q[1]) || abs($q[0]) > 90 || abs($q[1]) > 180) fail('Ungültige Koordinaten');
     $pts[] = [round((float)$q[0], 7), round((float)$q[1], 7)];
   }
-  if ($kind === 'point' ? count($pts) !== 1 : count($pts) < 3 || count($pts) > 200) fail($kind === 'point' ? 'Für eine Position ist genau ein Punkt nötig' : 'Ein Bereich braucht 3 bis 200 Punkte');
+  if ($kind === 'point' ? count($pts) !== 1 : count($pts) < 3 || count($pts) > 200) fail($kind === 'point' ? 'Für eine Markierung ist genau ein Punkt nötig' : 'Ein Bereich braucht 3 bis 200 Punkte');
   $db->prepare("INSERT INTO pois(incident_id,kind,name,color,pts,created_by,created) VALUES(?,?,?,?,?,?,?)")->execute([$inc['id'], $kind, $name, $col, json_encode($pts), $uid, $now]);
   $pid = (int)$db->lastInsertId();
-  if ($kind === 'point') $txt = sprintf('markiert die Position «%s» (%.5F, %.5F)', $name, $pts[0][0], $pts[0][1]);
+  if ($kind === 'point') $txt = sprintf('setzt die Markierung «%s» (%.5F, %.5F)', $name, $pts[0][0], $pts[0][1]);
   else { // Fläche grob über lokale Projektion (Shoelace), reicht für die Angabe im Log
     $k = 111320 * cos(deg2rad($pts[0][0])); $a = 0; $n = count($pts);
     for ($j = 0; $j < $n; $j++) { $p = $pts[$j]; $q = $pts[($j + 1) % $n]; $a += $p[1] * $k * $q[0] * 111320 - $q[1] * $k * $p[0] * 111320; }
@@ -547,11 +565,11 @@ switch ($route) {
 
  case 'incident/poi/remove': // Position oder Bereich entfernen: nur Einsatzleitung (bleibt in der Datenbank, removed gesetzt)
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
-  if (!canManage($inc)) fail('Nur die Einsatzleitung kann Positionen und Bereiche entfernen', 403);
+  if (!canManage($inc)) fail('Nur die Einsatzleitung kann Markierungen und Bereiche entfernen', 403);
   $s = $db->prepare("SELECT * FROM pois WHERE id=? AND incident_id=? AND removed IS NULL"); $s->execute([(int)($in['id'] ?? 0), $inc['id']]); $p = $s->fetch();
   if (!$p) fail('Markierung nicht gefunden', 404);
   $db->prepare("UPDATE pois SET removed=? WHERE id=?")->execute([$now, $p['id']]);
-  logev($inc['id'], $uid, 'poidel', ($p['kind'] === 'area' ? 'entfernt den Bereich «' : 'entfernt die Position «') . $p['name'] . '»');
+  logev($inc['id'], $uid, 'poidel', ($p['kind'] === 'area' ? 'entfernt den Bereich «' : 'entfernt die Markierung «') . $p['name'] . '»');
   out(['ok' => true]);
 
  // Rettlinge: erfassen, bearbeiten, Standort und «gerettet» markieren dürfen alle im Einsatz, entfernen nur die Einsatzleitung
@@ -845,7 +863,7 @@ switch ($route) {
   if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message) VALUES(?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1)]);
   out(['ok' => true]);
- case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_real' => recDefault()[0], 'rec_ex' => recDefault()[1], 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS]);
+ case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_real' => recDefault()[0], 'rec_ex' => recDefault()[1], 'features' => array_map(fn($k, $r, $e) => ['k' => $k, 'name' => FEATURES[$k], 'real' => $r, 'ex' => $e], array_keys(FEATURES), features(0), features(1)), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS]);
  case 'settings/save': admin();
   if (isset($in['overpass_ttl'])) { // Haltedauer des Overpass-Caches in Minuten, 0 = kein Cache, höchstens 7 Tage
     if (!is_numeric($in['overpass_ttl']) || (int)$in['overpass_ttl'] < 0 || (int)$in['overpass_ttl'] > 10080) fail('Haltedauer: 0 bis 10080 Minuten');
@@ -870,6 +888,16 @@ switch ($route) {
   }
   foreach (['msg_no_role', 'msg_read_all', 'rec_real', 'rec_ex'] as $k) if (isset($in[$k])) setSetting($k, empty($in[$k]) ? '0' : '1');
   if (isset($in['coord_sys'])) { if (!in_array($in['coord_sys'], COORDS, true)) fail('Unbekanntes Koordinatensystem'); setSetting('coord_sys', $in['coord_sys']); }
+  if (isset($in['features'])) { // {real: [ausgeschaltete Schlüssel], ex: [...]}; gilt sofort, auch im laufenden Einsatz
+    $o = [];
+    foreach (['real', 'ex'] as $t) { $o[$t] = array_values(array_unique(array_filter((array)($in['features'][$t] ?? []), 'is_string'))); foreach ($o[$t] as $k) if (!array_key_exists($k, FEATURES)) fail('Unbekannte Funktion'); }
+    setSetting('features', json_encode($o));
+    // laufender Einsatz: Aufzeichnung beenden bzw. öffentlichen Link ungültig machen, wenn die Funktion für seine Art jetzt aus ist
+    if ($inc = activeIncident()) {
+      if ((int)$inc['record'] && !feature($inc, 'rec')) { setRec((int)$inc['id'], 0); logev($inc['id'], $uid, 'rec', 'beendet die Aufzeichnung (Funktion in der Verwaltung ausgeschaltet)'); }
+      if ($inc['public_token'] !== null && !feature($inc, 'pub')) { $db->prepare("UPDATE incidents SET public_token=NULL WHERE id=?")->execute([$inc['id']]); logev($inc['id'], $uid, 'pub', 'schaltet die öffentliche Ansicht aus (Funktion in der Verwaltung ausgeschaltet)'); }
+    }
+  }
   out(['ok' => true]);
  case 'ext_templates': admin(); // Vorlagen für externe Einsatzkräfte, auch deaktivierte
   out(array_map(fn($r) => floats(ints($r, ['id', 'role_id', 'active']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,abbr,color,lat,lon,active FROM ext_templates ORDER BY active DESC, name")->fetchAll()));
