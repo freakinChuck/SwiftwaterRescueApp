@@ -70,7 +70,8 @@ body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: K
 @media(min-width:760px){body.so #followChip{left:calc(400px + 1rem)}}
 .mk{width:38px;height:38px;border-radius:50%;border:4px solid #888;background:#0c1c25 center/cover;display:grid;place-items:center;font-weight:700;font-size:.8rem;box-shadow:0 0 0 2px #0008}
 .mk.cl{border-radius:8px;background:#fff;color:#000}
-.mk.ext{border-radius:6px;border-style:dashed}
+.mk.ext{border-radius:6px;border-style:dashed}.mk.sm{font-size:.62rem;letter-spacing:-.02em}
+.xt .mk{width:30px;height:30px;border-width:3px;flex:0 0 auto;align-self:center}
 .pls{width:22px;height:22px;background:var(--alarm);border:3px solid #fff;transform:rotate(45deg)}.pls.off,.plsw.off{opacity:.45}
 #alarm{position:fixed;inset:0;background:var(--alarm);color:#fff;display:none;flex-direction:column;justify-content:center;padding:2rem;gap:1rem;z-index:9999;animation:bl 1s steps(2) infinite}
 @keyframes bl{50%{background:#8f1d0a}}@media(prefers-reduced-motion:reduce){#alarm{animation:none}}
@@ -153,10 +154,11 @@ function addCompass(){const C=L.Control.extend({options:{position:'bottomright'}
     b.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();map.setBearing(map.getBearing()+(e.key==='ArrowLeft'?-15:15));map.fire('moveend')}else if(e.key==='Enter'||e.key===' '){e.preventDefault();map.setBearing(0);map.fire('moveend')}});
     const sync=()=>{const g=map.getBearing();b.firstChild.style.transform=`rotate(${-g}deg)`;b.classList.toggle('rot',Math.round(g)%360!==0)};map.on('rotate',sync);sync();return b}});
   new C().addTo(map)}
-// p.ext: externe Einsatzkraft (eckig, gestrichelt)
-function mk(p){const r=roles.find(x=>x.id==p.role_id),col=r?r.color:'#8fb0bd';
-  const ini=(p.name||'?').split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase();
-  return `<div class="mk${p.ext?' ext':''}" style="border-color:${col};${p.photo?`background-image:url(${p.photo})`:''}">${p.photo?'':esc(ini)}</div>`}
+// p.ext: externe Einsatzkraft (eckig, gestrichelt); Rand = Spezialrolle, Füllung = Farbe (ohne Rolle auch Rand), Text = Kürzel
+const txtOn=c=>{const n=parseInt(c.slice(1),16);return .299*(n>>16)+.587*(n>>8&255)+.114*(n&255)>150?'#000':'#fff'};
+function mk(p){const r=roles.find(x=>x.id==p.role_id),fc=p.ext&&p.color,col=r?r.color:fc||'#8fb0bd';
+  const ini=p.ext&&p.abbr?p.abbr:(p.name||'?').split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase();
+  return `<div class="mk${p.ext?' ext':''}${ini.length>2?' sm':''}" style="border-color:${col};${fc?`background-color:${fc};color:${txtOn(fc)};`:''}${p.photo?`background-image:url(${p.photo})`:''}">${p.photo?'':esc(ini)}</div>`}
 let msgLayer=null,msgLayerKey='';
 const mmVisible=()=>{try{return localStorage.getItem('sw_msgmarks')!=='0'}catch(e){return true}};
 function setMmVisible(v,apply){try{localStorage.setItem('sw_msgmarks',v?'1':'0')}catch(e){}const c=$('#mmShow');if(c)c.checked=v;if(apply&&msgLayer)v?msgLayer.addTo(map):map.removeLayer(msgLayer)}
@@ -341,7 +343,7 @@ function renderPeople(){const o=$('#people');if(!o)return;const on=panel==='peop
   const row=p=>{const has=p.lat!=null,f=followId===p.user_id;
     return `<div class="pp">${mk(p)}<div class="nm">${esc(p.name)}${p.user_id==me.id?' (du)':''}<small>${esc(modeOf(p.mode).name)} · ${has?'Standort '+ago(p.loc_at):'kein Standort'}</small>${has&&fc(p.lat,p.lon)?`<small>${esc(fc(p.lat,p.lon))}</small>`:''}</div>${has?`<button data-c="${p.user_id}" title="Auf der Karte zentrieren">Zentrieren</button><button data-f="${p.user_id}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>`:''}</div>`};
   // externe Einsatzkräfte: fester Standort, kein Folgen; bearbeiten und entfernen nur die Einsatzleitung
-  const xrow=e=>`<div class="pp">${mk(e)}<div class="nm">${esc(e.name)}<small>Extern${e.descr?' · '+esc(e.descr):''}</small>${fc(e.lat,e.lon)?`<small>${esc(fc(e.lat,e.lon))}</small>`:''}</div><button data-xc="${e.id}" title="Auf der Karte zentrieren">Zentrieren</button>${st.can_manage?`<button data-xe="${e.id}" aria-label="${esc(e.name)} bearbeiten" title="Name, Beschreibung, Spezialrolle und Standort ändern">✎</button><button data-xd="${e.id}" aria-label="${esc(e.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div>`;
+  const xrow=e=>`<div class="pp">${mk(e)}<div class="nm">${esc(e.name)}<small>Extern${e.descr?' · '+esc(e.descr):''}</small>${fc(e.lat,e.lon)?`<small>${esc(fc(e.lat,e.lon))}</small>`:''}</div><button data-xc="${e.id}" title="Auf der Karte zentrieren">Zentrieren</button>${st.can_manage?`<button data-xe="${e.id}" aria-label="${esc(e.name)} bearbeiten" title="Name, Beschreibung, Spezialrolle, Kürzel, Farbe und Standort ändern">✎</button><button data-xd="${e.id}" aria-label="${esc(e.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div>`;
   // zwei Gruppen (mit App / extern), je zusammenklappbar, darin nach Spezialrolle
   const roleGrp=list=>byRole(list).map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.map(p=>p.ext?xrow(p):row(p)).join('')).join('');
   const xl=extList(),fold=(k,t,list,empty)=>{const c=pplFold.has(k);return `<button class="pfold" data-pf="${k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button>`+(c?'':roleGrp(list)||`<div class="mut" style="padding:.4rem 0">${empty}</div>`)};
@@ -361,20 +363,20 @@ const extGo=()=>{togglePanel('people',true);return poll()};
 const extPlace=body=>setTimeout(()=>pickPoint(`Tippe auf die Karte, um «${body.name}» zu setzen.`).then(q=>api('incident/external/save',{...body,lat:+q.lat.toFixed(7),lon:+q.lng.toFixed(7)})).then(extGo).catch(fail),0);
 function addExt(){const a=(st&&st.ext_templates)||[],b=(st&&st.ext_inc_templates)||[];if(!a.length&&!b.length)return editExt(0);
   const rn=t=>{const r=roles.find(r=>r.id==t.role_id);return r?esc(r.name):'Ohne Spezialrolle'};
-  const it=(t,k)=>`<div class="xt"><button data-t="${k}">${esc(t.name)}<small>${rn(t)}${t.lat!=null?' · mit Standort'+fcs(t.lat,t.lon,' '):''}</small></button>${t.lat!=null?`<button data-t="${k}" data-m title="Standort stattdessen auf der Karte wählen">Karte</button>`:''}</div>`;
+  const it=(t,k)=>`<div class="xt">${mk({...t,ext:1})}<button data-t="${k}">${esc(t.name)}<small>${rn(t)}${t.lat!=null?' · mit Standort'+fcs(t.lat,t.lon,' '):''}</small></button>${t.lat!=null?`<button data-t="${k}" data-m title="Standort stattdessen auf der Karte wählen">Karte</button>`:''}</div>`;
   const d=dlg('Externe Einsatzkraft erfassen',`<div class="mut">Vorlage antippen, danach den Standort auf der Karte wählen. Vorlagen mit Standort werden direkt dort gesetzt.</div><div class="xtl">`
     +(a.length?`<div class="pg">Vorlagen</div>`+a.map((t,i)=>it(t,'a'+i)).join(''):'')+(b.length?`<div class="pg">In diesem Einsatz erfasst</div>`+b.map((t,i)=>it(t,'b'+i)).join(''):'')+'</div>',
     async()=>{setTimeout(()=>editExt(0),0)},'Neu ohne Vorlage');
   $('.xtl',d).onclick=async e=>{const k=e.target.closest('[data-t]');if(!k)return;const t=(k.dataset.t[0]==='a'?a:b)[+k.dataset.t.slice(1)];d.remove();
-    const body={name:t.name,descr:t.descr||'',role_id:t.role_id||null};
+    const body={name:t.name,descr:t.descr||'',role_id:t.role_id||null,abbr:t.abbr||'',color:t.color||''};
     if(t.lat!=null&&k.dataset.m===undefined)return api('incident/external/save',{...body,lat:t.lat,lon:t.lon}).then(extGo).catch(fail);extPlace(body)}}
 function editExt(id){const e=extOf(id)||{name:'',descr:'',role_id:null};
-  const d=dlg(id?'Externe Einsatzkraft bearbeiten':'Externe Einsatzkraft erfassen',`<label class="mut">Name<input id="xN" maxlength="80" placeholder="z. B. Feuerwehr, Posten Brücke" value="${esc(e.name)}"></label><label class="mut">Beschreibung (Organisation, Funkkanal, Telefon …)<textarea id="xD" rows="3" maxlength="500">${esc(e.descr||'')}</textarea></label><label class="mut">Spezialrolle${roleSel('',e.role_id,'id="xR"')}</label><div class="mut">Mit einer Posten-Rolle endet das Suchgebiet an diesem Standort.</div>`
+  const d=dlg(id?'Externe Einsatzkraft bearbeiten':'Externe Einsatzkraft erfassen',`<label class="mut">Name<input id="xN" maxlength="80" placeholder="z. B. Feuerwehr, Posten Brücke" value="${esc(e.name)}"></label><label class="mut">Beschreibung (Organisation, Funkkanal, Telefon …)<textarea id="xD" rows="3" maxlength="500">${esc(e.descr||'')}</textarea></label><label class="mut">Spezialrolle${roleSel('',e.role_id,'id="xR"')}</label><div class="mut">Mit einer Posten-Rolle endet das Suchgebiet an diesem Standort.</div>${extStyleFields(e)}`
     +`<label class="row" style="align-items:center"><input type="checkbox" id="xP" style="flex:0 0 auto" ${id?'':'checked disabled'}> <span>${id?'Standort neu auf der Karte setzen':'Standort auf der Karte setzen'}</span></label><div class="mut" id="xI">${id?esc(fcs(e.lat,e.lon,'Standort ')):'Danach den Standort auf der Karte antippen.'}</div>`,
     async d=>{const name=$('#xN',d).value.trim(),descr=$('#xD',d).value.trim(),role_id=+$('#xR',d).value||null,pick=$('#xP',d).checked;if(!name)throw new Error('Bitte einen Namen eingeben.');
-      const body={id:id||undefined,name,descr,role_id};
+      const body={id:id||undefined,name,descr,role_id,...extStyleVal(d)};
       if(id){await api('incident/external/save',body);await extGo();if(pick)extPlace(body);return}
-      extPlace({...body,manual:1})},id?'Speichern':'Weiter')}
+      extPlace({...body,manual:1})},id?'Speichern':'Weiter');extStyleBind(d)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-xc],[data-xe],[data-xd]');if(!b)return;const d=b.dataset,id=+(d.xc||d.xe||d.xd),x=extOf(id);
   if(d.xe!==undefined)return id?editExt(id):addExt();if(!x)return;
   if(d.xc){stopFollow();map.panTo([x.lat,x.lon]);if(narrow())togglePanel('people',false);return}

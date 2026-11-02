@@ -49,7 +49,7 @@ foreach ([
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'externals' => ['manual INT DEFAULT 0'], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL'], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL']] as $t => $cs)
+foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL'], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 try { $db->exec("CREATE INDEX track_inc ON track(incident_id,ts)"); } catch (Throwable $e) {} // schlägt bei vorhandenem Index still fehl
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
@@ -120,7 +120,7 @@ if ($route === 'public/state') {
                 'lat' => $p['lat'] === null ? null : (float)$p['lat'], 'lon' => $p['lon'] === null ? null : (float)$p['lon'], 'loc_at' => $p['loc_at'] === null ? null : (int)$p['loc_at']];
   }
   foreach (incExternals($id) as $e) // externe Einsatzkräfte (Issue #39): id negativ, damit sie sich nicht mit Teilnahmen überschneidet; ohne Beschreibung
-    $parts[] = ['id' => -$e['id'], 'name' => $anon ? ($e['role_id'] !== null && isset($rn[$e['role_id']]) ? $rn[$e['role_id']] : 'Externe Einsatzkraft') : $e['name'], 'mode_name' => 'Extern', 'role_id' => $e['role_id'], 'lat' => $e['lat'], 'lon' => $e['lon'], 'loc_at' => $e['moved'] ?? $e['created'], 'ext' => 1];
+    $parts[] = ['id' => -$e['id'], 'name' => $anon ? ($e['role_id'] !== null && isset($rn[$e['role_id']]) ? $rn[$e['role_id']] : 'Externe Einsatzkraft') : $e['name'], 'mode_name' => 'Extern', 'role_id' => $e['role_id'], 'lat' => $e['lat'], 'lon' => $e['lon'], 'loc_at' => $e['moved'] ?? $e['created'], 'ext' => 1, 'color' => $e['color']];
   $po = $db->prepare("SELECT id,kind,name,color,pts FROM pois WHERE incident_id=? AND removed IS NULL ORDER BY id"); $po->execute([$id]);
   $pois = array_map(fn($p) => ['pts' => json_decode($p['pts'], true) ?: []] + ints($p, ['id']), $po->fetchAll());
   $res = [];
@@ -178,8 +178,11 @@ function incRescuees($id) { global $db;
   $s->execute([$id]); return array_map(fn($r) => floats(ints($r, ['id', 'loc_at', 'loc_by', 'rescued_at', 'rescued_by', 'created_by', 'created', 'pls_at']), ['lat', 'lon', 'pls_lat', 'pls_lon']), $s->fetchAll()); }
 // Externe Einsatzkräfte eines Einsatzes (ohne entfernte), Zahlen als Zahlen
 function incExternals($id) { global $db;
-  $s = $db->prepare("SELECT e.id,e.name,e.descr,e.role_id,e.lat,e.lon,e.created_by,e.created,e.moved,u.name by_name FROM externals e LEFT JOIN users u ON u.id=e.created_by WHERE e.incident_id=? AND e.removed IS NULL ORDER BY e.id");
+  $s = $db->prepare("SELECT e.id,e.name,e.descr,e.role_id,e.abbr,e.color,e.lat,e.lon,e.created_by,e.created,e.moved,u.name by_name FROM externals e LEFT JOIN users u ON u.id=e.created_by WHERE e.incident_id=? AND e.removed IS NULL ORDER BY e.id");
   $s->execute([$id]); return array_map(fn($r) => floats(ints($r, ['id', 'role_id', 'created_by', 'created', 'moved']), ['lat', 'lon']), $s->fetchAll()); }
+// Kürzel (max. 4 Zeichen) und Farbe (#rrggbb) externer Einsatzkräfte und ihrer Vorlagen; leer = null
+function extStyle($in) { $a = mb_substr(trim((string)($in['abbr'] ?? '')), 0, 4); $c = (string)($in['color'] ?? '');
+  return [$a === '' ? null : $a, preg_match('/^#[0-9a-fA-F]{6}$/', $c) ? strtolower($c) : null]; }
 // Spezialrolle aus der Anfrage: aktive Rolle oder null
 function roleIn($v) { global $db; if (empty($v)) return null;
   $s = $db->prepare("SELECT id FROM roles WHERE id=? AND active=1"); $s->execute([(int)$v]); return $s->fetch() ? (int)$v : fail('Unbekannte Spezialrolle'); }
@@ -397,9 +400,9 @@ switch ($route) {
   // Einsatz-Vorlagen: von Hand erfasste Externe dieses Einsatzes (auch entfernte), je Name die neuste, ohne Standort und ohne Namen der Verwaltungsvorlagen
   $ext = incExternals($id); $tpl = []; $itpl = [];
   if (canManage($inc)) {
-    $tpl = array_map(fn($r) => floats(ints($r, ['id', 'role_id']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,lat,lon FROM ext_templates WHERE active=1 ORDER BY name")->fetchAll());
+    $tpl = array_map(fn($r) => floats(ints($r, ['id', 'role_id']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,abbr,color,lat,lon FROM ext_templates WHERE active=1 ORDER BY name")->fetchAll());
     $seen = array_fill_keys(array_map(fn($t) => mb_strtolower($t['name']), $tpl), 1);
-    $s = $db->prepare("SELECT name,descr,role_id FROM externals WHERE incident_id=? AND manual=1 ORDER BY id DESC"); $s->execute([$id]);
+    $s = $db->prepare("SELECT name,descr,role_id,abbr,color FROM externals WHERE incident_id=? AND manual=1 ORDER BY id DESC"); $s->execute([$id]);
     foreach ($s->fetchAll() as $r) { $k = mb_strtolower($r['name']); if (isset($seen[$k])) continue; $seen[$k] = 1; $itpl[] = ints($r, ['role_id']); }
     usort($itpl, fn($x, $y) => strcasecmp($x['name'], $y['name']));
   }
@@ -616,12 +619,12 @@ switch ($route) {
   if (!canManage($inc)) fail('Nur die Einsatzleitung kann externe Einsatzkräfte erfassen', 403);
   $name = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); $descr = mb_substr(trim((string)($in['descr'] ?? '')), 0, 500);
   if ($name === '') fail('Name fehlt');
-  $rid = roleIn($in['role_id'] ?? null); $ll = isset($in['lat'], $in['lon']) ? llIn($in['lat'], $in['lon']) : null;
+  $rid = roleIn($in['role_id'] ?? null); $ll = isset($in['lat'], $in['lon']) ? llIn($in['lat'], $in['lon']) : null; [$ab, $co] = extStyle($in);
   $rn = function ($r) use ($db) { if ($r === null) return 'ohne Spezialrolle'; $s = $db->prepare("SELECT name FROM roles WHERE id=?"); $s->execute([$r]); return $s->fetch()['name'] ?? '?'; };
   if (!empty($in['id'])) {
     $s = $db->prepare("SELECT * FROM externals WHERE id=? AND incident_id=? AND removed IS NULL"); $s->execute([(int)$in['id'], $inc['id']]); $e = $s->fetch() ?: fail('Externe Einsatzkraft nicht gefunden', 404);
     $old = $e['role_id'] === null ? null : (int)$e['role_id'];
-    $db->prepare("UPDATE externals SET name=?, descr=?, role_id=? WHERE id=?")->execute([$name, $descr, $rid, $e['id']]);
+    $db->prepare("UPDATE externals SET name=?, descr=?, role_id=?, abbr=?, color=? WHERE id=?")->execute([$name, $descr, $rid, $ab, $co, $e['id']]);
     if ($e['name'] !== $name || (string)$e['descr'] !== $descr || $old !== $rid) logev($inc['id'], $uid, 'ext', "ändert die externe Einsatzkraft «{$e['name']}»" . ($e['name'] !== $name ? " zu «{$name}»" : '') . ($old !== $rid ? ' (' . $rn($rid) . ')' : ''));
     if ($ll && $ll !== [round((float)$e['lat'], 7), round((float)$e['lon'], 7)]) {
       $db->prepare("UPDATE externals SET lat=?, lon=?, moved=? WHERE id=?")->execute([$ll[0], $ll[1], $now, $e['id']]);
@@ -631,7 +634,7 @@ switch ($route) {
   }
   if (!$ll) fail('Standort fehlt');
   // manual = von Hand erfasst (nicht ab Vorlage): steht danach für den Rest des Einsatzes als Vorlage bereit
-  $db->prepare("INSERT INTO externals(incident_id,name,descr,role_id,lat,lon,created_by,created,manual) VALUES(?,?,?,?,?,?,?,?,?)")->execute([$inc['id'], $name, $descr, $rid, $ll[0], $ll[1], $uid, $now, empty($in['manual']) ? 0 : 1]);
+  $db->prepare("INSERT INTO externals(incident_id,name,descr,role_id,abbr,color,lat,lon,created_by,created,manual) VALUES(?,?,?,?,?,?,?,?,?,?,?)")->execute([$inc['id'], $name, $descr, $rid, $ab, $co, $ll[0], $ll[1], $uid, $now, empty($in['manual']) ? 0 : 1]);
   $nid = (int)$db->lastInsertId();
   logev($inc['id'], $uid, 'ext', sprintf('erfasst die externe Einsatzkraft «%s» (%s, %.5F, %.5F)', $name, $rn($rid), $ll[0], $ll[1]));
   out(['ok' => true, 'id' => $nid]);
@@ -751,7 +754,7 @@ switch ($route) {
   $marks = array_map(fn($r) => floats(ints($r, ['id', 'created', 'unmarked', 'mark']), ['mark_lat', 'mark_lon']), $q("SELECT m.id,m.text,m.created,m.mark,m.unmarked,m.mark_lat,m.mark_lon,u.name FROM messages m LEFT JOIN users u ON u.id=m.from_user WHERE m.incident_id=? AND m.mark_lat IS NOT NULL ORDER BY m.id"));
   $flow = array_map(fn($r) => ints($r, ['ts']), $q("SELECT ts,text FROM incident_log WHERE incident_id=? AND kind='flow' ORDER BY ts,id"));
   // externe Einsatzkräfte: Standort und Spezialrolle mit Stand Einsatzende
-  $ext = array_map(fn($r) => floats(ints($r, ['id', 'role_id', 'created', 'removed']), ['lat', 'lon']), $q("SELECT id,name,descr,role_id,lat,lon,created,removed FROM externals WHERE incident_id=? ORDER BY id"));
+  $ext = array_map(fn($r) => floats(ints($r, ['id', 'role_id', 'created', 'removed']), ['lat', 'lon']), $q("SELECT id,name,descr,role_id,abbr,color,lat,lon,created,removed FROM externals WHERE incident_id=? ORDER BY id"));
   $per = array_map(fn($r) => ints($r, ['start', 'stop']), $q("SELECT start,stop FROM rec_periods WHERE incident_id=? ORDER BY start,id"));
   $inc = floats(ints($inc, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded']), ['lat', 'lon', 'flow_ms']); $inc['pls_at'] = plsAt($inc);
   out(['incident' => $inc, 'periods' => $per, 'participants' => $parts, 'track' => $tr['u'], 'rtrack' => $tr['r'], 'pois' => $pois, 'rescuees' => $res, 'externals' => $ext, 'marks' => $marks, 'flow' => $flow, 'log' => logRows($id, true), 'now' => $now]);
@@ -869,14 +872,14 @@ switch ($route) {
   if (isset($in['coord_sys'])) { if (!in_array($in['coord_sys'], COORDS, true)) fail('Unbekanntes Koordinatensystem'); setSetting('coord_sys', $in['coord_sys']); }
   out(['ok' => true]);
  case 'ext_templates': admin(); // Vorlagen für externe Einsatzkräfte, auch deaktivierte
-  out(array_map(fn($r) => floats(ints($r, ['id', 'role_id', 'active']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,lat,lon,active FROM ext_templates ORDER BY active DESC, name")->fetchAll()));
- case 'ext_template/save': admin(); // anlegen oder ändern: name, descr, role_id, lat/lon (beide leer = Standort beim Erfassen wählen), active
+  out(array_map(fn($r) => floats(ints($r, ['id', 'role_id', 'active']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,abbr,color,lat,lon,active FROM ext_templates ORDER BY active DESC, name")->fetchAll()));
+ case 'ext_template/save': admin(); // anlegen oder ändern: name, descr, role_id, abbr, color, lat/lon (beide leer = Standort beim Erfassen wählen), active
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
-  $de = mb_substr(trim((string)($in['descr'] ?? '')), 0, 500); $rid = roleIn($in['role_id'] ?? null);
+  $de = mb_substr(trim((string)($in['descr'] ?? '')), 0, 500); $rid = roleIn($in['role_id'] ?? null); [$ab, $co] = extStyle($in);
   $ll = isset($in['lat'], $in['lon']) && $in['lat'] !== '' && $in['lon'] !== '' ? llIn($in['lat'], $in['lon']) : [null, null];
   $ac = array_key_exists('active', $in) && empty($in['active']) ? 0 : 1;
-  if (!empty($in['id'])) $db->prepare("UPDATE ext_templates SET name=?,descr=?,role_id=?,lat=?,lon=?,active=? WHERE id=?")->execute([$nm, $de, $rid, $ll[0], $ll[1], $ac, (int)$in['id']]);
-  else $db->prepare("INSERT INTO ext_templates(name,descr,role_id,lat,lon,active) VALUES(?,?,?,?,?,?)")->execute([$nm, $de, $rid, $ll[0], $ll[1], $ac]);
+  if (!empty($in['id'])) $db->prepare("UPDATE ext_templates SET name=?,descr=?,role_id=?,abbr=?,color=?,lat=?,lon=?,active=? WHERE id=?")->execute([$nm, $de, $rid, $ab, $co, $ll[0], $ll[1], $ac, (int)$in['id']]);
+  else $db->prepare("INSERT INTO ext_templates(name,descr,role_id,abbr,color,lat,lon,active) VALUES(?,?,?,?,?,?,?,?)")->execute([$nm, $de, $rid, $ab, $co, $ll[0], $ll[1], $ac]);
   out(['ok' => true]);
  case 'mode/save': admin(); // Einrückoption anlegen oder ändern
   $nm = trim($in['name'] ?? ''); if ($nm === '') fail('Name fehlt');

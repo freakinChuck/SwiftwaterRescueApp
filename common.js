@@ -108,6 +108,10 @@ function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(titl
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 /* ---------- Dialoge ---------- */
 // Einfacher modaler Dialog; save(d) wirft bei Fehlern, dann bleibt der Dialog offen
+// Kürzel und Farbe externer Einsatzkräfte und ihrer Vorlagen (Issue #39): Felder im Dialog, Wert lesen; Farbe ohne Häkchen = keine
+const extStyleFields=x=>`<div class="row" style="align-items:flex-end"><label class="mut" style="flex:1">Kürzel (max. 4 Zeichen, auf dem Marker)<input id="xK" maxlength="4" placeholder="z. B. FW" value="${esc(x.abbr||'')}"></label><label class="mut" style="flex:0 0 auto"><span><input type="checkbox" id="xFc" ${x.color?'checked':''}> Farbe</span><input type="color" id="xF" value="${esc(x.color||'#e53935')}" style="width:4rem"></label></div><div class="mut">Die Farbe füllt den Marker, der Rand zeigt die Spezialrolle.</div>`;
+function extStyleVal(d){return{abbr:$('#xK',d).value.trim(),color:$('#xFc',d).checked?$('#xF',d).value:''}}
+function extStyleBind(d){$('#xF',d).addEventListener('input',()=>{$('#xFc',d).checked=true});return d}
 function dlg(title,body,save,okText='Speichern',xText='Abbrechen',onX){const d=document.createElement('div');d.className='dlg';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-label',title);
   d.innerHTML=`<div class="card"><h2 style="margin:0">${esc(title)}</h2>${body}<div class="row"><button class="pri" data-ok>${esc(okText)}</button><button data-x>${esc(xText)}</button></div></div>`;
   document.body.appendChild(d);const f=d.querySelector('input,select');f&&f.focus();
