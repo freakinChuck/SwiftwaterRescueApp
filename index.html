@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
-<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="common.css?v=0">
 <style>
 body{height:100dvh;display:flex;flex-direction:column}
 #map{position:fixed;inset:0}
@@ -76,7 +76,7 @@ body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: K
 <div id="alarm" role="alertdialog"><h2 id="aT"></h2><div id="aB"></div><button id="aOk">Quittieren</button></div>
 <div id="toasts" aria-live="polite"></div>
 <div id="app"></div>
-<script src="common.js"></script>
+<script src="common.js?v=0"></script>
 <script>
 /* ---------- Konfiguration ---------- */
 // Kartenanbieter (MAP_PROVIDERS, DEFAULT_BASE) in common.js, gemeinsam mit dem Replay der Verwaltung
@@ -94,7 +94,7 @@ const roleSel=(id,cur,attr)=>`<select ${attr}><option value="">Keine Spezialroll
 const csys=()=>(me&&(me.coord_sys||me.coord_default))||'lv95',fc=(lat,lon)=>fmtC(lat,lon,csys());
 // mit Trennzeichen, leer wenn ausgeblendet (persönliche Einstellung «Keine Koordinaten anzeigen», coord_sys none)
 const fcs=(lat,lon,pre=' · ',post='')=>{const t=fc(lat,lon);return t?pre+t+post:''};
-let msgInit=false,areaShape=null,areaLogged={},creating=false,openSec=new Set(),locStatus='',lastPos=null,manual=false,hb=null,me=null,roles=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,alarmQ=[],watchId=null,lastSent=0,fitted=null;
+let msgData=[],msgInit=false,areaShape=null,areaLogged={},creating=false,openSec=new Set(),locStatus='',lastPos=null,manual=false,hb=null,me=null,roles=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,alarmQ=[],watchId=null,lastSent=0,fitted=null;
 onUnauth=()=>render();
 /* ---------- Alarm ---------- */
 let actx,beepT;function beep(on){clearInterval(beepT);if(!on)return;actx=actx||new(window.AudioContext||webkitAudioContext)();
@@ -340,7 +340,7 @@ const msgIds=m=>{try{return(JSON.parse(m.recipients)||[]).map(Number)}catch(e){r
 const msgForMe=m=>!m.recipients||msgIds(m).includes(me.id); // Benachrichtigung nur für markierte Empfänger
 const msgTo=m=>!m.recipients?'alle':msgIds(m).map(id=>id===me.id?'dich':((st.participants||[]).find(p=>p.user_id===id)||{name:'?'}).name).join(', ');
 // Nachrichten: Verlauf (älteste oben) und Senden, sofern die Rolle es darf (st.can_message, vom Server); Zähler für Ungelesenes am Knopf
-function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!!(st&&st.incident),ms=window.msgs||[];o.hidden=!on;$('#bMsg').setAttribute('aria-expanded',on);
+function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!!(st&&st.incident),ms=msgData;o.hidden=!on;$('#bMsg').setAttribute('aria-expanded',on);
   const key='sw_msgseen_'+(st&&st.incident?st.incident.id:0);
   if(!msgSeen)try{msgSeen=+localStorage.getItem(key)||0}catch(e){}
   if(on&&ms.length&&ms[ms.length-1].id>msgSeen){msgSeen=ms[ms.length-1].id;try{localStorage.setItem(key,msgSeen)}catch(e){}}
@@ -529,9 +529,9 @@ function bindMarks(){
 /* ---------- Polling ---------- */
 // Alarmierungsart kommt vom Server (critical): scharfer Einsatz immer kritisch, Übung nur mit Übungsmodus
 let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
-    if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;window.msgs=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
+    if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
       // alle sehen alle Nachrichten, benachrichtigt werden nur die markierten Empfänger (bzw. alle bei «an alle»)
-      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);window.msgs.push(m);if(m.from_user!=me.id&&nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&msgForMe(m))notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
+      (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);msgData.push(m);if(m.from_user!=me.id&&nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&msgForMe(m))notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
       if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
       st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&shares(nx.me.mode))track();else stop()}
     else{if(st&&st.incident){const x=st.incident.is_exercise;if(notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
