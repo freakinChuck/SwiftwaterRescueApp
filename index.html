@@ -81,9 +81,8 @@ body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: K
 /* ---------- Konfiguration ---------- */
 // Kartenanbieter (MAP_PROVIDERS, DEFAULT_BASE) in common.js, gemeinsam mit dem Replay der Verwaltung
 // Gewässernetz (OpenStreetMap via Overpass). Austauschbar: Funktion loadNet() liefert Wege als {id,nodes[],geometry[{lat,lon}]} in Fliessrichtung.
-const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
+// BANK_M (Ufergebiet) und SNAP_M (max. Distanz PLS zum Gewässer) in common.js
 const WATER_M=80;  // Standort so nahe an der Gewässerachse gilt als «auf dem Gewässer» (Boot); zählt im Einsatzlog nicht als Fahrt
-const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
 // Einrückoptionen kommen vom Server (Verwaltung → Einrückoptionen); share_location=0: Standort wird nicht geteilt
 let modes=[];
 const modeOf=k=>modes.find(x=>x.code===k)||{code:k,name:k,share_location:1,active:0,lead_rights:0},shares=k=>!!modeOf(k).share_location;
@@ -183,40 +182,23 @@ function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if
 /* ---------- Suchgebiet entlang des Flusslaufs ---------- */
 let net=null,netLoading=false,areaInfo='';
 // Gewässernetz über den Server (Cache, siehe Route overpass); Radius auf 1 km aufgerundet, damit alle Geräte eines Einsatzes dieselbe Abfrage stellen
-async function loadNet(i,R){netLoading=true;R=Math.ceil(R/1000)*1000;
-  try{const j=await api('overpass',{around:[R,i.lat,i.lon]});if(!j.elements)throw new Error('ungültige Antwort');
-    const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();
-    ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));
-    net={inc:i.id,R,ways,byNode};netLoading=false;drawMap();draw();return}
+// Berechnung (riverNet, riverArea, netRadius) in common.js, gemeinsam mit der öffentlichen Ansicht
+async function loadNet(i,R){netLoading=true;
+  try{const n=riverNet(await api('overpass',{around:[R,i.lat,i.lon]}));net={inc:i.id,R,...n};netLoading=false;drawMap();draw();return}
   catch(e){net={inc:i.id,R,fail:true,err:e.message,retryAt:Date.now()+20000};netLoading=false;drawMap();draw()}}
 const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
-function follow(w,k,rem,seen){const pts=[w.geometry[k]];seen=new Set(seen).add(w.id);
-  for(let j=k+1;j<w.geometry.length;j++){const a=w.geometry[j-1],b=w.geometry[j],d=dist(a,b);
-    if(d>=rem){const f=rem/d;pts.push({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});return[pts]}
-    pts.push(b);rem-=d}
-  const nexts=(net.byNode.get(w.nodes[w.nodes.length-1])||[]).filter(e=>!seen.has(e.w.id)&&e.k<e.w.geometry.length-1);
-  if(!nexts.length)return[pts];
-  return nexts.flatMap(e=>follow(e.w,e.k,rem,seen).map(br=>pts.concat(br.slice(1))))}
-function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/180),P=pts.map(p=>C.project(L.latLng(p.lat,p.lon))),A=[],B=[];
-  P.forEach((p,j)=>{const a=P[Math.max(0,j-1)],b=P[Math.min(P.length-1,j+1)];let dx=b.x-a.x,dy=b.y-a.y;const n=Math.hypot(dx,dy)||1;dx/=n;dy/=n;
-    A.push(C.unproject(L.point(p.x-dy*k,p.y+dx*k)));B.push(C.unproject(L.point(p.x+dy*k,p.y-dx*k)))});return A.concat(B.reverse())}
 function circleArea(i,D,why){areaShape={circle:{lat:i.lat,lon:i.lon,r:D}};areaInfo=why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.';
   return L.circle([i.lat,i.lon],{radius:D,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6'})}
 function drawArea(i){areaInfo='';areaShape=null;const D=(i.flow_ms||0)*(st.now-i.alarm_at);if(D<=0){areaInfo='Fliessgeschwindigkeit fehlt.';return null}
-  const need=Math.min(Math.max(5000,D*1.3),30000);
-  if(!netLoading&&(!net||net.inc!==i.id||(!net.fail&&net.R<D*1.1&&net.R<30000)||(net.fail&&Date.now()>net.retryAt)))loadNet(i,need);
+  if(!netLoading&&(!net||net.inc!==i.id||(!net.fail&&net.R<D*1.1&&net.R<30000)||(net.fail&&Date.now()>net.retryAt)))loadNet(i,netRadius(D));
   if(!net||net.inc!==i.id)return circleArea(i,D,'Gewässerdaten werden geladen.');
   if(net.fail)return circleArea(i,D,'Gewässerdaten nicht verfügbar ('+net.err+'), neuer Versuch folgt.');
-  let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=dist(g,{lat:i.lat,lon:i.lon});if(d<bd){bd=d;best={w,k}}}));
-  if(!best||bd>SNAP_M)return circleArea(i,D,'Kein Gewässer nahe der PLS.');
-  areaShape={polys:[]};const posts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&(roles.find(r=>r.id==p.role_id)||{}).is_post);let cutBy=null,maxLen=0;
-  const g=L.layerGroup();
-  follow(best.w,best.k,D,new Set()).forEach(pts=>{
-    for(let j=0;j<pts.length;j++){const po=posts.find(p=>dist(pts[j],{lat:p.lat,lon:p.lon})<120);if(po){pts=pts.slice(0,j+1);cutBy=po.name;break}}
-    if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=dist(pts[j-1],pts[j]);maxLen=Math.max(maxLen,len);
-    const cp=corridor(pts,BANK_M);areaShape.polys.push(cp);g.addLayer(L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false}));
-    g.addLayer(L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#ff4d2e',weight:3,interactive:false}))});
-  areaInfo=`Suchgebiet: ${(maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(cutBy?`, endet am Posten ${cutBy}.`:'.');
+  const posts=st.participants.filter(p=>p.lat!=null&&!p.left_at&&(roles.find(r=>r.id==p.role_id)||{}).is_post);
+  const a=riverArea(net,i,D,posts);if(!a)return circleArea(i,D,'Kein Gewässer nahe der PLS.');
+  areaShape={polys:a.polys};const g=L.layerGroup();
+  a.polys.forEach(cp=>g.addLayer(L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false})));
+  a.lines.forEach(pts=>g.addLayer(L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#ff4d2e',weight:3,interactive:false})));
+  areaInfo=`Suchgebiet: ${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet am Posten ${a.cutBy}.`:'.');
   return g}
 const roleName=p=>(roles.find(r=>r.id==p.role_id)||{}).name;
 const sec=(k,t,b)=>`<details data-k="${k}" ${openSec.has(k)?'open':''}><summary>${t}</summary>${b}</details>`;
