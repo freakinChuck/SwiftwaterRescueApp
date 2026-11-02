@@ -17,34 +17,51 @@ html,body{height:100%}body{display:flex;flex-direction:column}
 .pp{display:flex;gap:.45rem;align-items:center;padding:.3rem 0;border-bottom:1px solid var(--line);font-size:.9rem}.pp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.pp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.pp small{display:block;color:var(--mut)}.pp button{padding:.25rem .45rem;font-size:.8rem}
 .leaflet-tooltip.pblbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px}.leaflet-tooltip.pblbl::before{display:none}
 #pbFollow{position:absolute;z-index:1000;left:3.4rem;top:.6rem;display:flex;gap:.4rem;align-items:center;background:#0f2430e6;color:#fff;border-radius:999px;padding:.2rem .3rem .2rem .7rem;font-size:.85rem}#pbFollow[hidden]{display:none}#pbFollow button{padding:.1rem .45rem;font-size:.8rem}
+#pbView{position:absolute;z-index:1000;top:.6rem;right:.6rem;width:46px;height:46px;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px #0008}#pbView[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}
+#viewBox{position:absolute;top:3.7rem;right:.6rem;max-height:calc(100% - 4.4rem);cursor:auto;font:1rem/1.4 "Segoe UI",system-ui,sans-serif} /* in der Karte: sonst Schrift von Leaflet */
 #pbMsg{max-width:420px;margin:12vh auto;padding:1.2rem;text-align:center}
 @media(max-width:760px){#pbBody{flex-direction:column}#pbSide{width:auto;height:38%;border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
 <div id="pbHead"><h1 id="pbTitle">Öffentliche Ansicht</h1><span id="pbTime" class="mut"></span></div>
-<div id="pbBody"><div id="pbMap"><div id="pbFollow" hidden>Folgt: <b></b> <button title="Folgen beenden">✕</button></div></div><aside id="pbSide"></aside></div>
+<div id="pbBody"><div id="pbMap"><div id="pbFollow" hidden>Folgt: <b></b> <button title="Folgen beenden">✕</button></div><button id="pbView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden"></button><div id="viewBox" hidden></div></div><aside id="pbSide"></aside></div>
 <script src="common.js?v=0"></script>
 <script>
 // Daten über die Route public/state (ohne Anmeldung); Aktualisierung alle 5 s.
 // Suchgebiet wie in der Einsatz-App (riverArea in common.js), Gewässernetz über public/net (gleicher Server-Cache).
 const K=new URLSearchParams(location.search).get('k')||'';
-let map=null,lay=null,ps=null,cs='lv95',timer=null,fitted=false,followId=null,areaInfo='';const nets=new Map();
+let map=null,lay=null,bases={},baseKey=null,ps=null,cs='lv95',timer=null,fitted=false,followId=null,areaInfo='';const nets=new Map();
 const ago=ts=>{const s=Math.max(0,ps.now-ts);return s<60?'vor '+s+' s':s<3600?'vor '+Math.round(s/60)+' min':'vor '+Math.floor(s/3600)+' h'};
 function stopWith(t,b){clearInterval(timer);$('#pbBody').innerHTML=`<div id="pbMsg" class="card"><h2>${esc(t)}</h2><div class="mut">${esc(b)}</div></div>`;map=null}
-function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.lon]:[46.8,8.2],p?14:8);const bases={};
-  Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
-  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);L.control.layers(bases,null,{position:'topright'}).addTo(map);
-  map.on('baselayerchange',e=>{const k=Object.keys(MAP_PROVIDERS).find(k=>MAP_PROVIDERS[k].label===e.name);try{localStorage.setItem('sw_base',k)}catch(_){}});
+function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.lon]:[46.8,8.2],p?14:8);
+  // Grundkarte über das Fenster «Ansicht» wie in der Einsatz-App (setBase, pro Gerät gemerkt in sw_base)
+  Object.entries(MAP_PROVIDERS).forEach(([k,P])=>bases[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
+  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}baseKey=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;bases[baseKey].addTo(map);
+  const vb=$('#viewBox'),bv=$('#pbView');bv.innerHTML=VIEW_ICON;[vb,bv].forEach(x=>{L.DomEvent.disableClickPropagation(x);L.DomEvent.disableScrollPropagation(x)});
+  bv.onclick=()=>viewBox();vb.onclick=e=>{const a=e.target.closest('[data-va]');if(a)setVis(viewCats().map(v=>v[0]),a.dataset.va==='1');if(e.target.closest('#bViewX'))viewBox(false)};
+  vb.onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked)};
   lay=L.layerGroup().addTo(map);
   $('#pbSide').onclick=e=>{const f=e.target.closest('[data-f]');if(f)return toggleFollow(+f.dataset.f);
     const b=e.target.closest('[data-ll]');if(b)map.panTo(b.dataset.ll.split(',').map(Number))};
   L.DomEvent.disableClickPropagation($('#pbFollow'));$('#pbFollow button').onclick=stopFollow;map.on('dragstart',()=>{if(followId!=null)stopFollow()})} // von Hand verschieben beendet das Folgen
+/* ---------- Ansicht (Issue #48): Grundkarte und Kategorien auf der Karte ein-/ausblenden wie in der Einsatz-App ---------- */
+// Nur die Karte, die Seitenleiste bleibt; ausgeblendete Posten begrenzen das Suchgebiet weiterhin. Pro Gerät gemerkt (sw_pview, getrennt von der Einsatz-App).
+// Kategorien ausgeschalteter Funktionen (features aus public/state) fehlen, Nachrichten gibt es hier nicht.
+const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pview')||'[]'))}catch(e){return new Set()}})();
+const vis=k=>!viewHide.has(k);
+const viewCats=()=>VIEW.filter(([k,,f])=>k!=='mm'&&(!f||!ps||!ps.features||ps.features[f]!==0));
+function setVis(keys,on){keys.forEach(k=>on?viewHide.delete(k):viewHide.add(k));try{localStorage.setItem('sw_pview',JSON.stringify([...viewHide]))}catch(e){}
+  if(ps)draw();$('#viewBox').querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk))}
+function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(bases[baseKey]);baseKey=k;bases[k].addTo(map);try{localStorage.setItem('sw_base',k)}catch(e){}}
+function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#pbView').setAttribute('aria-expanded',on);if(on)b.innerHTML=viewHtml(baseKey,viewCats(),vis)}
+document.addEventListener('click',e=>{const b=$('#viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#pbView'))viewBox(false)});
+document.addEventListener('keydown',e=>{const b=$('#viewBox');if(e.key==='Escape'&&b&&!b.hidden){viewBox(false);$('#pbView').focus()}});
 // Folgen: Karte bleibt bei jeder Aktualisierung auf der Person (Zoom bleibt); endet über ✕, beim Verschieben oder wenn die Person den Einsatz verlässt
 function toggleFollow(id){followId=followId===id?null:id;draw()}
 function stopFollow(){followId=null;draw()}
 // Suchgebiet aus allen PLS der vermissten Rettlinge (sources, Issue #24), Gewässernetz je PLS über public/net
 function drawArea(d){const i=d.incident,posts=d.participants.filter(p=>p.lat!=null&&(d.roles.find(r=>r.id===p.role_id)||{}).is_post);
   const a=searchArea(d.sources||[],nets,i.flow_ms,d.now,posts,(s,R)=>overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R+'&la='+s.lat+'&lo='+s.lon),()=>{if(ps)draw()},d.rescuees);
-  areaInfo=a.info.join(' ');
+  areaInfo=a.info.join(' ');if(!vis('area'))return;
   a.circles.forEach(c=>L.circle([c.lat,c.lon],{radius:c.r,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false}).addTo(lay));
   a.polys.forEach(cp=>L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false}).addTo(lay));
   a.lines.forEach(pts=>L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#ff4d2e',weight:3,interactive:false}).addTo(lay))}
@@ -59,12 +76,12 @@ async function load(){let d;try{d=await api('public/state&k='+encodeURIComponent
   if(!map)initMap(d);draw()}
 function draw(){const d=ps,i=d.incident,col=p=>(d.roles.find(r=>r.id===p.role_id)||{}).color||'#cfd8dc',ll=(a,b)=>`data-ll="${a},${b}"`;lay.clearLayers();
   drawArea(d);
-  const pl=plsList(d);pl.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:p.on?1:.4,opacity:p.on?1:.5}).bindTooltip(esc(p.label),{permanent:true,direction:'right',className:'pblbl'}).addTo(lay));
-  d.pois.forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:7,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'pblbl'}).addTo(lay)});
-  d.rescuees.filter(r=>r.lat!=null).forEach(r=>L.circleMarker([r.lat,r.lon],{radius:9,color:'#fff',weight:2,fillColor:r.rescued_at?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.rescued_at?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[8,0],className:'pblbl'}).addTo(lay));
+  const pl=plsList(d);if(vis('pls'))pl.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:p.on?1:.4,opacity:p.on?1:.5}).bindTooltip(esc(p.label),{permanent:true,direction:'right',className:'pblbl'}).addTo(lay));
+  d.pois.filter(p=>vis(p.kind==='area'?'ar':'pt')).forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:7,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'pblbl'}).addTo(lay)});
+  if(vis('res'))d.rescuees.filter(r=>r.lat!=null).forEach(r=>L.circleMarker([r.lat,r.lon],{radius:9,color:'#fff',weight:2,fillColor:r.rescued_at?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.rescued_at?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[8,0],className:'pblbl'}).addTo(lay));
   const withPos=d.participants.filter(p=>p.lat!=null);
   // ext: externe Einsatzkraft mit festem Standort (Issue #39), gestrichelter Rand
-  withPos.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:8,color:p.ext?(p.color&&p.role_id!=null?col(p):'#fff'):'#0f2430',weight:p.ext&&p.color&&p.role_id!=null?3:2,dashArray:p.ext?'3':null,fillColor:p.ext&&p.color||col(p),fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[8,0],className:'pblbl'}).addTo(lay));
+  withPos.filter(p=>vis(p.ext?'ext':'app')).forEach(p=>L.circleMarker([p.lat,p.lon],{radius:8,color:p.ext?(p.color&&p.role_id!=null?col(p):'#fff'):'#0f2430',weight:p.ext&&p.color&&p.role_id!=null?3:2,dashArray:p.ext?'3':null,fillColor:p.ext&&p.color||col(p),fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[8,0],className:'pblbl'}).addTo(lay));
   if(!fitted){const all=[...pl.map(p=>[p.lat,p.lon]),...withPos.map(p=>[p.lat,p.lon])];if(all.length)fitted=true;if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:16});else if(all.length)map.setView(all[0],14)}
   const fp=followId!=null&&d.participants.find(p=>p.id===followId);if(!fp)followId=null;else if(fp.lat!=null)map.panTo([fp.lat,fp.lon]);
   $('#pbFollow').hidden=!fp;if(fp)$('#pbFollow b').textContent=fp.name+(fp.lat==null?' (kein Standort)':'');

@@ -21,3 +21,6 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 #bigList{overflow:auto;flex:1;padding:.6rem 1rem 2rem;font-size:1.25rem;line-height:1.35}
 .lg{display:grid;grid-template-columns:11rem 13rem 1fr;gap:.8rem;padding:.55rem .8rem;border-left:6px solid;border-bottom:1px solid var(--line)}.lg .t{color:var(--mut)}
 @media(max-width:700px){.lg{grid-template-columns:1fr;gap:.1rem}#bigList{font-size:1.1rem}}
+/* Fenster «Ansicht» (Einsatz-App und öffentliche Ansicht); Lage je Seite */
+#viewBox{z-index:1200;width:min(290px,calc(100vw - 1.4rem));overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 2px 10px #000a;padding:.5rem .7rem .7rem}#viewBox[hidden]{display:none}
+#viewBox .vh{display:flex;justify-content:space-between;align-items:center}#viewBox h4{margin:.6rem 0 .2rem;font-size:.8rem;color:var(--mut)}#viewBox label{display:flex;gap:.5rem;align-items:center;padding:.25rem 0}#viewBox .row{margin:.3rem 0}#viewBox .row button{font-size:.82rem;padding:.35rem .4rem}
