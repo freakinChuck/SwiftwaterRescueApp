@@ -7,7 +7,7 @@ Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und
 
 ## Architektur
 - `index.html`: Einsatz-App mit Karte (Vanilla JS, Leaflet via cdnjs, kein Build-Schritt). Läuft am Handy und im Browser.
-- `admin.html`: Verwaltung ohne Karte (Benutzer, Spezialrollen, Einsatzstatistik/-log), nur für die Benutzerrolle Administrator.
+- `admin.html`: Verwaltung ohne Karte (Benutzer, Spezialrollen, Einsatzstatistik/-log), nur für die Benutzerrolle Administrator. Navigation nach Kategorien mit Unterpunkten (Issue #32, Liste `NAV`, am Handy Auswahlliste): Personen (Benutzer), Einsatz (Einrückoptionen, Spezialrollen, Externe Einsatzkräfte), Funktionen (Funktionen, Aufzeichnung, Flussdistanz), Karte & Daten (Koordinaten, Gewässerdaten), Auswertung (Einsatzstatistik und Einsatzlog). Immer nur ein Abschnitt sichtbar, gewählt über den Hash (`#benutzer` …), bei jedem Öffnen frisch geladen. **Neue Einstellungen als Unterpunkt in `NAV` aufnehmen.**
 - `common.js` / `common.css`: gemeinsamer Code beider Seiten (`api()`, Anmeldung, Dialoge inkl. Passwort ändern, Einsatzlog im Gross-Modus).
 - `api/index.php`: JSON-API (PHP, PDO). Routen über `?r=<route>`, Token im Header `X-Token`.
 - `api/config.php`: DB-Konfiguration. Standard SQLite (`api/data/`), MySQL über DSN möglich. Nur Platzhalter-Passwort einchecken, echte Zugangsdaten nie committen.
