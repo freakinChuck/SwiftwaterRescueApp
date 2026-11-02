@@ -18,13 +18,16 @@ tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{p
 /* Replay */
 #replay{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
 #rpHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--line)}#rpHead h2{margin:0;font-size:1.15rem;flex:1 1 16rem}
-#rpBody{flex:1;display:flex;min-height:0}#rpMap{flex:1;min-width:0;background:#0c1c25}
+#rpBody{flex:1;display:flex;min-height:0;position:relative}#rpMap{flex:1;min-width:0;background:#0c1c25}
 #rpSide{width:24rem;overflow:auto;border-left:1px solid var(--line);padding:.6rem}
 #rpFoot{display:flex;gap:.8rem;align-items:center;padding:.6rem 1rem;border-top:1px solid var(--line)}#rpTl{flex:1;display:grid;gap:3px}#rpRange{width:100%;padding:0}
 #rpSeg{position:relative;height:5px;background:var(--line);border-radius:3px}#rpSeg span{position:absolute;top:0;bottom:0;background:#e05cb0;border-radius:3px} /* aufgezeichnete Zeiträume, Lücken = Pause/aus */
 #rpTime{font-variant-numeric:tabular-nums;white-space:nowrap}
 .rpl{display:block;width:100%;text-align:left;border:0;border-left:4px solid;border-radius:0;background:none;padding:.35rem .5rem;font-size:.9rem}.rpl:hover{background:var(--panel)}.rpl .t{color:var(--mut);margin-right:.4rem}
-.rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.15rem 0}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}
+.rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
+.rpg{font-size:.8rem;font-weight:700;color:var(--mut);margin-top:.5rem}
+/* Replay: Anzeige beim Folgen (oben links auf der Karte) */
+#rpFollow{position:absolute;top:.6rem;left:3.4rem;z-index:1000;background:var(--ex);color:#fff;border-radius:6px;padding:.2rem .3rem .2rem .7rem;font-size:.9rem;display:flex;gap:.4rem;align-items:center;box-shadow:0 1px 4px #0008;max-width:calc(100% - 4rem)}#rpFollow[hidden]{display:none}#rpFollow button{background:transparent;border:0;color:#fff;padding:.15rem .4rem}
 .leaflet-tooltip.rplbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px}.leaflet-tooltip.rplbl::before{display:none}
 @media(max-width:760px){#rpBody{flex-direction:column}#rpSide{width:auto;height:40%;border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
@@ -133,7 +136,7 @@ const lastIdx=(a,t)=>{let lo=0,hi=a.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>
 async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}catch(e){return fail(e)}
   closeReplay();const i=d.incident,o=document.createElement('div');o.id='replay';o.setAttribute('role','dialog');o.setAttribute('aria-label','Replay');
   o.innerHTML=`<div id="rpHead"><h2>${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} Replay – ${esc(i.message)}</h2><button id="rpPlay" class="pri">▶ Abspielen</button><select id="rpSpd" aria-label="Geschwindigkeit">${[1,5,10,30,60,120].map(v=>`<option value="${v}" ${v===30?'selected':''}>${v}× schneller</option>`).join('')}</select><select id="rpTrail" aria-label="Spurlänge">${TRAILS.map(([v,l])=>`<option value="${v}" ${v===trailWin()?'selected':''}>${l}</option>`).join('')}</select><button id="rpX">Schliessen</button></div>
-    <div id="rpBody"><div id="rpMap"></div><aside id="rpSide"><div id="rpInfo"></div><h3>Einsatzlog bis zu diesem Zeitpunkt</h3><div id="rpLog"></div></aside></div>
+    <div id="rpBody"><div id="rpMap"></div><div id="rpFollow" hidden><span></span><button id="rpUnf" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><aside id="rpSide"><div id="rpInfo"></div><h3 id="rpPH"></h3><div id="rpPeople"></div><h3>Einsatzlog bis zu diesem Zeitpunkt</h3><div id="rpLog"></div></aside></div>
     <div id="rpFoot"><span id="rpTime"></span><div id="rpTl"><input type="range" id="rpRange" aria-label="Zeitpunkt im Einsatz"><div id="rpSeg" title="Aufgezeichnete Zeiträume (Lücken: pausiert oder beendet)"></div></div><span id="rpEnd" class="mut"></span></div>`;
   document.body.appendChild(o);
   // Zeitraum: Alarmeingang bis Einsatzende (läuft der Einsatz noch: bis jetzt)
@@ -152,7 +155,11 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
   const all=[[i.lat,i.lon],...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts)];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17});
-  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,perIdx};
+  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,perIdx,follow:null,pKey:null};
+  // Personenliste wie in der Einsatz-App: «Zentrieren» und «Folgen» (Karte folgt der Person beim Abspielen); Verschieben von Hand oder ✕ beendet das Folgen
+  map.on('dragstart',()=>{if(rp&&rp.follow!=null)rpFollow(null)});$('#rpUnf').onclick=()=>rpFollow(null);
+  $('#rpPeople').onclick=e=>{const b=e.target.closest('button');if(!b)return;const p=rp.people.find(x=>x.user_id===+(b.dataset.c||b.dataset.f));if(!p)return;
+    if(b.dataset.c){rpFollow(null);if(p.ll)map.panTo(p.ll)}else rpFollow(rp.follow===p.user_id?null:p.user_id)};
   const R=$('#rpRange');R.min=t0;R.max=t1;R.step=1;R.value=t0;R.oninput=()=>seek(+R.value);
   $('#rpSeg').innerHTML=per.map(([a,b])=>`<span style="left:${(a-t0)/(t1-t0)*100}%;width:${Math.max(.3,(b-a)/(t1-t0)*100)}%"></span>`).join('');
   $('#rpEnd').textContent=durT(t1-i.alarm_at)+(i.ended_at?'':' (läuft)');
@@ -164,6 +171,7 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
 function closeReplay(){if(!rp)return;clearInterval(rp.timer);rp.map.remove();rp=null;const o=$('#replay');if(o)o.remove()}
 function playReplay(on){if(!rp)return;if(on&&rp.t>=rp.t1)rp.t=rp.t0;rp.play=on;$('#rpPlay').textContent=on?'❚❚ Pause':'▶ Abspielen';clearInterval(rp.timer);
   if(on){rp.last=performance.now();rp.timer=setInterval(()=>{const n=performance.now(),dt=(n-rp.last)/1000;rp.last=n;rp.t=Math.min(rp.t1,rp.t+dt*+$('#rpSpd').value);if(rp.t>=rp.t1)playReplay(false);drawReplay()},200)}}
+function rpFollow(id){rp.follow=id;rp.pKey=null;drawReplay()}
 function seek(t){if(!rp)return;rp.t=Math.max(rp.t0,Math.min(rp.t1,t));drawReplay()}
 // Escape schliesst, Leertaste spielt ab/pausiert (nicht auf Knöpfen/Reglern, die werten sie selbst aus)
 document.addEventListener('keydown',e=>{if(!rp)return;if(e.key==='Escape')return closeReplay();
@@ -178,11 +186,11 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
   const win=+$('#rpTrail').value,from=win<0?-Infinity:t-win;
   const trail=(p,k,ll)=>{const s=[];if(!win)return s;let j0=0;while(j0<=k&&p.pts[j0][1]<from)j0++;
     for(let j=j0;j<=k;j++){if(j===j0||p.per[j]!==p.per[j-1])s.push([]);s[s.length-1].push([p.pts[j][2],p.pts[j][3]])}if(ll&&s.length)s[s.length-1].push(ll);return s};
-  rp.people.forEach(p=>{const k=lastIdx(p.pts,t),here=rec&&k>=0&&p.per[k]===pi&&(p.left_at==null||t<p.left_at);
+  rp.people.forEach(p=>{const k=lastIdx(p.pts,t),here=rec&&k>=0&&p.per[k]===pi&&(p.left_at==null||t<p.left_at);p.ll=null;
     if(!here){rp.dynL.removeLayer(p.mk);p.line.setLatLngs(trail(p,k));if(on(p.joined,p.left_at))info.push([p,rec?'kein Standort':'nicht aufgezeichnet']);return}
     const a=p.pts[k],b=p.pts[k+1];let ll=[a[2],a[3]],age=t-a[1];
     if(b&&p.per[k+1]===pi&&b[1]-a[1]<=GAP_S){const f=(t-a[1])/(b[1]-a[1]);ll=[a[2]+(b[2]-a[2])*f,a[3]+(b[3]-a[3])*f];age=0}
-    p.mk.setLatLng(ll).setStyle({fillOpacity:age>GAP_S?.45:1});rp.dynL.addLayer(p.mk);
+    p.ll=ll;p.mk.setLatLng(ll).setStyle({fillOpacity:age>GAP_S?.45:1});rp.dynL.addLayer(p.mk);
     p.line.setLatLngs(trail(p,k,ll));info.push([p,age>GAP_S?'letzte Meldung vor '+durT(age):'Standort aktuell'])});
   // Positionen & Bereiche, Rettlinge und Nachrichten-Markierungen: nur neu zeichnen, wenn sich der sichtbare Bestand ändert
   const pois=d.pois.filter(p=>on(p.created,p.removed)),marks=d.marks.filter(m=>m.created<=t&&(m.mark||(m.unmarked!=null&&t<m.unmarked)));
@@ -195,9 +203,21 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
   const fl=d.flow.filter(f=>f.ts<=t).pop();
   $('#rpInfo').innerHTML=`<h3 style="margin-top:0">Lage</h3>${rec?'':'<div><b>Aufzeichnung zu diesem Zeitpunkt pausiert oder aus</b> – keine Standorte der Einsatzkräfte</div>'}<div class="mut">${fl?esc(fl.text.replace(/^setzt die /,'')):'Fliessgeschwindigkeit nicht gesetzt'}</div>
     <div class="mut">Rettlinge: ${res.length?res.map(r=>esc(r.name)+' – '+(r.ok?'gerettet':r.pos?'Standort bekannt':'vermisst')).join(', '):'keine erfasst'}</div>
-    <h3>Einsatzkräfte (${info.length})</h3>${info.map(([p,s])=>`<div class="rpp"><i style="background:${esc(p.col)}"></i><span><b>${esc(p.name)}</b>${p.role?' · '+esc(p.role):''} <span class="mut">${s}</span></span></div>`).join('')||'<div class="mut">Noch niemand im Einsatz</div>'}`;
+`;
+  rpPeople(info);
   // Log: nur Einträge bis t, neueste zuerst; Klick springt zum Zeitpunkt
   const lg=d.log.filter(x=>x.ts<=t);if(lg.length!==rp.logN){rp.logN=lg.length;
     $('#rpLog').innerHTML=lg.reverse().map(x=>`<button class="rpl" data-ts="${x.ts}" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${fmtT(x.ts)}</span><b>${esc(x.name||'System')}</b> ${esc(x.text)}</button>`).join('')||'<div class="mut">Noch keine Einträge</div>'}}
+// Einsatzkräfte im Replay: nach Spezialrolle gruppiert (Reihenfolge wie in der Verwaltung, ohne Rolle zuletzt), mit «Zentrieren» und «Folgen».
+// Die Liste wird nur neu aufgebaut, wenn sich Personen, Standort ja/nein oder das Folgen ändern; Status und Koordinaten werden direkt ersetzt (sonst gehen Klicks beim Abspielen verloren).
+function rpPeople(info){const cs=me&&(me.coord_sys||me.coord_default)||'lv95',f=rp.follow!=null&&rp.people.find(p=>p.user_id===rp.follow);
+  const grp=[...roles.map(r=>({n:r.name,c:r.color,items:info.filter(([p])=>p.role_id==r.id)})),{n:'Ohne Spezialrolle',items:info.filter(([p])=>!roles.some(r=>r.id==p.role_id))}].filter(g=>g.items.length);
+  const key=JSON.stringify([grp.map(g=>g.items.map(([p])=>[p.user_id,!!p.ll])),rp.follow]);
+  if(key!==rp.pKey){rp.pKey=key;$('#rpPH').textContent=`Einsatzkräfte (${info.length})`;
+    $('#rpPeople').innerHTML=grp.map(g=>`<div class="rpg">${g.c?`<span style="color:${esc(g.c)}">●</span> `:''}${esc(g.n)} (${g.items.length})</div>`+g.items.map(([p])=>{const fo=rp.follow===p.user_id;
+      return `<div class="rpp"><i style="background:${esc(p.col)}"></i><span class="nm"><b>${esc(p.name)}</b>${p.mode_name?' <span class="mut">· '+esc(p.mode_name)+'</span>':''}<small data-st="${p.user_id}"></small></span>${p.ll?`<button data-c="${p.user_id}" title="Auf der Karte zentrieren">Zentrieren</button>`:''}${p.ll||fo?`<button data-f="${p.user_id}" aria-pressed="${fo}" title="Karte folgt dieser Person">${fo?'Folgt':'Folgen'}</button>`:''}</div>`}).join('')).join('')||'<div class="mut">Noch niemand im Einsatz</div>'}
+  info.forEach(([p,s])=>{const e=$(`#rpPeople [data-st="${p.user_id}"]`),c=p.ll&&fmtC(p.ll[0],p.ll[1],cs);if(e)e.textContent=s+(c?' · '+c:'')});
+  // Folgen: Karte bei jedem Bild auf die Person schieben (Zoom bleibt); ohne Standort (Pause, ausgetreten) bleibt die Karte stehen
+  const fc=$('#rpFollow');fc.hidden=!f;if(f){fc.firstChild.textContent='Folgt: '+f.name+(f.ll?'':' (kein Standort)');if(f.ll)rp.map.panTo(f.ll,{animate:false})}}
 start();
 </script></body></html>
