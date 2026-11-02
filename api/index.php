@@ -69,6 +69,8 @@ const TRIP_LOG_S = 600;  // lange Fahrten zusätzlich alle 10 Minuten protokolli
 const COORDS = ['lv95', 'lv03', 'wgs84', 'wgs84dms']; // Koordinatensysteme für die Anzeige (Umrechnung im Frontend, COORD_SYS in common.js)
 // Gewässernetz (OSM via Overpass) über den Server mit Datei-Cache in api/data/overpass/ (overpassServe)
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+// Reihenfolge der Abfrage: Einstellung overpass_urls (JSON-Liste, in der Verwaltung unter «Gewässerdaten»), leer = OVERPASS
+function overpassUrls() { $v = json_decode(setting('overpass_urls', ''), true); return is_array($v) && $v ? $v : OVERPASS; }
 const OVERPASS_KEEP_S = 7 * 86400; // abgelaufene Einträge so lange als Rückfall behalten, falls Overpass nicht erreichbar ist
 
 if ($route === 'login') {
@@ -190,7 +192,7 @@ function overpassServe($q) { global $now;
   $r = overpassFetch($q);
   if ($r !== null) { if ($ttl && file_put_contents("$file.tmp", $r) !== false) rename("$file.tmp", $file); header('X-Cache: MISS'); echo $r; }
   elseif (is_file($file)) { header('X-Cache: STALE'); readfile($file); } // Overpass nicht erreichbar: abgelaufene Daten sind besser als keine
-  else out(['error' => 'Overpass antwortet nicht', 'query' => $q], 502); // mit Abfrage: das Gerät fragt Overpass dann selbst (overpassNet in common.js)
+  else out(['error' => 'Overpass antwortet nicht', 'query' => $q, 'servers' => overpassUrls()], 502); // mit Abfrage und Servern: das Gerät fragt Overpass dann selbst (overpassNet in common.js)
   exit;
 }
 // Rückfall (Issue #28): Vom Hosting aus lehnt Overpass oft ab, vom Gerät aus nicht. Das Gerät liefert sein Ergebnis hier für den Cache
@@ -232,7 +234,7 @@ function overpassQuery($in) { // Abfrage aus Parametern bauen (keine freien Abfr
   return '[out:json][timeout:25];way(' . $sel . ')["waterway"~"^(river|stream|canal)$"];out geom;';
 }
 function overpassFetch($q) { // erste Antwort mit elements, sonst null
-  foreach (OVERPASS as $url) {
+  foreach (overpassUrls() as $url) {
     if (function_exists('curl_init')) {
       $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 15, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
       $r = curl_exec($c); $ok = curl_getinfo($c, CURLINFO_HTTP_CODE) === 200; curl_close($c);
@@ -721,11 +723,21 @@ switch ($route) {
   if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message) VALUES(?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1)]);
   out(['ok' => true]);
- case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'overpass_ttl' => (int)setting('overpass_ttl', '120')]);
+ case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS]);
  case 'settings/save': admin();
   if (isset($in['overpass_ttl'])) { // Haltedauer des Overpass-Caches in Minuten, 0 = kein Cache, höchstens 7 Tage
     if (!is_numeric($in['overpass_ttl']) || (int)$in['overpass_ttl'] < 0 || (int)$in['overpass_ttl'] > 10080) fail('Haltedauer: 0 bis 10080 Minuten');
     setSetting('overpass_ttl', (string)(int)$in['overpass_ttl']);
+  }
+  if (isset($in['overpass_urls'])) { // Overpass-Server in der Reihenfolge der Abfrage, 1–8 https-Adressen; leere Liste = Standard (OVERPASS)
+    $v = [];
+    foreach ((array)$in['overpass_urls'] as $u) {
+      $u = trim((string)$u);
+      if (strlen($u) > 300 || !filter_var($u, FILTER_VALIDATE_URL) || !preg_match('#^https://[^/?\#@]+/#i', $u)) fail('Ungültige Adresse: ' . mb_substr($u, 0, 80) . ' (nur https://…)');
+      if (!in_array($u, $v, true)) $v[] = $u;
+    }
+    if (count($v) > 8) fail('Höchstens 8 Overpass-Server');
+    setSetting('overpass_urls', $v ? json_encode($v, JSON_UNESCAPED_SLASHES) : '');
   }
   if (isset($in['rd_speeds'])) { // 1–6 Geschwindigkeiten zwischen 1 und 200 km/h, sortiert und ohne Duplikate
     foreach ((array)$in['rd_speeds'] as $x) if (!is_numeric($x)) fail('Nur Zahlen sind erlaubt (km/h)');

@@ -101,11 +101,28 @@ async function loadRd(){const el=$('#sF');let s;try{s=await api('settings')}catc
     <div class="row" style="align-items:end"><label class="mut">Geschwindigkeiten in km/h, durch Komma getrennt (1 bis 6 Werte)<input id="rdS" value="${esc(s.rd_speeds.join(', '))}" inputmode="decimal"></label><button id="rdSv">Speichern</button></div>`;
   $('#rdSv').onclick=()=>{const v=$('#rdS').value.replace(/km\/h/gi,' ').split(/[,;\s]+/).filter(Boolean); // «km/h» darf mitgeschrieben werden
     api('settings/save',{rd_speeds:v}).then(()=>{alert('Gespeichert. Die Einsatz-App übernimmt die Werte beim nächsten Laden.');loadRd()}).catch(fail)}}
-/* ---------- Gewässerdaten: Haltedauer des Overpass-Caches auf dem Server ---------- */
+/* ---------- Gewässerdaten: Haltedauer des Overpass-Caches und Overpass-Server (Reihenfolge) ---------- */
+let opUrls=[],opDef=[];
 async function loadOp(){const el=$('#sO');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  opUrls=[...s.overpass_urls];opDef=s.overpass_default;
   el.innerHTML=`<h2>Gewässerdaten</h2><div class="mut">Das Gewässernetz für Suchgebiet und Flussdistanz (OpenStreetMap via Overpass) holt der Server und speichert es zwischen. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal zu Overpass. Ist Overpass nicht erreichbar, verwendet der Server ältere Daten (bis 7 Tage).</div>
-    <div class="row" style="align-items:end"><label class="mut">Haltedauer in Minuten (0 = nicht zwischenspeichern)<input id="opT" type="number" min="0" max="10080" step="1" value="${s.overpass_ttl}"></label><button id="opSv">Speichern</button></div>`;
-  $('#opSv').onclick=()=>api('settings/save',{overpass_ttl:$('#opT').value}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail)}
+    <div class="row" style="align-items:end"><label class="mut">Haltedauer in Minuten (0 = nicht zwischenspeichern)<input id="opT" type="number" min="0" max="10080" step="1" value="${s.overpass_ttl}"></label><button id="opSv">Speichern</button></div>
+    <h3>Overpass-Server</h3><div class="mut">Der Server fragt sie in dieser Reihenfolge ab (je 15 s), bis einer antwortet. Antwortet keiner, fragt das Gerät dieselben Server direkt (je 30 s).</div>
+    <div id="opList"></div>
+    <div class="row"><input id="opN" placeholder="https://…/api/interpreter" aria-label="Adresse eines Overpass-Servers" inputmode="url"><button id="opA">Hinzufügen</button></div>
+    <div class="row"><button id="opUs" class="pri">Server speichern</button><button id="opUd">Standard wiederherstellen</button></div>`;
+  $('#opSv').onclick=()=>api('settings/save',{overpass_ttl:$('#opT').value}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail);
+  $('#opA').onclick=()=>{const u=$('#opN').value.trim();if(!/^https:\/\/[^/?#@]+\//i.test(u))return alert('Bitte eine vollständige https-Adresse angeben, z. B. https://overpass-api.de/api/interpreter');
+    if(!opUrls.includes(u))opUrls.push(u);$('#opN').value='';drawOpList()};
+  $('#opN').onkeydown=e=>{if(e.key==='Enter')$('#opA').click()};
+  $('#opUs').onclick=()=>{if(!opUrls.length)return alert('Mindestens ein Server ist nötig. «Standard wiederherstellen» setzt die vorgegebene Liste.');
+    api('settings/save',{overpass_urls:opUrls}).then(()=>{alert('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail)};
+  $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[]}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail)};
+  drawOpList()}
+function drawOpList(){const n=opUrls.length,el=$('#opList');
+  el.innerHTML=`<div class="tw"><table><tbody>${opUrls.map((u,k)=>`<tr><td style="width:2rem">${k+1}.</td><td style="overflow-wrap:anywhere">${esc(u)}</td><td class="act"><button data-op="up" data-k="${k}" ${k?'':'disabled'} aria-label="Nach oben" title="Früher abfragen">↑</button><button data-op="dn" data-k="${k}" ${k<n-1?'':'disabled'} aria-label="Nach unten" title="Später abfragen">↓</button><button data-op="rm" data-k="${k}" ${n>1?'':'disabled'} aria-label="Entfernen" title="Entfernen">✕</button></td></tr>`).join('')}</tbody></table></div>${JSON.stringify(opUrls)!==JSON.stringify(opDef)?'':'<div class="mut">Vorgegebene Liste.</div>'}`;
+  el.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,o=b.dataset.op;
+    if(o==='rm')opUrls.splice(k,1);else{const j=o==='up'?k-1:k+1;[opUrls[k],opUrls[j]]=[opUrls[j],opUrls[k]]}drawOpList()})}
 /* ---------- Einsatzstatistik und Einsatzlog (getrennt nach scharfen Einsätzen und Übungen) ---------- */
 const ARTS={all:'Alle',real:'Scharfe Einsätze',ex:'Übungen'};
 let statsData=null,statsF=(()=>{try{return localStorage.getItem('sw_statsf')||'all'}catch(e){return'all'}})(); // Filter pro Gerät gemerkt
