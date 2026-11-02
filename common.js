@@ -54,6 +54,33 @@ function riverArea(net,i,D,posts){let best=null,bd=1e12;net.ways.forEach(w=>w.ge
     if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=geoDist(pts[j-1],pts[j]);r.maxLen=Math.max(r.maxLen,len);
     r.lines.push(pts);r.polys.push(corridor(pts,BANK_M))});
   return r}
+// Suchgebiet aus mehreren PLS (Issue #24): srcs = sources des Servers ([{lat,lon,at,own,names}], vermisste Rettlinge bzw. PLS des Einsatzes),
+// nets = Map je PLS (srcKey) mit dem Gewässernetz, get(s,R) liefert die Overpass-Antwort für einen PLS, redraw nach dem Laden.
+// Ergebnis: polys/lines (entlang Gewässer), circles (Rückfall {lat,lon,r}), info (Text), parts (je PLS: key, names, lat/lon, polys, circles), rs = Rettlinge (für den Hinweis ohne PLS)
+const srcKey=s=>s.lat.toFixed(6)+','+s.lon.toFixed(6);
+// Schlüssel eines Teilgebiets: PLS mit Zeitpunkt, wie die Zusammenfassung in plsSources()
+const partKey=(lat,lon,at)=>lat.toFixed(6)+','+lon.toFixed(6)+'@'+at;
+const fmtDT=ts=>new Date(ts*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+function searchArea(srcs,nets,flow,now,posts,get,redraw,rs){const r={polys:[],lines:[],circles:[],info:[],parts:[]};
+  if(!srcs.length){const miss=(rs||[]).filter(x=>!x.rescued_at&&x.lat==null);
+    r.info.push(!(rs||[]).length?'Suchgebiet: Kein PLS gesetzt.':miss.length?'Suchgebiet: Kein PLS für '+miss.map(x=>'«'+x.name+'»').join(', ')+'. PLS des Einsatzes oder der Rettlinge setzen.':'Suchgebiet: Alle Rettlinge gefunden.');return r}
+  if(!flow){r.info.push('Suchgebiet: Fliessgeschwindigkeit fehlt.');return r}
+  srcs.forEach(s=>{const D=flow*(now-s.at),k=srcKey(s),who=s.names&&s.names.length?' «'+s.names.join('», «')+'»':'',lbl=srcs.length>1||who?`Suchgebiet ab PLS${who} (${fmtDT(s.at)}): `:'Suchgebiet: ';
+    if(D<=0){r.info.push(lbl+'Der Zeitpunkt des PLS liegt in der Zukunft.');return}
+    const p={key:partKey(s.lat,s.lon,s.at),names:s.names||[],lat:s.lat,lon:s.lon,polys:[],circles:[]};r.parts.push(p);
+    let n=nets.get(k);
+    if(!n||(!n.loading&&((!n.fail&&n.R<D*1.1&&n.R<30000)||(n.fail&&Date.now()>n.retryAt)))){const R=netRadius(D),old=n;n={...(old||{}),loading:true};nets.set(k,n);
+      get(s,R).then(j=>({R,...riverNet(j)})).catch(e=>({R,fail:true,err:e.message,retryAt:Date.now()+20000})).then(v=>{if(nets.get(k)===n){nets.set(k,v);redraw()}})}
+    const circle=why=>{const c={lat:s.lat,lon:s.lon,r:D};r.circles.push(c);p.circles.push(c);r.info.push(lbl+why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.')};
+    if(n.fail)return circle('Gewässerdaten nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
+    if(!n.ways)return circle('Gewässerdaten werden geladen.');
+    const a=riverArea(n,s,D,posts);if(!a)return circle('Kein Gewässer nahe der PLS.');
+    r.polys.push(...a.polys);r.lines.push(...a.lines);p.polys.push(...a.polys);
+    r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet am Posten ${a.cutBy}.`:'.'))});
+  // Kurzfassung bei mehreren PLS (Hinweis unten in der Karte, Details per Klick)
+  if(srcs.length>1){const riv=r.parts.filter(p=>p.polys.length).length,circ=r.parts.length-riv,none=srcs.length-r.parts.length;
+    r.short=`Suchgebiet aus ${srcs.length} PLS: ${riv} entlang Gewässer`+(circ?`, ${circ} als Kreis`:'')+(none?`, ${none} ohne Gebiet`:'')}
+  return r}
 /* ---------- Koordinaten ---------- */
 // Standard in der Verwaltung (settings coord_sys), pro Person übersteuerbar (users.coord_sys); Schlüssel wie auf dem Server (COORDS)
 const COORD_SYS={lv95:'LV95 (CH1903+, E / N)',lv03:'LV03 (CH1903, Y / X)',wgs84:'WGS84 Dezimalgrad',wgs84dms:'WGS84 Grad, Minuten, Sekunden'};
