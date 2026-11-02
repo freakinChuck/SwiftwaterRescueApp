@@ -20,11 +20,12 @@ html,body{height:100%}body{display:flex;flex-direction:column}
 #pbView{position:absolute;z-index:1000;top:.6rem;right:.6rem;width:46px;height:46px;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px #0008}#pbView[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}
 #viewBox{position:absolute;top:3.7rem;right:.6rem;max-height:calc(100% - 4.4rem);cursor:auto;font:1rem/1.4 "Segoe UI",system-ui,sans-serif} /* in der Karte: sonst Schrift von Leaflet */
 #pbAuto[aria-pressed=true]{background:var(--ex);border-color:var(--ex);color:#fff}
+#pbWait{position:absolute;inset:0;z-index:2000;background:var(--bg);display:flex;align-items:flex-start;justify-content:center}#pbWait[hidden]{display:none}#pbBody{position:relative}
 #pbMsg{max-width:420px;margin:12vh auto;padding:1.2rem;text-align:center}
 @media(max-width:760px){#pbBody{flex-direction:column}#pbSide{width:auto;height:38%;border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
 <div id="pbHead"><h1 id="pbTitle">Öffentliche Ansicht</h1><span id="pbTime" class="mut"></span><button id="pbAuto" aria-pressed="false" hidden title="Karte zeigt laufend alle sichtbaren aktiven Positionen und folgt ihnen">Auto-Übersicht</button></div>
-<div id="pbBody"><div id="pbMap"><div id="pbFollow" hidden><span></span> <button title="Folgen beenden">✕</button></div><button id="pbView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden"></button><div id="viewBox" hidden></div></div><aside id="pbSide"></aside></div>
+<div id="pbBody"><div id="pbWait" hidden></div><div id="pbMap"><div id="pbFollow" hidden><span></span> <button title="Folgen beenden">✕</button></div><button id="pbView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden"></button><div id="viewBox" hidden></div></div><aside id="pbSide"></aside></div>
 <script src="common.js?v=0"></script>
 <script>
 // Daten über die Route public/state (ohne Anmeldung); Aktualisierung alle 5 s.
@@ -79,6 +80,10 @@ function drawArea(d){const i=d.incident,posts=d.participants.filter(p=>p.lat!=nu
 function plsList(d){const i=d.incident,l=[];if(i.lat!=null)l.push({lat:i.lat,lon:i.lon,at:i.pls_at,label:'PLS',on:(d.sources||[]).some(s=>!s.own)});
   d.rescuees.filter(r=>r.pls_lat!=null).forEach(r=>l.push({lat:r.pls_lat,lon:r.pls_lon,at:r.pls_at,label:'PLS '+r.name,on:!r.rescued_at&&r.lat==null}));return l}
 async function load(){let d;try{d=await api('public/state&k='+encodeURIComponent(K))}catch(e){return stopWith('Öffentliche Ansicht nicht verfügbar',e.message)}
+  // vorbereitete Übung noch nicht gestartet (Issue #29): Warteseite, die Seite prüft weiter und wechselt beim Start zur Live-Ansicht
+  const w=$('#pbWait');w.hidden=!d.waiting;
+  if(d.waiting){$('#pbTitle').innerHTML='<span class="badge">Übung</span> '+esc(d.title);document.title='Übung: '+d.title;$('#pbTime').textContent='öffentliche Ansicht, nur lesen';
+    w.innerHTML=`<div id="pbMsg" class="card"><h2>Die Übung hat noch nicht begonnen</h2><div class="mut">Diese Seite aktualisiert sich automatisch und zeigt die Übung, sobald sie gestartet ist.</div></div>`;return}
   ps=d;const i=d.incident;cs=d.coord_sys||'lv95';
   $('#pbTitle').innerHTML=`${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} ${esc(i.message)}`;document.title=(i.is_exercise?'Übung: ':'Einsatz: ')+i.message;
   if(i.ended_at)return stopWith(i.is_exercise?'Die Übung ist beendet.':'Der Einsatz ist beendet.','Die öffentliche Ansicht zeigt nur laufende Einsätze.');

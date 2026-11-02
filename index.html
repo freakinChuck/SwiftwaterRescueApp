@@ -277,14 +277,20 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   // Werkzeuge: auch ohne Einsatz verfügbar (im Einsatz zusätzlich über den Kartenknopf)
   const tools=!feat('rd')?'':sec('tools','Werkzeuge',`<div class="row"><button id="bRdM">Flussdistanz messen</button></div><div class="mut">Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei ${rdSpeeds().join(', ')} km/h.</div>`);
   const bindTools=()=>{if($('#bRdM'))$('#bRdM').onclick=rdOpen};
-  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+tools+acc+footInfo();$('#bNew').onclick=newView;bindTools();return bindAcc()}
+  // vorbereitete Übungen (Issue #29): Übungsleitung und Administratoren starten sie hier, Alarm mit der vorbereiteten Aufgebotsmeldung
+  const xps=(st&&!st.incident&&st.ex_plans)||[],xsec=!xps.length?'':sec('explans','Vorbereitete Übungen',xps.map(p=>`<div class="row" style="align-items:center"><span style="flex:1">${esc(p.title)}</span><button class="pri" data-xs="${p.id}">Übung starten</button></div>`).join('')+'<div class="mut">Startet die Übung mit der vorbereiteten Aufgebotsmeldung. Du leitest sie als Übungsleitung: du wirst nicht alarmiert, nimmst nicht teil und gibst die vorbereiteten Elemente frei.</div>');
+  if((!st||!st.incident)&&secReset){secReset=false;openSec=new Set(['explans'])} // vorbereitete Übungen offen
+  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+xsec+tools+acc+footInfo();$('#bNew').onclick=newView;bindTools();
+    s.querySelectorAll('[data-xs]').forEach(b=>b.onclick=()=>{const p=xps.find(x=>x.id===+b.dataset.xs);if(confirm(`Übung «${p.title}» jetzt starten? Alle werden alarmiert.`))api('ex/start',{id:p.id}).then(poll).catch(fail)});return bindAcc()}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
-  if(secReset){secReset=false;openSec=new Set(['mine']);if(!i.flow_ms)openSec.add('flow')}
+  if(secReset){secReset=false;openSec=new Set([st.ex_lead?'exlead':'mine']);if(!i.flow_ms)openSec.add('flow')}
   let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}${esc(fcs(i.lat,i.lon,' · PLS '))}${i.record===1?' · <b>● wird aufgezeichnet</b> (Standortverläufe für das Replay)':i.record===2?' · <b>❚❚ Aufzeichnung pausiert</b>':''}${i.public?` · <b>🌐 öffentlich sichtbar</b> (${i.public_anon?'ohne Namen':'mit Namen'})`:''}</div>`;
-  if(!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button class="pri" data-m="${esc(x.code)}">Einsatz annehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
+  if(st.ex_lead)h+=`<div class="mut"><b>Du leitest diese Übung${st.ex_title?' «'+esc(st.ex_title)+'»':''}</b> (Übungsleitung): Rechte der Einsatzleitung, du nimmst nicht teil und wirst nicht alarmiert.</div>`;
+  else if(!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button class="pri" data-m="${esc(x.code)}">Einsatz annehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
   // Reihenfolge im Menü: Mein Einsatz, Fliessgeschwindigkeit & Suchgebiet, danach der Rest
   const flowSec=st.can_flow?sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button></div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`):'';
+  if(st.ex_lead||(st.ex_injects||[]).length)h+=exSec();
   if(!joined)h+=flowSec;
   else{
     const sh=shares(m.mode);
@@ -303,6 +309,8 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
   s.innerHTML=h+tools+acc+footInfo();bindAcc();bindTools();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
+  s.querySelectorAll('[data-xr]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xr);if(confirm(`«${j.label}» freigeben?\n\n${exWhat(j)}${j.msg?'\nMeldung an alle: '+j.msg:''}`)){b.disabled=true;api('ex/release',{id:j.id}).then(poll).catch(e=>{b.disabled=false;fail(e)})}});
+  s.querySelectorAll('[data-xz]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xz);exShow(j)});
   if(joined){if($('#rs'))$('#rs').onchange=e=>{e.target.blur();api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail)};$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
   }
@@ -315,6 +323,19 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     ['pubOn','pubAnon'].forEach(k=>{const c=$('#'+k);if(c)c.onchange=()=>{c.blur();if(k==='pubOn'&&c.checked&&!confirm('Öffentliche Ansicht einschalten?\n\nWer den Link hat, sieht ohne Anmeldung die Karte mit den Standorten der Einsatzkräfte, Markierungen, Bereichen und Rettlingen (keine Nachrichten, kein Einsatzlog).')){c.checked=false;return}
       api('incident/public',k==='pubOn'?{on:c.checked}:{anon:c.checked}).then(poll).catch(e=>{fail(e);poll()})}});
     if($('#bPubCp'))$('#bPubCp').onclick=()=>{const t=$('#pubUrl');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>alert('Link kopiert.')).catch(()=>{try{document.execCommand('copy');alert('Link kopiert.')}catch(e){}})}}}
+// Übungsleitung (Issue #29): vorbereitete Elemente der Übung, erst nach der Freigabe für alle sichtbar und fürs Suchgebiet relevant
+const EXK={pls:'PLS des Einsatzes',res:'Neuer Rettling',seen:'Rettling gesichtet'};
+function exWhat(j){const ref=j.kind==='seen'&&st.ex_injects.find(x=>x.id===j.ref_id),t=j.ago?`, Drift ab ${j.ago} min vor der Freigabe`:'';
+  return j.kind==='pls'?'Setzt den PLS des Einsatzes'+t+'.':j.kind==='res'?`Erfasst den Rettling «${j.name}» mit eigenem PLS${t}.`:`Meldet «${ref?ref.name:'?'}» gesichtet und setzt den PLS neu${t}.`}
+function exSec(){const js=st.ex_injects||[],open=js.filter(j=>!j.released).length;
+  return sec('exlead',`Übungsleitung: Elemente (${open} offen)`,js.map(j=>{const ref=j.kind==='seen'&&js.find(x=>x.id===j.ref_id),blocked=j.kind==='seen'&&!(ref&&ref.released);
+    return `<div class="msg"><b>${esc(j.label)}</b> <span class="mut">${EXK[j.kind]}${j.kind==='res'?': '+esc(j.name):ref?': '+esc(ref.name):''}${esc(fcs(j.lat,j.lon,' · '))}</span>${j.msg?`<div>Meldung: ${esc(j.msg)}</div>`:''}
+      <div class="row" style="align-items:center">${j.released?`<span class="mut">✓ freigegeben ${fmtT(j.released)}${j.released_name?' von '+esc(j.released_name):''}</span>`:`<button class="pri" data-xr="${j.id}" ${blocked?'disabled title="Zuerst den Rettling freigeben"':''}>Freigeben</button>`}<button data-xz="${j.id}">Zeigen</button></div></div>`}).join('')
+    ||'<div class="mut">Keine vorbereiteten Elemente.</div>')+'<div class="mut">Nicht freigegebene Elemente sieht nur die Übungsleitung. Die Meldung geht bei der Freigabe als Nachricht an alle.</div>'}
+// Standort eines Elements kurz auf der Karte zeigen (nur für die Übungsleitung, nicht freigegeben = gestrichelt)
+let exMark=null;function exShow(j){stopFollow();toggleSheet(false);if(exMark)map.removeLayer(exMark);
+  exMark=L.circleMarker([j.lat,j.lon],{radius:12,color:'#e05cb0',weight:3,dashArray:j.released?null:'4',fillOpacity:.15}).bindTooltip(esc(j.label),{permanent:true,direction:'right'}).addTo(map);map.panTo([j.lat,j.lon]);
+  const m=exMark;setTimeout(()=>{if(exMark===m){map.removeLayer(m);exMark=null}},8000)}
 // Öffentliche Ansicht (Public Mode, nur Einsatzleitung): Link public.html?k=<public_token> zum Zuschauen ohne Login
 const pubUrl=t=>location.origin+location.pathname.replace(/[^/]*$/,'')+'public.html?k='+t;
 function pubSec(i){const u=i.public&&i.public_token?pubUrl(i.public_token):'';
@@ -444,7 +465,7 @@ function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!
   if(on&&ms.length&&ms[ms.length-1].id>msgSeen){msgSeen=ms[ms.length-1].id;try{localStorage.setItem(key,msgSeen)}catch(e){}}
   const unread=ms.filter(m=>m.id>msgSeen&&m.from_user!=me.id).length,c=$('#msgCnt');c.hidden=!unread;c.textContent=unread;updFold();
   if(!on)return;
-  const L=$('#msgList'),atEnd=L.scrollHeight-L.scrollTop-L.clientHeight<30,joined=!!(st.me&&!st.me.left_at&&st.me.mode!=='declined');
+  const L=$('#msgList'),atEnd=L.scrollHeight-L.scrollTop-L.clientHeight<30,joined=!!(st.me&&!st.me.left_at&&st.me.mode!=='declined')||!!st.ex_lead; // Übungsleitung sendet ohne Teilnahme
   const marked=new Set((st.msg_marks||[]).map(x=>x.id));
   L.innerHTML=ms.map(m=>`<div class="mg${m.recipients&&msgForMe(m)?' tome':''}"><b>${m.from_user==me.id?'Du':esc(m.from_name)}</b> ${esc(m.text)}<span class="t">${fmtT(m.created)} · an ${esc(msgTo(m))}</span>`
     +(m.lat!=null?`<button class="lk" data-goto="${m.lat},${m.lon}" title="Standort beim Senden auf der Karte zeigen">📍 Standort${esc(fcs(m.lat,m.lon,' '))}</button>`:'')
@@ -646,7 +667,7 @@ function bindMarks(){
 /* ---------- Polling ---------- */
 // Alarmierungsart kommt vom Server (critical): scharfer Einsatz immer kritisch, Übung nur mit Übungsmodus
 let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
-    if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
+    if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(!nx.ex_lead&&notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
       // alle sehen alle Nachrichten, benachrichtigt werden nur die markierten Empfänger (bzw. alle bei «an alle»)
       (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);msgData.push(m);if(m.from_user!=me.id&&nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&msgForMe(m))notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
       if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);

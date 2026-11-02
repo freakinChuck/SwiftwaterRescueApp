@@ -31,6 +31,7 @@ tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{p
 #rpTime{font-variant-numeric:tabular-nums;white-space:nowrap}
 .rpl{display:block;width:100%;text-align:left;border:0;border-left:4px solid;border-radius:0;background:none;padding:.35rem .5rem;font-size:.9rem}.rpl:hover{background:var(--panel)}.rpl .t{color:var(--mut);margin-right:.4rem}
 .rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
+.exp{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.8rem 0}.exp h3{margin:0 0 .3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.exp .badge.run{background:var(--alarm)}.exp .badge.done{background:var(--line)}.exp td{vertical-align:top}.exp td small{display:block;color:var(--mut)}
 .rpg{font-size:.8rem;font-weight:700;color:var(--mut);margin-top:.5rem}
 /* Replay: Anzeige beim Folgen (oben links auf der Karte) */
 #rpFollow{position:absolute;top:.6rem;left:3.4rem;z-index:1000;background:var(--ex);color:#fff;border-radius:6px;padding:.2rem .3rem .2rem .7rem;font-size:.9rem;display:flex;gap:.4rem;align-items:center;box-shadow:0 1px 4px #0008;max-width:calc(100% - 4rem)}#rpFollow[hidden]{display:none}#rpFollow button{background:transparent;border:0;color:#fff;padding:.15rem .4rem}
@@ -60,6 +61,7 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
 const NAV=[
   ['Personen',[['benutzer','sU','Benutzer',loadUsers]]],
   ['Einsatz',[['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt]]],
+  ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats]]],
@@ -191,6 +193,54 @@ function drawOpList(){const n=opUrls.length,el=$('#opList');
   el.innerHTML=`<div class="tw"><table><tbody>${opUrls.map((u,k)=>`<tr><td style="width:2rem">${k+1}.</td><td style="overflow-wrap:anywhere">${esc(u)}</td><td class="act"><button data-op="up" data-k="${k}" ${k?'':'disabled'} aria-label="Nach oben" title="Früher abfragen">↑</button><button data-op="dn" data-k="${k}" ${k<n-1?'':'disabled'} aria-label="Nach unten" title="Später abfragen">↓</button><button data-op="rm" data-k="${k}" ${n>1?'':'disabled'} aria-label="Entfernen" title="Entfernen">✕</button></td></tr>`).join('')}</tbody></table></div>${JSON.stringify(opUrls)!==JSON.stringify(opDef)?'':'<div class="mut">Vorgegebene Liste.</div>'}`;
   el.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,o=b.dataset.op;
     if(o==='rm')opUrls.splice(k,1);else{const j=o==='up'?k-1:k+1;[opUrls[k],opUrls[j]]=[opUrls[j],opUrls[k]]}drawOpList()})}
+/* ---------- Übungen vorbereiten (Issue #29) ---------- */
+// Aufgebotsmeldung, Übungsleitung (Rechte der Einsatzleitung, nimmt nicht teil), Aufzeichnung, öffentlicher Link (schon vor dem Start gültig, zeigt bis dahin eine Warteseite)
+// und Elemente, die die Übungsleitung in der Einsatz-App freigibt: PLS des Einsatzes, neuer Rettling, Rettling gesichtet, je mit optionaler Meldung (Nachricht an alle)
+const EXK={pls:'PLS des Einsatzes',res:'Neuer Rettling',seen:'Rettling gesichtet'};
+const pubLink=t=>location.origin+location.pathname.replace(/[^/]*$/,'')+'public.html?k='+t;
+async function loadEx(){const el=$('#sEx');let ps,us;try{[ps,us]=await Promise.all([api('ex/plans'),api('users')])}catch(e){el.innerHTML='<h2>Übungen vorbereiten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const un=id=>(us.find(u=>u.id===id)||{}).name||'?',stat=p=>p.incident_id==null?['vorbereitet','']:p.ended_at==null?['läuft','run']:['beendet','done'];
+  const inj=(p,j)=>{const ref=j.kind==='seen'&&p.injects.find(x=>x.id===j.ref_id);
+    return `<tr><td>${esc(j.label)}<small>${EXK[j.kind]}${j.kind==='res'?': '+esc(j.name):ref?': '+esc(ref.name||ref.label):''}</small></td><td>${esc(fmtC(j.lat,j.lon,'lv95'))}<small>${j.ago?'PLS '+j.ago+' min vor der Freigabe':'PLS bei der Freigabe'}</small></td><td>${j.msg?esc(j.msg):'<span class="mut">keine Meldung</span>'}</td>
+      <td>${j.released?'freigegeben '+esc(new Date(j.released*1000).toLocaleString('de-CH'))+'<small>'+esc(j.released_name||'')+'</small>':'<span class="mut">nicht freigegeben</span>'}</td>
+      <td class="act">${j.released||p.ended_at?'':`<button data-ji="${j.id}" data-p="${p.id}">Bearbeiten</button><button data-jr="${j.id}" aria-label="Element entfernen" title="Entfernen">✕</button>`}</td></tr>`};
+  el.innerHTML=`<h2>Übungen vorbereiten</h2><div class="mut">Die Übungsleitung startet die Übung in der Einsatz-App (☰ → Vorbereitete Übungen) und gibt dort die Elemente frei. Sie hat die Rechte der Einsatzleitung, wird aber nicht alarmiert und nimmt nicht teil. Erst freigegebene Elemente sind für die Teilnehmenden sichtbar und zählen fürs Suchgebiet. Der öffentliche Link lässt sich schon vorher öffnen und zeigt bis zum Start eine Warteseite.</div>
+    <div class="row"><button class="pri" id="exA">Neue Übung</button></div>
+    ${ps.map(p=>{const[s,c]=stat(p);return`<div class="exp"><h3>${esc(p.title)} <span class="badge ${c}">${s}</span>${p.alarm_at?` <span class="mut" style="font-weight:400">${esc(new Date(p.alarm_at*1000).toLocaleString('de-CH'))}</span>`:''}</h3>
+      <div class="mut">Aufgebotsmeldung: ${esc(p.message)}</div>
+      <div class="mut">Übungsleitung: ${esc(p.leads.map(un).join(', '))} · Aufzeichnung: ${p.record?'ja':'nein'} · Öffentliche Ansicht: ${p.public_token?(p.public_anon?'ja, anonym':'ja, mit Namen'):'nein'}</div>
+      ${p.public_token&&!p.ended_at?`<div class="row"><input readonly value="${esc(pubLink(p.public_token))}" aria-label="Öffentlicher Link" onfocus="this.select()"><a class="btn" href="${esc(pubLink(p.public_token))}" target="_blank" rel="noopener">Öffnen</a></div>`:''}
+      <div class="tw"><table><thead><tr><th>Element</th><th>Standort</th><th>Meldung</th><th>Status</th><th></th></tr></thead><tbody>${p.injects.map(j=>inj(p,j)).join('')||'<tr><td colspan="5" class="mut">Noch keine Elemente</td></tr>'}</tbody></table></div>
+      <div class="row">${p.ended_at?'':`<button data-ja="${p.id}">+ Element</button>`}${p.incident_id==null?`<button data-pe="${p.id}">Übung bearbeiten</button>`:''}<button data-pc="${p.id}">Kopieren</button>${p.incident_id!=null&&!p.ended_at?'':`<button data-pr="${p.id}">Entfernen</button>`}</div></div>`}).join('')||'<div class="mut">Noch keine vorbereiteten Übungen.</div>'}`;
+  const editP=p=>dlg(p.id?'Übung bearbeiten':'Neue Übung',`<label class="mut">Titel (für Verwaltung, Übungsleitung und Warteseite des öffentlichen Links)<input id="pT" maxlength="120" value="${esc(p.title||'')}" placeholder="z. B. Übung Aare Olten, Herbst"></label>
+      <label class="mut">Aufgebotsmeldung (Alarm beim Start)<textarea id="pM" rows="3">${esc(p.message||'')}</textarea></label>
+      <div class="mut">Übungsleitung (Rechte der Einsatzleitung, nimmt nicht teil)</div><div style="max-height:12rem;overflow:auto">${us.filter(u=>u.active).map(u=>`<label class="chk"><input type="checkbox" data-lead="${u.id}" ${(p.leads||[me.id]).includes(u.id)?'checked':''}> ${esc(u.name)}</label>`).join('')}</div>
+      ${features('rec')?`<label class="chk"><input type="checkbox" id="pR" ${p.record??1?'checked':''}> Aufzeichnen (Replay)</label>`:''}
+      <label class="chk"><input type="checkbox" id="pP" ${p.public_token?'checked':''}> Öffentliche Ansicht vorbereiten (Link schon vor dem Start)</label><label class="chk"><input type="checkbox" id="pA" ${p.public_anon??1?'checked':''}> Anonym: Namen ausblenden</label>`,
+    async d=>{await api('ex/plan/save',{id:p.id,title:$('#pT',d).value,message:$('#pM',d).value,leads:[...d.querySelectorAll('[data-lead]:checked')].map(c=>+c.dataset.lead),record:$('#pR',d)?($('#pR',d).checked?1:0):(p.record??1),public:$('#pP',d).checked?1:0,public_anon:$('#pA',d).checked?1:0});loadEx()});
+  const editJ=(p,j)=>{const rs=p.injects.filter(x=>x.kind==='res'&&x.id!==j.id);
+    const d=dlg(j.id?'Element bearbeiten':'Neues Element',`<label class="mut">Art<select id="jK">${Object.entries(EXK).map(([k,t])=>`<option value="${k}" ${k===(j.kind||'pls')?'selected':''}>${t}</option>`).join('')}</select></label><div class="mut" id="jKi"></div>
+      <label class="mut">Bezeichnung (für die Übungsleitung)<input id="jL" maxlength="120" value="${esc(j.label||'')}" placeholder="z. B. Meldung Passant Brücke"></label>
+      <label class="mut" data-k="res">Name des Rettlings<input id="jN" maxlength="80" value="${esc(j.name||'')}"></label><label class="mut" data-k="res">Beschreibung<textarea id="jD" rows="2" maxlength="1000">${esc(j.descr||'')}</textarea></label>
+      <label class="mut" data-k="seen">Rettling<select id="jRf">${rs.map(x=>`<option value="${x.id}" ${x.id===j.ref_id?'selected':''}>${esc(x.name)} (${esc(x.label)})</option>`).join('')||'<option value="">Zuerst ein Element «Neuer Rettling» erfassen</option>'}</select></label>
+      <label class="mut">Standort (PLS)<input id="jP" value="${j.lat!=null?esc(fmtC(j.lat,j.lon,'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div class="mut" id="jPi">LV95, LV03 oder WGS84 dezimal.</div>
+      <label class="mut">Zeitpunkt des PLS: Minuten vor der Freigabe (0 = bei der Freigabe)<input id="jA" type="number" min="0" max="1440" step="1" value="${j.ago||0}"></label>
+      <label class="mut">Meldung (optional, geht bei der Freigabe als Nachricht an alle)<textarea id="jM" rows="3" maxlength="2000">${esc(j.msg||'')}</textarea></label>`,
+      async d=>{const v=$('#jP',d).value.trim(),q=parseC(v);if(!q)throw new Error('Standort nicht erkannt. Beispiele: 2635600 / 1245500 (LV95) oder 47.36, 7.91 (WGS84).');
+        await api('ex/inject/save',{id:j.id,plan_id:p.id,kind:$('#jK',d).value,label:$('#jL',d).value,name:$('#jN',d).value,descr:$('#jD',d).value,ref_id:+$('#jRf',d).value||null,lat:+q.lat.toFixed(7),lon:+q.lon.toFixed(7),ago:+$('#jA',d).value||0,msg:$('#jM',d).value});loadEx()});
+    const KI={pls:'Setzt oder verschiebt den PLS des Einsatzes.',res:'Erfasst einen Rettling mit eigenem PLS (eigenes Suchgebiet).',seen:'Der Rettling wurde gesichtet: sein PLS wird neu gesetzt, die Drift beginnt dort neu.'};
+    const kind=()=>{const k=$('#jK',d).value;d.querySelectorAll('[data-k]').forEach(x=>x.hidden=x.dataset.k!==k);$('#jKi',d).textContent=KI[k]};$('#jK',d).onchange=kind;kind();
+    const pi=$('#jP',d);pi.oninput=()=>{const q=parseC(pi.value);$('#jPi',d).textContent=!pi.value.trim()?'LV95, LV03 oder WGS84 dezimal.':q?'Erkannt: '+fmtC(q.lat,q.lon,'lv95')+' (LV95) · '+fmtC(q.lat,q.lon,'wgs84')+' (WGS84)':'Nicht erkannt'};if(pi.value)pi.oninput()};
+  const P=id=>ps.find(p=>p.id===+id);
+  $('#exA').onclick=()=>editP({});
+  el.querySelectorAll('[data-pe]').forEach(b=>b.onclick=()=>editP(P(b.dataset.pe)));
+  el.querySelectorAll('[data-ja]').forEach(b=>b.onclick=()=>editJ(P(b.dataset.ja),{}));
+  el.querySelectorAll('[data-ji]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p);editJ(p,p.injects.find(j=>j.id===+b.dataset.ji))});
+  el.querySelectorAll('[data-jr]').forEach(b=>b.onclick=()=>confirm('Element entfernen?')&&api('ex/inject/remove',{id:+b.dataset.jr}).then(loadEx).catch(fail));
+  el.querySelectorAll('[data-pc]').forEach(b=>b.onclick=()=>api('ex/plan/copy',{id:+b.dataset.pc}).then(loadEx).catch(fail));
+  el.querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>confirm('Übung «'+P(b.dataset.pr).title+'» entfernen?'+(P(b.dataset.pr).incident_id==null?' Der vorbereitete öffentliche Link wird ungültig.':''))&&api('ex/plan/remove',{id:+b.dataset.pr}).then(loadEx).catch(fail))}
+// Funktion für Übungen eingeschaltet (aus me.features), z. B. Aufzeichnung
+const features=k=>!me||!me.features||me.features.ex[k]!==0;
 /* ---------- Einsatzstatistik und Einsatzlog (getrennt nach scharfen Einsätzen und Übungen) ---------- */
 const ARTS={all:'Alle',real:'Scharfe Einsätze',ex:'Übungen'};
 let statsData=null,statsF=(()=>{try{return localStorage.getItem('sw_statsf')||'all'}catch(e){return'all'}})(); // Filter pro Gerät gemerkt

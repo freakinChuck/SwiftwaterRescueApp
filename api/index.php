@@ -46,12 +46,18 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS ext_templates(id $ai, name $tx, descr TEXT, role_id INT NULL, lat DOUBLE NULL, lon DOUBLE NULL, active INT DEFAULT 1)",
  // Verwendung je Overpass-Server (Issue #45): src server = Abfrage vom Hosting, device = direkte Abfrage des Geräts (Rückfall); ok_ms = Summe der Antwortzeiten der erfolgreichen
  "CREATE TABLE IF NOT EXISTS overpass_stats(url $tx, src $tx, uses INT DEFAULT 0, ok INT DEFAULT 0, fails INT DEFAULT 0, ok_ms BIGINT DEFAULT 0, last_ok BIGINT NULL, last_fail BIGINT NULL, last_err $tx NULL, PRIMARY KEY(url, src))",
+ // Vorbereitete Übungen (Issue #29): Titel (nur für Verwaltung, Übungsleitung und Warteseite), Aufgebotsmeldung (message), Übungsleitung (leads = JSON-Liste von User-IDs,
+ // Rechte der Einsatzleitung, nicht Teil der Übung), Aufzeichnung, vorbereiteter öffentlicher Link (public_token, schon vor dem Start gültig); incident_id = gestartete Übung; active 0 = entfernt
+ "CREATE TABLE IF NOT EXISTS ex_plans(id $ai, title $tx, message TEXT, leads TEXT, record INT DEFAULT 1, public_token $tx NULL, public_anon INT DEFAULT 1, created_by INT, created BIGINT, incident_id INT NULL, active INT DEFAULT 1)",
+ // Vorbereitete Elemente einer Übung, erst nach der Freigabe durch die Übungsleitung sichtbar: kind pls (PLS des Einsatzes setzen/verschieben), res (neuer Rettling mit PLS: name, descr),
+ // seen (Rettling gesichtet: neuer PLS für den Rettling aus dem Element ref_id); ago = Zeitpunkt des PLS in Minuten vor der Freigabe; msg = Meldung, geht bei der Freigabe als Nachricht an alle
+ "CREATE TABLE IF NOT EXISTS ex_injects(id $ai, plan_id INT, kind $tx, label $tx, name $tx NULL, descr TEXT NULL, lat DOUBLE, lon DOUBLE, ago INT DEFAULT 0, msg TEXT NULL, ref_id INT NULL, released BIGINT NULL, released_by INT NULL, rescuee_id INT NULL, removed INT DEFAULT 0)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL'], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL']] as $t => $cs)
+foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL'], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 try { $db->exec("CREATE INDEX track_inc ON track(incident_id,ts)"); } catch (Throwable $e) {} // schlägt bei vorhandenem Index still fehl
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
@@ -114,6 +120,9 @@ if ($route === 'public/net') {
   overpassServe(overpassQuery(['around' => [$r, $src['lat'], $src['lon']]]));
 }
 if ($route === 'public/state') {
+  // vorbereitete Übung (Issue #29): Der Link gilt schon vor dem Start; bis dahin nur Titel und «noch nicht begonnen», ohne Aufgebotsmeldung
+  $k = (string)($_GET['k'] ?? ''); $s = $db->prepare("SELECT title FROM ex_plans WHERE public_token=? AND active=1 AND incident_id IS NULL"); $s->execute([$k]); $wp = $s->fetch(); $s->closeCursor();
+  if ($wp && preg_match('/^[0-9a-f]{32}$/', $k)) out(['waiting' => 1, 'title' => $wp['title'], 'now' => $now]);
   $inc = pubIncident();
   $pi = ['message' => $inc['message'], 'is_exercise' => (int)$inc['is_exercise'], 'alarm_at' => (int)$inc['alarm_at'], 'ended_at' => $inc['ended_at'] === null ? null : (int)$inc['ended_at']];
   if ($inc['ended_at'] !== null) out(['incident' => $pi, 'now' => $now]);
@@ -164,7 +173,15 @@ function isLead($incId) {
   return $r && (int)$r['is_lead'];
 }
 function leadMode($code) { $m = modeRow($code); return $m && (int)$m['lead_rights']; }
-function canManage($inc) { global $me, $uid; return $me['is_admin'] || (int)$inc['created_by'] === $uid || isLead((int)$inc['id']); }
+function canManage($inc) { global $me, $uid; return $me['is_admin'] || (int)$inc['created_by'] === $uid || isLead((int)$inc['id']) || exLead($inc); }
+// Vorbereitete Übung eines Einsatzes (Issue #29) und ob die angemeldete Person sie leitet (Übungsleitung: Rechte der Einsatzleitung, nimmt nicht teil)
+function exPlan($inc) { global $db; if (empty($inc['plan_id'])) return null; $s = $db->prepare("SELECT * FROM ex_plans WHERE id=?"); $s->execute([(int)$inc['plan_id']]); return $s->fetch() ?: null; }
+function exLeads($p) { return array_map('intval', json_decode($p['leads'] ?? '[]', true) ?: []); }
+function exLead($inc) { global $uid; $p = exPlan($inc); return $p && in_array($uid, exLeads($p), true); }
+// Elemente einer vorbereiteten Übung, Zahlen als Zahlen
+function exInjects($planId) { global $db; $s = $db->prepare("SELECT i.*,u.name released_name FROM ex_injects i LEFT JOIN users u ON u.id=i.released_by WHERE i.plan_id=? AND i.removed=0 ORDER BY i.id"); $s->execute([$planId]);
+  return array_map(fn($r) => floats(ints($r, ['id', 'plan_id', 'ago', 'ref_id', 'released', 'released_by', 'rescuee_id', 'removed']), ['lat', 'lon']), $s->fetchAll()); }
+const EX_KINDS = ['pls' => 'PLS des Einsatzes', 'res' => 'Neuer Rettling', 'seen' => 'Rettling gesichtet'];
 function canFlow($inc) { return canManage($inc) || isActivePart((int)$inc['id']); }
 function modeRow($code) { global $db; $s = $db->prepare("SELECT * FROM modes WHERE code=?"); $s->execute([$code]); return $s->fetch() ?: null; }
 function modeShares($code) { $m = modeRow($code); return !$m || (int)$m['share_location']; }
@@ -173,7 +190,8 @@ function setSetting($k, $v) { global $db, $my; $db->prepare($my ? "INSERT INTO s
 // Nachrichten senden: nur wer den Einsatz angenommen hat; wer den Einsatz verwalten darf, immer;
 // sonst je nach Spezialrolle (roles.can_message) bzw. Einstellung für Personen ohne Rolle (msg_no_role)
 function canMessage($inc) {
-  global $db; $p = part((int)$inc['id']);
+  global $db; if (exLead($inc)) return true; // Übungsleitung darf senden, ohne teilzunehmen
+  $p = part((int)$inc['id']);
   if (!$p || $p['mode'] === 'declined' || $p['left_at'] !== null) return false;
   if (canManage($inc)) return true;
   if ($p['role_id'] === null) return (bool)(int)setting('msg_no_role', '1');
@@ -411,9 +429,11 @@ switch ($route) {
   $inc = activeIncident();
   if (!$inc) {
     $last = $db->query("SELECT id,ended_at FROM incidents ORDER BY id DESC LIMIT 1")->fetch();
-    out(['incident' => null, 'last_ended' => $last ?: null, 'features' => ['real' => features(0), 'ex' => features(1)]]); // features: Flussdistanz ohne Einsatz
+    // vorbereitete Übungen, die diese Person starten darf (Übungsleitung, Administratoren)
+    $xp = array_values(array_filter($db->query("SELECT id,title,leads FROM ex_plans WHERE active=1 AND incident_id IS NULL ORDER BY title")->fetchAll(), fn($p) => $me['is_admin'] || in_array($uid, exLeads($p), true)));
+    out(['incident' => null, 'last_ended' => $last ?: null, 'features' => ['real' => features(0), 'ex' => features(1)], 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title']], $xp)]); // features: Flussdistanz ohne Einsatz
   }
-  $inc['id'] = (int)$inc['id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc['is_exercise'] = (int)$inc['is_exercise']; $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
+  $inc['id'] = (int)$inc['id']; $inc['plan_id'] = $inc['plan_id'] === null ? null : (int)$inc['plan_id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc['is_exercise'] = (int)$inc['is_exercise']; $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
   $id = $inc['id']; $since = (int)($_GET['since'] ?? 0); $F = features($inc['is_exercise']); // ausgeschaltete Funktionen liefern nichts
   $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,u.name,u.photo FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
@@ -421,7 +441,8 @@ switch ($route) {
   $isP = isActivePart($id);
   $msgs = []; $msgMarks = [];
   // Lesen: alle, die den Einsatz angenommen haben; mit Einstellung msg_read_all auch alle anderen angemeldeten Personen
-  $canRead = $F['msg'] && ($isP || setting('msg_read_all', '0') === '1');
+  $xl = exLead($inc); // Übungsleitung (Issue #29)
+  $canRead = $F['msg'] && ($isP || $xl || setting('msg_read_all', '0') === '1');
   if ($canRead) { // recipients = wer benachrichtigt wird (null = alle)
     $ms = $db->prepare("SELECT m.id,m.from_user,m.text,m.created,m.recipients,m.lat,m.lon,m.mark_lat,m.mark_lon,u.name from_name FROM messages m JOIN users u ON u.id=m.from_user WHERE m.incident_id=? AND m.id>? ORDER BY m.id");
     $ms->execute([$id, $since]);
@@ -457,10 +478,12 @@ switch ($route) {
   out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
        'participants' => array_map(function ($p) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
        'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'features' => $F,
+       'ex_lead' => $xl, 'ex_title' => $inc['plan_id'] && ($xl || $me['is_admin']) ? (exPlan($inc)['title'] ?? null) : null, 'ex_injects' => $inc['plan_id'] && ($xl || $me['is_admin']) ? exInjects((int)$inc['plan_id']) : [],
        'log' => $cf ? logRows($id) : null, 'now' => $now]);
 
  case 'incident/join': // mode: code einer aktiven Einrückoption oder declined
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
+  if (exLead($inc)) fail('Als Übungsleitung nimmst du nicht an der Übung teil.');
   $mode = (string)($in['mode'] ?? '');
   $m = $mode === 'declined' ? null : modeRow($mode);
   if ($mode !== 'declined' && (!$m || !(int)$m['active'])) fail('Ungültige Auswahl');
@@ -708,7 +731,7 @@ switch ($route) {
 
  case 'incident/message': // to: leer = alle Teilnehmenden, sonst Liste von User-IDs (nur Teilnehmende)
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
-  if (!isActivePart($inc['id'])) fail('Nachrichten können nur Personen senden, die den Einsatz angenommen haben');
+  if (!isActivePart($inc['id']) && !exLead($inc)) fail('Nachrichten können nur Personen senden, die den Einsatz angenommen haben');
   if (!canMessage($inc)) fail('Deine Rolle darf keine Nachrichten senden', 403);
   if (trim($in['text'] ?? '') === '') fail('Text fehlt');
   $s = $db->prepare("SELECT user_id FROM participants WHERE incident_id=? AND mode<>'declined' AND left_at IS NULL"); $s->execute([$inc['id']]);
@@ -716,7 +739,7 @@ switch ($route) {
   $to = null;
   if (!empty($in['to'])) { $to = array_values(array_intersect(array_map('intval', $in['to']), $act)); if (!$to) fail('Die gewählten Personen haben den Einsatz nicht angenommen'); }
   // Standort der sendenden Person (nur wenn sie ihn teilt); Markierung an mark_lat/mark_lon oder am eigenen Standort
-  $p = part($inc['id']); $la = $p['lat'] !== null ? (float)$p['lat'] : null; $lo = $p['lon'] !== null ? (float)$p['lon'] : null;
+  $p = part($inc['id']); $la = $p && $p['lat'] !== null ? (float)$p['lat'] : null; $lo = $p && $p['lon'] !== null ? (float)$p['lon'] : null; // Übungsleitung: keine Teilnahme, kein Standort
   $mk = !empty($in['mark']) ? 1 : 0; $mla = $mlo = null;
   if ($mk) {
     $ok = isset($in['mark_lat'], $in['mark_lon']) && is_numeric($in['mark_lat']) && is_numeric($in['mark_lon']) && abs($in['mark_lat']) <= 90 && abs($in['mark_lon']) <= 180;
@@ -780,6 +803,114 @@ switch ($route) {
   if ((int)$inc['record']) setRec((int)$inc['id'], 0); // laufende Aufzeichnung endet mit dem Einsatz
   $db->prepare("UPDATE incidents SET ended_at=? WHERE id=?")->execute([$now, $inc['id']]);
   logev($inc['id'], $uid, 'end', 'hat den Einsatz beendet');
+  out(['ok' => true]);
+
+ /* ---------- Vorbereitete Übungen (Issue #29) ---------- */
+ case 'ex/start': // vorbereitete Übung starten: Übungsleitung dieser Übung oder Administratoren; Alarm mit der Aufgebotsmeldung, ohne PLS (kommt über die Freigabe)
+  if (activeIncident()) fail('Es läuft bereits ein Einsatz');
+  $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)($in['id'] ?? 0)]); $p = $s->fetch();
+  if (!$p || $p['incident_id'] !== null) fail('Diese Übung ist nicht mehr startbar', 404);
+  if (!$me['is_admin'] && !in_array($uid, exLeads($p), true)) fail('Nur die Übungsleitung kann diese Übung starten', 403);
+  $rec = (int)$p['record'] && features(1)['rec'] ? 1 : 0; $tok = features(1)['pub'] ? $p['public_token'] : null;
+  $db->prepare("INSERT INTO incidents(message,alarm_at,created_by,is_exercise,plan_id,public_token,public_anon) VALUES(?,?,?,1,?,?,?)")->execute([$p['message'], $now, $uid, $p['id'], $tok, (int)$p['public_anon']]);
+  $nid = (int)$db->lastInsertId();
+  $db->prepare("UPDATE ex_plans SET incident_id=? WHERE id=?")->execute([$nid, $p['id']]);
+  if ($rec) setRec($nid, 1);
+  logev($nid, $uid, 'start', "startet die vorbereitete Übung «{$p['title']}»" . ($rec ? ' (mit Aufzeichnung)' : '') . ': ' . $p['message']);
+  if ($tok) logev($nid, $uid, 'pub', 'öffentliche Ansicht vorbereitet (' . ((int)$p['public_anon'] ? 'anonym, ohne Namen' : 'mit Namen') . ')');
+  out(['id' => $nid]);
+ case 'ex/release': // vorbereitetes Element freigeben (Übungsleitung oder Administratoren): erst jetzt wird es für alle sichtbar und fürs Suchgebiet relevant
+  $inc = activeIncident(); if (!$inc || empty($inc['plan_id'])) fail('Keine vorbereitete Übung aktiv');
+  if (!exLead($inc) && !$me['is_admin']) fail('Nur die Übungsleitung kann vorbereitete Elemente freigeben', 403);
+  $s = $db->prepare("SELECT * FROM ex_injects WHERE id=? AND plan_id=? AND removed=0"); $s->execute([(int)($in['id'] ?? 0), (int)$inc['plan_id']]); $j = $s->fetch();
+  if (!$j) fail('Element nicht gefunden', 404);
+  if ($j['released'] !== null) out(['ok' => true]); // schon freigegeben, z. B. gleichzeitig von zwei Personen
+  if ($j['kind'] !== 'pls' && !feature($inc, 'res')) fail('Die Funktion «Rettlinge» ist für Übungen ausgeschaltet', 403);
+  $ref = null;
+  if ($j['kind'] === 'seen') {
+    $s = $db->prepare("SELECT r.* FROM ex_injects i JOIN rescuees r ON r.id=i.rescuee_id WHERE i.id=? AND i.plan_id=? AND r.removed IS NULL"); $s->execute([(int)$j['ref_id'], (int)$inc['plan_id']]); $ref = $s->fetch();
+    if (!$ref) fail('Zuerst den Rettling freigeben, der hier gesichtet wird');
+  }
+  $u = $db->prepare("UPDATE ex_injects SET released=?, released_by=? WHERE id=? AND released IS NULL"); $u->execute([$now, $uid, $j['id']]);
+  if (!$u->rowCount()) out(['ok' => true]);
+  $at = $now - 60 * max(0, (int)$j['ago']); $la = (float)$j['lat']; $lo = (float)$j['lon']; $pos = sprintf('%.5F, %.5F, %s', $la, $lo, hm($at));
+  logev($inc['id'], $uid, 'ex', "gibt «{$j['label']}» frei (" . EX_KINDS[$j['kind']] . ')');
+  if ($j['kind'] === 'pls') {
+    $db->prepare("UPDATE incidents SET lat=?, lon=?, pls_at=? WHERE id=?")->execute([$la, $lo, $at === (int)$inc['alarm_at'] ? null : $at, $inc['id']]);
+    logev($inc['id'], $uid, 'pls', ($inc['lat'] === null ? 'setzt' : 'ändert') . " den PLS des Einsatzes ($pos)");
+  } elseif ($j['kind'] === 'res') {
+    $db->prepare("INSERT INTO rescuees(incident_id,name,descr,created_by,created,pls_lat,pls_lon,pls_at) VALUES(?,?,?,?,?,?,?,?)")->execute([$inc['id'], $j['name'], (string)$j['descr'], $uid, $now, $la, $lo, $at]);
+    $db->prepare("UPDATE ex_injects SET rescuee_id=? WHERE id=?")->execute([(int)$db->lastInsertId(), $j['id']]);
+    logev($inc['id'], $uid, 'rescuee', "erfasst den Rettling «{$j['name']}»" . ((string)$j['descr'] !== '' ? ": {$j['descr']}" : ''));
+    logev($inc['id'], $uid, 'rescuee', "setzt den PLS von «{$j['name']}» ($pos)");
+  } else {
+    $db->prepare("UPDATE rescuees SET pls_lat=?, pls_lon=?, pls_at=? WHERE id=?")->execute([$la, $lo, $at, $ref['id']]);
+    logev($inc['id'], $uid, 'rescuee', "meldet «{$ref['name']}» gesichtet und setzt den PLS neu ($pos)");
+  }
+  if (trim((string)$j['msg']) !== '' && feature($inc, 'msg')) // Meldung als Nachricht an alle (erscheint im Einsatzprotokoll über logRows)
+    $db->prepare("INSERT INTO messages(incident_id,from_user,text,recipients,created) VALUES(?,?,?,NULL,?)")->execute([$inc['id'], $uid, $j['msg'], $now]);
+  out(['ok' => true]);
+ case 'ex/plans': admin(); // alle vorbereiteten Übungen mit Elementen und Stand der Übung
+  $ps = $db->query("SELECT p.*,i.alarm_at,i.ended_at FROM ex_plans p LEFT JOIN incidents i ON i.id=p.incident_id WHERE p.active=1 ORDER BY p.incident_id IS NOT NULL, i.alarm_at DESC, p.title")->fetchAll();
+  out(array_map(fn($p) => ['leads' => exLeads($p), 'injects' => exInjects((int)$p['id'])] + ints($p, ['id', 'record', 'public_anon', 'created_by', 'created', 'incident_id', 'alarm_at', 'ended_at']), $ps));
+ case 'ex/plan/save': admin(); // anlegen oder ändern (nur vor dem Start): title, message, leads, record, public, public_anon
+  $title = mb_substr(trim((string)($in['title'] ?? '')), 0, 120); $msg = trim((string)($in['message'] ?? ''));
+  if ($title === '') fail('Titel fehlt'); if ($msg === '') fail('Die Aufgebotsmeldung ist Pflicht');
+  $leads = array_values(array_unique(array_map('intval', (array)($in['leads'] ?? []))));
+  if (!$leads) fail('Mindestens eine Person als Übungsleitung wählen');
+  $s = $db->prepare("SELECT COUNT(*) c FROM users WHERE active=1 AND id IN (" . implode(',', array_fill(0, count($leads), '?')) . ")"); $s->execute($leads);
+  if ((int)$s->fetch()['c'] !== count($leads)) fail('Unbekannte oder deaktivierte Person in der Übungsleitung');
+  $rec = empty($in['record']) ? 0 : 1; $anon = empty($in['public_anon']) ? 0 : 1;
+  if (!empty($in['id'])) {
+    $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)$in['id']]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
+    if ($p['incident_id'] !== null) fail('Die Übung wurde bereits gestartet');
+    $tok = empty($in['public']) ? null : ($p['public_token'] ?? bin2hex(random_bytes(16)));
+    $db->prepare("UPDATE ex_plans SET title=?, message=?, leads=?, record=?, public_token=?, public_anon=? WHERE id=?")->execute([$title, $msg, json_encode($leads), $rec, $tok, $anon, $p['id']]);
+    out(['ok' => true, 'id' => (int)$p['id']]);
+  }
+  $db->prepare("INSERT INTO ex_plans(title,message,leads,record,public_token,public_anon,created_by,created) VALUES(?,?,?,?,?,?,?,?)")->execute([$title, $msg, json_encode($leads), $rec, empty($in['public']) ? null : bin2hex(random_bytes(16)), $anon, $uid, $now]);
+  out(['ok' => true, 'id' => (int)$db->lastInsertId()]);
+ case 'ex/plan/copy': admin(); // als neue, noch nicht gestartete Übung kopieren (mit allen Elementen, nicht freigegeben)
+  $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)($in['id'] ?? 0)]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
+  $db->prepare("INSERT INTO ex_plans(title,message,leads,record,public_token,public_anon,created_by,created) VALUES(?,?,?,?,?,?,?,?)")->execute([mb_substr('Kopie von ' . $p['title'], 0, 120), $p['message'], $p['leads'], $p['record'], $p['public_token'] === null ? null : bin2hex(random_bytes(16)), $p['public_anon'], $uid, $now]);
+  $nid = (int)$db->lastInsertId(); $map = [];
+  foreach (exInjects((int)$p['id']) as $j) {
+    $db->prepare("INSERT INTO ex_injects(plan_id,kind,label,name,descr,lat,lon,ago,msg,ref_id) VALUES(?,?,?,?,?,?,?,?,?,?)")->execute([$nid, $j['kind'], $j['label'], $j['name'], $j['descr'], $j['lat'], $j['lon'], $j['ago'], $j['msg'], $j['ref_id'] === null ? null : ($map[$j['ref_id']] ?? null)]);
+    $map[$j['id']] = (int)$db->lastInsertId();
+  }
+  out(['ok' => true, 'id' => $nid]);
+ case 'ex/plan/remove': admin(); // entfernen (nicht während sie läuft); gestartete bleiben im Einsatzlog erhalten
+  $s = $db->prepare("SELECT p.*,i.ended_at FROM ex_plans p LEFT JOIN incidents i ON i.id=p.incident_id WHERE p.id=? AND p.active=1"); $s->execute([(int)($in['id'] ?? 0)]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
+  if ($p['incident_id'] !== null && $p['ended_at'] === null) fail('Die Übung läuft noch');
+  $db->prepare("UPDATE ex_plans SET active=0, public_token=CASE WHEN incident_id IS NULL THEN NULL ELSE public_token END WHERE id=?")->execute([$p['id']]);
+  out(['ok' => true]);
+ case 'ex/inject/save': admin(); // Element anlegen oder ändern (nur nicht freigegebene): plan_id, kind, label, lat, lon, ago, msg; res: name, descr; seen: ref_id (Element «Neuer Rettling»)
+  $s = $db->prepare("SELECT p.*,i.ended_at FROM ex_plans p LEFT JOIN incidents i ON i.id=p.incident_id WHERE p.id=? AND p.active=1"); $s->execute([(int)($in['plan_id'] ?? 0)]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
+  if ($p['ended_at'] !== null) fail('Die Übung ist beendet');
+  $kind = (string)($in['kind'] ?? ''); if (!isset(EX_KINDS[$kind])) fail('Unbekannte Art');
+  $label = mb_substr(trim((string)($in['label'] ?? '')), 0, 120); if ($label === '') fail('Bezeichnung fehlt');
+  [$la, $lo] = llIn($in['lat'] ?? null, $in['lon'] ?? null);
+  $ago = (int)($in['ago'] ?? 0); if ($ago < 0 || $ago > 1440) fail('Zeitpunkt: 0 bis 1440 Minuten vor der Freigabe');
+  $name = $kind === 'res' ? mb_substr(trim((string)($in['name'] ?? '')), 0, 80) : null; if ($kind === 'res' && $name === '') fail('Name des Rettlings fehlt');
+  $descr = $kind === 'res' ? mb_substr(trim((string)($in['descr'] ?? '')), 0, 1000) : null;
+  $ref = null;
+  if ($kind === 'seen') { $s = $db->prepare("SELECT id FROM ex_injects WHERE id=? AND plan_id=? AND kind='res' AND removed=0"); $s->execute([(int)($in['ref_id'] ?? 0), $p['id']]); $ref = (int)(($s->fetch() ?: [])['id'] ?? 0) ?: fail('Rettling wählen (Element «Neuer Rettling» dieser Übung)'); }
+  $msg = mb_substr(trim((string)($in['msg'] ?? '')), 0, 2000);
+  $v = [$kind, $label, $name, $descr, $la, $lo, $ago, $msg === '' ? null : $msg, $ref];
+  if (!empty($in['id'])) {
+    $s = $db->prepare("SELECT * FROM ex_injects WHERE id=? AND plan_id=? AND removed=0"); $s->execute([(int)$in['id'], $p['id']]); $j = $s->fetch() ?: fail('Element nicht gefunden', 404);
+    if ($j['released'] !== null) fail('Freigegebene Elemente lassen sich nicht mehr ändern');
+    if ($j['kind'] === 'res' && $kind !== 'res') { $s = $db->prepare("SELECT COUNT(*) c FROM ex_injects WHERE ref_id=? AND removed=0"); $s->execute([$j['id']]); if ((int)$s->fetch()['c']) fail('Auf diesen Rettling verweisen Sichtungen; zuerst diese ändern'); }
+    $db->prepare("UPDATE ex_injects SET kind=?, label=?, name=?, descr=?, lat=?, lon=?, ago=?, msg=?, ref_id=? WHERE id=?")->execute([...$v, $j['id']]);
+    out(['ok' => true]);
+  }
+  $db->prepare("INSERT INTO ex_injects(kind,label,name,descr,lat,lon,ago,msg,ref_id,plan_id) VALUES(?,?,?,?,?,?,?,?,?,?)")->execute([...$v, $p['id']]);
+  out(['ok' => true]);
+ case 'ex/inject/remove': admin(); // nur nicht freigegebene
+  $s = $db->prepare("SELECT * FROM ex_injects WHERE id=? AND removed=0"); $s->execute([(int)($in['id'] ?? 0)]); $j = $s->fetch() ?: fail('Element nicht gefunden', 404);
+  if ($j['released'] !== null) fail('Freigegebene Elemente lassen sich nicht entfernen');
+  $s = $db->prepare("SELECT COUNT(*) c FROM ex_injects WHERE ref_id=? AND removed=0"); $s->execute([$j['id']]); if ((int)$s->fetch()['c']) fail('Auf diesen Rettling verweisen Sichtungen; zuerst diese entfernen');
+  $db->prepare("UPDATE ex_injects SET removed=1 WHERE id=?")->execute([$j['id']]);
   out(['ok' => true]);
 
  case 'incident/log': admin(); out(logRows((int)($_GET['id'] ?? 0), true));
