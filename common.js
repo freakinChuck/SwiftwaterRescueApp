@@ -27,7 +27,7 @@ function riverNet(j){if(!j||!j.elements)throw new Error('ungültige Antwort');
   ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));return{ways,byNode}}
 // Gewässernetz über den Server (r = overpass bzw. public/net). Erreicht der Server Overpass nicht (502 mit query), fragt das Gerät
 // Overpass selbst mit der Abfrage des Servers (andere IP-Adresse, Issue #28) und liefert das Ergebnis über put für den Cache aller ab.
-const OVERPASS_URLS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+const OVERPASS_URLS=['https://overpass-api.de/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
 async function overpassNet(r,body,put){try{return await api(r,body)}catch(e){const q=e.data&&e.data.query;if(!q)throw e;
   for(const url of OVERPASS_URLS){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),30000);try{
     const res=await fetch(url,{method:'POST',body:new URLSearchParams({data:q}),signal:ac.signal});if(!res.ok)continue;
