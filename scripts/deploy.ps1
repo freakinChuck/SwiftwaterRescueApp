@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 function Check($what) { if ($LASTEXITCODE -ne 0) { throw "$what fehlgeschlagen (Exit-Code $LASTEXITCODE)" } }
 
 $c = Get-Content $Config -Raw | ConvertFrom-Json
-$files = 'index.html', 'admin.html', 'common.js', 'common.css', 'api/index.php', 'api/data/.htaccess'
+$files = 'index.html', 'admin.html', 'public.html', 'common.js', 'common.css', 'api/index.php', 'api/data/.htaccess'
 $opt = @('-i', $c.key, '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes')
 $dest = "$($c.user)@$($c.host)"
 
