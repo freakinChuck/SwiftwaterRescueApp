@@ -33,6 +33,7 @@ tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{p
 .rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
 .exp{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.8rem 0}.exp h3{margin:0 0 .3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.exp .badge.run{background:var(--alarm)}.exp .badge.done{background:var(--line)}.exp td{vertical-align:top}.exp td small{display:block;color:var(--mut)}
 .lsel{display:flex;flex-wrap:wrap;gap:.35rem}.lchip{display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--line);border-radius:999px;padding:.1rem .2rem .1rem .6rem}.lchip button{padding:.1rem .45rem;min-height:0;border-radius:999px}
+.pickmap{height:16rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25}
 .lres{display:grid;gap:.25rem}.lres:empty{display:none}.lres button{text-align:left}
 .rpg{font-size:.8rem;font-weight:700;color:var(--mut);margin-top:.5rem}
 /* Replay: Anzeige beim Folgen (oben links auf der Karte) */
@@ -233,14 +234,21 @@ async function loadEx(){const el=$('#sEx');let ps,us;try{[ps,us]=await Promise.a
       <label class="mut">Bezeichnung (für die Übungsleitung)<input id="jL" maxlength="120" value="${esc(j.label||'')}" placeholder="z. B. Meldung Passant Brücke"></label>
       <label class="mut" data-k="res">Name des Rettlings<input id="jN" maxlength="80" value="${esc(j.name||'')}"></label><label class="mut" data-k="res">Beschreibung<textarea id="jD" rows="2" maxlength="1000">${esc(j.descr||'')}</textarea></label>
       <label class="mut" data-k="seen">Rettling<select id="jRf">${rs.map(x=>`<option value="${x.id}" ${x.id===j.ref_id?'selected':''}>${esc(x.name)} (${esc(x.label)})</option>`).join('')||'<option value="">Zuerst ein Element «Neuer Rettling» erfassen</option>'}</select></label>
-      <label class="mut">Standort (PLS)<input id="jP" value="${j.lat!=null?esc(fmtC(j.lat,j.lon,'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div class="mut" id="jPi">LV95, LV03 oder WGS84 dezimal.</div>
+      <label class="mut">Standort (PLS)<input id="jP" value="${j.lat!=null?esc(fmtC(j.lat,j.lon,'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div class="mut" id="jPi">LV95, LV03 oder WGS84 dezimal.</div><div class="mut">oder auf der Karte antippen (die übrigen Elemente der Übung sind grau eingezeichnet)</div><div id="jMap" class="pickmap"></div>
       <label class="mut">Zeitpunkt des PLS: Minuten vor der Freigabe (0 = bei der Freigabe)<input id="jA" type="number" min="0" max="1440" step="1" value="${j.ago||0}"></label>
       <label class="mut">Meldung (optional, geht bei der Freigabe als Nachricht an alle)<textarea id="jM" rows="3" maxlength="2000">${esc(j.msg||'')}</textarea></label>`,
       async d=>{const v=$('#jP',d).value.trim(),q=parseC(v);if(!q)throw new Error('Standort nicht erkannt. Beispiele: 2635600 / 1245500 (LV95) oder 47.36, 7.91 (WGS84).');
         await api('ex/inject/save',{id:j.id,plan_id:p.id,kind:$('#jK',d).value,label:$('#jL',d).value,name:$('#jN',d).value,descr:$('#jD',d).value,ref_id:+$('#jRf',d).value||null,lat:+q.lat.toFixed(7),lon:+q.lon.toFixed(7),ago:+$('#jA',d).value||0,msg:$('#jM',d).value});loadEx()});
     const KI={pls:'Setzt oder verschiebt den PLS des Einsatzes.',res:'Erfasst einen Rettling mit eigenem PLS (eigenes Suchgebiet).',seen:'Der Rettling wurde gesichtet: sein PLS wird neu gesetzt, die Drift beginnt dort neu.'};
     const kind=()=>{const k=$('#jK',d).value;d.querySelectorAll('[data-k]').forEach(x=>x.hidden=x.dataset.k!==k);$('#jKi',d).textContent=KI[k]};$('#jK',d).onchange=kind;kind();
-    const pi=$('#jP',d);pi.oninput=()=>{const q=parseC(pi.value);$('#jPi',d).textContent=!pi.value.trim()?'LV95, LV03 oder WGS84 dezimal.':q?'Erkannt: '+fmtC(q.lat,q.lon,'lv95')+' (LV95) · '+fmtC(q.lat,q.lon,'wgs84')+' (WGS84)':'Nicht erkannt'};if(pi.value)pi.oninput()};
+    // Standort auch auf der Karte wählbar: Klick setzt das Feld, eine Eingabe im Feld verschiebt die Markierung
+    const others=p.injects.filter(x=>x.id!==j.id&&x.lat!=null),m=L.map($('#jMap',d)).setView(j.lat!=null?[j.lat,j.lon]:others.length?[others[0].lat,others[0].lon]:[46.8,8.2],j.lat!=null||others.length?14:8);
+    let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}const B=MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE];L.tileLayer(B.url,{attribution:B.attr,maxZoom:B.maxZoom}).addTo(m);
+    others.forEach(x=>L.circleMarker([x.lat,x.lon],{radius:6,color:'#fff',weight:2,fillColor:'#8a9aa5',fillOpacity:.9}).bindTooltip(esc(x.label)).addTo(m));
+    let mk=null;const setMk=(la,lo)=>{if(!mk)mk=L.circleMarker([la,lo],{radius:9,color:'#fff',weight:3,fillColor:'#ff5533',fillOpacity:1}).addTo(m);else mk.setLatLng([la,lo])};
+    setTimeout(()=>m.invalidateSize(),0); // Grösse erst nach dem Einblenden des Dialogs bekannt
+    const pi=$('#jP',d);pi.oninput=()=>{const q=parseC(pi.value);$('#jPi',d).textContent=!pi.value.trim()?'LV95, LV03 oder WGS84 dezimal.':q?'Erkannt: '+fmtC(q.lat,q.lon,'lv95')+' (LV95) · '+fmtC(q.lat,q.lon,'wgs84')+' (WGS84)':'Nicht erkannt';if(q){setMk(q.lat,q.lon);m.panTo([q.lat,q.lon])}};if(pi.value)pi.oninput();
+    m.on('click',e=>{pi.value=fmtC(e.latlng.lat,e.latlng.lng,'lv95');pi.oninput()})};
   const P=id=>ps.find(p=>p.id===+id);
   $('#exA').onclick=()=>editP({});
   el.querySelectorAll('[data-pe]').forEach(b=>b.onclick=()=>editP(P(b.dataset.pe)));
