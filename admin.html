@@ -37,8 +37,8 @@ tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{p
 .exleg{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.3rem;font-size:.8rem}.exleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;border:1px solid #fff;margin-right:.3rem;vertical-align:-.05rem}
 .pickmap{height:min(14rem,32dvh);isolation:isolate;border-radius:8px;border:1px solid var(--line);background:#0c1c25}
 /* Dialog «Element»: breit, links die Felder, rechts Standort und Karte; am Handy untereinander */
-.dlg .card.wide{max-width:960px}.jgrid,.jcol{display:grid;gap:.7rem;align-content:start}.jtwo{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;align-items:end}
-@media(min-width:760px){.jgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}.jcol.jm{display:flex;flex-direction:column}.jm .pickmap{flex:1;height:auto;min-height:18rem}}
+.dlg .card.wide{max-width:960px}.jgrid,.jcol{display:grid;gap:.7rem;align-content:start}.jtwo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.7rem;align-items:end}.jtwo>*,.jtwo select,.jtwo input{min-width:0;width:100%}
+@media(min-width:760px){.jgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}.jcol.jm{display:flex;flex-direction:column}.jm .pickmap{flex:1;height:auto;min-height:14rem}}
 .lres{display:grid;gap:.25rem}.lres:empty{display:none}.lres button{text-align:left}
 .rpg{font-size:.8rem;font-weight:700;color:var(--mut);margin-top:.5rem}
 /* Replay: Anzeige beim Folgen (oben links auf der Karte) */
@@ -204,23 +204,23 @@ function drawOpList(){const n=opUrls.length,el=$('#opList');
 /* ---------- Übungen vorbereiten (Issue #29) ---------- */
 // Aufgebotsmeldung, Übungsleitung (Rechte der Einsatzleitung, nimmt nicht teil), Aufzeichnung, öffentlicher Link (schon vor dem Start gültig, zeigt bis dahin eine Warteseite)
 // und Elemente, die die Übungsleitung in der Einsatz-App freigibt: PLS des Einsatzes, neuer Rettling, Rettling gesichtet, je mit optionaler Meldung (Nachricht an alle)
-const EXK={pls:'PLS des Einsatzes',res:'Neuer Rettling',seen:'Rettling gesichtet'};
+const EXK={pls:'PLS des Einsatzes',res:'Neuer Rettling',seen:'Rettling gesichtet',ext:'Neue externe Einsatzkraft',extdel:'Externe Einsatzkraft entfernen'};
 // erfasst das Element einen Rettling (neuer Rettling, Sichtung eines neuen oder unbekannten); Name des Rettlings
 const exOwn=x=>x.kind==='res'||x.kind==='seen'&&x.ref_id==null,exRN=x=>x.name||'Unbekannter Rettling';
 // Kartenvorschau je Übung: alle Elemente in der Übersicht, Sichtungen mit Linie vom Rettling; offene Vorschauen bleiben beim Neuladen offen
-const EXC={pls:'#ff5533',res:'#ff9f1c',seen:'#b06cff'},exMapOpen=new Set();
+const EXC={pls:'#ff5533',res:'#ff9f1c',seen:'#b06cff',ext:'#2a9d5c',extdel:'#7d8b93'},exMapOpen=new Set();
 function exMap(p,box){const m=L.map(box);let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}const B=MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE];L.tileLayer(B.url,{attribution:B.attr,maxZoom:B.maxZoom}).addTo(m);
-  const js=p.injects.filter(j=>j.lat!=null);
+  const js=p.injects.filter(j=>j.lat!=null&&j.kind!=='extdel'); // Entfernen liegt auf der externen Einsatzkraft
   js.forEach(j=>{const r=j.kind==='seen'&&js.find(x=>x.id===j.ref_id);if(r)L.polyline([[r.lat,r.lon],[j.lat,j.lon]],{color:EXC.seen,weight:2,dashArray:'6 6'}).addTo(m)});
   js.forEach(j=>L.circleMarker([j.lat,j.lon],{radius:8,color:'#fff',weight:2,fillColor:EXC[j.kind],fillOpacity:j.released?.45:1})
-    .bindTooltip(esc(j.label)+(j.released?' (freigegeben)':''),{permanent:true,direction:'top',offset:[0,-8]}).addTo(m));
+    .bindTooltip(esc(j.label)+(j.released?' (freigegeben)':'')+p.injects.filter(x=>x.kind==='extdel'&&x.ref_id===j.id).map(x=>' · entfernt: '+esc(x.label)).join(''),{permanent:true,direction:'top',offset:[0,-8]}).addTo(m));
   if(js.length)m.fitBounds(L.latLngBounds(js.map(j=>[j.lat,j.lon])),{padding:[40,40],maxZoom:15});else m.setView([46.8,8.2],8);
   setTimeout(()=>m.invalidateSize(),0);return m}
 const pubLink=t=>location.origin+location.pathname.replace(/[^/]*$/,'')+'public.html?k='+t;
-async function loadEx(){const el=$('#sEx');let ps,us;try{[ps,us]=await Promise.all([api('ex/plans'),api('users')])}catch(e){el.innerHTML='<h2>Übungen vorbereiten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+async function loadEx(){const el=$('#sEx');let ps,us,ros,xt;try{[ps,us,ros,xt]=await Promise.all([api('ex/plans'),api('users'),api('roles'),api('ext_templates')])}catch(e){el.innerHTML='<h2>Übungen vorbereiten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const un=id=>(us.find(u=>u.id===id)||{}).name||'?',stat=p=>p.incident_id==null?['vorbereitet','']:p.ended_at==null?['läuft','run']:['beendet','done'];
-  const inj=(p,j)=>{const ref=j.kind==='seen'&&p.injects.find(x=>x.id===j.ref_id);
-    return `<tr><td>${esc(j.label)}<small>${EXK[j.kind]}${j.kind==='res'?': '+esc(j.name):ref?': '+esc(exRN(ref)):j.kind==='seen'?(j.name?': neu, '+esc(j.name):': unbekannt'):''}</small></td><td>${esc(fmtC(j.lat,j.lon,'lv95'))}<small>${j.ago==null?'PLS-Zeitpunkt gibt die Übungsleitung an':j.ago?'PLS '+j.ago+' min vor der Freigabe':'PLS bei der Freigabe'}</small></td><td>${j.msg?esc(j.msg):'<span class="mut">keine Meldung</span>'}</td>
+  const rn=id=>(ros.find(r=>r.id===id)||{}).name,inj=(p,j)=>{const ref=(j.kind==='seen'||j.kind==='extdel')&&p.injects.find(x=>x.id===j.ref_id),xk=j.kind==='ext'||j.kind==='extdel';
+    return `<tr><td>${esc(j.label)}<small>${EXK[j.kind]}${j.kind==='res'?': '+esc(j.name):j.kind==='ext'?': '+esc(j.name)+(j.role_id?', '+esc(rn(j.role_id)||'?'):''):j.kind==='extdel'?': '+esc(ref?ref.name:'?'):ref?': '+esc(exRN(ref)):j.kind==='seen'?(j.name?': neu, '+esc(j.name):': unbekannt'):''}</small></td><td>${esc(fmtC(j.lat,j.lon,'lv95'))}<small>${xk?'':j.ago==null?'PLS-Zeitpunkt gibt die Übungsleitung an':j.ago?'PLS '+j.ago+' min vor der Freigabe':'PLS bei der Freigabe'}</small></td><td>${j.msg?esc(j.msg):'<span class="mut">keine Meldung</span>'}</td>
       <td>${j.released?'freigegeben '+esc(new Date(j.released*1000).toLocaleString('de-CH'))+'<small>'+esc(j.released_by?j.released_name||'':'automatisch')+'</small>':'<span class="mut">nicht freigegeben</span><small>'+(j.auto==null?'von Hand':'automatisch '+j.auto+' min nach dem Start')+'</small>'}</td>
       <td class="act">${j.released||p.ended_at?'':`<button data-ji="${j.id}" data-p="${p.id}">Bearbeiten</button><button data-jr="${j.id}" aria-label="Element entfernen" title="Entfernen">✕</button>`}</td></tr>`};
   el.innerHTML=`<h2>Übungen vorbereiten</h2><div class="mut">Die Übungsleitung startet die Übung in der Einsatz-App (☰ → Vorbereitete Übungen) und gibt dort die Elemente frei. Sie hat die Rechte der Einsatzleitung, wird aber nicht alarmiert und nimmt nicht teil. Erst freigegebene Elemente sind für die Teilnehmenden sichtbar und zählen fürs Suchgebiet. Der öffentliche Link lässt sich schon vorher öffnen und zeigt bis zum Start eine Warteseite.</div>
@@ -247,27 +247,37 @@ async function loadEx(){const el=$('#sEx');let ps,us;try{[ps,us]=await Promise.a
     d.addEventListener('click',e=>{const a=e.target.closest('[data-la]'),x=e.target.closest('[data-lx]');
       if(a){ld.push(+a.dataset.la);q.value='';drawL();q.focus()}else if(x){ld=ld.filter(i=>i!==+x.dataset.lx);drawL()}});drawL()};
   // Sichtung: neuer Rettling, unbekannter Rettling oder einer, den ein anderes Element der Übung erfasst
-  const editJ=(p,j)=>{const rs=p.injects.filter(x=>exOwn(x)&&x.id!==j.id),sm=j.kind==='seen'?(j.ref_id??(j.name?'new':'unk')):rs.length?rs[0].id:'new';
-    const d=dlg(j.id?'Element bearbeiten':'Neues Element',`<div class="jgrid"><div class="jcol"><label class="mut">Art<select id="jK">${Object.entries(EXK).map(([k,t])=>`<option value="${k}" ${k===(j.kind||'pls')?'selected':''}>${t}</option>`).join('')}</select></label><div class="mut" id="jKi"></div>
-      <label class="mut">Bezeichnung (für die Übungsleitung)<input id="jL" maxlength="120" value="${esc(j.label||'')}" placeholder="z. B. Meldung Passant Brücke"></label>
+  // externe Einsatzkraft: Vorlage aus der Verwaltung übernehmen (Name, Beschreibung, Rolle, Kürzel, Farbe, Standort falls vorhanden); entfernen: eine externe Einsatzkraft dieser Übung
+  const editJ=(p,j)=>{const rs=p.injects.filter(x=>exOwn(x)&&x.id!==j.id),sm=j.kind==='seen'?(j.ref_id??(j.name?'new':'unk')):rs.length?rs[0].id:'new',xs=p.injects.filter(x=>x.kind==='ext'&&x.id!==j.id),xa=xt.filter(x=>x.active),xe=j.kind==='ext'?j:{};
+    const d=dlg(j.id?'Element bearbeiten':'Neues Element',`<div class="jgrid"><div class="jcol"><div class="jtwo"><label class="mut">Art<select id="jK">${Object.entries(EXK).map(([k,t])=>`<option value="${k}" ${k===(j.kind||'pls')?'selected':''}>${t}</option>`).join('')}</select></label>
+      <label class="mut">Bezeichnung<input id="jL" maxlength="120" value="${esc(j.label||'')}" placeholder="für die Übungsleitung"></label></div><div class="mut" id="jKi"></div>
       <label class="mut" data-k="seen">Rettling<select id="jRf"><option value="new" ${sm==='new'?'selected':''}>Neuer Rettling</option><option value="unk" ${sm==='unk'?'selected':''}>Unbekannter Rettling</option>${rs.length?`<optgroup label="Rettling dieser Übung">${rs.map(x=>`<option value="${x.id}" ${x.id===sm?'selected':''}>${esc(exRN(x))} (${esc(x.label)})</option>`).join('')}</optgroup>`:''}</select></label>
+      <div class="jtwo" data-k="ext">${xa.length?`<label class="mut">Vorlage<select id="jXt" title="Übernimmt Name, Beschreibung, Rolle, Kürzel, Farbe und Standort"><option value="">Ohne Vorlage</option>${xa.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></label>`:''}
+      <label class="mut">Name<input id="jXn" maxlength="80" value="${esc(xe.name||'')}" placeholder="z. B. Feuerwehr, Posten Brücke"></label></div><label class="mut" data-k="ext">Beschreibung (optional)<textarea id="jXd" rows="2" maxlength="500">${esc(xe.descr||'')}</textarea></label>
+      <label class="mut" data-k="extdel">Externe Einsatzkraft<select id="jXe">${xs.map(x=>`<option value="${x.id}" ${x.id===j.ref_id?'selected':''}>${esc(x.name)} (${esc(x.label)})</option>`).join('')||'<option value="">Noch keine externe Einsatzkraft in dieser Übung</option>'}</select></label>
       <label class="mut" data-k="res new">Name des Rettlings<input id="jN" maxlength="80" value="${esc(j.name||'')}"></label><label class="mut" data-k="res new unk">Beschreibung${j.kind==='res'?'':' (optional, z. B. Kleidung)'}<textarea id="jD" rows="2" maxlength="1000">${esc(j.descr||'')}</textarea></label>
-      <div class="jtwo"><label class="mut">PLS: Minuten vor der Freigabe<input id="jA" type="number" min="0" max="1440" step="1" value="${j.id?(j.ago??''):0}" placeholder="leer: Leitung gibt ihn an"></label>
-      <label class="mut">Freigabe: Minuten nach dem Start<input id="jT" type="number" min="0" max="1440" step="1" value="${j.auto??''}" placeholder="leer: von Hand"></label></div><div class="mut" id="jTi"></div>
-      <label class="mut">Meldung (optional, geht bei der Freigabe als Nachricht an alle)<textarea id="jM" rows="3" maxlength="2000">${esc(j.msg||'')}</textarea></label></div>
-      <div class="jcol jm"><label class="mut">Standort (PLS)<input id="jP" value="${j.lat!=null?esc(fmtC(j.lat,j.lon,'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div class="mut" id="jPi">LV95, LV03 oder WGS84 dezimal.</div><div class="mut">oder auf der Karte antippen (die übrigen Elemente der Übung sind grau eingezeichnet)</div><div id="jMap" class="pickmap"></div></div></div>`,
-      async d=>{const v=$('#jP',d).value.trim(),q=parseC(v);if(!q)throw new Error('Standort nicht erkannt. Beispiele: 2635600 / 1245500 (LV95) oder 47.36, 7.91 (WGS84).');
-        await api('ex/inject/save',{id:j.id,plan_id:p.id,kind:$('#jK',d).value,label:$('#jL',d).value,name:$('#jN',d).value,descr:$('#jD',d).value,ref_id:$('#jRf',d).value,lat:+q.lat.toFixed(7),lon:+q.lon.toFixed(7),ago:$('#jA',d).value.trim()===''?null:+$('#jA',d).value,auto:$('#jT',d).value.trim()===''?null:+$('#jT',d).value,msg:$('#jM',d).value});loadEx()});
-    d.firstElementChild.classList.add('wide');
+      <div class="jtwo"><label class="mut" data-k="pls res seen">PLS vor Freigabe (min)<input id="jA" type="number" min="0" max="1440" step="1" value="${j.id?(j.ago??''):0}" placeholder="leer: Leitung gibt ihn an"></label>
+      <label class="mut" data-k="ext">Spezialrolle<select id="jXr"><option value="">Keine</option>${ros.filter(r=>r.active!==0).map(r=>`<option value="${r.id}" ${r.id===xe.role_id?'selected':''}>${esc(r.name)}${r.is_post?' (Posten)':''}</option>`).join('')}</select></label>
+      <label class="mut">Freigabe nach Start (min)<input id="jT" type="number" min="0" max="1440" step="1" value="${j.auto??''}" placeholder="leer: von Hand"></label></div><div class="mut" id="jTi"></div>
+      <label class="mut">Meldung (optional, geht bei der Freigabe als Nachricht an alle)<textarea id="jM" rows="2" maxlength="2000">${esc(j.msg||'')}</textarea></label></div>
+      <div class="jcol jm"><div data-k="ext">${extStyleFields(xe)}</div><div class="mut" data-k="extdel">Ort: der Standort der gewählten externen Einsatzkraft.</div><label class="mut" data-k="pls res seen ext"><span id="jPl">Standort (PLS)</span><input id="jP" value="${j.lat!=null?esc(fmtC(j.lat,j.lon,'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div class="mut" id="jPi" data-k="pls res seen ext">LV95, LV03 oder WGS84 dezimal.</div><div class="mut" data-k="pls res seen ext">oder auf der Karte antippen (die übrigen Elemente der Übung sind grau eingezeichnet)</div><div id="jMap" class="pickmap"></div></div></div>`,
+      async d=>{const k=$('#jK',d).value,x=k==='ext',v=$('#jP',d).value.trim(),q=k==='extdel'?{lat:0,lon:0}:parseC(v);if(!q)throw new Error('Standort nicht erkannt. Beispiele: 2635600 / 1245500 (LV95) oder 47.36, 7.91 (WGS84).');
+        await api('ex/inject/save',{id:j.id,plan_id:p.id,kind:k,label:$('#jL',d).value,name:$(x?'#jXn':'#jN',d).value,descr:$(x?'#jXd':'#jD',d).value,ref_id:$(k==='extdel'?'#jXe':'#jRf',d).value,role_id:+$('#jXr',d).value||null,...extStyleVal(d),lat:+q.lat.toFixed(7),lon:+q.lon.toFixed(7),ago:$('#jA',d).value.trim()===''?null:+$('#jA',d).value,auto:$('#jT',d).value.trim()===''?null:+$('#jT',d).value,msg:$('#jM',d).value});loadEx()});
+    d.firstElementChild.classList.add('wide');extStyleBind(d);
     const KI={pls:'Setzt oder verschiebt den PLS des Einsatzes.',res:'Erfasst einen Rettling mit eigenem PLS (eigenes Suchgebiet).',seen:'Der Rettling wurde gesichtet: sein PLS wird neu gesetzt, die Drift beginnt dort neu.',
-      new:'Ein bisher nicht gemeldeter Rettling wurde gesichtet: er wird bei der Freigabe mit dem PLS hier erfasst.',unk:'Ein Rettling wurde gesichtet, wer es ist, ist unklar: er wird bei der Freigabe als «Unbekannter Rettling» mit dem PLS hier erfasst.'};
+      new:'Ein bisher nicht gemeldeter Rettling wurde gesichtet: er wird bei der Freigabe mit dem PLS hier erfasst.',unk:'Ein Rettling wurde gesichtet, wer es ist, ist unklar: er wird bei der Freigabe als «Unbekannter Rettling» mit dem PLS hier erfasst.',
+      ext:'Erfasst eine Einsatzkraft ohne App-Konto mit festem Standort. Eine Posten-Rolle begrenzt das Suchgebiet.',extdel:'Entfernt eine externe Einsatzkraft, die ein anderes Element dieser Übung erfasst. Sie muss zuerst freigegeben sein.'};
     // sichtbare Felder je Art, bei Sichtungen zusätzlich je Auswahl (new, unk)
-    const kind=()=>{const k=$('#jK',d).value,r=$('#jRf',d).value,ks=k==='seen'?[k,r]:[k];d.querySelectorAll('[data-k]').forEach(x=>x.hidden=!x.dataset.k.split(' ').some(v=>ks.includes(v)));$('#jKi',d).textContent=KI[k==='seen'&&KI[r]?r:k]};
-    $('#jK',d).onchange=$('#jRf',d).onchange=kind;kind();
+    const kind=()=>{const k=$('#jK',d).value,r=$('#jRf',d).value,ks=k==='seen'?[k,r]:[k];d.querySelectorAll('[data-k]').forEach(x=>x.hidden=!x.dataset.k.split(' ').some(v=>ks.includes(v)));$('#jKi',d).textContent=KI[k==='seen'&&KI[r]?r:k];$('#jPl',d).textContent=k==='ext'?'Standort':'Standort (PLS)';
+      const xr=k==='extdel'&&xs.find(x=>x.id===+$('#jXe',d).value);if(xr&&m){setMk(xr.lat,xr.lon);m.panTo([xr.lat,xr.lon])}};
+    $('#jK',d).onchange=$('#jRf',d).onchange=$('#jXe',d).onchange=kind;
+    // Vorlage übernehmen
+    if($('#jXt',d))$('#jXt',d).onchange=()=>{const x=xa.find(t=>t.id===+$('#jXt',d).value);if(!x)return;$('#jXn',d).value=x.name;$('#jXd',d).value=x.descr||'';$('#jXr',d).value=x.role_id||'';$('#xK',d).value=x.abbr||'';$('#xFc',d).checked=!!x.color;if(x.color)$('#xF',d).value=x.color;
+      if(!$('#jL',d).value.trim())$('#jL',d).value=x.name;if(x.lat!=null){$('#jP',d).value=fmtC(x.lat,x.lon,'lv95');$('#jP',d).oninput()}};
     // Hinweis zu PLS-Zeitpunkt und Freigabe je nach Eingabe (automatisch: ohne PLS-Zeitpunkt Drift ab Freigabe, Sichtung wartet auf ihren Rettling)
-    const autoI=()=>{const a=$('#jA',d).value.trim(),t=$('#jT',d).value.trim(),sr=$('#jK',d).value==='seen'&&+$('#jRf',d).value>0;
-      $('#jTi',d).textContent=(a===''?(t===''?'PLS-Zeitpunkt gibt die Übungsleitung bei der Freigabe ein. ':'Ohne PLS-Zeitpunkt beginnt die Drift bei der Freigabe. '):a==='0'?'Drift ab der Freigabe. ':'')
-        +(t===''?'Freigabe von Hand durch die Übungsleitung.':`Automatisch ${t} min nach dem Übungsstart, die Übungsleitung kann es auch früher freigeben.${sr?' Die Sichtung wartet, bis ihr Rettling freigegeben ist.':''}`)};
+    const autoI=()=>{const k=$('#jK',d).value,a=$('#jA',d).value.trim(),t=$('#jT',d).value.trim(),sr=k==='seen'&&+$('#jRf',d).value>0||k==='extdel';
+      $('#jTi',d).textContent=(k==='ext'||k==='extdel'?'':a===''?(t===''?'PLS-Zeitpunkt gibt die Übungsleitung bei der Freigabe ein. ':'Ohne PLS-Zeitpunkt beginnt die Drift bei der Freigabe. '):a==='0'?'Drift ab der Freigabe. ':'')
+        +(t===''?'Freigabe von Hand durch die Übungsleitung.':`Automatisch ${t} min nach dem Übungsstart, die Übungsleitung kann es auch früher freigeben.${sr?(k==='extdel'?' Es wartet, bis die externe Einsatzkraft freigegeben ist.':' Die Sichtung wartet, bis ihr Rettling freigegeben ist.'):''}`)};
     $('#jT',d).oninput=$('#jA',d).oninput=autoI;d.addEventListener('change',autoI);autoI();
     // Standort auch auf der Karte wählbar: Klick setzt das Feld, eine Eingabe im Feld verschiebt die Markierung
     const others=p.injects.filter(x=>x.id!==j.id&&x.lat!=null),m=L.map($('#jMap',d)).setView(j.lat!=null?[j.lat,j.lon]:others.length?[others[0].lat,others[0].lon]:[46.8,8.2],j.lat!=null||others.length?14:8);
@@ -276,7 +286,7 @@ async function loadEx(){const el=$('#sEx');let ps,us;try{[ps,us]=await Promise.a
     let mk=null;const setMk=(la,lo)=>{if(!mk)mk=L.circleMarker([la,lo],{radius:9,color:'#fff',weight:3,fillColor:'#ff5533',fillOpacity:1}).addTo(m);else mk.setLatLng([la,lo])};
     setTimeout(()=>m.invalidateSize(),0); // Grösse erst nach dem Einblenden des Dialogs bekannt
     const pi=$('#jP',d);pi.oninput=()=>{const q=parseC(pi.value);$('#jPi',d).textContent=!pi.value.trim()?'LV95, LV03 oder WGS84 dezimal.':q?'Erkannt: '+fmtC(q.lat,q.lon,'lv95')+' (LV95) · '+fmtC(q.lat,q.lon,'wgs84')+' (WGS84)':'Nicht erkannt';if(q){setMk(q.lat,q.lon);m.panTo([q.lat,q.lon])}};if(pi.value)pi.oninput();
-    m.on('click',e=>{pi.value=fmtC(e.latlng.lat,e.latlng.lng,'lv95');pi.oninput()})};
+    m.on('click',e=>{if($('#jK',d).value==='extdel')return;pi.value=fmtC(e.latlng.lat,e.latlng.lng,'lv95');pi.oninput()});kind()};
   const P=id=>ps.find(p=>p.id===+id);
   const mapT=(b,on)=>{const id=+b.dataset.pm,box=el.querySelector(`[data-mapbox="${id}"]`);box.hidden=!on;b.textContent=on?'Karte ausblenden':'Karte';b.setAttribute('aria-pressed',on);
     if(on){exMapOpen.add(id);if(!box._m)box._m=exMap(P(id),box.firstElementChild)}else exMapOpen.delete(id)};
