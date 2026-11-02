@@ -42,7 +42,7 @@ function initMap(i){map=L.map('pbMap').setView([i.lat,i.lon],14);const bases={};
 function toggleFollow(id){followId=followId===id?null:id;draw()}
 function stopFollow(){followId=null;draw()}
 async function loadNet(R){netLoading=true;
-  try{net={R,...riverNet(await api('public/net&k='+encodeURIComponent(K)+'&m='+R))}}catch(e){net={R,fail:true,err:e.message,retryAt:Date.now()+20000}}
+  try{net={R,...riverNet(await overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R))}}catch(e){net={R,fail:true,err:e.message,retryAt:Date.now()+20000}}
   netLoading=false;if(ps)draw()}
 function drawArea(d){const i=d.incident,D=(i.flow_ms||0)*(d.now-i.alarm_at);areaInfo='';if(D<=0){areaInfo='Suchgebiet: Fliessgeschwindigkeit fehlt.';return}
   if(!netLoading&&(!net||(!net.fail&&net.R<D*1.1&&net.R<30000)||(net.fail&&Date.now()>net.retryAt)))loadNet(netRadius(D));

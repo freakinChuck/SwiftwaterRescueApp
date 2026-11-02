@@ -4,7 +4,7 @@ const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]
 let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt die jeweilige Seite
 async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
   const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
-  if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth()}if(j.error)throw new Error(j.error);return j}
+  if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth()}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
 const fail=e=>alert(e.message);
 /* ---------- Karte (Einsatz-App und Replay der Verwaltung) ---------- */
 // Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
@@ -25,6 +25,16 @@ const geoDist=(a,b)=>L.latLng(a.lat,a.lon).distanceTo([b.lat,b.lon]);
 function riverNet(j){if(!j||!j.elements)throw new Error('ungültige Antwort');
   const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();
   ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));return{ways,byNode}}
+// Gewässernetz über den Server (r = overpass bzw. public/net). Erreicht der Server Overpass nicht (502 mit query), fragt das Gerät
+// Overpass selbst mit der Abfrage und den Servern (Reihenfolge aus der Verwaltung) des Servers (andere IP-Adresse, Issue #28) und
+// liefert das Ergebnis über put für den Cache aller ab.
+async function overpassNet(r,body,put){try{return await api(r,body)}catch(e){const q=e.data&&e.data.query;if(!q)throw e;
+  for(const url of e.data.servers||[]){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),30000);try{
+    const res=await fetch(url,{method:'POST',body:new URLSearchParams({data:q}),signal:ac.signal});if(!res.ok)continue;
+    const j=await res.json();if(!j.elements)continue;
+    if(put)api(put,{...body,elements:j.elements.map(({type,id,nodes,geometry,tags})=>({type,id,nodes,geometry,tags:{waterway:tags&&tags.waterway,name:tags&&tags.name}}))}).catch(()=>{});
+    return j}catch(x){}finally{clearTimeout(to)}}
+  throw e}}
 // Weg ab Punkt k flussabwärts über rem Meter, an Verzweigungen alle Äste
 function riverFollow(net,w,k,rem,seen){const pts=[w.geometry[k]];seen=new Set(seen).add(w.id);
   for(let j=k+1;j<w.geometry.length;j++){const a=w.geometry[j-1],b=w.geometry[j],d=geoDist(a,b);

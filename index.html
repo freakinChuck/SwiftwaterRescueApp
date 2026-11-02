@@ -184,7 +184,7 @@ let net=null,netLoading=false,areaInfo='';
 // Gewässernetz über den Server (Cache, siehe Route overpass); Radius auf 1 km aufgerundet, damit alle Geräte eines Einsatzes dieselbe Abfrage stellen
 // Berechnung (riverNet, riverArea, netRadius) in common.js, gemeinsam mit der öffentlichen Ansicht
 async function loadNet(i,R){netLoading=true;
-  try{const n=riverNet(await api('overpass',{around:[R,i.lat,i.lon]}));net={inc:i.id,R,...n};netLoading=false;drawMap();draw();return}
+  try{const n=riverNet(await overpassNet('overpass',{around:[R,i.lat,i.lon]},'overpass/put'));net={inc:i.id,R,...n};netLoading=false;drawMap();draw();return}
   catch(e){net={inc:i.id,R,fail:true,err:e.message,retryAt:Date.now()+20000};netLoading=false;drawMap();draw()}}
 const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
 function circleArea(i,D,why){areaShape={circle:{lat:i.lat,lon:i.lon,r:D}};areaInfo=why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.';
@@ -444,7 +444,7 @@ async function rdGraph(a,b){const m=Math.max(1500,a.distanceTo(b)*.3),la=m/11132
   // Ausschnitt auf 0.01° (ca. 1 km) nach aussen runden, damit ähnliche Messungen dieselbe Abfrage stellen (Cache auf dem Server)
   const R=x=>Math.round(x*100)/100,bb=[Math.floor((Math.min(a.lat,b.lat)-la)*100)/100,Math.floor((Math.min(a.lng,b.lng)-lo)*100)/100,Math.ceil((Math.max(a.lat,b.lat)+la)*100)/100,Math.ceil((Math.max(a.lng,b.lng)+lo)*100)/100].map(R);
   if(rdNet&&rdNet.bb[0]<=bb[0]&&rdNet.bb[1]<=bb[1]&&rdNet.bb[2]>=bb[2]&&rdNet.bb[3]>=bb[3])return rdNet.g;
-  const j=await api('overpass',{bbox:bb});if(!j.elements)throw new Error('ungültige Antwort');
+  const j=await overpassNet('overpass',{bbox:bb},'overpass/put');if(!j.elements)throw new Error('ungültige Antwort');
   const g=new Map(),node=(id,p)=>g.get(id)||g.set(id,{id,lat:p.lat,lon:p.lon,adj:[]}).get(id);
   j.elements.filter(w=>w.geometry&&w.nodes).forEach(w=>{for(let k=1;k<w.nodes.length;k++){const u=node(w.nodes[k-1],w.geometry[k-1]),v=node(w.nodes[k],w.geometry[k]),d=dist(u,v);u.adj.push([v.id,d,1]);v.adj.push([u.id,d,0])}});
   rdNet={bb,g};return g}
