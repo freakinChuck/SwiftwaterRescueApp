@@ -328,7 +328,9 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
 // Übungsleitung (Issue #29): vorbereitete Elemente der Übung, erst nach der Freigabe für alle sichtbar und fürs Suchgebiet relevant
 const EXK={pls:'PLS des Einsatzes',res:'Neuer Rettling',seen:'Rettling gesichtet'};
 function exWhat(j){const ref=j.kind==='seen'&&st.ex_injects.find(x=>x.id===j.ref_id),t=j.ago==null?', Zeitpunkt gibst du bei der Freigabe an':j.ago?`, Drift ab ${j.ago} min vor der Freigabe`:'';
-  return j.kind==='pls'?'Setzt den PLS des Einsatzes'+t+'.':j.kind==='res'?`Erfasst den Rettling «${j.name}» mit eigenem PLS${t}.`:`Meldet «${ref?ref.name:'?'}» gesichtet und setzt den PLS neu${t}.`}
+  return j.kind==='pls'?'Setzt den PLS des Einsatzes'+t+'.':j.kind==='res'?`Erfasst den Rettling «${j.name}» mit eigenem PLS${t}.`
+    :j.ref_id==null?`Meldet einen gesichteten Rettling und erfasst ihn als ${j.name?'«'+j.name+'»':'«Unbekannter Rettling»'} mit PLS hier${t}.`:`Meldet «${ref?exRN(ref):'?'}» gesichtet und setzt den PLS neu${t}.`}
+const exRN=x=>x.name||'Unbekannter Rettling'; // Sichtung ohne Rettling (ref_id NULL) erfasst einen neuen (name) oder unbekannten
 // Freigabe mit Zeitpunkt des PLS: leer = jetzt, Zahl = Minuten vorher, HH:MM = Uhrzeit (liegt sie in der Zukunft, gilt der Vortag)
 function exAgo(v){v=v.trim();if(!v)return 0;if(/^\d+$/.test(v))return +v;const m=v.match(/^(\d{1,2})[:.](\d{2})$/);if(!m||+m[1]>23||+m[2]>59)return null;
   const t=new Date();t.setHours(+m[1],+m[2],0,0);if(t-Date.now()>60000)t.setDate(t.getDate()-1);return Math.max(0,Math.round((Date.now()-t)/60000))}
@@ -337,8 +339,8 @@ function exRelAt(j){const d=dlg(`«${j.label}» freigeben`,`<div class="mut">${e
     async d=>{const a=exAgo($('#xA',d).value);if(a==null||a>1440)throw new Error('Zeitpunkt nicht erkannt: leer, Minuten (0 bis 1440) oder Uhrzeit wie 14:20');await api('ex/release',{id:j.id,ago:a});poll()},'Freigeben');
   const i=$('#xA',d),show=()=>{const a=exAgo(i.value);$('#xAi',d).textContent=a==null||a>1440?'Nicht erkannt':'PLS um '+new Date(Date.now()-a*60000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})+(a?` (vor ${a} min)`:' (jetzt)')};i.oninput=show;show()}
 function exSec(){const js=st.ex_injects||[],open=js.filter(j=>!j.released).length;
-  return sec('exlead',`Übungsleitung: Elemente (${open} offen)`,js.map(j=>{const ref=j.kind==='seen'&&js.find(x=>x.id===j.ref_id),blocked=j.kind==='seen'&&!(ref&&ref.released);
-    return `<div class="msg"><b>${esc(j.label)}</b> <span class="mut">${EXK[j.kind]}${j.kind==='res'?': '+esc(j.name):ref?': '+esc(ref.name):''}${esc(fcs(j.lat,j.lon,' · '))}</span>${j.msg?`<div>Meldung: ${esc(j.msg)}</div>`:''}
+  return sec('exlead',`Übungsleitung: Elemente (${open} offen)`,js.map(j=>{const ref=j.kind==='seen'&&js.find(x=>x.id===j.ref_id),blocked=j.kind==='seen'&&j.ref_id!=null&&!(ref&&ref.released);
+    return `<div class="msg"><b>${esc(j.label)}</b> <span class="mut">${EXK[j.kind]}${j.kind==='res'?': '+esc(j.name):ref?': '+esc(exRN(ref)):j.kind==='seen'?(j.name?': neu, '+esc(j.name):': unbekannt'):''}${esc(fcs(j.lat,j.lon,' · '))}</span>${j.msg?`<div>Meldung: ${esc(j.msg)}</div>`:''}
       <div class="row" style="align-items:center">${j.released?`<span class="mut">✓ freigegeben ${fmtT(j.released)}${j.released_name?' von '+esc(j.released_name):''}</span>`:`<button class="pri" data-xr="${j.id}" ${blocked?'disabled title="Zuerst den Rettling freigeben"':''}>Freigeben</button>`}<button data-xz="${j.id}">Zeigen</button></div></div>`}).join('')
     ||'<div class="mut">Keine vorbereiteten Elemente.</div>')+'<div class="mut">Nicht freigegebene Elemente sieht nur die Übungsleitung. Die Meldung geht bei der Freigabe als Nachricht an alle.</div>'}
 // Standort eines Elements kurz auf der Karte zeigen (nur für die Übungsleitung, nicht freigegeben = gestrichelt)

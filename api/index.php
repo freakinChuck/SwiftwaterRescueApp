@@ -50,7 +50,7 @@ foreach ([
  // Rechte der Einsatzleitung, nicht Teil der Übung), Aufzeichnung, vorbereiteter öffentlicher Link (public_token, schon vor dem Start gültig); incident_id = gestartete Übung; active 0 = entfernt
  "CREATE TABLE IF NOT EXISTS ex_plans(id $ai, title $tx, message TEXT, leads TEXT, record INT DEFAULT 1, public_token $tx NULL, public_anon INT DEFAULT 1, created_by INT, created BIGINT, incident_id INT NULL, active INT DEFAULT 1)",
  // Vorbereitete Elemente einer Übung, erst nach der Freigabe durch die Übungsleitung sichtbar: kind pls (PLS des Einsatzes setzen/verschieben), res (neuer Rettling mit PLS: name, descr),
- // seen (Rettling gesichtet: neuer PLS für den Rettling aus dem Element ref_id); ago = Zeitpunkt des PLS in Minuten vor der Freigabe (NULL = Übungsleitung gibt ihn bei der Freigabe ein); msg = Meldung, geht bei der Freigabe als Nachricht an alle
+ // seen (Rettling gesichtet: neuer PLS für den Rettling aus dem Element ref_id; ref_id NULL = neuer Rettling mit name bzw. unbekannter Rettling ohne name, erfasst bei der Freigabe); ago = Zeitpunkt des PLS in Minuten vor der Freigabe (NULL = Übungsleitung gibt ihn bei der Freigabe ein); msg = Meldung, geht bei der Freigabe als Nachricht an alle
  "CREATE TABLE IF NOT EXISTS ex_injects(id $ai, plan_id INT, kind $tx, label $tx, name $tx NULL, descr TEXT NULL, lat DOUBLE, lon DOUBLE, ago INT DEFAULT 0, msg TEXT NULL, ref_id INT NULL, released BIGINT NULL, released_by INT NULL, rescuee_id INT NULL, removed INT DEFAULT 0)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
@@ -827,7 +827,7 @@ switch ($route) {
   if ($j['released'] !== null) out(['ok' => true]); // schon freigegeben, z. B. gleichzeitig von zwei Personen
   if ($j['kind'] !== 'pls' && !feature($inc, 'res')) fail('Die Funktion «Rettlinge» ist für Übungen ausgeschaltet', 403);
   $ref = null;
-  if ($j['kind'] === 'seen') {
+  if ($j['kind'] === 'seen' && $j['ref_id'] !== null) {
     $s = $db->prepare("SELECT r.* FROM ex_injects i JOIN rescuees r ON r.id=i.rescuee_id WHERE i.id=? AND i.plan_id=? AND r.removed IS NULL"); $s->execute([(int)$j['ref_id'], (int)$inc['plan_id']]); $ref = $s->fetch();
     if (!$ref) fail('Zuerst den Rettling freigeben, der hier gesichtet wird');
   }
@@ -840,11 +840,16 @@ switch ($route) {
   if ($j['kind'] === 'pls') {
     $db->prepare("UPDATE incidents SET lat=?, lon=?, pls_at=? WHERE id=?")->execute([$la, $lo, $at === (int)$inc['alarm_at'] ? null : $at, $inc['id']]);
     logev($inc['id'], $uid, 'pls', ($inc['lat'] === null ? 'setzt' : 'ändert') . " den PLS des Einsatzes ($pos)");
-  } elseif ($j['kind'] === 'res') {
-    $db->prepare("INSERT INTO rescuees(incident_id,name,descr,created_by,created,pls_lat,pls_lon,pls_at) VALUES(?,?,?,?,?,?,?,?)")->execute([$inc['id'], $j['name'], (string)$j['descr'], $uid, $now, $la, $lo, $at]);
+  } elseif (!$ref) { // neuer Rettling, auch gesichtet (neu oder unbekannt): Rettling mit PLS am Element erfassen
+    $nm = $j['name'];
+    if ($nm === null) { // unbekannter Rettling: fortlaufend benennen, falls es schon unbekannte gibt
+      $s = $db->prepare("SELECT COUNT(*) c FROM rescuees WHERE incident_id=? AND name LIKE 'Unbekannter Rettling%'"); $s->execute([$inc['id']]); $n = (int)$s->fetch()['c'];
+      $nm = 'Unbekannter Rettling' . ($n ? ' ' . ($n + 1) : '');
+    }
+    $db->prepare("INSERT INTO rescuees(incident_id,name,descr,created_by,created,pls_lat,pls_lon,pls_at) VALUES(?,?,?,?,?,?,?,?)")->execute([$inc['id'], $nm, (string)$j['descr'], $uid, $now, $la, $lo, $at]);
     $db->prepare("UPDATE ex_injects SET rescuee_id=? WHERE id=?")->execute([(int)$db->lastInsertId(), $j['id']]);
-    logev($inc['id'], $uid, 'rescuee', "erfasst den Rettling «{$j['name']}»" . ((string)$j['descr'] !== '' ? ": {$j['descr']}" : ''));
-    logev($inc['id'], $uid, 'rescuee', "setzt den PLS von «{$j['name']}» ($pos)");
+    logev($inc['id'], $uid, 'rescuee', ($j['kind'] === 'seen' ? 'meldet einen gesichteten Rettling und erfasst ihn als ' : 'erfasst den Rettling ') . "«{$nm}»" . ((string)$j['descr'] !== '' ? ": {$j['descr']}" : ''));
+    logev($inc['id'], $uid, 'rescuee', "setzt den PLS von «{$nm}» ($pos)");
   } else {
     $db->prepare("UPDATE rescuees SET pls_lat=?, pls_lon=?, pls_at=? WHERE id=?")->execute([$la, $lo, $at, $ref['id']]);
     logev($inc['id'], $uid, 'rescuee', "meldet «{$ref['name']}» gesichtet und setzt den PLS neu ($pos)");
@@ -875,18 +880,20 @@ switch ($route) {
  case 'ex/plan/copy': admin(); // als neue, noch nicht gestartete Übung kopieren (mit allen Elementen, nicht freigegeben)
   $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)($in['id'] ?? 0)]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
   $db->prepare("INSERT INTO ex_plans(title,message,leads,record,public_token,public_anon,created_by,created) VALUES(?,?,?,?,?,?,?,?)")->execute([mb_substr('Kopie von ' . $p['title'], 0, 120), $p['message'], $p['leads'], $p['record'], $p['public_token'] === null ? null : bin2hex(random_bytes(16)), $p['public_anon'], $uid, $now]);
-  $nid = (int)$db->lastInsertId(); $map = [];
-  foreach (exInjects((int)$p['id']) as $j) {
-    $db->prepare("INSERT INTO ex_injects(plan_id,kind,label,name,descr,lat,lon,ago,msg,ref_id) VALUES(?,?,?,?,?,?,?,?,?,?)")->execute([$nid, $j['kind'], $j['label'], $j['name'], $j['descr'], $j['lat'], $j['lon'], $j['ago'], $j['msg'], $j['ref_id'] === null ? null : ($map[$j['ref_id']] ?? null)]);
+  $nid = (int)$db->lastInsertId(); $map = []; $js = exInjects((int)$p['id']);
+  foreach ($js as $j) {
+    $db->prepare("INSERT INTO ex_injects(plan_id,kind,label,name,descr,lat,lon,ago,msg) VALUES(?,?,?,?,?,?,?,?,?)")->execute([$nid, $j['kind'], $j['label'], $j['name'], $j['descr'], $j['lat'], $j['lon'], $j['ago'], $j['msg']]);
     $map[$j['id']] = (int)$db->lastInsertId();
   }
+  foreach ($js as $j) if ($j['ref_id'] !== null && isset($map[$j['ref_id']])) // Verweise erst danach, sie können auch auf spätere Elemente zeigen
+    $db->prepare("UPDATE ex_injects SET ref_id=? WHERE id=?")->execute([$map[$j['ref_id']], $map[$j['id']]]);
   out(['ok' => true, 'id' => $nid]);
  case 'ex/plan/remove': admin(); // entfernen (nicht während sie läuft); gestartete bleiben im Einsatzlog erhalten
   $s = $db->prepare("SELECT p.*,i.ended_at FROM ex_plans p LEFT JOIN incidents i ON i.id=p.incident_id WHERE p.id=? AND p.active=1"); $s->execute([(int)($in['id'] ?? 0)]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
   if ($p['incident_id'] !== null && $p['ended_at'] === null) fail('Die Übung läuft noch');
   $db->prepare("UPDATE ex_plans SET active=0, public_token=CASE WHEN incident_id IS NULL THEN NULL ELSE public_token END WHERE id=?")->execute([$p['id']]);
   out(['ok' => true]);
- case 'ex/inject/save': admin(); // Element anlegen oder ändern (nur nicht freigegebene): plan_id, kind, label, lat, lon, ago, msg; res: name, descr; seen: ref_id (Element «Neuer Rettling»)
+ case 'ex/inject/save': admin(); // Element anlegen oder ändern (nur nicht freigegebene): plan_id, kind, label, lat, lon, ago, msg; res: name, descr; seen: ref_id ('new' mit name/descr, 'unk' mit descr oder Element-ID)
   $s = $db->prepare("SELECT p.*,i.ended_at FROM ex_plans p LEFT JOIN incidents i ON i.id=p.incident_id WHERE p.id=? AND p.active=1"); $s->execute([(int)($in['plan_id'] ?? 0)]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
   if ($p['ended_at'] !== null) fail('Die Übung ist beendet');
   $kind = (string)($in['kind'] ?? ''); if (!isset(EX_KINDS[$kind])) fail('Unbekannte Art');
@@ -894,16 +901,18 @@ switch ($route) {
   [$la, $lo] = llIn($in['lat'] ?? null, $in['lon'] ?? null);
   $ago = ($in['ago'] ?? null) === null || $in['ago'] === '' ? null : (int)$in['ago']; // NULL = die Übungsleitung gibt den Zeitpunkt bei der Freigabe ein
   if ($ago !== null && ($ago < 0 || $ago > 1440)) fail('Zeitpunkt: 0 bis 1440 Minuten vor der Freigabe');
-  $name = $kind === 'res' ? mb_substr(trim((string)($in['name'] ?? '')), 0, 80) : null; if ($kind === 'res' && $name === '') fail('Name des Rettlings fehlt');
-  $descr = $kind === 'res' ? mb_substr(trim((string)($in['descr'] ?? '')), 0, 1000) : null;
+  // seen: ref_id = 'new' (neuer Rettling mit Name), 'unk' (unbekannter Rettling) oder ein Element, das einen Rettling erfasst (res oder seen ohne ref_id)
+  $sm = $kind === 'seen' ? (string)($in['ref_id'] ?? '') : ''; $own = $kind === 'res' || $sm === 'new' || $sm === 'unk';
+  $name = $kind === 'res' || $sm === 'new' ? mb_substr(trim((string)($in['name'] ?? '')), 0, 80) : null; if ($name === '') fail('Name des Rettlings fehlt');
+  $descr = $own ? mb_substr(trim((string)($in['descr'] ?? '')), 0, 1000) : null;
   $ref = null;
-  if ($kind === 'seen') { $s = $db->prepare("SELECT id FROM ex_injects WHERE id=? AND plan_id=? AND kind='res' AND removed=0"); $s->execute([(int)($in['ref_id'] ?? 0), $p['id']]); $ref = (int)(($s->fetch() ?: [])['id'] ?? 0) ?: fail('Rettling wählen (Element «Neuer Rettling» dieser Übung)'); }
+  if ($kind === 'seen' && !$own) { $s = $db->prepare("SELECT id FROM ex_injects WHERE id=? AND id<>? AND plan_id=? AND removed=0 AND (kind='res' OR (kind='seen' AND ref_id IS NULL))"); $s->execute([(int)$sm, (int)($in['id'] ?? 0), $p['id']]); $ref = (int)(($s->fetch() ?: [])['id'] ?? 0) ?: fail('Rettling wählen: neu, unbekannt oder ein Rettling dieser Übung'); }
   $msg = mb_substr(trim((string)($in['msg'] ?? '')), 0, 2000);
   $v = [$kind, $label, $name, $descr, $la, $lo, $ago, $msg === '' ? null : $msg, $ref];
   if (!empty($in['id'])) {
     $s = $db->prepare("SELECT * FROM ex_injects WHERE id=? AND plan_id=? AND removed=0"); $s->execute([(int)$in['id'], $p['id']]); $j = $s->fetch() ?: fail('Element nicht gefunden', 404);
     if ($j['released'] !== null) fail('Freigegebene Elemente lassen sich nicht mehr ändern');
-    if ($j['kind'] === 'res' && $kind !== 'res') { $s = $db->prepare("SELECT COUNT(*) c FROM ex_injects WHERE ref_id=? AND removed=0"); $s->execute([$j['id']]); if ((int)$s->fetch()['c']) fail('Auf diesen Rettling verweisen Sichtungen; zuerst diese ändern'); }
+    if (($j['kind'] === 'res' || ($j['kind'] === 'seen' && $j['ref_id'] === null)) && !$own) { $s = $db->prepare("SELECT COUNT(*) c FROM ex_injects WHERE ref_id=? AND removed=0"); $s->execute([$j['id']]); if ((int)$s->fetch()['c']) fail('Auf diesen Rettling verweisen Sichtungen; zuerst diese ändern'); }
     $db->prepare("UPDATE ex_injects SET kind=?, label=?, name=?, descr=?, lat=?, lon=?, ago=?, msg=?, ref_id=? WHERE id=?")->execute([...$v, $j['id']]);
     out(['ok' => true]);
   }
