@@ -27,13 +27,16 @@ function riverNet(j){if(!j||!j.elements)throw new Error('ungültige Antwort');
   ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));return{ways,byNode}}
 // Gewässernetz über den Server (r = overpass bzw. public/net). Erreicht der Server Overpass nicht (502 mit query), fragt das Gerät
 // Overpass selbst mit der Abfrage und den Servern (Reihenfolge aus der Verwaltung) des Servers (andere IP-Adresse, Issue #28) und
-// liefert das Ergebnis über put für den Cache aller ab.
+// liefert das Ergebnis über put für den Cache aller ab. Mit put (Einsatz-App, angemeldet) meldet es jeden Versuch für die Statistik (overpass/stat, Issue #45).
 async function overpassNet(r,body,put){try{return await api(r,body)}catch(e){const q=e.data&&e.data.query;if(!q)throw e;
-  for(const url of e.data.servers||[]){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),30000);try{
-    const res=await fetch(url,{method:'POST',body:new URLSearchParams({data:q}),signal:ac.signal});if(!res.ok)continue;
-    const j=await res.json();if(!j.elements)continue;
+  const tries=[],stat=()=>{if(put&&tries.length)api('overpass/stat',{results:tries}).catch(()=>{})};
+  for(const url of e.data.servers||[]){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),30000),t=Date.now(),bad=err=>tries.push({url,ok:0,ms:Date.now()-t,err});try{
+    const res=await fetch(url,{method:'POST',body:new URLSearchParams({data:q}),signal:ac.signal});if(!res.ok){bad('HTTP '+res.status);continue}
+    const j=await res.json();if(!j.elements){bad('Ungültige Antwort');continue}
+    tries.push({url,ok:1,ms:Date.now()-t});stat();
     if(put)api(put,{...body,elements:j.elements.map(({type,id,nodes,geometry,tags})=>({type,id,nodes,geometry,tags:{waterway:tags&&tags.waterway,name:tags&&tags.name}}))}).catch(()=>{});
-    return j}catch(x){}finally{clearTimeout(to)}}
+    return j}catch(x){bad(x.name==='AbortError'?'Zeitüberschreitung':x instanceof SyntaxError?'Ungültige Antwort':'Keine Antwort')}finally{clearTimeout(to)}}
+  stat();
   throw e}}
 // Weg ab Punkt k flussabwärts über rem Meter, an Verzweigungen alle Äste
 function riverFollow(net,w,k,rem,seen){const pts=[w.geometry[k]];seen=new Set(seen).add(w.id);

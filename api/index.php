@@ -44,6 +44,8 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS externals(id $ai, incident_id INT, name $tx, descr TEXT, role_id INT NULL, lat DOUBLE, lon DOUBLE, created_by INT, created BIGINT, moved BIGINT NULL, removed BIGINT NULL)",
  // Vorlagen dafür aus der Verwaltung; lat/lon NULL = Standort beim Erfassen auf der Karte wählen; deaktiviert statt gelöscht
  "CREATE TABLE IF NOT EXISTS ext_templates(id $ai, name $tx, descr TEXT, role_id INT NULL, lat DOUBLE NULL, lon DOUBLE NULL, active INT DEFAULT 1)",
+ // Verwendung je Overpass-Server (Issue #45): src server = Abfrage vom Hosting, device = direkte Abfrage des Geräts (Rückfall); ok_ms = Summe der Antwortzeiten der erfolgreichen
+ "CREATE TABLE IF NOT EXISTS overpass_stats(url $tx, src $tx, uses INT DEFAULT 0, ok INT DEFAULT 0, fails INT DEFAULT 0, ok_ms BIGINT DEFAULT 0, last_ok BIGINT NULL, last_fail BIGINT NULL, last_err $tx NULL, PRIMARY KEY(url, src))",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
@@ -302,18 +304,36 @@ function overpassQuery($in) { // Abfrage aus Parametern bauen (keine freien Abfr
   } else fail('Ausschnitt fehlt');
   return '[out:json][timeout:25];way(' . $sel . ')["waterway"~"^(river|stream|canal)$"];out geom;';
 }
-function overpassFetch($q) { // erste Antwort mit elements, sonst null
+function overpassFetch($q) { // erste Antwort mit elements, sonst null; jeder Versuch zählt in der Statistik (opStat)
   foreach (overpassUrls() as $url) {
+    $t = microtime(true); $err = '';
     if (function_exists('curl_init')) {
       $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 15, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
-      $r = curl_exec($c); $ok = curl_getinfo($c, CURLINFO_HTTP_CODE) === 200; curl_close($c);
+      $r = curl_exec($c); $code = curl_getinfo($c, CURLINFO_HTTP_CODE);
+      if ($r === false) $err = curl_errno($c) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($c);
+      curl_close($c);
     } else {
-      $r = @file_get_contents($url, false, stream_context_create(['http' => ['method' => 'POST', 'timeout' => 15, 'header' => "Content-Type: application/x-www-form-urlencoded\r\nUser-Agent: SwiftwaterRescue/0.1\r\n", 'content' => http_build_query(['data' => $q])]]));
-      $ok = $r !== false;
+      $r = @file_get_contents($url, false, stream_context_create(['http' => ['method' => 'POST', 'timeout' => 15, 'ignore_errors' => true, 'header' => "Content-Type: application/x-www-form-urlencoded\r\nUser-Agent: SwiftwaterRescue/0.1\r\n", 'content' => http_build_query(['data' => $q])]]));
+      $code = preg_match('/^HTTP\/\S+ (\d{3})/', $http_response_header[0] ?? '', $m) ? (int)$m[1] : 0;
+      if ($r === false) $err = 'Keine Antwort';
     }
-    if ($ok && is_string($r) && isset(json_decode($r, true)['elements'])) return $r;
+    $good = $code === 200 && is_string($r) && isset(json_decode($r, true)['elements']);
+    opStat($url, 'server', $good, (microtime(true) - $t) * 1000, $good ? null : ($err ?: ($code !== 200 ? "HTTP $code" : 'Ungültige Antwort')));
+    if ($good) return $r;
   }
   return null;
+}
+// Verwendungsstatistik je Overpass-Server und Quelle (Issue #45, Tabelle overpass_stats); darf die Abfrage nie stören
+function opStat($url, $src, $ok, $ms, $err = null) { global $db;
+  try {
+    $now = time(); $err = $err === null ? null : mb_substr($err, 0, 150);
+    $u = $db->prepare($ok ? "UPDATE overpass_stats SET uses=uses+1, ok=ok+1, ok_ms=ok_ms+?, last_ok=? WHERE url=? AND src=?" : "UPDATE overpass_stats SET uses=uses+1, fails=fails+1, last_fail=?, last_err=? WHERE url=? AND src=?");
+    $p = $ok ? [(int)$ms, $now, $url, $src] : [$now, $err, $url, $src];
+    $u->execute($p); if ($u->rowCount()) return;
+    if (setting('overpass_stats_since', '') === '') setSetting('overpass_stats_since', (string)$now);
+    try { $db->prepare("INSERT INTO overpass_stats(url,src,uses,ok,fails,ok_ms,last_ok,last_fail,last_err) VALUES(?,?,1,?,?,?,?,?,?)")->execute([$url, $src, $ok ? 1 : 0, $ok ? 0 : 1, $ok ? (int)$ms : 0, $ok ? $now : null, $ok ? null : $now, $err]); }
+    catch (Throwable $e) { $u->execute($p); } // gleichzeitig angelegt: dann zählen
+  } catch (Throwable $e) {}
 }
 // Ortsname zu Koordinaten: swisstopo-Ortschaftenverzeichnis, ausserhalb der Schweiz OpenStreetMap (Nominatim), sonst Koordinaten
 function placeName($la, $lo) {
@@ -359,6 +379,16 @@ switch ($route) {
 
  case 'overpass': // Gewässernetz für Suchgebiet und Flussdistanz (alle angemeldeten Personen): around [m, lat, lon] oder bbox [s, w, n, e]; Antwort wie Overpass
   overpassServe(overpassQuery($in));
+ case 'overpass/stat': // Ergebnisse der direkten Abfragen des Geräts (Rückfall bei 502) für die Statistik: results [{url, ok, ms, err}], nur hinterlegte Server
+  foreach (array_slice((array)($in['results'] ?? []), 0, 8) as $x) {
+    if (!is_array($x) || !in_array($x['url'] ?? null, overpassUrls(), true)) continue;
+    opStat($x['url'], 'device', !empty($x['ok']), min(max(0, (float)($x['ms'] ?? 0)), 120000), empty($x['ok']) ? (mb_substr(trim((string)($x['err'] ?? '')), 0, 150) ?: 'Fehler') : null);
+  }
+  out(['ok' => true]);
+ case 'overpass/stats': admin(); // Statistik für die Verwaltung (Gewässerdaten)
+  out(['since' => (int)setting('overpass_stats_since', '0') ?: null, 'rows' => array_map(fn($r) => ints($r, ['uses', 'ok', 'fails', 'ok_ms', 'last_ok', 'last_fail']), $db->query("SELECT * FROM overpass_stats ORDER BY url, src")->fetchAll())]);
+ case 'overpass/stats/reset': admin();
+  $db->exec("DELETE FROM overpass_stats"); setSetting('overpass_stats_since', (string)time()); out(['ok' => true]);
  case 'overpass/put': // Ergebnis einer direkten Abfrage des Geräts (Rückfall bei 502), gleiche Parameter wie overpass plus elements
   overpassPut(overpassQuery($in), $in['elements'] ?? null);
 
