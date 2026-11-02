@@ -43,9 +43,9 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   if(!me.is_admin){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
-    <main><section id="sU"><h2>Benutzer</h2><div class="mut">Wird geladen …</div></section><section id="sM"><h2>Einrückoptionen</h2><div class="mut">Wird geladen …</div></section><section id="sR"><h2>Spezialrollen</h2><div class="mut">Wird geladen …</div></section><section id="sC"><h2>Koordinaten</h2><div class="mut">Wird geladen …</div></section><section id="sA"><h2>Aufzeichnung</h2><div class="mut">Wird geladen …</div></section><section id="sF"><h2>Flussdistanz</h2><div class="mut">Wird geladen …</div></section><section id="sO"><h2>Gewässerdaten</h2><div class="mut">Wird geladen …</div></section><section id="stats"><h2>Einsatzstatistik und Einsatzlog</h2><div class="mut">Wird geladen …</div></section></main>`;
+    <main><section id="sU"><h2>Benutzer</h2><div class="mut">Wird geladen …</div></section><section id="sM"><h2>Einrückoptionen</h2><div class="mut">Wird geladen …</div></section><section id="sR"><h2>Spezialrollen</h2><div class="mut">Wird geladen …</div></section><section id="sX"><h2>Externe Einsatzkräfte</h2><div class="mut">Wird geladen …</div></section><section id="sC"><h2>Koordinaten</h2><div class="mut">Wird geladen …</div></section><section id="sA"><h2>Aufzeichnung</h2><div class="mut">Wird geladen …</div></section><section id="sF"><h2>Flussdistanz</h2><div class="mut">Wird geladen …</div></section><section id="sO"><h2>Gewässerdaten</h2><div class="mut">Wird geladen …</div></section><section id="stats"><h2>Einsatzstatistik und Einsatzlog</h2><div class="mut">Wird geladen …</div></section></main>`;
   $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
-  loadUsers();loadModes();loadRoles();loadCoords();loadRec();loadRd();loadOp();loadStats()}
+  loadUsers();loadModes();loadRoles();loadExt();loadCoords();loadRec();loadRd();loadOp();loadStats()}
 /* ---------- Benutzer ---------- */
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
@@ -90,6 +90,22 @@ async function loadRoles(){const el=$('#sR');try{roles=await api('roles')}catch(
   // Einstellung für Personen ohne Spezialrolle, wird sofort gespeichert
   api('settings').then(s=>[['#msgNoRole','msg_no_role'],['#msgReadAll','msg_read_all']].forEach(([id,k])=>{const c=$(id);c.checked=!!s[k];c.disabled=false;
     c.onchange=()=>{c.disabled=true;api('settings/save',{[k]:c.checked?1:0}).catch(e=>{c.checked=!c.checked;fail(e)}).finally(()=>{c.disabled=false})}})).catch(fail)}
+/* ---------- Vorlagen für externe Einsatzkräfte (Issue #39) ---------- */
+// Die Einsatzleitung erfasst damit Externe ohne App-Konto (z. B. Posten der Feuerwehr) mit wenigen Klicks; ohne Standort wird er beim Erfassen gewählt
+async function loadExt(){const el=$('#sX');let xs,rs;try{[xs,rs]=await Promise.all([api('ext_templates'),api('roles')])}catch(e){el.innerHTML='<h2>Externe Einsatzkräfte</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const cs=me&&(me.coord_sys&&me.coord_sys!=='none'?me.coord_sys:me.coord_default)||'lv95',rn=id=>(rs.find(r=>r.id===id)||{}).name;
+  el.innerHTML=`<h2>Externe Einsatzkräfte</h2><div class="mut">Vorlagen für Einsatzkräfte ohne App-Konto mit festem Standort, z. B. Sicherungs- und Beobachtungsposten anderer Organisationen. Die Einsatzleitung erfasst sie im Einsatz über den Kartenknopf «Einsatzkräfte» und wählt dort eine Vorlage. Mit einer Posten-Rolle endet das Suchgebiet am Standort.</div>
+    ${xs.length?`<div class="tw"><table><thead><tr><th>Name</th><th>Kürzel / Farbe</th><th>Spezialrolle</th><th>Standort</th><th></th></tr></thead><tbody>${xs.map(x=>`<tr${x.active?'':' class="mut"'}><td>${esc(x.name)}${x.descr?`<div class="mut">${esc(x.descr)}</div>`:''}${x.active?'':' <span class="mut">(deaktiviert)</span>'}</td><td>${x.color?`<span style="display:inline-block;width:.9em;height:.9em;border-radius:3px;vertical-align:-.1em;background:${esc(x.color)}"></span> `:''}${esc(x.abbr||'')}${x.abbr||x.color?'':'–'}</td><td>${esc(rn(x.role_id)||'–')}</td><td>${x.lat!=null?esc(fmtC(x.lat,x.lon,cs)):'<span class="mut">beim Erfassen wählen</span>'}</td><td class="act"><button data-x="${x.id}">Bearbeiten</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="mut">Noch keine Vorlagen.</div>'}
+    <div class="row"><button id="xA">Vorlage anlegen</button></div>`;
+  const edit=x=>dlg(x.id?'Vorlage bearbeiten':'Neue Vorlage',`<label class="mut">Name<input id="xN" maxlength="80" placeholder="z. B. Feuerwehr Bremgarten, Posten Brücke" value="${esc(x.name||'')}"></label><label class="mut">Beschreibung (Organisation, Funkkanal, Telefon …)<textarea id="xD" rows="3" maxlength="500">${esc(x.descr||'')}</textarea></label>
+      <label class="mut">Spezialrolle<select id="xR"><option value="">Keine Spezialrolle</option>${rs.map(r=>`<option value="${r.id}" ${r.id===x.role_id?'selected':''}>${esc(r.name)}${r.is_post?' (Posten)':''}</option>`).join('')}</select></label>${extStyleFields(x)}
+      <label class="mut">Standort (optional)<input id="xL" placeholder="LV95 2'660'000 / 1'250'000 oder WGS84 47.38, 8.05" value="${x.lat!=null?esc(fmtC(x.lat,x.lon,'wgs84')):''}"></label><div class="mut" id="xLi">LV95, LV03 oder WGS84 dezimal. Leer = Standort beim Erfassen auf der Karte wählen.</div>
+      ${x.id?`<label class="chk"><input type="checkbox" id="xAc" ${x.active?'checked':''}> Aktiv (im Einsatz wählbar)</label>`:''}`,
+    async d=>{const v=$('#xL',d).value.trim(),p=v?parseC(v):null;if(v&&!p)throw new Error('Standort nicht erkannt. Beispiele: 2660000 / 1250000 (LV95) oder 47.38, 8.05 (WGS84).');
+      await api('ext_template/save',{id:x.id,name:$('#xN',d).value,descr:$('#xD',d).value,role_id:+$('#xR',d).value||null,...extStyleVal(d),lat:p?+p.lat.toFixed(7):'',lon:p?+p.lon.toFixed(7):'',active:$('#xAc',d)?($('#xAc',d).checked?1:0):1});loadExt()});
+  // Vorschau der erkannten Koordinaten während der Eingabe
+  const prev=d=>{const i=$('#xL',d);i.oninput=()=>{const p=parseC(i.value);$('#xLi',d).textContent=!i.value.trim()?'LV95, LV03 oder WGS84 dezimal. Leer = Standort beim Erfassen auf der Karte wählen.':p?'Erkannt: '+fmtC(p.lat,p.lon,'lv95')+' (LV95) · '+fmtC(p.lat,p.lon,'wgs84')+' (WGS84)':'Nicht erkannt'}};
+  $('#xA').onclick=()=>prev(extStyleBind(edit({})));el.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>prev(extStyleBind(edit(xs.find(x=>x.id==b.dataset.x)))))}
 /* ---------- Koordinatensystem (Standard für alle, pro Person in der Einsatz-App unter «Konto» übersteuerbar) ---------- */
 async function loadCoords(){const el=$('#sC');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Koordinaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   el.innerHTML=`<h2>Koordinaten</h2><label class="mut">Standard-Koordinatensystem für die Anzeige<select id="cS">${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===s.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
@@ -179,7 +195,7 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   people.forEach(p=>{p.line=L.polyline([],{color:p.col,weight:3,opacity:.75}).addTo(trailL);
     p.mk=L.circleMarker([0,0],{radius:8,color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[8,0],className:'rplbl'})});
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
-  const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts)];
+  const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17});
   rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,perIdx,follow:null,pKey:null};
   // Personenliste wie in der Einsatz-App: «Zentrieren» und «Folgen» (Karte folgt der Person beim Abspielen); Verschieben von Hand oder ✕ beendet das Folgen
@@ -221,14 +237,17 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
   // Positionen & Bereiche, Rettlinge und Nachrichten-Markierungen: nur neu zeichnen, wenn sich der sichtbare Bestand ändert
   const pois=d.pois.filter(p=>on(p.created,p.removed)),marks=d.marks.filter(m=>m.created<=t&&(m.mark||(m.unmarked!=null&&t<m.unmarked)));
   const res=d.rescuees.filter(r=>on(r.created,r.removed)).map(r=>{const tr=rp.rtr[r.id]||[],k=lastIdx(tr,t),pos=k>=0?[tr[k][2],tr[k][3]]:!tr.length&&on(r.loc_at)?[r.lat,r.lon]:null;return{...r,pos,ok:on(r.rescued_at)}});
-  const key=JSON.stringify([pois.map(p=>p.id),marks.map(m=>m.id),res.map(r=>[r.id,r.pos,r.ok])]);
+  // externe Einsatzkräfte (Issue #39): Standort und Spezialrolle mit Stand Einsatzende, sichtbar vom Erfassen bis zum Entfernen
+  const ext=(d.externals||[]).filter(e=>on(e.created,e.removed));
+  const key=JSON.stringify([pois.map(p=>p.id),marks.map(m=>m.id),res.map(r=>[r.id,r.pos,r.ok]),ext.map(e=>e.id)]);
   if(key!==rp.poiKey){rp.poiKey=key;rp.poiL.clearLayers();
     pois.forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:7,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'rplbl'}).addTo(rp.poiL)});
     marks.forEach(m=>L.circleMarker([m.mark_lat,m.mark_lon],{radius:6,color:'#0f2430',weight:2,fillColor:'#2ee6d6',fillOpacity:1}).bindTooltip(esc((m.name||'')+': '+m.text.slice(0,60))).addTo(rp.poiL));
+    ext.forEach(e=>{const rc=(roles.find(r=>r.id===e.role_id)||{}).color;return L.circleMarker([e.lat,e.lon],{radius:8,color:e.color&&rc?rc:'#fff',weight:e.color&&rc?3:2,dashArray:'3',fillColor:e.color||rc||'#cfd8dc',fillOpacity:1}).bindTooltip(esc(e.name)+' (extern)',{permanent:true,direction:'right',offset:[8,0],className:'rplbl'}).addTo(rp.poiL)});
     res.filter(r=>r.pos).forEach(r=>L.circleMarker(r.pos,{radius:9,color:'#fff',weight:2,fillColor:r.ok?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.ok?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[8,0],className:'rplbl'}).addTo(rp.poiL))}
   const fl=d.flow.filter(f=>f.ts<=t).pop();
   $('#rpInfo').innerHTML=`<h3 style="margin-top:0">Lage</h3>${rec?'':'<div><b>Aufzeichnung zu diesem Zeitpunkt pausiert oder aus</b> – keine Standorte der Einsatzkräfte</div>'}<div class="mut">${fl?esc(fl.text.replace(/^setzt die /,'')):'Fliessgeschwindigkeit nicht gesetzt'}</div>
-    <div class="mut">Rettlinge: ${res.length?res.map(r=>esc(r.name)+' – '+(r.ok?'gerettet':r.pos?'Standort bekannt':'vermisst')).join(', '):'keine erfasst'}</div>
+    ${ext.length?`<div class="mut">Externe Einsatzkräfte: ${ext.map(e=>esc(e.name)).join(', ')}</div>`:''}<div class="mut">Rettlinge: ${res.length?res.map(r=>esc(r.name)+' – '+(r.ok?'gerettet':r.pos?'Standort bekannt':'vermisst')).join(', '):'keine erfasst'}</div>
 `;
   rpPeople(info);
   // Log: nur Einträge bis t, neueste zuerst; Klick springt zum Zeitpunkt

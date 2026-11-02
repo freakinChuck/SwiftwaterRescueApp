@@ -93,6 +93,14 @@ function fmtC(lat,lon,sys){if(lat==null||lon==null||sys==='none')return''; // no
   if(sys==='wgs84')return `${(+lat).toFixed(5)}, ${(+lon).toFixed(5)}`;
   if(sys==='wgs84dms')return `${dms(lat,'N','S')} ${dms(lon,'E','W')}`;
   const[e,n]=toLV95(lat,lon);return sys==='lv03'?`${thou(e-2e6)} / ${thou(n-1e6)}`:`${thou(e)} / ${thou(n)}`}
+// Eingabe von Koordinaten (Vorlagen der externen Einsatzkräfte): WGS84 dezimal «47.38, 8.05», LV95 «2'660'000 / 1'250'000» oder LV03 «660000 250000»;
+// LV95/LV03 → WGS84 mit den Näherungsformeln von swisstopo (ca. 1 m). Ergebnis {lat, lon} oder null
+function parseC(s){const n=String(s||'').replace(/['’]/g,'').trim().split(/\s*[,;/]\s*|\s+/).filter(Boolean).map(Number);if(n.length!==2||n.some(x=>!isFinite(x)))return null;
+  let[a,b]=n;if(Math.abs(a)<=90&&Math.abs(b)<=180)return{lat:a,lon:b};
+  if(a<b)[a,b]=[b,a];if(a<1e6){a+=2e6;b+=1e6} // LV03 → LV95; Ost liegt in der Schweiz immer über Nord
+  if(a<2.4e6||a>2.9e6||b<1.05e6||b>1.35e6)return null;
+  const y=(a-2.6e6)/1e6,x=(b-1.2e6)/1e6;
+  return{lat:(16.9023892+3.238272*x-.270978*y*y-.002528*x*x-.0447*y*y*x-.014*x*x*x)*100/36,lon:(2.6779094+4.728982*y+.791484*y*x+.1306*y*x*x-.0436*y*y*y)*100/36}}
 function logout(){token=null;localStorage.removeItem('sw_token')}
 /* ---------- Anmeldung ---------- */
 function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button></div>`;
@@ -100,6 +108,10 @@ function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(titl
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 /* ---------- Dialoge ---------- */
 // Einfacher modaler Dialog; save(d) wirft bei Fehlern, dann bleibt der Dialog offen
+// Kürzel und Farbe externer Einsatzkräfte und ihrer Vorlagen (Issue #39): Felder im Dialog, Wert lesen; Farbe ohne Häkchen = keine
+const extStyleFields=x=>`<div class="row" style="align-items:flex-end"><label class="mut" style="flex:1">Kürzel (max. 4 Zeichen, auf dem Marker)<input id="xK" maxlength="4" placeholder="z. B. FW" value="${esc(x.abbr||'')}"></label><label class="mut" style="flex:0 0 auto"><span><input type="checkbox" id="xFc" ${x.color?'checked':''}> Farbe</span><input type="color" id="xF" value="${esc(x.color||'#e53935')}" style="width:4rem"></label></div><div class="mut">Die Farbe füllt den Marker, der Rand zeigt die Spezialrolle.</div>`;
+function extStyleVal(d){return{abbr:$('#xK',d).value.trim(),color:$('#xFc',d).checked?$('#xF',d).value:''}}
+function extStyleBind(d){$('#xF',d).addEventListener('input',()=>{$('#xFc',d).checked=true});return d}
 function dlg(title,body,save,okText='Speichern',xText='Abbrechen',onX){const d=document.createElement('div');d.className='dlg';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-label',title);
   d.innerHTML=`<div class="card"><h2 style="margin:0">${esc(title)}</h2>${body}<div class="row"><button class="pri" data-ok>${esc(okText)}</button><button data-x>${esc(xText)}</button></div></div>`;
   document.body.appendChild(d);const f=d.querySelector('input,select');f&&f.focus();
@@ -117,7 +129,7 @@ function pwDialog(forced,done){
 /* ---------- Einsatzlog im Gross-Modus ---------- */
 let big=null;
 const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],poi:['Positionen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub']]};
-const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0',pub:'#7dd3fc'};
+const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0',pub:'#7dd3fc',ext:'#a3e635'};
 function openBigLog(title,get,live){big={title,get,live,desc:true,filter:'all',cache:[]};let o=$('#bigLog');if(o)o.remove();
   o=document.createElement('div');o.id='bigLog';o.setAttribute('role','dialog');o.setAttribute('aria-label','Einsatzlog');
   o.innerHTML=`<div id="bigHead"><h2 id="bigT"></h2><select id="bigF" aria-label="Filter">${Object.entries(KIND_GROUPS).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('')}</select><button id="bigS"></button><button id="bigFs">Vollbild</button><button id="bigX" class="pri">Schliessen</button></div><div id="bigList"></div>`;
