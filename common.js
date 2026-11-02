@@ -38,25 +38,33 @@ async function overpassNet(r,body,put){try{return await api(r,body)}catch(e){con
     return j}catch(x){bad(x.name==='AbortError'?'Zeitüberschreitung':x instanceof SyntaxError?'Ungültige Antwort':'Keine Antwort')}finally{clearTimeout(to)}}
   stat();
   throw e}}
-// Weg ab Punkt k flussabwärts über rem Meter, an Verzweigungen alle Äste
-function riverFollow(net,w,k,rem,seen){const pts=[w.geometry[k]];seen=new Set(seen).add(w.id);
-  for(let j=k+1;j<w.geometry.length;j++){const a=w.geometry[j-1],b=w.geometry[j],d=geoDist(a,b);
-    if(d>=rem){const f=rem/d;pts.push({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});return[pts]}
-    pts.push(b);rem-=d}
-  const nexts=(net.byNode.get(w.nodes[w.nodes.length-1])||[]).filter(e=>!seen.has(e.w.id)&&e.k<e.w.geometry.length-1);
-  if(!nexts.length)return[pts];
-  return nexts.flatMap(e=>riverFollow(net,e.w,e.k,rem,seen).map(br=>pts.concat(br.slice(1))))}
+// Weg ab Punkt k flussabwärts über rem Meter, an Verzweigungen alle Äste. Liefert Linien ab dem Startpunkt, null = von hier aus schon verfolgt.
+// Verzweigungen: am Ende des Weges alle anschliessenden Wege, unterwegs Wege, die an einem Knoten beginnen (Issue #40: Seitenarm, Kanal;
+// in OSM beginnt der Arm oft mitten im Weg des Hauptflusses). Jede Linie endet am ersten Posten (ctx.posts, ctx.cut = dessen Name).
+// ctx.done verhindert, dass derselbe Einstieg (Weg, Knoten) mehrfach verfolgt wird, wenn Arme wieder zusammenfliessen.
+function riverFollow(net,w,k,rem,seen,ctx){const key=w.id+':'+k;if((ctx.done.get(key)??-1)>=rem)return null;ctx.done.set(key,rem);
+  const pts=[w.geometry[k]],out=[],last=w.geometry.length-1;seen=new Set(seen).add(w.id);
+  const post=p=>{const po=ctx.posts.find(q=>geoDist(p,q)<120);if(po)ctx.cut=po.name;return!!po};
+  const sub=(e,r)=>{const s=riverFollow(net,e.w,e.k,r,seen,ctx);return s?s.map(b=>pts.concat(b.slice(1))):[]};
+  if(post(pts[0]))return[pts];
+  for(let j=k;j<last;j++){
+    for(const e of net.byNode.get(w.nodes[j])||[])if(e.k===0&&e.w!==w&&!seen.has(e.w.id))out.push(...sub(e,rem));
+    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b);
+    if(d>=rem){const f=rem/d;pts.push({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});return[pts,...out]}
+    pts.push(b);rem-=d;if(post(b))return[pts,...out]}
+  const nx=(net.byNode.get(w.nodes[last])||[]).filter(e=>!seen.has(e.w.id)&&e.k<e.w.geometry.length-1).flatMap(e=>sub(e,rem));
+  return nx.length?[...nx,...out]:[pts,...out]}
 function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/180),P=pts.map(p=>C.project(L.latLng(p.lat,p.lon))),A=[],B=[];
   P.forEach((p,j)=>{const a=P[Math.max(0,j-1)],b=P[Math.min(P.length-1,j+1)];let dx=b.x-a.x,dy=b.y-a.y;const n=Math.hypot(dx,dy)||1;dx/=n;dy/=n;
     A.push(C.unproject(L.point(p.x-dy*k,p.y+dx*k)));B.push(C.unproject(L.point(p.x+dy*k,p.y-dx*k)))});return A.concat(B.reverse())}
 // Suchgebiet ab PLS (i) über die Driftdistanz D, endet am ersten Posten (posts: [{lat,lon,name}]); null = kein Gewässer nahe der PLS
 function riverArea(net,i,D,posts){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
   if(!best||bd>SNAP_M)return null;const r={lines:[],polys:[],cutBy:null,maxLen:0};
-  riverFollow(net,best.w,best.k,D,new Set()).forEach(pts=>{
-    for(let j=0;j<pts.length;j++){const po=posts.find(p=>geoDist(pts[j],p)<120);if(po){pts=pts.slice(0,j+1);r.cutBy=po.name;break}}
+  const ctx={posts,done:new Map(),cut:null};
+  (riverFollow(net,best.w,best.k,D,new Set(),ctx)||[]).forEach(pts=>{
     if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=geoDist(pts[j-1],pts[j]);r.maxLen=Math.max(r.maxLen,len);
     r.lines.push(pts);r.polys.push(corridor(pts,BANK_M))});
-  return r}
+  r.cutBy=ctx.cut;return r}
 // Suchgebiet aus mehreren PLS (Issue #24): srcs = sources des Servers ([{lat,lon,at,own,names}], vermisste Rettlinge bzw. PLS des Einsatzes),
 // nets = Map je PLS (srcKey) mit dem Gewässernetz, get(s,R) liefert die Overpass-Antwort für einen PLS, redraw nach dem Laden.
 // Ergebnis: polys/lines (entlang Gewässer), circles (Rückfall {lat,lon,r}), info (Text), parts (je PLS: key, names, lat/lon, polys, circles), rs = Rettlinge (für den Hinweis ohne PLS)
