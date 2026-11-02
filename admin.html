@@ -49,17 +49,20 @@ tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{p
 <div id="app"></div>
 <script src="common.js?v=0"></script>
 <script>
-/* Verwaltung: nur für die Benutzerrolle Administrator. Die API prüft die Berechtigung bei jedem Aufruf. */
+/* Verwaltung: für die Benutzerrolle Administrator, die Benutzerrolle Übungsleiter sieht nur «Übungen vorbereiten». Die API prüft die Berechtigung bei jedem Aufruf. */
 let me=null,users=[],roles=[];
 onUnauth=()=>start();
-const ROLE_LABEL=u=>u.is_admin?'Administrator':'Einsatzkraft';
+const ROLE_LABEL=u=>u.is_admin?'Administrator':u.is_planner?'Übungsleiter':'Einsatzkraft';
+// Auswahl der Benutzerrolle: Wert 0 = Einsatzkraft, 1 = Administrator, 2 = Übungsleiter
+const ROLE_OPTS=u=>[[0,'Einsatzkraft'],[2,'Übungsleiter'],[1,'Administrator']].map(([v,l])=>`<option value="${v}" ${u&&(u.is_admin?1:u.is_planner?2:0)===v?'selected':''}>${l}</option>`).join('');
+const ROLE_VAL=v=>({is_admin:v==1?1:0,is_planner:v==2?1:0});
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
-  if(!me.is_admin){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
+  if(!me.is_admin&&!me.is_planner){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren und Übungsleiter zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
-    <div id="wrap"><nav id="nav" aria-label="Bereiche der Verwaltung"><select id="navSel" aria-label="Bereich wählen">${NAV.map(([g,its])=>`<optgroup label="${esc(g)}">${its.map(([k,,l])=>`<option value="${k}">${esc(l)}</option>`).join('')}</optgroup>`).join('')}</select>
-    <div class="navl">${NAV.map(([g,its])=>`<div class="ng">${esc(g)}</div>${its.map(([k,,l])=>`<a href="#${k}" data-k="${k}">${esc(l)}</a>`).join('')}`).join('')}</div></nav>
+    <div id="wrap"><nav id="nav" aria-label="Bereiche der Verwaltung"><select id="navSel" aria-label="Bereich wählen">${nav().map(([g,its])=>`<optgroup label="${esc(g)}">${its.map(([k,,l])=>`<option value="${k}">${esc(l)}</option>`).join('')}</optgroup>`).join('')}</select>
+    <div class="navl">${nav().map(([g,its])=>`<div class="ng">${esc(g)}</div>${its.map(([k,,l])=>`<a href="#${k}" data-k="${k}">${esc(l)}</a>`).join('')}`).join('')}</div></nav>
     <main>${navItems().map(([k,id,l])=>`<section id="${id}" hidden><h2>${esc(l)}</h2><div class="mut">Wird geladen …</div></section>`).join('')}</main></div>`;
   $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
   $('#navSel').onchange=e=>{location.hash=e.target.value};showNav()}
@@ -74,7 +77,9 @@ const NAV=[
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats]]],
 ];
-const navItems=()=>NAV.flatMap(([,its])=>its);
+// Übungsleiter (Benutzerrolle ohne weitere Rechte der Verwaltung) sehen nur die Übungen
+const nav=()=>me.is_admin?NAV:NAV.map(([g,its])=>[g,its.filter(([k])=>k==='uebungen')]).filter(([,its])=>its.length);
+const navItems=()=>nav().flatMap(([,its])=>its);
 function showNav(){if(!$('#nav'))return;const its=navItems(),it=its.find(x=>x[0]===location.hash.slice(1))||its[0],[k,id,l,load]=it;
   its.forEach(([,i])=>{$('#'+i).hidden=i!==id});
   document.querySelectorAll('#nav a').forEach(a=>{if(a.dataset.k===k)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
@@ -87,13 +92,13 @@ async function loadUsers(){const el=$('#sU');try{users=await api('users')}catch(
   el.innerHTML=`<h2>Benutzer (${users.filter(u=>u.active).length} aktiv)</h2><div class="tw"><table><thead><tr><th>Name</th><th>Benutzername</th><th>Benutzerrolle</th><th>Status</th><th></th></tr></thead><tbody>${users.map(u=>{const self=u.id===me.id;
     return`<tr class="${u.active?'':'off'}"><td>${esc(u.name)}${self?' <span class="mut">(du)</span>':''}</td><td>${esc(u.username)}</td><td>${ROLE_LABEL(u)}</td><td>${u.active?'aktiv':'deaktiviert'}${u.must_change?'<br><span class="mut">Passwortwechsel ausstehend</span>':''}${u.exercise_mode?'<br><span class="mut">Übungsmodus an</span>':''}</td>
       <td class="act"><button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.active?`<button data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}</td></tr>`}).join('')}</tbody></table></div>
-    <h3>Neuer Benutzer</h3><div class="row"><input id="un" placeholder="Benutzername" autocomplete="off" aria-label="Benutzername"><input id="uf" placeholder="Name" aria-label="Name"><input id="up" placeholder="Startpasswort" autocomplete="off" aria-label="Startpasswort" value="${genPw()}"><select id="ur" aria-label="Benutzerrolle"><option value="0">Einsatzkraft</option><option value="1">Administrator</option></select><button class="pri" id="uA">Benutzer anlegen</button></div>
+    <h3>Neuer Benutzer</h3><div class="row"><input id="un" placeholder="Benutzername" autocomplete="off" aria-label="Benutzername"><input id="uf" placeholder="Name" aria-label="Name"><input id="up" placeholder="Startpasswort" autocomplete="off" aria-label="Startpasswort" value="${genPw()}"><select id="ur" aria-label="Benutzerrolle">${ROLE_OPTS()}</select><button class="pri" id="uA">Benutzer anlegen</button></div>
     <div class="mut">Neue Benutzer müssen das Startpasswort bei der ersten Anmeldung ändern. Deaktivierte Benutzer können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
-  $('#uA').onclick=()=>{const pw=$('#up').value;api('user/save',{username:$('#un').value,name:$('#uf').value,password:pw,is_admin:+$('#ur').value}).then(()=>{alert('Benutzer angelegt. Startpasswort: '+pw);loadUsers()}).catch(fail)};
+  $('#uA').onclick=()=>{const pw=$('#up').value;api('user/save',{username:$('#un').value,name:$('#uf').value,password:pw,...ROLE_VAL($('#ur').value)}).then(()=>{alert('Benutzer angelegt. Startpasswort: '+pw);loadUsers()}).catch(fail)};
   const U=id=>users.find(x=>x.id==id);
   el.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.e),self=u.id===me.id;
-    dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><label class="mut">Benutzerrolle<select id="eR" ${self?'disabled':''}><option value="0">Einsatzkraft</option><option value="1" ${u.is_admin?'selected':''}>Administrator</option></select></label>${self?'<div class="mut">Die eigene Benutzerrolle kann nicht geändert werden.</div>':''}<div class="mut">Administratoren haben Zugriff auf diese Verwaltung und dürfen jeden Einsatz verwalten.</div>`,
-      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,is_admin:+$('#eR',d).value});loadUsers()})});
+    dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><label class="mut">Benutzerrolle<select id="eR" ${self?'disabled':''}>${ROLE_OPTS(u)}</select></label>${self?'<div class="mut">Die eigene Benutzerrolle kann nicht geändert werden.</div>':''}<div class="mut">Administratoren haben Zugriff auf diese Verwaltung und dürfen jeden Einsatz verwalten. Übungsleiter sehen in der Verwaltung nur «Übungen vorbereiten» und dürfen vorbereitete Übungen starten und ihre Elemente freigeben.</div>`,
+      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,...ROLE_VAL($('#eR',d).value)});loadUsers()})});
   el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.p);
     dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div><label class="mut">Neues Startpasswort<input id="eP" autocomplete="off" value="${genPw()}"></label>`,
       async d=>{const pw=$('#eP',d).value;await api('user/password',{id:u.id,password:pw});alert('Passwort zurückgesetzt. Bitte das Startpasswort «'+pw+'» an '+u.name+' weitergeben.');loadUsers()},'Zurücksetzen')});
