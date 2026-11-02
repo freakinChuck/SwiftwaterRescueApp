@@ -190,8 +190,33 @@ function overpassServe($q) { global $now;
   $r = overpassFetch($q);
   if ($r !== null) { if ($ttl && file_put_contents("$file.tmp", $r) !== false) rename("$file.tmp", $file); header('X-Cache: MISS'); echo $r; }
   elseif (is_file($file)) { header('X-Cache: STALE'); readfile($file); } // Overpass nicht erreichbar: abgelaufene Daten sind besser als keine
-  else fail('Overpass antwortet nicht', 502); // Frontend ergänzt «Gewässerdaten nicht verfügbar»
+  else out(['error' => 'Overpass antwortet nicht', 'query' => $q], 502); // mit Abfrage: das Gerät fragt Overpass dann selbst (overpassNet in common.js)
   exit;
+}
+// Rückfall (Issue #28): Vom Hosting aus lehnt Overpass oft ab, vom Gerät aus nicht. Das Gerät liefert sein Ergebnis hier für den Cache
+// aller ab. Der Schlüssel kommt aus denselben Parametern wie bei overpass; gespeichert werden nur geprüfte Wege mit den nötigen Feldern.
+function overpassPut($q, $els) {
+  $ttl = max(0, (int)setting('overpass_ttl', '120')) * 60;
+  if (!is_array($els) || count($els) > 50000) fail('Ungültige Gewässerdaten');
+  $num = fn($x, $m) => (is_int($x) || is_float($x)) && abs($x) <= $m;
+  $w = [];
+  foreach ($els as $e) {
+    $n = $e['nodes'] ?? null; $g = $e['geometry'] ?? null; $t = $e['tags'] ?? [];
+    if (($e['type'] ?? '') !== 'way' || !is_int($e['id'] ?? null) || !is_array($n) || !is_array($g) || count($n) < 2 || count($n) !== count($g) || count($n) > 100000) fail('Ungültige Gewässerdaten');
+    if (!is_array($t) || !preg_match('/^(river|stream|canal)$/', (string)($t['waterway'] ?? ''))) fail('Ungültige Gewässerdaten');
+    $p = [];
+    foreach ($n as $k => $id) {
+      if (!is_int($id) || !$num($g[$k]['lat'] ?? null, 90) || !$num($g[$k]['lon'] ?? null, 180)) fail('Ungültige Gewässerdaten');
+      $p[] = ['lat' => (float)$g[$k]['lat'], 'lon' => (float)$g[$k]['lon']];
+    }
+    $w[] = ['type' => 'way', 'id' => $e['id'], 'nodes' => array_values($n), 'geometry' => $p, 'tags' => ['waterway' => $t['waterway']] + (is_string($t['name'] ?? null) ? ['name' => mb_substr($t['name'], 0, 200)] : [])];
+  }
+  $dir = __DIR__ . '/data/overpass'; if (!is_dir($dir)) @mkdir($dir, 0775, true);
+  $file = "$dir/" . sha1($q) . '.json'; clearstatcache(true, $file);
+  if (!$ttl || (is_file($file) && time() - filemtime($file) < $ttl)) out(['ok' => true]); // kein Cache bzw. schon aktuell: nichts überschreiben
+  $tmp = "$file." . bin2hex(random_bytes(4)) . '.tmp';
+  if (file_put_contents($tmp, json_encode(['elements' => $w])) !== false) rename($tmp, $file);
+  out(['ok' => true]);
 }
 function overpassQuery($in) { // Abfrage aus Parametern bauen (keine freien Abfragen über den Server)
   $f = fn($x) => sprintf('%.5F', (float)$x);
@@ -209,10 +234,10 @@ function overpassQuery($in) { // Abfrage aus Parametern bauen (keine freien Abfr
 function overpassFetch($q) { // erste Antwort mit elements, sonst null
   foreach (OVERPASS as $url) {
     if (function_exists('curl_init')) {
-      $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 30, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
+      $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 15, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
       $r = curl_exec($c); $ok = curl_getinfo($c, CURLINFO_HTTP_CODE) === 200; curl_close($c);
     } else {
-      $r = @file_get_contents($url, false, stream_context_create(['http' => ['method' => 'POST', 'timeout' => 30, 'header' => "Content-Type: application/x-www-form-urlencoded\r\nUser-Agent: SwiftwaterRescue/0.1\r\n", 'content' => http_build_query(['data' => $q])]]));
+      $r = @file_get_contents($url, false, stream_context_create(['http' => ['method' => 'POST', 'timeout' => 15, 'header' => "Content-Type: application/x-www-form-urlencoded\r\nUser-Agent: SwiftwaterRescue/0.1\r\n", 'content' => http_build_query(['data' => $q])]]));
       $ok = $r !== false;
     }
     if ($ok && is_string($r) && isset(json_decode($r, true)['elements'])) return $r;
@@ -259,6 +284,8 @@ switch ($route) {
 
  case 'overpass': // Gewässernetz für Suchgebiet und Flussdistanz (alle angemeldeten Personen): around [m, lat, lon] oder bbox [s, w, n, e]; Antwort wie Overpass
   overpassServe(overpassQuery($in));
+ case 'overpass/put': // Ergebnis einer direkten Abfrage des Geräts (Rückfall bei 502), gleiche Parameter wie overpass plus elements
+  overpassPut(overpassQuery($in), $in['elements'] ?? null);
 
  case 'incident/start':
   if (activeIncident()) fail('Es läuft bereits ein Einsatz');
