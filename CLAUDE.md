@@ -68,6 +68,8 @@ Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und
 - Frontend: keine Neuzeichnung des Menüs, solange ein Eingabefeld Fokus hat oder das Formular «Einsatz starten» offen ist (`draw()`-Guards). Bei Änderungen am Polling darauf achten.
 - Server liefert Zahlen als Zahlen (`ints()`, Float-Casts); MySQL liefert sonst Strings, was im JS zu falschen Wahrheitswerten führt.
 - Berechtigungen immer serverseitig prüfen, das Frontend blendet nur aus.
+- Zwischenspeicher: `.htaccess` (Wurzel) setzt `Cache-Control: no-cache` für HTML/JS/CSS, und `common.js`/`common.css` werden mit `?v=…` eingebunden (im Repo `?v=0`, `deploy.ps1` setzt den Git-Stand ein). Sonst laden Handys nach einem Update ein altes `common.js` zu einem neuen `index.html` (grauer Bildschirm, Issue #19).
+- Keine globalen Variablen mit dem Namen einer Element-ID über `window.<name>` ansprechen: Der Browser liefert sonst das Element (z. B. `window.msgs` = `#msgs`).
 
 ## Stand und bekannte Lücken
 - **Nie ausgeführt/getestet:** Die Entwicklung fand ohne PHP-Laufzeit und ohne Netzzugriff auf Overpass statt. Das JS wurde nur auf Syntaxfehler geprüft. Erste Aufgabe: lokal mit `php -S` starten und die Abläufe durchtesten (Login, Einsatz, Beitritt, Standort, Suchgebiet, Log, Statistik, Markierung, Entfernen).
