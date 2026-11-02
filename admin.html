@@ -36,6 +36,9 @@ tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{p
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
 .exleg{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.3rem;font-size:.8rem}.exleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;border:1px solid #fff;margin-right:.3rem;vertical-align:-.05rem}
 .pickmap{height:min(14rem,32dvh);isolation:isolate;border-radius:8px;border:1px solid var(--line);background:#0c1c25}
+/* Dialog «Element»: breit, links die Felder, rechts Standort und Karte; am Handy untereinander */
+.dlg .card.wide{max-width:960px}.jgrid,.jcol{display:grid;gap:.7rem;align-content:start}
+@media(min-width:760px){.jgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}.jcol.jm{display:flex;flex-direction:column}.jm .pickmap{flex:1;height:auto;min-height:18rem}}
 .lres{display:grid;gap:.25rem}.lres:empty{display:none}.lres button{text-align:left}
 .rpg{font-size:.8rem;font-weight:700;color:var(--mut);margin-top:.5rem}
 /* Replay: Anzeige beim Folgen (oben links auf der Karte) */
@@ -242,15 +245,16 @@ async function loadEx(){const el=$('#sEx');let ps,us;try{[ps,us]=await Promise.a
     d.addEventListener('click',e=>{const a=e.target.closest('[data-la]'),x=e.target.closest('[data-lx]');
       if(a){ld.push(+a.dataset.la);q.value='';drawL();q.focus()}else if(x){ld=ld.filter(i=>i!==+x.dataset.lx);drawL()}});drawL()};
   const editJ=(p,j)=>{const rs=p.injects.filter(x=>x.kind==='res'&&x.id!==j.id);
-    const d=dlg(j.id?'Element bearbeiten':'Neues Element',`<label class="mut">Art<select id="jK">${Object.entries(EXK).map(([k,t])=>`<option value="${k}" ${k===(j.kind||'pls')?'selected':''}>${t}</option>`).join('')}</select></label><div class="mut" id="jKi"></div>
+    const d=dlg(j.id?'Element bearbeiten':'Neues Element',`<div class="jgrid"><div class="jcol"><label class="mut">Art<select id="jK">${Object.entries(EXK).map(([k,t])=>`<option value="${k}" ${k===(j.kind||'pls')?'selected':''}>${t}</option>`).join('')}</select></label><div class="mut" id="jKi"></div>
       <label class="mut">Bezeichnung (für die Übungsleitung)<input id="jL" maxlength="120" value="${esc(j.label||'')}" placeholder="z. B. Meldung Passant Brücke"></label>
       <label class="mut" data-k="res">Name des Rettlings<input id="jN" maxlength="80" value="${esc(j.name||'')}"></label><label class="mut" data-k="res">Beschreibung<textarea id="jD" rows="2" maxlength="1000">${esc(j.descr||'')}</textarea></label>
       <label class="mut" data-k="seen">Rettling<select id="jRf">${rs.map(x=>`<option value="${x.id}" ${x.id===j.ref_id?'selected':''}>${esc(x.name)} (${esc(x.label)})</option>`).join('')||'<option value="">Zuerst ein Element «Neuer Rettling» erfassen</option>'}</select></label>
-      <label class="mut">Standort (PLS)<input id="jP" value="${j.lat!=null?esc(fmtC(j.lat,j.lon,'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div class="mut" id="jPi">LV95, LV03 oder WGS84 dezimal.</div><div class="mut">oder auf der Karte antippen (die übrigen Elemente der Übung sind grau eingezeichnet)</div><div id="jMap" class="pickmap"></div>
       <label class="mut">Zeitpunkt des PLS: Minuten vor der Freigabe (0 = bei der Freigabe, leer = die Übungsleitung gibt ihn bei der Freigabe ein)<input id="jA" type="number" min="0" max="1440" step="1" value="${j.id?(j.ago??''):0}" placeholder="leer: Übungsleitung gibt ihn an"></label>
-      <label class="mut">Meldung (optional, geht bei der Freigabe als Nachricht an alle)<textarea id="jM" rows="3" maxlength="2000">${esc(j.msg||'')}</textarea></label>`,
+      <label class="mut">Meldung (optional, geht bei der Freigabe als Nachricht an alle)<textarea id="jM" rows="3" maxlength="2000">${esc(j.msg||'')}</textarea></label></div>
+      <div class="jcol jm"><label class="mut">Standort (PLS)<input id="jP" value="${j.lat!=null?esc(fmtC(j.lat,j.lon,'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div class="mut" id="jPi">LV95, LV03 oder WGS84 dezimal.</div><div class="mut">oder auf der Karte antippen (die übrigen Elemente der Übung sind grau eingezeichnet)</div><div id="jMap" class="pickmap"></div></div></div>`,
       async d=>{const v=$('#jP',d).value.trim(),q=parseC(v);if(!q)throw new Error('Standort nicht erkannt. Beispiele: 2635600 / 1245500 (LV95) oder 47.36, 7.91 (WGS84).');
         await api('ex/inject/save',{id:j.id,plan_id:p.id,kind:$('#jK',d).value,label:$('#jL',d).value,name:$('#jN',d).value,descr:$('#jD',d).value,ref_id:+$('#jRf',d).value||null,lat:+q.lat.toFixed(7),lon:+q.lon.toFixed(7),ago:$('#jA',d).value.trim()===''?null:+$('#jA',d).value,msg:$('#jM',d).value});loadEx()});
+    d.firstElementChild.classList.add('wide');
     const KI={pls:'Setzt oder verschiebt den PLS des Einsatzes.',res:'Erfasst einen Rettling mit eigenem PLS (eigenes Suchgebiet).',seen:'Der Rettling wurde gesichtet: sein PLS wird neu gesetzt, die Drift beginnt dort neu.'};
     const kind=()=>{const k=$('#jK',d).value;d.querySelectorAll('[data-k]').forEach(x=>x.hidden=x.dataset.k!==k);$('#jKi',d).textContent=KI[k]};$('#jK',d).onchange=kind;kind();
     // Standort auch auf der Karte wählbar: Klick setzt das Feld, eine Eingabe im Feld verschiebt die Markierung
