@@ -123,7 +123,8 @@ async function loadRec(){const el=$('#sA');let s;try{s=await api('settings')}cat
 async function loadFeat(){const el=$('#sFn');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Funktionen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const fs=s.features||[];
   el.innerHTML=`<h2>Funktionen</h2><div class="mut">Ausgeschaltete Funktionen erscheinen in der Einsatz-App nicht (Kartenknopf, Fenster, Kartenebene, Menü), und der Server lehnt sie ab. Die Einstellung gilt sofort, auch im laufenden Einsatz. Bereits erfasste Daten bleiben erhalten (Einsatzlog, Replay). Beim Ausschalten endet eine laufende Aufzeichnung, und der Link der öffentlichen Ansicht wird ungültig.</div>
-    <div class="tw"><table><thead><tr><th>Funktion</th><th>Scharfe Einsätze</th><th>Übungen</th></tr></thead><tbody>${fs.map(f=>`<tr><td>${esc(f.name)}</td>${['real','ex'].map(t=>`<td><input type="checkbox" data-fk="${esc(f.k)}" data-ft="${t}" ${f[t]?'checked':''} aria-label="${esc(f.name)}: ${t==='ex'?'Übungen':'Scharfe Einsätze'}"></td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    <div class="tw"><table><thead><tr><th>Funktion</th><th>Scharfe Einsätze</th><th>Übungen</th></tr></thead><tbody>${fs.map(f=>`<tr><td>${esc(f.name)}</td>${['real','ex'].map(t=>`<td><input type="checkbox" data-fk="${esc(f.k)}" data-ft="${t}" ${f[t]?'checked':''} aria-label="${esc(f.name)}: ${t==='ex'?'Übungen':'Scharfe Einsätze'}"></td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="mut">Die Flussdistanz gibt es auch ohne laufenden Einsatz (☰ → Werkzeuge). Dort ist sie verfügbar, solange sie für scharfe Einsätze oder Übungen eingeschaltet ist. Für beide aus, verschwindet sie ganz.</div>`;
   el.onchange=e=>{const c=e.target;if(!c.dataset.fk)return;const all=[...el.querySelectorAll('[data-fk]')],off={real:[],ex:[]};
     all.forEach(x=>{if(!x.checked)off[x.dataset.ft].push(x.dataset.fk)});all.forEach(x=>x.disabled=true);
     api('settings/save',{features:off}).catch(e=>{c.checked=!c.checked;fail(e)}).finally(()=>all.forEach(x=>x.disabled=false))}}
@@ -172,7 +173,7 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
   el.querySelectorAll('[data-l]').forEach(b=>b.onclick=async()=>{try{const x=X(b.dataset.l),l=await api('incident/log&id='+x.id);openBigLog((x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,()=>l,false)}catch(e){fail(e)}});
   el.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.rp));
   el.querySelectorAll('[data-rpd]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.rpd);
-    if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Positionen und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
+    if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Markierungen, Bereiche und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
       api('incident/replay/delete',{id:x.id}).then(loadStats).catch(fail)})}
 /* ---------- Replay eines aufgezeichneten Einsatzes ---------- */
 // Zeitachse aus den gespeicherten Daten: Standortverläufe (track), Rettlinge (rtrack, created/removed/rescued_at), Positionen & Bereiche (created/removed), Nachrichten-Markierungen (created/unmarked), Log
