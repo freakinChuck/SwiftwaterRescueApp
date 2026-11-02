@@ -77,6 +77,9 @@ function searchArea(srcs,nets,flow,now,posts,get,redraw,rs){const r={polys:[],li
     const a=riverArea(n,s,D,posts);if(!a)return circle('Kein Gewässer nahe der PLS.');
     r.polys.push(...a.polys);r.lines.push(...a.lines);p.polys.push(...a.polys);
     r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet am Posten ${a.cutBy}.`:'.'))});
+  // Kurzfassung bei mehreren PLS (Hinweis unten in der Karte, Details per Klick)
+  if(srcs.length>1){const riv=r.parts.filter(p=>p.polys.length).length,circ=r.parts.length-riv,none=srcs.length-r.parts.length;
+    r.short=`Suchgebiet aus ${srcs.length} PLS: ${riv} entlang Gewässer`+(circ?`, ${circ} als Kreis`:'')+(none?`, ${none} ohne Gebiet`:'')}
   return r}
 /* ---------- Koordinaten ---------- */
 // Standard in der Verwaltung (settings coord_sys), pro Person übersteuerbar (users.coord_sys); Schlüssel wie auf dem Server (COORDS)
