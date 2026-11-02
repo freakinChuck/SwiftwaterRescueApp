@@ -50,7 +50,7 @@ foreach ([
  // Rechte der Einsatzleitung, nicht Teil der Übung), Aufzeichnung, vorbereiteter öffentlicher Link (public_token, schon vor dem Start gültig); incident_id = gestartete Übung; active 0 = entfernt
  "CREATE TABLE IF NOT EXISTS ex_plans(id $ai, title $tx, message TEXT, leads TEXT, record INT DEFAULT 1, public_token $tx NULL, public_anon INT DEFAULT 1, created_by INT, created BIGINT, incident_id INT NULL, active INT DEFAULT 1)",
  // Vorbereitete Elemente einer Übung, erst nach der Freigabe durch die Übungsleitung sichtbar: kind pls (PLS des Einsatzes setzen/verschieben), res (neuer Rettling mit PLS: name, descr),
- // seen (Rettling gesichtet: neuer PLS für den Rettling aus dem Element ref_id); ago = Zeitpunkt des PLS in Minuten vor der Freigabe; msg = Meldung, geht bei der Freigabe als Nachricht an alle
+ // seen (Rettling gesichtet: neuer PLS für den Rettling aus dem Element ref_id); ago = Zeitpunkt des PLS in Minuten vor der Freigabe (NULL = Übungsleitung gibt ihn bei der Freigabe ein); msg = Meldung, geht bei der Freigabe als Nachricht an alle
  "CREATE TABLE IF NOT EXISTS ex_injects(id $ai, plan_id INT, kind $tx, label $tx, name $tx NULL, descr TEXT NULL, lat DOUBLE, lon DOUBLE, ago INT DEFAULT 0, msg TEXT NULL, ref_id INT NULL, released BIGINT NULL, released_by INT NULL, rescuee_id INT NULL, removed INT DEFAULT 0)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
@@ -831,9 +831,11 @@ switch ($route) {
     $s = $db->prepare("SELECT r.* FROM ex_injects i JOIN rescuees r ON r.id=i.rescuee_id WHERE i.id=? AND i.plan_id=? AND r.removed IS NULL"); $s->execute([(int)$j['ref_id'], (int)$inc['plan_id']]); $ref = $s->fetch();
     if (!$ref) fail('Zuerst den Rettling freigeben, der hier gesichtet wird');
   }
+  // ohne vorbereiteten Zeitpunkt gibt ihn die Übungsleitung bei der Freigabe an (ago, Minuten vor jetzt)
+  $ago = $j['ago'] !== null ? (int)$j['ago'] : (int)($in['ago'] ?? 0); if ($ago < 0 || $ago > 1440) fail('Zeitpunkt: 0 bis 1440 Minuten vor der Freigabe');
   $u = $db->prepare("UPDATE ex_injects SET released=?, released_by=? WHERE id=? AND released IS NULL"); $u->execute([$now, $uid, $j['id']]);
   if (!$u->rowCount()) out(['ok' => true]);
-  $at = $now - 60 * max(0, (int)$j['ago']); $la = (float)$j['lat']; $lo = (float)$j['lon']; $pos = sprintf('%.5F, %.5F, %s', $la, $lo, hm($at));
+  $at = $now - 60 * $ago; $la = (float)$j['lat']; $lo = (float)$j['lon']; $pos = sprintf('%.5F, %.5F, %s', $la, $lo, hm($at));
   logev($inc['id'], $uid, 'ex', "gibt «{$j['label']}» frei (" . EX_KINDS[$j['kind']] . ')');
   if ($j['kind'] === 'pls') {
     $db->prepare("UPDATE incidents SET lat=?, lon=?, pls_at=? WHERE id=?")->execute([$la, $lo, $at === (int)$inc['alarm_at'] ? null : $at, $inc['id']]);
@@ -890,7 +892,8 @@ switch ($route) {
   $kind = (string)($in['kind'] ?? ''); if (!isset(EX_KINDS[$kind])) fail('Unbekannte Art');
   $label = mb_substr(trim((string)($in['label'] ?? '')), 0, 120); if ($label === '') fail('Bezeichnung fehlt');
   [$la, $lo] = llIn($in['lat'] ?? null, $in['lon'] ?? null);
-  $ago = (int)($in['ago'] ?? 0); if ($ago < 0 || $ago > 1440) fail('Zeitpunkt: 0 bis 1440 Minuten vor der Freigabe');
+  $ago = ($in['ago'] ?? null) === null || $in['ago'] === '' ? null : (int)$in['ago']; // NULL = die Übungsleitung gibt den Zeitpunkt bei der Freigabe ein
+  if ($ago !== null && ($ago < 0 || $ago > 1440)) fail('Zeitpunkt: 0 bis 1440 Minuten vor der Freigabe');
   $name = $kind === 'res' ? mb_substr(trim((string)($in['name'] ?? '')), 0, 80) : null; if ($kind === 'res' && $name === '') fail('Name des Rettlings fehlt');
   $descr = $kind === 'res' ? mb_substr(trim((string)($in['descr'] ?? '')), 0, 1000) : null;
   $ref = null;

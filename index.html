@@ -309,7 +309,9 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
   s.innerHTML=h+tools+acc+footInfo();bindAcc();bindTools();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
-  s.querySelectorAll('[data-xr]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xr);if(confirm(`«${j.label}» freigeben?\n\n${exWhat(j)}${j.msg?'\nMeldung an alle: '+j.msg:''}`)){b.disabled=true;api('ex/release',{id:j.id}).then(poll).catch(e=>{b.disabled=false;fail(e)})}});
+  s.querySelectorAll('[data-xr]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xr);
+    if(j.ago==null){exRelAt(j);return} // kein vorbereiteter Zeitpunkt: die Übungsleitung gibt ihn jetzt an
+    if(confirm(`«${j.label}» freigeben?\n\n${exWhat(j)}${j.msg?'\nMeldung an alle: '+j.msg:''}`)){b.disabled=true;api('ex/release',{id:j.id}).then(poll).catch(e=>{b.disabled=false;fail(e)})}});
   s.querySelectorAll('[data-xz]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xz);exShow(j)});
   if(joined){if($('#rs'))$('#rs').onchange=e=>{e.target.blur();api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail)};$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
@@ -325,8 +327,15 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     if($('#bPubCp'))$('#bPubCp').onclick=()=>{const t=$('#pubUrl');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>alert('Link kopiert.')).catch(()=>{try{document.execCommand('copy');alert('Link kopiert.')}catch(e){}})}}}
 // Übungsleitung (Issue #29): vorbereitete Elemente der Übung, erst nach der Freigabe für alle sichtbar und fürs Suchgebiet relevant
 const EXK={pls:'PLS des Einsatzes',res:'Neuer Rettling',seen:'Rettling gesichtet'};
-function exWhat(j){const ref=j.kind==='seen'&&st.ex_injects.find(x=>x.id===j.ref_id),t=j.ago?`, Drift ab ${j.ago} min vor der Freigabe`:'';
+function exWhat(j){const ref=j.kind==='seen'&&st.ex_injects.find(x=>x.id===j.ref_id),t=j.ago==null?', Zeitpunkt gibst du bei der Freigabe an':j.ago?`, Drift ab ${j.ago} min vor der Freigabe`:'';
   return j.kind==='pls'?'Setzt den PLS des Einsatzes'+t+'.':j.kind==='res'?`Erfasst den Rettling «${j.name}» mit eigenem PLS${t}.`:`Meldet «${ref?ref.name:'?'}» gesichtet und setzt den PLS neu${t}.`}
+// Freigabe mit Zeitpunkt des PLS: leer = jetzt, Zahl = Minuten vorher, HH:MM = Uhrzeit (liegt sie in der Zukunft, gilt der Vortag)
+function exAgo(v){v=v.trim();if(!v)return 0;if(/^\d+$/.test(v))return +v;const m=v.match(/^(\d{1,2})[:.](\d{2})$/);if(!m||+m[1]>23||+m[2]>59)return null;
+  const t=new Date();t.setHours(+m[1],+m[2],0,0);if(t-Date.now()>60000)t.setDate(t.getDate()-1);return Math.max(0,Math.round((Date.now()-t)/60000))}
+function exRelAt(j){const d=dlg(`«${j.label}» freigeben`,`<div class="mut">${esc(exWhat(j).replace(', Zeitpunkt gibst du bei der Freigabe an',''))}${j.msg?'<br>Meldung an alle: '+esc(j.msg):''}</div>
+    <label class="mut">Zeitpunkt des PLS (Beginn der Drift): leer = jetzt, Minuten vorher (z. B. 15) oder Uhrzeit (z. B. 14:20)<input id="xA" inputmode="numeric" autocomplete="off" placeholder="jetzt"></label><div class="mut" id="xAi"></div>`,
+    async d=>{const a=exAgo($('#xA',d).value);if(a==null||a>1440)throw new Error('Zeitpunkt nicht erkannt: leer, Minuten (0 bis 1440) oder Uhrzeit wie 14:20');await api('ex/release',{id:j.id,ago:a});poll()},'Freigeben');
+  const i=$('#xA',d),show=()=>{const a=exAgo(i.value);$('#xAi',d).textContent=a==null||a>1440?'Nicht erkannt':'PLS um '+new Date(Date.now()-a*60000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})+(a?` (vor ${a} min)`:' (jetzt)')};i.oninput=show;show()}
 function exSec(){const js=st.ex_injects||[],open=js.filter(j=>!j.released).length;
   return sec('exlead',`Übungsleitung: Elemente (${open} offen)`,js.map(j=>{const ref=j.kind==='seen'&&js.find(x=>x.id===j.ref_id),blocked=j.kind==='seen'&&!(ref&&ref.released);
     return `<div class="msg"><b>${esc(j.label)}</b> <span class="mut">${EXK[j.kind]}${j.kind==='res'?': '+esc(j.name):ref?': '+esc(ref.name):''}${esc(fcs(j.lat,j.lon,' · '))}</span>${j.msg?`<div>Meldung: ${esc(j.msg)}</div>`:''}
