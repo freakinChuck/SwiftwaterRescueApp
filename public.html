@@ -19,11 +19,12 @@ html,body{height:100%}body{display:flex;flex-direction:column}
 #pbFollow{position:absolute;z-index:1000;left:3.4rem;top:.6rem;display:flex;gap:.4rem;align-items:center;background:#0f2430e6;color:#fff;border-radius:999px;padding:.2rem .3rem .2rem .7rem;font-size:.85rem}#pbFollow[hidden]{display:none}#pbFollow button{padding:.1rem .45rem;font-size:.8rem}
 #pbView{position:absolute;z-index:1000;top:.6rem;right:.6rem;width:46px;height:46px;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px #0008}#pbView[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}
 #viewBox{position:absolute;top:3.7rem;right:.6rem;max-height:calc(100% - 4.4rem);cursor:auto;font:1rem/1.4 "Segoe UI",system-ui,sans-serif} /* in der Karte: sonst Schrift von Leaflet */
+#pbAuto[aria-pressed=true]{background:var(--ex);border-color:var(--ex);color:#fff}
 #pbMsg{max-width:420px;margin:12vh auto;padding:1.2rem;text-align:center}
 @media(max-width:760px){#pbBody{flex-direction:column}#pbSide{width:auto;height:38%;border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
-<div id="pbHead"><h1 id="pbTitle">Öffentliche Ansicht</h1><span id="pbTime" class="mut"></span></div>
-<div id="pbBody"><div id="pbMap"><div id="pbFollow" hidden>Folgt: <b></b> <button title="Folgen beenden">✕</button></div><button id="pbView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden"></button><div id="viewBox" hidden></div></div><aside id="pbSide"></aside></div>
+<div id="pbHead"><h1 id="pbTitle">Öffentliche Ansicht</h1><span id="pbTime" class="mut"></span><button id="pbAuto" aria-pressed="false" hidden title="Karte zeigt laufend alle sichtbaren aktiven Positionen und folgt ihnen">Auto-Übersicht</button></div>
+<div id="pbBody"><div id="pbMap"><div id="pbFollow" hidden><span></span> <button title="Folgen beenden">✕</button></div><button id="pbView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden"></button><div id="viewBox" hidden></div></div><aside id="pbSide"></aside></div>
 <script src="common.js?v=0"></script>
 <script>
 // Daten über die Route public/state (ohne Anmeldung); Aktualisierung alle 5 s.
@@ -42,7 +43,9 @@ function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.
   lay=L.layerGroup().addTo(map);
   $('#pbSide').onclick=e=>{const f=e.target.closest('[data-f]');if(f)return toggleFollow(+f.dataset.f);
     const b=e.target.closest('[data-ll]');if(b)map.panTo(b.dataset.ll.split(',').map(Number))};
-  L.DomEvent.disableClickPropagation($('#pbFollow'));$('#pbFollow button').onclick=stopFollow;map.on('dragstart',()=>{if(followId!=null)stopFollow()})} // von Hand verschieben beendet das Folgen
+  L.DomEvent.disableClickPropagation($('#pbFollow'));$('#pbFollow button').onclick=stopFollow;map.on('dragstart',()=>{if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen und die Auto-Übersicht
+  map.on('zoomstart',()=>{if(autoView&&Date.now()-autoBusy>1500)stopFollow()}); // Zoomen von Hand beendet die Auto-Übersicht
+  const ab=$('#pbAuto');ab.hidden=false;ab.onclick=()=>setAuto(!autoView)}
 /* ---------- Ansicht (Issue #48): Grundkarte und Kategorien auf der Karte ein-/ausblenden wie in der Einsatz-App ---------- */
 // Nur die Karte, die Seitenleiste bleibt; ausgeblendete Posten begrenzen das Suchgebiet weiterhin. Pro Gerät gemerkt (sw_pview, getrennt von der Einsatz-App).
 // Kategorien ausgeschalteter Funktionen (features aus public/state) fehlen, Nachrichten gibt es hier nicht.
@@ -56,8 +59,15 @@ function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidd
 document.addEventListener('click',e=>{const b=$('#viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#pbView'))viewBox(false)});
 document.addEventListener('keydown',e=>{const b=$('#viewBox');if(e.key==='Escape'&&b&&!b.hidden){viewBox(false);$('#pbView').focus()}});
 // Folgen: Karte bleibt bei jeder Aktualisierung auf der Person (Zoom bleibt); endet über ✕, beim Verschieben oder wenn die Person den Einsatz verlässt
-function toggleFollow(id){followId=followId===id?null:id;draw()}
-function stopFollow(){followId=null;draw()}
+function toggleFollow(id){followId=followId===id?null:id;if(followId!=null)autoView=false,saveAuto();draw()}
+function stopFollow(){followId=null;if(autoView)autoView=false,saveAuto();draw()}
+// Auto-Übersicht (Issue #51, wie in der Einsatz-App): Karte zeigt bei jeder Aktualisierung alle sichtbaren aktiven Positionen (Einsatzkräfte, nicht gerettete Rettlinge
+// mit Standort, PLS fürs Suchgebiet) und folgt ihnen; endet über ✕, Verschieben oder Zoomen von Hand und beim Folgen einer Person. Pro Gerät gemerkt (sw_pauto).
+let autoView=(()=>{try{return localStorage.getItem('sw_pauto')==='1'}catch(e){return false}})(),autoKey='',autoBusy=0;
+function saveAuto(){autoKey='';try{localStorage.setItem('sw_pauto',autoView?'1':'0')}catch(e){}}
+function setAuto(on){autoView=on;if(on)followId=null;saveAuto();if(ps)draw()}
+function autoFit(pts){if(!autoView)return;const k=JSON.stringify(pts.map(p=>p.map(x=>x.toFixed(5))));if(!pts.length||k===autoKey)return;autoKey=k;
+  autoBusy=Date.now();if(pts.length>1)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:16});else map.setView(pts[0],15)}
 // Suchgebiet aus allen PLS der vermissten Rettlinge (sources, Issue #24), Gewässernetz je PLS über public/net
 function drawArea(d){const i=d.incident,posts=d.participants.filter(p=>p.lat!=null&&(d.roles.find(r=>r.id===p.role_id)||{}).is_post);
   const a=searchArea(d.sources||[],nets,i.flow_ms,d.now,posts,(s,R)=>overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R+'&la='+s.lat+'&lo='+s.lon),()=>{if(ps)draw()},d.rescuees);
@@ -82,9 +92,11 @@ function draw(){const d=ps,i=d.incident,col=p=>(d.roles.find(r=>r.id===p.role_id
   const withPos=d.participants.filter(p=>p.lat!=null);
   // ext: externe Einsatzkraft mit festem Standort (Issue #39), gestrichelter Rand
   withPos.filter(p=>vis(p.ext?'ext':'app')).forEach(p=>L.circleMarker([p.lat,p.lon],{radius:8,color:p.ext?(p.color&&p.role_id!=null?col(p):'#fff'):'#0f2430',weight:p.ext&&p.color&&p.role_id!=null?3:2,dashArray:p.ext?'3':null,fillColor:p.ext&&p.color||col(p),fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[8,0],className:'pblbl'}).addTo(lay));
+  autoFit([...(vis('pls')?pl.filter(p=>p.on):[]),...withPos.filter(p=>vis(p.ext?'ext':'app')),...(vis('res')?d.rescuees.filter(r=>r.lat!=null&&!r.rescued_at):[])].map(p=>[p.lat,p.lon]));if(autoView)fitted=true;
   if(!fitted){const all=[...pl.map(p=>[p.lat,p.lon]),...withPos.map(p=>[p.lat,p.lon])];if(all.length)fitted=true;if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:16});else if(all.length)map.setView(all[0],14)}
   const fp=followId!=null&&d.participants.find(p=>p.id===followId);if(!fp)followId=null;else if(fp.lat!=null)map.panTo([fp.lat,fp.lon]);
-  $('#pbFollow').hidden=!fp;if(fp)$('#pbFollow b').textContent=fp.name+(fp.lat==null?' (kein Standort)':'');
+  $('#pbFollow').hidden=!fp&&!autoView;$('#pbFollow span').innerHTML=fp?'Folgt: <b>'+esc(fp.name+(fp.lat==null?' (kein Standort)':''))+'</b>':'Auto-Übersicht';$('#pbFollow button').title=fp?'Folgen beenden':'Auto-Übersicht beenden';
+  const ab=$('#pbAuto');ab.setAttribute('aria-pressed',autoView);ab.textContent=(autoView?'✓ ':'')+'Auto-Übersicht';
   // Seitenleiste: Lage, Einsatzkräfte nach Spezialrolle (ohne Rolle zuletzt), Rettlinge
   const grp=[...d.roles.map(r=>({r,items:d.participants.filter(p=>p.role_id===r.id)})),{r:null,items:d.participants.filter(p=>!d.roles.some(r=>r.id===p.role_id))}].filter(g=>g.items.length);
   const row=p=>`<div class="pp"><i style="background:${esc(p.ext&&p.color||col(p))}"></i><span class="nm">${esc(p.name)}<small>${d.anon?'':esc(p.mode_name||'')+' · '}${p.lat!=null?(p.ext?'fester Standort':'Standort '+ago(p.loc_at))+(fmtC(p.lat,p.lon,cs)?' · '+esc(fmtC(p.lat,p.lon,cs)):''):'kein Standort'}</small></span>${p.lat!=null?`<button ${ll(p.lat,p.lon)}>Zentrieren</button>`:''}${p.ext?'':`<button data-f="${p.id}"${followId===p.id?' class="pri"':''}>${followId===p.id?'Folgt ✕':'Folgen'}</button>`}</div>`;
