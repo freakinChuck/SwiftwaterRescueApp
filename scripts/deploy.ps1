@@ -27,6 +27,6 @@ git archive --format=tar -o $tar $Ref @files; Check 'git archive'
 $stage = ".swiftwater-deploy-$sha"
 Write-Host "Deploye $Ref ($sha) nach ${dest}:$($c.path)"
 scp @opt $tar "${dest}:$stage.tar"; Check 'Upload'
-ssh @opt $dest "set -e; rm -rf $stage; mkdir $stage; tar -xf $stage.tar -C $stage; rm $stage.tar; php -l $stage/api/index.php; sed -i 's/?v=[0-9a-z]*/?v=$sha/g' $stage/index.html $stage/admin.html; cp -r $stage/. $($c.path)/; rm -rf $stage; echo '$Ref $sha' > $($c.path)/api/data/deployed.txt; echo Fertig."
+ssh @opt $dest "set -e; rm -rf $stage; mkdir $stage; tar -xf $stage.tar -C $stage; rm $stage.tar; php -l $stage/api/index.php; sed -i 's/?v=[0-9a-z]*/?v=$sha/g' $stage/*.html; cp -r $stage/. $($c.path)/; rm -rf $stage; echo '$Ref $sha' > $($c.path)/api/data/deployed.txt; echo Fertig."
 Check 'Installation auf dem Server'
 Remove-Item $tar
