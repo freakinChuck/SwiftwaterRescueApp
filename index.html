@@ -42,7 +42,7 @@ body{height:100dvh;display:flex;flex-direction:column}
 .rsk{width:32px;height:32px;border-radius:50%;background:#ff9f1c;color:#2a1600;border:3px solid #fff;display:grid;place-items:center;font-weight:800;box-shadow:0 0 0 2px #0008}.rsk.ok{background:#35c27a;color:#002b14}
 .rs{padding:.45rem 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.rs .hd{display:flex;gap:.4rem;align-items:baseline}.rs .hd b{flex:1}.rs .ds{white-space:pre-wrap;font-size:.88rem}.rs small{display:block;color:var(--mut)}
 .rs .st{font-size:.72rem;font-weight:700;padding:0 .4em;border-radius:4px;color:#fff;background:var(--alarm)}.rs .st.loc{background:#ff9f1c;color:#2a1600}.rs .st.ok{background:#35c27a;color:#002b14}
-.rs .bt{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem}.rs button{padding:.3rem .5rem;font-size:.82rem}.rs.done{opacity:.75}#resForm,#peopleForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem}#resForm[hidden],#peopleForm[hidden]{display:none}
+.rs .bt{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem}.rs button{padding:.3rem .5rem;font-size:.82rem}.rs.done{opacity:.75}#resForm,#peopleForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem}.xtl{display:grid;gap:.3rem;max-height:55vh;overflow:auto}.xtl .pg{margin:.4rem 0 0}.xt{display:flex;gap:.3rem}.xt>button:first-child{flex:1;text-align:left}.xt small{display:block;color:var(--mut);font-weight:400}#resForm[hidden],#peopleForm[hidden]{display:none}
 /* Positionen und Bereiche der Einsatzleitung: Fähnchen (Spitze unten links), Beschriftung, Liste, Zeichenleiste */
 .poi{width:28px;height:28px;border-radius:8px 8px 8px 0;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:.9rem;box-shadow:0 0 0 2px #0008;text-shadow:0 0 2px #000}
 .leaflet-tooltip.poilbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px}.leaflet-tooltip.poilbl::before{display:none}
@@ -352,25 +352,31 @@ const pplFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pplfo
 function setPplFold(k){pplFold.has(k)?pplFold.delete(k):pplFold.add(k);try{localStorage.setItem('sw_pplfold',JSON.stringify([...pplFold]))}catch(e){}renderPeople()}
 function centerOn(id){const p=activePeople().find(x=>x.user_id===id);if(!p||p.lat==null)return;stopFollow();map.panTo([p.lat,p.lon]);if(narrow())togglePanel('people',false)}
 /* ---------- Externe Einsatzkräfte (Issue #39): ohne App-Konto, fester Standort, erfasst von der Einsatzleitung ---------- */
-// Spezialrolle wie bei Personen; Rollen mit «Posten» begrenzen das Suchgebiet. Vorlagen aus der Verwaltung (ext_templates, nur für can_manage)
+// Spezialrolle wie bei Personen; Rollen mit «Posten» begrenzen das Suchgebiet.
+// Erfassen: «+» öffnet die Vorlagen (Verwaltung: ext_templates, von Hand im Einsatz erfasste: ext_inc_templates, nur für can_manage),
+// ein Klick auf eine Vorlage, danach den Standort auf der Karte antippen. Von Hand erfasste (manual) stehen danach für den Rest des Einsatzes als Vorlage bereit.
 const extList=()=>st&&st.incident?(st.externals||[]).map(e=>({...e,ext:1})):[];
 const extOf=id=>extList().find(x=>x.id===id);
-function editExt(id){const e=extOf(id)||{name:'',descr:'',role_id:null},tpl=(st&&st.ext_templates)||[];
-  const d=dlg(id?'Externe Einsatzkraft bearbeiten':'Externe Einsatzkraft erfassen',(id||!tpl.length?'':`<label class="mut">Vorlage<select id="xT"><option value="">Ohne Vorlage</option>${tpl.map(t=>`<option value="${t.id}">${esc(t.name)}${t.lat!=null?' (mit Standort)':''}</option>`).join('')}</select></label>`)
-    +`<label class="mut">Name<input id="xN" maxlength="80" placeholder="z. B. Feuerwehr, Posten Brücke" value="${esc(e.name)}"></label><label class="mut">Beschreibung (Organisation, Funkkanal, Telefon …)<textarea id="xD" rows="3" maxlength="500">${esc(e.descr||'')}</textarea></label><label class="mut">Spezialrolle${roleSel('',e.role_id,'id="xR"')}</label><div class="mut">Mit einer Posten-Rolle endet das Suchgebiet an diesem Standort.</div>`
+const extGo=()=>{togglePanel('people',true);return poll()};
+const extPlace=body=>setTimeout(()=>pickPoint(`Tippe auf die Karte, um «${body.name}» zu setzen.`).then(q=>api('incident/external/save',{...body,lat:+q.lat.toFixed(7),lon:+q.lng.toFixed(7)})).then(extGo).catch(fail),0);
+function addExt(){const a=(st&&st.ext_templates)||[],b=(st&&st.ext_inc_templates)||[];if(!a.length&&!b.length)return editExt(0);
+  const rn=t=>{const r=roles.find(r=>r.id==t.role_id);return r?esc(r.name):'Ohne Spezialrolle'};
+  const it=(t,k)=>`<div class="xt"><button data-t="${k}">${esc(t.name)}<small>${rn(t)}${t.lat!=null?' · mit Standort'+fcs(t.lat,t.lon,' '):''}</small></button>${t.lat!=null?`<button data-t="${k}" data-m title="Standort stattdessen auf der Karte wählen">Karte</button>`:''}</div>`;
+  const d=dlg('Externe Einsatzkraft erfassen',`<div class="mut">Vorlage antippen, danach den Standort auf der Karte wählen. Vorlagen mit Standort werden direkt dort gesetzt.</div><div class="xtl">`
+    +(a.length?`<div class="pg">Vorlagen</div>`+a.map((t,i)=>it(t,'a'+i)).join(''):'')+(b.length?`<div class="pg">In diesem Einsatz erfasst</div>`+b.map((t,i)=>it(t,'b'+i)).join(''):'')+'</div>',
+    async()=>{setTimeout(()=>editExt(0),0)},'Neu ohne Vorlage');
+  $('.xtl',d).onclick=async e=>{const k=e.target.closest('[data-t]');if(!k)return;const t=(k.dataset.t[0]==='a'?a:b)[+k.dataset.t.slice(1)];d.remove();
+    const body={name:t.name,descr:t.descr||'',role_id:t.role_id||null};
+    if(t.lat!=null&&k.dataset.m===undefined)return api('incident/external/save',{...body,lat:t.lat,lon:t.lon}).then(extGo).catch(fail);extPlace(body)}}
+function editExt(id){const e=extOf(id)||{name:'',descr:'',role_id:null};
+  const d=dlg(id?'Externe Einsatzkraft bearbeiten':'Externe Einsatzkraft erfassen',`<label class="mut">Name<input id="xN" maxlength="80" placeholder="z. B. Feuerwehr, Posten Brücke" value="${esc(e.name)}"></label><label class="mut">Beschreibung (Organisation, Funkkanal, Telefon …)<textarea id="xD" rows="3" maxlength="500">${esc(e.descr||'')}</textarea></label><label class="mut">Spezialrolle${roleSel('',e.role_id,'id="xR"')}</label><div class="mut">Mit einer Posten-Rolle endet das Suchgebiet an diesem Standort.</div>`
     +`<label class="row" style="align-items:center"><input type="checkbox" id="xP" style="flex:0 0 auto" ${id?'':'checked disabled'}> <span>${id?'Standort neu auf der Karte setzen':'Standort auf der Karte setzen'}</span></label><div class="mut" id="xI">${id?esc(fcs(e.lat,e.lon,'Standort ')):'Danach den Standort auf der Karte antippen.'}</div>`,
     async d=>{const name=$('#xN',d).value.trim(),descr=$('#xD',d).value.trim(),role_id=+$('#xR',d).value||null,pick=$('#xP',d).checked;if(!name)throw new Error('Bitte einen Namen eingeben.');
-      const t=tpl.find(x=>x.id==($('#xT',d)||{}).value),body={id:id||undefined,name,descr,role_id},go=()=>{togglePanel('people',true);return poll()};
-      const place=()=>setTimeout(()=>pickPoint(`Tippe auf die Karte, um «${name}» zu setzen.`).then(q=>api('incident/external/save',{...body,lat:+q.lat.toFixed(7),lon:+q.lng.toFixed(7)})).then(go).catch(fail),0);
-      if(id){await api('incident/external/save',body);await go();if(pick)place();return}
-      if(pick)return place();
-      await api('incident/external/save',{...body,lat:t.lat,lon:t.lon});await go()},id?'Speichern':'Weiter');
-  // Vorlage übernimmt Name, Beschreibung und Spezialrolle; mit Standort kann man ihn übernehmen oder auf der Karte wählen
-  const ts=$('#xT',d);if(ts)ts.onchange=()=>{const t=tpl.find(x=>x.id==ts.value),p=$('#xP',d);
-    if(t){$('#xN',d).value=t.name;$('#xD',d).value=t.descr||'';$('#xR',d).value=t.role_id||''}
-    const has=!!(t&&t.lat!=null);p.disabled=!has;p.checked=!has;$('#xI',d).textContent=has?'Standort der Vorlage'+(fcs(t.lat,t.lon,': ')||'')+'. Mit Häkchen stattdessen auf der Karte wählen.':'Danach den Standort auf der Karte antippen.'}}
+      const body={id:id||undefined,name,descr,role_id};
+      if(id){await api('incident/external/save',body);await extGo();if(pick)extPlace(body);return}
+      extPlace({...body,manual:1})},id?'Speichern':'Weiter')}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-xc],[data-xe],[data-xd]');if(!b)return;const d=b.dataset,id=+(d.xc||d.xe||d.xd),x=extOf(id);
-  if(d.xe!==undefined)return editExt(id);if(!x)return;
+  if(d.xe!==undefined)return id?editExt(id):addExt();if(!x)return;
   if(d.xc){stopFollow();map.panTo([x.lat,x.lon]);if(narrow())togglePanel('people',false);return}
   if(d.xd&&confirm(`Externe Einsatzkraft «${x.name}» für alle entfernen?`))api('incident/external/remove',{id}).then(poll).catch(fail)});
 function toggleFollow(id){if(followId===id)return stopFollow();followId=id;followNow();if(narrow())togglePanel('people',false);else renderPeople()}

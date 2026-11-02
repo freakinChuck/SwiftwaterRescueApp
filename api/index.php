@@ -49,7 +49,7 @@ foreach ([
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL'], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL']] as $t => $cs)
+foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL"], 'externals' => ['manual INT DEFAULT 0'], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL'], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 try { $db->exec("CREATE INDEX track_inc ON track(incident_id,ts)"); } catch (Throwable $e) {} // schlägt bei vorhandenem Index still fehl
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
@@ -394,9 +394,16 @@ switch ($route) {
   $inc['public'] = $inc['public_token'] !== null ? 1 : 0; $inc['public_anon'] = (int)$inc['public_anon'];
   if (!canManage($inc)) unset($inc['public_token']);
   // Externe Einsatzkräfte für alle; Vorlagen nur für die Einsatzleitung (nur sie erfasst Externe)
-  $ext = incExternals($id); $tpl = [];
-  if (canManage($inc)) $tpl = array_map(fn($r) => floats(ints($r, ['id', 'role_id']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,lat,lon FROM ext_templates WHERE active=1 ORDER BY name")->fetchAll());
-  out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'ext_templates' => $tpl, 'sources' => plsSources($inc, $rescuees),
+  // Einsatz-Vorlagen: von Hand erfasste Externe dieses Einsatzes (auch entfernte), je Name die neuste, ohne Standort und ohne Namen der Verwaltungsvorlagen
+  $ext = incExternals($id); $tpl = []; $itpl = [];
+  if (canManage($inc)) {
+    $tpl = array_map(fn($r) => floats(ints($r, ['id', 'role_id']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,lat,lon FROM ext_templates WHERE active=1 ORDER BY name")->fetchAll());
+    $seen = array_fill_keys(array_map(fn($t) => mb_strtolower($t['name']), $tpl), 1);
+    $s = $db->prepare("SELECT name,descr,role_id FROM externals WHERE incident_id=? AND manual=1 ORDER BY id DESC"); $s->execute([$id]);
+    foreach ($s->fetchAll() as $r) { $k = mb_strtolower($r['name']); if (isset($seen[$k])) continue; $seen[$k] = 1; $itpl[] = ints($r, ['role_id']); }
+    usort($itpl, fn($x, $y) => strcasecmp($x['name'], $y['name']));
+  }
+  out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
        'participants' => array_map(function ($p) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
        'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'can_flow' => $cf, 'can_message' => canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc),
        'log' => $cf ? logRows($id) : null, 'now' => $now]);
@@ -623,7 +630,8 @@ switch ($route) {
     out(['ok' => true, 'id' => (int)$e['id']]);
   }
   if (!$ll) fail('Standort fehlt');
-  $db->prepare("INSERT INTO externals(incident_id,name,descr,role_id,lat,lon,created_by,created) VALUES(?,?,?,?,?,?,?,?)")->execute([$inc['id'], $name, $descr, $rid, $ll[0], $ll[1], $uid, $now]);
+  // manual = von Hand erfasst (nicht ab Vorlage): steht danach für den Rest des Einsatzes als Vorlage bereit
+  $db->prepare("INSERT INTO externals(incident_id,name,descr,role_id,lat,lon,created_by,created,manual) VALUES(?,?,?,?,?,?,?,?,?)")->execute([$inc['id'], $name, $descr, $rid, $ll[0], $ll[1], $uid, $now, empty($in['manual']) ? 0 : 1]);
   $nid = (int)$db->lastInsertId();
   logev($inc['id'], $uid, 'ext', sprintf('erfasst die externe Einsatzkraft «%s» (%s, %.5F, %.5F)', $name, $rn($rid), $ll[0], $ll[1]));
   out(['ok' => true, 'id' => $nid]);
