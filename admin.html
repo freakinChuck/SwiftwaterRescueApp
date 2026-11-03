@@ -353,12 +353,14 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   document.body.appendChild(o);
   // Zeitraum: Alarmeingang bis Einsatzende (läuft der Einsatz noch: bis jetzt)
   const tr=d.track,t0=tr.length?Math.min(i.alarm_at,tr[0][1]):i.alarm_at,t1=Math.max(i.ended_at||d.now,tr.length?tr[tr.length-1][1]:0,t0+1); // track ist nach Zeit sortiert
-  // PLS des Einsatzes und eigene PLS der Rettlinge (Issue #24, Stand Einsatzende)
-  const pls=[...(i.lat!=null?[[i.lat,i.lon,'PLS']]:[]),...d.rescuees.filter(r=>r.pls_lat!=null&&!r.removed).map(r=>[r.pls_lat,r.pls_lon,'PLS '+r.name])];
-  const map=L.map('rpMap',{zoomControl:true}).setView(pls.length?pls[0]:[46.8,8.2],pls.length?14:8),bases={};
+  // PLS des Einsatzes und eigene PLS der Rettlinge (Issue #24, Standort mit Stand Einsatzende), je mit Zeitraum [von, bis], in dem sie sichtbar sind:
+  // Rettling vom Erfassen bis zum Entfernen; PLS des Einsatzes ab dem ersten Log-Eintrag «setzt» (ohne solchen von Anfang an, z. B. beim Start gesetzt), «entfernt» blendet ihn bis zum nächsten Setzen aus
+  const plsLog=d.log.filter(x=>x.kind==='pls'),plsOn=t=>{const x=plsLog.filter(x=>x.ts<=t).pop();return x?!/^entfernt/.test(x.text):!plsLog.length||!/^setzt/.test(plsLog[0].text)};
+  const pls=[...(i.lat!=null?[[i.lat,i.lon,'PLS',plsOn]]:[]),...d.rescuees.filter(r=>r.pls_lat!=null).map(r=>[r.pls_lat,r.pls_lon,'PLS '+r.name,t=>r.created<=t&&(r.removed==null||t<r.removed)])];
+  const map=L.map('rpMap',{zoomControl:true}).setView(pls.length?[pls[0][0],pls[0][1]]:[46.8,8.2],pls.length?14:8),bases={};
   Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
   let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);L.control.layers(bases,null,{position:'topright'}).addTo(map);
-  pls.forEach(([la,lo,t])=>L.circleMarker([la,lo],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip(esc(t),{permanent:true,direction:'right',className:'rplbl'}).addTo(map));
+  pls.forEach(p=>p.mk=L.circleMarker([p[0],p[1]],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip(esc(p[2]),{permanent:true,direction:'right',className:'rplbl'}));
   // Personen: Verlauf je Person, Farbe der Spezialrolle (Stand Einsatzende)
   // Aufgezeichnete Zeiträume [start, stop]; ausserhalb (Pause/aus) keine Standorte, Spuren und Interpolation enden dort
   const per=d.periods.map(p=>[p.start,p.stop??t1]),perIdx=ts=>per.length?per.findIndex(p=>p[0]<=ts&&ts<=p[1]):0;
@@ -369,7 +371,7 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
   const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17});
-  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,perIdx,follow:null,pKey:null};
+  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,perIdx,follow:null,pKey:null,pls};
   // Personenliste wie in der Einsatz-App: «Zentrieren» und «Folgen» (Karte folgt der Person beim Abspielen); Verschieben von Hand oder ✕ beendet das Folgen
   map.on('dragstart',()=>{if(rp&&rp.follow!=null)rpFollow(null)});$('#rpUnf').onclick=()=>rpFollow(null);
   $('#rpPeople').onclick=e=>{const b=e.target.closest('button');if(!b)return;const p=rp.people.find(x=>x.user_id===+(b.dataset.c||b.dataset.f));if(!p)return;
@@ -411,8 +413,9 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
   const res=d.rescuees.filter(r=>on(r.created,r.removed)).map(r=>{const tr=rp.rtr[r.id]||[],k=lastIdx(tr,t),pos=k>=0?[tr[k][2],tr[k][3]]:!tr.length&&on(r.loc_at)?[r.lat,r.lon]:null;return{...r,pos,ok:on(r.rescued_at)}});
   // externe Einsatzkräfte (Issue #39): Standort und Spezialrolle mit Stand Einsatzende, sichtbar vom Erfassen bis zum Entfernen
   const ext=(d.externals||[]).filter(e=>on(e.created,e.removed));
-  const key=JSON.stringify([pois.map(p=>p.id),marks.map(m=>m.id),res.map(r=>[r.id,r.pos,r.ok]),ext.map(e=>e.id)]);
-  if(key!==rp.poiKey){rp.poiKey=key;rp.poiL.clearLayers();
+  const pls=rp.pls.filter(p=>p[3](t));
+  const key=JSON.stringify([pois.map(p=>p.id),marks.map(m=>m.id),res.map(r=>[r.id,r.pos,r.ok]),ext.map(e=>e.id),pls.map(p=>p[2])]);
+  if(key!==rp.poiKey){rp.poiKey=key;rp.poiL.clearLayers();pls.forEach(p=>rp.poiL.addLayer(p.mk));
     pois.forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:7,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'rplbl'}).addTo(rp.poiL)});
     marks.forEach(m=>L.circleMarker([m.mark_lat,m.mark_lon],{radius:6,color:'#0f2430',weight:2,fillColor:'#2ee6d6',fillOpacity:1}).bindTooltip(esc((m.name||'')+': '+m.text.slice(0,60))).addTo(rp.poiL));
     ext.forEach(e=>{const rc=(roles.find(r=>r.id===e.role_id)||{}).color;return L.circleMarker([e.lat,e.lon],{radius:8,color:e.color&&rc?rc:'#fff',weight:e.color&&rc?3:2,dashArray:'3',fillColor:e.color||rc||'#cfd8dc',fillOpacity:1}).bindTooltip(esc(e.name)+' (extern)',{permanent:true,direction:'right',offset:[8,0],className:'rplbl'}).addTo(rp.poiL)});
