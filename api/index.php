@@ -4,7 +4,11 @@ $cfg = require __DIR__ . '/config.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 ini_set('serialize_precision', '-1'); // Zahlen im JSON kurz ausgeben (47.481 statt 47.48100000000000164…), Hosting-Einstellung übersteuern
-function out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE); exit; }
+function out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE);
+  if (!empty($GLOBALS['pushQ'])) { // Web-Push erst nach der Antwort senden (Issue #67), damit z. B. «Alarm auslösen» nicht auf die Push-Dienste wartet
+    ignore_user_abort(true); if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); else flush();
+    try { pushFlush(); } catch (Throwable $e) { error_log('Push: ' . $e->getMessage()); } }
+  exit; }
 function fail($m, $c = 400) { out(['error' => $m], $c); }
 
 $db = new PDO($cfg['dsn'], $cfg['db_user'], $cfg['db_pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
@@ -43,6 +47,8 @@ foreach ([
  // Externe Einsatzkräfte ohne App-Konto mit festem Standort (Issue #39), z. B. Sicherungs- und Beobachtungsposten der Feuerwehr; moved = zuletzt verschoben, removed = entfernt
  "CREATE TABLE IF NOT EXISTS externals(id $ai, incident_id INT, name $tx, descr TEXT, role_id INT NULL, lat DOUBLE, lon DOUBLE, created_by INT, created BIGINT, moved BIGINT NULL, removed BIGINT NULL)",
  // Vorlagen dafür aus der Verwaltung; lat/lon NULL = Standort beim Erfassen auf der Karte wählen; deaktiviert statt gelöscht
+ // Web-Push-Abonnements je Gerät (Issue #67): endpoint des Push-Dienstes, Schlüssel des Browsers (p256dh, auth, base64url)
+ "CREATE TABLE IF NOT EXISTS push_subs(id $ai, user_id INT, endpoint TEXT, p256dh $tx, auth $tx, created BIGINT)",
  "CREATE TABLE IF NOT EXISTS ext_templates(id $ai, name $tx, descr TEXT, role_id INT NULL, lat DOUBLE NULL, lon DOUBLE NULL, active INT DEFAULT 1)",
  // Verwendung je Overpass-Server (Issue #45): src server = Abfrage vom Hosting, device = direkte Abfrage des Geräts (Rückfall); ok_ms = Summe der Antwortzeiten der erfolgreichen
  "CREATE TABLE IF NOT EXISTS overpass_stats(url $tx, src $tx, uses INT DEFAULT 0, ok INT DEFAULT 0, fails INT DEFAULT 0, ok_ms BIGINT DEFAULT 0, last_ok BIGINT NULL, last_fail BIGINT NULL, last_err $tx NULL, PRIMARY KEY(url, src))",
@@ -240,6 +246,57 @@ function setRec($incId, $state) { global $db, $now;
   $db->prepare("UPDATE rec_periods SET stop=? WHERE incident_id=? AND stop IS NULL")->execute([$now, $incId]);
   if ($state === 1) $db->prepare("INSERT INTO rec_periods(incident_id,start) VALUES(?,?)")->execute([$incId, $now]);
   $db->prepare("UPDATE incidents SET record=?" . ($state === 1 ? ', recorded=1' : '') . " WHERE id=?")->execute([$state, $incId]); }
+/* ---------- Web-Push (Issue #67) ---------- */
+// Payload verschlüsselt nach RFC 8291 (aes128gcm), Absender per VAPID (RFC 8292, ES256). Nur PHP mit openssl und curl, keine Bibliothek.
+// Schlüsselpaar wird beim ersten Bedarf erzeugt und in settings (vapid) gespeichert. Ohne openssl/curl gibt es keinen Push, die App pollt wie bisher.
+function b64u($s) { return rtrim(strtr(base64_encode($s), '+/', '-_'), '='); }
+function b64ud($s) { return base64_decode(strtr($s, '-_', '+/') . str_repeat('=', (4 - strlen($s) % 4) % 4)); }
+function pushOk() { return function_exists('openssl_pkey_new') && function_exists('curl_multi_init') && function_exists('openssl_pkey_derive'); }
+function ecRaw($k) { $d = openssl_pkey_get_details($k)['ec']; return "\x04" . str_pad($d['x'], 32, "\0", STR_PAD_LEFT) . str_pad($d['y'], 32, "\0", STR_PAD_LEFT); } // unkomprimierter Punkt, 65 Byte
+function ecNew() { return openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]); }
+function ecPub($raw) { // öffentlicher P-256-Schlüssel (65 Byte) als PEM für openssl
+  return "-----BEGIN PUBLIC KEY-----\n" . chunk_split(base64_encode(hex2bin('3059301306072a8648ce3d020106082a8648ce3d030107034200') . $raw), 64, "\n") . "-----END PUBLIC KEY-----\n"; }
+function vapid() { static $v = null; if ($v) return $v;
+  $v = json_decode(setting('vapid', ''), true);
+  if (!$v || empty($v['pem'])) { $k = ecNew(); openssl_pkey_export($k, $pem); $v = ['pub' => b64u(ecRaw($k)), 'pem' => $pem]; setSetting('vapid', json_encode($v)); }
+  return $v; }
+function vapidJwt($aud) { global $cfg; $v = vapid();
+  $sub = $cfg['push_subject'] ?? ('https://' . ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+  $h = b64u(json_encode(['typ' => 'JWT', 'alg' => 'ES256'])) . '.' . b64u(json_encode(['aud' => $aud, 'exp' => time() + 12 * 3600, 'sub' => $sub], JSON_UNESCAPED_SLASHES));
+  openssl_sign($h, $der, openssl_pkey_get_private($v['pem']), OPENSSL_ALGO_SHA256);
+  // DER (SEQUENCE{INTEGER r, INTEGER s}) → r||s mit je 32 Byte
+  $o = 3 + (ord($der[1]) & 0x80 ? 1 : 0); $rl = ord($der[$o]); $r = substr($der, $o + 1, $rl); $o += 2 + $rl; $sl = ord($der[$o]); $sv = substr($der, $o + 1, $sl);
+  $fix = fn($x) => str_pad(ltrim($x, "\0"), 32, "\0", STR_PAD_LEFT);
+  return $h . '.' . b64u($fix($r) . $fix($sv)); }
+function pushEncrypt($payload, $p256dh, $auth) { // RFC 8291: ein Datensatz, aes128gcm
+  $ua = b64ud($p256dh); $as = b64ud($auth); if (strlen($ua) !== 65 || strlen($as) < 16) return null;
+  $eph = ecNew(); $ep = ecRaw($eph); $sec = openssl_pkey_derive(openssl_pkey_get_public(ecPub($ua)), $eph, 32); if ($sec === false) return null;
+  $ikm = hash_hkdf('sha256', $sec, 32, "WebPush: info\0" . $ua . $ep, $as);
+  $salt = random_bytes(16); $cek = hash_hkdf('sha256', $ikm, 16, "Content-Encoding: aes128gcm\0", $salt); $nonce = hash_hkdf('sha256', $ikm, 12, "Content-Encoding: nonce\0", $salt);
+  $ct = openssl_encrypt($payload . "\x02", 'aes-128-gcm', $cek, OPENSSL_RAW_DATA, $nonce, $tag);
+  return $salt . pack('N', 4096) . chr(65) . $ep . $ct . $tag; }
+// Benachrichtigung für Personen vormerken; gesendet wird in out() nach der Antwort. $msg: t (Titel), b (Text), tag (wie die Quittierschlüssel der App), crit
+function pushTo($userIds, $msg) { global $pushQ; if (!pushOk() || !$userIds) return; foreach (array_unique(array_map('intval', $userIds)) as $u) $pushQ[] = [$u, $msg]; }
+function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) return;
+  $ids = array_values(array_unique(array_column($q, 0))); $in = implode(',', array_fill(0, count($ids), '?'));
+  $s = $db->prepare("SELECT s.* FROM push_subs s JOIN users u ON u.id=s.user_id WHERE u.active=1 AND s.user_id IN ($in)"); $s->execute($ids); $subs = $s->fetchAll();
+  $mh = curl_multi_init(); $hs = []; $jwt = [];
+  foreach ($q as [$u, $m]) foreach ($subs as $sub) { if ((int)$sub['user_id'] !== $u) continue;
+    $pu = parse_url($sub['endpoint']); if (!$pu || !in_array($pu['scheme'] ?? '', ['https', 'http'], true)) continue;
+    $aud = $pu['scheme'] . '://' . $pu['host'] . (isset($pu['port']) ? ':' . $pu['port'] : ''); $jwt[$aud] = $jwt[$aud] ?? vapidJwt($aud);
+    $body = pushEncrypt(json_encode($m, JSON_UNESCAPED_UNICODE), $sub['p256dh'], $sub['auth']); if ($body === null) continue;
+    $h = curl_init($sub['endpoint']);
+    curl_setopt_array($h, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4,
+      CURLOPT_HTTPHEADER => ['Content-Type: application/octet-stream', 'Content-Encoding: aes128gcm', 'TTL: ' . (!empty($m['crit']) ? 3600 : 600), 'Urgency: high', 'Topic: ' . substr(preg_replace('/[^A-Za-z0-9_-]/', '_', (string)($m['tag'] ?? 'sw')), 0, 32), 'Authorization: vapid t=' . $jwt[$aud] . ', k=' . vapid()['pub']]]);
+    curl_multi_add_handle($mh, $h); $hs[] = [$h, (int)$sub['id']]; }
+  do { $st = curl_multi_exec($mh, $run); if ($run) curl_multi_select($mh, 1); } while ($run && $st === CURLM_OK);
+  foreach ($hs as [$h, $id]) { $c = curl_getinfo($h, CURLINFO_HTTP_CODE); if ($c === 404 || $c === 410) $db->prepare("DELETE FROM push_subs WHERE id=?")->execute([$id]); // abgelaufen
+    curl_multi_remove_handle($mh, $h); curl_close($h); }
+  curl_multi_close($mh); }
+// alle aktiven Benutzer ausser $except; kritisch wie critical(): scharf immer, Übung nur mit Übungsmodus
+function pushAlarm($inc, $except) { global $db; if (!pushOk()) return;
+  foreach ($db->query("SELECT id,exercise_mode FROM users WHERE active=1")->fetchAll() as $u) { if ((int)$u['id'] === $except) continue;
+    pushTo([(int)$u['id']], ['t' => (int)$inc['is_exercise'] ? 'ÜBUNG' : 'EINSATZ', 'b' => $inc['message'], 'tag' => 'i:' . $inc['id'], 'crit' => !(int)$inc['is_exercise'] || (int)$u['exercise_mode'] ? 1 : 0]); } }
 function logev($incId, $userId, $kind, $text) { global $db, $now; $db->prepare("INSERT INTO incident_log(incident_id,ts,user_id,kind,text) VALUES(?,?,?,?,?)")->execute([$incId, $now, $userId, $kind, $text]); }
 function hav($a, $b, $c, $d) { $p1 = deg2rad($a); $p2 = deg2rad($c); $dp = $p2 - $p1; $dl = deg2rad($d - $b); $x = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 12742000 * asin(min(1, sqrt($x))); }
 function avg($a) { $a = array_values(array_filter($a, fn($x) => $x !== null)); return $a ? round(array_sum($a) / count($a), 1) : null; }
@@ -405,6 +462,7 @@ switch ($route) {
   $nid = (int)$db->lastInsertId();
   if ($rec) setRec($nid, 1);
   logev($nid, $uid, 'start', 'hat den Einsatz gestartet (' . ($ex ? 'Übung' : 'scharfer Einsatz') . ($rec ? ', mit Aufzeichnung' : '') . ($pls[0] === null ? ', ohne PLS' : '') . '): ' . $in['message']);
+  pushAlarm(['id' => $nid, 'is_exercise' => $ex, 'message' => $in['message']], $uid);
   out(['id' => $nid]);
 
  case 'incident/state': // Polling-Endpunkt: ?since=<letzte Nachrichten-ID>
@@ -725,6 +783,8 @@ switch ($route) {
   }
   $db->prepare("INSERT INTO messages(incident_id,from_user,text,recipients,created,lat,lon,mark,mark_lat,mark_lon) VALUES(?,?,?,?,?,?,?,?,?,?)")
      ->execute([$inc['id'], $uid, $in['text'], $to === null ? null : json_encode($to), $now, $la, $lo, $mk, $mla, $mlo]);
+  // Push nur an die Empfänger (keine Auswahl = alle Teilnehmenden), nicht an die sendende Person
+  pushTo(array_diff($to ?? $act, [$uid]), ['t' => 'Nachricht von ' . $me['name'], 'b' => mb_substr($in['text'], 0, 300), 'tag' => 'm:' . $db->lastInsertId(), 'crit' => 0]);
   out(['ok' => true]); // im Einsatzprotokoll erscheint die Nachricht über logRows()
 
  case 'incident/message/unmark': // Kartenmarkierung einer Nachricht entfernen: sendende Person oder Einsatzleitung
@@ -780,6 +840,8 @@ switch ($route) {
   if ((int)$inc['record']) setRec((int)$inc['id'], 0); // laufende Aufzeichnung endet mit dem Einsatz
   $db->prepare("UPDATE incidents SET ended_at=? WHERE id=?")->execute([$now, $inc['id']]);
   logev($inc['id'], $uid, 'end', 'hat den Einsatz beendet');
+  $s = $db->prepare("SELECT user_id FROM participants WHERE incident_id=? AND mode<>'declined' AND left_at IS NULL AND user_id<>?"); $s->execute([$inc['id'], $uid]);
+  pushTo(array_column($s->fetchAll(), 'user_id'), ['t' => (int)$inc['is_exercise'] ? 'ÜBUNG BEENDET' : 'EINSATZ BEENDET', 'b' => (int)$inc['is_exercise'] ? 'Die Übung wurde beendet.' : 'Der Einsatz wurde beendet.', 'tag' => 'e:' . $inc['id'], 'crit' => 0]);
   out(['ok' => true]);
 
  case 'incident/log': admin(); out(logRows((int)($_GET['id'] ?? 0), true));
@@ -832,6 +894,16 @@ switch ($route) {
     'avg_first_accept' => avg(array_map(fn($r) => $r['first_accept'] === null ? null : $r['first_accept'] - $r['alarm_at'], $rows)),
     'avg_first_area' => avg(array_map(fn($r) => $r['first_area'] === null ? null : $r['first_area'] - $r['alarm_at'], $rows))]]);
 
+ /* ---------- Web-Push (Issue #67): Abonnement des Geräts ---------- */
+ case 'push/key': out(['enabled' => pushOk(), 'key' => pushOk() ? vapid()['pub'] : null]); // öffentlicher VAPID-Schlüssel für pushManager.subscribe
+ case 'push/subscribe': // endpoint, keys: {p256dh, auth}; ein Gerät gehört immer der zuletzt angemeldeten Person
+  if (!pushOk()) fail('Push ist auf diesem Server nicht verfügbar (PHP ohne openssl/curl)');
+  $ep = (string)($in['endpoint'] ?? ''); $k = $in['keys'] ?? [];
+  if (!preg_match('~^https://~', $ep) || strlen($ep) > 1000 || strlen(b64ud((string)($k['p256dh'] ?? ''))) !== 65 || strlen(b64ud((string)($k['auth'] ?? ''))) < 16) fail('Ungültiges Abonnement');
+  $db->prepare("DELETE FROM push_subs WHERE endpoint=?")->execute([$ep]);
+  $db->prepare("INSERT INTO push_subs(user_id,endpoint,p256dh,auth,created) VALUES(?,?,?,?,?)")->execute([$uid, $ep, $k['p256dh'], $k['auth'], $now]);
+  out(['ok' => true]);
+ case 'push/unsubscribe': $db->prepare("DELETE FROM push_subs WHERE endpoint=? AND user_id=?")->execute([(string)($in['endpoint'] ?? ''), $uid]); out(['ok' => true]);
  case 'me/password': // eigenes Passwort ändern (aktuelles Passwort nötig)
   $s = $db->prepare("SELECT pass_hash FROM users WHERE id=?"); $s->execute([$uid]);
   if (!password_verify($in['old'] ?? '', $s->fetch()['pass_hash'])) fail('Das aktuelle Passwort ist falsch', 403);
@@ -869,6 +941,7 @@ switch ($route) {
   if ($id === $uid) fail('Das eigene Passwort bitte über «Passwort ändern» setzen');
   pwCheck($in['password'] ?? '');
   $s = $db->prepare("UPDATE users SET pass_hash=?, must_change=1, token=NULL WHERE id=?"); $s->execute([password_hash($in['password'], PASSWORD_DEFAULT), $id]);
+  $db->prepare("DELETE FROM push_subs WHERE user_id=?")->execute([$id]); // abgemeldet: Geräte erhalten keine Push-Nachrichten mehr
   if (!$s->rowCount()) fail('Benutzer nicht gefunden', 404);
   out(['ok' => true]);
  case 'user/active': admin(); // Benutzer entfernen (deaktivieren) oder reaktivieren, Einsatzdaten bleiben erhalten
@@ -877,6 +950,7 @@ switch ($route) {
   $s = $db->prepare("SELECT name FROM users WHERE id=?"); $s->execute([$id]); $u = $s->fetch();
   if (!$u) fail('Benutzer nicht gefunden', 404);
   $db->prepare("UPDATE users SET active=?" . ($a ? '' : ', token=NULL') . " WHERE id=?")->execute([$a, $id]);
+  if (!$a) $db->prepare("DELETE FROM push_subs WHERE user_id=?")->execute([$id]); // keine Push-Nachrichten mehr an deaktivierte Personen
   if (!$a && ($inc = activeIncident())) { // aus laufendem Einsatz austragen
     $p = part($inc['id'], $id);
     if ($p && $p['left_at'] === null && $p['mode'] !== 'declined') {

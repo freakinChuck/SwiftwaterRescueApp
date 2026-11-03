@@ -1,7 +1,11 @@
 # HTML, JS und CSS bei jedem Aufruf beim Server prüfen lassen (ETag/Last-Modified, meist nur «304 Not Modified»).
 # Sonst verwenden Handys nach einem Update teils noch alte Dateien (z. B. altes common.js zu neuem index.html → grauer Bildschirm).
 <IfModule mod_headers.c>
-  <FilesMatch "\.(html|js|css)$">
+  <FilesMatch "\.(html|js|css|webmanifest)$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
+</IfModule>
+# PWA (Issue #67): Manifest mit dem richtigen Typ ausliefern; sw.js ist JS und wird damit ebenfalls bei jedem Aufruf geprüft
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
 </IfModule>

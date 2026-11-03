@@ -28,6 +28,10 @@ Beim ersten Mal auf dem Server `api/config.php` von Hand anlegen (Vorlage im Rep
 ## Öffentliche Ansicht (Public Mode)
 Die Einsatzleitung kann einen laufenden Einsatz oder eine Übung im Menü unter «Einsatz verwalten» öffentlich machen. Wer den Link (`public.html?k=…`) hat, sieht ohne Anmeldung die Karte mit Standorten, Positionen, Bereichen und Rettlingen, aber keine Nachrichten und kein Einsatzlog. Standardmässig anonym: statt Namen nur Spezialrolle bzw. Einrückoption. Ausschalten macht den Link ungültig.
 
+## App installieren und Push-Benachrichtigungen
+Die Einsatz-App ist eine PWA: Im Browser über «App installieren» (Menü → Konto) bzw. auf dem iPhone über «Teilen → Zum Home-Bildschirm» installieren. Unter «Konto» lassen sich Push-Benachrichtigungen pro Gerät einschalten. Alarme, Nachrichten an einen selbst und das Einsatzende kommen dann auch bei geschlossener App. Auf iPhone und iPad gilt das nur für die installierte App, ab iOS 16.4. Ohne Verbindung zeigt die App den letzten Stand mit einem Hinweis, wann die letzte Verbindung bestand.
+Voraussetzung auf dem Server: HTTPS sowie PHP mit openssl und curl. Bei cyon ist beides vorhanden.
+
 ## Karte
 Standard ist das swisstopo-Luftbild; über das Ebenen-Symbol oben rechts kann auf Landeskarte oder OpenStreetMap umgeschaltet werden (Wahl wird pro Gerät gemerkt).
 
