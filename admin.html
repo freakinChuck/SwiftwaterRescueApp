@@ -45,6 +45,9 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .rpl{display:block;width:100%;text-align:left;border:0;border-left:4px solid;border-radius:0;background:none;padding:.35rem .5rem;font-size:.9rem}.rpl:hover{background:var(--panel)}.rpl .t{color:var(--mut);margin-right:.4rem}
 .rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
 .exp{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.8rem 0}.exp h3{margin:0 0 .3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.exp .badge.run{background:var(--alarm)}.exp .badge.done{background:var(--line)}.exp td{vertical-align:top}.exp td small{display:block;color:var(--mut)}
+.urg{display:grid;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:.45rem}.urb{display:grid;gap:.15rem;text-align:left;padding:.55rem .7rem .55rem 2.1rem;position:relative;border-radius:8px;min-height:0}.urb small{color:var(--mut);font-size:.78rem;line-height:1.3}
+.urb::before{content:'';position:absolute;left:.7rem;top:.7rem;width:.9rem;height:.9rem;border-radius:50%;border:2px solid var(--mut)}.urb[aria-pressed=true]{background:#1d7fd133;border-color:var(--ex)}.urb[aria-pressed=true]::before{content:'✓';border-color:var(--ex);background:var(--ex);color:#fff;font-size:.7rem;line-height:.9rem;text-align:center}.urb:disabled{opacity:.55;cursor:not-allowed}
+.pwr{display:flex;gap:.35rem}.pwr input{flex:1;min-width:0;font-family:ui-monospace,Consolas,monospace}.pwr button{flex:0 0 auto}
 .lsel{display:flex;flex-wrap:wrap;gap:.35rem}.lchip{display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--line);border-radius:999px;padding:.1rem .2rem .1rem .6rem}.lchip button{padding:.1rem .45rem;min-height:0;border-radius:999px}
 /* Helikopter: Zahlenwerte als Karten mit Einheit, Bereich und Standard (geänderte Werte hervorgehoben) */
 .anums{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.6rem;margin:.4rem 0 .6rem}
@@ -79,9 +82,15 @@ const UR=id=>(uroles&&uroles.roles.find(r=>r.id===id))||{name:'?',perms:[]};
 const ROLE_LABEL=u=>u.uroles.length?u.uroles.map(id=>esc(UR(id).name)).join(', '):'<span class="mut">keine</span>';
 const urOk=r=>r.perms.every(can);
 // Häkchen je Rolle; u = bestehende Person (sonst die Vorauswahl def), die eigene Administratorrolle bleibt gesperrt
-const roleChecks=u=>uroles.roles.map(r=>{const on=u?u.uroles.includes(r.id):!!r.def&&urOk(r),lock=!urOk(r)||u&&u.id===me.id&&r.sys==='admin'&&on;
-  return`<label class="chk"><input type="checkbox" data-ur="${r.id}" ${on?'checked':''} ${lock?'disabled':''}> ${esc(r.name)}${lock&&!urOk(r)?' <span class="mut">(Rechte, die du nicht hast)</span>':''}</label>`}).join('');
-const roleVal=el=>[...el.querySelectorAll('[data-ur]')].filter(c=>c.checked).map(c=>+c.dataset.ur);
+// Rollenauswahl: je Rolle eine Karte zum Antippen (aria-pressed) mit den enthaltenen Rechten
+const urPermTxt=r=>r.sys==='admin'?'Alle Rechte, auch künftige':r.perms.map(k=>(uroles.perms.find(p=>p.k===k)||{name:k}).name).join(' · ')||'keine Rechte';
+const roleChecks=u=>`<div class="urg" role="group" aria-label="Benutzerrollen">${uroles.roles.map(r=>{const on=u?u.uroles.includes(r.id):!!r.def&&urOk(r),lock=!urOk(r)||u&&u.id===me.id&&r.sys==='admin'&&on;
+  return`<button type="button" class="urb" data-ur="${r.id}" aria-pressed="${on}" ${lock?'disabled':''} title="${lock?(urOk(r)?'Die eigene Rolle Administrator bleibt':'Enthält Rechte, die du selbst nicht hast'):'Antippen zum Wählen'}"><b>${esc(r.name)}</b><small>${esc(urPermTxt(r))}</small></button>`}).join('')}</div>`;
+const pwField=(id,label)=>`<label class="mut">${label}<span class="pwr"><input id="${id}" autocomplete="off" spellcheck="false" value="${genPw()}"><button type="button" data-pwn title="Neues Passwort erzeugen">↻</button><button type="button" data-pwc>Kopieren</button></span></label>`;
+const pwWire=d=>{const i=d.querySelector('.pwr input');d.querySelector('[data-pwn]').onclick=()=>i.value=genPw();
+  d.querySelector('[data-pwc]').onclick=()=>navigator.clipboard.writeText(i.value).then(()=>toast('Startpasswort kopiert.','ok'),()=>{i.select();toast('Kopieren nicht möglich, bitte von Hand kopieren.','info')})};
+const roleWire=el=>el.querySelectorAll('.urb').forEach(b=>b.onclick=()=>b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')!=='true'));
+const roleVal=el=>[...el.querySelectorAll('[data-ur]')].filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>+c.dataset.ur);
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
@@ -125,21 +134,24 @@ window.addEventListener('hashchange',()=>{if(me&&myMode()!==MY)start();else show
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
 async function loadUsers(){const el=$('#sU');try{[users,uroles]=await Promise.all([api('users'),api('uroles')])}catch(e){el.innerHTML='<h2>Benutzer</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  el.innerHTML=`<h2>Benutzer (${users.filter(u=>u.active).length} aktiv)</h2><div class="tw"><table><thead><tr><th>Name</th><th>Benutzername</th><th>Benutzerrollen</th><th>Status</th><th></th></tr></thead><tbody>${users.map(u=>{const self=u.id===me.id;
+  el.innerHTML=`<h2>Benutzer (${users.filter(u=>u.active).length} aktiv)</h2><div class="row"><button class="pri" id="uA">+ Neuer Benutzer</button></div><div class="tw"><table><thead><tr><th>Name</th><th>Benutzername</th><th>Benutzerrollen</th><th>Status</th><th></th></tr></thead><tbody>${users.map(u=>{const self=u.id===me.id;
     return`<tr class="${u.active?'':'off'}"><td>${esc(u.name)}${self?' <span class="mut">(du)</span>':''}</td><td>${esc(u.username)}</td><td>${ROLE_LABEL(u)}</td><td>${u.active?'aktiv':'deaktiviert'}${u.must_change?'<br><span class="mut">Passwortwechsel ausstehend</span>':''}${u.exercise_mode?'<br><span class="mut">Übungsmodus an</span>':''}</td>
-      <td class="act">${!u.editable?'<span class="mut" title="Hat Rechte, die du selbst nicht hast">nur mit mehr Rechten</span>':`<button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.active?`<button data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}`}</td></tr>`}).join('')}</tbody>
-    <tfoot><tr class="new"><th colspan="5">Neuer Benutzer</th></tr><tr class="new"><td><input id="uf" placeholder="Name" aria-label="Name"></td><td><input id="un" placeholder="Benutzername" autocomplete="off" aria-label="Benutzername"></td><td><div id="ur" class="urc" role="group" aria-label="Benutzerrollen">${roleChecks(null)}</div></td><td><input id="up" placeholder="Startpasswort" autocomplete="off" aria-label="Startpasswort" title="Startpasswort" value="${genPw()}"></td><td class="act"><button class="pri" id="uA">Benutzer anlegen</button></td></tr></tfoot></table></div>
-    <div class="mut" id="uMsg" role="status"></div>
-    <div class="mut">Neue Benutzer müssen das Startpasswort bei der ersten Anmeldung ändern; gib es vor dem Anlegen weiter, es wird danach nicht mehr angezeigt. Deaktivierte Benutzer können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
+      <td class="act">${!u.editable?'<span class="mut" title="Hat Rechte, die du selbst nicht hast">nur mit mehr Rechten</span>':`<button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.active?`<button data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}`}</td></tr>`}).join('')}</tbody></table></div>
+    <div class="mut">Deaktivierte Benutzer können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
   // Startpasswort nach dem Speichern nicht in einer Meldung anzeigen (Issue #59): es steht vorher im Feld und kann dort kopiert werden
-  $('#uA').onclick=()=>{const nm=$('#uf').value.trim()||$('#un').value.trim();api('user/save',{username:$('#un').value,name:$('#uf').value,password:$('#up').value,uroles:roleVal($('#ur'))}).then(async()=>{await loadUsers();$('#uMsg').textContent=`Benutzer «${nm}» angelegt.`}).catch(fail)};
+  $('#uA').onclick=()=>{const d=dlg('Neuer Benutzer',`<div class="jtwo"><label class="mut">Name<input id="uf" autocomplete="off"></label><label class="mut">Benutzername<input id="un" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>
+      ${pwField('up','Startpasswort')}
+      <div class="mut">Die Person muss es bei der ersten Anmeldung ändern. Gib es vor dem Anlegen weiter, danach wird es nicht mehr angezeigt.</div>
+      <div class="mut">Benutzerrollen</div>${roleChecks(null)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du nicht vergeben.</div>`,
+      async d=>{const nm=$('#uf',d).value.trim()||$('#un',d).value.trim();await api('user/save',{username:$('#un',d).value,name:$('#uf',d).value,password:$('#up',d).value,uroles:roleVal(d)});toast(`Benutzer «${nm}» angelegt.`,'ok');loadUsers()},'Benutzer anlegen');
+    roleWire(d);pwWire(d)};
   const U=id=>users.find(x=>x.id==id);
   el.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.e),self=u.id===me.id;
-    dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><div class="mut">Benutzerrollen</div><div id="eR" class="urc">${roleChecks(u)}</div><div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Administrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
-      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,uroles:roleVal($('#eR',d))});toast('Gespeichert.');if(self)me=(await api('me')).me;loadUsers()})});
+    dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><div class="mut">Benutzerrollen</div>${roleChecks(u)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Administrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
+      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,uroles:roleVal(d)});toast('Gespeichert.');if(self)me=(await api('me')).me;loadUsers()});roleWire(d)});
   el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.p);
-    dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div><label class="mut">Neues Startpasswort<input id="eP" autocomplete="off" value="${genPw()}"></label><div class="mut">Gib es vor dem Zurücksetzen weiter, es wird danach nicht mehr angezeigt.</div>`,
-      async d=>{await api('user/password',{id:u.id,password:$('#eP',d).value});await loadUsers();$('#uMsg').textContent=`Passwort von ${u.name} zurückgesetzt.`},'Zurücksetzen')});
+    const d=dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div>${pwField('eP','Neues Startpasswort')}<div class="mut">Gib es vor dem Zurücksetzen weiter, es wird danach nicht mehr angezeigt.</div>`,
+      async d=>{await api('user/password',{id:u.id,password:$('#eP',d).value});toast(`Passwort von ${u.name} zurückgesetzt.`,'ok');loadUsers()},'Zurücksetzen');pwWire(d)});
   el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.d);
     if(confirm(u.name+' deaktivieren?\n\nDie Person wird abgemeldet, aus einem laufenden Einsatz ausgetragen und kann sich nicht mehr anmelden. Einsatzdaten bleiben erhalten.'))api('user/active',{id:u.id,active:0}).then(loadUsers).catch(fail)});
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>api('user/active',{id:+b.dataset.a,active:1}).then(loadUsers).catch(fail))}
