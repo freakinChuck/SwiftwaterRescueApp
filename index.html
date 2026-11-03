@@ -251,7 +251,7 @@ const roleName=p=>(roles.find(r=>r.id==p.role_id)||{}).name;
 const sec=(k,t,b)=>`<details data-k="${k}" ${openSec.has(k)?'open':''}><summary>${t}</summary>${b}</details>`;
 // Fusszeile im Menü (immer sichtbar): Server, angemeldete Person, alle aktuellen Rechte im Einsatz
 function footInfo(){const i=st&&st.incident,m=i&&st.me,joined=!!(m&&!m.left_at&&m.mode!=='declined'),r=joined&&roles.find(x=>x.id==m.role_id),sh=joined&&shares(m.mode);
-  const rows=[['Server',location.host+location.pathname.replace(/[^/]*$/,'')],['Angemeldet',`${me.name} (${me.username}) · ${me.is_admin?'Administrator':'Einsatzkraft'}${me.exercise_mode?' · Übungsmodus an':''}`]];
+  const rows=[['Server',location.host+location.pathname.replace(/[^/]*$/,'')],['Angemeldet',`${me.name} (${me.username}) · ${me.is_admin?'Administrator':me.is_planner?'Übungsleiter':'Einsatzkraft'}${me.exercise_mode?' · Übungsmodus an':''}`]];
   if(i){rows.push(['Im Einsatz',joined?modeOf(m.mode).name+(leadMode(m.mode)?' (Rechte der Einsatzleitung)':'')+(r?' · Spezialrolle '+r.name:''):'nicht angenommen']);
     const yes=[],no=[],add=(c,t)=>(c?yes:no).push(t);
     add(st.can_manage,'Einsatz verwalten und beenden');add(st.can_manage,'Spezialrollen setzen');add(st.can_manage,'Einsatzkräfte entfernen');add(st.can_manage,'Rettlinge entfernen');add(st.can_manage,'Markierungen und Bereiche setzen');add(st.can_manage,'Externe Einsatzkräfte erfassen');add(st.can_manage,'Öffentliche Ansicht steuern');
@@ -269,7 +269,7 @@ function leadWhy(i,m,joined){const why=[],r=joined&&roles.find(x=>x.id==m.role_i
   if(i.created_by===me.id)why.push('hat den Einsatz gestartet');
   return why.join(', ')||'laut Server'}
 function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
-  const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button>${me.is_admin?'<button id="bAdm">Verwaltung</button>':''}<button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`);
+  const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button>${me.is_admin||me.is_planner?'<button id="bAdm">Verwaltung</button>':''}<button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`);
   const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();stop();render()};if($('#bAdm'))$('#bAdm').onclick=()=>{location.href='admin.html'};
     $('#exm').onchange=e=>{const v=e.target.checked?1:0;api('me/settings',{exercise_mode:v}).then(()=>{me.exercise_mode=v;e.target.blur();return poll()}).catch(x=>{e.target.checked=!v;fail(x)})};
     // eigenes Koordinatensystem ('' = Standard der Verwaltung); Kartenebenen neu aufbauen, damit Popups die neue Anzeige zeigen
@@ -277,14 +277,22 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   // Werkzeuge: auch ohne Einsatz verfügbar (im Einsatz zusätzlich über den Kartenknopf)
   const tools=!feat('rd')?'':sec('tools','Werkzeuge',`<div class="row"><button id="bRdM">Flussdistanz messen</button></div><div class="mut">Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei ${rdSpeeds().join(', ')} km/h.</div>`);
   const bindTools=()=>{if($('#bRdM'))$('#bRdM').onclick=rdOpen};
-  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+tools+acc+footInfo();$('#bNew').onclick=newView;bindTools();return bindAcc()}
+  // vorbereitete Übungen (Issue #29): Übungsleitung und Administratoren starten sie hier, Alarm mit der vorbereiteten Aufgebotsmeldung
+  const xps=(st&&!st.incident&&st.ex_plans)||[],xsec=!xps.length?'':sec('explans','Vorbereitete Übungen',xps.map(p=>`<div class="row" style="align-items:center"><span style="flex:1">${esc(p.title)}</span><button class="pri" data-xs="${p.id}">Übung starten</button></div>`).join('')+'<div class="mut">Startet die Übung mit der vorbereiteten Aufgebotsmeldung. Du leitest sie als Übungsleitung: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.</div>');
+  if((!st||!st.incident)&&secReset){secReset=false;openSec=new Set(['explans'])} // vorbereitete Übungen offen
+  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button></div>`+xsec+tools+acc+footInfo();$('#bNew').onclick=newView;bindTools();
+    s.querySelectorAll('[data-xs]').forEach(b=>b.onclick=()=>{const p=xps.find(x=>x.id===+b.dataset.xs);if(confirm(`Übung «${p.title}» jetzt starten? ${p.invited?'Die aufgebotenen Personen werden':'Alle werden'} alarmiert.`))api('ex/start',{id:p.id}).then(()=>{secReset=true;return poll()}).catch(fail)});return bindAcc()}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
-  if(secReset){secReset=false;openSec=new Set(['mine']);if(!i.flow_ms)openSec.add('flow')}
+  if(secReset){secReset=false;openSec=new Set(st.ex_lead?['exlead','mine']:['mine']);if(!i.flow_ms)openSec.add('flow')}
   let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}${esc(fcs(i.lat,i.lon,' · PLS '))}${i.record===1?' · <b>● wird aufgezeichnet</b> (Standortverläufe für das Replay)':i.record===2?' · <b>❚❚ Aufzeichnung pausiert</b>':''}${i.public?` · <b>🌐 öffentlich sichtbar</b> (${i.public_anon?'ohne Namen':'mit Namen'})`:''}</div>`;
-  if(!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button class="pri" data-m="${esc(x.code)}">Einsatz annehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
+  if(st.ex_lead)h+=`<div class="mut"><b>Du leitest diese Übung${st.ex_title?' «'+esc(st.ex_title)+'»':''}</b> (Übungsleitung): Rechte der Einsatzleitung, du wirst nicht alarmiert.${joined?' Du nimmst zusätzlich als Einsatzkraft teil.':' Du kannst zusätzlich als Einsatzkraft teilnehmen:'}</div>`;
+  // Übungsleitung: Teilnahme freiwillig, ohne «ablehnen» und ohne Hinweis zum Aufgebot
+  if(st.ex_lead&&!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button data-m="${esc(x.code)}">Zusätzlich teilnehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}</div>`;
+  else if(!joined)h+=(st.alarm===false?'<div class="mut">Du bist für diese Übung nicht aufgeboten, kannst aber trotzdem teilnehmen.</div>':'')+`<div class="row">${modes.filter(x=>x.active).map(x=>`<button class="pri" data-m="${esc(x.code)}">Einsatz annehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}${m&&m.mode==='declined'?'':'<button data-m="declined">Einsatz ablehnen</button>'}</div>`;
   // Reihenfolge im Menü: Mein Einsatz, Fliessgeschwindigkeit & Suchgebiet, danach der Rest
   const flowSec=st.can_flow?sec('flow','Fliessgeschwindigkeit &amp; Suchgebiet',`<div class="row"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label></div><div class="row"><button id="bFl">Setzen &amp; Suchgebiet berechnen</button></div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`):'';
+  if(st.ex_lead||(st.ex_injects||[]).length)h+=exSec();
   if(!joined)h+=flowSec;
   else{
     const sh=shares(m.mode);
@@ -303,6 +311,10 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   if(st.log)h+=sec('elog','Einsatzlog ('+st.log.length+')','<div class="row"><button id="bBig">Gross-Modus</button></div>'+st.log.map(l=>`<div class="msg"><span class="mut">${fmtT(l.ts)}</span> <b>${esc(l.name||'System')}</b> ${esc(l.text)}</div>`).join(''));
   s.innerHTML=h+tools+acc+footInfo();bindAcc();bindTools();bindMarks();if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
+  s.querySelectorAll('[data-xr]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xr);
+    if(j.ago==null){exRelAt(j);return} // kein vorbereiteter Zeitpunkt: die Übungsleitung gibt ihn jetzt an
+    if(confirm(`«${j.label}» freigeben?\n\n${exWhat(j)}${j.msg?'\nMeldung an alle: '+j.msg:''}`)){b.disabled=true;api('ex/release',{id:j.id}).then(poll).catch(e=>{b.disabled=false;fail(e)})}});
+  s.querySelectorAll('[data-xz]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xz);exShow(j)});
   if(joined){if($('#rs'))$('#rs').onchange=e=>{e.target.blur();api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail)};$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
   }
@@ -315,6 +327,29 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
     ['pubOn','pubAnon'].forEach(k=>{const c=$('#'+k);if(c)c.onchange=()=>{c.blur();if(k==='pubOn'&&c.checked&&!confirm('Öffentliche Ansicht einschalten?\n\nWer den Link hat, sieht ohne Anmeldung die Karte mit den Standorten der Einsatzkräfte, Markierungen, Bereichen und Rettlingen (keine Nachrichten, kein Einsatzlog).')){c.checked=false;return}
       api('incident/public',k==='pubOn'?{on:c.checked}:{anon:c.checked}).then(poll).catch(e=>{fail(e);poll()})}});
     if($('#bPubCp'))$('#bPubCp').onclick=()=>{const t=$('#pubUrl');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>alert('Link kopiert.')).catch(()=>{try{document.execCommand('copy');alert('Link kopiert.')}catch(e){}})}}}
+// Übungsleitung (Issue #29): vorbereitete Elemente der Übung, erst nach der Freigabe für alle sichtbar und fürs Suchgebiet relevant
+const EXK={pls:'PLS des Einsatzes',res:'Neuer Rettling',seen:'Rettling gesichtet',ext:'Neue externe Einsatzkraft',extdel:'Externe Einsatzkraft entfernen'};
+function exWhat(j){const ref=(j.kind==='seen'||j.kind==='extdel')&&st.ex_injects.find(x=>x.id===j.ref_id),t=j.ago==null?', Zeitpunkt gibst du bei der Freigabe an':j.ago?`, Drift ab ${j.ago} min vor der Freigabe`:'';
+  if(j.kind==='ext')return `Erfasst die externe Einsatzkraft «${j.name}» an diesem Standort.`;if(j.kind==='extdel')return `Entfernt die externe Einsatzkraft «${ref?ref.name:'?'}».`;
+  return j.kind==='pls'?'Setzt den PLS des Einsatzes'+t+'.':j.kind==='res'?`Erfasst den Rettling «${j.name}» mit eigenem PLS${t}.`
+    :j.ref_id==null?`Meldet einen gesichteten Rettling und erfasst ihn als ${j.name?'«'+j.name+'»':'«Unbekannter Rettling»'} mit PLS hier${t}.`:`Meldet «${ref?exRN(ref):'?'}» gesichtet und setzt den PLS neu${t}.`}
+const exRN=x=>x.name||'Unbekannter Rettling'; // Sichtung ohne Rettling (ref_id NULL) erfasst einen neuen (name) oder unbekannten
+// Freigabe mit Zeitpunkt des PLS: leer = jetzt, Zahl = Minuten vorher, HH:MM = Uhrzeit (liegt sie in der Zukunft, gilt der Vortag)
+function exAgo(v){v=v.trim();if(!v)return 0;if(/^\d+$/.test(v))return +v;const m=v.match(/^(\d{1,2})[:.](\d{2})$/);if(!m||+m[1]>23||+m[2]>59)return null;
+  const t=new Date();t.setHours(+m[1],+m[2],0,0);if(t-Date.now()>60000)t.setDate(t.getDate()-1);return Math.max(0,Math.round((Date.now()-t)/60000))}
+function exRelAt(j){const d=dlg(`«${j.label}» freigeben`,`<div class="mut">${esc(exWhat(j).replace(', Zeitpunkt gibst du bei der Freigabe an',''))}${j.msg?'<br>Meldung an alle: '+esc(j.msg):''}</div>
+    <label class="mut">Zeitpunkt des PLS (Beginn der Drift): leer = jetzt, Minuten vorher (z. B. 15) oder Uhrzeit (z. B. 14:20)<input id="xA" inputmode="numeric" autocomplete="off" placeholder="jetzt"></label><div class="mut" id="xAi"></div>`,
+    async d=>{const a=exAgo($('#xA',d).value);if(a==null||a>1440)throw new Error('Zeitpunkt nicht erkannt: leer, Minuten (0 bis 1440) oder Uhrzeit wie 14:20');await api('ex/release',{id:j.id,ago:a});poll()},'Freigeben');
+  const i=$('#xA',d),show=()=>{const a=exAgo(i.value);$('#xAi',d).textContent=a==null||a>1440?'Nicht erkannt':'PLS um '+new Date(Date.now()-a*60000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})+(a?` (vor ${a} min)`:' (jetzt)')};i.oninput=show;show()}
+function exSec(){const js=st.ex_injects||[],open=js.filter(j=>!j.released).length;
+  return sec('exlead',`Übungsleitung: Elemente (${open} offen)`,js.map(j=>{const ref=(j.kind==='seen'||j.kind==='extdel')&&js.find(x=>x.id===j.ref_id),blocked=(j.kind==='seen'||j.kind==='extdel')&&j.ref_id!=null&&!(ref&&ref.released);
+    return `<div class="msg"><b>${esc(j.label)}</b> <span class="mut">${EXK[j.kind]}${j.kind==='res'||j.kind==='ext'?': '+esc(j.name):j.kind==='extdel'?': '+esc(ref?ref.name:'?'):ref?': '+esc(exRN(ref)):j.kind==='seen'?(j.name?': neu, '+esc(j.name):': unbekannt'):''}${esc(fcs(j.lat,j.lon,' · '))}</span>${j.msg?`<div>Meldung: ${esc(j.msg)}</div>`:''}
+      <div class="row" style="align-items:center">${j.released?`<span class="mut">✓ freigegeben ${fmtT(j.released)}${j.released_name?' von '+esc(j.released_name):''}</span>`:`<button class="pri" data-xr="${j.id}" ${blocked?`disabled title="${j.kind==='extdel'?'Zuerst die externe Einsatzkraft freigeben':'Zuerst den Rettling freigeben'}"`:''}>Freigeben</button>`}<button data-xz="${j.id}">Zeigen</button></div>${!j.released&&j.auto!=null?`<div class="mut">⏱ automatisch um ${new Date((st.incident.alarm_at+60*j.auto)*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})}${blocked?(j.kind==='extdel'?', sobald die externe Einsatzkraft freigegeben ist':', sobald der Rettling freigegeben ist'):''}</div>`:''}</div>`}).join('')
+    ||'<div class="mut">Keine vorbereiteten Elemente.</div>')+'<div class="mut">Nicht freigegebene Elemente sieht nur die Übungsleitung. Die Meldung geht bei der Freigabe als Nachricht an alle. Elemente mit ⏱ gibt der Server zur angegebenen Zeit selbst frei, du kannst sie auch früher freigeben.</div>'}
+// Standort eines Elements kurz auf der Karte zeigen (nur für die Übungsleitung, nicht freigegeben = gestrichelt)
+let exMark=null;function exShow(j){stopFollow();toggleSheet(false);if(exMark)map.removeLayer(exMark);
+  exMark=L.circleMarker([j.lat,j.lon],{radius:12,color:'#e05cb0',weight:3,dashArray:j.released?null:'4',fillOpacity:.15}).bindTooltip(esc(j.label),{permanent:true,direction:'right'}).addTo(map);map.panTo([j.lat,j.lon]);
+  const m=exMark;setTimeout(()=>{if(exMark===m){map.removeLayer(m);exMark=null}},8000)}
 // Öffentliche Ansicht (Public Mode, nur Einsatzleitung): Link public.html?k=<public_token> zum Zuschauen ohne Login
 const pubUrl=t=>location.origin+location.pathname.replace(/[^/]*$/,'')+'public.html?k='+t;
 function pubSec(i){const u=i.public&&i.public_token?pubUrl(i.public_token):'';
@@ -322,7 +357,7 @@ function pubSec(i){const u=i.public&&i.public_token?pubUrl(i.public_token):'';
     ${u?`<div class="row"><input id="pubUrl" readonly value="${esc(u)}" aria-label="Link zur öffentlichen Ansicht" onfocus="this.select()"><button id="bPubCp">Link kopieren</button><a class="btn" href="${esc(u)}" target="_blank" rel="noopener">Öffnen</a></div>`:''}<div class="mut">Sichtbar sind Karte, Standorte, Markierungen, Bereiche und Rettlinge, keine Nachrichten und kein Einsatzlog. Ausschalten macht den Link ungültig.</div>`}
 async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'&&shares(mode))track();await poll()}catch(e){fail(e)}}
 function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
-async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined')track();await poll()}catch(e){fail(e)}}
+async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'){track();openSec.add('mine')}await poll()}catch(e){fail(e)}}
 // Abstand zur nächsten Gewässerachse im geladenen Gewässernetz (Meter), Infinity ohne Daten
 function waterDist(p){const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);let best=Infinity;
   [...nets.values()].flatMap(n=>n.ways||[]).forEach(w=>{const g=w.geometry;for(let j=1;j<g.length;j++){const ax=(g[j-1].lon-p.lon)*kx,ay=(g[j-1].lat-p.lat)*ky,dx=(g[j].lon-g[j-1].lon)*kx,dy=(g[j].lat-g[j-1].lat)*ky,L=dx*dx+dy*dy,t=L?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L)):0;best=Math.min(best,Math.hypot(ax+t*dx,ay+t*dy))}});return best}
@@ -444,7 +479,7 @@ function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!
   if(on&&ms.length&&ms[ms.length-1].id>msgSeen){msgSeen=ms[ms.length-1].id;try{localStorage.setItem(key,msgSeen)}catch(e){}}
   const unread=ms.filter(m=>m.id>msgSeen&&m.from_user!=me.id).length,c=$('#msgCnt');c.hidden=!unread;c.textContent=unread;updFold();
   if(!on)return;
-  const L=$('#msgList'),atEnd=L.scrollHeight-L.scrollTop-L.clientHeight<30,joined=!!(st.me&&!st.me.left_at&&st.me.mode!=='declined');
+  const L=$('#msgList'),atEnd=L.scrollHeight-L.scrollTop-L.clientHeight<30,joined=!!(st.me&&!st.me.left_at&&st.me.mode!=='declined')||!!st.ex_lead; // Übungsleitung sendet ohne Teilnahme
   const marked=new Set((st.msg_marks||[]).map(x=>x.id));
   L.innerHTML=ms.map(m=>`<div class="mg${m.recipients&&msgForMe(m)?' tome':''}"><b>${m.from_user==me.id?'Du':esc(m.from_name)}</b> ${esc(m.text)}<span class="t">${fmtT(m.created)} · an ${esc(msgTo(m))}</span>`
     +(m.lat!=null?`<button class="lk" data-goto="${m.lat},${m.lon}" title="Standort beim Senden auf der Karte zeigen">📍 Standort${esc(fcs(m.lat,m.lon,' '))}</button>`:'')
@@ -646,12 +681,12 @@ function bindMarks(){
 /* ---------- Polling ---------- */
 // Alarmierungsart kommt vom Server (critical): scharfer Einsatz immer kritisch, Übung nur mit Übungsmodus
 let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
-    if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
+    if(nx.incident){const i=nx.incident,cr=nx.critical!==false;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(nx.alarm!==false&&notify(i.is_exercise?'ÜBUNG':'EINSATZ',i.message,'i:'+i.id,cr))toggleSheet(true)}
       // alle sehen alle Nachrichten, benachrichtigt werden nur die markierten Empfänger (bzw. alle bei «an alle»)
       (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);msgData.push(m);if(m.from_user!=me.id&&nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&msgForMe(m))notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
       if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
       st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&shares(nx.me.mode))track();else stop()}
-    else{if(st&&st.incident){const x=st.incident.is_exercise;if(notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
+    else{if(st&&st.incident){const x=st.incident.is_exercise;if((st.alarm!==false||st.me)&&notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
     if(st&&st.incident)creating=false;updateChip();drawMap();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}catch(e){console.error('Poll',e)}}
 async function render(){clearInterval(timer);if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
   try{me=(await api('me')).me}catch(e){return}
