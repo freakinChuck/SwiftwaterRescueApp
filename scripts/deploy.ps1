@@ -1,6 +1,8 @@
 # Deployt einen Git-Stand der Web-App per SSH auf einen Server (z. B. Testsystem bei cyon).
 # Verbindung steht in deploy.local.json (nicht im Git, Vorlage: deploy.example.json), Anmeldung nur per SSH-Schlüssel.
 # Ausgeliefert wird ein eingecheckter Stand (Standard: origin/main), nicht die Arbeitskopie.
+# App-Icons je System: im Repo die grün umrandeten (DEV), Test erhält icons/test/ (orange), Prod icons/prod/ (ohne Rand).
+# Das System steht in der Konfiguration unter "env" (dev|test|prod), sonst prod, wenn der Dateiname "prod" enthält, sonst test.
 # api/config.php und die Datenbank in api/data/ auf dem Server bleiben unangetastet.
 #
 #   powershell -File scripts\deploy.ps1                      # origin/main
@@ -16,6 +18,8 @@ $c = Get-Content $Config -Raw | ConvertFrom-Json
 $files = 'index.html', 'admin.html', 'public.html', 'common.js', 'common.css', '.htaccess', 'manifest.webmanifest', 'sw.js', 'icons', 'api/index.php', 'api/data/.htaccess'
 $opt = @('-i', $c.key, '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes')
 $dest = "$($c.user)@$($c.host)"
+$envName = if ($c.env) { $c.env } elseif ((Split-Path $Config -Leaf) -match "prod") { "prod" } else { "test" }
+if ($envName -notin "dev", "test", "prod") { throw "Unbekanntes System in env: $envName" }
 
 git fetch -q origin; Check 'git fetch'
 $sha = (git rev-parse --short $Ref); Check "Stand $Ref"
@@ -25,8 +29,8 @@ git archive --format=tar -o $tar $Ref @files; Check 'git archive'
 # Auf dem Server zuerst in einen Zwischenordner entpacken und die PHP-Syntax prüfen, erst dann übernehmen.
 # common.js/common.css werden in den HTML-Seiten mit ?v=<Stand> eingebunden, damit Browser nach jedem Deployment die neuen Dateien laden. In sw.js ebenso, damit der Service Worker (Issue #67) sich mit jedem Deployment erneuert.
 $stage = ".swiftwater-deploy-$sha"
-Write-Host "Deploye $Ref ($sha) nach ${dest}:$($c.path)"
+Write-Host "Deploye $Ref ($sha) nach $envName, ${dest}:$($c.path)"
 scp @opt $tar "${dest}:$stage.tar"; Check 'Upload'
-ssh @opt $dest "set -e; rm -rf $stage; mkdir $stage; tar -xf $stage.tar -C $stage; rm $stage.tar; php -l $stage/api/index.php; sed -i 's/?v=[0-9a-z]*/?v=$sha/g' $stage/*.html $stage/sw.js; cp -r $stage/. $($c.path)/; rm -rf $stage; echo '$Ref $sha' > $($c.path)/api/data/deployed.txt; echo Fertig."
+ssh @opt $dest "set -e; rm -rf $stage; mkdir $stage; tar -xf $stage.tar -C $stage; rm $stage.tar; php -l $stage/api/index.php; if [ $envName != dev ]; then cp $stage/icons/$envName/* $stage/icons/; fi; rm -rf $stage/icons/test $stage/icons/prod; sed -i 's/?v=[0-9a-z]*/?v=$sha/g' $stage/*.html $stage/sw.js; cp -r $stage/. $($c.path)/; rm -rf $stage; echo '$Ref $sha' > $($c.path)/api/data/deployed.txt; echo Fertig."
 Check 'Installation auf dem Server'
 Remove-Item $tar

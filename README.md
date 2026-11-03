@@ -10,7 +10,7 @@
 Liefert einen eingecheckten Git-Stand aus (nicht die Arbeitskopie): Dateien per `git archive`, Upload per `scp`, auf dem Server erst PHP-Syntaxprüfung (`php -l`), dann Übernahme. `api/config.php` und `api/data/` (Datenbank) werden nie überschrieben; der ausgelieferte Stand steht in `api/data/deployed.txt`.
 
 1. SSH-Schlüssel erzeugen (`ssh-keygen -t ed25519 -f %USERPROFILE%\.ssh\swiftwater-tst`) und den öffentlichen Teil im cyon-Panel beim Hosting-Benutzer eintragen (FTP-Unterkonten unterstützen keine Schlüssel).
-2. `deploy.example.json` nach `deploy.local.json` (Testsystem) bzw. `deploy.prod.json` (Produktivsystem) kopieren und Server, Benutzer, Schlüssel und Zielordner eintragen. Alle `deploy.*.json` ausser der Vorlage sind per `.gitignore` ausgeschlossen, Passwörter braucht es keine.
+2. `deploy.example.json` nach `deploy.local.json` (Testsystem) bzw. `deploy.prod.json` (Produktivsystem) kopieren und Server, Benutzer, Schlüssel und Zielordner eintragen. Alle `deploy.*.json` ausser der Vorlage sind per `.gitignore` ausgeschlossen, Passwörter braucht es keine. `env` (`dev`, `test` oder `prod`) wählt die App-Icons: DEV grün umrandet (so liegen sie im Repo), Test orange (`icons/test/`), Prod ohne Rand (`icons/prod/`). Ohne `env` gilt `prod`, wenn der Dateiname «prod» enthält, sonst `test`.
 3. Ausliefern:
 ```
 powershell -File scripts\deploy.ps1                                  # origin/main
