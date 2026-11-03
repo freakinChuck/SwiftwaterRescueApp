@@ -4,7 +4,7 @@
    - Kartenkacheln: zuerst Netz, offline die zuletzt gesehenen (höchstens TILE_MAX).
    - Die API (api/index.php) geht nie über den Zwischenspeicher; den letzten Stand merkt sich die App selbst (localStorage sw_last). */
 const SHELL='sw-shell-1',LIBS='sw-libs-1',TILES='sw-tiles-1',TILE_MAX=1500;
-const PRE=['./','index.html','common.js?v=0','common.css?v=0','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png'];
+const PRE=['./','index.html','common.js?v=0','common.css?v=0','manifest.webmanifest','img/icon-192.png','img/icon-512.png'];
 const CDN=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\//,TILE=/^https:\/\/(wmts\.geo\.admin\.ch|tile\.openstreetmap\.org)\//;
 
 self.addEventListener('install',e=>{e.waitUntil(caches.open(SHELL).then(c=>Promise.all(PRE.map(u=>c.add(u).catch(()=>{})))).then(()=>self.skipWaiting()))});
@@ -34,7 +34,7 @@ self.addEventListener('push',e=>{let m={};try{m=e.data?e.data.json():{}}catch(_)
   e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{
     if(cs.some(c=>c.visibilityState==='visible'&&c.focused))return;
     return self.registration.showNotification(m.t||'Swiftwater Rescue',{body:m.b||'',tag:m.tag||undefined,renotify:true,requireInteraction:!!m.crit,
-      vibrate:m.crit?[600,200,600,200,600,200,600]:[200],icon:'icons/icon-192.png',badge:'icons/badge-96.png',data:{url:'./'}})}))});
+      vibrate:m.crit?[600,200,600,200,600,200,600]:[200],icon:'img/icon-192.png',badge:'img/badge-96.png',data:{url:'./'}})}))});
 // Klick: offene App in den Vordergrund holen, sonst öffnen
 self.addEventListener('notificationclick',e=>{e.notification.close();
   e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>new URL(c.url).pathname.endsWith('/')||c.url.includes('index.html'));

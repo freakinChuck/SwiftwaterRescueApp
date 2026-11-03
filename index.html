@@ -3,8 +3,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Swiftwater Rescue</title>
 <!-- PWA (Issue #67): installierbar, Service Worker sw.js; Icons sind Platzhalter bis zum Logo (Issue #56) -->
-<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0f2430"><link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Swiftwater">
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0f2430"><link rel="icon" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Swiftwater">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
@@ -123,7 +123,7 @@ function alarm(t,b,key){if(key&&(ackGet().includes(key)||key===curKey||alarmQ.so
 function showAlarm(){if($('#alarm').style.display==='flex'||!alarmQ.length)return;const[t,b,k]=alarmQ.shift();curKey=k||null;$('#aT').textContent=t;$('#aB').textContent=b;$('#alarm').style.display='flex';beep(true);
   sysNote(t,b,k,true)}
 // Systembenachrichtigung über den Service Worker (Issue #67), mit demselben tag wie die Push-Nachricht des Servers: ersetzt sie statt sie zu verdoppeln
-function sysNote(t,b,tag,crit){if(!('Notification'in window)||Notification.permission!=='granted')return;const o={body:b,tag:tag||undefined,requireInteraction:!!crit,icon:'icons/icon-192.png'};
+function sysNote(t,b,tag,crit){if(!('Notification'in window)||Notification.permission!=='granted')return;const o={body:b,tag:tag||undefined,requireInteraction:!!crit,icon:'img/icon-192.png'};
   (navigator.serviceWorker?navigator.serviceWorker.getRegistration():Promise.resolve(null)).then(r=>r?r.showNotification(t,o):new Notification(t,o)).catch(()=>{try{new Notification(t,o)}catch(e){}})}
 $('#aOk').onclick=()=>{if(curKey)ackAdd(curKey);curKey=null;$('#alarm').style.display='none';beep(false);showAlarm()};
 /* ---------- Hauptansicht ---------- */
