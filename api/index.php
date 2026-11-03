@@ -1516,6 +1516,35 @@ switch ($route) {
     'avg_first_accept' => avg(array_map(fn($r) => $r['first_accept'] === null ? null : $r['first_accept'] - $r['alarm_at'], $rows)),
     'avg_first_area' => avg(array_map(fn($r) => $r['first_area'] === null ? null : $r['first_area'] - $r['alarm_at'], $rows))]]);
 
+ case 'stats/people': need('stats'); // Statistik pro Person (Issue #87): eine Zeile je Teilnahme, ausgewertet (Zeitraum, Einsatz, Art) im Frontend
+  // Einsatzzeit = Summe der Abschnitte von «angenommen»/«wieder eingestiegen» bis «verlassen», der letzte bis Austritt (left_at) bzw. Einsatzende
+  // Fahrten = Log-Einträge «move» (Luftlinie gemäss Log), Weg = Summe der aufgezeichneten Standorte (nur mit Aufzeichnung, Lücken über 120 s nicht, wie GAP_S im Replay)
+  $inc = []; foreach ($db->query("SELECT id,alarm_at,ended_at,is_exercise,log_anon FROM incidents") as $r) $inc[(int)$r['id']] = ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'log_anon']);
+  $ev = []; foreach ($db->query("SELECT incident_id,user_id,ts,kind,text FROM incident_log WHERE kind IN ('accept','leave','move','area') AND user_id IS NOT NULL ORDER BY ts, id") as $r) $ev[$r['incident_id'] . ':' . $r['user_id']][] = $r;
+  $tr = []; $last = []; foreach ($db->query("SELECT incident_id,user_id,ts,lat,lon FROM track WHERE user_id IS NOT NULL ORDER BY incident_id,user_id,ts,id") as $r) {
+   $k = $r['incident_id'] . ':' . $r['user_id']; $l = $last[$k] ?? null;
+   if ($l && (int)$r['ts'] - (int)$l['ts'] <= 120) $tr[$k] = ($tr[$k] ?? 0) + hav((float)$l['lat'], (float)$l['lon'], (float)$r['lat'], (float)$r['lon']);
+   $last[$k] = $r; }
+  $rows = [];
+  foreach ($db->query("SELECT p.incident_id,p.user_id,p.mode,p.left_at,u.name,u.username,u.active,m.name mode_name FROM participants p JOIN users u ON u.id=p.user_id LEFT JOIN modes m ON m.code=p.mode") as $p) {
+   $i = $inc[(int)$p['incident_id']] ?? null; if (!$i) continue;
+   $k = $p['incident_id'] . ':' . $p['user_id']; $e = $ev[$k] ?? []; $dec = $p['mode'] === 'declined';
+   $dur = 0; $open = null; $first = null; $trips = 0; $km = 0.0; $area = null;
+   foreach ($e as $x) { $t = (int)$x['ts'];
+    if ($x['kind'] === 'accept') { if ($first === null) $first = $t; if ($open === null) $open = $t; }
+    elseif ($x['kind'] === 'leave') { if ($open !== null) { $dur += $t - $open; $open = null; } }
+    elseif ($x['kind'] === 'area') { if ($area === null) $area = $t; }
+    elseif (preg_match('~ca\. ([0-9.]+) km~', $x['text'], $mm)) { $trips++; $km += (float)$mm[1]; } }
+   $stop = $p['left_at'] !== null ? (int)$p['left_at'] : ($i['ended_at'] ?? $now);
+   if ($open !== null && !$dec) $dur += max(0, $stop - $open);
+   $row = ['incident_id' => $i['id'], 'is_exercise' => $i['is_exercise'], 'alarm_at' => $i['alarm_at'], 'declined' => $dec ? 1 : 0,
+    'dur' => $dec ? 0 : $dur, 'react' => $first === null ? null : max(0, $first - $i['alarm_at']), 'area' => $area === null ? null : max(0, $area - $i['alarm_at']),
+    'trips' => $trips, 'km' => round($km, 1), 'track_km' => isset($tr[$k]) ? round($tr[$k] / 1000, 1) : null, 'mode_name' => $dec ? null : $p['mode_name']];
+   // endgültig anonymisierte Protokolle: Teilnahme ohne Person (zählt in den Summen, nicht bei einer Person)
+   if ($i['log_anon']) $row += ['user_id' => null, 'name' => null, 'username' => null, 'active' => 1];
+   else $row += ['user_id' => (int)$p['user_id'], 'name' => $p['name'], 'username' => $p['username'], 'active' => (int)$p['active']];
+   $rows[] = $row; }
+  out(['rows' => $rows]);
  /* ---------- Web-Push (Issue #67): Abonnement des Geräts ---------- */
  case 'push/key': out(['enabled' => pushOk(), 'key' => pushOk() ? vapid()['pub'] : null]); // öffentlicher VAPID-Schlüssel für pushManager.subscribe
  case 'push/subscribe': // endpoint, keys: {p256dh, auth}; ein Gerät gehört immer der zuletzt angemeldeten Person

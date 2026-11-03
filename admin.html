@@ -32,6 +32,11 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .inc .ia{display:flex;flex-wrap:wrap;gap:.3rem;margin-left:auto}.inc .ia button{padding:.35rem .6rem}.inc .ia .sec{background:none;color:var(--mut)}
 @media(max-width:760px){.inc .ia{margin-left:0;width:100%}.inc .ia button{flex:1 1 auto}}
 @media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}.inc.url .kv{grid-template-columns:repeat(3,1fr)}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
+/* Statistik pro Person (Issue #87): Filterzeile, Diagramme als SVG, Hinweis beim Darüberfahren */
+.psf label{flex:1 1 9rem}.psf .psinc{flex:3 1 18rem}.psf select,.psf input{width:100%}
+.psch{width:100%;height:auto;display:block;margin:.2rem 0 .6rem}.psch text{fill:var(--mut);font-size:11px;font-variant-numeric:tabular-nums}.psch text.nm{fill:currentColor}.psch line{stroke:var(--line);stroke-width:1}
+.pslg{display:flex;gap:1rem;font-size:.8rem;color:var(--mut)}.pslg i{display:inline-block;width:.7rem;height:.7rem;border-radius:2px;margin-right:.3rem;vertical-align:-1px}
+#psTip{position:fixed;display:none;z-index:6000;background:#08161e;border:1px solid var(--line);border-radius:6px;padding:.25rem .5rem;font-size:.8rem;pointer-events:none}
 /* Replay */
 #replay{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
 #rpHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--line)}#rpHead h2{margin:0;font-size:1.15rem;flex:1 1 16rem}
@@ -121,10 +126,10 @@ const NAV=[
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir]]],
-  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
+  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:'stats',einsicht:'cfg_my'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:'stats',personenstatistik:'stats',einsicht:'cfg_my'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>can(NAV_PERM[k]))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -497,6 +502,75 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
   el.querySelectorAll('[data-rpd]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.rpd);
     if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Markierungen, Bereiche und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
       api('incident/replay/delete',{id:x.id}).then(loadStats).catch(fail)})}
+/* ---------- Statistik pro Person (Issue #87): wer wie viele Einsätze, Zeiten, Kilometer; je Einsatz, über alle oder je Zeitraum ---------- */
+// Daten: stats/people (eine Zeile je Teilnahme) und stats (Einsätze für die Auswahl); ausgewertet wird hier, Filter pro Gerät gemerkt (sw_psf)
+const PS_METRIC={n:'Anzahl Einsätze',dur:'Einsatzzeit',km:'Fahrtkilometer',track:'Weg (Aufzeichnung)'};
+let psData=null,psF=(()=>{try{return Object.assign({art:'all',per:'all',from:'',to:'',inc:'',m:'n'},JSON.parse(localStorage.getItem('sw_psf')||'{}'))}catch(e){return{art:'all',per:'all',from:'',to:'',inc:'',m:'n'}}})();
+async function loadPS(){const el=$('#sPS');try{const[p,s]=await Promise.all([api('stats/people'),api('stats')]);psData={rows:p.rows,inc:s.incidents}}
+  catch(e){el.innerHTML='<h2>Statistik pro Person</h2><div class="mut">Statistik nicht verfügbar: '+esc(e.message)+'</div>';return}renderPS()}
+const psHrs=s=>s==null?'–':s<3600?Math.round(s/60)+' min':(Math.round(s/360)/10).toLocaleString('de-CH')+' h';
+const psKm=k=>k==null?'–':(Math.round(k*10)/10).toLocaleString('de-CH')+' km';
+// Zeitraum: alle, ein Kalenderjahr oder frei (von/bis, Datum inklusive)
+function psRange(){const f=psF;if(/^\d{4}$/.test(f.per))return[new Date(+f.per,0,1)/1000,new Date(+f.per+1,0,1)/1000];
+  if(f.per==='custom'){const a=f.from?new Date(f.from+'T00:00')/1000:-Infinity,b=f.to?new Date(f.to+'T00:00')/1000+86400:Infinity;return[a,b]}return[-Infinity,Infinity]}
+function renderPS(){const el=$('#sPS'),f=psF,[a,b]=psRange(),save=()=>{try{localStorage.setItem('sw_psf',JSON.stringify(psF))}catch(_){}};
+  const years=[...new Set(psData.inc.map(x=>new Date(x.alarm_at*1000).getFullYear()))].sort((x,y)=>y-x);
+  const incs=psData.inc.filter(x=>isArt(x,f.art)&&x.alarm_at>=a&&x.alarm_at<b);
+  if(f.inc&&!incs.some(x=>x.id==f.inc))f.inc='';
+  const sel=f.inc?incs.filter(x=>x.id==f.inc):incs,ids=new Set(sel.map(x=>x.id));
+  const rows=psData.rows.filter(r=>ids.has(r.incident_id)),acc=rows.filter(r=>!r.declined),anon=acc.filter(r=>r.user_id==null).length;
+  // pro Person zusammenfassen (anonymisierte Protokolle ohne Person zählen nur in den Summen)
+  const P=new Map();rows.filter(r=>r.user_id!=null).forEach(r=>{let p=P.get(r.user_id);if(!p)P.set(r.user_id,p={id:r.user_id,name:r.name,username:r.username,active:r.active,n:0,real:0,ex:0,dec:0,dur:0,react:[],area:0,trips:0,km:0,track:0,modes:{}});
+    if(r.declined){p.dec++;return}p.n++;r.is_exercise?p.ex++:p.real++;p.dur+=r.dur;if(r.react!=null)p.react.push(r.react);if(r.area!=null)p.area++;p.trips+=r.trips;p.km+=r.km;p.track+=r.track_km||0;if(r.mode_name)p.modes[r.mode_name]=(p.modes[r.mode_name]||0)+1});
+  const ppl=[...P.values()],val=p=>f.m==='n'?p.n:f.m==='dur'?p.dur:f.m==='km'?p.km:p.track,fmt=v=>f.m==='n'?String(v):f.m==='dur'?psHrs(v):psKm(v);
+  ppl.sort((x,y)=>val(y)-val(x)||y.n-x.n||x.name.localeCompare(y.name,'de'));
+  const avg=l=>l.length?l.reduce((s,x)=>s+x,0)/l.length:null,sumF=k=>acc.reduce((s,r)=>s+(r[k]||0),0);
+  const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  el.innerHTML=`<h2>Statistik pro Person</h2>
+    <div class="row psf"><label class="mut">Art<select id="psArt">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===f.art?'selected':''}>${v}</option>`).join('')}</select></label>
+      <label class="mut">Zeitraum<select id="psPer"><option value="all">Gesamte Zeit</option>${years.map(y=>`<option value="${y}" ${String(y)===f.per?'selected':''}>${y}</option>`).join('')}<option value="custom" ${f.per==='custom'?'selected':''}>Von – bis …</option></select></label>
+      ${f.per==='custom'?`<label class="mut">Von<input type="date" id="psFrom" value="${esc(f.from)}"></label><label class="mut">Bis<input type="date" id="psTo" value="${esc(f.to)}"></label>`:''}
+      <label class="mut psinc">Einsatz<select id="psInc"><option value="">Alle im Zeitraum (${incs.length})</option>${incs.map(x=>`<option value="${x.id}" ${x.id==f.inc?'selected':''}>${x.is_exercise?'Übung':'Einsatz'} ${dt(x.alarm_at)} – ${esc(x.message.slice(0,60))}</option>`).join('')}</select></label></div>
+    <div class="ssum"><div class="${f.art==='ex'?'ex':''}"><h3>Übersicht</h3><div class="kv"><span><small>Einsätze</small>${sel.filter(x=>!x.is_exercise).length}</span><span><small>Übungen</small>${sel.filter(x=>x.is_exercise).length}</span><span><small>Teilnahmen</small>${acc.length}${rows.length>acc.length?` <small>${rows.length-acc.length} abgelehnt</small>`:''}</span><span><small>Personen</small>${ppl.filter(p=>p.n).length}</span>
+      <span><small>Einsatzzeit gesamt</small>${psHrs(sumF('dur'))}</span><span><small>Ø Reaktionszeit</small>${psHrs(avg(acc.map(r=>r.react).filter(x=>x!=null)))}</span><span><small>Fahrten</small>${sumF('trips')} · ${psKm(sumF('km'))}</span><span><small>Weg (Aufzeichnung)</small>${psKm(sumF('track_km'))}</span></div>
+      ${anon?`<div class="mut" style="font-size:.8rem;margin-top:.3rem">${anon} Teilnahme${anon>1?'n':''} aus anonymisierten Protokollen ohne Person (nur in den Summen).</div>`:''}</div></div>
+    ${f.inc?'':psMonths(sel)}
+    <div class="row" style="align-items:center;margin-top:.8rem"><h3 style="margin:0;flex:1 1 auto">Pro Person</h3><label class="mut" style="flex:0 0 auto">Sortieren nach<select id="psM">${Object.entries(PS_METRIC).map(([k,v])=>`<option value="${k}" ${k===f.m?'selected':''}>${v}</option>`).join('')}</select></label><button class="sec" id="psCsv" style="flex:0 0 auto">CSV</button></div>
+    ${psBars(ppl.filter(p=>val(p)>0).slice(0,15),val,fmt)}
+    ${ppl.map(p=>`<div class="inc usr ${p.active?'':'off'}"><div class="ih"><b>${esc(p.name)}</b><span class="mut">${esc(p.username)}${p.active?'':' · deaktiviert'}</span>${Object.keys(p.modes).length?`<div class="fl">${Object.entries(p.modes).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`<span>${esc(k)} ${v}×</span>`).join('')}</div>`:''}</div>
+      <div class="kv"><span><small>Einsätze</small>${p.real}</span><span><small>Übungen</small>${p.ex}</span><span><small>Einsatzzeit</small>${psHrs(p.dur)}</span><span><small>Ø Reaktion</small>${psHrs(avg(p.react))}</span>
+      <span><small>Abgelehnt</small>${p.dec}</span><span><small>Suchgebiet erreicht</small>${p.area}</span><span><small>Fahrten</small>${p.trips?p.trips+' · '+psKm(p.km):'–'}</span><span><small>Weg</small>${p.track?psKm(p.track):'–'}</span></div></div>`).join('')||'<div class="mut">Keine Teilnahmen im gewählten Bereich.</div>'}
+    <div class="mut" style="font-size:.8rem;margin-top:.6rem">Einsatzzeit: ab Annahme bis Verlassen bzw. Einsatzende (bei Wiedereinstieg je Abschnitt). Reaktionszeit: Alarm bis erste Annahme. Fahrtkilometer: erkannte Fahrten mit Fahrzeug gemäss Einsatzlog (Luftlinie). Weg: Summe der aufgezeichneten Standorte, nur bei Einsätzen mit Aufzeichnung.</div>`;
+  const set=(k,v)=>{psF[k]=v;save();renderPS()};
+  $('#psArt').onchange=e=>set('art',e.target.value);$('#psPer').onchange=e=>set('per',e.target.value);$('#psInc').onchange=e=>set('inc',e.target.value);$('#psM').onchange=e=>set('m',e.target.value);
+  if($('#psFrom')){$('#psFrom').onchange=e=>set('from',e.target.value);$('#psTo').onchange=e=>set('to',e.target.value)}
+  $('#psCsv').onclick=()=>{const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['Name','Benutzername','Einsätze','Übungen','Abgelehnt','Einsatzzeit (min)','Ø Reaktionszeit (min)','Suchgebiet erreicht','Fahrten','Fahrtkilometer','Weg Aufzeichnung (km)'];
+    const csv=[h,...ppl.map(p=>[p.name,p.username,p.real,p.ex,p.dec,Math.round(p.dur/60),p.react.length?Math.round(avg(p.react)/60):'',p.area,p.trips,p.km.toFixed(1),p.track.toFixed(1)])].map(r=>r.map(q).join(';')).join('\r\n');
+    const u=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'})),l=document.createElement('a');l.href=u;l.download='statistik-pro-person.csv';l.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};
+  psTips(el)}
+// Säulen je Monat (scharf/Übung gestapelt, 2 px Abstand, gerundete Enden), Hinweis beim Darüberfahren
+function psMonths(sel){if(!sel.length)return'';const k=t=>{const d=new Date(t*1000);return d.getFullYear()*12+d.getMonth()},ks=sel.map(x=>k(x.alarm_at));
+  let lo=Math.min(...ks),hi=Math.max(...ks);if(hi-lo>35)lo=hi-35;const n=hi-lo+1,M=[];for(let i=0;i<n;i++)M.push({k:lo+i,real:0,ex:0});
+  sel.forEach(x=>{const i=k(x.alarm_at)-lo;if(i>=0)M[i][x.is_exercise?'ex':'real']++});
+  const W=psW(),H=140,pl=26,pb=22,pt=8,mx=Math.max(1,...M.map(m=>m.real+m.ex)),bw=(W-pl)/n,y=v=>(H-pb-pt)*v/mx,mn=m=>new Date(Math.floor(m.k/12),m.k%12,1).toLocaleDateString('de-CH',{month:'short',year:'2-digit'});
+  const step=Math.ceil(n/Math.max(1,Math.floor(W/62))),ticks=[...new Set([0,Math.ceil(mx/2),mx])];
+  const bar=(m,i)=>{const w=Math.max(2,Math.min(44,bw*.64)),x=pl+i*bw+(bw-w)/2,hr=y(m.real),he=y(m.ex),base=H-pb,tip=`${mn(m)}: ${m.real} Einsätze, ${m.ex} Übungen`;
+    const seg=(h,y0,c,top)=>h<=0?'':top?`<path d="M${x},${y0} v${-(h-Math.min(4,h))} q0,${-Math.min(4,h)} ${Math.min(4,w/2)},${-Math.min(4,h)} h${w-2*Math.min(4,w/2)} q${Math.min(4,w/2)},0 ${Math.min(4,w/2)},${Math.min(4,h)} v${h-Math.min(4,h)} z" fill="${c}"/>`:`<rect x="${x}" y="${y0-h}" width="${w}" height="${h}" fill="${c}"/>`;
+    const gap=hr>0&&he>0?2:0;return`<g class="pstip" data-tip="${esc(tip)}"><rect x="${pl+i*bw}" y="${pt}" width="${bw}" height="${H-pb-pt}" fill="transparent"/>${seg(hr,base,'var(--alarm)',!he)}${seg(Math.max(0,he-gap),base-hr-gap,'var(--ex)',true)}</g>${i%step===0?`<text x="${x+w/2}" y="${H-6}" text-anchor="middle">${mn(m)}</text>`:''}`};
+  return`<h3>Einsätze pro Monat</h3><div class="pslg"><span><i style="background:var(--alarm)"></i>Scharfe Einsätze</span><span><i style="background:var(--ex)"></i>Übungen</span></div>
+    <svg class="psch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Einsätze pro Monat">${ticks.map(t=>`<line x1="${pl}" x2="${W}" y1="${H-pb-y(t)}" y2="${H-pb-y(t)}"/><text x="${pl-5}" y="${H-pb-y(t)+4}" text-anchor="end">${t}</text>`).join('')}${M.map(bar).join('')}</svg>`}
+// Diagrammbreite = verfügbare Breite, damit die Schrift am Handy nicht mitschrumpft
+const psW=()=>Math.max(280,Math.min(960,($('#sPS').clientWidth||640)-40));
+// waagrechte Balken je Person (bei Anzahl gestapelt scharf/Übung), höchstens 15
+function psBars(ppl,val,fmt){if(!ppl.length)return'';const W=psW(),lh=24,lw=Math.min(150,Math.round(W*.32)),H=ppl.length*lh+4,mx=Math.max(...ppl.map(val)),cnt=psF.m==='n',sx=v=>(W-lw-70)*v/mx;
+  const end=(x,y,w,h,c)=>w<=0?'':`<path d="M${x},${y} h${w-Math.min(4,w)} q${Math.min(4,w)},0 ${Math.min(4,w)},${Math.min(4,h/2)} v${h-2*Math.min(4,h/2)} q0,${Math.min(4,h/2)} ${-Math.min(4,w)},${Math.min(4,h/2)} h${-(w-Math.min(4,w))} z" fill="${c}"/>`;
+  return`${cnt?'<div class="pslg"><span><i style="background:var(--alarm)"></i>Scharfe Einsätze</span><span><i style="background:var(--ex)"></i>Übungen</span></div>':''}<svg class="psch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(PS_METRIC[psF.m])} pro Person">${ppl.map((p,i)=>{const y=i*lh+4,h=lh-8,v=val(p),tip=`${p.name}: ${cnt?`${p.real} Einsätze, ${p.ex} Übungen`:fmt(v)}`;
+    const mc=Math.max(6,Math.floor(lw/7.5)),nm=p.name.length>mc?p.name.slice(0,mc-1)+'…':p.name,wr=cnt?sx(p.real):0,we=cnt?sx(p.ex):sx(v),g=cnt&&wr>0&&we>0?2:0;
+    return`<g class="pstip" data-tip="${esc(tip)}"><rect x="0" y="${y-3}" width="${W}" height="${lh}" fill="transparent"/><text x="${lw-8}" y="${y+h/2+4}" text-anchor="end" class="nm">${esc(nm)}</text>
+      ${cnt&&wr>0?(we>0?`<rect x="${lw}" y="${y}" width="${wr}" height="${h}" fill="var(--alarm)"/>`:end(lw,y,wr,h,'var(--alarm)')):''}${end(lw+wr+g,y,Math.max(0,we-g),h,cnt?'var(--ex)':'var(--ex)')}<text x="${lw+sx(v)+6}" y="${y+h/2+4}">${esc(fmt(v))}</text></g>`}).join('')}</svg>`}
+function psTips(el){let t=$('#psTip');if(!t){t=document.createElement('div');t.id='psTip';document.body.appendChild(t)}
+  el.querySelectorAll('.pstip').forEach(g=>{g.onmousemove=e=>{t.textContent=g.dataset.tip;t.style.display='block';t.style.left=Math.min(e.clientX+12,innerWidth-t.offsetWidth-8)+'px';t.style.top=(e.clientY+14)+'px'};
+    g.onmouseleave=()=>t.style.display='none';g.onclick=g.onmousemove})}
 // Einsatzprotokoll im Gross-Modus mit Knopf «Anonym» (Issue #54, anonymisierte Fassung vom Server); endgültig anonymisierte ohne Knopf
 async function openLog(id,title,done,forced){let l;try{l=await api('incident/log&id='+id+myQ())}catch(e){return fail(e)}
   openBigLog(title+(done||forced?' (anonymisiert)':''),()=>l,false,done||forced?null:async on=>{l=await api('incident/log&id='+id+myQ()+(on?'&anon=1':''))})}
