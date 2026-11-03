@@ -8,6 +8,7 @@
 <style>
 body{min-height:100dvh}
 header{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10}header h1{font-size:1.15rem;margin:0;flex:1 1 12rem}
+#wrap.my{grid-template-columns:minmax(0,1fr);max-width:900px} /* Meine Einsätze: ohne Navigation */
 #wrap{max-width:1300px;margin:0 auto;padding:1rem;display:grid;grid-template-columns:13rem minmax(0,1fr);gap:1.2rem;align-items:start} /* minmax: breite Tabellen scrollen in .tw statt die Seite zu verbreitern */
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:1.2rem}main>section[hidden]{display:none}
 /* Navigation nach Kategorien (Issue #32); am Handy als Auswahlliste */
@@ -74,7 +75,13 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   if(!me.is_admin&&!me.is_planner&&me.my_runs==='off'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren und Übungsleiter zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
-  a.innerHTML=`<header><h1>Swiftwater Rescue – ${navTitle()}</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
+  MY=myMode();const adm=me.is_admin||me.is_planner;
+  if(MY){a.innerHTML=`<header><h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}<button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
+    <div id="wrap" class="my"><main><section id="sMy"><h2>Meine Einsätze</h2><div class="mut">Wird geladen …</div></section></main></div>`;
+    $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
+    if(adm)$('#bVw').onclick=e=>{e.preventDefault();location.hash='einsatzlog'};
+    document.title='Swiftwater Rescue – Meine Einsätze';return loadMy()}
+  a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine" title="Log und Replay deiner eigenen Einsätze, wie für Einsatzkräfte ohne Verwaltungsrechte">📋 Meine Einsätze</a>':''}<button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
     <div id="wrap"><nav id="nav" aria-label="Bereiche der Verwaltung"><select id="navSel" aria-label="Bereich wählen">${nav().map(([g,its])=>`<optgroup label="${esc(g)}">${its.map(([k,,l])=>`<option value="${k}">${esc(l)}</option>`).join('')}</optgroup>`).join('')}</select>
     <div class="navl">${nav().map(([g,its])=>`<div class="ng">${esc(g)}</div>${its.map(([k,,l])=>`<a href="#${k}" data-k="${k}">${esc(l)}</a>`).join('')}`).join('')}</div></nav>
     <main>${navItems().map(([k,id,l])=>`<section id="${id}" hidden><h2>${esc(l)}</h2><div class="mut">Wird geladen …</div></section>`).join('')}</main></div>`;
@@ -89,17 +96,19 @@ const NAV=[
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp]]],
-  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['meine','sMy','Meine Einsätze',loadMy]]],
+  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
 ];
-// Übungsleiter (Benutzerrolle ohne weitere Rechte der Verwaltung) sehen nur die Übungen, alle übrigen nur «Meine Einsätze» (Issue #61); diese fehlt bei my_runs off
-const nav=()=>{const ok=k=>k==='meine'?me.my_runs!=='off':me.is_admin||(me.is_planner&&k==='uebungen');return NAV.map(([g,its])=>[g,its.filter(([k])=>ok(k))]).filter(([,its])=>its.length)};
-const navTitle=()=>me.is_admin||me.is_planner?'Verwaltung':'Meine Einsätze';
+// Übungsleiter (Benutzerrolle ohne weitere Rechte der Verwaltung) sehen nur die Übungen
+const nav=()=>me.is_admin?NAV:NAV.map(([g,its])=>[g,its.filter(([k])=>k==='uebungen')]).filter(([,its])=>its.length);
+// «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
+// (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
+let MY=false;const myMode=()=>me.my_runs!=='off'&&(!(me.is_admin||me.is_planner)||location.hash==='#meine');const myQ=()=>MY?'&my=1':'';
 const navItems=()=>nav().flatMap(([,its])=>its);
 function showNav(){if(!$('#nav'))return;const its=navItems(),it=its.find(x=>x[0]===location.hash.slice(1))||its[0],[k,id,l,load]=it;
   its.forEach(([,i])=>{$('#'+i).hidden=i!==id});
   document.querySelectorAll('#nav a').forEach(a=>{if(a.dataset.k===k)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
-  $('#navSel').value=k;document.title='Swiftwater Rescue – '+navTitle()+' – '+l;load()}
-window.addEventListener('hashchange',()=>{showNav();window.scrollTo(0,0)});
+  $('#navSel').value=k;document.title='Swiftwater Rescue – Verwaltung – '+l;load()}
+window.addEventListener('hashchange',()=>{if(me&&myMode()!==MY)start();else showNav();window.scrollTo(0,0)}); // Wechsel zwischen Verwaltung und Meine Einsätze baut die Seite neu auf
 /* ---------- Benutzer ---------- */
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
@@ -378,8 +387,8 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
     if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Markierungen, Bereiche und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
       api('incident/replay/delete',{id:x.id}).then(loadStats).catch(fail)})}
 // Einsatzprotokoll im Gross-Modus mit Knopf «Anonym» (Issue #54, anonymisierte Fassung vom Server); endgültig anonymisierte ohne Knopf
-async function openLog(id,title,done,forced){let l;try{l=await api('incident/log&id='+id)}catch(e){return fail(e)}
-  openBigLog(title+(done||forced?' (anonymisiert)':''),()=>l,false,done||forced?null:async on=>{l=await api('incident/log&id='+id+(on?'&anon=1':''))})}
+async function openLog(id,title,done,forced){let l;try{l=await api('incident/log&id='+id+myQ())}catch(e){return fail(e)}
+  openBigLog(title+(done||forced?' (anonymisiert)':''),()=>l,false,done||forced?null:async on=>{l=await api('incident/log&id='+id+myQ()+(on?'&anon=1':''))})}
 /* ---------- Meine Einsätze (Issue #61): Log und Replay der beendeten Einsätze, an denen man teilgenommen hat ---------- */
 // my_runs (Einstellung der Verwaltung): anon = alle anderen anonym, die eigene Person mit Namen (forced, ohne Umschalter); full = alle Daten.
 // Endgültig Anonymisiertes (rp_anon, log_anon) bleibt in jedem Fall ganz anonym.
@@ -422,7 +431,7 @@ const GAP_S=120; // längere Lücken zwischen zwei Standortmeldungen nicht inter
 const durT=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')};
 const lastIdx=(a,t)=>{let lo=0,hi=a.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(a[m][1]<=t){r=m;lo=m+1}else hi=m-1}return r}; // letzter Eintrag mit ts ≤ t
 // o.anon: anonymisierte Fassung (Issue #54), o.t: Zeitpunkt beim Umschalten beibehalten
-async function openReplay(id,o={}){let d;try{d=await api('incident/replay&id='+id+(o.anon?'&anon=1':''))}catch(e){return fail(e)}
+async function openReplay(id,o={}){let d;try{d=await api('incident/replay&id='+id+myQ()+(o.anon?'&anon=1':''))}catch(e){return fail(e)}
   closeReplay();const i=d.incident,ov=document.createElement('div');ov.id='replay';ov.setAttribute('role','dialog');ov.setAttribute('aria-label','Replay');
   ov.innerHTML=`<div id="rpHead"><h2>${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} Replay – ${esc(i.message)}</h2><button id="rpPlay" class="pri">▶ Abspielen</button><select id="rpSpd" aria-label="Geschwindigkeit">${[1,5,10,30,60,120].map(v=>`<option value="${v}" ${v===30?'selected':''}>${v}× schneller</option>`).join('')}</select><select id="rpTrail" aria-label="Spurlänge">${TRAILS.map(([v,l])=>`<option value="${v}" ${v===trailWin()?'selected':''}>${l}</option>`).join('')}</select><button id="rpAuto" aria-pressed="false" title="Karte zeigt laufend alle sichtbaren aktiven Positionen und folgt ihnen">Auto-Übersicht</button><button id="rpAnon" aria-pressed="${!!d.anon}" ${i.rp_anon?'disabled title="Das Replay wurde endgültig anonymisiert"':d.forced?'disabled title="Für Einsatzkräfte nur anonymisiert freigegeben (du selbst mit Namen)"':'title="Namen von Einsatzkräften, Rettlingen und Externen durch Bezeichnungen ersetzen, auch im Log"'}>${d.anon?'✓ ':''}${i.rp_anon||d.forced?'Anonymisiert':'Anonym'}</button><button id="rpX">Schliessen</button></div>
     <div id="rpBody"><div id="rpMap"></div><div id="rpFollow" hidden><span></span><button id="rpUnf" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><aside id="rpSide"><div id="rpInfo"></div><h3 id="rpPH"></h3><div id="rpPeople"></div><h3>Einsatzlog bis zu diesem Zeitpunkt</h3><div id="rpLog"></div></aside></div>

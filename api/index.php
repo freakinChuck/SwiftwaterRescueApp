@@ -188,10 +188,11 @@ function plannerOnly() { if (!planner()) fail('Nur für Administratoren und Übu
 const MY_RUNS = ['off' => 'Ausgeschaltet', 'anon' => 'Anonymisiert (ausser sich selbst)', 'full' => 'Mit allen Daten'];
 function myRuns() { $v = setting('my_runs', 'anon'); return isset(MY_RUNS[$v]) ? $v : 'anon'; }
 function myPart($id) { global $db, $uid; $s = $db->prepare("SELECT 1 FROM participants p JOIN incidents i ON i.id=p.incident_id WHERE p.incident_id=? AND p.user_id=? AND p.mode<>'declined' AND i.ended_at IS NOT NULL"); $s->execute([$id, $uid]); $r = (bool)$s->fetch(); $s->closeCursor(); return $r; }
-function incView($id) { global $db, $me; if ($me['is_admin']) return 0;
-  if ($me['is_planner']) { $s = $db->prepare("SELECT plan_id FROM incidents WHERE id=?"); $s->execute([$id]); $r = $s->fetch(); if ($r && $r['plan_id'] !== null) return 0; }
+// my=1 (Meine Einsätze): Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter, also nur eigene Einsätze gemäss my_runs
+function incView($id) { global $db, $me; $my = !empty($_GET['my']); if ($me['is_admin'] && !$my) return 0;
+  if ($me['is_planner'] && !$my) { $s = $db->prepare("SELECT plan_id FROM incidents WHERE id=?"); $s->execute([$id]); $r = $s->fetch(); if ($r && $r['plan_id'] !== null) return 0; }
   if (myRuns() !== 'off' && myPart($id)) return myRuns() === 'full' ? 1 : 2;
-  fail('Nur für Administratoren', 403); }
+  fail($my ? 'Kein Zugriff auf diesen Einsatz' : 'Nur für Administratoren', 403); }
 function pwCheck($p) { if (!is_string($p) || $p === '') fail('Das Passwort darf nicht leer sein'); }
 // Kritisch alarmieren: scharfe Einsätze immer, Übungen nur bei aktiviertem Übungsmodus
 function critical($inc) { global $me; return !(int)$inc['is_exercise'] || $me['exercise_mode']; }
