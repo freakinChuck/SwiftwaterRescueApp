@@ -32,7 +32,7 @@ body.off #chip,body.off #bMenu,body.off #bView,body.off #viewBox{margin-top:var(
 .foot{margin-top:1rem;padding-top:.6rem;border-top:1px solid var(--line);font-size:.78rem;color:var(--mut);display:grid;gap:.25rem}.foot b{color:var(--tx)}
 .mmk{width:30px;height:30px;border-radius:8px 8px 8px 0;background:#ffd23f;color:#3a2a00;border:2px solid #fff;display:grid;place-items:center;font-size:.95rem;box-shadow:0 0 0 2px #0008}
 .mmpop b{display:block}.mmpop .t{display:block;color:#666;font-size:.8rem;margin-bottom:.3rem}.mmpop button{margin-top:.5rem;padding:.35rem .6rem;background:var(--alarm);border-color:var(--alarm);color:#fff;font-weight:600}
-.mmpop button.nav{display:block;background:#eef2f4;border-color:#b9c6cc;color:#032248}.navapps{display:grid;gap:.4rem;margin:.8rem 0}.navapp{display:block;padding:.7rem;border:1px solid var(--line);border-radius:6px;text-align:center;font-weight:600;color:inherit;text-decoration:none;background:#ffffff10}
+.mmpop button.nav{display:block;background:#eef2f4;border-color:#b9c6cc;color:#032248}
 #bView{left:auto;right:.7rem;display:grid;place-items:center}#bView[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}
 #viewBox{position:fixed;top:calc(4rem + env(safe-area-inset-top));right:.7rem;max-height:calc(100dvh - 5rem - env(safe-area-inset-top))} /* übriges Aussehen in common.css (auch öffentliche Ansicht) */
 #mmShowRow{display:flex;gap:.5rem;align-items:center;padding:.35rem .7rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--mut)}
@@ -290,11 +290,12 @@ function leadWhy(i,m,joined){const why=[],r=joined&&roles.find(x=>x.id==m.role_i
   return why.join(', ')||'laut Server'}
 function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
   const ba=$('#bAdm');if(ba)ba.hidden=!(me&&(me.is_admin||me.is_planner)); // Verwaltung in der Kopfzeile des Menüs, nicht unter «Konto» (Issue #58)
-  const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`+pushHtml());
+  const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label>${feat('nav')?`<label class="mut">Navigations-App (Knopf 🧭)<select id="navA"><option value="">Standard: ${esc(NAV_APPS[me.nav_default]||NAV_APPS.google)}</option>${(me.nav_apps||[]).filter(navOk).map(k=>`<option value="${k}" ${k===me.nav_app?'selected':''}>${esc(NAV_APPS[k])}</option>`).join('')}</select></label>`:''}<div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`+pushHtml());
   const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=async()=>{await pushOff(true);logout();stop();render()};bindPush();
     $('#exm').onchange=e=>{const v=e.target.checked?1:0;api('me/settings',{exercise_mode:v}).then(()=>{me.exercise_mode=v;e.target.blur();return poll()}).catch(x=>{e.target.checked=!v;fail(x)})};
     // eigenes Koordinatensystem ('' = Standard der Verwaltung); Kartenebenen neu aufbauen, damit Popups die neue Anzeige zeigen
-    $('#csys').onchange=e=>{const v=e.target.value,old=me.coord_sys;e.target.blur();me.coord_sys=v||null;poiKey=resKey='';api('me/settings',{coord_sys:v}).then(poll).catch(x=>{me.coord_sys=old;fail(x);poll()})}};
+    $('#csys').onchange=e=>{const v=e.target.value,old=me.coord_sys;e.target.blur();me.coord_sys=v||null;poiKey=resKey='';api('me/settings',{coord_sys:v}).then(poll).catch(x=>{me.coord_sys=old;fail(x);poll()})};
+    const na=$('#navA');if(na)na.onchange=e=>{const v=e.target.value,old=me.nav_app;e.target.blur();me.nav_app=v||null;api('me/settings',{nav_app:v}).catch(x=>{me.nav_app=old;fail(x);draw()})}};
   // Werkzeuge: auch ohne Einsatz verfügbar (im Einsatz zusätzlich über den Kartenknopf)
   const tools=!feat('rd')?'':sec('tools','Werkzeuge',`<div class="row"><button id="bRdM">Flussdistanz messen</button></div><div class="mut">Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei ${rdSpeeds().join(', ')} km/h.</div>`);
   const bindTools=()=>{if($('#bRdM'))$('#bRdM').onclick=rdOpen};
@@ -542,15 +543,20 @@ const poiInfo=p=>{const a=p.kind==='area',c=poiPt(p);
   return (a?'Bereich, ca. '+haOf(p.pts).toFixed(1)+' ha'+fcs(c.lat,c.lng,' · Mitte '):'Markierung'+fcs(c.lat,c.lng))+' · '+(p.by_name||'')+' · '+fmtT(p.created)};
 // Navigation (Issue #79, Funktion «nav»): Ziel an eine Navigations-App übergeben. Ohne label nur das Symbol (für enge Listen).
 const navBtn=(lat,lon,name,label)=>feat('nav')&&lat!=null&&lon!=null?`<button class="nav" data-nav="${(+lat).toFixed(6)},${(+lon).toFixed(6)}" data-nn="${esc(name)}" title="Mit einer Navigations-App hinfahren"${label?'':` aria-label="Zu ${esc(name)} navigieren"`}>🧭${label?' '+esc(label):''}</button>`:'';
-// Marker ohne Popup (Einsatzkräfte, PLS, alte Rettlings-Markierungen): Antippen öffnet direkt die Auswahl
+// Apps: in der Verwaltung ein-/ausschaltbar mit Standard (me.nav_apps, me.nav_default), pro Person unter «Konto» (me.nav_app)
+const ANDROID=/Android/i.test(navigator.userAgent),NAV_APPS={google:'Google Maps',apple:'Apple Karten',waze:'Waze',geo:'Andere App (Auswahl)'};
+const navOk=k=>(me&&me.nav_apps||['google']).includes(k)&&!(k==='apple'&&ANDROID)&&!(k==='geo'&&!ANDROID); // Apple Karten nicht unter Android, geo: nur dort
+const navApp=()=>[me&&me.nav_app,me&&me.nav_default,...(me&&me.nav_apps||[])].find(k=>k&&navOk(k))||'google';
+const navUrl=(k,ll,q)=>({apple:`https://maps.apple.com/?daddr=${ll}&q=${q}`,waze:`https://waze.com/ul?ll=${ll}&navigate=yes`,geo:`geo:${ll}?q=${ll}(${q})`}[k]||`https://www.google.com/maps/dir/?api=1&destination=${ll}`);
+// Knopf 🧭: Ziel ohne Auswahl direkt an die App übergeben (muss im Klick laufen, sonst blockiert der Browser)
+function navGo(lat,lon,name){const ll=(+lat).toFixed(6)+','+(+lon).toFixed(6),u=navUrl(navApp(),ll,encodeURIComponent(name||'Ziel'));
+  if(u.startsWith('geo:')){location.href=u;return}
+  const a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
+// Marker ohne Popup (Einsatzkräfte, PLS, alte Rettlings-Markierungen): Antippen fragt kurz nach, damit ein versehentlicher Tipp nicht die App öffnet
 const navOn=(m,lat,lon,name)=>m.on('click',()=>{if(feat('nav')&&!document.body.classList.contains('picking'))navTo(lat,lon,name)});
-function navTo(lat,lon,name){lat=(+lat).toFixed(6);lon=(+lon).toFixed(6);const ll=lat+','+lon,q=encodeURIComponent(name||'Ziel'),android=/Android/i.test(navigator.userAgent);
-  const apps=[['Google Maps',`https://www.google.com/maps/dir/?api=1&destination=${ll}`],...(android?[]:[['Apple Karten',`https://maps.apple.com/?daddr=${ll}&q=${q}`]]),['Waze',`https://waze.com/ul?ll=${ll}&navigate=yes`],
-    ...(android?[['Andere App …',`geo:${ll}?q=${ll}(${q})`]]:[])]; // geo: öffnet unter Android die Auswahl aller Karten-Apps
-  const d=dlg('Navigieren',`<div><b>${esc(name)}</b><div class="mut">${esc(fc(lat,lon)||'')}${fc(lat,lon)?' · ':''}WGS84 ${ll}</div></div><div class="navapps">${apps.map(([n,u])=>`<a class="navapp" href="${esc(u)}"${u.startsWith('geo:')?'':' target="_blank" rel="noopener"'}>${esc(n)}</a>`).join('')}</div>`,
-    ()=>(navigator.clipboard?navigator.clipboard.writeText(ll):Promise.reject()).then(()=>alert('Koordinaten kopiert: '+ll),()=>prompt('Koordinaten (WGS84):',ll)),'Koordinaten kopieren','Schliessen');
-  d.querySelectorAll('.navapp').forEach(a=>a.addEventListener('click',()=>d.remove()))}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;const [la,lo]=b.dataset.nav.split(',').map(Number);map.closePopup();navTo(la,lo,b.dataset.nn)});
+function navTo(lat,lon,name){lat=(+lat).toFixed(6);lon=(+lon).toFixed(6);
+  dlg('Navigieren',`<div><b>${esc(name)}</b><div class="mut">${esc(fc(lat,lon)||'')}${fc(lat,lon)?' · ':''}WGS84 ${lat},${lon}</div></div>`,()=>navGo(lat,lon,name),'🧭 Mit '+NAV_APPS[navApp()]+' navigieren','Abbrechen')}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;const [la,lo]=b.dataset.nav.split(',').map(Number);map.closePopup();navGo(la,lo,b.dataset.nn)});
 // Karte: nur neu zeichnen, wenn sich Inhalt, Sichtbarkeit oder Berechtigung ändern (ein offenes Popup bleibt offen)
 function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color]))+[...poiHide]+vis('pt')+vis('ar')+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
   ps.filter(p=>!poiHide.has(p.id)&&vis(p.kind==='area'?'ar':'pt')).forEach(p=>{const area=p.kind==='area';
