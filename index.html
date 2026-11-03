@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Swiftwater Rescue</title>
 <!-- PWA (Issue #67): installierbar, Service Worker sw.js; Icons sind Platzhalter bis zum Logo (Issue #56) -->
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0f2430"><link rel="icon" href="img/icon-192.png">
@@ -11,7 +11,8 @@
 <link rel="stylesheet" href="common.css?v=0">
 <style>
 /* Seite selbst scrollt nie (Issue #84: iOS zeigte sonst einen Scrollbalken, weil das zugeklappte Menü unterhalb des Bildschirms liegt); gescrollt wird in den Fenstern bzw. in #app (Anmeldung) */
-html,body{overflow:hidden;overscroll-behavior:none}
+html,body{overflow:hidden;overscroll-behavior:none;touch-action:pan-x pan-y} /* kein Zoom der Seite (Zwei Finger, Doppeltipp); die Karte zoomt selbst über Touch-Ereignisse */
+@media(pointer:coarse){input,select,textarea{font-size:max(16px,1em)}} /* iOS zoomt sonst beim Antippen kleiner Eingabefelder */
 body{height:100dvh;display:flex;flex-direction:column}#app{flex:1;min-height:0;overflow:auto}
 #map{position:fixed;inset:0}
 .fab{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:.7rem;z-index:1000;width:46px;height:46px;font-size:1.3rem;padding:0}
@@ -718,6 +719,8 @@ function plsPick(what,at,save){pickPoint(`Tippe auf die Karte, um den ${what} zu
   dlg(what,`<div class="mut">${esc(fc(q.lat,q.lng)||'')}</div><label class="mut">Zeitpunkt (Beginn der Drift)<input id="plT" type="datetime-local" value="${dtLocal(at||st.now)}"></label><div class="mut">Ab diesem Zeitpunkt wird die Driftdistanz mit der Fliessgeschwindigkeit berechnet.</div>`,
     async d=>{const t=dtTs($('#plT',d).value);if(!t)throw new Error('Bitte einen Zeitpunkt eingeben.');await save(+q.lat.toFixed(7),+q.lng.toFixed(7),t);poll()})).catch(fail)}
 const dtLocal=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16),dtTs=v=>Math.floor(new Date(v).getTime()/1000)||0;
+// iOS ignoriert user-scalable=no: Zoom der Seite per Zwei-Finger-Geste unterdrücken (Leaflet zoomt die Karte über touchstart/touchmove, nicht über gesture*)
+['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 const resOf=id=>((st&&st.rescuees)||[]).find(x=>x.id===id);
 document.addEventListener('click',e=>{const g=e.target.closest('[data-rfo]');if(g)return setResFold(g.dataset.rfo);const b=e.target.closest('[data-rf],[data-rm],[data-rc],[data-rr],[data-rg],[data-re],[data-rd],[data-rpls],[data-rsa]');if(!b)return;const d=b.dataset,id=+(d.rf||d.rm||d.rc||d.rr||d.rg||d.re||d.rd||d.rpls||d.rsa),r=resOf(id);
   if(d.re!==undefined)return editRes(id);if(!r)return;
