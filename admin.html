@@ -580,7 +580,7 @@ function aarBtn(d,t,cls,fn){const row=d.querySelector('[data-ok]').parentNode,b=
 async function aarShow(id,my){const o={log:!!aarC.cfg.auto.log,anon:false};let x;const get=()=>api('aar/get&id='+id+(my?'&my=1':'')+(o.anon?'&anon=1':''));
   try{x=await get();await aarImgs(x,my)}catch(e){return fail(e)}const logo=await aarLogo(),anonOk=!x.forced&&!x.my_anon;
   const d=dlg(aarC.cfg.title+' – '+x.inc.message,`<div class="row aaro"><label class="chk"><input type="checkbox" id="avL" ${o.log?'checked':''}> Einsatzlog</label>${anonOk?'<label class="chk"><input type="checkbox" id="avA"> Namen anonymisieren</label>':''}</div>
-    ${!my?`<div class="mut">Status: <b>${x.status===1?`freigegeben${x.rel_at?' am '+aarDt(x.rel_at):''}${x.rel_by?' von '+esc(x.rel_by):''}`:x.status===2?'nicht relevant':x.updated?'in Arbeit':'noch nichts erfasst'}</b></div>`:''}<div class="aardoc" id="avD"></div>`,async()=>{},'Schliessen');
+    <div class="aardoc" id="avD"></div>`,async()=>{},'Schliessen');
   d.firstElementChild.classList.add('aarv');d.querySelector('[data-x]').remove();
   const draw=()=>$('#avD',d).innerHTML=aarHtml(aarModel(x,o),logo);draw();
   $('#avL',d).onchange=e=>{o.log=e.target.checked;draw()};
@@ -592,7 +592,7 @@ async function aarShow(id,my){const o={log:!!aarC.cfg.auto.log,anon:false};let x
     await api('aar/status',{id,status:1});toast('After Action Review freigegeben.','ok');loadStats()})}
 // Dokumentmodell als HTML (Ansicht)
 function aarHtml(B,logo){const tb=(h,rows)=>`<div class="tw"><table>${h?`<thead><tr>${h.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>`:''}<tbody>${rows.map(r=>`<tr>${r.map((c,n)=>`<td${!h&&!n?' class="mut"':''} style="white-space:pre-wrap">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-  return(logo?`<img src="${logo.src}" alt="" class="aarlogo" style="float:right;margin-left:.5rem">`:'')+B.map(b=>({title:()=>`<h2>${esc(b.x)}</h2>`,sub:()=>`<div class="mut" style="white-space:pre-line">${esc(b.x)}</div>`,h:()=>`<h3 class="aarq" style="clear:both">${esc(b.x)}</h3>`,
+  return(logo?`<img src="${logo.src}" alt="" class="aarlogo" style="float:right;margin-left:.5rem">`:'')+B.map(b=>({title:()=>`<h2>${esc(b.x)}</h2>`,sub:()=>`<div class="mut" style="white-space:pre-line">${esc(b.x)}</div>`,status:()=>`<div style="font-weight:600;margin-top:.3rem;color:${{rel:'var(--ok)',wip:'var(--warn,#e0a030)',nr:'var(--mut)'}[b.k]}">${esc(b.x)}</div>`,h:()=>`<h3 class="aarq" style="clear:both">${esc(b.x)}</h3>`,
     q:()=>`<div style="margin-top:.4rem"><b>${esc(b.x)}</b></div>`,img:()=>`<figure><img src="${b.src}" alt="${esc(b.cap)}">${b.cap?`<figcaption>${esc(b.cap)}</figcaption>`:''}</figure>`,p:()=>`<div style="white-space:pre-wrap">${esc(b.x)}</div>`,kv:()=>tb(null,b.rows),table:()=>tb(b.head,b.rows),note:()=>`<div class="mut" style="margin-top:.6rem"><small>${esc(b.x)}</small></div>`})[b.t]?.()||'').join('')}
 // my = Meine Einsätze; anonOk = false, wenn die Namen dort ohnehin anonym sind (my_runs anon)
 function aarDl(id,fmt,msg,my,anonOk=true){
@@ -605,9 +605,11 @@ function aarDl(id,fmt,msg,my,anonOk=true){
 const aarV=(f,v)=>v==null||v===''?'':f.type==='date'?String(v).split('-').reverse().join('.'):f.type==='check'?(v==='1'?'Ja':'Nein'):String(v);
 const AAR_MARK=/\[Bild (\d+)\]/g; // Marke im Text (Feldart area): dort steht im Dokument das Bild; ohne passendes Bild bleibt es gewöhnlicher Text
 const aarImB=m=>{const png=m.src.startsWith('data:image/png');return{t:'img',src:m.src,w:m.w,h:m.h,fmt:png?'PNG':'JPEG',ext:png?'png':'jpeg',cap:m.caption||''}};
-// Dokumentmodell: title, sub, h (Abschnitt), q (Frage), p (Text), kv (Tabelle Bezeichnung/Wert), table (head, rows, w = Breiten in 1/50 %), note
+const AAR_STC={rel:'2E7D32',wip:'B45F06',nr:'595959'}; // Farbe der Statuszeile in Word und PDF
+const aarStText=x=>'Status: '+(x.status===1?`Freigegeben${x.rel_at?' am '+aarDt(x.rel_at):''}${x.rel_by?' von '+x.rel_by:''}`:x.status===2?'Nicht relevant':x.updated?'In Arbeit':'Noch nichts erfasst');
+// Dokumentmodell: title, sub, status (k = rel, wip, nr), h (Abschnitt), q (Frage), p (Text), kv (Tabelle Bezeichnung/Wert), table (head, rows, w = Breiten in 1/50 %), note
 function aarModel(x,o){const C=aarC.cfg,A=C.auto,i=x.inc,B=[],act=r=>!r.removed;
-  B.push({t:'title',x:C.title},{t:'sub',x:[C.org,(i.is_exercise?'Übung':'Einsatz')+' vom '+aarDt(i.alarm_at)+' – '+i.message].filter(Boolean).join('\n')});
+  B.push({t:'title',x:C.title},{t:'sub',x:[C.org,(i.is_exercise?'Übung':'Einsatz')+' vom '+aarDt(i.alarm_at)+' – '+i.message].filter(Boolean).join('\n')},{t:'status',k:x.status===1?'rel':x.status===2?'nr':'wip',x:aarStText(x)});
   if(A.inc){const res=x.rescuees.filter(act);
     B.push({t:'h',x:'Einsatzdaten'},{t:'kv',rows:[['Art',i.is_exercise?'Übung':'Scharfer Einsatz'],...(i.plan?[['Vorbereitete Übung',i.plan]]:[]),['Alarmmeldung',i.message],
       ['Alarmeingang',aarDt(i.alarm_at)],['Einsatzende',aarDt(i.ended_at)],['Dauer',aarMin(i.ended_at-i.alarm_at)],['Ausgelöst von',i.creator||'–'],['Einsatzkräfte mit App',String(x.people.length)],
@@ -636,7 +638,7 @@ function aarModel(x,o){const C=aarC.cfg,A=C.auto,i=x.inc,B=[],act=r=>!r.removed;
   if(A.ext&&x.externals.length)B.push({t:'h',x:`Externe Einsatzkräfte (${x.externals.length})`},{t:'table',head:['Name','Spezialrolle','Beschreibung','Im Einsatz'],w:[1300,1100,1600,1000],
     rows:x.externals.map(e=>[e.name,e.role||'–',e.descr||'–',aarTm(e.created)+' – '+(e.removed?aarTm(e.removed):'Ende')])});
   if(o.log&&x.log.length)B.push({t:'h',x:'Einsatzlog'},{t:'table',head:['Zeit','Person','Eintrag'],w:[600,1000,3400],rows:x.log.map(l=>[aarTm(l.ts),l.name||'System',l.text])});
-  B.push({t:'note',x:`Erstellt am ${aarDt(Date.now()/1000)} von ${me.name}${x.status===1&&x.rel_at?` · freigegeben am ${aarDt(x.rel_at)}${x.rel_by?' von '+x.rel_by:''}`:''}${x.anon?' · Namen anonymisiert':''}`});return B}
+  B.push({t:'note',x:`Erstellt am ${aarDt(Date.now()/1000)} von ${me.name}${x.anon?' · Namen anonymisiert':''}`});return B}
 const aarLogo=()=>new Promise(ok=>{const s=aarC.logo;if(!s)return ok(null);const im=new Image(),png=s.startsWith('data:image/png');
   im.onload=()=>ok({src:s,w:im.naturalWidth,h:im.naturalHeight,fmt:png?'PNG':'JPEG',ext:png?'png':'jpeg'});im.onerror=()=>ok(null);im.src=s});
 async function aarMake(x,fmt,o){const B=aarModel(x,o),logo=await aarLogo(),D=new Date(x.inc.alarm_at*1000),p=n=>String(n).padStart(2,'0');
@@ -660,7 +662,7 @@ async function aarDocx(B,logo,title){await loadJs(AAR_LIB.zip);
   if(logo){const h=Math.min(22,logo.h*50/logo.w),w=h*logo.w/logo.h;img=pic('rIdL','logo.'+logo.ext,1,w,h,'right')}
   // Bilder der Felder: höchstens 160 × 120 mm, kleine nicht vergrössert (96 dpi)
   const IM=B.filter(b=>b.t==='img');IM.forEach((b,n)=>{b.rid='rIdI'+(n+1);b.file=`img${n+1}.${b.ext}`;b.mw=Math.min(160,120*b.w/b.h,b.w*.2646);b.mh=b.mw*b.h/b.w});
-  const body=img+B.map(b=>b.t==='title'?par('Title',b.x):b.t==='sub'?par('Subtitle',b.x):b.t==='h'?par('Heading1',b.x):b.t==='q'?par('Heading2',b.x):b.t==='p'?par('',b.x)
+  const body=img+B.map(b=>b.t==='title'?par('Title',b.x):b.t==='sub'?par('Subtitle',b.x):b.t==='status'?par('',b.x,`<w:b/><w:color w:val="${AAR_STC[b.k]}"/>`):b.t==='h'?par('Heading1',b.x):b.t==='q'?par('Heading2',b.x):b.t==='p'?par('',b.x)
     :b.t==='img'?pic(b.rid,b.file,100+IM.indexOf(b),b.mw,b.mh,'center')+(b.cap?par('',b.cap,'<w:i/><w:color w:val="595959"/><w:sz w:val="18"/>','<w:jc w:val="center"/>'):'')
     :b.t==='note'?par('',b.x,'<w:i/><w:color w:val="7F7F7F"/><w:sz w:val="16"/>','<w:spacing w:before="240"/>'):b.t==='kv'?tbl(null,b.rows,[1600,3400]):tbl(b.head,b.rows,b.w)).join('');
   const W='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"',R='xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
@@ -692,6 +694,7 @@ async function aarPdf(B,logo,title){await loadJs(AAR_LIB.pdf);await loadJs(AAR_L
   for(const b of B){
     if(b.t==='title')txt(b.x,20,'bold',[31,78,121],8.5,1);
     else if(b.t==='sub'){txt(b.x,11,'normal',[89,89,89],5,2);y=Math.max(y,lb);tw=W}
+    else if(b.t==='status')txt(b.x,10.5,'bold',AAR_STC[b.k].match(/../g).map(c=>parseInt(c,16)),5,2);
     else if(b.t==='h'){y+=3;brk(16);txt(b.x,13,'bold',[31,78,121],6,0);doc.setDrawColor(31,78,121);doc.setLineWidth(.3);doc.line(M,y,M+W,y);y+=3}
     else if(b.t==='q'){y+=1;brk(14);txt(b.x,10.5,'bold',[0,0,0],5,.5)}
     else if(b.t==='p')txt(b.x,10.5,'normal',[0,0,0],4.8,2);
