@@ -134,7 +134,8 @@ function dlg(title,body,save,okText='Speichern',xText='Abbrechen',onX){const d=d
   d.innerHTML=`<div class="card"><h2 style="margin:0">${esc(title)}</h2>${body}<div class="row"><button class="pri" data-ok>${esc(okText)}</button><button data-x>${esc(xText)}</button></div></div>`;
   document.body.appendChild(d);const f=d.querySelector('input,select');f&&f.focus();
   d.querySelector('[data-x]').onclick=()=>{d.remove();onX&&onX()};
-  d.querySelector('[data-ok]').onclick=async()=>{try{await save(d);d.remove()}catch(e){fail(e)}};return d}
+  // während des Speicherns gesperrt: ein zweiter Klick schickte sonst dieselbe Anfrage nochmals (z. B. Anonymisieren doppelt)
+  const ok=d.querySelector('[data-ok]');ok.onclick=async()=>{if(ok.disabled)return;ok.disabled=true;try{await save(d);d.remove()}catch(e){fail(e)}finally{ok.disabled=false}};return d}
 // Eigenes Passwort ändern; forced = nach Zurücksetzen durch die Verwaltung (nur Abmelden als Alternative)
 function pwDialog(forced,done){
   dlg('Passwort ändern',`${forced?'<div class="mut">Dein Passwort wurde neu gesetzt. Bitte vergib jetzt ein eigenes Passwort.</div>':''}

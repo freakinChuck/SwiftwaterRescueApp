@@ -10,6 +10,10 @@ function out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_U
     try { pushFlush(); } catch (Throwable $e) { error_log('Push: ' . $e->getMessage()); } }
   exit; }
 function fail($m, $c = 400) { out(['error' => $m], $c); }
+// Unerwartete Fehler (z. B. Datenbank gesperrt) als JSON melden statt leerer 500-Antwort; offene Transaktion zurückrollen, Details ins Fehlerprotokoll
+set_exception_handler(function ($e) { global $db; error_log('API ' . ($_GET['r'] ?? '') . ': ' . $e->getMessage());
+  try { if ($db && $db->inTransaction()) $db->rollBack(); } catch (Throwable $x) {}
+  fail('Serverfehler, bitte nochmals versuchen', 500); });
 
 $db = new PDO($cfg['dsn'], $cfg['db_user'], $cfg['db_pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 $my = str_starts_with($cfg['dsn'], 'mysql');
@@ -1183,8 +1187,11 @@ switch ($route) {
   if ($inc['ended_at'] === null) fail('Nur beendete Einsätze lassen sich anonymisieren');
   if (!(int)$inc['recorded']) fail('Für diesen Einsatz gibt es keine Aufzeichnung');
   if ($inc['rp_anon'] !== null) fail('Das Replay ist bereits anonymisiert');
-  $c = anonCtx($id); $people = [];
   $db->beginTransaction();
+  // zuerst schreibend sperren: bei zwei gleichzeitigen Anfragen (Doppelklick) läuft nur eine durch, die andere wartet und erhält danach die Meldung
+  $cl = $db->prepare("UPDATE incidents SET rp_anon='[]' WHERE id=? AND rp_anon IS NULL"); $cl->execute([$id]);
+  if (!$cl->rowCount()) { $db->rollBack(); fail('Das Replay ist bereits anonymisiert'); }
+  $c = anonCtx($id); $people = [];
   $up = $db->prepare("UPDATE track SET user_id=? WHERE incident_id=? AND user_id=?");
   foreach (replayParts($id) as $p) { $pid = -(count($people) + 1); $up->execute([$pid, $id, $p['user_id']]);
     $people[] = ['user_id' => $pid, 'name' => $c['u'][$p['user_id']] ?? 'Einsatzkraft'] + array_intersect_key($p, array_flip(['mode', 'role_id', 'left_at', 'role', 'color', 'mode_name', 'joined'])); }
@@ -1197,8 +1204,10 @@ switch ($route) {
   $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
   if ($inc['ended_at'] === null) fail('Nur beendete Einsätze lassen sich anonymisieren');
   if ((int)$inc['log_anon']) fail('Das Einsatzprotokoll ist bereits anonymisiert');
-  $c = anonCtx($id); $who = fn($u) => $c['u'][(int)$u] ?? 'Person';
   $db->beginTransaction();
+  $cl = $db->prepare("UPDATE incidents SET log_anon=1 WHERE id=? AND log_anon=0"); $cl->execute([$id]); // sperren wie beim Replay
+  if (!$cl->rowCount()) { $db->rollBack(); fail('Das Einsatzprotokoll ist bereits anonymisiert'); }
+  $c = anonCtx($id); $who = fn($u) => $c['u'][(int)$u] ?? 'Person';
   $s = $db->prepare("SELECT id,user_id,kind,text,actor FROM incident_log WHERE incident_id=?"); $s->execute([$id]);
   $up = $db->prepare("UPDATE incident_log SET text=?, actor=?, user_id=NULL WHERE id=?");
   foreach ($s->fetchAll() as $r) $up->execute([anonText($r['text'], $c, $r['kind']), $r['user_id'] !== null ? $who($r['user_id']) : $r['actor'], $r['id']]);
