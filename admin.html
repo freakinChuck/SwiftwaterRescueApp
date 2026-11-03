@@ -28,9 +28,10 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .inc{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1.2rem;border:1px solid var(--line);border-left:4px solid var(--alarm);border-radius:8px;padding:.6rem .8rem;margin:.5rem 0}.inc.ex{border-left-color:var(--ex)}
 .inc .ih{flex:1 1 15rem;min-width:0}.inc .ih b{display:block;overflow-wrap:anywhere;margin:.15rem 0}.inc .ih .mut{font-size:.85rem}
 .inc .fl{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.3rem}.inc .fl span{font-size:.75rem;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:0 .45rem}.inc .fl .on{color:#e05cb0;border-color:#e05cb0}
+.inc.usr{border-left-color:var(--ok)}.inc.usr.off{border-left-color:var(--line);opacity:.6}.inc.usr .ih b{display:inline;margin-right:.4rem}.inc .fl .adm{color:#f0b429;border-color:#f0b429}.inc.url{border-left-color:var(--ex)}.inc.url.adm{border-left-color:#f0b429}.inc.url .ih b{display:inline;margin-right:.4rem}
 .inc .ia{display:flex;flex-wrap:wrap;gap:.3rem;margin-left:auto}.inc .ia button{padding:.35rem .6rem}.inc .ia .sec{background:none;color:var(--mut)}
 @media(max-width:760px){.inc .ia{margin-left:0;width:100%}.inc .ia button{flex:1 1 auto}}
-@media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
+@media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}.inc.url .kv{grid-template-columns:repeat(3,1fr)}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
 /* Replay */
 #replay{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
 #rpHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--line)}#rpHead h2{margin:0;font-size:1.15rem;flex:1 1 16rem}
@@ -45,6 +46,11 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .rpl{display:block;width:100%;text-align:left;border:0;border-left:4px solid;border-radius:0;background:none;padding:.35rem .5rem;font-size:.9rem}.rpl:hover{background:var(--panel)}.rpl .t{color:var(--mut);margin-right:.4rem}
 .rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
 .exp{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.8rem 0}.exp h3{margin:0 0 .3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.exp .badge.run{background:var(--alarm)}.exp .badge.done{background:var(--line)}.exp td{vertical-align:top}.exp td small{display:block;color:var(--mut)}
+.dlg .card.mid{max-width:640px}.urh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem}.urh .urf{flex:1 1 12rem;max-width:18rem;margin:0}
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13rem),1fr));gap:0 .8rem} /* Rechte im Rollen-Dialog mehrspaltig */
+.urg{display:grid;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:.4rem}.urb{display:grid;gap:.1rem;text-align:left;padding:.45rem .6rem .45rem 2rem;position:relative;border-radius:8px;min-height:0}.urb[hidden]{display:none}.urb small{color:var(--mut);font-size:.78rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.urb::before{content:'';position:absolute;left:.6rem;top:.6rem;width:.9rem;height:.9rem;border-radius:50%;border:2px solid var(--mut)}.urb[aria-pressed=true]{background:#1d7fd133;border-color:var(--ex)}.urb[aria-pressed=true]::before{content:'✓';border-color:var(--ex);background:var(--ex);color:#fff;font-size:.7rem;line-height:.9rem;text-align:center}.urb:disabled{opacity:.55;cursor:not-allowed}
+.pwr{display:flex;gap:.35rem}.pwr input{flex:1;min-width:0;font-family:ui-monospace,Consolas,monospace}.pwr button{flex:0 0 auto}
 .lsel{display:flex;flex-wrap:wrap;gap:.35rem}.lchip{display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--line);border-radius:999px;padding:.1rem .2rem .1rem .6rem}.lchip button{padding:.1rem .45rem;min-height:0;border-radius:999px}
 /* Helikopter: Zahlenwerte als Karten mit Einheit, Bereich und Standard (geänderte Werte hervorgehoben) */
 .anums{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.6rem;margin:.4rem 0 .6rem}
@@ -70,19 +76,31 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 <div id="app"></div>
 <script src="common.js?v=0"></script>
 <script>
-/* Verwaltung: für die Benutzerrolle Administrator, die Benutzerrolle Übungsleiter sieht nur «Übungen vorbereiten». Die API prüft die Berechtigung bei jedem Aufruf.
+/* Verwaltung: jede Person sieht die Bereiche, für die eine ihrer Benutzerrollen das Recht hat (Issue #63, NAV_PERM). Die API prüft die Berechtigung bei jedem Aufruf.
    Alle anderen sehen nur «Meine Einsätze» (Issue #61, Log und Replay der eigenen beendeten Einsätze), sofern die Verwaltung das nicht ausgeschaltet hat (my_runs). */
-let me=null,users=[],roles=[];
+let me=null,users=[],roles=[],uroles=null;
 onUnauth=()=>start();
-const ROLE_LABEL=u=>u.is_admin?'Administrator':u.is_planner?'Übungsleiter':'Einsatzkraft';
-// Auswahl der Benutzerrolle: Wert 0 = Einsatzkraft, 1 = Administrator, 2 = Übungsleiter
-const ROLE_OPTS=u=>[[0,'Einsatzkraft'],[2,'Übungsleiter'],[1,'Administrator']].map(([v,l])=>`<option value="${v}" ${u&&(u.is_admin?1:u.is_planner?2:0)===v?'selected':''}>${l}</option>`).join('');
-const ROLE_VAL=v=>({is_admin:v==1?1:0,is_planner:v==2?1:0});
+// Benutzerrollen (Issue #63): mehrere je Person, Rechte = alle Rechte aller Rollen. Vergeben/entziehen nur Rollen, deren Rechte man selbst hat (prüft auch der Server)
+const UR=id=>(uroles&&uroles.roles.find(r=>r.id===id))||{name:'?',perms:[]};
+const ROLE_LABEL=u=>u.uroles.length?u.uroles.map(id=>esc(UR(id).name)).join(', '):'<span class="mut">keine</span>';
+const urOk=r=>r.perms.every(can);
+// Rollenauswahl: je Rolle eine Karte zum Antippen (aria-pressed) mit den enthaltenen Rechten
+const urPermTxt=r=>r.sys==='admin'?'Alle Rechte, auch künftige':r.perms.map(k=>(uroles.perms.find(p=>p.k===k)||{name:k}).name).join(' · ')||'keine Rechte';
+const roleChecks=u=>`<div class="urh"><span class="mut">Benutzerrollen <span class="urn"></span></span>${uroles.roles.length>8?'<input type="search" class="urf" placeholder="Rolle oder Recht suchen" aria-label="Rollen filtern">':''}</div><div class="urg" role="group" aria-label="Benutzerrollen">${uroles.roles.map(r=>{const on=u?u.uroles.includes(r.id):!!r.def&&urOk(r),lock=!urOk(r)||u&&u.id===me.id&&r.sys==='admin'&&on;
+  return`<button type="button" class="urb" data-ur="${r.id}" aria-pressed="${on}" ${lock?'disabled':''} title="${esc(urPermTxt(r))}${lock?(urOk(r)?' – die eigene Rolle Systemadministrator bleibt':' – enthält Rechte, die du selbst nicht hast'):''}"><b>${esc(r.name)}</b><small>${esc(urPermTxt(r))}</small></button>`}).join('')}</div>`;
+const pwField=(id,label)=>`<label class="mut">${label}<span class="pwr"><input id="${id}" autocomplete="off" spellcheck="false" value="${genPw()}"><button type="button" data-pwn title="Neues Passwort erzeugen">↻</button><button type="button" data-pwc>Kopieren</button></span></label>`;
+const pwWire=d=>{const i=d.querySelector('.pwr input');d.querySelector('[data-pwn]').onclick=()=>i.value=genPw();
+  d.querySelector('[data-pwc]').onclick=()=>navigator.clipboard.writeText(i.value).then(()=>toast('Startpasswort kopiert.','ok'),()=>{i.select();toast('Kopieren nicht möglich, bitte von Hand kopieren.','info')})};
+const roleWire=el=>{const bs=[...el.querySelectorAll('.urb')],n=el.querySelector('.urn'),f=el.querySelector('.urf');
+  const cnt=()=>{const k=bs.filter(b=>b.getAttribute('aria-pressed')==='true').length;n.textContent=k?`(${k} gewählt)`:'(keine gewählt)'};cnt();
+  bs.forEach(b=>b.onclick=()=>{b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')!=='true');cnt()});
+  if(f)f.oninput=()=>{const q=f.value.trim().toLowerCase();bs.forEach(b=>b.hidden=!!q&&!b.textContent.toLowerCase().includes(q))}};
+const roleVal=el=>[...el.querySelectorAll('[data-ur]')].filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>+c.dataset.ur);
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
-  if(!me.is_admin&&!me.is_planner&&me.my_runs==='off'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren und Übungsleiter zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
-  MY=myMode();const adm=me.is_admin||me.is_planner;
+  if(!nav().length&&me.my_runs==='off'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Deine Benutzerrollen geben dir keinen Zugriff auf die Verwaltung.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
+  MY=myMode();const adm=nav().length>0;
   if(MY){a.innerHTML=`<header><h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}<button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
     <div id="wrap" class="my"><main><section id="sMy"><h2>Meine Einsätze</h2><div class="mut">Wird geladen …</div></section></main></div>`;
     $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
@@ -98,18 +116,19 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
 // Kategorien mit Unterpunkten: [Kategorie, [[Hash, Abschnitt-ID, Bezeichnung, Laden]]]. Neue Einstellungen hier als Unterpunkt aufnehmen.
 // Es ist immer nur ein Abschnitt sichtbar (Hash in der Adresse, Neuladen und Zurück funktionieren); er wird bei jedem Öffnen frisch geladen.
 const NAV=[
-  ['Personen',[['benutzer','sU','Benutzer',loadUsers]]],
+  ['Personen',[['benutzer','sU','Benutzer',loadUsers],['benutzerrollen','sUR','Benutzerrollen',loadURoles]]],
   ['Einsatz',[['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
 ];
-// Übungsleiter (Benutzerrolle ohne weitere Rechte der Verwaltung) sehen nur die Übungen
-const nav=()=>me.is_admin?NAV:NAV.map(([g,its])=>[g,its.filter(([k])=>k==='uebungen')]).filter(([,its])=>its.length);
+// Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:'stats',einsicht:'cfg_my'};
+const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>can(NAV_PERM[k]))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
-let MY=false;const myMode=()=>me.my_runs!=='off'&&(!(me.is_admin||me.is_planner)||location.hash==='#meine');const myQ=()=>MY?'&my=1':'';
+let MY=false;const myMode=()=>me.my_runs!=='off'&&(!nav().length||location.hash==='#meine');const myQ=()=>MY?'&my=1':'';
 const navItems=()=>nav().flatMap(([,its])=>its);
 function showNav(){if(!$('#nav'))return;const its=navItems(),it=its.find(x=>x[0]===location.hash.slice(1))||its[0],[k,id,l,load]=it;
   its.forEach(([,i])=>{$('#'+i).hidden=i!==id});
@@ -119,25 +138,57 @@ window.addEventListener('hashchange',()=>{if(me&&myMode()!==MY)start();else show
 /* ---------- Benutzer ---------- */
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
-async function loadUsers(){const el=$('#sU');try{users=await api('users')}catch(e){el.innerHTML='<h2>Benutzer</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  el.innerHTML=`<h2>Benutzer (${users.filter(u=>u.active).length} aktiv)</h2><div class="tw"><table><thead><tr><th>Name</th><th>Benutzername</th><th>Benutzerrolle</th><th>Status</th><th></th></tr></thead><tbody>${users.map(u=>{const self=u.id===me.id;
-    return`<tr class="${u.active?'':'off'}"><td>${esc(u.name)}${self?' <span class="mut">(du)</span>':''}</td><td>${esc(u.username)}</td><td>${ROLE_LABEL(u)}</td><td>${u.active?'aktiv':'deaktiviert'}${u.must_change?'<br><span class="mut">Passwortwechsel ausstehend</span>':''}${u.exercise_mode?'<br><span class="mut">Übungsmodus an</span>':''}</td>
-      <td class="act"><button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.active?`<button data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}</td></tr>`}).join('')}</tbody>
-    <tfoot><tr class="new"><th colspan="5">Neuer Benutzer</th></tr><tr class="new"><td><input id="uf" placeholder="Name" aria-label="Name"></td><td><input id="un" placeholder="Benutzername" autocomplete="off" aria-label="Benutzername"></td><td><select id="ur" aria-label="Benutzerrolle">${ROLE_OPTS()}</select></td><td><input id="up" placeholder="Startpasswort" autocomplete="off" aria-label="Startpasswort" title="Startpasswort" value="${genPw()}"></td><td class="act"><button class="pri" id="uA">Benutzer anlegen</button></td></tr></tfoot></table></div>
-    <div class="mut" id="uMsg" role="status"></div>
-    <div class="mut">Neue Benutzer müssen das Startpasswort bei der ersten Anmeldung ändern; gib es vor dem Anlegen weiter, es wird danach nicht mehr angezeigt. Deaktivierte Benutzer können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
+async function loadUsers(){const el=$('#sU');try{[users,uroles]=await Promise.all([api('users'),api('uroles')])}catch(e){el.innerHTML='<h2>Benutzer</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  // eine Karte pro Person wie in der Einsatzstatistik: Kopf (Name, Benutzername, Rollen), Kennzahlen, Knöpfe
+  const dt=t=>t?new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'vor der Erfassung';
+  const card=u=>{const self=u.id===me.id;
+    return`<div class="inc usr${u.active?'':' off'}"><div class="ih"><b>${esc(u.name)}${self?' <span class="mut">(du)</span>':''}</b><span class="mut">${esc(u.username)}</span>
+      <div class="fl">${u.uroles.length?u.uroles.map(id=>`<span${UR(id).sys==='admin'?' class="adm"':''}>${esc(UR(id).name)}</span>`).join(''):'<span>keine Benutzerrolle</span>'}</div></div>
+      <div class="kv"><span><small>Status</small>${u.active?'aktiv':'deaktiviert'}</span><span><small>Letzte Anmeldung</small>${u.last_login==null?'noch nie':dt(u.last_login)}</span><span><small>Passwort</small>${u.must_change?'Wechsel ausstehend':'eigenes'}</span><span><small>Übungsmodus</small>${u.exercise_mode?'an':'aus'}</span></div>
+      <div class="ia">${!u.editable?'<span class="mut" title="Hat Rechte, die du selbst nicht hast">nur mit mehr Rechten bearbeitbar</span>':`<button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.deletable?`<button class="sec" data-x="${u.id}" title="Hat sich noch nie angemeldet und kommt in keinen Einsatzdaten vor">Löschen</button>`:u.active?`<button class="sec" data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}`}</div></div>`};
+  el.innerHTML=`<h2>Benutzer (${users.filter(u=>u.active).length} aktiv)</h2><div class="row"><button class="pri" id="uA">+ Neuer Benutzer</button></div>
+    ${users.map(card).join('')}
+    <div class="mut">Wer sich noch nie angemeldet hat, kann gelöscht werden; alle anderen werden deaktiviert: Sie können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
   // Startpasswort nach dem Speichern nicht in einer Meldung anzeigen (Issue #59): es steht vorher im Feld und kann dort kopiert werden
-  $('#uA').onclick=()=>{const nm=$('#uf').value.trim()||$('#un').value.trim();api('user/save',{username:$('#un').value,name:$('#uf').value,password:$('#up').value,...ROLE_VAL($('#ur').value)}).then(async()=>{await loadUsers();$('#uMsg').textContent=`Benutzer «${nm}» angelegt.`}).catch(fail)};
+  $('#uA').onclick=()=>{const d=dlg('Neuer Benutzer',`<div class="jtwo"><label class="mut">Name<input id="uf" autocomplete="off"></label><label class="mut">Benutzername<input id="un" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>
+      ${pwField('up','Startpasswort')}
+      <div class="mut">Die Person muss es bei der ersten Anmeldung ändern. Gib es vor dem Anlegen weiter, danach wird es nicht mehr angezeigt.</div>
+      ${roleChecks(null)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du nicht vergeben.</div>`,
+      async d=>{const nm=$('#uf',d).value.trim()||$('#un',d).value.trim();await api('user/save',{username:$('#un',d).value,name:$('#uf',d).value,password:$('#up',d).value,uroles:roleVal(d)});toast(`Benutzer «${nm}» angelegt.`,'ok');loadUsers()},'Benutzer anlegen');
+    d.firstElementChild.classList.add('mid');roleWire(d);pwWire(d)};
   const U=id=>users.find(x=>x.id==id);
   el.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.e),self=u.id===me.id;
-    dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><label class="mut">Benutzerrolle<select id="eR" ${self?'disabled':''}>${ROLE_OPTS(u)}</select></label>${self?'<div class="mut">Die eigene Benutzerrolle kann nicht geändert werden.</div>':''}<div class="mut">Administratoren haben Zugriff auf diese Verwaltung und dürfen jeden Einsatz verwalten. Übungsleiter sehen in der Verwaltung nur «Übungen vorbereiten» und dürfen vorbereitete Übungen starten und ihre Elemente freigeben.</div>`,
-      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,...ROLE_VAL($('#eR',d).value)});loadUsers()})});
+    const d=dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label>${roleChecks(u)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Systemadministrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
+      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,uroles:roleVal(d)});toast('Gespeichert.');if(self)me=(await api('me')).me;loadUsers()});d.firstElementChild.classList.add('mid');roleWire(d)});
   el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.p);
-    dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div><label class="mut">Neues Startpasswort<input id="eP" autocomplete="off" value="${genPw()}"></label><div class="mut">Gib es vor dem Zurücksetzen weiter, es wird danach nicht mehr angezeigt.</div>`,
-      async d=>{await api('user/password',{id:u.id,password:$('#eP',d).value});await loadUsers();$('#uMsg').textContent=`Passwort von ${u.name} zurückgesetzt.`},'Zurücksetzen')});
+    const d=dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div>${pwField('eP','Neues Startpasswort')}<div class="mut">Gib es vor dem Zurücksetzen weiter, es wird danach nicht mehr angezeigt.</div>`,
+      async d=>{await api('user/password',{id:u.id,password:$('#eP',d).value});toast(`Passwort von ${u.name} zurückgesetzt.`,'ok');loadUsers()},'Zurücksetzen');pwWire(d)});
+  el.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.x);
+    dlg('Benutzer löschen',`<div>«${esc(u.name)}» (${esc(u.username)}) hat sich noch nie angemeldet und wird endgültig gelöscht.</div>`,async()=>{await api('user/delete',{id:u.id});toast(`Benutzer «${u.name}» gelöscht.`,'ok');loadUsers()},'Löschen')});
   el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.d);
     if(confirm(u.name+' deaktivieren?\n\nDie Person wird abgemeldet, aus einem laufenden Einsatz ausgetragen und kann sich nicht mehr anmelden. Einsatzdaten bleiben erhalten.'))api('user/active',{id:u.id,active:0}).then(loadUsers).catch(fail)});
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>api('user/active',{id:+b.dataset.a,active:1}).then(loadUsers).catch(fail))}
+/* ---------- Benutzerrollen (Issue #63) ---------- */
+// Rollen mit frei wählbaren Rechten (PERMS im Server); Administrator hat immer alle. Nur eigene Rechte lassen sich vergeben
+async function loadURoles(){const el=$('#sUR');try{uroles=await api('uroles')}catch(e){el.innerHTML='<h2>Benutzerrollen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const P=uroles.perms,pn=k=>(P.find(p=>p.k===k)||{}).name||k,edit=can('uroles');
+  el.innerHTML=`<h2>Benutzerrollen</h2><div class="mut">Eine Person kann mehrere Benutzerrollen haben und erhält alle Rechte all ihrer Rollen. Zugewiesen werden sie unter «Benutzer». Die Rechte im Einsatz selbst (Nachrichten, Rettlinge, Markierungen …) regeln weiterhin Einsatzleitung, Spezialrollen und Einrückoptionen.</div>
+    ${edit?'<div class="row"><button class="pri" id="urA">+ Neue Benutzerrolle</button></div>':''}
+    ${uroles.roles.map(r=>{const adm=r.sys==='admin'; // Karten wie bei Benutzern und Einsatzstatistik
+      return`<div class="inc url${adm?' adm':''}"><div class="ih"><b>${esc(r.name)}</b>${adm?'<span class="mut">feste Rolle</span>':''}
+      <div class="fl">${adm?'<span class="adm">Alle Rechte, auch künftige</span>':r.perms.length?r.perms.map(k=>`<span>${esc(pn(k))}</span>`).join(''):'<span>keine Rechte</span>'}</div></div>
+      <div class="kv"><span><small>Personen</small>${r.users}</span><span><small>Rechte</small>${adm?'alle':r.perms.length+' von '+P.length}</span><span><small>Neue Benutzer</small>${r.def?'vorausgewählt':'–'}</span></div>
+      <div class="ia">${adm?'<span class="mut">weder änderbar noch entfernbar</span>':!edit?'':urOk(r)?`<button data-ue="${r.id}">Bearbeiten</button><button class="sec" data-ux="${r.id}">Entfernen</button>`:'<span class="mut" title="Hat Rechte, die du selbst nicht hast">nur mit mehr Rechten bearbeitbar</span>'}</div></div>`}).join('')}
+    <h3>Rechte</h3><div class="tw"><table><tbody>${P.map(p=>`<tr><td><small class="mut">${esc(p.group)}</small><br><b>${esc(p.name)}</b></td><td class="mut">${esc(p.hint)}</td></tr>`).join('')}</tbody></table></div>`;
+  const form=r=>{const gs=[...new Set(P.map(p=>p.group))];
+    return`<label class="mut">Name<input id="qN" value="${esc(r?r.name:'')}"></label><label class="chk"><input type="checkbox" id="qD" ${r&&r.def?'checked':''}> Bei neuen Benutzern vorausgewählt</label>
+      ${gs.map(g=>`<div class="mut" style="margin-top:.4rem"><b>${esc(g)}</b></div><div class="pg">${P.filter(p=>p.group===g).map(p=>`<label class="chk" title="${esc(p.hint)}"><input type="checkbox" data-pk="${p.k}" ${r&&r.perms.includes(p.k)?'checked':''} ${can(p.k)?'':'disabled'}> ${esc(p.name)}</label>`).join('')}</div>`).join('')}
+      <div class="mut">Du kannst nur Rechte vergeben und entziehen, die du selbst hast.</div>`};
+  const val=(d,r)=>({id:r?r.id:0,name:$('#qN',d).value,def:$('#qD',d).checked?1:0,perms:[...d.querySelectorAll('[data-pk]')].filter(c=>c.checked).map(c=>c.dataset.pk)});
+  if($('#urA'))$('#urA').onclick=()=>dlg('Neue Benutzerrolle',form(null),async d=>{await api('urole/save',val(d,null));toast('Benutzerrolle angelegt.');loadURoles()},'Anlegen').firstElementChild.classList.add('mid');
+  el.querySelectorAll('[data-ue]').forEach(b=>b.onclick=()=>{const r=UR(+b.dataset.ue);dlg('Benutzerrolle bearbeiten',form(r),async d=>{await api('urole/save',val(d,r));toast('Gespeichert.');me=(await api('me')).me;loadURoles()}).firstElementChild.classList.add('mid')});
+  el.querySelectorAll('[data-ux]').forEach(b=>b.onclick=()=>{const r=UR(+b.dataset.ux);
+    if(confirm(`Benutzerrolle «${r.name}» entfernen?${r.users?`\n\n${r.users} ${r.users===1?'Person verliert':'Personen verlieren'} die Rechte dieser Rolle (sofern keine andere Rolle sie gibt).`:''}`))api('urole/remove',{id:r.id}).then(async()=>{me=(await api('me')).me;loadURoles()}).catch(fail)})}
 /* ---------- Einrückoptionen (Auswahl beim Annehmen eines Einsatzes) ---------- */
 async function loadModes(){const el=$('#sM');let modes;try{modes=await api('modes')}catch(e){el.innerHTML='<h2>Einrückoptionen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   el.innerHTML=`<h2>Einrückoptionen</h2><div class="mut">Auswahl beim Annehmen eines Einsatzes. Ohne Standortfreigabe wird der Standort der Person weder geteilt noch auf der Karte angezeigt. Mit «Rechte der Einsatzleitung» darf die Person alles wie die Einsatzleitung, erhält aber keine Spezialrolle (z. B. Koordinator KP Rück).</div>
@@ -152,7 +203,7 @@ async function loadRoles(){const el=$('#sR');try{roles=await api('roles')}catch(
   el.innerHTML=`<h2>Spezialrollen im Einsatz</h2><div class="tw"><table><tbody>${roles.map(r=>`<tr><td><span style="color:${esc(r.color)}">●</span> ${esc(r.name)}${r.is_lead?' <span class="mut">(Einsatzleitung: darf Einsatz verwalten)</span>':''}${r.is_post?' <span class="mut">(Posten: Suchgebiet endet hier)</span>':''}${r.can_message||r.is_lead?'':' <span class="mut">(darf keine Nachrichten senden)</span>'}</td><td class="act"><button data-r="${r.id}">Bearbeiten</button></td></tr>`).join('')}</tbody></table></div>
     <h3>Nachrichten senden</h3><label class="row" style="align-items:center"><input type="checkbox" id="msgNoRole" disabled> <span>Personen ohne Spezialrolle dürfen Nachrichten senden</span></label>
     <label class="row" style="align-items:center"><input type="checkbox" id="msgReadAll" disabled> <span>Personen, die den Einsatz nicht angenommen haben, dürfen Nachrichten lesen (ohne Benachrichtigung, ohne Senden)</span></label>
-    <div class="mut">Pro Spezialrolle unter «Bearbeiten» einstellbar. Einsatzleitung, Administratoren und wer den Einsatz gestartet hat, dürfen immer senden. Lesen dürfen alle, die den Einsatz angenommen haben, mit der Einstellung oben auch alle übrigen.</div>
+    <div class="mut">Pro Spezialrolle unter «Bearbeiten» einstellbar. Einsatzleitung, Personen mit dem Recht «Jeden Einsatz leiten» und wer den Einsatz gestartet hat, dürfen immer senden. Lesen dürfen alle, die den Einsatz angenommen haben, mit der Einstellung oben auch alle übrigen.</div>
     <h3>Neue Rolle</h3><div class="row"><input id="rn" placeholder="Rollenname" aria-label="Rollenname"><input id="rc" type="color" value="#8888ff" aria-label="Farbe" style="flex:0 0 4rem"><button id="rA">Rolle anlegen</button></div>`;
   $('#rA').onclick=()=>api('role/save',{name:$('#rn').value,color:$('#rc').value}).then(loadRoles).catch(fail);
   el.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=roles.find(x=>x.id==b.dataset.r);
@@ -434,7 +485,7 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
   const card=x=>{const fl=[x.record===1?'<span class="on">● Aufzeichnung läuft</span>':x.record===2?'<span>❚❚ Aufzeichnung pausiert</span>':x.recorded?'<span>● aufgezeichnet</span>':'',x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':''].join('');
     return`<div class="inc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl?`<div class="fl">${fl}</div>`:''}</div>
       <div class="kv"><span><small>Dauer</small>${x.ended_at?min(x.ended_at-x.alarm_at):'läuft'}</span><span><small>Angenommen</small>${x.accepted}${x.declined?` <small>${x.declined} abgelehnt</small>`:''}</span><span><small>1. Annahme</small>${min(x.first_accept==null?null:x.first_accept-x.alarm_at)}</span><span><small>1. im Gebiet</small>${min(x.first_area==null?null:x.first_area-x.alarm_at)}</span></div>
-      <div class="ia"><button data-l="${x.id}">Log</button>${x.recorded?`<button data-rp="${x.id}">Replay</button>`:''}${x.ended_at&&(!x.log_anon||x.recorded&&!x.rp_anon)?`<button class="sec" data-an="${x.id}" title="Replay oder Einsatzprotokoll endgültig ohne Personendaten speichern">Anonymisieren</button>`:''}${x.recorded?`<button class="sec" data-rpd="${x.id}" title="Aufzeichnung dieses Einsatzes löschen">Aufzeichnung löschen</button>`:''}</div></div>`};
+      <div class="ia"><button data-l="${x.id}">Log</button>${x.recorded?`<button data-rp="${x.id}">Replay</button>`:''}${can('anon')&&x.ended_at&&(!x.log_anon||x.recorded&&!x.rp_anon)?`<button class="sec" data-an="${x.id}" title="Replay oder Einsatzprotokoll endgültig ohne Personendaten speichern">Anonymisieren</button>`:''}${can('anon')&&x.recorded?`<button class="sec" data-rpd="${x.id}" title="Aufzeichnung dieses Einsatzes löschen">Aufzeichnung löschen</button>`:''}</div></div>`};
   el.innerHTML=`<h2>Einsatzstatistik und Einsatzlog</h2><div class="row" style="align-items:center"><label class="mut" style="flex:0 0 auto">Anzeigen <select id="stF">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===statsF?'selected':''}>${v}</option>`).join('')}</select></label></div>
     <div class="ssum">${statsF!=='ex'?sum('real','Scharfe Einsätze'):''}${statsF!=='real'?sum('ex','Übungen'):''}</div>
     ${rows.map(card).join('')||`<div class="mut">Keine ${statsF==='ex'?'Übungen':statsF==='real'?'scharfen Einsätze':'Einsätze'}</div>`}`;
