@@ -516,10 +516,11 @@ const aarMin=s=>s==null?'–':Math.round(s/60)+' min';
 // Status in der Einsatzstatistik: rel = freigegeben, nr = nicht relevant, wip = in Arbeit (Angaben gespeichert), open = noch nichts
 const aarSt=x=>x.aar_st===1?'rel':x.aar_st===2?'nr':x.aar_at?'wip':'open';
 const aarChip=x=>({rel:'<span class="rv">AAR freigegeben</span>',nr:'<span>AAR nicht relevant</span>',wip:`<span class="wip" title="Zuletzt bearbeitet ${aarDt(x.aar_at)}">AAR in Arbeit</span>`,open:'<span>noch kein AAR</span>'})[aarSt(x)];
-// Knöpfe: Erfassen/Bearbeiten (nicht bei freigegebenen, die sind gesperrt), Ansehen (dort auch Freigabe), Word/PDF gemäss Einstellung dl
-const aarDlBtns=(id,p)=>(aarC.cfg.dl.docx?`<button data-${p}w="${id}" title="Als Word-Dokument herunterladen">Word</button>`:'')+(aarC.cfg.dl.pdf?`<button data-${p}p="${id}" title="Als PDF herunterladen">PDF</button>`:'');
+// Knöpfe: Erfassen/Bearbeiten (nicht bei freigegebenen, die sind gesperrt), Ansehen (dort auch Freigabe), Word/PDF gemäss Einstellung dl (je Format und Zustand wip, rel, nr)
+const aarDlOk=(k,s)=>!!aarC.cfg.dl[k][s==='open'?'wip':s];
+const aarDlBtns=(id,p,s)=>(aarDlOk('docx',s)?`<button data-${p}w="${id}" title="Als Word-Dokument herunterladen">Word</button>`:'')+(aarDlOk('pdf',s)?`<button data-${p}p="${id}" title="Als PDF herunterladen">PDF</button>`:'');
 function aarBtns(x){const s=aarSt(x);
-  return`<span class="bg"><span class="bl">AAR</span>${s!=='rel'&&can('aar')?`<button data-ae="${x.id}" title="After Action Review ${s==='wip'?'bearbeiten':'erfassen'}">${s==='wip'?'Bearbeiten':'Erfassen'}</button>`:''}${s!=='nr'?`<button data-av="${x.id}" title="Ansehen${can('aar_rel')?(s==='rel'?', Freigabe zurücknehmen':', freigeben'):''}">Ansehen</button>${aarDlBtns(x.id,'a')}`:''}</span>`}
+  const b=`${s!=='rel'&&can('aar')?`<button data-ae="${x.id}" title="After Action Review ${s==='wip'?'bearbeiten':'erfassen'}">${s==='wip'?'Bearbeiten':'Erfassen'}</button>`:''}${s!=='nr'?`<button data-av="${x.id}" title="Ansehen${can('aar_rel')?(s==='rel'?', Freigabe zurücknehmen':', freigeben'):''}">Ansehen</button>`:''}${aarDlBtns(x.id,'a',s)}`;return b?`<span class="bg"><span class="bl">AAR</span>${b}</span>`:''}
 // Formular mit allen Feldern der Einstellungen; leere Felder werden nicht gespeichert
 async function aarEdit(id){let x;try{x=await api('aar/get&id='+id);await aarImgs(x)}catch(e){return fail(e)}const i=x.inc,F=aarC.cfg.fields;let chg=false;
   const inp=f=>{const v=x.data[f.id]??'',a=`data-af="${f.id}"`;
@@ -572,7 +573,7 @@ async function aarShow(id,my){const o={log:!!aarC.cfg.auto.log,anon:false};let x
   const draw=()=>$('#avD',d).innerHTML=aarHtml(aarModel(x,o),logo);draw();
   $('#avL',d).onchange=e=>{o.log=e.target.checked;draw()};
   if(anonOk)$('#avA',d).onchange=async e=>{o.anon=e.target.checked;try{x=await get();await aarImgs(x,my);draw()}catch(er){fail(er)}};
-  for(const [k,l] of [['docx','Word'],['pdf','PDF']])if(aarC.cfg.dl[k])aarBtn(d,l,'',async()=>{await aarMake(x,k,o);return false});
+  for(const [k,l] of [['docx','Word'],['pdf','PDF']])if(aarDlOk(k,x.status===1?'rel':x.status===2?'nr':'wip'))aarBtn(d,l,'',async()=>{await aarMake(x,k,o);return false});
   if(!my&&can('aar_rel')&&x.status===1)aarBtn(d,'Freigabe zurücknehmen','sec',async()=>{if(!confirm('Freigabe zurücknehmen?\n\nDas Review ist wieder in Arbeit, bearbeitbar und für die Teilnehmenden nicht mehr sichtbar.'))return false;
     await api('aar/status',{id,status:0});toast('Freigabe zurückgenommen.','ok');loadStats()});
   if(!my&&can('aar_rel')&&x.status!==1)aarBtn(d,'Freigeben','',async()=>{if(!confirm('Freigeben?\n\nDas Review ist danach abgeschlossen und gesperrt, und alle Teilnehmenden sehen es unter «Meine Einsätze».'))return false;
@@ -699,17 +700,17 @@ async function loadAarCfg(){const el=$('#sAarC');try{aarC=await api('aar/cfg')}c
     <div class="mut">Optional, erscheint oben rechts im Dokument. PNG, JPEG, WebP oder SVG; es wird auf höchstens 800 Pixel verkleinert.</div>
     <h3>Mitgelieferte Abschnitte</h3>${Object.entries(aarC.auto).map(([k,l])=>`<label class="chk"><input type="checkbox" data-aa="${k}" ${C.auto[k]?'checked':''}> ${esc(l)}</label>`).join('')}
     <div class="mut">Die Listen erscheinen nur, wenn es im Einsatz solche gibt.</div>
-    <h3>Herunterladen</h3>${Object.entries(aarC.dls).map(([k,l])=>`<label class="chk"><input type="checkbox" data-adl="${k}" ${C.dl[k]?'checked':''}> ${esc(l)} erlauben</label>`).join('')}
-    <div class="mut">Gilt in der Einsatzstatistik und unter «Meine Einsätze». Ansehen im Browser ist immer möglich.</div>
+    <h3>Herunterladen</h3><div class="tw"><table><thead><tr><th>Dokument</th>${Object.values(aarC.dlst).map(l=>`<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${Object.entries(aarC.dls).map(([k,l])=>`<tr><td>${esc(l)}</td>${Object.entries(aarC.dlst).map(([s,sl])=>`<td><input type="checkbox" data-adl="${k}" data-ads="${s}" aria-label="${esc(l)}: ${esc(sl)}" ${C.dl[k][s]?'checked':''}></td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="mut">Legt fest, in welchem Zustand des Reviews welches Dokument heruntergeladen werden kann. «In Arbeit» umfasst auch Einsätze ohne erfasstes Review. Unter «Meine Einsätze» zählt nur «Freigegeben». Das Ansehen im Browser ist davon unabhängig.</div>
     <h3>Felder (${L})</h3><div class="row"><button class="pri" id="acA">+ Neues Feld</button></div>
     <div class="tw"><table><thead><tr><th>Bezeichnung</th><th>Art</th><th>Hinweis</th><th></th></tr></thead><tbody>${C.fields.map((f,n)=>`<tr${f.type==='head'?' class="aarh"':''}><td>${f.type==='head'?'<b>'+esc(f.label)+'</b>':esc(f.label)}</td><td>${esc(T[f.type]||f.type)}${f.type==='select'?` <span class="mut">(${f.opts.length} Werte)</span>`:''}</td><td class="mut">${esc(f.hint)}</td>
       <td class="act"><button data-fu="${n}" ${n?'':'disabled'} title="Nach oben" aria-label="Nach oben">↑</button><button data-fd="${n}" ${n<L-1?'':'disabled'} title="Nach unten" aria-label="Nach unten">↓</button><button data-fe="${n}">Bearbeiten</button><button data-fx="${n}">Entfernen</button></td></tr>`).join('')||'<tr><td colspan="4" class="mut">Keine Felder</td></tr>'}</tbody></table></div>
     <div class="mut">Entfernte Felder verschwinden aus Formular und Dokument; bereits erfasste Angaben bleiben gespeichert. Kurze Angaben (Text einzeilig, Datum, Uhrzeit, Zahl, Auswahl, Ja/Nein) stehen im Dokument in einer Tabelle, mehrzeilige als Frage mit Antwort.</div>`;
-  const cur=()=>({title:C.title,org:C.org,auto:{...C.auto},dl:{...C.dl},fields:C.fields.map(f=>({...f}))});
+  const cur=()=>({title:C.title,org:C.org,auto:{...C.auto},dl:JSON.parse(JSON.stringify(C.dl)),fields:C.fields.map(f=>({...f}))});
   const save=c=>api('aar/cfg/save',c).then(()=>{toast('Gespeichert.','ok');loadAarCfg()});
   $('#acS').onclick=()=>save({...cur(),title:$('#acT').value,org:$('#acO').value}).catch(fail);
   el.querySelectorAll('[data-aa]').forEach(c=>c.onchange=()=>{const x=cur();x.auto[c.dataset.aa]=c.checked?1:0;save(x).catch(fail)});
-  el.querySelectorAll('[data-adl]').forEach(c=>c.onchange=()=>{const x=cur();x.dl[c.dataset.adl]=c.checked?1:0;save(x).catch(fail)});
+  el.querySelectorAll('[data-adl]').forEach(c=>c.onchange=()=>{const x=cur();x.dl[c.dataset.adl][c.dataset.ads]=c.checked?1:0;save(x).catch(fail)});
   const mv=(n,k)=>{const x=cur();[x.fields[n],x.fields[n+k]]=[x.fields[n+k],x.fields[n]];save(x).catch(fail)};
   el.querySelectorAll('[data-fu]').forEach(b=>b.onclick=()=>mv(+b.dataset.fu,-1));
   el.querySelectorAll('[data-fd]').forEach(b=>b.onclick=()=>mv(+b.dataset.fd,1));
@@ -741,7 +742,7 @@ async function loadMy(){const el=$('#sMy');let r;try{r=await api('my/incidents')
   const card=x=>{const fl=[x.aar_rel?`<span class="rv" title="Freigegeben am ${aarDt(x.aar_rel)}">AAR</span>`:'',x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':''].join('');
     return`<div class="inc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl?`<div class="fl">${fl}</div>`:''}</div>
       <div class="kv"><span><small>Dauer</small>${Math.round((x.ended_at-x.alarm_at)/60)} min</span>${x.mode_name?`<span><small>Eingerückt</small>${esc(x.mode_name)}</span>`:''}</div>
-      <div class="ia"><span class="bg"><button data-ml="${x.id}">Log</button>${x.recorded?`<button data-mr="${x.id}">Replay</button>`:''}</span>${x.aar_rel&&aarC?`<span class="bg"><span class="bl">After Action Review</span><button data-mv="${x.id}">Ansehen</button>${aarDlBtns(x.id,'m')}</span>`:''}</div></div>`};
+      <div class="ia"><span class="bg"><button data-ml="${x.id}">Log</button>${x.recorded?`<button data-mr="${x.id}">Replay</button>`:''}</span>${x.aar_rel&&aarC?`<span class="bg"><span class="bl">After Action Review</span><button data-mv="${x.id}">Ansehen</button>${aarDlBtns(x.id,'m','rel')}</span>`:''}</div></div>`};
   el.innerHTML=`<h2>Meine Einsätze</h2><div class="mut">Beendete Einsätze und Übungen, an denen du teilgenommen hast. ${forced?'Andere Personen erscheinen anonymisiert (z. B. «Einsatzkraft 3»), du selbst mit deinem Namen.':'Log und Replay zeigen alle Daten, sofern sie nicht endgültig anonymisiert wurden.'} Ein Replay gibt es nur bei aufgezeichneten Einsätzen, ein After Action Review nur, wenn es freigegeben wurde.</div>
     ${r.incidents.map(card).join('')||'<div class="mut">Noch keine beendeten Einsätze mit deiner Teilnahme.</div>'}`;
   const X=id=>r.incidents.find(x=>x.id==id);

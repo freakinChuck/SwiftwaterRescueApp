@@ -164,8 +164,11 @@ const AAR_IMG_MAX = 50; // Bilder je Review, je höchstens 3 MB (der Browser ver
 const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'log' => 'Einsatzlog (Vorauswahl beim Herunterladen)'];
 // Status je Review: 0 = in Arbeit, 1 = freigegeben (abgeschlossen, gesperrt, für Teilnehmende sichtbar), 2 = nicht relevant
 const AAR_STATUS = [0 => 'in Arbeit', 1 => 'freigegeben', 2 => 'nicht relevant'];
-const AAR_DL = ['docx' => 'Word (.docx)', 'pdf' => 'PDF']; // Download erlaubt (Einstellung dl); Ansehen im Browser geht immer
-const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 13, 'auto' => ['inc' => 1, 'people' => 1, 'res' => 1, 'ext' => 1, 'log' => 0], 'dl' => ['docx' => 1, 'pdf' => 1], 'fields' => [
+const AAR_DL = ['docx' => 'Word (.docx)', 'pdf' => 'PDF']; // Download je Format und Zustand erlaubt (Einstellung dl); Ansehen im Browser ist davon unabhängig
+const AAR_DL_ST = ['wip' => 'In Arbeit', 'rel' => 'Freigegeben', 'nr' => 'Nicht relevant']; // «noch kein AAR» zählt als in Arbeit
+// dl je Format und Zustand; die frühere Einstellung (nur Format ein/aus) gilt für «Freigegeben»
+function aarDlNorm($d) { $r = []; foreach (AAR_DL as $k => $_) { $v = $d[$k] ?? null; foreach (AAR_DL_ST as $s => $__) $r[$k][$s] = is_array($v) ? (int)!empty($v[$s]) : ($s === 'rel' ? (int)($v ?? 1) : 0); } return $r; }
+const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 13, 'auto' => ['inc' => 1, 'people' => 1, 'res' => 1, 'ext' => 1, 'log' => 0], 'dl' => ['docx' => ['wip' => 0, 'rel' => 1, 'nr' => 0], 'pdf' => ['wip' => 0, 'rel' => 1, 'nr' => 0]], 'fields' => [
   ['id' => 'f1', 'type' => 'date', 'label' => 'Datum des Reviews', 'hint' => ''],
   ['id' => 'f2', 'type' => 'text', 'label' => 'Moderation', 'hint' => ''],
   ['id' => 'f3', 'type' => 'area', 'label' => 'Teilnehmende am Review', 'hint' => ''],
@@ -199,7 +202,7 @@ function aarImgRow($img) { global $db; $s = $db->prepare("SELECT id,incident_id 
 function aarCfg() { $c = json_decode((string)setting('aar_cfg', ''), true);
   if (!is_array($c)) return AAR_DEFAULT;
   $c += AAR_DEFAULT; $a = []; foreach (AAR_AUTO as $k => $_) $a[$k] = (int)($c['auto'][$k] ?? AAR_DEFAULT['auto'][$k]); $c['auto'] = $a;
-  $d = []; foreach (AAR_DL as $k => $_) $d[$k] = (int)($c['dl'][$k] ?? 1); $c['dl'] = $d;
+  $c['dl'] = aarDlNorm((array)$c['dl']);
   return $c; }
 // Einstellungen prüfen; neue Felder erhalten eine nie zuvor vergebene ID (seq), damit Werte entfernter Felder nie einem neuen Feld zufallen
 function aarIn($in) { $old = aarCfg(); $s = fn($v, $n) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)$v)), 0, $n);
@@ -221,7 +224,7 @@ function aarIn($in) { $old = aarCfg(); $s = fn($v, $n) => mb_substr(trim(preg_re
     $f[] = $r;
   }
   $a = []; foreach (AAR_AUTO as $k => $_) $a[$k] = (int)!empty(($in['auto'] ?? [])[$k]);
-  $d = []; foreach (AAR_DL as $k => $_) $d[$k] = isset($in['dl']) ? (int)!empty($in['dl'][$k]) : $old['dl'][$k];
+  $d = isset($in['dl']) ? aarDlNorm((array)$in['dl']) : $old['dl'];
   return ['title' => $s($in['title'] ?? '', 120) ?: AAR_DEFAULT['title'], 'org' => $s($in['org'] ?? '', 120), 'seq' => $seq, 'auto' => $a, 'dl' => $d, 'fields' => $f]; }
 const FEATURES = ['area' => 'Suchgebiet', 'res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
                   'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
@@ -1596,7 +1599,7 @@ switch ($route) {
 
  /* ---------- After Action Review (Issue #55) ---------- */
  case 'aar/cfg': if (myRuns() === 'off') need('aar', 'aar_rel', 'aar_cfg'); // mit Meine Einsätze für alle (Ansicht freigegebener Reviews)
-  out(['cfg' => aarCfg(), 'logo' => setting('aar_logo', '') ?: null, 'types' => AAR_TYPES, 'auto' => AAR_AUTO, 'dls' => AAR_DL]);
+  out(['cfg' => aarCfg(), 'logo' => setting('aar_logo', '') ?: null, 'types' => AAR_TYPES, 'auto' => AAR_AUTO, 'dls' => AAR_DL, 'dlst' => AAR_DL_ST]);
  case 'aar/cfg/save': need('aar_cfg'); setSetting('aar_cfg', json_encode(aarIn($in), JSON_UNESCAPED_UNICODE)); out(['cfg' => aarCfg()]);
  case 'aar/logo': need('aar_cfg'); // PNG oder JPEG als Data-URL (der Browser verkleinert vorher), null = entfernen
   $l = $in['logo'] ?? null;
