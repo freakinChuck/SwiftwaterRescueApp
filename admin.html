@@ -357,7 +357,7 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   // Rettling vom Erfassen bis zum Entfernen; PLS des Einsatzes ab dem ersten Log-Eintrag «setzt» (ohne solchen von Anfang an, z. B. beim Start gesetzt), «entfernt» blendet ihn bis zum nächsten Setzen aus
   const plsLog=d.log.filter(x=>x.kind==='pls'),plsOn=t=>{const x=plsLog.filter(x=>x.ts<=t).pop();return x?!/^entfernt/.test(x.text):!plsLog.length||!/^setzt/.test(plsLog[0].text)};
   const pls=[...(i.lat!=null?[[i.lat,i.lon,'PLS',plsOn]]:[]),...d.rescuees.filter(r=>r.pls_lat!=null).map(r=>[r.pls_lat,r.pls_lon,'PLS '+r.name,t=>r.created<=t&&(r.removed==null||t<r.removed)])];
-  const map=L.map('rpMap',{zoomControl:true}).setView(pls.length?pls[0]:[46.8,8.2],pls.length?14:8),bases={};
+  const map=L.map('rpMap',{zoomControl:true}).setView(pls.length?[pls[0][0],pls[0][1]]:[46.8,8.2],pls.length?14:8),bases={};
   Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
   let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);L.control.layers(bases,null,{position:'topright'}).addTo(map);
   pls.forEach(p=>p.mk=L.circleMarker([p[0],p[1]],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip(esc(p[2]),{permanent:true,direction:'right',className:'rplbl'}));
