@@ -132,8 +132,9 @@ const AIR_SOURCES = [
 const AIR_FILTERS = ['rescue' => 'Nur Rettungshelikopter (Liste unten)', 'heli' => 'Alle Helikopter, Rettungshelikopter hervorgehoben', 'all' => 'Alle Luftfahrzeuge (auch Flugzeuge, z. B. Suchflüge)'];
 const AIR_APP = ['all' => 'Alle angemeldeten Personen', 'part' => 'Teilnehmende und Einsatzleitung', 'lead' => 'Nur Einsatzleitung', 'off' => 'Niemand'];
 // Zahlen: [Standard, Minimum, Maximum]
-const AIR_NUM = ['radius_km' => [15, 1, 100], 'max_alt_ft' => [10000, 500, 60000], 'max_age_s' => [60, 10, 600], 'trail_min' => [5, 0, 60], 'cache_s' => [5, 2, 120]];
+const AIR_NUM = ['radius_km' => [15, 1, 500], 'max_alt_ft' => [10000, 500, 60000], 'max_age_s' => [60, 10, 600], 'trail_min' => [5, 0, 60], 'cache_s' => [5, 2, 120]];
 const AIR_DEFAULT = ['on' => 1, 'def_real' => 1, 'def_ex' => 0, 'src' => ['adsbfi', 'adsblol'], 'order' => ['adsbfi', 'adsblol', 'opensky'], 'filter' => 'heli', 'app' => 'all', 'public' => 0, 'replay' => 1, 'rescue' => [['k' => 'RGA', 'n' => 'Rega'], ['k' => 'AAA', 'n' => 'Alpine Air Ambulance']]];
+const AIR_MAX_M = 463000; // grösster Abfrageradius der Dienste (250 Seemeilen); ein grösserer Umkreis wird nur bis dahin abgefragt
 const AIR_BACKOFF_S = 20; // nach einem Fehlschlag aller Quellen so lange nicht erneut abfragen
 const AIR_REPLAY_S = 5;   // Aufzeichnung fürs Replay: höchstens ein Punkt je Luftfahrzeug in diesem Abstand
 function airCfg() { $v = json_decode(setting('air', ''), true); $v = is_array($v) ? $v : []; $c = AIR_DEFAULT; $ks = array_keys(AIR_SOURCES);
@@ -196,7 +197,7 @@ function airStat($k, $ok, $ms, $err, $n) { try { $f = __DIR__ . '/data/air/statu
   $s[$k] = $x; @file_put_contents("$f.tmp", json_encode($s)); @rename("$f.tmp", $f); } catch (Throwable $e) {} }
 // erste Quelle mit gültiger Antwort für den Kreis (la, lo, rm Meter): [Quelle, Liste, abgedeckter Radius] oder null
 function airFetch($srcs, $la, $lo, $rm) { $f = fn($x) => sprintf('%.4F', $x);
-  $nm = (int)min(250, max(5, ceil($rm / 1852 / 5) * 5)); // Radius in Seemeilen, auf 5 aufgerundet (höchstens 250, Grenze der Dienste)
+  $nm = (int)min(AIR_MAX_M / 1852, max(5, ceil($rm / 1852 / 5) * 5)); // Radius in Seemeilen, auf 5 aufgerundet (höchstens 250, Grenze der Dienste)
   foreach ($srcs as $k) { $S = AIR_SOURCES[$k];
     if ($k === 'opensky') { $d = $nm * 1852; $dla = $d / 111320; $dlo = $d / (111320 * max(.1, cos(deg2rad($la)))); $url = sprintf($S['url'], $f($la - $dla), $f($lo - $dlo), $f($la + $dla), $f($lo + $dlo)); }
     else $url = sprintf($S['url'], $f($la), $f($lo), $nm);
@@ -232,7 +233,7 @@ function airServe($inc) { global $now, $db; $c = airCfg(); $id = (int)$inc['id']
   [$la, $lo, $rm] = airCircle($z);
   $dir = __DIR__ . '/data/air'; if (!is_dir($dir)) @mkdir($dir, 0775, true); $file = "$dir/inc$id.json";
   $read = function () use ($file) { clearstatcache(true, $file); $d = is_file($file) ? json_decode((string)@file_get_contents($file), true) : null; return is_array($d) ? $d : null; };
-  $ok = fn($d) => $d && isset($d['at']) && $now - (int)$d['at'] < $c['cache_s'] && hav($d['la'], $d['lo'], $la, $lo) + $rm <= $d['rm'];
+  $ok = fn($d) => $d && isset($d['at']) && $now - (int)$d['at'] < $c['cache_s'] && hav($d['la'], $d['lo'], $la, $lo) + min($rm, AIR_MAX_M * .9) <= $d['rm']; // grösser als die Grenze der Dienste: deckt der Cache das Abfragbare ab, gilt er
   $wait = fn($d) => $d && !empty($d['fail_at']) && $now - (int)$d['fail_at'] < AIR_BACKOFF_S;
   $d = $read();
   if (!$ok($d) && !$wait($d) && ($lk = @fopen("$file.lock", 'c')) && flock($lk, LOCK_EX | LOCK_NB)) {

@@ -52,6 +52,7 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .anum label{font-weight:600}.anum .h{color:var(--mut);font-size:.82rem;flex:1}
 .anum .ai{display:flex;align-items:center;gap:.4rem}.anum .ai input{width:7.5rem;margin:0;font-variant-numeric:tabular-nums}.anum .ai span{color:var(--mut)}
 .anum small{color:var(--mut);font-size:.75rem}.anum small b{color:var(--ex);font-weight:600}
+#sH .afld{display:flex;flex-direction:column;gap:.25rem;max-width:28rem;margin:.5rem 0}#sH .afld select{margin:0}#sH label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* Helikopter: je Eingabe eine Zeile */
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
 .exleg{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.3rem;font-size:.8rem}.exleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;border:1px solid #fff;margin-right:.3rem;vertical-align:-.05rem}
 .pickmap{height:min(14rem,32dvh);isolation:isolate;border-radius:8px;border:1px solid var(--line);background:#0c1c25}
@@ -220,7 +221,7 @@ async function loadNav(){const el=$('#sNv');let s;try{s=await api('settings')}ca
 // Alles in der Einstellung air (JSON), gespeichert erst mit «Speichern»; der Server prüft die Werte (airIn)
 let airS=null,airC=null;
 // Zahlenwerte: [Titel, Einheit, Erklärung], gruppiert; Bereich und Standard kommen vom Server (air_num)
-const airNumL={radius_km:['Umkreis','km','um PLS (plus Driftdistanz), Einsatzkräfte, Rettlinge, Externe, Markierungen und Bereiche'],max_alt_ft:['Höchste Flughöhe','ft','höher fliegende gelten als Durchflug (barometrische Höhe)'],
+const airNumL={radius_km:['Umkreis','km','um PLS (plus Driftdistanz), Einsatzkräfte, Rettlinge, Externe, Markierungen und Bereiche; abgefragt werden höchstens ca. 460 km um die Mitte (Grenze der Dienste)'],max_alt_ft:['Höchste Flughöhe','ft','höher fliegende gelten als Durchflug (barometrische Höhe)'],
   max_age_s:['Höchstes Alter einer Position','s','ältere Positionen werden nicht mehr gezeigt'],trail_min:['Spur','min','zurückgelegter Weg hinter dem Symbol, 0 = keine Spur'],cache_s:['Abfrage höchstens alle','s','eine Abfrage für alle Geräte zusammen']};
 const AIR_GRP=[['Relevanzzone',['radius_km','max_alt_ft']],['Anzeige',['max_age_s','trail_min']],['Abfrage',['cache_s']]];
 const airNumX=(k,v)=>k==='max_alt_ft'&&v!==''&&!isNaN(v)?'≈ '+Math.round(v*.3048).toLocaleString('de-CH')+' m':''; // Flughöhe zusätzlich in Metern
@@ -246,8 +247,8 @@ function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?n
     <label class="chk"><input type="checkbox" id="aDE" ${c.def_ex?'checked':''} ${c.on?'':'disabled'}> Übungen (auch vorbereitete)</label></div>
     <h3>Datenquellen</h3><div class="mut">Der Server fragt die eingeschalteten in dieser Reihenfolge ab, bis eine antwortet. Alle sind gratis und ohne Schlüssel, aber <b>nur für nicht-kommerzielle Nutzung</b> gedacht; die Bedingungen der Betreiber gelten.</div>
     ${c.order.map(srcRow).join('')}
-    <h3>Anzeige</h3><label class="mut">Welche Luftfahrzeuge${sel('aF',s.air_filters,c.filter)}</label>
-    <label class="mut">Einsatz-App: Wer sieht die Helikopter${sel('aA',s.air_app,c.app)}</label>
+    <h3>Anzeige</h3><label class="mut afld">Welche Luftfahrzeuge${sel('aF',s.air_filters,c.filter)}</label>
+    <label class="mut afld">Einsatz-App: Wer sieht die Helikopter${sel('aA',s.air_app,c.app)}</label>
     <label class="chk"><input type="checkbox" id="aP" ${c.public?'checked':''}> In der öffentlichen Ansicht zeigen</label>
     <label class="chk"><input type="checkbox" id="aR" ${c.replay?'checked':''}> Aufzeichnen und im Replay zeigen (nur während der Einsatz aufgezeichnet wird)</label>
     <h3>Relevanzzone und Abfrage</h3><div class="mut">Relevant ist ein Luftfahrzeug, das sich im Umkreis um eine aktive Position des Einsatzes befindet. Um den PLS zählt zusätzlich die Driftdistanz (Fliessgeschwindigkeit × Zeit seit dem PLS, höchstens 30 km), damit das ganze Suchgebiet abgedeckt ist. 15 km entsprechen bei einem Rettungshelikopter etwa 4 Minuten Anflug.</div>
