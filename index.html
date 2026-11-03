@@ -227,15 +227,17 @@ function drawNote(){const n=$('#areaNote');if(!n)return;const pick=window.markPi
   n.innerHTML=pick?esc(pick):!more?esc(areaInfo):areaOpen?areaLines.map(l=>`<div class="ln">${esc(l)}</div>`).join('')+'<div class="tg">▴ weniger</div>':`${esc(areaShort)} <span class="tg">▸ Details</span>`;
   n.hidden=!(areaInfo||pick)}
 function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
-  layers.pls=L.layerGroup(plsList().map(p=>L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at)))));if(vis('pls'))layers.pls.addTo(map);
+  layers.pls=L.layerGroup(plsList().map(p=>navOn(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))),p.lat,p.lon,p.label)));if(vis('pls'))layers.pls.addTo(map);
   try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
   const act=[...(vis('app')?st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'):[]),...(vis('ext')?extList():[])],groups=[];
   act.forEach(p=>{const pt=map.latLngToLayerPoint([p.lat,p.lon]);const g=groups.find(g=>g.pt.distanceTo(pt)<40);g?g.items.push(p):groups.push({pt,items:[p]})});
   layers.pp=L.layerGroup(groups.map(g=>{const a=g.items[0];const ll=[a.lat,a.lon];
-    if(g.items.length===1)return L.marker(ll,{icon:L.divIcon({className:'',html:mk(a),iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(esc(a.name)+(roleName(a)?' – '+esc(roleName(a)):'')+(a.ext?' · extern':''));
-    return L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="mk cl">${g.items.length}</div>`,iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(g.items.map(x=>esc(x.name)).join(', '))})).addTo(map);
-  layers.rm=L.layerGroup((vis('res')&&st.marks||[]).map(x=>L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="rm">R</div>',iconSize:[34,34],iconAnchor:[17,17]}),zIndexOffset:1000}).bindTooltip('Rettling – '+(x.manual?'manuell (Einsatzleitung)':esc(x.name))+' · '+fmtT(x.ts)))).addTo(map);
+    if(g.items.length===1)return navOn(L.marker(ll,{icon:L.divIcon({className:'',html:mk(a),iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(esc(a.name)+(roleName(a)?' – '+esc(roleName(a)):'')+(a.ext?' · extern':'')),a.lat,a.lon,a.name);
+    // Gruppe: am selben Ort (≤ 30 m) direkt navigieren, sonst hineinzoomen, damit man die einzelne Person antippen kann
+    const m=L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="mk cl">${g.items.length}</div>`,iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(g.items.map(x=>esc(x.name)).join(', '));
+    return g.items.every(x=>geoDist(x,a)<=30)?navOn(m,a.lat,a.lon,g.items.map(x=>x.name).join(', ')):m.on('click',()=>{stopFollow();map.fitBounds(L.latLngBounds(g.items.map(x=>[x.lat,x.lon])),{padding:[60,60],maxZoom:19})})})).addTo(map);
+  layers.rm=L.layerGroup((vis('res')&&st.marks||[]).map(x=>navOn(L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="rm">R</div>',iconSize:[34,34],iconAnchor:[17,17]}),zIndexOffset:1000}).bindTooltip('Rettling – '+(x.manual?'manuell (Einsatzleitung)':esc(x.name))+' · '+fmtT(x.ts)),x.lat,x.lon,'Rettling'))).addTo(map);
   if(fitted!==i.id)startView(i)}
 // Startansicht beim Öffnen des Einsatzes: Übersicht über alle aktiven Positionen (Einsatzkräfte mit Standort inkl. Externe, nicht gerettete Rettlinge mit Standort, PLS fürs Suchgebiet).
 // Nur einmal pro Einsatz; gibt es noch keine Position, wird es beim nächsten Polling erneut versucht.
@@ -540,7 +542,9 @@ const poiInfo=p=>{const a=p.kind==='area',c=poiPt(p);
   return (a?'Bereich, ca. '+haOf(p.pts).toFixed(1)+' ha'+fcs(c.lat,c.lng,' · Mitte '):'Markierung'+fcs(c.lat,c.lng))+' · '+(p.by_name||'')+' · '+fmtT(p.created)};
 // Navigation (Issue #79, Funktion «nav»): Ziel an eine Navigations-App übergeben. Ohne label nur das Symbol (für enge Listen).
 const navBtn=(lat,lon,name,label)=>feat('nav')&&lat!=null&&lon!=null?`<button class="nav" data-nav="${(+lat).toFixed(6)},${(+lon).toFixed(6)}" data-nn="${esc(name)}" title="Mit einer Navigations-App hinfahren"${label?'':` aria-label="Zu ${esc(name)} navigieren"`}>🧭${label?' '+esc(label):''}</button>`:'';
-function navTo(lat,lon,name){const ll=lat+','+lon,q=encodeURIComponent(name||'Ziel'),android=/Android/i.test(navigator.userAgent);
+// Marker ohne Popup (Einsatzkräfte, PLS, alte Rettlings-Markierungen): Antippen öffnet direkt die Auswahl
+const navOn=(m,lat,lon,name)=>m.on('click',()=>{if(feat('nav')&&!document.body.classList.contains('picking'))navTo(lat,lon,name)});
+function navTo(lat,lon,name){lat=(+lat).toFixed(6);lon=(+lon).toFixed(6);const ll=lat+','+lon,q=encodeURIComponent(name||'Ziel'),android=/Android/i.test(navigator.userAgent);
   const apps=[['Google Maps',`https://www.google.com/maps/dir/?api=1&destination=${ll}`],...(android?[]:[['Apple Karten',`https://maps.apple.com/?daddr=${ll}&q=${q}`]]),['Waze',`https://waze.com/ul?ll=${ll}&navigate=yes`],
     ...(android?[['Andere App …',`geo:${ll}?q=${ll}(${q})`]]:[])]; // geo: öffnet unter Android die Auswahl aller Karten-Apps
   const d=dlg('Navigieren',`<div><b>${esc(name)}</b><div class="mut">${esc(fc(lat,lon)||'')}${fc(lat,lon)?' · ':''}WGS84 ${ll}</div></div><div class="navapps">${apps.map(([n,u])=>`<a class="navapp" href="${esc(u)}"${u.startsWith('geo:')?'':' target="_blank" rel="noopener"'}>${esc(n)}</a>`).join('')}</div>`,
