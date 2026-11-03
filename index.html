@@ -672,6 +672,9 @@ function rdRender(){const box=$('#rdBox');if(!rd){box.hidden=true;return}box.hid
 // mehrere Rettlinge mit Name und Beschreibung; alle im Einsatz markieren Standort (eigener oder auf der Karte gewählt) und «gerettet»
 // Reihenfolge: vermisst (noch kein Standort) oben, dann Standort bekannt, gerettet zuletzt
 let resLayer=null,resKey='';const resMore=new Set();
+// zugeklappte Gruppen (Vermisst, Standort bekannt, Gerettet) im Fenster «Rettlinge», pro Gerät gemerkt (localStorage sw_resfold)
+const resFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_resfold')||'[]'))}catch(e){return new Set()}})();
+function setResFold(k){resFold.has(k)?resFold.delete(k):resFold.add(k);try{localStorage.setItem('sw_resfold',JSON.stringify([...resFold]))}catch(e){}renderRes()}
 const canRes=()=>!!(st&&st.incident&&(st.can_manage||(st.me&&!st.me.left_at&&st.me.mode!=='declined')));
 const resSt=r=>r.rescued_at?'ok':r.lat!=null?'loc':'miss',RES_ST={miss:'Vermisst',loc:'Standort bekannt',ok:'Gerettet'};
 // PLS eines Rettlings: eigener oder der des Einsatzes (Issue #24)
@@ -690,7 +693,7 @@ function renderRes(){const o=$('#res');if(!o)return;const on=panel==='res'&&!!(s
     +(s==='miss'&&feat('area')&&resPart(r)?`<button data-rsa="${r.id}" title="Suchgebiet dieses Rettlings anzeigen">Suchgebiet</button>`:'')+(r.lat!=null?`<button data-rg="${r.id}" title="Auf der Karte zeigen">Zeigen</button>`:'')+(s==='ok'?'':r.lat!=null?navBtn(r.lat,r.lon,r.name,'Navigieren'):navBtn(r.pls_lat??st.incident.lat,r.pls_lon??st.incident.lon,'PLS «'+r.name+'»','Zum PLS'))
     +(can?`<button class="mo" data-rm="${r.id}" aria-expanded="${more}" aria-label="Weitere Aktionen für ${esc(r.name)}" title="Weitere Aktionen">⋯</button>`:'')+'</div>'
     +(more?`<div class="bt">${r.lat!=null&&s!=='ok'?`<button data-rc="${r.id}" title="Fundort entfernen, der Rettling gilt wieder als vermisst">Fundort zurücksetzen</button>`:''}<button data-rpls="${r.id}" title="Ort und Zeitpunkt, an dem der Rettling zuletzt gesehen wurde (PLS), auf der Karte setzen">PLS setzen</button><button data-re="${r.id}" title="Name, Beschreibung und PLS ändern">✎ Bearbeiten</button>${st.can_manage?`<button data-rd="${r.id}" title="Für alle entfernen">✕ Entfernen</button>`:''}</div>`:'')+'</div>'};
-  $('#resList').innerHTML=['miss','loc','ok'].map(s=>{const l=rs.filter(r=>resSt(r)===s);return l.length?`<div class="pg">${RES_ST[s]} (${l.length})</div>`+l.map(row).join(''):''}).join('')
+  $('#resList').innerHTML=['miss','loc','ok'].map(s=>{const l=rs.filter(r=>resSt(r)===s),c=resFold.has(s);return l.length?`<button class="pfold" data-rfo="${s}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${RES_ST[s]} (${l.length})</button>`+(c?'':l.map(row).join('')):''}).join('')
     ||`<div class="mut" style="padding:.6rem 0">Noch keine Rettlinge erfasst.</div>`;
   $('#resForm').hidden=!can}
 // Erfassen/Bearbeiten: PLS des Einsatzes übernehmen oder eigener PLS (Ort über «PLS»/auf der Karte, Zeitpunkt hier änderbar)
@@ -716,7 +719,7 @@ function plsPick(what,at,save){pickPoint(`Tippe auf die Karte, um den ${what} zu
     async d=>{const t=dtTs($('#plT',d).value);if(!t)throw new Error('Bitte einen Zeitpunkt eingeben.');await save(+q.lat.toFixed(7),+q.lng.toFixed(7),t);poll()})).catch(fail)}
 const dtLocal=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16),dtTs=v=>Math.floor(new Date(v).getTime()/1000)||0;
 const resOf=id=>((st&&st.rescuees)||[]).find(x=>x.id===id);
-document.addEventListener('click',e=>{const b=e.target.closest('[data-rf],[data-rm],[data-rc],[data-rr],[data-rg],[data-re],[data-rd],[data-rpls],[data-rsa]');if(!b)return;const d=b.dataset,id=+(d.rf||d.rm||d.rc||d.rr||d.rg||d.re||d.rd||d.rpls||d.rsa),r=resOf(id);
+document.addEventListener('click',e=>{const g=e.target.closest('[data-rfo]');if(g)return setResFold(g.dataset.rfo);const b=e.target.closest('[data-rf],[data-rm],[data-rc],[data-rr],[data-rg],[data-re],[data-rd],[data-rpls],[data-rsa]');if(!b)return;const d=b.dataset,id=+(d.rf||d.rm||d.rc||d.rr||d.rg||d.re||d.rd||d.rpls||d.rsa),r=resOf(id);
   if(d.re!==undefined)return editRes(id);if(!r)return;
   if(d.rm){resMore.has(id)?resMore.delete(id):resMore.add(id);return renderRes()}
   if(d.rf)return resFound(r);
