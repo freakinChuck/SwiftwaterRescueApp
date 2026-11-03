@@ -377,7 +377,7 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
   const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17});
-  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:rpAutoSaved(),autoBusy:0};
+  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:0};
   // Fenster «Ansicht» und Auto-Übersicht (Issue #53)
   const mc=$('#rpMap');mc.insertAdjacentHTML('beforeend','<button id="rpView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden">'+VIEW_ICON+'</button><div id="viewBox" hidden></div>');
   const vb=$('#viewBox'),bv=$('#rpView');[vb,bv].forEach(x=>{L.DomEvent.disableClickPropagation(x);L.DomEvent.disableScrollPropagation(x)});
@@ -400,7 +400,7 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
 function closeReplay(){if(!rp)return;clearInterval(rp.timer);rp.map.remove();rp=null;const o=$('#replay');if(o)o.remove()}
 function playReplay(on){if(!rp)return;if(on&&rp.t>=rp.t1)rp.t=rp.t0;rp.play=on;$('#rpPlay').textContent=on?'❚❚ Pause':'▶ Abspielen';clearInterval(rp.timer);
   if(on){rp.last=performance.now();rp.timer=setInterval(()=>{const n=performance.now(),dt=(n-rp.last)/1000;rp.last=n;rp.t=Math.min(rp.t1,rp.t+dt*+$('#rpSpd').value);if(rp.t>=rp.t1)playReplay(false);drawReplay()},200)}}
-function rpFollow(id){rp.follow=id;rp.pKey=null;if(rp.auto){rp.auto=false;rpAutoSave()}drawReplay()}
+function rpFollow(id){rp.follow=id;rp.pKey=null;rp.auto=false;drawReplay()}
 /* ---------- Replay: Ansicht und Auto-Übersicht (Issue #53) ---------- */
 // Kategorien wie in der Einsatz-App (VIEW), ohne Suchgebiet (wird im Replay nicht gezeichnet); ausgeblendete pro Gerät in sw_rpview (getrennt von App und öffentlicher Ansicht)
 const rpHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_rpview')||'[]'))}catch(e){return new Set()}})();
@@ -411,10 +411,8 @@ function rpSetBase(k){if(!MAP_PROVIDERS[k]||k===rp.baseKey)return;rp.map.removeL
 function rpViewBox(on){const b=$('#viewBox');if(!b||!rp)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#rpView').setAttribute('aria-expanded',on);if(on)b.innerHTML=viewHtml(rp.baseKey,rpCats(),rpVis)}
 document.addEventListener('click',e=>{const b=$('#replay #viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#rpView'))rpViewBox(false)});
 // Auto-Übersicht: bei jedem Zeichnen alle sichtbaren aktiven Positionen (Einsatzkräfte mit Standort, Externe, nicht gerettete Rettlinge, PLS) im Bild halten.
-// Neu ausgerichtet nur, wenn eine Position das Bild verlässt oder deutlich näher gezoomt werden kann (sonst springt die Karte beim Abspielen); gemerkt in sw_rpauto
-function rpAutoSaved(){try{return localStorage.getItem('sw_rpauto')==='1'}catch(e){return false}}
-function rpAutoSave(){try{localStorage.setItem('sw_rpauto',rp.auto?'1':'0')}catch(e){}}
-function rpSetAuto(on){rp.auto=on;if(on)rp.follow=null;rp.pKey=null;rpAutoSave();drawReplay()}
+// Neu ausgerichtet nur, wenn eine Position das Bild verlässt oder deutlich näher gezoomt werden kann (sonst springt die Karte beim Abspielen); beim Öffnen immer an
+function rpSetAuto(on){rp.auto=on;if(on)rp.follow=null;rp.pKey=null;drawReplay()}
 function rpAutoFit(pts){if(!rp.auto||!pts.length)return;const m=rp.map,b=L.latLngBounds(pts),view=m.getBounds().pad(-.08),z=Math.min(m.getBoundsZoom(b,false,L.point(80,80)),16);
   if(pts.length>1?view.contains(b)&&z<m.getZoom()+1:view.contains(b))return;rp.autoBusy=Date.now();
   if(pts.length>1)m.fitBounds(b,{padding:[40,40],maxZoom:16,animate:false});else m.setView(pts[0],Math.max(m.getZoom(),15),{animate:false})}
