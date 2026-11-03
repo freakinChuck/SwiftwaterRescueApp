@@ -394,7 +394,7 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   people.forEach(p=>{p.line=L.polyline([],{color:p.col,weight:3,opacity:.75}).addTo(trailL);
     p.mk=L.circleMarker([0,0],{radius:rz(8),color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'})});
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
-  const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
+  const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.filter(q=>q[2]!=null).map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17,animate:false}); // ohne Animation: ein verspätetes zoomstart beendete sonst die Auto-Übersicht
   rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:Date.now(),sz:rpSzSaved()};
   // Fenster «Ansicht»: nur Kategorien, die in diesem Einsatz vorkommen (das Suchgebiet zeichnet das Replay nie)
@@ -465,7 +465,7 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
     p.line.setLatLngs(sv?trail(p,k,ll):[]);info.push([p,age>GAP_S?'letzte Meldung vor '+durT(age):'Standort aktuell'])});
   // Positionen & Bereiche, Rettlinge und Nachrichten-Markierungen: nur neu zeichnen, wenn sich der sichtbare Bestand ändert
   const pois=d.pois.filter(p=>on(p.created,p.removed)),marks=d.marks.filter(m=>m.created<=t&&(m.mark||(m.unmarked!=null&&t<m.unmarked)));
-  const res=d.rescuees.filter(r=>on(r.created,r.removed)).map(r=>{const tr=rp.rtr[r.id]||[],k=lastIdx(tr,t),pos=k>=0?[tr[k][2],tr[k][3]]:!tr.length&&on(r.loc_at)?[r.lat,r.lon]:null;return{...r,pos,ok:on(r.rescued_at)}});
+  const res=d.rescuees.filter(r=>on(r.created,r.removed)).map(r=>{const tr=rp.rtr[r.id]||[],k=lastIdx(tr,t),pos=k>=0?(tr[k][2]==null?null:[tr[k][2],tr[k][3]]):!tr.length&&on(r.loc_at)?[r.lat,r.lon]:null;return{...r,pos,ok:on(r.rescued_at)}});
   // externe Einsatzkräfte (Issue #39): Standort und Spezialrolle mit Stand Einsatzende, sichtbar vom Erfassen bis zum Entfernen
   const ext=(d.externals||[]).filter(e=>on(e.created,e.removed));
   const pls=rp.pls.filter(p=>p[3](t));

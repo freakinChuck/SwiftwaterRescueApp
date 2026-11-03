@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="de"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Swiftwater Rescue</title>
 <!-- PWA (Issue #67): installierbar, Service Worker sw.js; Icons sind Platzhalter bis zum Logo (Issue #56) -->
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0f2430"><link rel="icon" href="img/icon-192.png">
-<link rel="apple-touch-icon" href="img/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Swiftwater">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Swiftwater"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
 <link rel="stylesheet" href="common.css?v=0">
 <style>
-body{height:100dvh;display:flex;flex-direction:column}
+/* Seite selbst scrollt nie (Issue #84: iOS zeigte sonst einen Scrollbalken, weil das zugeklappte Menü unterhalb des Bildschirms liegt); gescrollt wird in den Fenstern bzw. in #app (Anmeldung) */
+html,body{overflow:hidden;overscroll-behavior:none;touch-action:pan-x pan-y} /* kein Zoom der Seite (Zwei Finger, Doppeltipp); die Karte zoomt selbst über Touch-Ereignisse */
+@media(pointer:coarse){input,select,textarea{font-size:max(16px,1em)}} /* iOS zoomt sonst beim Antippen kleiner Eingabefelder */
+body{height:100dvh;display:flex;flex-direction:column}#app{flex:1;min-height:0;overflow:auto}
 #map{position:fixed;inset:0}
 .fab{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:.7rem;z-index:1000;width:46px;height:46px;font-size:1.3rem;padding:0}
 #chip{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:4rem;right:4rem;z-index:1000;background:var(--alarm);color:#fff;border-radius:6px;padding:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600}#chip.ex{background:var(--ex)}
@@ -22,7 +25,7 @@ body.off #chip,body.off #bMenu,body.off #bView,body.off #viewBox{margin-top:var(
 #sheetWrap{position:fixed;z-index:1100;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;transition:transform .2s;left:0;right:0;bottom:0;max-height:58dvh;transform:translateY(105%)}
 #sheetWrap.open{transform:none}#sheetBar{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.5rem .8rem;border-bottom:1px solid var(--line)}
 #sheet{overflow:auto;padding:.8rem;flex:1;padding-bottom:calc(.8rem + env(safe-area-inset-bottom))}
-@media(min-width:760px){#sheetWrap{top:0;bottom:0;right:auto;width:400px;max-height:none;transform:translateX(-105%)}}
+@media(min-width:760px){#sheetWrap{top:0;bottom:0;right:auto;width:400px;max-height:none;transform:translateX(-105%);padding-top:env(safe-area-inset-top)}}
 @media(prefers-reduced-motion:reduce){#sheetWrap{transition:none}}
 /* Seite «Einstellungen»: persönliche Einstellungen, Vollbild über Karte und Menü */
 #prefs{position:fixed;inset:0;z-index:1300;background:var(--bg,#08151c);display:flex;flex-direction:column}#prefs[hidden]{display:none}
@@ -58,7 +61,7 @@ body.off #chip,body.off #bMenu,body.off #bView,body.off #viewBox{margin-top:var(
 .rsk{width:32px;height:32px;border-radius:50%;background:#ff9f1c;color:#2a1600;border:3px solid #fff;display:grid;place-items:center;font-weight:800;box-shadow:0 0 0 2px #0008}.rsk.ok{background:#35c27a;color:#002b14}
 .rs{padding:.45rem 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.rs .hd{display:flex;gap:.4rem;align-items:baseline}.rs .hd b{flex:1}.rs .ds{white-space:pre-wrap;font-size:.88rem}.rs small{display:block;color:var(--mut)}
 .rs .st{font-size:.72rem;font-weight:700;padding:0 .4em;border-radius:4px;color:#fff;background:var(--alarm)}.rs .st.loc{background:#ff9f1c;color:#2a1600}.rs .st.ok{background:#35c27a;color:#002b14}
-.rs .bt{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem}.rs button{padding:.3rem .5rem;font-size:.82rem}.rs.done{opacity:.75}#resForm,#peopleForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem}.xtl{display:grid;gap:.3rem;max-height:55vh;overflow:auto}.xtl .pg{margin:.4rem 0 0}.xt{display:flex;gap:.3rem}.xt>button:first-child{flex:1;text-align:left}.xt small{display:block;color:var(--mut);font-weight:400}#resForm[hidden],#peopleForm[hidden]{display:none}
+.rs .bt{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem}.rs button{padding:.3rem .5rem;font-size:.82rem}.rs .mo{margin-left:auto;min-width:2.4rem;font-weight:700}.rs.done{opacity:.75}#resForm,#peopleForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem}.xtl{display:grid;gap:.3rem;max-height:55vh;overflow:auto}.xtl .pg{margin:.4rem 0 0}.xt{display:flex;gap:.3rem}.xt>button:first-child{flex:1;text-align:left}.xt small{display:block;color:var(--mut);font-weight:400}#resForm[hidden],#peopleForm[hidden]{display:none}
 /* Markierungen und Bereiche der Einsatzleitung: Fähnchen (Spitze unten links), Beschriftung, Liste, Zeichenleiste */
 .poi{width:28px;height:28px;border-radius:8px 8px 8px 0;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:.9rem;box-shadow:0 0 0 2px #0008;text-shadow:0 0 2px #000}
 .leaflet-tooltip.poilbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px}.leaflet-tooltip.poilbl::before{display:none}
@@ -669,7 +672,10 @@ function rdRender(){const box=$('#rdBox');if(!rd){box.hidden=true;return}box.hid
 /* ---------- Rettlinge (Kartenknopf «Rettlinge») ---------- */
 // mehrere Rettlinge mit Name und Beschreibung; alle im Einsatz markieren Standort (eigener oder auf der Karte gewählt) und «gerettet»
 // Reihenfolge: vermisst (noch kein Standort) oben, dann Standort bekannt, gerettet zuletzt
-let resLayer=null,resKey='';
+let resLayer=null,resKey='';const resMore=new Set();
+// zugeklappte Gruppen (Vermisst, Standort bekannt, Gerettet) im Fenster «Rettlinge», pro Gerät gemerkt (localStorage sw_resfold)
+const resFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_resfold')||'[]'))}catch(e){return new Set()}})();
+function setResFold(k){resFold.has(k)?resFold.delete(k):resFold.add(k);try{localStorage.setItem('sw_resfold',JSON.stringify([...resFold]))}catch(e){}renderRes()}
 const canRes=()=>!!(st&&st.incident&&(st.can_manage||(st.me&&!st.me.left_at&&st.me.mode!=='declined')));
 const resSt=r=>r.rescued_at?'ok':r.lat!=null?'loc':'miss',RES_ST={miss:'Vermisst',loc:'Standort bekannt',ok:'Gerettet'};
 // PLS eines Rettlings: eigener oder der des Einsatzes (Issue #24)
@@ -682,22 +688,29 @@ function drawRes(){if(!resLayer)return;const rs=(vis('res')&&st&&st.incident&&st
 function renderRes(){const o=$('#res');if(!o)return;const on=panel==='res'&&!!(st&&st.incident),rs=(st&&st.incident&&st.rescuees)||[];o.hidden=!on;$('#bRes').setAttribute('aria-expanded',on);
   const open=rs.filter(r=>!r.rescued_at).length,c=$('#resCnt');c.hidden=!open;c.textContent=open;updFold();
   if(!on)return;const can=canRes(),own=can&&st.me&&!st.me.left_at&&shares(st.me.mode);
-  const row=r=>{const s=resSt(r);return `<div class="rs${s==='ok'?' done':''}"><div class="hd"><b>${esc(r.name)}</b><span class="st ${s}">${RES_ST[s]}</span></div>${r.descr?`<div class="ds">${esc(r.descr)}</div>`:''}<small>${esc(resInfo(r))}</small><small>${esc(resPls(r))}</small><div class="bt">`
-    +(can&&s!=='ok'?`${own?`<button class="pri" data-rl="${r.id}" title="Standort des Rettlings = mein aktueller Standort">📍 Fundort = mein Standort</button>`:''}<button data-rp="${r.id}" title="Fundort des Rettlings auf der Karte antippen">📍 Fundort auf Karte</button><button class="pri" data-rr="${r.id}" data-v="1">Gerettet</button>`:'')
-    +(s==='miss'&&feat('area')&&resPart(r)?`<button data-rsa="${r.id}" title="Suchgebiet dieses Rettlings anzeigen">Suchgebiet</button>`:'')+(r.lat!=null?`<button data-rg="${r.id}" title="Auf der Karte zeigen">Zeigen</button>`:'')+(s==='ok'?'':r.lat!=null?navBtn(r.lat,r.lon,r.name,'Navigieren'):navBtn(r.pls_lat??st.incident.lat,r.pls_lon??st.incident.lon,'PLS «'+r.name+'»','Zum PLS'))+(can&&s==='ok'?`<button data-rr="${r.id}" data-v="0">Zurücknehmen</button>`:'')
-    +(can?`<button data-rpls="${r.id}" title="Ort und Zeitpunkt, an dem der Rettling zuletzt gesehen wurde (PLS), auf der Karte setzen">PLS setzen</button><button data-re="${r.id}" aria-label="${esc(r.name)} bearbeiten" title="Name, Beschreibung und PLS ändern">✎</button>`:'')+(st.can_manage?`<button data-rd="${r.id}" aria-label="${esc(r.name)} entfernen" title="Für alle entfernen">✕</button>`:'')+'</div></div>'};
-  $('#resList').innerHTML=['miss','loc','ok'].map(s=>{const l=rs.filter(r=>resSt(r)===s);return l.length?`<div class="pg">${RES_ST[s]} (${l.length})</div>`+l.map(row).join(''):''}).join('')
+  // Knöpfe (Issue #85): eine Zeile mit den Hauptaktionen, Seltenes unter «⋯» (aufgeklappt pro Rettling in resMore)
+  const row=r=>{const s=resSt(r),more=can&&resMore.has(r.id);return `<div class="rs${s==='ok'?' done':''}"><div class="hd"><b>${esc(r.name)}</b><span class="st ${s}">${RES_ST[s]}</span></div>${r.descr?`<div class="ds">${esc(r.descr)}</div>`:''}<small>${esc(resInfo(r))}</small><small>${esc(resPls(r))}</small><div class="bt">`
+    +(can&&s!=='ok'?`<button data-rf="${r.id}" title="${own?'Fundort = mein Standort oder auf der Karte wählen':'Fundort auf der Karte antippen'}">📍 Fundort</button><button class="pri" data-rr="${r.id}" data-v="1">Gerettet</button>`:'')+(can&&s==='ok'?`<button data-rr="${r.id}" data-v="0">Zurücknehmen</button>`:'')
+    +(s==='miss'&&feat('area')&&resPart(r)?`<button data-rsa="${r.id}" title="Suchgebiet dieses Rettlings anzeigen">Suchgebiet</button>`:'')+(r.lat!=null?`<button data-rg="${r.id}" title="Auf der Karte zeigen">Zeigen</button>`:'')+(s==='ok'?'':r.lat!=null?navBtn(r.lat,r.lon,r.name,'Navigieren'):navBtn(r.pls_lat??st.incident.lat,r.pls_lon??st.incident.lon,'PLS «'+r.name+'»','Zum PLS'))
+    +(can?`<button class="mo" data-rm="${r.id}" aria-expanded="${more}" aria-label="Weitere Aktionen für ${esc(r.name)}" title="Weitere Aktionen">⋯</button>`:'')+'</div>'
+    +(more?`<div class="bt">${r.lat!=null&&s!=='ok'?`<button data-rc="${r.id}" title="Fundort entfernen, der Rettling gilt wieder als vermisst">Fundort zurücksetzen</button>`:''}<button data-rpls="${r.id}" title="Ort und Zeitpunkt, an dem der Rettling zuletzt gesehen wurde (PLS), auf der Karte setzen">PLS setzen</button><button data-re="${r.id}" title="Name, Beschreibung und PLS ändern">✎ Bearbeiten</button>${st.can_manage?`<button data-rd="${r.id}" title="Für alle entfernen">✕ Entfernen</button>`:''}</div>`:'')+'</div>'};
+  $('#resList').innerHTML=['miss','loc','ok'].map(s=>{const l=rs.filter(r=>resSt(r)===s),c=resFold.has(s);return l.length?`<button class="pfold" data-rfo="${s}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${RES_ST[s]} (${l.length})</button>`+(c?'':l.map(row).join('')):''}).join('')
     ||`<div class="mut" style="padding:.6rem 0">Noch keine Rettlinge erfasst.</div>`;
   $('#resForm').hidden=!can}
 // Erfassen/Bearbeiten: PLS des Einsatzes übernehmen oder eigener PLS (Ort über «PLS»/auf der Karte, Zeitpunkt hier änderbar)
 function editRes(id){const r=((st&&st.rescuees)||[]).find(x=>x.id===id)||{name:'',descr:'',pls_lat:null},i=st.incident,own=r.pls_lat!=null;
   const plsH=own?`<label class="mut">Eigener PLS${esc(fcs(r.pls_lat,r.pls_lon,' · '))}, Drift ab<input id="rsT" type="datetime-local" value="${dtLocal(r.pls_at)}"></label><label class="row" style="align-items:center"><input type="checkbox" id="rsI" style="flex:0 0 auto"> <span>Stattdessen den PLS des Einsatzes übernehmen</span></label>`
     :`<div class="mut">PLS: ${i.lat!=null?'der des Einsatzes'+esc(fcs(i.lat,i.lon,' (',')'))+', Drift ab '+fmtDT(i.pls_at):'noch keiner (der Einsatz hat keinen PLS)'}</div><label class="row" style="align-items:center"><input type="checkbox" id="rsP" style="flex:0 0 auto" ${i.lat==null?'checked':''}> <span>${id?'Eigenen PLS auf der Karte setzen':'Danach eigenen PLS auf der Karte setzen'}</span></label>`;
-  dlg(id?'Rettling bearbeiten':'Rettling erfassen',`<label class="mut">Name<input id="rsN" maxlength="80" placeholder="z. B. Person 1, Kind, Kanufahrer" value="${esc(r.name)}"></label><label class="mut">Beschreibung (Merkmale, Kleidung, Alter …)<textarea id="rsD" rows="4" maxlength="1000">${esc(r.descr||'')}</textarea></label>${plsH}`,
-    async d=>{const name=$('#rsN',d).value.trim(),descr=$('#rsD',d).value;if(!name)throw new Error('Bitte einen Namen eingeben.');const body={id:id||undefined,name,descr};
+  dlg(id?'Rettling bearbeiten':'Rettling erfassen',`<label class="mut">Name<input id="rsN" maxlength="80" placeholder="leer = Unbekannter Rettling" value="${esc(r.name)}"></label><label class="mut">Beschreibung (Merkmale, Kleidung, Alter …)<textarea id="rsD" rows="4" maxlength="1000">${esc(r.descr||'')}</textarea></label>${plsH}`,
+    async d=>{const name=$('#rsN',d).value.trim(),descr=$('#rsD',d).value;const body={id:id||undefined,name,descr}; // ohne Namen vergibt der Server «Unbekannter Rettling» (Issue #86)
       if(own)body.pls=$('#rsI',d).checked?null:{lat:r.pls_lat,lon:r.pls_lon,at:dtTs($('#rsT',d).value)||r.pls_at};
       const pick=!own&&$('#rsP',d).checked,res=await api('incident/rescuee/save',body);togglePanel('res',true);await poll();
-      if(pick)setTimeout(()=>resPlsPick(res.id,name,descr),0)})}
+      if(pick)setTimeout(()=>resPlsPick(res.id,(resOf(res.id)||{}).name||name,descr),0)})}
+// Fundort melden: mit geteiltem Standort Auswahl «Mein Standort» oder Karte, sonst direkt auf der Karte
+function resFound(r){const pick=()=>pickPoint(`Tippe auf die Karte, um den Fundort von «${r.name}» zu setzen.`).then(q=>api('incident/rescuee/locate',{id:r.id,lat:q.lat,lon:q.lng})).then(()=>{togglePanel('res',true);poll()}).catch(fail);
+  if(!(st.me&&!st.me.left_at&&shares(st.me.mode)))return pick();
+  const d=dlg(`Fundort von «${r.name}»`,`<div class="mut">Wo wurde der Rettling gefunden?</div><button data-pk>Auf der Karte wählen</button>`,()=>api('incident/rescuee/locate',{id:r.id,own:1}).then(poll),'📍 Mein Standort');
+  $('[data-pk]',d).onclick=()=>{d.remove();pick()}}
 // Eigener PLS eines Rettlings: Punkt auf der Karte, danach Zeitpunkt (Standard: der des bisherigen PLS)
 function resPlsPick(id,name,descr){const r=resOf(id),at=r&&r.pls_lat!=null?r.pls_at:st.incident.pls_at;
   plsPick(`PLS von «${name}»`,at,(lat,lon,t)=>api('incident/rescuee/save',{id,name,descr,pls:{lat,lon,at:t}}).then(()=>togglePanel('res',true)))}
@@ -706,14 +719,17 @@ function plsPick(what,at,save){pickPoint(`Tippe auf die Karte, um den ${what} zu
   dlg(what,`<div class="mut">${esc(fc(q.lat,q.lng)||'')}</div><label class="mut">Zeitpunkt (Beginn der Drift)<input id="plT" type="datetime-local" value="${dtLocal(at||st.now)}"></label><div class="mut">Ab diesem Zeitpunkt wird die Driftdistanz mit der Fliessgeschwindigkeit berechnet.</div>`,
     async d=>{const t=dtTs($('#plT',d).value);if(!t)throw new Error('Bitte einen Zeitpunkt eingeben.');await save(+q.lat.toFixed(7),+q.lng.toFixed(7),t);poll()})).catch(fail)}
 const dtLocal=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16),dtTs=v=>Math.floor(new Date(v).getTime()/1000)||0;
+// iOS ignoriert user-scalable=no: Zoom der Seite per Zwei-Finger-Geste unterdrücken (Leaflet zoomt die Karte über touchstart/touchmove, nicht über gesture*)
+['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 const resOf=id=>((st&&st.rescuees)||[]).find(x=>x.id===id);
-document.addEventListener('click',e=>{const b=e.target.closest('[data-rl],[data-rp],[data-rr],[data-rg],[data-re],[data-rd],[data-rpls],[data-rsa]');if(!b)return;const d=b.dataset,id=+(d.rl||d.rp||d.rr||d.rg||d.re||d.rd||d.rpls||d.rsa),r=resOf(id);
+document.addEventListener('click',e=>{const g=e.target.closest('[data-rfo]');if(g)return setResFold(g.dataset.rfo);const b=e.target.closest('[data-rf],[data-rm],[data-rc],[data-rr],[data-rg],[data-re],[data-rd],[data-rpls],[data-rsa]');if(!b)return;const d=b.dataset,id=+(d.rf||d.rm||d.rc||d.rr||d.rg||d.re||d.rd||d.rpls||d.rsa),r=resOf(id);
   if(d.re!==undefined)return editRes(id);if(!r)return;
+  if(d.rm){resMore.has(id)?resMore.delete(id):resMore.add(id);return renderRes()}
+  if(d.rf)return resFound(r);
+  if(d.rc){if(!confirm(`Fundort von «${r.name}» zurücksetzen? Der Rettling gilt dann wieder als vermisst.`))return;return api('incident/rescuee/locate',{id,clear:1}).then(poll).catch(fail)}
   if(d.rpls)return resPlsPick(id,r.name,r.descr||'');
   if(d.rsa){fitArea(resPart(r));if(narrow())togglePanel('res',false);return}
   if(d.rg){stopFollow();map.panTo([r.lat,r.lon]);if(narrow())togglePanel('res',false);return}
-  if(d.rl)return api('incident/rescuee/locate',{id,own:1}).then(poll).catch(fail);
-  if(d.rp)return pickPoint(`Tippe auf die Karte, um den Standort von «${r.name}» zu setzen.`).then(q=>api('incident/rescuee/locate',{id,lat:q.lat,lon:q.lng})).then(()=>{togglePanel('res',true);poll()}).catch(fail);
   if(d.rr){const v=+d.v;if(!confirm(v?`«${r.name}» als gerettet melden?`:`«Gerettet» bei «${r.name}» zurücknehmen?`))return;return api('incident/rescuee/rescued',{id,rescued:v}).then(()=>{map.closePopup();poll()}).catch(fail)}
   if(d.rd&&confirm(`Rettling «${r.name}» für alle entfernen?`))api('incident/rescuee/remove',{id}).then(poll).catch(fail)});
 function bindMarks(){
