@@ -95,7 +95,7 @@ const NAV=[
   ['Einsatz',[['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
-  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp]]],
+  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
 ];
 // Übungsleiter (Benutzerrolle ohne weitere Rechte der Verwaltung) sehen nur die Übungen
@@ -210,6 +210,45 @@ async function loadNav(){const el=$('#sNv');let s;try{s=await api('settings')}ca
     if(c.dataset.na)p={nav_off:[...el.querySelectorAll('[data-na]')].filter(x=>!x.checked).map(x=>x.dataset.na)};
     else if(c.id==='nvD')p={nav_default:c.value};else return;
     el.querySelectorAll('input,select').forEach(x=>x.disabled=true);api('settings/save',p).catch(fail).finally(loadNav)}}
+/* ---------- Helikopter (Issue #73): Datenquellen (Reihenfolge, Ein/Aus, Test), Filter, Sichtbarkeit je Ansicht, Relevanzzone, Rettungshelikopter ---------- */
+// Alles in der Einstellung air (JSON), gespeichert erst mit «Speichern»; der Server prüft die Werte (airIn)
+let airS=null,airC=null;
+const airNumL={radius_km:['Umkreis in km','um PLS (plus Driftdistanz), Einsatzkräfte, Rettlinge, Externe, Markierungen und Bereiche'],max_alt_ft:['Höchste Flughöhe in ft','höher fliegende gelten als Durchflug (1000 ft ≈ 300 m, barometrische Höhe)'],max_age_s:['Höchstes Alter einer Position in s','ältere Positionen werden nicht mehr gezeigt'],trail_min:['Spur in Minuten','0 = keine Spur'],cache_s:['Abfrage höchstens alle … s','gilt für alle Geräte zusammen']};
+async function loadAir(){const el=$('#sH');try{airS=await api('settings')}catch(e){el.innerHTML='<h2>Helikopter</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  airC=JSON.parse(JSON.stringify(airS.air));drawAir()}
+function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?new Date(t*1000).toLocaleString('de-CH'):'–';
+  const srcRow=(k,i)=>{const S=s.air_sources[k],x=st[k],on=c.src.includes(k);
+    return`<div class="inc" style="padding:.5rem .7rem"><div class="row" style="align-items:center;margin:0"><label class="chk" style="flex:1"><input type="checkbox" data-as="${k}" ${on?'checked':''}> <b>${esc(S.name)}</b> <a href="${esc(S.site)}" target="_blank" rel="noopener" class="mut">${esc(S.site.replace(/^https:\/\//,''))}</a></label>
+      <button data-au="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button data-ad="${i}" ${i<c.order.length-1?'':'disabled'} aria-label="Nach unten">↓</button><button data-at="${k}">Testen</button></div>
+      <div class="mut">⚠ ${esc(S.note)}</div>
+      <div class="mut">${x?`Abfragen ${x.uses}, fehlgeschlagen ${x.fails} · letzter Erfolg ${dt(x.last_ok)}${x.ms!=null?` (${x.ms} ms, ${x.n} Luftfahrzeuge)`:''}${x.last_fail?` · letzter Fehler ${dt(x.last_fail)}: ${esc(x.err||'')}`:''}`:'Noch nicht abgefragt'}</div><div class="mut" id="at_${k}"></div></div>`};
+  const sel=(id,o,v)=>`<select id="${id}">${Object.entries(o).map(([k,l])=>`<option value="${k}" ${k===v?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  el.innerHTML=`<h2>Helikopter</h2><div class="mut">Zeigt Helikopter (z. B. der Rega) live auf der Karte des Einsatzes, aus offenen ADS-B-Daten (Transpondersignale, gesammelt von Freiwilligen). Der Server fragt die Daten ab und teilt sie mit allen Geräten. Nur was in der Relevanzzone des Einsatzes fliegt, erscheint. Ob die Funktion für scharfe Einsätze und Übungen angeboten wird, steht unter «Funktionen».</div>
+    <div class="mut"><b>Grenzen:</b> Tief fliegende Helikopter in Tälern und über dem Fluss sind für die Empfänger am Boden oft nicht sichtbar und können zeitweise fehlen. Manche Betreiber (z. B. Militär) senden keine oder gesperrte Daten. Die Anzeige ersetzt keine Absprache über Funk.</div>
+    <h3>Datenquellen</h3><div class="mut">Der Server fragt die eingeschalteten in dieser Reihenfolge ab, bis eine antwortet. Alle sind gratis und ohne Schlüssel, aber <b>nur für nicht-kommerzielle Nutzung</b> gedacht; die Bedingungen der Betreiber gelten.</div>
+    ${c.order.map(srcRow).join('')}
+    <h3>Anzeige</h3><label class="mut">Welche Luftfahrzeuge${sel('aF',s.air_filters,c.filter)}</label>
+    <label class="mut">Einsatz-App: Wer sieht die Helikopter${sel('aA',s.air_app,c.app)}</label>
+    <label class="chk"><input type="checkbox" id="aP" ${c.public?'checked':''}> In der öffentlichen Ansicht zeigen</label>
+    <label class="chk"><input type="checkbox" id="aR" ${c.replay?'checked':''}> Aufzeichnen und im Replay zeigen (nur während der Einsatz aufgezeichnet wird)</label>
+    <h3>Relevanzzone und Abfrage</h3><div class="mut">Relevant ist ein Luftfahrzeug, das sich im Umkreis um eine aktive Position des Einsatzes befindet. Um den PLS zählt zusätzlich die Driftdistanz (Fliessgeschwindigkeit × Zeit seit dem PLS, höchstens 30 km), damit das ganze Suchgebiet abgedeckt ist. 15 km entsprechen bei einem Rettungshelikopter etwa 4 Minuten Anflug.</div>
+    ${Object.entries(airNumL).map(([k,[l,h]])=>{const[d,lo,hi]=s.air_num[k];return`<label class="mut">${esc(l)} (${lo}–${hi}, Standard ${d}) <input type="number" data-an="${k}" min="${lo}" max="${hi}" step="1" value="${c[k]}"><small>${esc(h)}</small></label>`}).join('')}
+    <h3>Rettungshelikopter</h3><div class="mut">Diese werden hervorgehoben (rot) und mit ihrer Bezeichnung angeschrieben. Kennung: Anfang des Rufzeichens (Rega: RGA), Anfang des Kennzeichens (z. B. HB-Z) oder Transponder-Adresse (6 Zeichen, z. B. 4b330c).</div>
+    <div id="aL">${c.rescue.map((x,i)=>`<div class="row" style="align-items:center"><input data-rk="${i}" value="${esc(x.k)}" aria-label="Kennung" style="max-width:8rem" maxlength="8"><input data-rn="${i}" value="${esc(x.n)}" aria-label="Bezeichnung" maxlength="40"><button data-rx="${i}" aria-label="Entfernen">✕</button></div>`).join('')||'<div class="mut">Keine Einträge</div>'}</div>
+    <div class="row"><button id="aAdd">+ Eintrag</button></div>
+    <div class="row"><button id="aSv" class="pri">Speichern</button><button id="aDf">Standard wiederherstellen</button><button id="aRl">Verwerfen</button></div>`;
+  el.oninput=e=>{const t=e.target;if(t.dataset.an)c[t.dataset.an]=t.value;else if(t.dataset.rk)c.rescue[+t.dataset.rk].k=t.value;else if(t.dataset.rn)c.rescue[+t.dataset.rn].n=t.value};
+  el.onchange=e=>{const t=e.target;if(t.dataset.as){c.src=c.order.filter(k=>k===t.dataset.as?t.checked:c.src.includes(k))}else if(t.id==='aF')c.filter=t.value;else if(t.id==='aA')c.app=t.value;else if(t.id==='aP')c.public=t.checked?1:0;else if(t.id==='aR')c.replay=t.checked?1:0};
+  el.onclick=async e=>{const b=e.target.closest('button');if(!b)return;const mv=(i,d)=>{const o=c.order;[o[i],o[i+d]]=[o[i+d],o[i]];c.src=o.filter(k=>c.src.includes(k));drawAir()};
+    if(b.dataset.au)mv(+b.dataset.au,-1);else if(b.dataset.ad)mv(+b.dataset.ad,1);
+    else if(b.dataset.rx){c.rescue.splice(+b.dataset.rx,1);drawAir()}else if(b.id==='aAdd'){c.rescue.push({k:'',n:''});drawAir();const l=$('#aL').querySelectorAll('[data-rk]');l[l.length-1].focus()}
+    else if(b.dataset.at){const o=$('#at_'+b.dataset.at);b.disabled=true;o.textContent='Wird abgefragt …';
+      try{const r=await api('air/test',{src:b.dataset.at});o.innerHTML=r.ok?`✓ Antwort in ${r.ms} ms: ${r.total} Luftfahrzeuge im Umkreis von 220 km um die Mitte der Schweiz, davon ${r.heli.length} Helikopter${r.heli.length?': '+r.heli.map(h=>esc((h.rescue?h.rescue+' ':'')+(h.cs||h.reg||h.hex))+(h.alt!=null?` (${h.alt?h.alt+' ft':'am Boden'})`:'')).join(', '):''}.`:`✗ Keine gültige Antwort nach ${r.ms} ms${r.status&&r.status.err?': '+esc(r.status.err):''}.`}catch(x){o.textContent='✗ '+x.message}b.disabled=false}
+    else if(b.id==='aRl')loadAir();
+    else if(b.id==='aDf'){if(confirm('Standardeinstellungen für Helikopter wiederherstellen (noch nicht gespeichert)?')){airC=JSON.parse(JSON.stringify(s.air_default));drawAir()}}
+    else if(b.id==='aSv'){if(!c.src.length&&!confirm('Keine Datenquelle eingeschaltet: Es werden keine Helikopter angezeigt. Trotzdem speichern?'))return;
+      c.rescue=c.rescue.filter(x=>x.k.trim()||x.n.trim());b.disabled=true;
+      api('settings/save',{air:{...c,rescue:c.rescue}}).then(()=>{alert('Gespeichert. Gilt ab der nächsten Abfrage.');loadAir()}).catch(x=>{fail(x);b.disabled=false})}}}
 /* ---------- Gewässerdaten: Haltedauer des Overpass-Caches und Overpass-Server (Reihenfolge) ---------- */
 let opUrls=[],opDef=[],opOff=[];
 async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all([api('settings'),api('overpass/stats')])}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
@@ -455,12 +494,14 @@ async function openReplay(id,o={}){let d;try{d=await api('incident/replay&id='+i
   const trailL=L.layerGroup().addTo(map),dynL=L.layerGroup().addTo(map),poiL=L.layerGroup().addTo(map);
   people.forEach(p=>{p.line=L.polyline([],{color:p.col,weight:3,opacity:.75}).addTo(trailL);
     p.mk=L.circleMarker([0,0],{radius:rz(8),color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'})});
+  // Helikopter (Issue #73): aufgezeichnete Positionen je Luftfahrzeug, zwischen zwei Meldungen interpoliert (Lücken > AIR_GAP_S nicht), Spur wie bei den Personen
+  const air=(d.air||[]).map(a=>({...a,mk:L.marker([0,0],{icon:L.divIcon({className:'',html:'',iconSize:[32,32],iconAnchor:[16,16]}),zIndexOffset:1500,keyboard:false}).bindTooltip('',{direction:'top',offset:[0,-16]}),line:L.polyline([],{color:airCol(a),weight:2,opacity:.75,dashArray:'4 4',interactive:false}).addTo(trailL),hk:''}));
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
   const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.filter(q=>q[2]!=null).map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17,animate:false}); // ohne Animation: ein verspätetes zoomstart beendete sonst die Auto-Übersicht
-  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:Date.now(),sz:rpSzSaved()};
+  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,air,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:Date.now(),sz:rpSzSaved()};
   // Fenster «Ansicht»: nur Kategorien, die in diesem Einsatz vorkommen (das Suchgebiet zeichnet das Replay nie)
-  const has={app:d.track.length,ext:(d.externals||[]).length,res:d.rtrack.length||d.rescuees.some(r=>r.lat!=null),pls:pls.length,pt:d.pois.some(p=>p.kind!=='area'),ar:d.pois.some(p=>p.kind==='area'),mm:d.marks.some(m=>m.mark||m.unmarked!=null)};
+  const has={app:d.track.length,ext:(d.externals||[]).length,res:d.rtrack.length||d.rescuees.some(r=>r.lat!=null),pls:pls.length,pt:d.pois.some(p=>p.kind!=='area'),ar:d.pois.some(p=>p.kind==='area'),mm:d.marks.some(m=>m.mark||m.unmarked!=null),air:air.length};
   rp.cats=VIEW.map(v=>v[0]).filter(k=>has[k]);
   // Fenster «Ansicht» und Auto-Übersicht (Issue #53)
   const mc=$('#rpMap');mc.insertAdjacentHTML('beforeend','<button id="rpView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden">'+VIEW_ICON+'</button><div id="viewBox" hidden></div>');
@@ -527,6 +568,14 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
     if(b&&p.per[k+1]===pi&&b[1]-a[1]<=GAP_S){const f=(t-a[1])/(b[1]-a[1]);ll=[a[2]+(b[2]-a[2])*f,a[3]+(b[3]-a[3])*f];age=0}
     p.ll=ll;p.mk.setLatLng(ll).setStyle({fillOpacity:age>GAP_S?.45:1});if(sv)rp.dynL.addLayer(p.mk);else rp.dynL.removeLayer(p.mk);
     p.line.setLatLngs(sv?trail(p,k,ll):[]);info.push([p,age>GAP_S?'letzte Meldung vor '+durT(age):'Standort aktuell'])});
+  // Helikopter zum Zeitpunkt t (Issue #73): sichtbar bis AIR_GAP_S nach der letzten Position
+  const airNow=[];rp.air.forEach(a=>{const k=lastIdx(a.pts,t),p=k>=0?a.pts[k]:null,q=a.pts[k+1];let ll=null;
+    if(p&&t-p[1]<=AIR_GAP_S){ll=[p[2],p[3]];if(q&&q[1]-p[1]<=AIR_GAP_S){const f=(t-p[1])/(q[1]-p[1]);ll=[p[2]+(q[2]-p[2])*f,p[3]+(q[3]-p[3])*f]}}
+    if(!ll||!rpVis('air')){rp.dynL.removeLayer(a.mk);a.line.setLatLngs([]);return}
+    const x={...a,lat:ll[0],lon:ll[1],alt:p[4],gnd:p[4]===0,trk:p[5],at:p[1]},h=airIconHtml(x,0,x.trk||0);
+    if(h!==a.hk){a.hk=h;a.mk.setIcon(L.divIcon({className:'',html:h,iconSize:[32,32],iconAnchor:[16,16]}))}
+    a.mk.setLatLng(ll).setTooltipContent(esc(airName(x))+(x.desc||x.type?' · '+esc(x.desc||x.type):''));rp.dynL.addLayer(a.mk);
+    let j0=0;while(j0<=k&&a.pts[j0][1]<from)j0++;a.line.setLatLngs(win&&j0<=k?[...a.pts.slice(j0,k+1).map(z=>[z[2],z[3]]),ll]:[]);airNow.push(x)});
   // Positionen & Bereiche, Rettlinge und Nachrichten-Markierungen: nur neu zeichnen, wenn sich der sichtbare Bestand ändert
   const pois=d.pois.filter(p=>on(p.created,p.removed)),marks=d.marks.filter(m=>m.created<=t&&(m.mark||(m.unmarked!=null&&t<m.unmarked)));
   const res=d.rescuees.filter(r=>on(r.created,r.removed)).map(r=>{const tr=rp.rtr[r.id]||[],k=lastIdx(tr,t),pos=k>=0?(tr[k][2]==null?null:[tr[k][2],tr[k][3]]):!tr.length&&on(r.loc_at)?[r.lat,r.lon]:null;return{...r,pos,ok:on(r.rescued_at)}});
@@ -541,7 +590,7 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
     res.filter(r=>r.pos&&rpVis('res')).forEach(r=>L.circleMarker(r.pos,{radius:rz(9),color:'#fff',weight:2,fillColor:r.ok?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.ok?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'}).addTo(rp.poiL))}
   const fl=d.flow.filter(f=>f.ts<=t).pop();
   $('#rpInfo').innerHTML=`<h3 style="margin-top:0">Lage</h3>${rec?'':'<div><b>Aufzeichnung zu diesem Zeitpunkt pausiert oder aus</b> – keine Standorte der Einsatzkräfte</div>'}<div class="mut">${fl?esc(fl.text.replace(/^setzt die /,'')):'Fliessgeschwindigkeit nicht gesetzt'}</div>
-    ${ext.length?`<div class="mut">Externe Einsatzkräfte: ${ext.map(e=>esc(e.name)).join(', ')}</div>`:''}<div class="mut">Rettlinge: ${res.length?res.map(r=>esc(r.name)+' – '+(r.ok?'gerettet':r.pos?'Standort bekannt':'vermisst')).join(', '):'keine erfasst'}</div>
+    ${ext.length?`<div class="mut">Externe Einsatzkräfte: ${ext.map(e=>esc(e.name)).join(', ')}</div>`:''}${airNow.length?`<div class="mut">Helikopter: ${airNow.map(x=>esc(airName(x))+' ('+esc(airAltS(x))+')').join(', ')}</div>`:''}<div class="mut">Rettlinge: ${res.length?res.map(r=>esc(r.name)+' – '+(r.ok?'gerettet':r.pos?'Standort bekannt':'vermisst')).join(', '):'keine erfasst'}</div>
 `;
   rpPeople(info);
   rpAutoFit([...(rpVis('app')?rp.people.filter(p=>p.ll).map(p=>p.ll):[]),...(rpVis('ext')?ext.map(e=>[e.lat,e.lon]):[]),...(rpVis('res')?res.filter(r=>r.pos&&!r.ok).map(r=>r.pos):[]),...(rpVis('pls')?pls.map(p=>[p[0],p[1]]):[])]);

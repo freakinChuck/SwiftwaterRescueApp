@@ -170,6 +170,7 @@ const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOp
   let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}baseKey=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;baseLayers[baseKey].addTo(map);
   // Nachrichten-Markierungen als eigene, ausblendbare Ebene (Fenster «Ansicht» oder Häkchen im Nachrichten-Fenster, pro Gerät gemerkt)
   msgLayer=L.layerGroup();msgLayerKey='';if(mmVisible())msgLayer.addTo(map);poiLayer=L.layerGroup().addTo(map);poiKey='';resLayer=L.layerGroup().addTo(map);resKey='';
+  airLayer=L.layerGroup().addTo(map);airLayer._air=new Map();airData=null;map.on('rotate',()=>airRot(map,airLayer)); // Helikopter (Issue #73)
   $('#mmShow').checked=mmVisible();$('#mmShow').onchange=e=>setMmVisible(e.target.checked,true);
   $('#msgList').onclick=e=>{const b=e.target.closest('[data-goto]');if(!b)return;const[a,o]=b.dataset.goto.split(',').map(Number);stopFollow();map.panTo([a,o]);if(narrow())togglePanel('msgs',false)};
   layers={};fitted=null;map.on('zoomend',drawMap);map.on('dragstart',()=>{if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen und die Auto-Übersicht
@@ -192,6 +193,16 @@ const txtOn=c=>{const n=parseInt(c.slice(1),16);return .299*(n>>16)+.587*(n>>8&2
 function mk(p){const r=roles.find(x=>x.id==p.role_id),fc=p.ext&&p.color,col=r?r.color:fc||'#8fb0bd';
   const ini=p.ext&&p.abbr?p.abbr:(p.name||'?').split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase();
   return `<div class="mk${p.ext?' ext':''}${ini.length>2?' sm':''}" style="border-color:${col};${fc?`background-color:${fc};color:${txtOn(fc)};`:''}${p.photo?`background-image:url(${p.photo})`:''}">${p.photo?'':esc(ini)}</div>`}
+/* ---------- Helikopter (Issue #73) ---------- */
+// Daten über incident/air (Server mit Cache und Relevanzzone), höchstens alle 3.5 s und nur, wenn die Kategorie eingeblendet ist; Anzeige mit airSync (common.js).
+// st.air: für diese Person freigegeben (Verwaltung → Helikopter); nicht in Kamerafokus und Auto-Übersicht (sie bewegen sich zu schnell)
+let airLayer=null,airData=null,airBusy=false,airLast=0;
+const airOn=()=>!!(st&&st.incident&&st.air&&feat('air'));
+function airPoll(){if(!airOn()||!vis('air')){if(airData){airData=null;drawAir()}return}if(airBusy||Date.now()-airLast<3500)return;airBusy=true;airLast=Date.now();
+  api('incident/air').then(d=>{airData=d}).catch(e=>{airData={air:[],err:e instanceof TypeError?'Keine Verbindung zum Server':e.message}}).finally(()=>{airBusy=false;drawAir()})}
+function drawAir(){if(!airLayer)return;const on=airOn()&&vis('air')&&airData;airSync(map,airLayer,on?airData.air||[]:[],on?airData.now:0,fc);airAttr(map,on?airData:null);const i=$('#airInfo');if(i)i.innerHTML=airInfo()}
+function airInfo(){if(!vis('air'))return'Helikopter ausgeblendet.';const d=airData;if(!d)return'Luftlage wird geladen …';if(d.err)return'⚠ '+esc(d.err);if(d.info)return esc(d.info);
+  const n=(d.air||[]).length;return`Helikopter: ${n?n+' im Umkreis':'keine im Umkreis'} von ${d.radius_km} km um Einsatz und Suchgebiet${d.src?' · Quelle '+esc(d.src.name):''}${d.at?' · Stand '+fmtT(d.at):''}. Tief fliegende Helikopter können fehlen.`}
 let msgLayer=null,msgLayerKey='';
 const mmVisible=()=>{try{return localStorage.getItem('sw_msgmarks')!=='0'}catch(e){return true}};
 function setMmVisible(v,apply){try{localStorage.setItem('sw_msgmarks',v?'1':'0')}catch(e){}const c=$('#mmShow');if(c)c.checked=v;const c2=$('#viewBox [data-vk="mm"]');if(c2)c2.checked=v;if(apply&&msgLayer)v?msgLayer.addTo(map):map.removeLayer(msgLayer)}
@@ -223,12 +234,12 @@ let baseLayers={},baseKey=null;
 // VIEW (Kategorien) und viewHtml stehen in common.js, die öffentliche Ansicht nutzt sie ebenfalls (Issue #48)
 const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_view')||'[]'))}catch(e){return new Set()}})();
 const vis=k=>k==='mm'?mmVisible():!viewHide.has(k);
-const viewCats=()=>VIEW.filter(v=>!v[2]||feat(v[2]));
+const viewCats=()=>VIEW.filter(v=>(!v[2]||feat(v[2]))&&(v[0]!=='air'||!!(st&&st.air))); // Helikopter nur, wenn für diese Person freigegeben
 function setVis(keys,on){keys.forEach(k=>{if(k==='mm')setMmVisible(on,true);else on?viewHide.delete(k):viewHide.add(k)});try{localStorage.setItem('sw_view',JSON.stringify([...viewHide]))}catch(e){}
-  drawMap();autoFit();const b=$('#viewBox');if(b)b.querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk))}
+  drawMap();autoFit();airPoll();const b=$('#viewBox');if(b)b.querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk));const i=$('#airInfo');if(i)i.innerHTML=airInfo()}
 function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(baseLayers[baseKey]);baseKey=k;baseLayers[k].addTo(map);try{localStorage.setItem('sw_base',k)}catch(e){}}
 function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#bView').setAttribute('aria-expanded',on);if(!on)return;
-  b.innerHTML=viewHtml(baseKey,st&&st.incident?viewCats():null,vis)}
+  b.innerHTML=viewHtml(baseKey,st&&st.incident?viewCats():null,vis)+(airOn()?`<div class="mut" id="airInfo" style="margin-top:.5rem;font-size:.8rem">${airInfo()}</div>`:'')}
 document.addEventListener('click',e=>{const b=$('#viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#bView'))viewBox(false)});
 document.addEventListener('keydown',e=>{const b=$('#viewBox');if(e.key==='Escape'&&b&&!b.hidden){viewBox(false);$('#bView').focus()}});
 const pickMode=on=>{document.body.classList.toggle('picking',on);if(on)map.closePopup()};
@@ -238,7 +249,7 @@ function drawNote(){const n=$('#areaNote');if(!n)return;const pick=window.markPi
   if(more){n.setAttribute('role','button');n.setAttribute('aria-expanded',areaOpen);n.tabIndex=0}else{n.removeAttribute('role');n.removeAttribute('aria-expanded');n.removeAttribute('tabindex')}
   n.innerHTML=pick?esc(pick):!more?esc(areaInfo):areaOpen?areaLines.map(l=>`<div class="ln">${esc(l)}</div>`).join('')+'<div class="tg">▴ weniger</div>':`${esc(areaShort)} <span class="tg">▸ Details</span>`;
   n.hidden=!(areaInfo||pick)}
-function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
+function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();drawAir();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.layerGroup(plsList().map(p=>navOn(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))),p.lat,p.lon,p.label)));if(vis('pls'))layers.pls.addTo(map);
   try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
@@ -750,7 +761,7 @@ let timer;async function poll(){try{const nx=await api(`incident/state&since=${l
     else{if(st&&st.incident){const x=st.incident.is_exercise;if((st.alarm!==false||st.me)&&notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
     saveLast();setOffline(false);if(bootOff){bootOff=false;return render()} // offline gestartet: jetzt alles frisch laden
     paint()}catch(e){if(e instanceof TypeError)setOffline(true);console.error('Poll',e)}} // TypeError = keine Verbindung (fetch)
-function paint(){if(st&&st.incident)creating=false;updateChip();drawMap();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
+function paint(){if(st&&st.incident)creating=false;updateChip();drawMap();airPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
 /* ---------- Offline (Issue #67) ---------- */
 // Letzter Stand pro Gerät in localStorage: sw_last = {at, uid, st (mit allen Nachrichten)}, sw_boot = {uid, me, roles, modes}. Ohne Verbindung zeigt die App
 // diesen Stand mit einem Hinweis oben (Zeitpunkt der letzten Verbindung) und versucht es bei jedem Polling weiter. Aktionen schlagen offline fehl (Meldung in fail).

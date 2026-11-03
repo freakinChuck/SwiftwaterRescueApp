@@ -30,3 +30,8 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 /* Hinweis «Push ist aus» zuoberst im Menü (Issue #67) */
 .pushNag{display:flex;flex-wrap:wrap;gap:.4rem .6rem;align-items:center;justify-content:space-between;margin:0 0 .8rem;padding:.6rem .7rem;border:1px solid var(--alarm);border-radius:8px;background:rgba(255,77,46,.12)}
 .pushNag>span:first-child{flex:1 1 14rem}
+/* Helikopter (Issue #73): Symbol nach Kurs gedreht, Beschriftung darunter; blass = Position älter als AIR_STALE_S */
+.airk{position:relative;width:32px;height:32px}.airk svg{display:block;filter:drop-shadow(0 0 2px #000c)}.airr{transition:transform .4s}
+.airk span{position:absolute;left:50%;top:31px;transform:translateX(-50%);white-space:nowrap;font:600 11px/1.25 system-ui,sans-serif;color:#fff;background:rgba(15,36,48,.85);padding:1px 4px;border-radius:3px;pointer-events:none}
+.airk.resc span{background:rgba(176,0,16,.9)}.airk.old{opacity:.5}
+.airpop{min-width:12rem}.airpop .t{display:block;font-size:.8rem;opacity:.75;margin:.1rem 0 .3rem}.airpop table{border-collapse:collapse;font-size:.85rem}.airpop td{padding:.05rem .5rem .05rem 0;vertical-align:top}.airpop td:first-child{opacity:.7;white-space:nowrap}
