@@ -46,7 +46,8 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .rpg{font-size:.8rem;font-weight:700;color:var(--mut);margin-top:.5rem}
 /* Replay: Anzeige beim Folgen (oben links auf der Karte) */
 #rpFollow{position:absolute;top:.6rem;left:3.4rem;z-index:1000;background:var(--ex);color:#fff;border-radius:6px;padding:.2rem .3rem .2rem .7rem;font-size:.9rem;display:flex;gap:.4rem;align-items:center;box-shadow:0 1px 4px #0008;max-width:calc(100% - 4rem)}#rpFollow[hidden]{display:none}#rpFollow button{background:transparent;border:0;color:#fff;padding:.15rem .4rem}
-.leaflet-tooltip.rplbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px}.leaflet-tooltip.rplbl::before{display:none}
+.leaflet-tooltip.rplbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px;font-size:calc(12px*var(--rpsz,1))} /* --rpsz: Regler «Grösse der Positionen» */
+#rpSzL{display:flex;gap:.5rem;align-items:center}#rpSzL input{flex:1;padding:0}#rpSzL span{min-width:3.2rem;text-align:right;font-variant-numeric:tabular-nums}.leaflet-tooltip.rplbl::before{display:none}
 @media(max-width:760px){#rpBody{flex-direction:column}#rpSide{width:auto;height:40%;border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
 <div id="app"></div>
@@ -347,6 +348,8 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
 let rp=null;
 const TRAILS=[[-1,'Spur: ganzer Verlauf'],[3600,'Spur: letzte 60 min'],[1800,'Spur: letzte 30 min'],[900,'Spur: letzte 15 min'],[600,'Spur: letzte 10 min'],[300,'Spur: letzte 5 min'],[120,'Spur: letzte 2 min'],[0,'Keine Spur']];
 const trailWin=()=>{let v=null;try{v=localStorage.getItem('sw_rptrail')}catch(e){}return TRAILS.some(x=>String(x[0])===v)?+v:-1}; // pro Gerät gemerkt
+// Grösse der Positionen (Marker und Beschriftungen) in Prozent, Regler im Fenster «Ansicht», pro Gerät gemerkt in sw_rpsize
+const RP_SZ=[50,250],rpSzSaved=()=>{let v=100;try{v=+localStorage.getItem('sw_rpsize')||100}catch(e){}return Math.min(RP_SZ[1],Math.max(RP_SZ[0],v))},rz=r=>r*(rp?rp.sz:rpSzSaved())/100;
 const GAP_S=120; // längere Lücken zwischen zwei Standortmeldungen nicht interpolieren, Person gilt dann als «letzter Standort»
 const durT=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')};
 const lastIdx=(a,t)=>{let lo=0,hi=a.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(a[m][1]<=t){r=m;lo=m+1}else hi=m-1}return r}; // letzter Eintrag mit ts ≤ t
@@ -355,7 +358,7 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   o.innerHTML=`<div id="rpHead"><h2>${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} Replay – ${esc(i.message)}</h2><button id="rpPlay" class="pri">▶ Abspielen</button><select id="rpSpd" aria-label="Geschwindigkeit">${[1,5,10,30,60,120].map(v=>`<option value="${v}" ${v===30?'selected':''}>${v}× schneller</option>`).join('')}</select><select id="rpTrail" aria-label="Spurlänge">${TRAILS.map(([v,l])=>`<option value="${v}" ${v===trailWin()?'selected':''}>${l}</option>`).join('')}</select><button id="rpAuto" aria-pressed="false" title="Karte zeigt laufend alle sichtbaren aktiven Positionen und folgt ihnen">Auto-Übersicht</button><button id="rpX">Schliessen</button></div>
     <div id="rpBody"><div id="rpMap"></div><div id="rpFollow" hidden><span></span><button id="rpUnf" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><aside id="rpSide"><div id="rpInfo"></div><h3 id="rpPH"></h3><div id="rpPeople"></div><h3>Einsatzlog bis zu diesem Zeitpunkt</h3><div id="rpLog"></div></aside></div>
     <div id="rpFoot"><span id="rpTime"></span><div id="rpTl"><input type="range" id="rpRange" aria-label="Zeitpunkt im Einsatz"><div id="rpSeg" title="Aufgezeichnete Zeiträume (Lücken: pausiert oder beendet)"></div></div><span id="rpEnd" class="mut"></span></div>`;
-  document.body.appendChild(o);
+  document.body.appendChild(o);o.style.setProperty('--rpsz',rpSzSaved()/100);
   // Zeitraum: Alarmeingang bis Einsatzende (läuft der Einsatz noch: bis jetzt)
   const tr=d.track,t0=tr.length?Math.min(i.alarm_at,tr[0][1]):i.alarm_at,t1=Math.max(i.ended_at||d.now,tr.length?tr[tr.length-1][1]:0,t0+1); // track ist nach Zeit sortiert
   // PLS des Einsatzes und eigene PLS der Rettlinge (Issue #24, Standort mit Stand Einsatzende), je mit Zeitraum [von, bis], in dem sie sichtbar sind:
@@ -366,22 +369,23 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   // Grundkarte über das Fenster «Ansicht» (Issue #53) statt des Leaflet-Ebenenmenüs, gemerkt in sw_base wie in der Einsatz-App
   Object.entries(MAP_PROVIDERS).forEach(([k,P])=>bases[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
   let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}const baseKey=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;bases[baseKey].addTo(map);
-  pls.forEach(p=>p.mk=L.circleMarker([p[0],p[1]],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip(esc(p[2]),{permanent:true,direction:'right',className:'rplbl'}));
+  pls.forEach(p=>p.mk=L.circleMarker([p[0],p[1]],{radius:rz(9),color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip(esc(p[2]),{permanent:true,direction:'right',className:'rplbl'}));
   // Personen: Verlauf je Person, Farbe der Spezialrolle (Stand Einsatzende)
   // Aufgezeichnete Zeiträume [start, stop]; ausserhalb (Pause/aus) keine Standorte, Spuren und Interpolation enden dort
   const per=d.periods.map(p=>[p.start,p.stop??t1]),perIdx=ts=>per.length?per.findIndex(p=>p[0]<=ts&&ts<=p[1]):0;
   const people=d.participants.map(p=>{const pts=d.track.filter(q=>q[0]===p.user_id);return{...p,col:p.color||'#cfd8dc',pts,per:pts.map(q=>perIdx(q[1]))}});
   const trailL=L.layerGroup().addTo(map),dynL=L.layerGroup().addTo(map),poiL=L.layerGroup().addTo(map);
   people.forEach(p=>{p.line=L.polyline([],{color:p.col,weight:3,opacity:.75}).addTo(trailL);
-    p.mk=L.circleMarker([0,0],{radius:8,color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[8,0],className:'rplbl'})});
+    p.mk=L.circleMarker([0,0],{radius:rz(8),color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'})});
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
   const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17});
-  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:0};
+  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:0,sz:rpSzSaved()};
   // Fenster «Ansicht» und Auto-Übersicht (Issue #53)
   const mc=$('#rpMap');mc.insertAdjacentHTML('beforeend','<button id="rpView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden">'+VIEW_ICON+'</button><div id="viewBox" hidden></div>');
   const vb=$('#viewBox'),bv=$('#rpView');[vb,bv].forEach(x=>{L.DomEvent.disableClickPropagation(x);L.DomEvent.disableScrollPropagation(x)});
   bv.onclick=()=>rpViewBox();vb.onclick=e=>{const a=e.target.closest('[data-va]');if(a)rpSetVis(rpCats().map(v=>v[0]),a.dataset.va==='1');if(e.target.closest('#bViewX'))rpViewBox(false)};
+  vb.oninput=e=>{if(e.target.id==='rpSz')rpSetSize(+e.target.value)};
   vb.onchange=e=>{const t=e.target;if(t.name==='vbase')rpSetBase(t.value);else if(t.dataset.vk)rpSetVis([t.dataset.vk],t.checked)};
   map.on('zoomstart',()=>{if(rp&&rp.auto&&Date.now()-rp.autoBusy>1500)rpSetAuto(false)}); // Zoomen von Hand beendet die Auto-Übersicht
   $('#rpAuto').onclick=()=>rpSetAuto(!rp.auto);
@@ -408,7 +412,10 @@ const rpVis=k=>!rpHide.has(k),rpCats=()=>VIEW.filter(([k])=>k!=='area');
 function rpSetVis(keys,on){keys.forEach(k=>on?rpHide.delete(k):rpHide.add(k));try{localStorage.setItem('sw_rpview',JSON.stringify([...rpHide]))}catch(e){}
   if(!rp)return;rp.poiKey=null;drawReplay();$('#viewBox').querySelectorAll('[data-vk]').forEach(c=>c.checked=rpVis(c.dataset.vk))}
 function rpSetBase(k){if(!MAP_PROVIDERS[k]||k===rp.baseKey)return;rp.map.removeLayer(rp.bases[rp.baseKey]);rp.baseKey=k;rp.bases[k].addTo(rp.map);try{localStorage.setItem('sw_base',k)}catch(e){}}
-function rpViewBox(on){const b=$('#viewBox');if(!b||!rp)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#rpView').setAttribute('aria-expanded',on);if(on)b.innerHTML=viewHtml(rp.baseKey,rpCats(),rpVis)}
+function rpViewBox(on){const b=$('#viewBox');if(!b||!rp)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#rpView').setAttribute('aria-expanded',on);if(on)b.innerHTML=viewHtml(rp.baseKey,rpCats(),rpVis)+`<h4>Grösse der Positionen</h4><label id="rpSzL"><input type="range" id="rpSz" min="${RP_SZ[0]}" max="${RP_SZ[1]}" step="10" value="${rp.sz}" aria-label="Grösse der Positionen in Prozent"><span>${rp.sz} %</span></label>`}
+// Grösse der Positionen: Radien der Marker und Abstand der Beschriftung neu setzen, Schrift über --rpsz, übrige Marker beim nächsten Zeichnen
+function rpSetSize(v){rp.sz=v;try{localStorage.setItem('sw_rpsize',v)}catch(e){}$('#replay').style.setProperty('--rpsz',v/100);const l=$('#rpSzL span');if(l)l.textContent=v+' %';
+  rp.pls.forEach(p=>p.mk.setRadius(rz(9)));rp.people.forEach(p=>{p.mk.setRadius(rz(8));const t=p.mk.getTooltip();t.options.offset=[rz(8),0];t.update()});rp.poiKey=null;drawReplay()}
 document.addEventListener('click',e=>{const b=$('#replay #viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#rpView'))rpViewBox(false)});
 // Auto-Übersicht: bei jedem Zeichnen alle sichtbaren aktiven Positionen (Einsatzkräfte mit Standort, Externe, nicht gerettete Rettlinge, PLS) im Bild halten.
 // Neu ausgerichtet nur, wenn eine Position das Bild verlässt oder deutlich näher gezoomt werden kann (sonst springt die Karte beim Abspielen); beim Öffnen immer an
@@ -445,10 +452,10 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
   const pls=rp.pls.filter(p=>p[3](t));
   const key=JSON.stringify([pois.map(p=>p.id),marks.map(m=>m.id),res.map(r=>[r.id,r.pos,r.ok]),ext.map(e=>e.id),pls.map(p=>p[2])]);
   if(key!==rp.poiKey){rp.poiKey=key;rp.poiL.clearLayers();pls.filter(()=>rpVis('pls')).forEach(p=>rp.poiL.addLayer(p.mk));
-    pois.filter(p=>rpVis(p.kind==='area'?'ar':'pt')).forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:7,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'rplbl'}).addTo(rp.poiL)});
-    marks.filter(()=>rpVis('mm')).forEach(m=>L.circleMarker([m.mark_lat,m.mark_lon],{radius:6,color:'#0f2430',weight:2,fillColor:'#2ee6d6',fillOpacity:1}).bindTooltip(esc((m.name||'')+': '+m.text.slice(0,60))).addTo(rp.poiL));
-    ext.filter(()=>rpVis('ext')).forEach(e=>{const rc=(roles.find(r=>r.id===e.role_id)||{}).color;return L.circleMarker([e.lat,e.lon],{radius:8,color:e.color&&rc?rc:'#fff',weight:e.color&&rc?3:2,dashArray:'3',fillColor:e.color||rc||'#cfd8dc',fillOpacity:1}).bindTooltip(esc(e.name)+' (extern)',{permanent:true,direction:'right',offset:[8,0],className:'rplbl'}).addTo(rp.poiL)});
-    res.filter(r=>r.pos&&rpVis('res')).forEach(r=>L.circleMarker(r.pos,{radius:9,color:'#fff',weight:2,fillColor:r.ok?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.ok?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[8,0],className:'rplbl'}).addTo(rp.poiL))}
+    pois.filter(p=>rpVis(p.kind==='area'?'ar':'pt')).forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:rz(7),color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'rplbl'}).addTo(rp.poiL)});
+    marks.filter(()=>rpVis('mm')).forEach(m=>L.circleMarker([m.mark_lat,m.mark_lon],{radius:rz(6),color:'#0f2430',weight:2,fillColor:'#2ee6d6',fillOpacity:1}).bindTooltip(esc((m.name||'')+': '+m.text.slice(0,60))).addTo(rp.poiL));
+    ext.filter(()=>rpVis('ext')).forEach(e=>{const rc=(roles.find(r=>r.id===e.role_id)||{}).color;return L.circleMarker([e.lat,e.lon],{radius:rz(8),color:e.color&&rc?rc:'#fff',weight:e.color&&rc?3:2,dashArray:'3',fillColor:e.color||rc||'#cfd8dc',fillOpacity:1}).bindTooltip(esc(e.name)+' (extern)',{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'}).addTo(rp.poiL)});
+    res.filter(r=>r.pos&&rpVis('res')).forEach(r=>L.circleMarker(r.pos,{radius:rz(9),color:'#fff',weight:2,fillColor:r.ok?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.ok?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'}).addTo(rp.poiL))}
   const fl=d.flow.filter(f=>f.ts<=t).pop();
   $('#rpInfo').innerHTML=`<h3 style="margin-top:0">Lage</h3>${rec?'':'<div><b>Aufzeichnung zu diesem Zeitpunkt pausiert oder aus</b> – keine Standorte der Einsatzkräfte</div>'}<div class="mut">${fl?esc(fl.text.replace(/^setzt die /,'')):'Fliessgeschwindigkeit nicht gesetzt'}</div>
     ${ext.length?`<div class="mut">Externe Einsatzkräfte: ${ext.map(e=>esc(e.name)).join(', ')}</div>`:''}<div class="mut">Rettlinge: ${res.length?res.map(r=>esc(r.name)+' – '+(r.ok?'gerettet':r.pos?'Standort bekannt':'vermisst')).join(', '):'keine erfasst'}</div>
