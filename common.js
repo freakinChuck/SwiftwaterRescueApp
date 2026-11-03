@@ -5,12 +5,19 @@ let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt di
 async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
   const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth()}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
-const fail=e=>alert(e instanceof TypeError?'Keine Verbindung zum Server. Bitte später nochmals versuchen.':e.message); // TypeError: fetch ohne Netz (Issue #67)
+// Kurze Hinweise statt alert(): ohne Klick, verschwinden von selbst (Dauer nach Textlänge), Antippen schliesst sofort.
+// kind: 'ok' (grün, Standard), 'info' (blau), 'err' (rot, länger sichtbar). Rückfragen (confirm) bleiben Dialoge.
+function toast(t,kind='ok'){t=String(t==null?'':t);let c=document.getElementById('tsts');
+  if(!c){c=document.createElement('div');c.id='tsts';document.body.appendChild(c)}
+  const d=document.createElement('div');d.className='tst '+kind;d.setAttribute('role',kind==='err'?'alert':'status');d.textContent=t;
+  const rm=()=>{d.classList.add('out');setTimeout(()=>d.remove(),250)};d.onclick=rm;c.appendChild(d);
+  while(c.children.length>4)c.firstChild.remove();setTimeout(rm,Math.min(12000,(kind==='err'?5000:2500)+t.length*45))}
+const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte später nochmals versuchen.':e.message,'err'); // TypeError: fetch ohne Netz (Issue #67)
 /* ---------- Karte (Einsatz-App und Replay der Verwaltung) ---------- */
 // Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
 const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 // Fenster «Ansicht» (Issue #34, öffentliche Ansicht #48): Kategorien auf der Karte [Schlüssel, Bezeichnung, Funktion (feat)]. Neue Kartenelemente hier aufnehmen.
-const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['mm','Nachrichten-Markierungen','msg']];
+const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
 const VIEW_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 // Inhalt des Fensters: Grundkarte (Radio vbase) und, wenn cats (Liste aus VIEW), Häkchen je Kategorie (data-vk) mit «Alle einblenden/ausblenden» (data-va)
 function viewHtml(base,cats,vis){return'<div class="vh"><b>Ansicht</b><button id="bViewX" aria-label="Ansicht schliessen">✕</button></div><h4>Grundkarte</h4>'
@@ -21,6 +28,33 @@ const MAP_PROVIDERS={
   swisstopo:{label:'Landeskarte (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
   osm:{label:'OpenStreetMap',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap',maxZoom:19}
 };
+/* ---------- Helikopter / Luftlage (Issue #73): Anzeige in Einsatz-App, öffentlicher Ansicht und Replay ---------- */
+// Daten vom Server (incident/air, public/air, air in incident/replay): hex, cs, reg, type, desc, cat (A7 = Helikopter), lat, lon, alt (ft), gnd, gs (kt), trk, vr (ft/min), at, rescue, pls_m, trail [[ts, lat, lon, alt]]
+const AIR_STALE_S=20,AIR_GAP_S=60; // ältere Positionen blass; im Replay längere Lücken nicht interpolieren
+const airCol=a=>a.rescue?'#e30613':a.cat==='A7'?'#ffd23f':'#7fc8ff';
+const airName=a=>a.rescue?a.rescue+(a.cs?' '+a.cs:''):a.cs||a.reg||String(a.hex||'').toUpperCase();
+const airAltS=a=>a.gnd?'am Boden':a.alt==null?'Höhe ?':Math.round(a.alt*.3048)+' m';
+const airAltL=a=>a.gnd?'am Boden':a.alt==null?'unbekannt':`ca. ${Math.round(a.alt*.3048)} m ü. M. (${a.alt} ft, barometrisch)`;
+const AIR_SVG={h:c=>`<circle cx="16" cy="12" r="10.5" fill="none" stroke="#fff" stroke-width="1.3" stroke-dasharray="3 2.5" opacity=".9"/><ellipse cx="16" cy="12.5" rx="4.2" ry="6.2" fill="${c}" stroke="#0f2430" stroke-width="1.4"/><path d="M15 18h2v9h-2z" fill="${c}" stroke="#0f2430" stroke-width="1"/><path d="M12 26.5h8v2h-8z" fill="${c}" stroke="#0f2430" stroke-width=".9"/>`,
+  p:c=>`<path d="M16 3l2 9 10 5v2l-10-3-.5 9 3.5 3v1l-5-1.5-5 1.5v-1l3.5-3-.5-9-10 3v-2l10-5z" fill="${c}" stroke="#0f2430" stroke-width="1.2" stroke-linejoin="round"/>`};
+// Marker: Symbol nach Kurs gedreht (rot = Rettungshelikopter, gelb = Helikopter, blau = übrige), Beschriftung mit Name und Höhe; rot = Drehung auf dem Bildschirm (Kurs minus Kartendrehung)
+function airIconHtml(a,age,rot){const h=a.cat==='A7'||!!a.rescue;
+  return`<div class="airk${age>AIR_STALE_S?' old':''}${a.rescue?' resc':''}"><div class="airr" style="transform:rotate(${Math.round(rot||0)}deg)"><svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">${AIR_SVG[h?'h':'p'](airCol(a))}</svg></div><span>${esc(airName(a))} · ${esc(airAltS(a))}</span></div>`}
+function airPop(a,now,fc){const age=Math.max(0,Math.round(now-a.at)),vr=a.vr?(a.vr>0?'steigt ':'sinkt ')+(Math.abs(a.vr)*.00508).toFixed(1)+' m/s':null;
+  const rows=[['Rufzeichen',a.cs],['Kennzeichen',a.reg],['Typ',a.desc||a.type],['Transponder',String(a.hex||'').toUpperCase()],['Höhe',airAltL(a)],['Geschwindigkeit',a.gs!=null?Math.round(a.gs*1.852)+' km/h':null],['Kurs',a.trk!=null?a.trk+'°':null],['Vertikal',vr],
+    ['Distanz zum PLS',a.pls_m!=null?(a.pls_m/1000).toFixed(1)+' km Luftlinie':null],['Standort',fc?fc(a.lat,a.lon):null],['Letzte Position',fmtT(a.at)+` (vor ${age} s)`]];
+  return`<div class="airpop"><b>${esc(airName(a))}</b><span class="t">${a.rescue?'Rettungshelikopter':a.cat==='A7'?'Helikopter':'Luftfahrzeug'} · ADS-B</span><table>${rows.filter(r=>r[1]).map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join('')}</table></div>`}
+// Marker je Transponder-Adresse nachführen statt neu zeichnen (ein offenes Popup bleibt offen und wird aktualisiert); fehlende entfernen
+function airSync(map,layer,list,now,fc){const m=layer._air||(layer._air=new Map()),seen=new Set(),b=map.getBearing?map.getBearing():0;
+  list.forEach(a=>{seen.add(a.hex);const ll=[a.lat,a.lon],html=airIconHtml(a,now-a.at,(a.trk||0)-b),ic=()=>L.divIcon({className:'',html,iconSize:[32,32],iconAnchor:[16,16]});let x=m.get(a.hex);
+    if(!x){x={mk:L.marker(ll,{icon:ic(),zIndexOffset:1500,keyboard:false}).bindPopup(''),tr:L.polyline([],{weight:2,opacity:.75,dashArray:'4 4',interactive:false})};x.tr.addTo(layer);x.mk.addTo(layer);m.set(a.hex,x)}
+    else{x.mk.setLatLng(ll);if(x.html!==html)x.mk.setIcon(ic())}
+    x.html=html;x.a=a;x.tr.setLatLngs([...(a.trail||[]).map(p=>[p[1],p[2]]),ll]).setStyle({color:airCol(a)});x.mk.setPopupContent(airPop(a,now,fc))});
+  m.forEach((x,k)=>{if(!seen.has(k)){layer.removeLayer(x.mk);layer.removeLayer(x.tr);m.delete(k)}})}
+// Karte gedreht (leaflet-rotate): Symbole nachdrehen, damit der Kurs stimmt
+function airRot(map,layer){const b=map.getBearing?map.getBearing():0;(layer._air||new Map()).forEach(x=>{const e=x.mk.getElement&&x.mk.getElement(),s=e&&e.querySelector('.airr');if(s)s.style.transform=`rotate(${Math.round((x.a.trk||0)-b)}deg)`})}
+// Quellenangabe der Datenquelle unten auf der Karte (ODbL u. a.)
+function airAttr(map,d){const ac=map.attributionControl;if(!ac)return;const t=d&&d.src&&(d.air||[]).length?`Luftlage: <a href="${esc(d.src.site)}" target="_blank" rel="noopener">${esc(d.src.name)}</a>`:'';if(map._airAt===t)return;if(map._airAt)ac.removeAttribution(map._airAt);if(t)ac.addAttribution(t);map._airAt=t}
 const fmtT=ts=>new Date(ts*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 /* ---------- Suchgebiet entlang des Flusslaufs (Einsatz-App und öffentliche Ansicht) ---------- */
 const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
@@ -143,19 +177,19 @@ function pwDialog(forced,done){
     <label class="mut">Neues Passwort<input id="pwN" type="password" autocomplete="new-password"></label>
     <label class="mut">Neues Passwort wiederholen<input id="pwR" type="password" autocomplete="new-password"></label>`,
     async d=>{const n=$('#pwN',d).value;if(n!==$('#pwR',d).value)throw new Error('Die neuen Passwörter stimmen nicht überein.');
-      await api('me/password',{old:$('#pwO',d).value,new:n});alert('Passwort geändert.');done&&done()},
+      await api('me/password',{old:$('#pwO',d).value,new:n});toast('Passwort geändert.');done&&done()},
     'Speichern',forced?'Abmelden':'Abbrechen',forced?()=>{logout();done&&done()}:null)}
 /* ---------- Einsatzlog im Gross-Modus ---------- */
 let big=null;
-const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],poi:['Markierungen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub','anon']]};
-const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0',pub:'#7dd3fc',ext:'#a3e635',anon:'#8fb0bd'};
+const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],poi:['Markierungen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub','anon','air']]};
+const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0',pub:'#7dd3fc',ext:'#a3e635',anon:'#8fb0bd',air:'#ffd23f'};
 // anon (Issue #54, Verwaltung): async on => Fassung laden (anonymisiert oder nicht), dann Knopf «Anonym» in der Kopfzeile
 function openBigLog(title,get,live,anon){big={title,get,live,anon,anonOn:false,desc:true,filter:'all',cache:[]};let o=$('#bigLog');if(o)o.remove();
   o=document.createElement('div');o.id='bigLog';o.setAttribute('role','dialog');o.setAttribute('aria-label','Einsatzlog');
   o.innerHTML=`<div id="bigHead"><h2 id="bigT"></h2><select id="bigF" aria-label="Filter">${Object.entries(KIND_GROUPS).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('')}</select>${anon?'<button id="bigA" aria-pressed="false" title="Namen von Einsatzkräften, Rettlingen und Externen durch Bezeichnungen ersetzen">Anonym</button>':''}<button id="bigS"></button><button id="bigFs">Vollbild</button><button id="bigX" class="pri">Schliessen</button></div><div id="bigList"></div>`;
   document.body.appendChild(o);
   $('#bigF').onchange=e=>{big.filter=e.target.value;renderBigLog()};
-  if(anon)$('#bigA').onclick=async()=>{const b=$('#bigA'),on=!big.anonOn;b.disabled=true;try{await anon(on);big.anonOn=on;b.setAttribute('aria-pressed',on);b.textContent=(on?'✓ ':'')+'Anonym'}catch(e){alert(e.message)}b.disabled=false;renderBigLog()};$('#bigS').onclick=()=>{big.desc=!big.desc;renderBigLog()};
+  if(anon)$('#bigA').onclick=async()=>{const b=$('#bigA'),on=!big.anonOn;b.disabled=true;try{await anon(on);big.anonOn=on;b.setAttribute('aria-pressed',on);b.textContent=(on?'✓ ':'')+'Anonym'}catch(e){fail(e)}b.disabled=false;renderBigLog()};$('#bigS').onclick=()=>{big.desc=!big.desc;renderBigLog()};
   $('#bigFs').onclick=()=>{document.fullscreenElement?document.exitFullscreen():o.requestFullscreen&&o.requestFullscreen().catch(()=>{})};$('#bigX').onclick=closeBigLog;
   renderBigLog()}
 function closeBigLog(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});const o=$('#bigLog');if(o)o.remove();big=null}

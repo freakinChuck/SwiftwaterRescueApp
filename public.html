@@ -43,7 +43,7 @@ function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.
   const vb=$('#viewBox'),bv=$('#pbView');bv.innerHTML=VIEW_ICON;[vb,bv].forEach(x=>{L.DomEvent.disableClickPropagation(x);L.DomEvent.disableScrollPropagation(x)});
   bv.onclick=()=>viewBox();vb.onclick=e=>{const a=e.target.closest('[data-va]');if(a)setVis(viewCats().map(v=>v[0]),a.dataset.va==='1');if(e.target.closest('#bViewX'))viewBox(false)};
   vb.onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked)};
-  lay=L.layerGroup().addTo(map);
+  lay=L.layerGroup().addTo(map);airLay=L.layerGroup().addTo(map);airLay._air=new Map(); // Helikopter (Issue #73) in eigener Ebene, damit offene Popups das Neuzeichnen überstehen
   $('#pbSide').onclick=e=>{const f=e.target.closest('[data-f]');if(f)return toggleFollow(+f.dataset.f);
     const b=e.target.closest('[data-ll]');if(b)map.panTo(b.dataset.ll.split(',').map(Number))};
   L.DomEvent.disableClickPropagation($('#pbFollow'));$('#pbFollow button').onclick=stopFollow;map.on('dragstart',()=>{if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen und die Auto-Übersicht
@@ -54,9 +54,13 @@ function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.
 // Kategorien ausgeschalteter Funktionen (features aus public/state) fehlen, Nachrichten gibt es hier nicht.
 const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pview')||'[]'))}catch(e){return new Set()}})();
 const vis=k=>!viewHide.has(k);
-const viewCats=()=>VIEW.filter(([k,,f])=>k!=='mm'&&(!f||!ps||!ps.features||ps.features[f]!==0));
+const viewCats=()=>VIEW.filter(([k,,f])=>k!=='mm'&&(k!=='air'||!!(ps&&ps.air))&&(!f||!ps||!ps.features||ps.features[f]!==0)); // Helikopter nur, wenn die Verwaltung sie hier freigibt (air)
+/* ---------- Helikopter (Issue #73): über public/air, mit jeder Aktualisierung ---------- */
+let airLay=null,airD=null;
+function loadAir(){if(!ps||!ps.air||!vis('air')){airD=null;return drawAirP()}api('public/air&k='+encodeURIComponent(K)).then(a=>{airD=a}).catch(()=>{airD=null}).finally(drawAirP)}
+function drawAirP(){if(!airLay)return;const on=ps&&ps.air&&vis('air')&&airD;airSync(map,airLay,on?airD.air||[]:[],on?airD.now:0,(a,b)=>fmtC(a,b,cs));airAttr(map,on?airD:null)}
 function setVis(keys,on){keys.forEach(k=>on?viewHide.delete(k):viewHide.add(k));try{localStorage.setItem('sw_pview',JSON.stringify([...viewHide]))}catch(e){}
-  if(ps)draw();$('#viewBox').querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk))}
+  if(ps){draw();if(keys.includes('air'))loadAir()}$('#viewBox').querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk))}
 function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(bases[baseKey]);baseKey=k;bases[k].addTo(map);try{localStorage.setItem('sw_base',k)}catch(e){}}
 function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#pbView').setAttribute('aria-expanded',on);if(on)b.innerHTML=viewHtml(baseKey,viewCats(),vis)}
 document.addEventListener('click',e=>{const b=$('#viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#pbView'))viewBox(false)});
@@ -91,7 +95,7 @@ async function load(){let d;try{d=await api('public/state&k='+encodeURIComponent
   $('#pbTitle').innerHTML=`${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} ${esc(i.message)}`;document.title=(i.is_exercise?'Übung: ':'Einsatz: ')+i.message;
   if(i.ended_at)return stopWith(i.is_exercise?'Die Übung ist beendet.':'Der Einsatz ist beendet.','Die öffentliche Ansicht zeigt nur laufende Einsätze.');
   $('#pbTime').textContent='seit '+Math.round((d.now-i.alarm_at)/60)+' min · öffentliche Ansicht, nur lesen';
-  if(!map)initMap(d);draw()}
+  if(!map)initMap(d);draw();loadAir()}
 function draw(){const d=ps,i=d.incident,col=p=>(d.roles.find(r=>r.id===p.role_id)||{}).color||'#cfd8dc',ll=(a,b)=>`data-ll="${a},${b}"`;lay.clearLayers();
   drawArea(d);
   const pl=plsList(d);if(vis('pls'))pl.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:p.on?1:.4,opacity:p.on?1:.5}).bindTooltip(esc(p.label),{permanent:true,direction:'right',className:'pblbl'}).addTo(lay));
