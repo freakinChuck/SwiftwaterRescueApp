@@ -31,7 +31,7 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .inc.usr{border-left-color:var(--ok)}.inc.usr.off{border-left-color:var(--line);opacity:.6}.inc.usr .ih b{display:inline;margin-right:.4rem}.inc .fl .adm{color:#f0b429;border-color:#f0b429}.inc.url{border-left-color:var(--ex)}.inc.url.adm{border-left-color:#f0b429}.inc.url .ih b{display:inline;margin-right:.4rem}
 .inc .ia{display:flex;flex-wrap:wrap;gap:.3rem;margin-left:auto}.inc .ia button{padding:.35rem .6rem}.inc .ia .sec{background:none;color:var(--mut)}
 @media(max-width:760px){.inc .ia{margin-left:0;width:100%}.inc .ia button{flex:1 1 auto}}
-@media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}.inc.url .kv,.inc .kv.aark{grid-template-columns:repeat(3,1fr)}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
+@media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}.inc.url .kv{grid-template-columns:repeat(3,1fr)}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
 /* Replay */
 #replay{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
 #rpHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--line)}#rpHead h2{margin:0;font-size:1.15rem;flex:1 1 16rem}
@@ -121,11 +121,11 @@ const NAV=[
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir]]],
-  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aar','sAar','After Action Review',loadAar],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
+  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
 ];
-// Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:'stats',aar:'aar',aarcfg:'aar_cfg',einsicht:'cfg_my'};
-const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>can(NAV_PERM[k]))]).filter(([,its])=>its.length);
+// Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:['stats','aar'],aarcfg:'aar_cfg',einsicht:'cfg_my'};
+const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
 let MY=false;const myMode=()=>me.my_runs!=='off'&&(!nav().length||location.hash==='#meine');const myQ=()=>MY?'&my=1':'';
@@ -475,25 +475,30 @@ const features=k=>!me||!me.features||me.features.ex[k]!==0;
 const ARTS={all:'Alle',real:'Scharfe Einsätze',ex:'Übungen'};
 let statsData=null,statsF=(()=>{try{return localStorage.getItem('sw_statsf')||'all'}catch(e){return'all'}})(); // Filter pro Gerät gemerkt
 const isArt=(x,f)=>f==='all'||(f==='ex')===!!x.is_exercise;
-async function loadStats(){const el=$('#stats');try{statsData=await api('stats')}catch(e){el.innerHTML='<h2>Einsatzstatistik</h2><div class="mut">Statistik nicht verfügbar: '+esc(e.message)+'</div>';return}renderStats()}
-function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.filter(x=>isArt(x,statsF)),min=x=>x==null?'–':Math.round(x/60)+' min';
+async function loadStats(){const el=$('#stats');try{[statsData,aarC]=await Promise.all([api('stats'),can('aar')?api('aar/cfg'):null])}catch(e){el.innerHTML='<h2>Einsatzstatistik</h2><div class="mut">Statistik nicht verfügbar: '+esc(e.message)+'</div>';return}renderStats()}
+// Statistik für «Alle Einsätze auswerten» (stats); After Action Review (Issue #55, Recht aar) direkt bei den beendeten Einsätzen. Mit nur aar fehlen Log und Replay.
+function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.filter(x=>isArt(x,statsF)),min=x=>x==null?'–':Math.round(x/60)+' min',st=can('stats'),aar=can('aar')&&!!aarC;
+  const ended=all.filter(x=>x.ended_at),nAar=ended.filter(x=>x.aar_at).length;
   const av=a=>{a=a.filter(x=>x!=null);return a.length?Math.round(a.reduce((s,x)=>s+x,0)/a.length*10)/10:null};
   // Kennzahlen je Art, damit Übungen die Werte der scharfen Einsätze nicht verfälschen
   const sum=(f,l)=>{const r=all.filter(x=>isArt(x,f)),e=r.filter(x=>x.ended_at);return`<div class="${f}"><h3>${l}</h3><div class="kv"><span><small>Anzahl</small>${r.length} (beendet ${e.length})</span><span><small>Ø Dauer</small>${min(av(e.map(x=>x.ended_at-x.alarm_at)))}</span><span><small>Ø Teilnehmende</small>${av(r.map(x=>x.accepted))??'–'}</span><span><small>Ø bis 1. Annahme</small>${min(av(r.map(x=>x.first_accept==null?null:x.first_accept-x.alarm_at)))}</span><span><small>Ø bis Suchgebiet</small>${min(av(r.map(x=>x.first_area==null?null:x.first_area-x.alarm_at)))}</span></div></div>`};
   const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
   // eine Karte pro Einsatz: Kopf (Art, Zeit, Meldung, Status), Kennzahlen, Knöpfe; bricht um statt seitlich zu scrollen
-  const card=x=>{const fl=[x.record===1?'<span class="on">● Aufzeichnung läuft</span>':x.record===2?'<span>❚❚ Aufzeichnung pausiert</span>':x.recorded?'<span>● aufgezeichnet</span>':'',x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':''].join('');
+  const card=x=>{const fl=[x.record===1?'<span class="on">● Aufzeichnung läuft</span>':x.record===2?'<span>❚❚ Aufzeichnung pausiert</span>':x.recorded?'<span>● aufgezeichnet</span>':'',x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':'',aar&&x.ended_at?(x.aar_at?`<span class="rv" title="Zuletzt bearbeitet ${aarDt(x.aar_at)}">AAR erfasst</span>`:'<span>noch kein AAR</span>'):''].join('');
     return`<div class="inc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl?`<div class="fl">${fl}</div>`:''}</div>
       <div class="kv"><span><small>Dauer</small>${x.ended_at?min(x.ended_at-x.alarm_at):'läuft'}</span><span><small>Angenommen</small>${x.accepted}${x.declined?` <small>${x.declined} abgelehnt</small>`:''}</span><span><small>1. Annahme</small>${min(x.first_accept==null?null:x.first_accept-x.alarm_at)}</span><span><small>1. im Gebiet</small>${min(x.first_area==null?null:x.first_area-x.alarm_at)}</span></div>
-      <div class="ia"><button data-l="${x.id}">Log</button>${x.recorded?`<button data-rp="${x.id}">Replay</button>`:''}${can('aar')&&x.ended_at?`<button data-aar="${x.id}" title="After Action Review erfassen und herunterladen">After Action Review</button>`:''}${can('anon')&&x.ended_at&&(!x.log_anon||x.recorded&&!x.rp_anon)?`<button class="sec" data-an="${x.id}" title="Replay oder Einsatzprotokoll endgültig ohne Personendaten speichern">Anonymisieren</button>`:''}${can('anon')&&x.recorded?`<button class="sec" data-rpd="${x.id}" title="Aufzeichnung dieses Einsatzes löschen">Aufzeichnung löschen</button>`:''}</div></div>`};
+      <div class="ia">${st?`<button data-l="${x.id}">Log</button>${x.recorded?`<button data-rp="${x.id}">Replay</button>`:''}`:''}${aar&&x.ended_at?`<button data-ae="${x.id}" title="After Action Review ${x.aar_at?'bearbeiten':'erfassen'}">AAR ${x.aar_at?'bearbeiten':'erfassen'}</button><button data-aw="${x.id}" title="After Action Review als Word-Dokument herunterladen">AAR Word</button><button data-ap="${x.id}" title="After Action Review als PDF herunterladen">AAR PDF</button>`:''}${can('anon')&&x.ended_at&&(!x.log_anon||x.recorded&&!x.rp_anon)?`<button class="sec" data-an="${x.id}" title="Replay oder Einsatzprotokoll endgültig ohne Personendaten speichern">Anonymisieren</button>`:''}${can('anon')&&x.recorded?`<button class="sec" data-rpd="${x.id}" title="Aufzeichnung dieses Einsatzes löschen">Aufzeichnung löschen</button>`:''}</div></div>`};
   el.innerHTML=`<h2>Einsatzstatistik und Einsatzlog</h2><div class="row" style="align-items:center"><label class="mut" style="flex:0 0 auto">Anzeigen <select id="stF">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===statsF?'selected':''}>${v}</option>`).join('')}</select></label></div>
+    ${aar?`<div class="mut">After Action Review (AAR): je beendetem Einsatz die Erkenntnisse erfassen und als Word oder PDF herunterladen; ${nAar} von ${ended.length} beendeten haben eines.${can('aar_cfg')?' Felder, Titel und Logo: <a href="#aarcfg">After Action Review einrichten</a>.':''}</div>`:''}
     <div class="ssum">${statsF!=='ex'?sum('real','Scharfe Einsätze'):''}${statsF!=='real'?sum('ex','Übungen'):''}</div>
     ${rows.map(card).join('')||`<div class="mut">Keine ${statsF==='ex'?'Übungen':statsF==='real'?'scharfen Einsätze':'Einsätze'}</div>`}`;
   $('#stF').onchange=e=>{statsF=e.target.value;try{localStorage.setItem('sw_statsf',statsF)}catch(_){}renderStats()};
   const X=id=>all.find(x=>x.id==id);
   el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.l);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon)});
   el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>anonDlg(X(b.dataset.an)));
-  el.querySelectorAll('[data-aar]').forEach(b=>b.onclick=()=>{aarOpen=+b.dataset.aar;location.hash='aar'});
+  el.querySelectorAll('[data-ae]').forEach(b=>b.onclick=()=>aarEdit(+b.dataset.ae));
+  el.querySelectorAll('[data-aw]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.aw,'docx'));
+  el.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.ap,'pdf'));
   el.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.rp));
   el.querySelectorAll('[data-rpd]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.rpd);
     if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Markierungen, Bereiche und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
@@ -501,26 +506,12 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
 /* ---------- After Action Review (Issue #55) ---------- */
 // Je beendetem Einsatz Angaben erfassen (Felder frei definierbar unter «After Action Review einrichten») und das Dokument im Browser erzeugen:
 // Word (.docx, Office Open XML mit JSZip) oder PDF (jsPDF mit AutoTable). Beide nutzen dasselbe Modell (aarModel); die Bibliotheken laden erst beim Herunterladen.
-let aarC=null,aarRows=[],aarOpen=null,aarF=(()=>{try{return localStorage.getItem('sw_aarf')||'all'}catch(e){return'all'}})(); // aarOpen: direkt bearbeiten (Knopf in der Einsatzstatistik)
+let aarC=null; // Einstellungen (aar/cfg), geladen mit der Einsatzstatistik
 const AAR_LIB={zip:'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',pdf:'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',at:'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'};
 const aarJs={};const loadJs=u=>aarJs[u]=aarJs[u]||new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>{delete aarJs[u];no(new Error('Bibliothek für das Dokument konnte nicht geladen werden (Verbindung?)'))};document.head.appendChild(s)});
 const aarDt=t=>t?new Date(t*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
 const aarTm=t=>t?new Date(t*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'}):'–';
 const aarMin=s=>s==null?'–':Math.round(s/60)+' min';
-async function loadAar(){const el=$('#sAar');try{[aarC,aarRows]=await Promise.all([api('aar/cfg'),api('aar/list')])}catch(e){el.innerHTML='<h2>After Action Review</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  renderAar();if(aarOpen){const id=aarOpen;aarOpen=null;aarEdit(id)}}
-function renderAar(){const el=$('#sAar'),rows=aarRows.filter(x=>isArt(x,aarF)),n=aarRows.filter(x=>x.updated).length;
-  const card=x=>`<div class="inc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${aarDt(x.alarm_at)}</span><b>${esc(x.message)}</b>
-      <div class="fl">${x.updated?'<span class="rv">Review erfasst</span>':'<span>noch kein Review</span>'}</div></div>
-    <div class="kv aark"><span><small>Dauer</small>${aarMin(x.ended_at-x.alarm_at)}</span><span><small>Einsatzkräfte</small>${x.accepted}</span><span><small>Zuletzt bearbeitet</small>${x.updated?aarDt(x.updated)+'<br>'+esc(x.upd_name||'?'):'–'}</span></div>
-    <div class="ia"><button data-ae="${x.id}">${x.updated?'Bearbeiten':'Erfassen'}</button><button data-aw="${x.id}">Word</button><button data-ap="${x.id}">PDF</button></div></div>`;
-  el.innerHTML=`<h2>After Action Review</h2><div class="mut">Je beendetem Einsatz die Erkenntnisse erfassen und als Word- oder PDF-Dokument herunterladen. ${n} von ${aarRows.length} beendeten Einsätzen haben ein Review.${can('aar_cfg')?' Felder, Titel und Logo: <a href="#aarcfg">After Action Review einrichten</a>.':''}</div>
-    <div class="row" style="align-items:center"><label class="mut" style="flex:0 0 auto">Anzeigen <select id="aaF">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===aarF?'selected':''}>${v}</option>`).join('')}</select></label></div>
-    ${rows.map(card).join('')||`<div class="mut">Keine beendeten ${aarF==='ex'?'Übungen':aarF==='real'?'scharfen Einsätze':'Einsätze'}</div>`}`;
-  $('#aaF').onchange=e=>{aarF=e.target.value;try{localStorage.setItem('sw_aarf',aarF)}catch(_){}renderAar()};
-  el.querySelectorAll('[data-ae]').forEach(b=>b.onclick=()=>aarEdit(+b.dataset.ae));
-  el.querySelectorAll('[data-aw]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.aw,'docx'));
-  el.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.ap,'pdf'))}
 // Formular mit allen Feldern der Einstellungen; leere Felder werden nicht gespeichert
 async function aarEdit(id){let x;try{x=await api('aar/get&id='+id)}catch(e){return fail(e)}const i=x.inc,F=aarC.cfg.fields;
   const inp=f=>{const v=x.data[f.id]??'',a=`data-af="${f.id}"`;
@@ -532,9 +523,9 @@ async function aarEdit(id){let x;try{x=await api('aar/get&id='+id)}catch(e){retu
       default:return`<input ${a} value="${esc(v)}" maxlength="2000">`}};
   const d=dlg('After Action Review – '+i.message,`<div class="mut">${i.is_exercise?'Übung':'Einsatz'} vom ${aarDt(i.alarm_at)}, Dauer ${aarMin(i.ended_at-i.alarm_at)}, ${x.people.length} Einsatzkräfte${x.updated?` · zuletzt bearbeitet ${aarDt(x.updated)} von ${esc(x.updated_by||'?')}`:''}</div>
     ${F.map(f=>f.type==='head'?`<h3 class="aarq">${esc(f.label)}</h3>`:`<label class="mut">${esc(f.label)}${inp(f)}${f.hint?`<small>${esc(f.hint)}</small>`:''}</label>`).join('')||'<div class="mut">Es sind noch keine Felder eingerichtet (Auswertung → After Action Review einrichten).</div>'}`,
-    async d=>{const data={};d.querySelectorAll('[data-af]').forEach(e=>data[e.dataset.af]=e.value);await api('aar/save',{id,data});toast('After Action Review gespeichert.','ok');loadAar()});
+    async d=>{const data={};d.querySelectorAll('[data-af]').forEach(e=>data[e.dataset.af]=e.value);await api('aar/save',{id,data});toast('After Action Review gespeichert.','ok');loadStats()});
   d.firstElementChild.classList.add('mid')}
-function aarDl(id,fmt){const x=aarRows.find(r=>r.id===id);
+function aarDl(id,fmt){const x=statsData.incidents.find(r=>r.id===id);
   dlg((fmt==='docx'?'Word':'PDF')+' herunterladen',`<div class="mut">${esc(x?x.message:'')}</div>
     <label class="chk"><input type="checkbox" id="adL" ${aarC.cfg.auto.log?'checked':''}> Einsatzlog anhängen</label>
     <label class="chk"><input type="checkbox" id="adA"> Namen anonymisieren</label>

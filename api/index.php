@@ -142,7 +142,7 @@ const PERMS = [
   'stats' => ['Auswertung', 'Alle Einsätze auswerten', 'Einsatzstatistik, Log und Replay aller Einsätze'],
   'anon' => ['Auswertung', 'Anonymisieren und Aufzeichnungen löschen', 'Endgültig, nicht umkehrbar (zusammen mit «Alle Einsätze auswerten»)'],
   'cfg_my' => ['Auswertung', 'Einsicht für Einsatzkräfte einstellen', 'Was Teilnehmende von ihren eigenen Einsätzen sehen (Meine Einsätze)'],
-  'aar' => ['Auswertung', 'After Action Reviews erstellen', 'Je beendetem Einsatz die Angaben erfassen und das Dokument als Word oder PDF herunterladen'],
+  'aar' => ['Auswertung', 'After Action Reviews erstellen', 'In der Einsatzstatistik je beendetem Einsatz die Angaben erfassen und das Dokument als Word oder PDF herunterladen (ohne «Alle Einsätze auswerten» nur Liste und Kennzahlen, ohne Log und Replay)'],
   'aar_cfg' => ['Auswertung', 'After Action Review einrichten', 'Felder, Dokumenttitel, Organisation, Logo und mitgelieferte Abschnitte'],
 ];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
@@ -1547,9 +1547,9 @@ switch ($route) {
   if (myRuns() === 'anon') foreach ($rows as &$r) $r['message'] = anonText($r['message'], anonCtx($r['id'], $uid)); // Alarmmeldung wie im Log
   unset($r);
   out(['mode' => myRuns(), 'incidents' => $rows]);
- case 'stats': need('stats');
-  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area', 'rp_anon', 'log_anon']), $db->query(
-   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,u.name creator,
+ case 'stats': need('stats', 'aar'); // mit nur aar (After Action Review, Issue #55) ohne Log und Replay, die prüfen incView
+  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area', 'rp_anon', 'log_anon', 'aar_at']), $db->query(
+   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,u.name creator,(SELECT a.updated FROM aar a WHERE a.incident_id=i.id) aar_at,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode='declined') declined,
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='accept') first_accept,
@@ -1575,10 +1575,6 @@ switch ($route) {
     if (!@getimagesizefromstring($b)) fail('Die Datei ist kein gültiges Bild');
   }
   setSetting('aar_logo', (string)$l); out(['ok' => true]);
- case 'aar/list': need('aar'); // beendete Einsätze mit Stand des Reviews
-  out(array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'updated', 'accepted']), $db->query(
-   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,a.updated,u.name upd_name,(SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted
-    FROM incidents i LEFT JOIN aar a ON a.incident_id=i.id LEFT JOIN users u ON u.id=a.updated_by WHERE i.ended_at IS NOT NULL ORDER BY i.alarm_at DESC, i.id DESC")->fetchAll()));
  case 'aar/get': need('aar'); // Daten fürs Dokument; anon=1 oder endgültig anonymisiert: Bezeichnungen wie Issue #54 (die erfassten Angaben bleiben, wie sie geschrieben wurden)
   $inc = incById($_GET['id'] ?? 0); $id = (int)$inc['id']; $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
   $forced = (int)$inc['log_anon'] || $inc['rp_anon'] !== null; $anon = $forced || !empty($_GET['anon']); $c = $anon ? anonCtx($id) : null;
