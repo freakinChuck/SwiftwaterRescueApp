@@ -77,7 +77,7 @@ const NAV=[
   ['Personen',[['benutzer','sU','Benutzer',loadUsers]]],
   ['Einsatz',[['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
-  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd]]],
+  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats]]],
 ];
@@ -179,6 +179,17 @@ async function loadRd(){const el=$('#sF');let s;try{s=await api('settings')}catc
     <div class="row" style="align-items:end"><label class="mut">Geschwindigkeiten in km/h, durch Komma getrennt (1 bis 6 Werte)<input id="rdS" value="${esc(s.rd_speeds.join(', '))}" inputmode="decimal"></label><button id="rdSv">Speichern</button></div>`;
   $('#rdSv').onclick=()=>{const v=$('#rdS').value.replace(/km\/h/gi,' ').split(/[,;\s]+/).filter(Boolean); // «km/h» darf mitgeschrieben werden
     api('settings/save',{rd_speeds:v}).then(()=>{alert('Gespeichert. Die Einsatz-App übernimmt die Werte beim nächsten Laden.');loadRd()}).catch(fail)}}
+/* ---------- Navigation (Issue #79): verfügbare Apps und Standard ---------- */
+async function loadNav(){const el=$('#sNv');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Navigation</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const as=s.nav_apps||[];
+  el.innerHTML=`<h2>Navigation</h2><div class="mut">Der Knopf 🧭 in der Einsatz-App übergibt das Ziel direkt an die Navigations-App, ohne Auswahl. Jede Person kann unter «Konto» eine der eingeschalteten Apps wählen, sonst gilt der Standard. Ob die Funktion überhaupt angeboten wird, steht unter «Funktionen».</div>
+    ${as.map(a=>`<label class="row" style="align-items:center"><input type="checkbox" data-na="${esc(a.k)}" ${a.on?'checked':''}> <span>${esc(a.name)}</span></label>`).join('')}
+    <label class="mut">Standard<select id="nvD">${as.filter(a=>a.on).map(a=>`<option value="${esc(a.k)}" ${a.k===s.nav_default?'selected':''}>${esc(a.name)}</option>`).join('')}</select></label>
+    <div class="mut">Apple Karten gibt es unter Android nicht, «Andere App» nur unter Android. Ist die gewählte App auf einem Gerät nicht verfügbar, nimmt die App den Standard, sonst Google Maps.</div>`;
+  el.onchange=e=>{const c=e.target;let p;
+    if(c.dataset.na)p={nav_off:[...el.querySelectorAll('[data-na]')].filter(x=>!x.checked).map(x=>x.dataset.na)};
+    else if(c.id==='nvD')p={nav_default:c.value};else return;
+    el.querySelectorAll('input,select').forEach(x=>x.disabled=true);api('settings/save',p).catch(fail).finally(loadNav)}}
 /* ---------- Gewässerdaten: Haltedauer des Overpass-Caches und Overpass-Server (Reihenfolge) ---------- */
 let opUrls=[],opDef=[],opOff=[];
 async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all([api('settings'),api('overpass/stats')])}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
