@@ -381,6 +381,9 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17,animate:false}); // ohne Animation: ein verspätetes zoomstart beendete sonst die Auto-Übersicht
   rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:Date.now(),sz:rpSzSaved()};
+  // Fenster «Ansicht»: nur Kategorien, die in diesem Einsatz vorkommen (das Suchgebiet zeichnet das Replay nie)
+  const has={app:d.track.length,ext:(d.externals||[]).length,res:d.rtrack.length||d.rescuees.some(r=>r.lat!=null),pls:pls.length,pt:d.pois.some(p=>p.kind!=='area'),ar:d.pois.some(p=>p.kind==='area'),mm:d.marks.some(m=>m.mark||m.unmarked!=null)};
+  rp.cats=VIEW.map(v=>v[0]).filter(k=>has[k]);
   // Fenster «Ansicht» und Auto-Übersicht (Issue #53)
   const mc=$('#rpMap');mc.insertAdjacentHTML('beforeend','<button id="rpView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden">'+VIEW_ICON+'</button><div id="viewBox" hidden></div>');
   const vb=$('#viewBox'),bv=$('#rpView');[vb,bv].forEach(x=>{L.DomEvent.disableClickPropagation(x);L.DomEvent.disableScrollPropagation(x)});
@@ -408,11 +411,11 @@ function rpFollow(id){rp.follow=id;rp.pKey=null;rp.auto=false;drawReplay()}
 /* ---------- Replay: Ansicht und Auto-Übersicht (Issue #53) ---------- */
 // Kategorien wie in der Einsatz-App (VIEW), ohne Suchgebiet (wird im Replay nicht gezeichnet); ausgeblendete pro Gerät in sw_rpview (getrennt von App und öffentlicher Ansicht)
 const rpHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_rpview')||'[]'))}catch(e){return new Set()}})();
-const rpVis=k=>!rpHide.has(k),rpCats=()=>VIEW.filter(([k])=>k!=='area');
+const rpVis=k=>!rpHide.has(k),rpCats=()=>VIEW.filter(([k])=>rp.cats.includes(k));
 function rpSetVis(keys,on){keys.forEach(k=>on?rpHide.delete(k):rpHide.add(k));try{localStorage.setItem('sw_rpview',JSON.stringify([...rpHide]))}catch(e){}
   if(!rp)return;rp.poiKey=null;drawReplay();$('#viewBox').querySelectorAll('[data-vk]').forEach(c=>c.checked=rpVis(c.dataset.vk))}
 function rpSetBase(k){if(!MAP_PROVIDERS[k]||k===rp.baseKey)return;rp.map.removeLayer(rp.bases[rp.baseKey]);rp.baseKey=k;rp.bases[k].addTo(rp.map);try{localStorage.setItem('sw_base',k)}catch(e){}}
-function rpViewBox(on){const b=$('#viewBox');if(!b||!rp)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#rpView').setAttribute('aria-expanded',on);if(on)b.innerHTML=viewHtml(rp.baseKey,rpCats(),rpVis)+`<h4>Grösse der Positionen</h4><label id="rpSzL"><input type="range" id="rpSz" min="${RP_SZ[0]}" max="${RP_SZ[1]}" step="10" value="${rp.sz}" aria-label="Grösse der Positionen in Prozent"><span>${rp.sz} %</span></label>`}
+function rpViewBox(on){const b=$('#viewBox');if(!b||!rp)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#rpView').setAttribute('aria-expanded',on);if(on)b.innerHTML=viewHtml(rp.baseKey,rpCats().length?rpCats():null,rpVis)+`<h4>Grösse der Positionen</h4><label id="rpSzL"><input type="range" id="rpSz" min="${RP_SZ[0]}" max="${RP_SZ[1]}" step="10" value="${rp.sz}" aria-label="Grösse der Positionen in Prozent"><span>${rp.sz} %</span></label>`}
 // Grösse der Positionen: Radien der Marker und Abstand der Beschriftung neu setzen, Schrift über --rpsz, übrige Marker beim nächsten Zeichnen
 function rpSetSize(v){rp.sz=v;try{localStorage.setItem('sw_rpsize',v)}catch(e){}$('#replay').style.setProperty('--rpsz',v/100);const l=$('#rpSzL span');if(l)l.textContent=v+' %';
   rp.pls.forEach(p=>p.mk.setRadius(rz(9)));rp.people.forEach(p=>{p.mk.setRadius(rz(8));const t=p.mk.getTooltip();t.options.offset=[rz(8),0];t.update()});rp.poiKey=null;drawReplay()}
