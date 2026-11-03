@@ -543,7 +543,8 @@ function anonCtx($id) { global $db;
   $nm = $db->query("SELECT id,name FROM users")->fetchAll(PDO::FETCH_KEY_PAIR);
   $map = [];
   foreach ($u as $k => $l) if (isset($nm[$k]) && mb_strlen(trim($nm[$k])) >= 2) $map[(string)$nm[$k]] = $l;
-  $lab = function ($sql, $pre) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); $r = []; $i = 0; foreach ($s->fetchAll() as $x) $r[(int)$x['id']] = [$pre . ++$i, (string)$x['name']]; return $r; };
+  // gleicher Name = gleiche Bezeichnung (das Log kennt nur Namen, z. B. entfernt und neu erfasst)
+  $lab = function ($sql, $pre) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); $r = []; $byName = []; foreach ($s->fetchAll() as $x) { $nx = (string)$x['name']; $byName[$nx] = $byName[$nx] ?? $pre . (count($byName) + 1); $r[(int)$x['id']] = [$byName[$nx], $nx]; } return $r; };
   $res = $lab("SELECT id,name FROM rescuees WHERE incident_id=? ORDER BY id", 'Rettling ');
   $ext = $lab("SELECT id,name FROM externals WHERE incident_id=? ORDER BY id", 'Externe Einsatzkraft ');
   $rn = []; foreach ($res as [$l, $x]) $rn[$x] = $rn[$x] ?? $l;
@@ -554,8 +555,8 @@ function anonCtx($id) { global $db;
     if ($r['kind'] === 'rescuee' && preg_match('/^ändert den Rettling «([^»]*)» zu «([^»]*)»/u', $r['text'], $m) && isset($rn[$m[2]])) $rn[$m[1]] = $rn[$m[1]] ?? $rn[$m[2]];
     if ($r['kind'] === 'ext' && preg_match('/^ändert die externe Einsatzkraft «([^»]*)» zu «([^»]*)»/u', $r['text'], $m) && isset($en[$m[2]])) $en[$m[1]] = $en[$m[1]] ?? $en[$m[2]];
   }
-  foreach ($rn as $x => $l) { $map["«$x»"] = "«$l»"; if (mb_strlen($x) >= 3 && !isset($map[(string)$x])) $map[(string)$x] = $l; } // Rettlinge auch ohne «» (z. B. in Nachrichten)
-  foreach ($en as $x => $l) $map["«$x»"] = $map["«$x»"] ?? "«$l»";
+  foreach ($rn as $x => $l) { $map["«{$x}»"] = "«{$l}»"; if (mb_strlen($x) >= 3 && !isset($map[(string)$x])) $map[(string)$x] = $l; } // Rettlinge auch ohne «» (z. B. in Nachrichten)
+  foreach ($en as $x => $l) $map["«{$x}»"] = $map["«{$x}»"] ?? "«{$l}»";
   $keys = array_map('strval', array_keys($map)); usort($keys, fn($a, $b) => mb_strlen($b) <=> mb_strlen($a));
   $re = $keys ? '/(?<![\p{L}\p{N}])(?:' . implode('|', array_map(fn($k) => preg_quote($k, '/'), $keys)) . ')(?![\p{L}\p{N}])/u' : null;
   return ['u' => $u, 'r' => array_map(fn($x) => $x[0], $res), 'e' => array_map(fn($x) => $x[0], $ext), 'map' => $map, 're' => $re];
