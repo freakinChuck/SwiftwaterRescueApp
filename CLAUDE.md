@@ -115,6 +115,7 @@ Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und
 
 ## Wichtige Konventionen
 - Frontend: keine Neuzeichnung des Menüs, solange ein Eingabefeld Fokus hat oder das Formular «Einsatz starten» offen ist (`draw()`-Guards). Bei Änderungen am Polling darauf achten.
+- Hinweise und Fehler mit `toast(text, kind)` (`common.js`, kind ok/info/err; `fail` nutzt err), nie `alert()`: verschwinden von selbst, Antippen schliesst. Nur Rückfragen (`confirm`, `dlg`) brauchen einen Klick.
 - Server liefert Zahlen als Zahlen (`ints()`, Float-Casts); MySQL liefert sonst Strings, was im JS zu falschen Wahrheitswerten führt.
 - Berechtigungen immer serverseitig prüfen, das Frontend blendet nur aus.
 - Zwischenspeicher: `.htaccess` (Wurzel) setzt `Cache-Control: no-cache` für HTML/JS/CSS, und `common.js`/`common.css` werden mit `?v=…` eingebunden (im Repo `?v=0`, `deploy.ps1` setzt den Git-Stand ein). Sonst laden Handys nach einem Update ein altes `common.js` zu einem neuen `index.html` (grauer Bildschirm, Issue #19).
