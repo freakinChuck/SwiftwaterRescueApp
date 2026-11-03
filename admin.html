@@ -18,7 +18,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:1.2rem}main>section[hi
 main>section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:1rem} /* nur die Abschnitte: Leaflet baut die Kartenauswahl ebenfalls als section (Issue #26) */
 h2{margin:0 0 .6rem;font-size:1.1rem}h3{margin:1rem 0 .3rem;font-size:1rem}
 .tw{overflow-x:auto}th{text-align:left;padding:.3rem;color:var(--mut);font-weight:600;border-bottom:1px solid var(--line);white-space:nowrap}
-tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{padding:.35rem .6rem;margin:.1rem}
+tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:100%;min-width:8rem;margin:0}tr.new select{min-width:10rem}tfoot th{padding-top:1rem}td.act{white-space:nowrap;text-align:right}td.act button{padding:.35rem .6rem;margin:.1rem}
 /* Einsatzlog: scharfe Einsätze rot, Übungen blau */
 .badge.real{background:var(--alarm)}tr.art-ex td:first-child{border-left:4px solid var(--ex)}tr.art-real td:first-child{border-left:4px solid var(--alarm)}
 /* Replay */
@@ -29,6 +29,9 @@ tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{p
 #rpFoot{display:flex;gap:.8rem;align-items:center;padding:.6rem 1rem;border-top:1px solid var(--line)}#rpTl{flex:1;display:grid;gap:3px}#rpRange{width:100%;padding:0}
 #rpSeg{position:relative;height:5px;background:var(--line);border-radius:3px}#rpSeg span{position:absolute;top:0;bottom:0;background:#e05cb0;border-radius:3px} /* aufgezeichnete Zeiträume, Lücken = Pause/aus */
 #rpTime{font-variant-numeric:tabular-nums;white-space:nowrap}
+/* Replay: Fenster «Ansicht» und Auto-Übersicht (Issue #53), wie in der öffentlichen Ansicht */
+#rpView{position:absolute;z-index:1000;top:.6rem;right:.6rem;width:46px;height:46px;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px #0008}#rpView[aria-expanded=true],#rpAuto[aria-pressed=true]{background:var(--ex);border-color:var(--ex);color:#fff}
+#replay #viewBox{position:absolute;top:3.7rem;right:.6rem;max-height:calc(100% - 4.4rem);cursor:auto;font:1rem/1.4 "Segoe UI",system-ui,sans-serif}
 .rpl{display:block;width:100%;text-align:left;border:0;border-left:4px solid;border-radius:0;background:none;padding:.35rem .5rem;font-size:.9rem}.rpl:hover{background:var(--panel)}.rpl .t{color:var(--mut);margin-right:.4rem}
 .rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
 .exp{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.8rem 0}.exp h3{margin:0 0 .3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.exp .badge.run{background:var(--alarm)}.exp .badge.done{background:var(--line)}.exp td{vertical-align:top}.exp td small{display:block;color:var(--mut)}
@@ -43,7 +46,8 @@ tr.off td{opacity:.55}td.act{white-space:nowrap;text-align:right}td.act button{p
 .rpg{font-size:.8rem;font-weight:700;color:var(--mut);margin-top:.5rem}
 /* Replay: Anzeige beim Folgen (oben links auf der Karte) */
 #rpFollow{position:absolute;top:.6rem;left:3.4rem;z-index:1000;background:var(--ex);color:#fff;border-radius:6px;padding:.2rem .3rem .2rem .7rem;font-size:.9rem;display:flex;gap:.4rem;align-items:center;box-shadow:0 1px 4px #0008;max-width:calc(100% - 4rem)}#rpFollow[hidden]{display:none}#rpFollow button{background:transparent;border:0;color:#fff;padding:.15rem .4rem}
-.leaflet-tooltip.rplbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px}.leaflet-tooltip.rplbl::before{display:none}
+.leaflet-tooltip.rplbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px;font-size:calc(12px*var(--rpsz,1))} /* --rpsz: Regler «Grösse der Positionen» */
+#rpSzL{display:flex;gap:.5rem;align-items:center}#rpSzL input{flex:1;padding:0}#rpSzL span{min-width:3.2rem;text-align:right;font-variant-numeric:tabular-nums}.leaflet-tooltip.rplbl::before{display:none}
 @media(max-width:760px){#rpBody{flex-direction:column}#rpSide{width:auto;height:40%;border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
 <div id="app"></div>
@@ -91,17 +95,19 @@ function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ234567
 async function loadUsers(){const el=$('#sU');try{users=await api('users')}catch(e){el.innerHTML='<h2>Benutzer</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   el.innerHTML=`<h2>Benutzer (${users.filter(u=>u.active).length} aktiv)</h2><div class="tw"><table><thead><tr><th>Name</th><th>Benutzername</th><th>Benutzerrolle</th><th>Status</th><th></th></tr></thead><tbody>${users.map(u=>{const self=u.id===me.id;
     return`<tr class="${u.active?'':'off'}"><td>${esc(u.name)}${self?' <span class="mut">(du)</span>':''}</td><td>${esc(u.username)}</td><td>${ROLE_LABEL(u)}</td><td>${u.active?'aktiv':'deaktiviert'}${u.must_change?'<br><span class="mut">Passwortwechsel ausstehend</span>':''}${u.exercise_mode?'<br><span class="mut">Übungsmodus an</span>':''}</td>
-      <td class="act"><button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.active?`<button data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}</td></tr>`}).join('')}</tbody></table></div>
-    <h3>Neuer Benutzer</h3><div class="row"><input id="un" placeholder="Benutzername" autocomplete="off" aria-label="Benutzername"><input id="uf" placeholder="Name" aria-label="Name"><input id="up" placeholder="Startpasswort" autocomplete="off" aria-label="Startpasswort" value="${genPw()}"><select id="ur" aria-label="Benutzerrolle">${ROLE_OPTS()}</select><button class="pri" id="uA">Benutzer anlegen</button></div>
-    <div class="mut">Neue Benutzer müssen das Startpasswort bei der ersten Anmeldung ändern. Deaktivierte Benutzer können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
-  $('#uA').onclick=()=>{const pw=$('#up').value;api('user/save',{username:$('#un').value,name:$('#uf').value,password:pw,...ROLE_VAL($('#ur').value)}).then(()=>{alert('Benutzer angelegt. Startpasswort: '+pw);loadUsers()}).catch(fail)};
+      <td class="act"><button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.active?`<button data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}</td></tr>`}).join('')}</tbody>
+    <tfoot><tr class="new"><th colspan="5">Neuer Benutzer</th></tr><tr class="new"><td><input id="uf" placeholder="Name" aria-label="Name"></td><td><input id="un" placeholder="Benutzername" autocomplete="off" aria-label="Benutzername"></td><td><select id="ur" aria-label="Benutzerrolle">${ROLE_OPTS()}</select></td><td><input id="up" placeholder="Startpasswort" autocomplete="off" aria-label="Startpasswort" title="Startpasswort" value="${genPw()}"></td><td class="act"><button class="pri" id="uA">Benutzer anlegen</button></td></tr></tfoot></table></div>
+    <div class="mut" id="uMsg" role="status"></div>
+    <div class="mut">Neue Benutzer müssen das Startpasswort bei der ersten Anmeldung ändern; gib es vor dem Anlegen weiter, es wird danach nicht mehr angezeigt. Deaktivierte Benutzer können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
+  // Startpasswort nach dem Speichern nicht in einer Meldung anzeigen (Issue #59): es steht vorher im Feld und kann dort kopiert werden
+  $('#uA').onclick=()=>{const nm=$('#uf').value.trim()||$('#un').value.trim();api('user/save',{username:$('#un').value,name:$('#uf').value,password:$('#up').value,...ROLE_VAL($('#ur').value)}).then(async()=>{await loadUsers();$('#uMsg').textContent=`Benutzer «${nm}» angelegt.`}).catch(fail)};
   const U=id=>users.find(x=>x.id==id);
   el.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.e),self=u.id===me.id;
     dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><label class="mut">Benutzerrolle<select id="eR" ${self?'disabled':''}>${ROLE_OPTS(u)}</select></label>${self?'<div class="mut">Die eigene Benutzerrolle kann nicht geändert werden.</div>':''}<div class="mut">Administratoren haben Zugriff auf diese Verwaltung und dürfen jeden Einsatz verwalten. Übungsleiter sehen in der Verwaltung nur «Übungen vorbereiten» und dürfen vorbereitete Übungen starten und ihre Elemente freigeben.</div>`,
       async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,...ROLE_VAL($('#eR',d).value)});loadUsers()})});
   el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.p);
-    dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div><label class="mut">Neues Startpasswort<input id="eP" autocomplete="off" value="${genPw()}"></label>`,
-      async d=>{const pw=$('#eP',d).value;await api('user/password',{id:u.id,password:pw});alert('Passwort zurückgesetzt. Bitte das Startpasswort «'+pw+'» an '+u.name+' weitergeben.');loadUsers()},'Zurücksetzen')});
+    dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div><label class="mut">Neues Startpasswort<input id="eP" autocomplete="off" value="${genPw()}"></label><div class="mut">Gib es vor dem Zurücksetzen weiter, es wird danach nicht mehr angezeigt.</div>`,
+      async d=>{await api('user/password',{id:u.id,password:$('#eP',d).value});await loadUsers();$('#uMsg').textContent=`Passwort von ${u.name} zurückgesetzt.`},'Zurücksetzen')});
   el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.d);
     if(confirm(u.name+' deaktivieren?\n\nDie Person wird abgemeldet, aus einem laufenden Einsatz ausgetragen und kann sich nicht mehr anmelden. Einsatzdaten bleiben erhalten.'))api('user/active',{id:u.id,active:0}).then(loadUsers).catch(fail)});
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>api('user/active',{id:+b.dataset.a,active:1}).then(loadUsers).catch(fail))}
@@ -161,7 +167,7 @@ async function loadRec(){const el=$('#sA');let s;try{s=await api('settings')}cat
 // Liste und Bezeichnungen kommen vom Server (FEATURES in api/index.php); gespeichert werden die ausgeschalteten je Art
 async function loadFeat(){const el=$('#sFn');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Funktionen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const fs=s.features||[];
-  el.innerHTML=`<h2>Funktionen</h2><div class="mut">Ausgeschaltete Funktionen erscheinen in der Einsatz-App nicht (Kartenknopf, Fenster, Kartenebene, Menü), und der Server lehnt sie ab. Die Einstellung gilt sofort, auch im laufenden Einsatz. Bereits erfasste Daten bleiben erhalten (Einsatzlog, Replay). Beim Ausschalten endet eine laufende Aufzeichnung, und der Link der öffentlichen Ansicht wird ungültig.</div>
+  el.innerHTML=`<h2>Funktionen</h2><div class="mut">Ausgeschaltete Funktionen erscheinen in der Einsatz-App nicht (Kartenknopf, Fenster, Kartenebene, Menü), und der Server lehnt sie ab. Die Einstellung gilt sofort, auch im laufenden Einsatz. Bereits erfasste Daten bleiben erhalten (Einsatzlog, Replay). Beim Ausschalten endet eine laufende Aufzeichnung, und der Link der öffentlichen Ansicht wird ungültig. Ohne Suchgebiet zeigt die Karte nur die PLS, und für das Suchgebiet werden keine Gewässerdaten mehr geladen.</div>
     <div class="tw"><table><thead><tr><th>Funktion</th><th>Scharfe Einsätze</th><th>Übungen</th></tr></thead><tbody>${fs.map(f=>`<tr><td>${esc(f.name)}</td>${['real','ex'].map(t=>`<td><input type="checkbox" data-fk="${esc(f.k)}" data-ft="${t}" ${f[t]?'checked':''} aria-label="${esc(f.name)}: ${t==='ex'?'Übungen':'Scharfe Einsätze'}"></td>`).join('')}</tr>`).join('')}</tbody></table></div>
     <div class="mut">Die Flussdistanz gibt es auch ohne laufenden Einsatz (☰ → Werkzeuge). Dort ist sie verfügbar, solange sie für scharfe Einsätze oder Übungen eingeschaltet ist. Für beide aus, verschwindet sie ganz.</div>`;
   el.onchange=e=>{const c=e.target;if(!c.dataset.fk)return;const all=[...el.querySelectorAll('[data-fk]')],off={real:[],ex:[]};
@@ -174,24 +180,28 @@ async function loadRd(){const el=$('#sF');let s;try{s=await api('settings')}catc
   $('#rdSv').onclick=()=>{const v=$('#rdS').value.replace(/km\/h/gi,' ').split(/[,;\s]+/).filter(Boolean); // «km/h» darf mitgeschrieben werden
     api('settings/save',{rd_speeds:v}).then(()=>{alert('Gespeichert. Die Einsatz-App übernimmt die Werte beim nächsten Laden.');loadRd()}).catch(fail)}}
 /* ---------- Gewässerdaten: Haltedauer des Overpass-Caches und Overpass-Server (Reihenfolge) ---------- */
-let opUrls=[],opDef=[];
+let opUrls=[],opDef=[],opOff=[];
 async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all([api('settings'),api('overpass/stats')])}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  opUrls=[...s.overpass_urls];opDef=s.overpass_default;
+  opUrls=[...s.overpass_urls];opDef=s.overpass_default;opOff=[...(s.overpass_off||[])];
   el.innerHTML=`<h2>Gewässerdaten</h2><div class="mut">Das Gewässernetz für Suchgebiet und Flussdistanz (OpenStreetMap via Overpass) holt der Server und speichert es zwischen. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal zu Overpass. Ist Overpass nicht erreichbar, verwendet der Server ältere Daten (bis 7 Tage).</div>
+    <label class="chk"><input type="checkbox" id="opOn" ${s.overpass_on?'checked':''}> Zugriff auf Overpass</label>
+    <div class="mut">Ausgeschaltet fragen weder der Server noch die Geräte Overpass ab. Suchgebiet und Flussdistanz erhalten dann nur noch Daten aus dem Zwischenspeicher (auch ältere); ohne solche erscheint das Suchgebiet als Kreis um den PLS, und die Flussdistanz ist nicht verfügbar. Gilt sofort.</div>
     <div class="row" style="align-items:end"><label class="mut">Haltedauer in Minuten (0 = nicht zwischenspeichern)<input id="opT" type="number" min="0" max="10080" step="1" value="${s.overpass_ttl}"></label><button id="opSv">Speichern</button></div>
-    <h3>Overpass-Server</h3><div class="mut">Der Server fragt sie in dieser Reihenfolge ab (je 15 s), bis einer antwortet. Antwortet keiner, fragt das Gerät dieselben Server direkt (je 30 s).</div>
+    <h3>Overpass-Server</h3><div class="mut">Der Server fragt die eingeschalteten in dieser Reihenfolge ab (je 15 s), bis einer antwortet. Antwortet keiner, fragt das Gerät dieselben Server direkt (je 30 s). Ausgeschaltete Server bleiben in der Liste, werden aber nicht abgefragt.</div>
     <div id="opList"></div>
     <div class="row"><input id="opN" placeholder="https://…/api/interpreter" aria-label="Adresse eines Overpass-Servers" inputmode="url"><button id="opA">Hinzufügen</button></div>
     <div class="row"><button id="opUs" class="pri">Server speichern</button><button id="opUd">Standard wiederherstellen</button></div>
     <h3>Verwendung und Verfügbarkeit</h3>${opStats(os,s.overpass_urls)}`;
+  $('#opOn').onchange=e=>{const c=e.target;c.disabled=true;api('settings/save',{overpass_on:c.checked?1:0}).catch(x=>{c.checked=!c.checked;fail(x)}).finally(()=>{c.disabled=false})};
   $('#opSr').onclick=()=>{if(confirm('Statistik der Overpass-Server zurücksetzen?'))api('overpass/stats/reset',{}).then(loadOp).catch(fail)};
   $('#opSv').onclick=()=>api('settings/save',{overpass_ttl:$('#opT').value}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail);
   $('#opA').onclick=()=>{const u=$('#opN').value.trim();if(!/^https:\/\/[^/?#@]+\//i.test(u))return alert('Bitte eine vollständige https-Adresse angeben, z. B. https://overpass-api.de/api/interpreter');
     if(!opUrls.includes(u))opUrls.push(u);$('#opN').value='';drawOpList()};
   $('#opN').onkeydown=e=>{if(e.key==='Enter')$('#opA').click()};
   $('#opUs').onclick=()=>{if(!opUrls.length)return alert('Mindestens ein Server ist nötig. «Standard wiederherstellen» setzt die vorgegebene Liste.');
-    api('settings/save',{overpass_urls:opUrls}).then(()=>{alert('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail)};
-  $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[]}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail)};
+    if(opUrls.every(u=>opOff.includes(u))&&!confirm('Alle Server sind ausgeschaltet. Overpass wird dann nicht mehr abgefragt. Trotzdem speichern?'))return;
+    api('settings/save',{overpass_urls:opUrls,overpass_off:opOff.filter(u=>opUrls.includes(u))}).then(()=>{alert('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail)};
+  $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[],overpass_off:[]}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail)};
   drawOpList()}
 // Statistik je Server (Issue #45): Versuche vom Server (Hosting) und direkt vom Gerät (Rückfall), Abfragen aus dem Zwischenspeicher zählen nicht
 function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',
@@ -203,7 +213,8 @@ function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?es
     <div class="tw"><table><thead><tr><th>Server</th><th>Quelle</th><th>Versuche</th><th>Erfolgreich</th><th>Fehlgeschlagen</th><th>Quote</th><th>Ø Antwortzeit</th><th>Zuletzt erfolgreich</th><th>Zuletzt fehlgeschlagen</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="row"><button id="opSr">Statistik zurücksetzen</button></div>`}
 function drawOpList(){const n=opUrls.length,el=$('#opList');
-  el.innerHTML=`<div class="tw"><table><tbody>${opUrls.map((u,k)=>`<tr><td style="width:2rem">${k+1}.</td><td style="overflow-wrap:anywhere">${esc(u)}</td><td class="act"><button data-op="up" data-k="${k}" ${k?'':'disabled'} aria-label="Nach oben" title="Früher abfragen">↑</button><button data-op="dn" data-k="${k}" ${k<n-1?'':'disabled'} aria-label="Nach unten" title="Später abfragen">↓</button><button data-op="rm" data-k="${k}" ${n>1?'':'disabled'} aria-label="Entfernen" title="Entfernen">✕</button></td></tr>`).join('')}</tbody></table></div>${JSON.stringify(opUrls)!==JSON.stringify(opDef)?'':'<div class="mut">Vorgegebene Liste.</div>'}`;
+  el.innerHTML=`<div class="tw"><table><tbody>${opUrls.map((u,k)=>`<tr><td style="width:2rem">${k+1}.</td><td style="width:2rem"><input type="checkbox" data-opk="${k}" ${opOff.includes(u)?'':'checked'} aria-label="Server abfragen" title="Eingeschaltet: wird abgefragt"></td><td style="overflow-wrap:anywhere${opOff.includes(u)?';opacity:.55':''}">${esc(u)}${opOff.includes(u)?' <span class="mut">(ausgeschaltet)</span>':''}</td><td class="act"><button data-op="up" data-k="${k}" ${k?'':'disabled'} aria-label="Nach oben" title="Früher abfragen">↑</button><button data-op="dn" data-k="${k}" ${k<n-1?'':'disabled'} aria-label="Nach unten" title="Später abfragen">↓</button><button data-op="rm" data-k="${k}" ${n>1?'':'disabled'} aria-label="Entfernen" title="Entfernen">✕</button></td></tr>`).join('')}</tbody></table></div>${JSON.stringify(opUrls)!==JSON.stringify(opDef)||opOff.length?'':'<div class="mut">Vorgegebene Liste.</div>'}<div class="mut">Änderungen gelten erst nach «Server speichern».</div>`;
+  el.querySelectorAll('[data-opk]').forEach(c=>c.onchange=()=>{const u=opUrls[+c.dataset.opk];opOff=opOff.filter(x=>x!==u);if(!c.checked)opOff.push(u);drawOpList()});
   el.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,o=b.dataset.op;
     if(o==='rm')opUrls.splice(k,1);else{const j=o==='up'?k-1:k+1;[opUrls[k],opUrls[j]]=[opUrls[j],opUrls[k]]}drawOpList()})}
 /* ---------- Übungen vorbereiten (Issue #29) ---------- */
@@ -342,15 +353,17 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
 let rp=null;
 const TRAILS=[[-1,'Spur: ganzer Verlauf'],[3600,'Spur: letzte 60 min'],[1800,'Spur: letzte 30 min'],[900,'Spur: letzte 15 min'],[600,'Spur: letzte 10 min'],[300,'Spur: letzte 5 min'],[120,'Spur: letzte 2 min'],[0,'Keine Spur']];
 const trailWin=()=>{let v=null;try{v=localStorage.getItem('sw_rptrail')}catch(e){}return TRAILS.some(x=>String(x[0])===v)?+v:-1}; // pro Gerät gemerkt
+// Grösse der Positionen (Marker und Beschriftungen) in Prozent, Regler im Fenster «Ansicht», pro Gerät gemerkt in sw_rpsize
+const RP_SZ=[50,250],rpSzSaved=()=>{let v=100;try{v=+localStorage.getItem('sw_rpsize')||100}catch(e){}return Math.min(RP_SZ[1],Math.max(RP_SZ[0],v))},rz=r=>r*(rp?rp.sz:rpSzSaved())/100;
 const GAP_S=120; // längere Lücken zwischen zwei Standortmeldungen nicht interpolieren, Person gilt dann als «letzter Standort»
 const durT=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')};
 const lastIdx=(a,t)=>{let lo=0,hi=a.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(a[m][1]<=t){r=m;lo=m+1}else hi=m-1}return r}; // letzter Eintrag mit ts ≤ t
 async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}catch(e){return fail(e)}
   closeReplay();const i=d.incident,o=document.createElement('div');o.id='replay';o.setAttribute('role','dialog');o.setAttribute('aria-label','Replay');
-  o.innerHTML=`<div id="rpHead"><h2>${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} Replay – ${esc(i.message)}</h2><button id="rpPlay" class="pri">▶ Abspielen</button><select id="rpSpd" aria-label="Geschwindigkeit">${[1,5,10,30,60,120].map(v=>`<option value="${v}" ${v===30?'selected':''}>${v}× schneller</option>`).join('')}</select><select id="rpTrail" aria-label="Spurlänge">${TRAILS.map(([v,l])=>`<option value="${v}" ${v===trailWin()?'selected':''}>${l}</option>`).join('')}</select><button id="rpX">Schliessen</button></div>
+  o.innerHTML=`<div id="rpHead"><h2>${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} Replay – ${esc(i.message)}</h2><button id="rpPlay" class="pri">▶ Abspielen</button><select id="rpSpd" aria-label="Geschwindigkeit">${[1,5,10,30,60,120].map(v=>`<option value="${v}" ${v===30?'selected':''}>${v}× schneller</option>`).join('')}</select><select id="rpTrail" aria-label="Spurlänge">${TRAILS.map(([v,l])=>`<option value="${v}" ${v===trailWin()?'selected':''}>${l}</option>`).join('')}</select><button id="rpAuto" aria-pressed="false" title="Karte zeigt laufend alle sichtbaren aktiven Positionen und folgt ihnen">Auto-Übersicht</button><button id="rpX">Schliessen</button></div>
     <div id="rpBody"><div id="rpMap"></div><div id="rpFollow" hidden><span></span><button id="rpUnf" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><aside id="rpSide"><div id="rpInfo"></div><h3 id="rpPH"></h3><div id="rpPeople"></div><h3>Einsatzlog bis zu diesem Zeitpunkt</h3><div id="rpLog"></div></aside></div>
     <div id="rpFoot"><span id="rpTime"></span><div id="rpTl"><input type="range" id="rpRange" aria-label="Zeitpunkt im Einsatz"><div id="rpSeg" title="Aufgezeichnete Zeiträume (Lücken: pausiert oder beendet)"></div></div><span id="rpEnd" class="mut"></span></div>`;
-  document.body.appendChild(o);
+  document.body.appendChild(o);o.style.setProperty('--rpsz',rpSzSaved()/100);
   // Zeitraum: Alarmeingang bis Einsatzende (läuft der Einsatz noch: bis jetzt)
   const tr=d.track,t0=tr.length?Math.min(i.alarm_at,tr[0][1]):i.alarm_at,t1=Math.max(i.ended_at||d.now,tr.length?tr[tr.length-1][1]:0,t0+1); // track ist nach Zeit sortiert
   // PLS des Einsatzes und eigene PLS der Rettlinge (Issue #24, Standort mit Stand Einsatzende), je mit Zeitraum [von, bis], in dem sie sichtbar sind:
@@ -358,22 +371,34 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
   const plsLog=d.log.filter(x=>x.kind==='pls'),plsOn=t=>{const x=plsLog.filter(x=>x.ts<=t).pop();return x?!/^entfernt/.test(x.text):!plsLog.length||!/^setzt/.test(plsLog[0].text)};
   const pls=[...(i.lat!=null?[[i.lat,i.lon,'PLS',plsOn]]:[]),...d.rescuees.filter(r=>r.pls_lat!=null).map(r=>[r.pls_lat,r.pls_lon,'PLS '+r.name,t=>r.created<=t&&(r.removed==null||t<r.removed)])];
   const map=L.map('rpMap',{zoomControl:true}).setView(pls.length?[pls[0][0],pls[0][1]]:[46.8,8.2],pls.length?14:8),bases={};
-  Object.values(MAP_PROVIDERS).forEach(P=>bases[P.label]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
-  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}bases[(MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE]).label].addTo(map);L.control.layers(bases,null,{position:'topright'}).addTo(map);
-  pls.forEach(p=>p.mk=L.circleMarker([p[0],p[1]],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip(esc(p[2]),{permanent:true,direction:'right',className:'rplbl'}));
+  // Grundkarte über das Fenster «Ansicht» (Issue #53) statt des Leaflet-Ebenenmenüs, gemerkt in sw_base wie in der Einsatz-App
+  Object.entries(MAP_PROVIDERS).forEach(([k,P])=>bases[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
+  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}const baseKey=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;bases[baseKey].addTo(map);
+  pls.forEach(p=>p.mk=L.circleMarker([p[0],p[1]],{radius:rz(9),color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip(esc(p[2]),{permanent:true,direction:'right',className:'rplbl'}));
   // Personen: Verlauf je Person, Farbe der Spezialrolle (Stand Einsatzende)
   // Aufgezeichnete Zeiträume [start, stop]; ausserhalb (Pause/aus) keine Standorte, Spuren und Interpolation enden dort
   const per=d.periods.map(p=>[p.start,p.stop??t1]),perIdx=ts=>per.length?per.findIndex(p=>p[0]<=ts&&ts<=p[1]):0;
   const people=d.participants.map(p=>{const pts=d.track.filter(q=>q[0]===p.user_id);return{...p,col:p.color||'#cfd8dc',pts,per:pts.map(q=>perIdx(q[1]))}});
   const trailL=L.layerGroup().addTo(map),dynL=L.layerGroup().addTo(map),poiL=L.layerGroup().addTo(map);
   people.forEach(p=>{p.line=L.polyline([],{color:p.col,weight:3,opacity:.75}).addTo(trailL);
-    p.mk=L.circleMarker([0,0],{radius:8,color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[8,0],className:'rplbl'})});
+    p.mk=L.circleMarker([0,0],{radius:rz(8),color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'})});
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
   const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
-  if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17});
-  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,perIdx,follow:null,pKey:null,pls};
+  if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17,animate:false}); // ohne Animation: ein verspätetes zoomstart beendete sonst die Auto-Übersicht
+  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:Date.now(),sz:rpSzSaved()};
+  // Fenster «Ansicht»: nur Kategorien, die in diesem Einsatz vorkommen (das Suchgebiet zeichnet das Replay nie)
+  const has={app:d.track.length,ext:(d.externals||[]).length,res:d.rtrack.length||d.rescuees.some(r=>r.lat!=null),pls:pls.length,pt:d.pois.some(p=>p.kind!=='area'),ar:d.pois.some(p=>p.kind==='area'),mm:d.marks.some(m=>m.mark||m.unmarked!=null)};
+  rp.cats=VIEW.map(v=>v[0]).filter(k=>has[k]);
+  // Fenster «Ansicht» und Auto-Übersicht (Issue #53)
+  const mc=$('#rpMap');mc.insertAdjacentHTML('beforeend','<button id="rpView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden">'+VIEW_ICON+'</button><div id="viewBox" hidden></div>');
+  const vb=$('#viewBox'),bv=$('#rpView');[vb,bv].forEach(x=>{L.DomEvent.disableClickPropagation(x);L.DomEvent.disableScrollPropagation(x)});
+  bv.onclick=()=>rpViewBox();vb.onclick=e=>{const a=e.target.closest('[data-va]');if(a)rpSetVis(rpCats().map(v=>v[0]),a.dataset.va==='1');if(e.target.closest('#bViewX'))rpViewBox(false)};
+  vb.oninput=e=>{if(e.target.id==='rpSz')rpSetSize(+e.target.value)};
+  vb.onchange=e=>{const t=e.target;if(t.name==='vbase')rpSetBase(t.value);else if(t.dataset.vk)rpSetVis([t.dataset.vk],t.checked)};
+  map.on('zoomstart',()=>{if(rp&&rp.auto&&Date.now()-rp.autoBusy>1500)rpSetAuto(false)}); // Zoomen von Hand beendet die Auto-Übersicht
+  $('#rpAuto').onclick=()=>rpSetAuto(!rp.auto);
   // Personenliste wie in der Einsatz-App: «Zentrieren» und «Folgen» (Karte folgt der Person beim Abspielen); Verschieben von Hand oder ✕ beendet das Folgen
-  map.on('dragstart',()=>{if(rp&&rp.follow!=null)rpFollow(null)});$('#rpUnf').onclick=()=>rpFollow(null);
+  map.on('dragstart',()=>{if(rp&&(rp.follow!=null||rp.auto))rpFollow(null)});$('#rpUnf').onclick=()=>rpFollow(null); // von Hand verschieben beendet Folgen und Auto-Übersicht
   $('#rpPeople').onclick=e=>{const b=e.target.closest('button');if(!b)return;const p=rp.people.find(x=>x.user_id===+(b.dataset.c||b.dataset.f));if(!p)return;
     if(b.dataset.c){rpFollow(null);if(p.ll)map.panTo(p.ll)}else rpFollow(rp.follow===p.user_id?null:p.user_id)};
   const R=$('#rpRange');R.min=t0;R.max=t1;R.step=1;R.value=t0;R.oninput=()=>seek(+R.value);
@@ -387,10 +412,28 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
 function closeReplay(){if(!rp)return;clearInterval(rp.timer);rp.map.remove();rp=null;const o=$('#replay');if(o)o.remove()}
 function playReplay(on){if(!rp)return;if(on&&rp.t>=rp.t1)rp.t=rp.t0;rp.play=on;$('#rpPlay').textContent=on?'❚❚ Pause':'▶ Abspielen';clearInterval(rp.timer);
   if(on){rp.last=performance.now();rp.timer=setInterval(()=>{const n=performance.now(),dt=(n-rp.last)/1000;rp.last=n;rp.t=Math.min(rp.t1,rp.t+dt*+$('#rpSpd').value);if(rp.t>=rp.t1)playReplay(false);drawReplay()},200)}}
-function rpFollow(id){rp.follow=id;rp.pKey=null;drawReplay()}
+function rpFollow(id){rp.follow=id;rp.pKey=null;rp.auto=false;drawReplay()}
+/* ---------- Replay: Ansicht und Auto-Übersicht (Issue #53) ---------- */
+// Kategorien wie in der Einsatz-App (VIEW), ohne Suchgebiet (wird im Replay nicht gezeichnet); ausgeblendete pro Gerät in sw_rpview (getrennt von App und öffentlicher Ansicht)
+const rpHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_rpview')||'[]'))}catch(e){return new Set()}})();
+const rpVis=k=>!rpHide.has(k),rpCats=()=>VIEW.filter(([k])=>rp.cats.includes(k));
+function rpSetVis(keys,on){keys.forEach(k=>on?rpHide.delete(k):rpHide.add(k));try{localStorage.setItem('sw_rpview',JSON.stringify([...rpHide]))}catch(e){}
+  if(!rp)return;rp.poiKey=null;drawReplay();$('#viewBox').querySelectorAll('[data-vk]').forEach(c=>c.checked=rpVis(c.dataset.vk))}
+function rpSetBase(k){if(!MAP_PROVIDERS[k]||k===rp.baseKey)return;rp.map.removeLayer(rp.bases[rp.baseKey]);rp.baseKey=k;rp.bases[k].addTo(rp.map);try{localStorage.setItem('sw_base',k)}catch(e){}}
+function rpViewBox(on){const b=$('#viewBox');if(!b||!rp)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#rpView').setAttribute('aria-expanded',on);if(on)b.innerHTML=viewHtml(rp.baseKey,rpCats().length?rpCats():null,rpVis)+`<h4>Grösse der Positionen</h4><label id="rpSzL"><input type="range" id="rpSz" min="${RP_SZ[0]}" max="${RP_SZ[1]}" step="10" value="${rp.sz}" aria-label="Grösse der Positionen in Prozent"><span>${rp.sz} %</span></label>`}
+// Grösse der Positionen: Radien der Marker und Abstand der Beschriftung neu setzen, Schrift über --rpsz, übrige Marker beim nächsten Zeichnen
+function rpSetSize(v){rp.sz=v;try{localStorage.setItem('sw_rpsize',v)}catch(e){}$('#replay').style.setProperty('--rpsz',v/100);const l=$('#rpSzL span');if(l)l.textContent=v+' %';
+  rp.pls.forEach(p=>p.mk.setRadius(rz(9)));rp.people.forEach(p=>{p.mk.setRadius(rz(8));const t=p.mk.getTooltip();t.options.offset=[rz(8),0];t.update()});rp.poiKey=null;drawReplay()}
+document.addEventListener('click',e=>{const b=$('#replay #viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#rpView'))rpViewBox(false)});
+// Auto-Übersicht: bei jedem Zeichnen alle sichtbaren aktiven Positionen (Einsatzkräfte mit Standort, Externe, nicht gerettete Rettlinge, PLS) im Bild halten.
+// Neu ausgerichtet nur, wenn eine Position das Bild verlässt oder deutlich näher gezoomt werden kann (sonst springt die Karte beim Abspielen); beim Öffnen immer an
+function rpSetAuto(on){rp.auto=on;if(on)rp.follow=null;rp.pKey=null;drawReplay()}
+function rpAutoFit(pts){if(!rp.auto||!pts.length)return;const m=rp.map,b=L.latLngBounds(pts),view=m.getBounds().pad(-.08),z=Math.min(m.getBoundsZoom(b,false,L.point(80,80)),16);
+  if(pts.length>1?view.contains(b)&&z<m.getZoom()+1:view.contains(b))return;rp.autoBusy=Date.now();
+  if(pts.length>1)m.fitBounds(b,{padding:[40,40],maxZoom:16,animate:false});else m.setView(pts[0],Math.max(m.getZoom(),15),{animate:false})}
 function seek(t){if(!rp)return;rp.t=Math.max(rp.t0,Math.min(rp.t1,t));drawReplay()}
 // Escape schliesst, Leertaste spielt ab/pausiert (nicht auf Knöpfen/Reglern, die werten sie selbst aus)
-document.addEventListener('keydown',e=>{if(!rp)return;if(e.key==='Escape')return closeReplay();
+document.addEventListener('keydown',e=>{if(!rp)return;if(e.key==='Escape'){const b=$('#replay #viewBox');if(b&&!b.hidden){rpViewBox(false);return $('#rpView').focus()}return closeReplay()}
   if(e.key===' '&&!e.target.closest('input,textarea,select,button')){e.preventDefault();playReplay(!rp.play)}});
 function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==null||t<b);
   $('#rpRange').value=Math.floor(t);$('#rpTime').textContent=new Date(t*1000).toLocaleString('de-CH')+' · T+'+durT(t-i.alarm_at);
@@ -403,11 +446,12 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
   const trail=(p,k,ll)=>{const s=[];if(!win)return s;let j0=0;while(j0<=k&&p.pts[j0][1]<from)j0++;
     for(let j=j0;j<=k;j++){if(j===j0||p.per[j]!==p.per[j-1])s.push([]);s[s.length-1].push([p.pts[j][2],p.pts[j][3]])}if(ll&&s.length)s[s.length-1].push(ll);return s};
   rp.people.forEach(p=>{const k=lastIdx(p.pts,t),here=rec&&k>=0&&p.per[k]===pi&&(p.left_at==null||t<p.left_at);p.ll=null;
-    if(!here){rp.dynL.removeLayer(p.mk);p.line.setLatLngs(trail(p,k));if(on(p.joined,p.left_at))info.push([p,rec?'kein Standort':'nicht aufgezeichnet']);return}
+    const sv=rpVis('app'); // Kategorie «Einsatzkräfte mit App» (Ansicht): Liste und Folgen bleiben, nur Marker und Spur fehlen
+    if(!here){rp.dynL.removeLayer(p.mk);p.line.setLatLngs(sv?trail(p,k):[]);if(on(p.joined,p.left_at))info.push([p,rec?'kein Standort':'nicht aufgezeichnet']);return}
     const a=p.pts[k],b=p.pts[k+1];let ll=[a[2],a[3]],age=t-a[1];
     if(b&&p.per[k+1]===pi&&b[1]-a[1]<=GAP_S){const f=(t-a[1])/(b[1]-a[1]);ll=[a[2]+(b[2]-a[2])*f,a[3]+(b[3]-a[3])*f];age=0}
-    p.ll=ll;p.mk.setLatLng(ll).setStyle({fillOpacity:age>GAP_S?.45:1});rp.dynL.addLayer(p.mk);
-    p.line.setLatLngs(trail(p,k,ll));info.push([p,age>GAP_S?'letzte Meldung vor '+durT(age):'Standort aktuell'])});
+    p.ll=ll;p.mk.setLatLng(ll).setStyle({fillOpacity:age>GAP_S?.45:1});if(sv)rp.dynL.addLayer(p.mk);else rp.dynL.removeLayer(p.mk);
+    p.line.setLatLngs(sv?trail(p,k,ll):[]);info.push([p,age>GAP_S?'letzte Meldung vor '+durT(age):'Standort aktuell'])});
   // Positionen & Bereiche, Rettlinge und Nachrichten-Markierungen: nur neu zeichnen, wenn sich der sichtbare Bestand ändert
   const pois=d.pois.filter(p=>on(p.created,p.removed)),marks=d.marks.filter(m=>m.created<=t&&(m.mark||(m.unmarked!=null&&t<m.unmarked)));
   const res=d.rescuees.filter(r=>on(r.created,r.removed)).map(r=>{const tr=rp.rtr[r.id]||[],k=lastIdx(tr,t),pos=k>=0?[tr[k][2],tr[k][3]]:!tr.length&&on(r.loc_at)?[r.lat,r.lon]:null;return{...r,pos,ok:on(r.rescued_at)}});
@@ -415,16 +459,18 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
   const ext=(d.externals||[]).filter(e=>on(e.created,e.removed));
   const pls=rp.pls.filter(p=>p[3](t));
   const key=JSON.stringify([pois.map(p=>p.id),marks.map(m=>m.id),res.map(r=>[r.id,r.pos,r.ok]),ext.map(e=>e.id),pls.map(p=>p[2])]);
-  if(key!==rp.poiKey){rp.poiKey=key;rp.poiL.clearLayers();pls.forEach(p=>rp.poiL.addLayer(p.mk));
-    pois.forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:7,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'rplbl'}).addTo(rp.poiL)});
-    marks.forEach(m=>L.circleMarker([m.mark_lat,m.mark_lon],{radius:6,color:'#0f2430',weight:2,fillColor:'#2ee6d6',fillOpacity:1}).bindTooltip(esc((m.name||'')+': '+m.text.slice(0,60))).addTo(rp.poiL));
-    ext.forEach(e=>{const rc=(roles.find(r=>r.id===e.role_id)||{}).color;return L.circleMarker([e.lat,e.lon],{radius:8,color:e.color&&rc?rc:'#fff',weight:e.color&&rc?3:2,dashArray:'3',fillColor:e.color||rc||'#cfd8dc',fillOpacity:1}).bindTooltip(esc(e.name)+' (extern)',{permanent:true,direction:'right',offset:[8,0],className:'rplbl'}).addTo(rp.poiL)});
-    res.filter(r=>r.pos).forEach(r=>L.circleMarker(r.pos,{radius:9,color:'#fff',weight:2,fillColor:r.ok?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.ok?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[8,0],className:'rplbl'}).addTo(rp.poiL))}
+  if(key!==rp.poiKey){rp.poiKey=key;rp.poiL.clearLayers();pls.filter(()=>rpVis('pls')).forEach(p=>rp.poiL.addLayer(p.mk));
+    pois.filter(p=>rpVis(p.kind==='area'?'ar':'pt')).forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.circleMarker(p.pts[0],{radius:rz(7),color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind==='area'?'center':'right',className:'rplbl'}).addTo(rp.poiL)});
+    marks.filter(()=>rpVis('mm')).forEach(m=>L.circleMarker([m.mark_lat,m.mark_lon],{radius:rz(6),color:'#0f2430',weight:2,fillColor:'#2ee6d6',fillOpacity:1}).bindTooltip(esc((m.name||'')+': '+m.text.slice(0,60))).addTo(rp.poiL));
+    ext.filter(()=>rpVis('ext')).forEach(e=>{const rc=(roles.find(r=>r.id===e.role_id)||{}).color;return L.circleMarker([e.lat,e.lon],{radius:rz(8),color:e.color&&rc?rc:'#fff',weight:e.color&&rc?3:2,dashArray:'3',fillColor:e.color||rc||'#cfd8dc',fillOpacity:1}).bindTooltip(esc(e.name)+' (extern)',{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'}).addTo(rp.poiL)});
+    res.filter(r=>r.pos&&rpVis('res')).forEach(r=>L.circleMarker(r.pos,{radius:rz(9),color:'#fff',weight:2,fillColor:r.ok?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.ok?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'}).addTo(rp.poiL))}
   const fl=d.flow.filter(f=>f.ts<=t).pop();
   $('#rpInfo').innerHTML=`<h3 style="margin-top:0">Lage</h3>${rec?'':'<div><b>Aufzeichnung zu diesem Zeitpunkt pausiert oder aus</b> – keine Standorte der Einsatzkräfte</div>'}<div class="mut">${fl?esc(fl.text.replace(/^setzt die /,'')):'Fliessgeschwindigkeit nicht gesetzt'}</div>
     ${ext.length?`<div class="mut">Externe Einsatzkräfte: ${ext.map(e=>esc(e.name)).join(', ')}</div>`:''}<div class="mut">Rettlinge: ${res.length?res.map(r=>esc(r.name)+' – '+(r.ok?'gerettet':r.pos?'Standort bekannt':'vermisst')).join(', '):'keine erfasst'}</div>
 `;
   rpPeople(info);
+  rpAutoFit([...(rpVis('app')?rp.people.filter(p=>p.ll).map(p=>p.ll):[]),...(rpVis('ext')?ext.map(e=>[e.lat,e.lon]):[]),...(rpVis('res')?res.filter(r=>r.pos&&!r.ok).map(r=>r.pos):[]),...(rpVis('pls')?pls.map(p=>[p[0],p[1]]):[])]);
+  $('#rpAuto').setAttribute('aria-pressed',rp.auto);$('#rpAuto').textContent=(rp.auto?'✓ ':'')+'Auto-Übersicht';
   // Log: nur Einträge bis t, neueste zuerst; Klick springt zum Zeitpunkt
   const lg=d.log.filter(x=>x.ts<=t);if(lg.length!==rp.logN){rp.logN=lg.length;
     $('#rpLog').innerHTML=lg.reverse().map(x=>`<button class="rpl" data-ts="${x.ts}" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${fmtT(x.ts)}</span><b>${esc(x.name||'System')}</b> ${esc(x.text)}</button>`).join('')||'<div class="mut">Noch keine Einträge</div>'}}
@@ -438,6 +484,6 @@ function rpPeople(info){const cs=me&&(me.coord_sys||me.coord_default)||'lv95',f=
       return `<div class="rpp"><i style="background:${esc(p.col)}"></i><span class="nm"><b>${esc(p.name)}</b>${p.mode_name?' <span class="mut">· '+esc(p.mode_name)+'</span>':''}<small data-st="${p.user_id}"></small></span>${p.ll?`<button data-c="${p.user_id}" title="Auf der Karte zentrieren">Zentrieren</button>`:''}${p.ll||fo?`<button data-f="${p.user_id}" aria-pressed="${fo}" title="Karte folgt dieser Person">${fo?'Folgt':'Folgen'}</button>`:''}</div>`}).join('')).join('')||'<div class="mut">Noch niemand im Einsatz</div>'}
   info.forEach(([p,s])=>{const e=$(`#rpPeople [data-st="${p.user_id}"]`),c=p.ll&&fmtC(p.ll[0],p.ll[1],cs);if(e)e.textContent=s+(c?' · '+c:'')});
   // Folgen: Karte bei jedem Bild auf die Person schieben (Zoom bleibt); ohne Standort (Pause, ausgetreten) bleibt die Karte stehen
-  const fc=$('#rpFollow');fc.hidden=!f;if(f){fc.firstChild.textContent='Folgt: '+f.name+(f.ll?'':' (kein Standort)');if(f.ll)rp.map.panTo(f.ll,{animate:false})}}
+  const fc=$('#rpFollow');fc.hidden=!f&&!rp.auto;fc.firstChild.textContent=f?'Folgt: '+f.name+(f.ll?'':' (kein Standort)'):'Auto-Übersicht';$('#rpUnf').title=f?'Folgen beenden':'Auto-Übersicht beenden';$('#rpUnf').setAttribute('aria-label',$('#rpUnf').title);if(f&&f.ll)rp.map.panTo(f.ll,{animate:false})}
 start();
 </script></body></html>

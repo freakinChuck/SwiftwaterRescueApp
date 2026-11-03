@@ -70,7 +70,8 @@ function setAuto(on){autoView=on;if(on)followId=null;saveAuto();if(ps)draw()}
 function autoFit(pts){if(!autoView)return;const k=JSON.stringify(pts.map(p=>p.map(x=>x.toFixed(5))));if(!pts.length||k===autoKey)return;autoKey=k;
   autoBusy=Date.now();if(pts.length>1)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:16});else map.setView(pts[0],15)}
 // Suchgebiet aus allen PLS der vermissten Rettlinge (sources, Issue #24), Gewässernetz je PLS über public/net
-function drawArea(d){const i=d.incident,posts=d.participants.filter(p=>p.lat!=null&&(d.roles.find(r=>r.id===p.role_id)||{}).is_post);
+function drawArea(d){if(d.features&&d.features.area===0){areaInfo='';return} // Funktion «Suchgebiet» aus (Issue #75)
+  const i=d.incident,posts=d.participants.filter(p=>p.lat!=null&&(d.roles.find(r=>r.id===p.role_id)||{}).is_post);
   const a=searchArea(d.sources||[],nets,i.flow_ms,d.now,posts,(s,R)=>overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R+'&la='+s.lat+'&lo='+s.lon),()=>{if(ps)draw()},d.rescuees);
   areaInfo=a.info.join(' ');if(!vis('area'))return;
   a.circles.forEach(c=>L.circle([c.lat,c.lon],{radius:c.r,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false}).addTo(lay));

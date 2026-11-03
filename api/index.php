@@ -94,13 +94,16 @@ const COORDS = ['lv95', 'lv03', 'wgs84', 'wgs84dms']; // Koordinatensysteme für
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 // Reihenfolge der Abfrage: Einstellung overpass_urls (JSON-Liste, in der Verwaltung unter «Gewässerdaten»), leer = OVERPASS
 function overpassUrls() { $v = json_decode(setting('overpass_urls', ''), true); return is_array($v) && $v ? $v : OVERPASS; }
+// Issue #75: ausgeschaltete Server (Einstellung overpass_off, JSON-Liste) und Zugriff ganz aus (overpass_on = 0); abgefragt werden nur die übrigen
+function overpassOff() { $v = json_decode(setting('overpass_off', ''), true); return array_values(array_intersect(overpassUrls(), is_array($v) ? $v : [])); }
+function overpassActive() { return setting('overpass_on', '1') === '1' ? array_values(array_diff(overpassUrls(), overpassOff())) : []; }
 // Abschaltbare Funktionen (Issue #35), je für scharfe Einsätze und Übungen getrennt (Abschnitt «Funktionen» in der Verwaltung).
 // Neue Funktionen hier aufnehmen (Schlüssel => Bezeichnung) und ihre Routen in FEATURE_ROUTES; das Frontend liest features aus incident/state bzw. me.
-const FEATURES = ['res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
+const FEATURES = ['area' => 'Suchgebiet', 'res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
                   'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)'];
 const FEATURE_ROUTES = ['incident/mark' => 'res', 'incident/mark/remove' => 'res', 'incident/rescuee/save' => 'res', 'incident/rescuee/locate' => 'res', 'incident/rescuee/rescued' => 'res', 'incident/rescuee/remove' => 'res',
                         'incident/message' => 'msg', 'incident/message/unmark' => 'msg', 'incident/poi' => 'poi', 'incident/poi/remove' => 'poi',
-                        'incident/external/save' => 'ext', 'incident/external/remove' => 'ext', 'incident/public' => 'pub', 'incident/record' => 'rec'];
+                        'incident/external/save' => 'ext', 'incident/external/remove' => 'ext', 'incident/public' => 'pub', 'incident/record' => 'rec', 'incident/event' => 'area'];
 const OVERPASS_KEEP_S = 7 * 86400; // abgelaufene Einträge so lange als Rückfall behalten, falls Overpass nicht erreichbar ist
 const EX_KINDS = ['pls' => 'PLS des Einsatzes', 'res' => 'Neuer Rettling', 'seen' => 'Rettling gesichtet', 'ext' => 'Neue externe Einsatzkraft', 'extdel' => 'Externe Einsatzkraft entfernen']; // Elemente vorbereiteter Übungen (Issue #29), steht vor public/state
 
@@ -123,6 +126,7 @@ function pubIncident() { global $db; $k = (string)($_GET['k'] ?? '');
 // Gewässernetz fürs Suchgebiet: nur um einen PLS des Suchgebiets (la/lo, siehe plsSources) des laufenden Einsatzes, Radius m wie in der Einsatz-App (netRadius), gleicher Cache
 if ($route === 'public/net') {
   $inc = pubIncident(); if ($inc['ended_at'] !== null) fail('Der Einsatz ist beendet.', 404);
+  if (!feature($inc, 'area')) fail('Das Suchgebiet ist ausgeschaltet.', 403);
   $r = (int)(ceil(min(max(5000, (float)($_GET['m'] ?? 0)), 30000) / 1000) * 1000);
   $la = (float)($_GET['la'] ?? 0); $lo = (float)($_GET['lo'] ?? 0);
   $src = array_values(array_filter(plsSources($inc, incRes($inc)), fn($s) => abs($s['lat'] - $la) < 1e-6 && abs($s['lon'] - $lo) < 1e-6))[0] ?? fail('Kein PLS für das Suchgebiet', 404);
@@ -399,6 +403,10 @@ function overpassServe($q) { global $now;
   $file = "$dir/" . sha1($q) . '.json';
   $hit = function () use ($ttl, $file) { clearstatcache(true, $file); if (!$ttl || !is_file($file) || time() - filemtime($file) >= $ttl) return false; header('X-Cache: HIT'); readfile($file); exit; };
   $hit();
+  if (!overpassActive()) { // Zugriff auf Overpass in der Verwaltung ausgeschaltet (Issue #75): nur noch Daten aus dem Cache, auch abgelaufene, ohne Rückfall im Gerät
+    clearstatcache(true, $file); if (is_file($file)) { header('X-Cache: STALE'); readfile($file); exit; }
+    fail('Overpass ist in der Verwaltung ausgeschaltet', 503);
+  }
   // Sperre je Abfrage: gleichzeitige Anfragen warten auf die erste und lesen danach den Cache, statt selbst zu Overpass zu gehen
   $lk = @fopen("$file.lock", 'c'); if ($lk) flock($lk, LOCK_EX);
   $hit();
@@ -407,13 +415,14 @@ function overpassServe($q) { global $now;
   $r = overpassFetch($q);
   if ($r !== null) { if ($ttl && file_put_contents("$file.tmp", $r) !== false) rename("$file.tmp", $file); header('X-Cache: MISS'); echo $r; }
   elseif (is_file($file)) { header('X-Cache: STALE'); readfile($file); } // Overpass nicht erreichbar: abgelaufene Daten sind besser als keine
-  else out(['error' => 'Overpass antwortet nicht', 'query' => $q, 'servers' => overpassUrls()], 502); // mit Abfrage und Servern: das Gerät fragt Overpass dann selbst (overpassNet in common.js)
+  else out(['error' => 'Overpass antwortet nicht', 'query' => $q, 'servers' => overpassActive()], 502); // mit Abfrage und Servern: das Gerät fragt Overpass dann selbst (overpassNet in common.js)
   exit;
 }
 // Rückfall (Issue #28): Vom Hosting aus lehnt Overpass oft ab, vom Gerät aus nicht. Das Gerät liefert sein Ergebnis hier für den Cache
 // aller ab. Der Schlüssel kommt aus denselben Parametern wie bei overpass; gespeichert werden nur geprüfte Wege mit den nötigen Feldern.
 function overpassPut($q, $els) {
   $ttl = max(0, (int)setting('overpass_ttl', '120')) * 60;
+  if (!overpassActive()) out(['ok' => true]); // Overpass ausgeschaltet: nichts annehmen
   if (!is_array($els) || count($els) > 50000) fail('Ungültige Gewässerdaten');
   $num = fn($x, $m) => (is_int($x) || is_float($x)) && abs($x) <= $m;
   $w = [];
@@ -449,7 +458,7 @@ function overpassQuery($in) { // Abfrage aus Parametern bauen (keine freien Abfr
   return '[out:json][timeout:25];way(' . $sel . ')["waterway"~"^(river|stream|canal)$"];out geom;';
 }
 function overpassFetch($q) { // erste Antwort mit elements, sonst null; jeder Versuch zählt in der Statistik (opStat)
-  foreach (overpassUrls() as $url) {
+  foreach (overpassActive() as $url) {
     $t = microtime(true); $err = '';
     if (function_exists('curl_init')) {
       $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 15, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
@@ -525,7 +534,7 @@ switch ($route) {
   overpassServe(overpassQuery($in));
  case 'overpass/stat': // Ergebnisse der direkten Abfragen des Geräts (Rückfall bei 502) für die Statistik: results [{url, ok, ms, err}], nur hinterlegte Server
   foreach (array_slice((array)($in['results'] ?? []), 0, 8) as $x) {
-    if (!is_array($x) || !in_array($x['url'] ?? null, overpassUrls(), true)) continue;
+    if (!is_array($x) || !in_array($x['url'] ?? null, overpassActive(), true)) continue;
     opStat($x['url'], 'device', !empty($x['ok']), min(max(0, (float)($x['ms'] ?? 0)), 120000), empty($x['ok']) ? (mb_substr(trim((string)($x['err'] ?? '')), 0, 150) ?: 'Fehler') : null);
   }
   out(['ok' => true]);
@@ -1185,7 +1194,7 @@ switch ($route) {
   if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message) VALUES(?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1)]);
   out(['ok' => true]);
- case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_real' => recDefault()[0], 'rec_ex' => recDefault()[1], 'features' => array_map(fn($k, $r, $e) => ['k' => $k, 'name' => FEATURES[$k], 'real' => $r, 'ex' => $e], array_keys(FEATURES), features(0), features(1)), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS]);
+ case 'settings': admin(); out(['msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_real' => recDefault()[0], 'rec_ex' => recDefault()[1], 'features' => array_map(fn($k, $r, $e) => ['k' => $k, 'name' => FEATURES[$k], 'real' => $r, 'ex' => $e], array_keys(FEATURES), features(0), features(1)), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff()]);
  case 'settings/save': admin();
   if (isset($in['overpass_ttl'])) { // Haltedauer des Overpass-Caches in Minuten, 0 = kein Cache, höchstens 7 Tage
     if (!is_numeric($in['overpass_ttl']) || (int)$in['overpass_ttl'] < 0 || (int)$in['overpass_ttl'] > 10080) fail('Haltedauer: 0 bis 10080 Minuten');
@@ -1201,6 +1210,8 @@ switch ($route) {
     if (count($v) > 8) fail('Höchstens 8 Overpass-Server');
     setSetting('overpass_urls', $v ? json_encode($v, JSON_UNESCAPED_SLASHES) : '');
   }
+  if (isset($in['overpass_off'])) // ausgeschaltete Server, nur hinterlegte (Issue #75)
+    setSetting('overpass_off', json_encode(array_values(array_intersect(overpassUrls(), array_filter((array)$in['overpass_off'], 'is_string'))), JSON_UNESCAPED_SLASHES));
   if (isset($in['rd_speeds'])) { // 1–6 Geschwindigkeiten zwischen 1 und 200 km/h, sortiert und ohne Duplikate
     foreach ((array)$in['rd_speeds'] as $x) if (!is_numeric($x)) fail('Nur Zahlen sind erlaubt (km/h)');
     $v = array_values(array_unique(array_map(fn($x) => round((float)$x, 1), (array)$in['rd_speeds'])));
@@ -1208,7 +1219,7 @@ switch ($route) {
     foreach ($v as $x) if ($x < 1 || $x > 200) fail('Geschwindigkeiten müssen zwischen 1 und 200 km/h liegen');
     sort($v); setSetting('rd_speeds', implode(',', $v));
   }
-  foreach (['msg_no_role', 'msg_read_all', 'rec_real', 'rec_ex'] as $k) if (isset($in[$k])) setSetting($k, empty($in[$k]) ? '0' : '1');
+  foreach (['msg_no_role', 'msg_read_all', 'rec_real', 'rec_ex', 'overpass_on'] as $k) if (isset($in[$k])) setSetting($k, empty($in[$k]) ? '0' : '1');
   if (isset($in['coord_sys'])) { if (!in_array($in['coord_sys'], COORDS, true)) fail('Unbekanntes Koordinatensystem'); setSetting('coord_sys', $in['coord_sys']); }
   if (isset($in['features'])) { // {real: [ausgeschaltete Schlüssel], ex: [...]}; gilt sofort, auch im laufenden Einsatz
     $o = [];
