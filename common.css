@@ -20,6 +20,7 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 /* Einsatzlog im Gross-Modus */
 #bigLog{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
 #bigHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1rem;border-bottom:1px solid var(--line)}#bigHead h2{margin:0;font-size:1.3rem;flex:1 1 20rem}
+#bigA[aria-pressed=true]{background:var(--ex);border-color:var(--ex);color:#fff} /* Anonym (Issue #54) */
 #bigList{overflow:auto;flex:1;padding:.6rem 1rem 2rem;font-size:1.25rem;line-height:1.35}
 .lg{display:grid;grid-template-columns:11rem 13rem 1fr;gap:.8rem;padding:.55rem .8rem;border-left:6px solid;border-bottom:1px solid var(--line)}.lg .t{color:var(--mut)}
 @media(max-width:700px){.lg{grid-template-columns:1fr;gap:.1rem}#bigList{font-size:1.1rem}}
