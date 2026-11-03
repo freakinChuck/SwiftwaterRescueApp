@@ -1636,9 +1636,9 @@ switch ($route) {
  case 'aar/img': // ein Bild als Data-URL (Zugriff wie aar/get)
   $r = aarImgRow($_GET['id'] ?? 0); aarView((int)$r['incident_id']);
   $s = $db->prepare("SELECT data FROM aar_img WHERE id=?"); $s->execute([(int)$r['id']]); out(['src' => $s->fetchColumn()]);
- case 'aar/img/add': // id = Einsatz, field = Feld der Art img, src = JPEG/PNG als Data-URL, caption optional
+ case 'aar/img/add': // id = Einsatz, field = Feld der Art img oder area (im Text über die Marke [Bild <id>] platziert), src = JPEG/PNG als Data-URL, caption optional
   $inc = incById($in['id'] ?? 0); $id = (int)$inc['id']; $ex = aarEditable($inc);
-  $fid = (string)($in['field'] ?? ''); if (!array_filter(aarCfg()['fields'], fn($f) => $f['id'] === $fid && $f['type'] === 'img')) fail('Unbekanntes Bilderfeld');
+  $fid = (string)($in['field'] ?? ''); if (!array_filter(aarCfg()['fields'], fn($f) => $f['id'] === $fid && ($f['type'] === 'img' || $f['type'] === 'area'))) fail('Unbekanntes Bilderfeld');
   $src = $in['src'] ?? null;
   if (!is_string($src) || !preg_match('~^data:image/(png|jpeg);base64,([A-Za-z0-9+/=]+)$~', $src, $m)) fail('Nur PNG- oder JPEG-Bilder');
   $b = base64_decode($m[2], true); if ($b === false || strlen($b) > 3000000) fail('Das Bild ist zu gross (höchstens 3 MB)');
@@ -1653,7 +1653,12 @@ switch ($route) {
   $db->prepare("UPDATE aar_img SET caption=? WHERE id=?")->execute([mb_substr(trim(preg_replace('/\s+/u', ' ', (string)($in['caption'] ?? ''))), 0, 300), (int)$r['id']]); aarTouch($id, $ex); out(['ok' => true]);
  case 'aar/img/remove':
   $r = aarImgRow($in['img'] ?? 0); $id = (int)$r['incident_id']; $ex = aarEditable(incById($id));
-  $db->prepare("DELETE FROM aar_img WHERE id=?")->execute([(int)$r['id']]); aarTouch($id, $ex); out(['ok' => true]);
+  $db->prepare("DELETE FROM aar_img WHERE id=?")->execute([(int)$r['id']]);
+  // auch die Marken in den Texten entfernen, sonst stünde dort nach einem Abbrechen des Formulars «[Bild 12]» als Text
+  $s = $db->prepare("SELECT data FROM aar WHERE incident_id=?"); $s->execute([$id]); $d = json_decode((string)$s->fetchColumn(), true); $s->closeCursor();
+  if (is_array($d)) { foreach ($d as $k => $v) if (is_string($v)) { $v = preg_replace('/\n?\[Bild ' . (int)$r['id'] . '\]/', '', $v); if (trim($v) === '') unset($d[$k]); else $d[$k] = $v; }
+    $db->prepare("UPDATE aar SET data=? WHERE incident_id=?")->execute([json_encode((object)$d, JSON_UNESCAPED_UNICODE), $id]); }
+  aarTouch($id, $ex); out(['ok' => true]);
  case 'aar/save': need('aar'); // nur Felder der Einstellungen; Werte entfernter Felder bleiben erhalten
   $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
   if ($inc['ended_at'] === null) fail('Ein After Action Review gibt es erst nach dem Einsatzende');
