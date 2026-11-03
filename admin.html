@@ -28,10 +28,10 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .inc{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1.2rem;border:1px solid var(--line);border-left:4px solid var(--alarm);border-radius:8px;padding:.6rem .8rem;margin:.5rem 0}.inc.ex{border-left-color:var(--ex)}
 .inc .ih{flex:1 1 15rem;min-width:0}.inc .ih b{display:block;overflow-wrap:anywhere;margin:.15rem 0}.inc .ih .mut{font-size:.85rem}
 .inc .fl{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.3rem}.inc .fl span{font-size:.75rem;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:0 .45rem}.inc .fl .on{color:#e05cb0;border-color:#e05cb0}
-.inc.usr{border-left-color:var(--ok)}.inc.usr.off{border-left-color:var(--line);opacity:.6}.inc.usr .ih b{display:inline;margin-right:.4rem}.inc .fl .adm{color:#f0b429;border-color:#f0b429}
+.inc.usr{border-left-color:var(--ok)}.inc.usr.off{border-left-color:var(--line);opacity:.6}.inc.usr .ih b{display:inline;margin-right:.4rem}.inc .fl .adm{color:#f0b429;border-color:#f0b429}.inc.url{border-left-color:var(--ex)}.inc.url.adm{border-left-color:#f0b429}.inc.url .ih b{display:inline;margin-right:.4rem}
 .inc .ia{display:flex;flex-wrap:wrap;gap:.3rem;margin-left:auto}.inc .ia button{padding:.35rem .6rem}.inc .ia .sec{background:none;color:var(--mut)}
 @media(max-width:760px){.inc .ia{margin-left:0;width:100%}.inc .ia button{flex:1 1 auto}}
-@media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
+@media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}.inc.url .kv{grid-template-columns:repeat(3,1fr)}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
 /* Replay */
 #replay{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
 #rpHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--line)}#rpHead h2{margin:0;font-size:1.15rem;flex:1 1 16rem}
@@ -172,10 +172,12 @@ async function loadUsers(){const el=$('#sU');try{[users,uroles]=await Promise.al
 async function loadURoles(){const el=$('#sUR');try{uroles=await api('uroles')}catch(e){el.innerHTML='<h2>Benutzerrollen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const P=uroles.perms,pn=k=>(P.find(p=>p.k===k)||{}).name||k,edit=can('uroles');
   el.innerHTML=`<h2>Benutzerrollen</h2><div class="mut">Eine Person kann mehrere Benutzerrollen haben und erhält alle Rechte all ihrer Rollen. Zugewiesen werden sie unter «Benutzer». Die Rechte im Einsatz selbst (Nachrichten, Rettlinge, Markierungen …) regeln weiterhin Einsatzleitung, Spezialrollen und Einrückoptionen.</div>
-    <div class="tw"><table><thead><tr><th>Rolle</th><th>Rechte</th><th>Personen</th><th></th></tr></thead><tbody>${uroles.roles.map(r=>`<tr><td><b>${esc(r.name)}</b>${r.def?'<br><span class="mut">bei neuen Benutzern vorausgewählt</span>':''}</td>
-      <td>${r.sys==='admin'?'<b>Alle Rechte</b>, auch künftige':r.perms.length?r.perms.map(k=>esc(pn(k))).join(' · '):'<span class="mut">keine</span>'}</td><td>${r.users}</td>
-      <td class="act">${edit&&r.sys!=='admin'&&urOk(r)?`<button data-ue="${r.id}">Bearbeiten</button><button data-ux="${r.id}">Entfernen</button>`:r.sys==='admin'?'<span class="mut">fest</span>':edit?'<span class="mut" title="Hat Rechte, die du selbst nicht hast">nur mit mehr Rechten</span>':''}</td></tr>`).join('')}</tbody></table></div>
-    ${edit?'<div class="row"><button class="pri" id="urA">Neue Benutzerrolle</button></div>':''}
+    ${edit?'<div class="row"><button class="pri" id="urA">+ Neue Benutzerrolle</button></div>':''}
+    ${uroles.roles.map(r=>{const adm=r.sys==='admin'; // Karten wie bei Benutzern und Einsatzstatistik
+      return`<div class="inc url${adm?' adm':''}"><div class="ih"><b>${esc(r.name)}</b>${adm?'<span class="mut">feste Rolle</span>':''}
+      <div class="fl">${adm?'<span class="adm">Alle Rechte, auch künftige</span>':r.perms.length?r.perms.map(k=>`<span>${esc(pn(k))}</span>`).join(''):'<span>keine Rechte</span>'}</div></div>
+      <div class="kv"><span><small>Personen</small>${r.users}</span><span><small>Rechte</small>${adm?'alle':r.perms.length+' von '+P.length}</span><span><small>Neue Benutzer</small>${r.def?'vorausgewählt':'–'}</span></div>
+      <div class="ia">${adm?'<span class="mut">weder änderbar noch entfernbar</span>':!edit?'':urOk(r)?`<button data-ue="${r.id}">Bearbeiten</button><button class="sec" data-ux="${r.id}">Entfernen</button>`:'<span class="mut" title="Hat Rechte, die du selbst nicht hast">nur mit mehr Rechten bearbeitbar</span>'}</div></div>`}).join('')}
     <h3>Rechte</h3><div class="tw"><table><tbody>${P.map(p=>`<tr><td><small class="mut">${esc(p.group)}</small><br><b>${esc(p.name)}</b></td><td class="mut">${esc(p.hint)}</td></tr>`).join('')}</tbody></table></div>`;
   const form=r=>{const gs=[...new Set(P.map(p=>p.group))];
     return`<label class="mut">Name<input id="qN" value="${esc(r?r.name:'')}"></label><label class="chk"><input type="checkbox" id="qD" ${r&&r.def?'checked':''}> Bei neuen Benutzern vorausgewählt</label>
