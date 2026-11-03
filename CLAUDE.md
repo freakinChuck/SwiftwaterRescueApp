@@ -115,6 +115,7 @@ Web-App/PWA für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und
 - Einsatzart: «Scharfer Einsatz» oder «Übung» (`incidents.is_exercise`). Ohne Einsatz gibt es dafür getrennte Knöpfe «Einsatz starten» und «Übung starten» (`newView(ex)`, Issue #64), keine Auswahlliste im Formular. Scharf = immer kritischer Alarm (Vollbild, Dauerton). Übung = normale Benachrichtigung (Hinweis, kurzer Ton), ausser die Person hat den «Übungsmodus» aktiviert (`users.exercise_mode`). Der Server entscheidet (`critical()` → `critical` in `incident/state`), das Frontend folgt; eine spätere Push-Lösung soll dieselbe Regel nutzen.
 
 ## Wichtige Konventionen
+- Anforderungen: `docs/REQUIREMENTS.md` listet alle Anforderungen mit ID je Bereich (Issue #38). **Bei jeder Änderung nachführen** (neue Anforderung mit nächster ID, geänderte anpassen, entfallene als «entfallen» stehen lassen). Technische Details bleiben hier.
 - Frontend: keine Neuzeichnung des Menüs, solange ein Eingabefeld Fokus hat oder das Formular «Einsatz starten» offen ist (`draw()`-Guards). Bei Änderungen am Polling darauf achten.
 - Hinweise und Fehler mit `toast(text, kind)` (`common.js`, kind ok/info/err; `fail` nutzt err), nie `alert()`: verschwinden von selbst, Antippen schliesst. Nur Rückfragen (`confirm`, `dlg`) brauchen einen Klick.
 - Server liefert Zahlen als Zahlen (`ints()`, Float-Casts); MySQL liefert sonst Strings, was im JS zu falschen Wahrheitswerten führt.
