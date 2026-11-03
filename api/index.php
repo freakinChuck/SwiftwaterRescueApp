@@ -71,6 +71,7 @@ foreach ([
  // auto = automatisch freigeben so viele Minuten nach dem Übungsstart (NULL = nur von Hand; released_by NULL = automatisch freigegeben); msg = Meldung, geht bei der Freigabe als Nachricht an alle
  "CREATE TABLE IF NOT EXISTS ex_injects(id $ai, plan_id INT, kind $tx, label $tx, name $tx NULL, descr TEXT NULL, lat DOUBLE, lon DOUBLE, ago INT DEFAULT 0, msg TEXT NULL, ref_id INT NULL, released BIGINT NULL, released_by INT NULL, rescuee_id INT NULL, removed INT DEFAULT 0, auto INT NULL, role_id INT NULL, abbr $tx NULL, color $tx NULL, ext_id INT NULL)",
   "CREATE TABLE IF NOT EXISTS aar(incident_id INT PRIMARY KEY, data MEDIUMTEXT, updated BIGINT, updated_by INT NULL)", // After Action Review (Issue #55)
+  "CREATE TABLE IF NOT EXISTS aar_img(id $ai, incident_id INT, field_id $tx, caption TEXT, data MEDIUMTEXT, w INT, h INT, created BIGINT, created_by INT NULL)", // Bilder im After Action Review (Feldart img)
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
@@ -81,6 +82,12 @@ foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NU
 // Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
 try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX track_inc ON track(incident_id,ts)"); } catch (Throwable $e) {} // schlägt bei vorhandenem Index still fehl
+// Bilder im After Action Review: einmalig ein Feld «Bilder» an bereits gespeicherte Einstellungen anhängen (der Standard hat es schon); entfernbar
+if (setting('aar_img_mig', '') === '') { $c = json_decode((string)setting('aar_cfg', ''), true);
+  if (is_array($c) && !array_filter((array)($c['fields'] ?? []), fn($f) => ($f['type'] ?? '') === 'img')) {
+    $c['seq'] = (int)($c['seq'] ?? 12) + 1; $c['fields'][] = ['id' => 'f' . $c['seq'], 'type' => 'img', 'label' => 'Bilder', 'hint' => 'Fotos, Skizzen, Kartenausschnitte'];
+    setSetting('aar_cfg', json_encode($c, JSON_UNESCAPED_UNICODE)); }
+  setSetting('aar_img_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO roles(name,color,is_lead,is_post) VALUES(?,?,?,?)");
@@ -152,12 +159,13 @@ const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
-const AAR_TYPES = ['head' => 'Zwischentitel', 'text' => 'Text einzeilig', 'area' => 'Text mehrzeilig', 'date' => 'Datum', 'time' => 'Uhrzeit', 'number' => 'Zahl', 'select' => 'Auswahl', 'check' => 'Ja/Nein'];
+const AAR_TYPES = ['head' => 'Zwischentitel', 'text' => 'Text einzeilig', 'area' => 'Text mehrzeilig', 'date' => 'Datum', 'time' => 'Uhrzeit', 'number' => 'Zahl', 'select' => 'Auswahl', 'check' => 'Ja/Nein', 'img' => 'Bilder'];
+const AAR_IMG_MAX = 50; // Bilder je Review, je höchstens 3 MB (der Browser verkleinert auf 1600 px JPEG)
 const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'log' => 'Einsatzlog (Vorauswahl beim Herunterladen)'];
 // Status je Review: 0 = in Arbeit, 1 = freigegeben (abgeschlossen, gesperrt, für Teilnehmende sichtbar), 2 = nicht relevant
 const AAR_STATUS = [0 => 'in Arbeit', 1 => 'freigegeben', 2 => 'nicht relevant'];
 const AAR_DL = ['docx' => 'Word (.docx)', 'pdf' => 'PDF']; // Download erlaubt (Einstellung dl); Ansehen im Browser geht immer
-const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 12, 'auto' => ['inc' => 1, 'people' => 1, 'res' => 1, 'ext' => 1, 'log' => 0], 'dl' => ['docx' => 1, 'pdf' => 1], 'fields' => [
+const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 13, 'auto' => ['inc' => 1, 'people' => 1, 'res' => 1, 'ext' => 1, 'log' => 0], 'dl' => ['docx' => 1, 'pdf' => 1], 'fields' => [
   ['id' => 'f1', 'type' => 'date', 'label' => 'Datum des Reviews', 'hint' => ''],
   ['id' => 'f2', 'type' => 'text', 'label' => 'Moderation', 'hint' => ''],
   ['id' => 'f3', 'type' => 'area', 'label' => 'Teilnehmende am Review', 'hint' => ''],
@@ -170,7 +178,24 @@ const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 12,
   ['id' => 'f10', 'type' => 'area', 'label' => 'Was lief gut?', 'hint' => 'Beibehalten'],
   ['id' => 'f11', 'type' => 'area', 'label' => 'Was können wir verbessern?', 'hint' => ''],
   ['id' => 'f12', 'type' => 'area', 'label' => 'Massnahmen', 'hint' => 'Was, wer, bis wann'],
+  ['id' => 'f13', 'type' => 'img', 'label' => 'Bilder', 'hint' => 'Fotos, Skizzen, Kartenausschnitte'],
 ]];
+// Zugriff auf ein Review: Verwaltung (aar, aar_rel) oder my=1 (Meine Einsätze: Teilnahme, freigegeben, my_runs nicht off)
+function aarView($id) { global $db; if (empty($_GET['my'])) { need('aar', 'aar_rel'); return false; }
+  if (myRuns() === 'off' || !myPart($id)) fail('Kein Zugriff auf diesen Einsatz', 403);
+  $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([$id]); $st = $s->fetchColumn(); $s->closeCursor();
+  if ($st === false || (int)$st !== 1) fail('Dieses After Action Review ist nicht freigegeben', 403);
+  return true; }
+// Bearbeiten (Angaben, Bilder): Recht aar, Einsatz beendet, nicht freigegeben; danach gilt das Review als in Arbeit
+function aarEditable($inc) { global $db; need('aar');
+  if ($inc['ended_at'] === null) fail('Ein After Action Review gibt es erst nach dem Einsatzende');
+  $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([(int)$inc['id']]); $st = $s->fetchColumn(); $s->closeCursor();
+  if ($st !== false && (int)$st === 1) fail('Das After Action Review ist freigegeben. Zum Bearbeiten zuerst die Freigabe zurücknehmen.');
+  return $st !== false; }
+function aarTouch($id, $exists) { global $db, $now, $uid;
+  if ($exists) $db->prepare("UPDATE aar SET updated=?,updated_by=?,status=0 WHERE incident_id=?")->execute([$now, $uid, $id]);
+  else $db->prepare("INSERT INTO aar(incident_id,data,updated,updated_by,status) VALUES(?,'{}',?,?,0)")->execute([$id, $now, $uid]); }
+function aarImgRow($img) { global $db; $s = $db->prepare("SELECT id,incident_id FROM aar_img WHERE id=?"); $s->execute([(int)$img]); $r = $s->fetch(); $s->closeCursor(); return $r ?: fail('Bild nicht gefunden', 404); }
 function aarCfg() { $c = json_decode((string)setting('aar_cfg', ''), true);
   if (!is_array($c)) return AAR_DEFAULT;
   $c += AAR_DEFAULT; $a = []; foreach (AAR_AUTO as $k => $_) $a[$k] = (int)($c['auto'][$k] ?? AAR_DEFAULT['auto'][$k]); $c['auto'] = $a;
@@ -1584,13 +1609,10 @@ switch ($route) {
   setSetting('aar_logo', (string)$l); out(['ok' => true]);
  case 'aar/get': // Daten fürs Dokument; anon=1 oder endgültig anonymisiert: Bezeichnungen wie Issue #54 (die erfassten Angaben bleiben, wie sie geschrieben wurden)
   // my=1 (Meine Einsätze): nur freigegebene Reviews eigener Einsätze, Namen gemäss my_runs (anon: alle anderen anonym, die Person selbst mit Namen)
-  $my = !empty($_GET['my']); if (!$my) need('aar', 'aar_rel');
-  $inc = incById($_GET['id'] ?? 0); $id = (int)$inc['id']; $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
+  $inc = incById($_GET['id'] ?? 0); $id = (int)$inc['id']; $mine = aarView($id); $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
   $a = $q("SELECT data,updated,updated_by,status,rel_at,rel_by FROM aar WHERE incident_id=?")[0] ?? null;
-  if ($my && (myRuns() === 'off' || !myPart($id))) fail('Kein Zugriff auf diesen Einsatz', 403);
-  if ($my && (!$a || (int)$a['status'] !== 1)) fail('Dieses After Action Review ist nicht freigegeben', 403);
-  $forced = (int)$inc['log_anon'] || $inc['rp_anon'] !== null; $self = $my && !$forced ? $uid : null;
-  $anon = $forced || !empty($_GET['anon']) || $my && myRuns() === 'anon'; $c = $anon ? anonCtx($id, $self) : null;
+  $forced = (int)$inc['log_anon'] || $inc['rp_anon'] !== null; $self = $mine && !$forced ? $uid : null;
+  $anon = $forced || !empty($_GET['anon']) || $mine && myRuns() === 'anon'; $c = $anon ? anonCtx($id, $self) : null;
   $nm = fn($u) => $u === null ? null : ($c ? ($c['u'][(int)$u] ?? 'Person') : ($db->query('SELECT name FROM users WHERE id=' . (int)$u)->fetchColumn() ?: '?'));
   $rpa = $inc['rp_anon'] !== null;
   $parts = array_map(fn($p) => ['name' => $c && !$rpa ? ($c['u'][$p['user_id']] ?? 'Einsatzkraft') : $p['name'], 'mode' => $p['mode_name'] ?? null, 'role' => $p['role'] ?? null, 'joined' => $p['joined'] ?? null, 'left_at' => $p['left_at'] ?? null],
@@ -1604,16 +1626,38 @@ switch ($route) {
   out(['inc' => ['id' => $id, 'message' => $c ? anonText($inc['message'], $c) : $inc['message'], 'alarm_at' => (int)$inc['alarm_at'], 'ended_at' => $inc['ended_at'] === null ? null : (int)$inc['ended_at'],
       'is_exercise' => (int)$inc['is_exercise'], 'creator' => $nm($inc['created_by']), 'plan' => $plan, 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms'],
       'lat' => $inc['lat'] === null ? null : (float)$inc['lat'], 'lon' => $inc['lon'] === null ? null : (float)$inc['lon'], 'first_accept' => $first('accept'), 'first_area' => $first('area')],
-    'anon' => $anon, 'forced' => $forced, 'people' => $parts, 'rescuees' => $res, 'externals' => $ext, 'log' => logRows($id, true, $anon, $self), 'my_anon' => $my && myRuns() === 'anon',
+    'anon' => $anon, 'forced' => $forced, 'people' => $parts, 'rescuees' => $res, 'externals' => $ext, 'log' => logRows($id, true, $anon, $self), 'my_anon' => $mine && myRuns() === 'anon',
     'data' => $a ? (json_decode($a['data'], true) ?: (object)[]) : (object)[], 'updated' => $a && $a['updated'] !== null ? (int)$a['updated'] : null, 'updated_by' => $a ? $nm($a['updated_by']) : null,
-    'status' => $a ? (int)$a['status'] : 0, 'rel_at' => $a && $a['rel_at'] !== null ? (int)$a['rel_at'] : null, 'rel_by' => $a ? $nm($a['rel_by']) : null]);
+    'status' => $a ? (int)$a['status'] : 0, 'rel_at' => $a && $a['rel_at'] !== null ? (int)$a['rel_at'] : null, 'rel_by' => $a ? $nm($a['rel_by']) : null,
+    'imgs' => array_map(fn($r) => ints($r, ['id', 'w', 'h']), $q("SELECT id,field_id field,caption,w,h FROM aar_img WHERE incident_id=? ORDER BY id"))]); // Bilder ohne Inhalt, der kommt einzeln über aar/img
+ case 'aar/img': // ein Bild als Data-URL (Zugriff wie aar/get)
+  $r = aarImgRow($_GET['id'] ?? 0); aarView((int)$r['incident_id']);
+  $s = $db->prepare("SELECT data FROM aar_img WHERE id=?"); $s->execute([(int)$r['id']]); out(['src' => $s->fetchColumn()]);
+ case 'aar/img/add': // id = Einsatz, field = Feld der Art img, src = JPEG/PNG als Data-URL, caption optional
+  $inc = incById($in['id'] ?? 0); $id = (int)$inc['id']; $ex = aarEditable($inc);
+  $fid = (string)($in['field'] ?? ''); if (!array_filter(aarCfg()['fields'], fn($f) => $f['id'] === $fid && $f['type'] === 'img')) fail('Unbekanntes Bilderfeld');
+  $src = $in['src'] ?? null;
+  if (!is_string($src) || !preg_match('~^data:image/(png|jpeg);base64,([A-Za-z0-9+/=]+)$~', $src, $m)) fail('Nur PNG- oder JPEG-Bilder');
+  $b = base64_decode($m[2], true); if ($b === false || strlen($b) > 3000000) fail('Das Bild ist zu gross (höchstens 3 MB)');
+  $sz = @getimagesizefromstring($b); if (!$sz) fail('Die Datei ist kein gültiges Bild');
+  $s = $db->prepare("SELECT COUNT(*) FROM aar_img WHERE incident_id=?"); $s->execute([$id]); if ((int)$s->fetchColumn() >= AAR_IMG_MAX) fail('Höchstens ' . AAR_IMG_MAX . ' Bilder je Review');
+  $db->beginTransaction();
+  $db->prepare("INSERT INTO aar_img(incident_id,field_id,caption,data,w,h,created,created_by) VALUES(?,?,?,?,?,?,?,?)")->execute([$id, $fid, mb_substr(trim((string)($in['caption'] ?? '')), 0, 300), $src, (int)$sz[0], (int)$sz[1], $now, $uid]);
+  $nid = (int)$db->lastInsertId(); aarTouch($id, $ex); $db->commit();
+  out(['id' => $nid, 'w' => (int)$sz[0], 'h' => (int)$sz[1]]);
+ case 'aar/img/save': // Beschriftung ändern
+  $r = aarImgRow($in['img'] ?? 0); $id = (int)$r['incident_id']; $ex = aarEditable(incById($id));
+  $db->prepare("UPDATE aar_img SET caption=? WHERE id=?")->execute([mb_substr(trim(preg_replace('/\s+/u', ' ', (string)($in['caption'] ?? ''))), 0, 300), (int)$r['id']]); aarTouch($id, $ex); out(['ok' => true]);
+ case 'aar/img/remove':
+  $r = aarImgRow($in['img'] ?? 0); $id = (int)$r['incident_id']; $ex = aarEditable(incById($id));
+  $db->prepare("DELETE FROM aar_img WHERE id=?")->execute([(int)$r['id']]); aarTouch($id, $ex); out(['ok' => true]);
  case 'aar/save': need('aar'); // nur Felder der Einstellungen; Werte entfernter Felder bleiben erhalten
   $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
   if ($inc['ended_at'] === null) fail('Ein After Action Review gibt es erst nach dem Einsatzende');
   $s = $db->prepare("SELECT data,status FROM aar WHERE incident_id=?"); $s->execute([$id]); $old = $s->fetch(); $s->closeCursor(); $d = $old ? (json_decode((string)$old['data'], true) ?: []) : [];
   if ($old && (int)$old['status'] === 1) fail('Das After Action Review ist freigegeben. Zum Bearbeiten zuerst die Freigabe zurücknehmen.');
   $v = (array)($in['data'] ?? []);
-  foreach (aarCfg()['fields'] as $f) if ($f['type'] !== 'head' && array_key_exists($f['id'], $v)) {
+  foreach (aarCfg()['fields'] as $f) if ($f['type'] !== 'head' && $f['type'] !== 'img' && array_key_exists($f['id'], $v)) {
     $x = $v[$f['id']]; if (!is_scalar($x) && $x !== null) fail('Ungültiger Wert');
     $x = mb_substr(str_replace("\r", '', trim((string)$x)), 0, 20000);
     if ($x === '') unset($d[$f['id']]); else $d[$f['id']] = $x;

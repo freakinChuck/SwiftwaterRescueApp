@@ -46,7 +46,7 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .rpl{display:block;width:100%;text-align:left;border:0;border-left:4px solid;border-radius:0;background:none;padding:.35rem .5rem;font-size:.9rem}.rpl:hover{background:var(--panel)}.rpl .t{color:var(--mut);margin-right:.4rem}
 .rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
 .exp{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.8rem 0}.exp h3{margin:0 0 .3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.exp .badge.run{background:var(--alarm)}.exp .badge.done{background:var(--line)}.exp td{vertical-align:top}.exp td small{display:block;color:var(--mut)}
-.dlg .card.mid{max-width:640px}.dlg .card.aarv{max-width:900px}.aardoc{border-top:1px solid var(--line);margin-top:.4rem;padding-top:.4rem}.aardoc h2{margin:.2rem 0}.aardoc table{width:100%}#sAarC label.chk,.aaro label.chk{display:flex;align-items:center;gap:.5rem;margin:.3rem 0}.aaro{gap:1rem}.inc .fl .wip{color:var(--warn,#e0a030);border-color:var(--warn,#e0a030)}.dlg label[hidden]{display:none}.dlg label small{font-size:.78rem}.dlg h3.aarq{margin:.6rem 0 0;border-bottom:1px solid var(--line);padding-bottom:.2rem}.inc .fl .rv{color:var(--ok);border-color:var(--ok)}.aarrow>*{flex:0 0 auto}.aarlogo{height:4rem;width:auto;max-width:14rem;object-fit:contain;background:#fff;border-radius:4px;padding:.2rem}tr.aarh td{background:#ffffff0d}.urh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem}.urh .urf{flex:1 1 12rem;max-width:18rem;margin:0}
+.dlg .card.mid{max-width:640px}.dlg .card.aarv{max-width:900px}.aarimgs{display:grid;gap:.5rem}.aarit{display:flex;gap:.5rem;align-items:center}.aarit img{width:6rem;height:4.5rem;object-fit:cover;border-radius:4px;background:#0006;flex:0 0 auto}.aarit input{flex:1 1 auto;min-width:0}.aarit button{flex:0 0 auto}.aardoc figure{margin:.5rem 0;text-align:center}.aardoc figure img{max-width:100%;max-height:28rem;border-radius:4px}.aardoc figcaption{font-size:.8rem;color:var(--mut)}.aardoc{border-top:1px solid var(--line);margin-top:.4rem;padding-top:.4rem}.aardoc h2{margin:.2rem 0}.aardoc table{width:100%}#sAarC label.chk,.aaro label.chk{display:flex;align-items:center;gap:.5rem;margin:.3rem 0}.aaro{gap:1rem}.inc .fl .wip{color:var(--warn,#e0a030);border-color:var(--warn,#e0a030)}.dlg label[hidden]{display:none}.dlg label small{font-size:.78rem}.dlg h3.aarq{margin:.6rem 0 0;border-bottom:1px solid var(--line);padding-bottom:.2rem}.inc .fl .rv{color:var(--ok);border-color:var(--ok)}.aarrow>*{flex:0 0 auto}.aarlogo{height:4rem;width:auto;max-width:14rem;object-fit:contain;background:#fff;border-radius:4px;padding:.2rem}tr.aarh td{background:#ffffff0d}.urh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem}.urh .urf{flex:1 1 12rem;max-width:18rem;margin:0}
 .pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13rem),1fr));gap:0 .8rem} /* Rechte im Rollen-Dialog mehrspaltig */
 .urg{display:grid;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:.4rem}.urb{display:grid;gap:.1rem;text-align:left;padding:.45rem .6rem .45rem 2rem;position:relative;border-radius:8px;min-height:0}.urb[hidden]{display:none}.urb small{color:var(--mut);font-size:.78rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .urb::before{content:'';position:absolute;left:.6rem;top:.6rem;width:.9rem;height:.9rem;border-radius:50%;border:2px solid var(--mut)}.urb[aria-pressed=true]{background:#1d7fd133;border-color:var(--ex)}.urb[aria-pressed=true]::before{content:'✓';border-color:var(--ex);background:var(--ex);color:#fff;font-size:.7rem;line-height:.9rem;text-align:center}.urb:disabled{opacity:.55;cursor:not-allowed}
@@ -521,7 +521,7 @@ const aarDlBtns=(id,p)=>(aarC.cfg.dl.docx?`<button data-${p}w="${id}" title="Als
 function aarBtns(x){const s=aarSt(x);
   return`<span class="bg"><span class="bl">AAR</span>${s!=='rel'&&can('aar')?`<button data-ae="${x.id}" title="After Action Review ${s==='wip'?'bearbeiten':'erfassen'}">${s==='wip'?'Bearbeiten':'Erfassen'}</button>`:''}${s!=='nr'?`<button data-av="${x.id}" title="Ansehen${can('aar_rel')?(s==='rel'?', Freigabe zurücknehmen':', freigeben'):''}">Ansehen</button>${aarDlBtns(x.id,'a')}`:''}</span>`}
 // Formular mit allen Feldern der Einstellungen; leere Felder werden nicht gespeichert
-async function aarEdit(id){let x;try{x=await api('aar/get&id='+id)}catch(e){return fail(e)}const i=x.inc,F=aarC.cfg.fields;
+async function aarEdit(id){let x;try{x=await api('aar/get&id='+id);await aarImgs(x)}catch(e){return fail(e)}const i=x.inc,F=aarC.cfg.fields;let chg=false;
   const inp=f=>{const v=x.data[f.id]??'',a=`data-af="${f.id}"`;
     switch(f.type){case'area':return`<textarea ${a} rows="4">${esc(v)}</textarea>`;
       case'date':return`<input type="date" ${a} value="${esc(v)}">`;case'time':return`<input type="time" ${a} value="${esc(v)}">`;
@@ -531,27 +531,47 @@ async function aarEdit(id){let x;try{x=await api('aar/get&id='+id)}catch(e){retu
       default:return`<input ${a} value="${esc(v)}" maxlength="2000">`}};
   const d=dlg('After Action Review – '+i.message,`<div class="mut">${i.is_exercise?'Übung':'Einsatz'} vom ${aarDt(i.alarm_at)}, Dauer ${aarMin(i.ended_at-i.alarm_at)}, ${x.people.length} Einsatzkräfte${x.updated?` · zuletzt bearbeitet ${aarDt(x.updated)} von ${esc(x.updated_by||'?')}`:''}</div>
     ${x.status===2?'<div class="mut"><b>Als nicht relevant markiert.</b> Speichern macht es wieder zu einem Review in Arbeit.</div>':''}
-    ${F.map(f=>f.type==='head'?`<h3 class="aarq">${esc(f.label)}</h3>`:`<label class="mut">${esc(f.label)}${inp(f)}${f.hint?`<small>${esc(f.hint)}</small>`:''}</label>`).join('')||'<div class="mut">Es sind noch keine Felder eingerichtet (Auswertung → After Action Review einrichten).</div>'}`,
-    async d=>{await api('aar/save',{id,data:collect()});toast('After Action Review gespeichert.','ok');loadStats()});
+    ${F.map(f=>f.type==='head'?`<h3 class="aarq">${esc(f.label)}</h3>`:f.type==='img'?`<div class="mut">${esc(f.label)}<div class="aarimgs" data-aimg="${f.id}"></div>${f.hint?`<small>${esc(f.hint)}</small>`:''}</div>`:`<label class="mut">${esc(f.label)}${inp(f)}${f.hint?`<small>${esc(f.hint)}</small>`:''}</label>`).join('')||'<div class="mut">Es sind noch keine Felder eingerichtet (Auswertung → After Action Review einrichten).</div>'}`,
+    async d=>{await api('aar/save',{id,data:collect()});toast('After Action Review gespeichert.','ok');loadStats()},'Speichern','Abbrechen',()=>{if(chg)loadStats()});
   d.firstElementChild.classList.add('mid');
+  F.filter(f=>f.type==='img').forEach(f=>aarImgEdit(d,x,id,f.id,()=>chg=true));
   const collect=()=>{const data={};d.querySelectorAll('[data-af]').forEach(e=>data[e.dataset.af]=e.value);return data};
   // Speichern und freigeben (Recht aar_rel), Nicht relevant (erfasste Angaben bleiben gespeichert)
   if(can('aar_rel'))aarBtn(d,'Speichern und freigeben','',async()=>{if(!confirm('Speichern und freigeben?\n\nDas Review ist danach abgeschlossen und gesperrt, und alle Teilnehmenden sehen es unter «Meine Einsätze» (Namen gemäss «Einsicht für Einsatzkräfte»). Zum Ändern muss die Freigabe zurückgenommen werden.'))return false;
     await api('aar/save',{id,data:collect()});await api('aar/status',{id,status:1});toast('After Action Review freigegeben.','ok');loadStats()});
   if(x.status!==2)aarBtn(d,'Nicht relevant','sec',async()=>{if(!confirm('Als nicht relevant markieren?\n\nEs zählt dann nicht mehr als offen. Die Angaben im Formular werden gespeichert, das Review lässt sich jederzeit wieder erfassen.'))return false;
     await api('aar/save',{id,data:collect()});await api('aar/status',{id,status:2});toast('Als nicht relevant markiert.','ok');loadStats()})}
+// Bilder (Feldart img): werden sofort gespeichert (nicht erst mit «Speichern»), Inhalt einzeln über aar/img geladen und hier zwischengespeichert
+const aarIC={};
+const aarImgs=(x,my)=>Promise.all((x.imgs||[]).map(async m=>{m.src=await(aarIC[m.id]=aarIC[m.id]||api('aar/img&id='+m.id+(my?'&my=1':'')).then(r=>r.src).catch(e=>{delete aarIC[m.id];throw e}))}));
+// Foto verkleinern: höchstens 1600 px, JPEG (weisser Hintergrund für transparente PNG)
+const aarPhoto=file=>new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{const w0=im.naturalWidth||1600,h0=im.naturalHeight||1200,k=Math.min(1,1600/Math.max(w0,h0)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w0*k));c.height=Math.max(1,Math.round(h0*k));
+    const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);let q=.85,s=c.toDataURL('image/jpeg',q);while(s.length>3900000&&q>.4)s=c.toDataURL('image/jpeg',q-=.15);ok(s)};
+  im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('Das Bild konnte nicht gelesen werden'))};im.src=u});
+function aarImgEdit(d,x,id,fid,changed){const el=$(`[data-aimg="${fid}"]`,d);
+  const draw=()=>{const L=x.imgs.filter(m=>m.field===fid);
+    el.innerHTML=L.map(m=>`<div class="aarit"><img src="${m.src}" alt=""><input data-aic="${m.id}" value="${esc(m.caption||'')}" placeholder="Beschriftung (optional)" maxlength="300"><button class="sec" data-aix="${m.id}">Entfernen</button></div>`).join('')
+      +`<div class="row"><button data-aia>+ Bilder hinzufügen</button><input type="file" accept="image/*" multiple hidden></div><small>Bilder werden sofort gespeichert und auf höchstens 1600 Pixel verkleinert.</small>`;
+    el.querySelectorAll('[data-aic]').forEach(c=>c.onchange=()=>{const m=x.imgs.find(m=>m.id==c.dataset.aic);api('aar/img/save',{img:m.id,caption:c.value}).then(()=>{m.caption=c.value;changed()}).catch(fail)});
+    el.querySelectorAll('[data-aix]').forEach(b=>b.onclick=()=>{if(!confirm('Bild entfernen?'))return;api('aar/img/remove',{img:+b.dataset.aix}).then(()=>{x.imgs=x.imgs.filter(m=>m.id!=b.dataset.aix);changed();draw()}).catch(fail)});
+    const fi=$('input[type=file]',el);$('[data-aia]',el).onclick=()=>fi.click();
+    fi.onchange=async()=>{const fs=[...fi.files];if(!fs.length)return;const b=$('[data-aia]',el);b.disabled=true;
+      try{for(const [n,f] of fs.entries()){b.textContent=`Lädt hoch … ${n+1}/${fs.length}`;const src=await aarPhoto(f),r=await api('aar/img/add',{id,field:fid,src});aarIC[r.id]=Promise.resolve(src);x.imgs.push({id:r.id,field:fid,caption:'',w:r.w,h:r.h,src});changed()}}
+      catch(e){fail(e)}draw()}};
+  draw()}
 // zusätzlicher Knopf in der Knopfzeile eines Dialogs; fn liefert false = Dialog bleibt offen
 function aarBtn(d,t,cls,fn){const row=d.querySelector('[data-ok]').parentNode,b=document.createElement('button');b.textContent=t;if(cls)b.className=cls;
   b.onclick=async()=>{if(b.disabled)return;b.disabled=true;try{if(await fn()!==false)d.remove()}catch(e){fail(e)}finally{b.disabled=false}};row.appendChild(b);return b}
 // Ansicht im Browser (geht immer, auch wenn Word und PDF ausgeschaltet sind); my = Meine Einsätze (nur freigegebene, Namen gemäss my_runs)
 async function aarShow(id,my){const o={log:!!aarC.cfg.auto.log,anon:false};let x;const get=()=>api('aar/get&id='+id+(my?'&my=1':'')+(o.anon?'&anon=1':''));
-  try{x=await get()}catch(e){return fail(e)}const logo=await aarLogo(),anonOk=!x.forced&&!x.my_anon;
+  try{x=await get();await aarImgs(x,my)}catch(e){return fail(e)}const logo=await aarLogo(),anonOk=!x.forced&&!x.my_anon;
   const d=dlg(aarC.cfg.title+' – '+x.inc.message,`<div class="row aaro"><label class="chk"><input type="checkbox" id="avL" ${o.log?'checked':''}> Einsatzlog</label>${anonOk?'<label class="chk"><input type="checkbox" id="avA"> Namen anonymisieren</label>':''}</div>
     ${!my?`<div class="mut">Status: <b>${x.status===1?`freigegeben${x.rel_at?' am '+aarDt(x.rel_at):''}${x.rel_by?' von '+esc(x.rel_by):''}`:x.status===2?'nicht relevant':x.updated?'in Arbeit':'noch nichts erfasst'}</b></div>`:''}<div class="aardoc" id="avD"></div>`,async()=>{},'Schliessen');
   d.firstElementChild.classList.add('aarv');d.querySelector('[data-x]').remove();
   const draw=()=>$('#avD',d).innerHTML=aarHtml(aarModel(x,o),logo);draw();
   $('#avL',d).onchange=e=>{o.log=e.target.checked;draw()};
-  if(anonOk)$('#avA',d).onchange=async e=>{o.anon=e.target.checked;try{x=await get();draw()}catch(er){fail(er)}};
+  if(anonOk)$('#avA',d).onchange=async e=>{o.anon=e.target.checked;try{x=await get();await aarImgs(x,my);draw()}catch(er){fail(er)}};
   for(const [k,l] of [['docx','Word'],['pdf','PDF']])if(aarC.cfg.dl[k])aarBtn(d,l,'',async()=>{await aarMake(x,k,o);return false});
   if(!my&&can('aar_rel')&&x.status===1)aarBtn(d,'Freigabe zurücknehmen','sec',async()=>{if(!confirm('Freigabe zurücknehmen?\n\nDas Review ist wieder in Arbeit, bearbeitbar und für die Teilnehmenden nicht mehr sichtbar.'))return false;
     await api('aar/status',{id,status:0});toast('Freigabe zurückgenommen.','ok');loadStats()});
@@ -560,14 +580,14 @@ async function aarShow(id,my){const o={log:!!aarC.cfg.auto.log,anon:false};let x
 // Dokumentmodell als HTML (Ansicht)
 function aarHtml(B,logo){const tb=(h,rows)=>`<div class="tw"><table>${h?`<thead><tr>${h.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>`:''}<tbody>${rows.map(r=>`<tr>${r.map((c,n)=>`<td${!h&&!n?' class="mut"':''} style="white-space:pre-wrap">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   return(logo?`<img src="${logo.src}" alt="" class="aarlogo" style="float:right;margin-left:.5rem">`:'')+B.map(b=>({title:()=>`<h2>${esc(b.x)}</h2>`,sub:()=>`<div class="mut" style="white-space:pre-line">${esc(b.x)}</div>`,h:()=>`<h3 class="aarq" style="clear:both">${esc(b.x)}</h3>`,
-    q:()=>`<div style="margin-top:.4rem"><b>${esc(b.x)}</b></div>`,p:()=>`<div style="white-space:pre-wrap">${esc(b.x)}</div>`,kv:()=>tb(null,b.rows),table:()=>tb(b.head,b.rows),note:()=>`<div class="mut" style="margin-top:.6rem"><small>${esc(b.x)}</small></div>`})[b.t]?.()||'').join('')}
+    q:()=>`<div style="margin-top:.4rem"><b>${esc(b.x)}</b></div>`,img:()=>`<figure><img src="${b.src}" alt="${esc(b.cap)}">${b.cap?`<figcaption>${esc(b.cap)}</figcaption>`:''}</figure>`,p:()=>`<div style="white-space:pre-wrap">${esc(b.x)}</div>`,kv:()=>tb(null,b.rows),table:()=>tb(b.head,b.rows),note:()=>`<div class="mut" style="margin-top:.6rem"><small>${esc(b.x)}</small></div>`})[b.t]?.()||'').join('')}
 // my = Meine Einsätze; anonOk = false, wenn die Namen dort ohnehin anonym sind (my_runs anon)
 function aarDl(id,fmt,msg,my,anonOk=true){
   dlg((fmt==='docx'?'Word':'PDF')+' herunterladen',`<div class="mut">${esc(msg||'')}</div>
     <label class="chk"><input type="checkbox" id="adL" ${aarC.cfg.auto.log?'checked':''}> Einsatzlog anhängen</label>
     ${anonOk?`<label class="chk"><input type="checkbox" id="adA"> Namen anonymisieren</label>
     <div class="mut">Anonymisiert stehen statt Namen Bezeichnungen wie «Einsatzkraft 1» oder «Rettling 1», ohne Beschreibungen der Rettlinge. Die im Review erfassten Angaben bleiben, wie sie geschrieben wurden. Endgültig anonymisierte Einsätze sind immer anonym.</div>`:''}`,
-    async d=>{const r=await api('aar/get&id='+id+(my?'&my=1':'')+($('#adA',d)?.checked?'&anon=1':''));await aarMake(r,fmt,{log:$('#adL',d).checked})},'Herunterladen')}
+    async d=>{const r=await api('aar/get&id='+id+(my?'&my=1':'')+($('#adA',d)?.checked?'&anon=1':''));await aarImgs(r,my);await aarMake(r,fmt,{log:$('#adL',d).checked})},'Herunterladen')}
 // Wert fürs Dokument
 const aarV=(f,v)=>v==null||v===''?'':f.type==='date'?String(v).split('-').reverse().join('.'):f.type==='check'?(v==='1'?'Ja':'Nein'):String(v);
 // Dokumentmodell: title, sub, h (Abschnitt), q (Frage), p (Text), kv (Tabelle Bezeichnung/Wert), table (head, rows, w = Breiten in 1/50 %), note
@@ -582,7 +602,10 @@ function aarModel(x,o){const C=aarC.cfg,A=C.auto,i=x.inc,B=[],act=r=>!r.removed;
   let kv=[];const flush=()=>{if(kv.length)B.push({t:'kv',rows:kv});kv=[]};
   if(C.fields.length&&C.fields[0].type!=='head')B.push({t:'h',x:'Review'});
   for(const f of C.fields){const v=aarV(f,x.data[f.id]);
-    if(f.type==='head'){flush();B.push({t:'h',x:f.label})}else if(f.type==='area'){flush();B.push({t:'q',x:f.label},{t:'p',x:v||'–'})}else kv.push([f.label,v||'–'])}
+    if(f.type==='head'){flush();B.push({t:'h',x:f.label})}
+    else if(f.type==='img'){flush();const im=(x.imgs||[]).filter(m=>m.field===f.id&&m.src&&m.w&&m.h);B.push({t:'q',x:f.label});
+      if(!im.length)B.push({t:'p',x:'–'});for(const m of im){const png=m.src.startsWith('data:image/png');B.push({t:'img',src:m.src,w:m.w,h:m.h,fmt:png?'PNG':'JPEG',ext:png?'png':'jpeg',cap:m.caption||''})}}
+    else if(f.type==='area'){flush();B.push({t:'q',x:f.label},{t:'p',x:v||'–'})}else kv.push([f.label,v||'–'])}
   flush();
   if(A.people&&x.people.length)B.push({t:'h',x:`Einsatzkräfte (${x.people.length})`},{t:'table',head:['Name','Einrückoption','Spezialrolle','Eingerückt','Ausgetreten'],w:[1500,1000,1100,700,700],
     rows:x.people.map(p=>[p.name,p.mode||'–',p.role||'–',aarTm(p.joined),p.left_at?aarTm(p.left_at):'–'])});
@@ -609,17 +632,22 @@ async function aarDocx(B,logo,title){await loadJs(AAR_LIB.zip);
   const tbl=(head,rows,ws)=>`<w:tbl><w:tblPr><w:tblStyle w:val="Tabelle"/><w:tblW w:w="${TW}" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${ws.map(w=>`<w:gridCol w:w="${Math.round(w*TW/5000)}"/>`).join('')}</w:tblGrid>`
     +(head?`<w:tr><w:trPr><w:tblHeader/></w:trPr>${head.map((h,n)=>cell(h,ws[n],1,'D9E2F3')).join('')}</w:tr>`:'')
     +rows.map(r=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${r.map((c,n)=>cell(c,ws[n],!head&&!n,!head&&!n?'F2F2F2':'')).join('')}</w:tr>`).join('')+`</w:tbl><w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>`;
+  // Bild als eigener Absatz (Masse in mm, 1 mm = 36000 EMU)
+  const pic=(rid,name,id,w,h,jc)=>{const cx=Math.round(w*36000),cy=Math.round(h*36000);
+    return`<w:p><w:pPr><w:jc w:val="${jc}"/><w:spacing w:after="${jc==='right'?0:60}"/>${jc==='center'?'<w:keepNext/>':''}</w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="${name}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`};
   let img='';
-  if(logo){const mm=36000,h=Math.min(22,logo.h*50/logo.w),w=h*logo.w/logo.h,cx=Math.round(w*mm),cy=Math.round(h*mm);
-    img=`<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="1" name="Logo"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1" name="logo.${logo.ext}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdL"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`}
+  if(logo){const h=Math.min(22,logo.h*50/logo.w),w=h*logo.w/logo.h;img=pic('rIdL','logo.'+logo.ext,1,w,h,'right')}
+  // Bilder der Felder: höchstens 160 × 120 mm, kleine nicht vergrössert (96 dpi)
+  const IM=B.filter(b=>b.t==='img');IM.forEach((b,n)=>{b.rid='rIdI'+(n+1);b.file=`img${n+1}.${b.ext}`;b.mw=Math.min(160,120*b.w/b.h,b.w*.2646);b.mh=b.mw*b.h/b.w});
   const body=img+B.map(b=>b.t==='title'?par('Title',b.x):b.t==='sub'?par('Subtitle',b.x):b.t==='h'?par('Heading1',b.x):b.t==='q'?par('Heading2',b.x):b.t==='p'?par('',b.x)
+    :b.t==='img'?pic(b.rid,b.file,100+IM.indexOf(b),b.mw,b.mh,'center')+(b.cap?par('',b.cap,'<w:i/><w:color w:val="595959"/><w:sz w:val="18"/>','<w:jc w:val="center"/>'):'')
     :b.t==='note'?par('',b.x,'<w:i/><w:color w:val="7F7F7F"/><w:sz w:val="16"/>','<w:spacing w:before="240"/>'):b.t==='kv'?tbl(null,b.rows,[1600,3400]):tbl(b.head,b.rows,b.w)).join('');
   const W='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"',R='xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
   const bd=['top','left','bottom','right','insideH','insideV'].map(k=>`<w:${k} w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>`).join('');
   const z=new JSZip();
   z.file('[Content_Types].xml',`${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`);
   z.file('_rels/.rels',`${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
-  z.file('word/_rels/document.xml.rels',`${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>${logo?`<Relationship Id="rIdL" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.${logo.ext}"/>`:''}</Relationships>`);
+  z.file('word/_rels/document.xml.rels',`${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>${logo?`<Relationship Id="rIdL" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.${logo.ext}"/>`:''}${IM.map(b=>`<Relationship Id="${b.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${b.file}"/>`).join('')}</Relationships>`);
   z.file('word/styles.xml',`${H}<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="de-CH"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
 <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
 <w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="60"/></w:pPr><w:rPr><w:b/><w:color w:val="1F4E79"/><w:sz w:val="44"/><w:szCs w:val="44"/></w:rPr></w:style>
@@ -631,6 +659,7 @@ async function aarDocx(B,logo,title){await loadJs(AAR_LIB.zip);
   z.file('word/footer1.xml',`${H}<w:ftr ${W} ${R}><w:p><w:pPr><w:pStyle w:val="Footer"/><w:jc w:val="center"/></w:pPr>${run(title+' · Seite ')}<w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple>${run(' von ')}<w:fldSimple w:instr=" NUMPAGES "><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p></w:ftr>`);
   z.file('word/document.xml',`${H}<w:document ${W} ${R} xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}<w:sectPr><w:footerReference w:type="default" r:id="rIdF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`);
   if(logo)z.file('word/media/logo.'+logo.ext,logo.src.split(',')[1],{base64:true});
+  for(const b of IM)z.file('word/media/'+b.file,b.src.split(',')[1],{base64:true});
   return z.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
 // PDF: A4, Helvetica (Zeichen ausserhalb von Windows-1252 werden zu «?»), Tabellen mit AutoTable, Fusszeile mit Seitenzahl
 async function aarPdf(B,logo,title){await loadJs(AAR_LIB.pdf);await loadJs(AAR_LIB.at);
@@ -645,6 +674,8 @@ async function aarPdf(B,logo,title){await loadJs(AAR_LIB.pdf);await loadJs(AAR_L
     else if(b.t==='h'){y+=3;brk(16);txt(b.x,13,'bold',[31,78,121],6,0);doc.setDrawColor(31,78,121);doc.setLineWidth(.3);doc.line(M,y,M+W,y);y+=3}
     else if(b.t==='q'){y+=1;brk(14);txt(b.x,10.5,'bold',[0,0,0],5,.5)}
     else if(b.t==='p')txt(b.x,10.5,'normal',[0,0,0],4.8,2);
+    else if(b.t==='img'){const w=Math.min(W,110*b.w/b.h,b.w*.2646),h=w*b.h/b.w;brk(h+(b.cap?6:2));doc.addImage(b.src,b.fmt,M+(W-w)/2,y,w,h);y+=h+1.5;
+      if(b.cap){doc.setFont('helvetica','italic');doc.setFontSize(8.5);doc.setTextColor(90,90,90);for(const l of doc.splitTextToSize(T(b.cap),W)){brk(4);doc.text(l,105,y+3,{align:'center'});y+=4}}y+=2.5}
     else if(b.t==='note'){y+=4;txt(b.x,8.5,'italic',[110,110,110],4,0)}
     else{const kv=b.t==='kv';doc.autoTable({startY:y,margin:{left:M,right:M,top:M,bottom:M+6},theme:'grid',head:kv?undefined:[b.head.map(T)],body:b.rows.map(r=>r.map(T)),
       styles:{font:'helvetica',fontSize:9,cellPadding:1.5,lineColor:[191,191,191],lineWidth:.2,textColor:[0,0,0],overflow:'linebreak',valign:'top'},
@@ -697,7 +728,7 @@ function aarField(f,done){const T=aarC.types,neu=!f;f=f||{type:'area',label:'',h
     <label class="mut" id="afOw">Auswahlwerte (einer pro Zeile, höchstens 30)<textarea id="afO" rows="5">${esc((f.opts||[]).join('\n'))}</textarea></label>`,
     async d=>{const t=$('#afT',d).value;await done({id:f.id,type:t,label:$('#afL',d).value,hint:t==='head'?'':$('#afH',d).value,...(t==='select'?{opts:$('#afO',d).value.split('\n')}:{})})},neu?'Hinzufügen':'Speichern');
   const sync=()=>{const t=$('#afT',d).value;$('#afOw',d).hidden=t!=='select';$('#afHw',d).hidden=t==='head';
-    $('#afN',d).textContent=t==='head'?'Gliedert Formular und Dokument (Abschnittstitel), hat keinen Wert.':t==='area'?'Im Dokument als Frage mit der Antwort darunter.':'Im Dokument in einer Tabelle mit den übrigen kurzen Angaben.'};
+    $('#afN',d).textContent=t==='head'?'Gliedert Formular und Dokument (Abschnittstitel), hat keinen Wert.':t==='img'?'Beliebig viele Bilder mit Beschriftung (höchstens 50 je Review); im Dokument unter der Bezeichnung.':t==='area'?'Im Dokument als Frage mit der Antwort darunter.':'Im Dokument in einer Tabelle mit den übrigen kurzen Angaben.'};
   $('#afT',d).onchange=sync;sync()}
 // Einsatzprotokoll im Gross-Modus mit Knopf «Anonym» (Issue #54, anonymisierte Fassung vom Server); endgültig anonymisierte ohne Knopf
 async function openLog(id,title,done,forced){let l;try{l=await api('incident/log&id='+id+myQ())}catch(e){return fail(e)}
