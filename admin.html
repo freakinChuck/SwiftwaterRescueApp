@@ -45,8 +45,9 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .rpl{display:block;width:100%;text-align:left;border:0;border-left:4px solid;border-radius:0;background:none;padding:.35rem .5rem;font-size:.9rem}.rpl:hover{background:var(--panel)}.rpl .t{color:var(--mut);margin-right:.4rem}
 .rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
 .exp{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.8rem 0}.exp h3{margin:0 0 .3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.exp .badge.run{background:var(--alarm)}.exp .badge.done{background:var(--line)}.exp td{vertical-align:top}.exp td small{display:block;color:var(--mut)}
-.urg{display:grid;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:.45rem}.urb{display:grid;gap:.15rem;text-align:left;padding:.55rem .7rem .55rem 2.1rem;position:relative;border-radius:8px;min-height:0}.urb small{color:var(--mut);font-size:.78rem;line-height:1.3}
-.urb::before{content:'';position:absolute;left:.7rem;top:.7rem;width:.9rem;height:.9rem;border-radius:50%;border:2px solid var(--mut)}.urb[aria-pressed=true]{background:#1d7fd133;border-color:var(--ex)}.urb[aria-pressed=true]::before{content:'✓';border-color:var(--ex);background:var(--ex);color:#fff;font-size:.7rem;line-height:.9rem;text-align:center}.urb:disabled{opacity:.55;cursor:not-allowed}
+.dlg .card.mid{max-width:640px}.urh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem}.urh .urf{flex:1 1 12rem;max-width:18rem;margin:0}
+.urg{display:grid;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:.4rem}.urb{display:grid;gap:.1rem;text-align:left;padding:.45rem .6rem .45rem 2rem;position:relative;border-radius:8px;min-height:0}.urb[hidden]{display:none}.urb small{color:var(--mut);font-size:.78rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.urb::before{content:'';position:absolute;left:.6rem;top:.6rem;width:.9rem;height:.9rem;border-radius:50%;border:2px solid var(--mut)}.urb[aria-pressed=true]{background:#1d7fd133;border-color:var(--ex)}.urb[aria-pressed=true]::before{content:'✓';border-color:var(--ex);background:var(--ex);color:#fff;font-size:.7rem;line-height:.9rem;text-align:center}.urb:disabled{opacity:.55;cursor:not-allowed}
 .pwr{display:flex;gap:.35rem}.pwr input{flex:1;min-width:0;font-family:ui-monospace,Consolas,monospace}.pwr button{flex:0 0 auto}
 .lsel{display:flex;flex-wrap:wrap;gap:.35rem}.lchip{display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--line);border-radius:999px;padding:.1rem .2rem .1rem .6rem}.lchip button{padding:.1rem .45rem;min-height:0;border-radius:999px}
 /* Helikopter: Zahlenwerte als Karten mit Einheit, Bereich und Standard (geänderte Werte hervorgehoben) */
@@ -81,15 +82,17 @@ onUnauth=()=>start();
 const UR=id=>(uroles&&uroles.roles.find(r=>r.id===id))||{name:'?',perms:[]};
 const ROLE_LABEL=u=>u.uroles.length?u.uroles.map(id=>esc(UR(id).name)).join(', '):'<span class="mut">keine</span>';
 const urOk=r=>r.perms.every(can);
-// Häkchen je Rolle; u = bestehende Person (sonst die Vorauswahl def), die eigene Administratorrolle bleibt gesperrt
 // Rollenauswahl: je Rolle eine Karte zum Antippen (aria-pressed) mit den enthaltenen Rechten
 const urPermTxt=r=>r.sys==='admin'?'Alle Rechte, auch künftige':r.perms.map(k=>(uroles.perms.find(p=>p.k===k)||{name:k}).name).join(' · ')||'keine Rechte';
-const roleChecks=u=>`<div class="urg" role="group" aria-label="Benutzerrollen">${uroles.roles.map(r=>{const on=u?u.uroles.includes(r.id):!!r.def&&urOk(r),lock=!urOk(r)||u&&u.id===me.id&&r.sys==='admin'&&on;
-  return`<button type="button" class="urb" data-ur="${r.id}" aria-pressed="${on}" ${lock?'disabled':''} title="${lock?(urOk(r)?'Die eigene Rolle Systemadministrator bleibt':'Enthält Rechte, die du selbst nicht hast'):'Antippen zum Wählen'}"><b>${esc(r.name)}</b><small>${esc(urPermTxt(r))}</small></button>`}).join('')}</div>`;
+const roleChecks=u=>`<div class="urh"><span class="mut">Benutzerrollen <span class="urn"></span></span>${uroles.roles.length>8?'<input type="search" class="urf" placeholder="Rolle oder Recht suchen" aria-label="Rollen filtern">':''}</div><div class="urg" role="group" aria-label="Benutzerrollen">${uroles.roles.map(r=>{const on=u?u.uroles.includes(r.id):!!r.def&&urOk(r),lock=!urOk(r)||u&&u.id===me.id&&r.sys==='admin'&&on;
+  return`<button type="button" class="urb" data-ur="${r.id}" aria-pressed="${on}" ${lock?'disabled':''} title="${esc(urPermTxt(r))}${lock?(urOk(r)?' – die eigene Rolle Systemadministrator bleibt':' – enthält Rechte, die du selbst nicht hast'):''}"><b>${esc(r.name)}</b><small>${esc(urPermTxt(r))}</small></button>`}).join('')}</div>`;
 const pwField=(id,label)=>`<label class="mut">${label}<span class="pwr"><input id="${id}" autocomplete="off" spellcheck="false" value="${genPw()}"><button type="button" data-pwn title="Neues Passwort erzeugen">↻</button><button type="button" data-pwc>Kopieren</button></span></label>`;
 const pwWire=d=>{const i=d.querySelector('.pwr input');d.querySelector('[data-pwn]').onclick=()=>i.value=genPw();
   d.querySelector('[data-pwc]').onclick=()=>navigator.clipboard.writeText(i.value).then(()=>toast('Startpasswort kopiert.','ok'),()=>{i.select();toast('Kopieren nicht möglich, bitte von Hand kopieren.','info')})};
-const roleWire=el=>el.querySelectorAll('.urb').forEach(b=>b.onclick=()=>b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')!=='true'));
+const roleWire=el=>{const bs=[...el.querySelectorAll('.urb')],n=el.querySelector('.urn'),f=el.querySelector('.urf');
+  const cnt=()=>{const k=bs.filter(b=>b.getAttribute('aria-pressed')==='true').length;n.textContent=k?`(${k} gewählt)`:'(keine gewählt)'};cnt();
+  bs.forEach(b=>b.onclick=()=>{b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')!=='true');cnt()});
+  if(f)f.oninput=()=>{const q=f.value.trim().toLowerCase();bs.forEach(b=>b.hidden=!!q&&!b.textContent.toLowerCase().includes(q))}};
 const roleVal=el=>[...el.querySelectorAll('[data-ur]')].filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>+c.dataset.ur);
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
@@ -142,13 +145,13 @@ async function loadUsers(){const el=$('#sU');try{[users,uroles]=await Promise.al
   $('#uA').onclick=()=>{const d=dlg('Neuer Benutzer',`<div class="jtwo"><label class="mut">Name<input id="uf" autocomplete="off"></label><label class="mut">Benutzername<input id="un" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>
       ${pwField('up','Startpasswort')}
       <div class="mut">Die Person muss es bei der ersten Anmeldung ändern. Gib es vor dem Anlegen weiter, danach wird es nicht mehr angezeigt.</div>
-      <div class="mut">Benutzerrollen</div>${roleChecks(null)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du nicht vergeben.</div>`,
+      ${roleChecks(null)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du nicht vergeben.</div>`,
       async d=>{const nm=$('#uf',d).value.trim()||$('#un',d).value.trim();await api('user/save',{username:$('#un',d).value,name:$('#uf',d).value,password:$('#up',d).value,uroles:roleVal(d)});toast(`Benutzer «${nm}» angelegt.`,'ok');loadUsers()},'Benutzer anlegen');
-    roleWire(d);pwWire(d)};
+    d.firstElementChild.classList.add('mid');roleWire(d);pwWire(d)};
   const U=id=>users.find(x=>x.id==id);
   el.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.e),self=u.id===me.id;
-    dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><div class="mut">Benutzerrollen</div>${roleChecks(u)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Systemadministrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
-      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,uroles:roleVal(d)});toast('Gespeichert.');if(self)me=(await api('me')).me;loadUsers()});roleWire(d)});
+    const d=dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label>${roleChecks(u)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Systemadministrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
+      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,uroles:roleVal(d)});toast('Gespeichert.');if(self)me=(await api('me')).me;loadUsers()});d.firstElementChild.classList.add('mid');roleWire(d)});
   el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.p);
     const d=dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div>${pwField('eP','Neues Startpasswort')}<div class="mut">Gib es vor dem Zurücksetzen weiter, es wird danach nicht mehr angezeigt.</div>`,
       async d=>{await api('user/password',{id:u.id,password:$('#eP',d).value});toast(`Passwort von ${u.name} zurückgesetzt.`,'ok');loadUsers()},'Zurücksetzen');pwWire(d)});
