@@ -6,7 +6,7 @@ header('Cache-Control: no-store');
 ini_set('serialize_precision', '-1'); // Zahlen im JSON kurz ausgeben (47.481 statt 47.48100000000000164…), Hosting-Einstellung übersteuern
 function out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE);
   if (!empty($GLOBALS['pushQ'])) { // Web-Push erst nach der Antwort senden (Issue #67), damit z. B. «Alarm auslösen» nicht auf die Push-Dienste wartet
-    ignore_user_abort(true); if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); else flush();
+    ignore_user_abort(true); if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); elseif (function_exists('litespeed_finish_request')) litespeed_finish_request(); else flush(); // cyon läuft mit LiteSpeed
     try { pushFlush(); } catch (Throwable $e) { error_log('Push: ' . $e->getMessage()); } }
   exit; }
 function fail($m, $c = 400) { out(['error' => $m], $c); }
