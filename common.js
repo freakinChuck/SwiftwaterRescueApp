@@ -5,7 +5,14 @@ let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt di
 async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
   const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth()}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
-const fail=e=>alert(e instanceof TypeError?'Keine Verbindung zum Server. Bitte später nochmals versuchen.':e.message); // TypeError: fetch ohne Netz (Issue #67)
+// Kurze Hinweise statt alert(): ohne Klick, verschwinden von selbst (Dauer nach Textlänge), Antippen schliesst sofort.
+// kind: 'ok' (grün, Standard), 'info' (blau), 'err' (rot, länger sichtbar). Rückfragen (confirm) bleiben Dialoge.
+function toast(t,kind='ok'){t=String(t==null?'':t);let c=document.getElementById('tsts');
+  if(!c){c=document.createElement('div');c.id='tsts';document.body.appendChild(c)}
+  const d=document.createElement('div');d.className='tst '+kind;d.setAttribute('role',kind==='err'?'alert':'status');d.textContent=t;
+  const rm=()=>{d.classList.add('out');setTimeout(()=>d.remove(),250)};d.onclick=rm;c.appendChild(d);
+  while(c.children.length>4)c.firstChild.remove();setTimeout(rm,Math.min(12000,(kind==='err'?5000:2500)+t.length*45))}
+const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte später nochmals versuchen.':e.message,'err'); // TypeError: fetch ohne Netz (Issue #67)
 /* ---------- Karte (Einsatz-App und Replay der Verwaltung) ---------- */
 // Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
 const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
@@ -170,7 +177,7 @@ function pwDialog(forced,done){
     <label class="mut">Neues Passwort<input id="pwN" type="password" autocomplete="new-password"></label>
     <label class="mut">Neues Passwort wiederholen<input id="pwR" type="password" autocomplete="new-password"></label>`,
     async d=>{const n=$('#pwN',d).value;if(n!==$('#pwR',d).value)throw new Error('Die neuen Passwörter stimmen nicht überein.');
-      await api('me/password',{old:$('#pwO',d).value,new:n});alert('Passwort geändert.');done&&done()},
+      await api('me/password',{old:$('#pwO',d).value,new:n});toast('Passwort geändert.');done&&done()},
     'Speichern',forced?'Abmelden':'Abbrechen',forced?()=>{logout();done&&done()}:null)}
 /* ---------- Einsatzlog im Gross-Modus ---------- */
 let big=null;
@@ -182,7 +189,7 @@ function openBigLog(title,get,live,anon){big={title,get,live,anon,anonOn:false,d
   o.innerHTML=`<div id="bigHead"><h2 id="bigT"></h2><select id="bigF" aria-label="Filter">${Object.entries(KIND_GROUPS).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('')}</select>${anon?'<button id="bigA" aria-pressed="false" title="Namen von Einsatzkräften, Rettlingen und Externen durch Bezeichnungen ersetzen">Anonym</button>':''}<button id="bigS"></button><button id="bigFs">Vollbild</button><button id="bigX" class="pri">Schliessen</button></div><div id="bigList"></div>`;
   document.body.appendChild(o);
   $('#bigF').onchange=e=>{big.filter=e.target.value;renderBigLog()};
-  if(anon)$('#bigA').onclick=async()=>{const b=$('#bigA'),on=!big.anonOn;b.disabled=true;try{await anon(on);big.anonOn=on;b.setAttribute('aria-pressed',on);b.textContent=(on?'✓ ':'')+'Anonym'}catch(e){alert(e.message)}b.disabled=false;renderBigLog()};$('#bigS').onclick=()=>{big.desc=!big.desc;renderBigLog()};
+  if(anon)$('#bigA').onclick=async()=>{const b=$('#bigA'),on=!big.anonOn;b.disabled=true;try{await anon(on);big.anonOn=on;b.setAttribute('aria-pressed',on);b.textContent=(on?'✓ ':'')+'Anonym'}catch(e){fail(e)}b.disabled=false;renderBigLog()};$('#bigS').onclick=()=>{big.desc=!big.desc;renderBigLog()};
   $('#bigFs').onclick=()=>{document.fullscreenElement?document.exitFullscreen():o.requestFullscreen&&o.requestFullscreen().catch(()=>{})};$('#bigX').onclick=closeBigLog;
   renderBigLog()}
 function closeBigLog(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});const o=$('#bigLog');if(o)o.remove();big=null}

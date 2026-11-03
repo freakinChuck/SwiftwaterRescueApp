@@ -369,7 +369,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
     // Öffentliche Ansicht ein/aus, anonym (Namen ausblenden) und mit Einsatzprotokoll (Issue #54); Häkchen verlieren den Fokus, damit das Menü wieder neu gezeichnet wird
     ['pubOn','pubAnon','pubLog'].forEach(k=>{const c=$('#'+k);if(c)c.onchange=()=>{c.blur();if(k==='pubOn'&&c.checked&&!confirm('Öffentliche Ansicht einschalten?\n\nWer den Link hat, sieht ohne Anmeldung die Karte mit den Standorten der Einsatzkräfte, Markierungen, Bereichen und Rettlingen'+($('#pubLog').checked?', dazu das Einsatzprotokoll mit den Nachrichten':' (keine Nachrichten, kein Einsatzlog)')+'.')){c.checked=false;return}
       api('incident/public',k==='pubOn'?{on:c.checked}:k==='pubAnon'?{anon:c.checked}:{log:c.checked}).then(poll).catch(e=>{fail(e);poll()})}});
-    if($('#bPubCp'))$('#bPubCp').onclick=()=>{const t=$('#pubUrl');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>alert('Link kopiert.')).catch(()=>{try{document.execCommand('copy');alert('Link kopiert.')}catch(e){}})}}}
+    if($('#bPubCp'))$('#bPubCp').onclick=()=>{const t=$('#pubUrl');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>toast('Link kopiert.')).catch(()=>{try{document.execCommand('copy');toast('Link kopiert.')}catch(e){}})}}}
 // Übungsleitung (Issue #29): vorbereitete Elemente der Übung, erst nach der Freigabe für alle sichtbar und fürs Suchgebiet relevant
 const EXK={pls:'PLS des Einsatzes',res:'Neuer Rettling',seen:'Rettling gesichtet',ext:'Neue externe Einsatzkraft',extdel:'Externe Einsatzkraft entfernen'};
 function exWhat(j){const ref=(j.kind==='seen'||j.kind==='extdel')&&st.ex_injects.find(x=>x.id===j.ref_id),t=j.ago==null?', Zeitpunkt gibst du bei der Freigabe an':j.ago?`, Drift ab ${j.ago} min vor der Freigabe`:'';
@@ -451,14 +451,14 @@ function overviewPts(){if(!st||!st.incident)return[];return[...(vis('app')?st.pa
 function autoFit(){if(!autoView||!map)return;const pts=overviewPts(),k=JSON.stringify(pts.map(p=>p.map(x=>x.toFixed(5))));if(!pts.length||k===autoKey)return;autoKey=k;
   autoBusy=Date.now();if(pts.length===1)map.setView(pts[0],15);else map.fitBounds(L.latLngBounds(pts),FITPAD)}
 // key = Teilgebiet (partKey), sonst ganzes Suchgebiet
-function fitArea(key){toggleSheet(false);const p=key?areaParts.find(x=>x.key===key):null;if(key&&!p)return alert('Das Suchgebiet dieses Rettlings ist noch nicht berechnet. '+(areaInfo||'Zuerst die Fliessgeschwindigkeit setzen.'));
-  const b=areaBounds(p||areaShape);if(!b)return alert('Das Suchgebiet ist noch nicht berechnet. '+(areaInfo||'Zuerst die Fliessgeschwindigkeit setzen.'));
+function fitArea(key){toggleSheet(false);const p=key?areaParts.find(x=>x.key===key):null;if(key&&!p)return toast('Das Suchgebiet dieses Rettlings ist noch nicht berechnet. '+(areaInfo||'Zuerst die Fliessgeschwindigkeit setzen.'),'info');
+  const b=areaBounds(p||areaShape);if(!b)return toast('Das Suchgebiet ist noch nicht berechnet. '+(areaInfo||'Zuerst die Fliessgeschwindigkeit setzen.'),'info');
   stopFollow();(p?[p]:st.sources||[]).forEach(s=>b.extend([s.lat,s.lon]));map.fitBounds(b,FITPAD)}
 // Teilgebiet eines vermissten Rettlings: eigener PLS oder der des Einsatzes
 function resPart(r){const i=st.incident;if(r.pls_lat!=null)return partKey(r.pls_lat,r.pls_lon,r.pls_at);return i.lat!=null?partKey(i.lat,i.lon,i.pls_at):null}
 // Alle Einsatzkräfte mit bekanntem Standort, egal ob im Suchgebiet
 function fitForces(){toggleSheet(false);const pts=[...st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'),...extList()];
-  if(!pts.length)return alert('Keine Einsatzkräfte mit bekanntem Standort.');
+  if(!pts.length)return toast('Keine Einsatzkräfte mit bekanntem Standort.','info');
   stopFollow();map.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lon])),FITPAD)}
 /* ---------- Seitenfenster «Einsatzkräfte» (Zentrieren, Folgen; Zoom bleibt) und «Nachrichten» ---------- */
 let followId=null,panel=null,msgSeen=0,msgFormKey=''; // panel: 'people' | 'res' | 'msgs' | 'pois' | null

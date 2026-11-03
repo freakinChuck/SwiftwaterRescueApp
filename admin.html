@@ -205,7 +205,7 @@ async function loadRd(){const el=$('#sF');let s;try{s=await api('settings')}catc
   el.innerHTML=`<h2>Flussdistanz</h2><div class="mut">Das Werkzeug «Flussdistanz» in der Einsatz-App zeigt neben der Treibzeit mit der Fliessgeschwindigkeit die Dauer für diese Geschwindigkeiten (z. B. Boot, Fahrzeug).</div>
     <div class="row" style="align-items:end"><label class="mut">Geschwindigkeiten in km/h, durch Komma getrennt (1 bis 6 Werte)<input id="rdS" value="${esc(s.rd_speeds.join(', '))}" inputmode="decimal"></label><button id="rdSv">Speichern</button></div>`;
   $('#rdSv').onclick=()=>{const v=$('#rdS').value.replace(/km\/h/gi,' ').split(/[,;\s]+/).filter(Boolean); // «km/h» darf mitgeschrieben werden
-    api('settings/save',{rd_speeds:v}).then(()=>{alert('Gespeichert. Die Einsatz-App übernimmt die Werte beim nächsten Laden.');loadRd()}).catch(fail)}}
+    api('settings/save',{rd_speeds:v}).then(()=>{toast('Gespeichert. Die Einsatz-App übernimmt die Werte beim nächsten Laden.');loadRd()}).catch(fail)}}
 /* ---------- Navigation (Issue #79): verfügbare Apps und Standard ---------- */
 async function loadNav(){const el=$('#sNv');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Navigation</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const as=s.nav_apps||[];
@@ -269,7 +269,7 @@ function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?n
     else if(b.id==='aDf'){if(confirm('Standardeinstellungen für Helikopter wiederherstellen (noch nicht gespeichert)?')){airC=JSON.parse(JSON.stringify(s.air_default));drawAir()}}
     else if(b.id==='aSv'){if(!c.src.length&&!confirm('Keine Datenquelle eingeschaltet: Es werden keine Helikopter angezeigt. Trotzdem speichern?'))return;
       c.rescue=c.rescue.filter(x=>x.k.trim()||x.n.trim());b.disabled=true;
-      api('settings/save',{air:{...c,rescue:c.rescue}}).then(()=>{alert('Gespeichert. Gilt ab der nächsten Abfrage.');loadAir()}).catch(x=>{fail(x);b.disabled=false})}}}
+      api('settings/save',{air:{...c,rescue:c.rescue}}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.');loadAir()}).catch(x=>{fail(x);b.disabled=false})}}}
 /* ---------- Gewässerdaten: Haltedauer des Overpass-Caches und Overpass-Server (Reihenfolge) ---------- */
 let opUrls=[],opDef=[],opOff=[];
 async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all([api('settings'),api('overpass/stats')])}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
@@ -285,14 +285,14 @@ async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all(
     <h3>Verwendung und Verfügbarkeit</h3>${opStats(os,s.overpass_urls)}`;
   $('#opOn').onchange=e=>{const c=e.target;c.disabled=true;api('settings/save',{overpass_on:c.checked?1:0}).catch(x=>{c.checked=!c.checked;fail(x)}).finally(()=>{c.disabled=false})};
   $('#opSr').onclick=()=>{if(confirm('Statistik der Overpass-Server zurücksetzen?'))api('overpass/stats/reset',{}).then(loadOp).catch(fail)};
-  $('#opSv').onclick=()=>api('settings/save',{overpass_ttl:$('#opT').value}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail);
-  $('#opA').onclick=()=>{const u=$('#opN').value.trim();if(!/^https:\/\/[^/?#@]+\//i.test(u))return alert('Bitte eine vollständige https-Adresse angeben, z. B. https://overpass-api.de/api/interpreter');
+  $('#opSv').onclick=()=>api('settings/save',{overpass_ttl:$('#opT').value}).then(()=>{toast('Gespeichert.');loadOp()}).catch(fail);
+  $('#opA').onclick=()=>{const u=$('#opN').value.trim();if(!/^https:\/\/[^/?#@]+\//i.test(u))return toast('Bitte eine vollständige https-Adresse angeben, z. B. https://overpass-api.de/api/interpreter','err');
     if(!opUrls.includes(u))opUrls.push(u);$('#opN').value='';drawOpList()};
   $('#opN').onkeydown=e=>{if(e.key==='Enter')$('#opA').click()};
-  $('#opUs').onclick=()=>{if(!opUrls.length)return alert('Mindestens ein Server ist nötig. «Standard wiederherstellen» setzt die vorgegebene Liste.');
+  $('#opUs').onclick=()=>{if(!opUrls.length)return toast('Mindestens ein Server ist nötig. «Standard wiederherstellen» setzt die vorgegebene Liste.','err');
     if(opUrls.every(u=>opOff.includes(u))&&!confirm('Alle Server sind ausgeschaltet. Overpass wird dann nicht mehr abgefragt. Trotzdem speichern?'))return;
-    api('settings/save',{overpass_urls:opUrls,overpass_off:opOff.filter(u=>opUrls.includes(u))}).then(()=>{alert('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail)};
-  $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[],overpass_off:[]}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail)};
+    api('settings/save',{overpass_urls:opUrls,overpass_off:opOff.filter(u=>opUrls.includes(u))}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail)};
+  $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[],overpass_off:[]}).then(()=>{toast('Gespeichert.');loadOp()}).catch(fail)};
   drawOpList()}
 // Statistik je Server (Issue #45): Versuche vom Server (Hosting) und direkt vom Gerät (Rückfall), Abfragen aus dem Zwischenspeicher zählen nicht
 function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',
