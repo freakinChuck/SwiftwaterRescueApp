@@ -196,7 +196,8 @@ function isLead($incId) {
   return $r && (int)$r['is_lead'];
 }
 function leadMode($code) { $m = modeRow($code); return $m && (int)$m['lead_rights']; }
-function canManage($inc) { global $me, $uid; return $me['is_admin'] || (int)$inc['created_by'] === $uid || isLead((int)$inc['id']) || exLead($inc); }
+// Einsatzleitung nur mit Teilnahme (Einrückoption gewählt, nicht abgelehnt/ausgetreten, Issue #82); die Übungsleitung auch ohne
+function canManage($inc) { global $me, $uid; return exLead($inc) || isActivePart((int)$inc['id']) && ($me['is_admin'] || (int)$inc['created_by'] === $uid || isLead((int)$inc['id'])); }
 // Vorbereitete Übung eines Einsatzes (Issue #29) und ob die angemeldete Person sie leitet (Übungsleitung: Rechte der Einsatzleitung, wird nicht alarmiert, kann zusätzlich teilnehmen)
 function exPlan($inc) { global $db; if (empty($inc['plan_id'])) return null; $s = $db->prepare("SELECT * FROM ex_plans WHERE id=?"); $s->execute([(int)$inc['plan_id']]); return $s->fetch() ?: null; }
 function exLeads($p) { return array_map('intval', json_decode($p['leads'] ?? '[]', true) ?: []); }
