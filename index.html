@@ -291,7 +291,7 @@ const roleName=p=>(roles.find(r=>r.id==p.role_id)||{}).name;
 const sec=(k,t,b)=>`<details data-k="${k}" ${openSec.has(k)?'open':''}><summary>${t}</summary>${b}</details>`;
 // Fusszeile im Menü (immer sichtbar): Server, angemeldete Person, alle aktuellen Rechte im Einsatz
 function footInfo(){const i=st&&st.incident,m=i&&st.me,joined=!!(m&&!m.left_at&&m.mode!=='declined'),r=joined&&roles.find(x=>x.id==m.role_id),sh=joined&&shares(m.mode);
-  const rows=[['Server',location.host+location.pathname.replace(/[^/]*$/,'')],['Angemeldet',`${me.name} (${me.username}) · ${me.is_admin?'Administrator':me.is_planner?'Übungsleiter':'Einsatzkraft'}${me.exercise_mode?' · Übungsmodus an':''}`]];
+  const rows=[['Server',location.host+location.pathname.replace(/[^/]*$/,'')],['Angemeldet',`${me.name} (${me.username}) · ${esc(roleNames(me))}${me.exercise_mode?' · Übungsmodus an':''}`]];
   // Mein Standort (Issue #76): immer LV95 und WGS84 Grad/Min/Sek, ausser die Person blendet Koordinaten aus (coord_sys none)
   const mp=lastPos||(joined&&m.lat!=null?{lat:m.lat,lon:m.lon}:null)||herePos;
   if(csys()!=='none')rows.push(['Mein Standort',mp?`LV95 ${fmtC(mp.lat,mp.lon,'lv95')} · WGS84 ${fmtC(mp.lat,mp.lon,'wgs84dms')}${manual&&mp===lastPos?' (manuell gesetzt)':''}`:hereErr||'wird ermittelt …']);
@@ -308,13 +308,13 @@ function footInfo(){const i=st&&st.incident,m=i&&st.me,joined=!!(m&&!m.left_at&&
 function leadWhy(i,m,joined){const why=[],r=joined&&roles.find(x=>x.id==m.role_id);
   if(joined&&leadMode(m.mode))why.push('Einrückoption '+modeOf(m.mode).name);
   if(r&&r.is_lead)why.push('Spezialrolle '+r.name);
-  if(me.is_admin)why.push('Administrator');
+  if(can('inc_lead'))why.push('Benutzerrolle mit «Jeden Einsatz leiten»');
   if(i.created_by===me.id)why.push('hat den Einsatz gestartet');
   return why.join(', ')||'laut Server'}
 function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «Einstellungen» hat eigene Prüfungen
   const s=$('#sheet');if(!s||creating)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
   // Kopfzeile des Menüs: Verwaltung für Administratoren und Übungsleiter (Issue #58), «Meine Einsätze» für alle (Issue #61, Ansicht als Einsatzkraft, auch für Administratoren; fehlt bei my_runs off)
-  const ba=$('#bAdm');if(ba)ba.hidden=!(me&&(me.is_admin||me.is_planner));
+  const ba=$('#bAdm');if(ba)ba.hidden=!(me&&ADMIN_PERMS.some(can)); // Issue #63: wer ein Recht der Verwaltung hat
   const bm=$('#bMy');if(bm)bm.hidden=!(me&&me.my_runs&&me.my_runs!=='off');
   // Werkzeuge: auch ohne Einsatz verfügbar (im Einsatz zusätzlich über den Kartenknopf)
   const tools=!feat('rd')?'':sec('tools','Werkzeuge',`<div class="row"><button id="bRdM">Flussdistanz messen</button></div><div class="mut">Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei ${rdSpeeds().join(', ')} km/h.</div>`);
@@ -322,7 +322,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   // vorbereitete Übungen (Issue #29): Übungsleitung und Administratoren starten sie hier, Alarm mit der vorbereiteten Aufgebotsmeldung
   const xps=(st&&!st.incident&&st.ex_plans)||[],xsec=!xps.length?'':sec('explans',`Vorbereitete Übungen (${xps.length})`,xps.map(p=>`<div class="row" style="align-items:center"><span style="flex:1">${esc(p.title)}</span><button class="pri" data-xs="${p.id}">Übung starten</button></div>`).join('')+'<div class="mut">Startet die Übung mit der vorbereiteten Aufgebotsmeldung. Du leitest sie als Übungsleitung: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.</div>');
   if((!st||!st.incident)&&secReset){secReset=false;openSec=new Set()} // alle Abschnitte zu, auch «Vorbereitete Übungen» (Issue #62); die Anzahl steht im Titel
-  if(!st||!st.incident){s.innerHTML=pushNag()+`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button><button id="bNewEx">Übung starten</button></div>`+xsec+tools+footInfo();$('#bNew').onclick=()=>newView(0);$('#bNewEx').onclick=()=>newView(1);bindTools();bindPush();
+  if(!st||!st.incident){s.innerHTML=pushNag()+`<h3>Kein aktiver Einsatz</h3>${can('inc_start')||can('ex_start')?`<div class="row">${can('inc_start')?'<button class="pri" id="bNew">Einsatz starten</button>':''}${can('ex_start')?'<button id="bNewEx">Übung starten</button>':''}</div>`:'<div class="mut">Du darfst keine Einsätze oder Übungen starten (Benutzerrolle). Bei einem Alarm erscheint er hier.</div>'}`+xsec+tools+footInfo();if($('#bNew'))$('#bNew').onclick=()=>newView(0);if($('#bNewEx'))$('#bNewEx').onclick=()=>newView(1);bindTools();bindPush();
     s.querySelectorAll('[data-xs]').forEach(b=>b.onclick=()=>{const p=xps.find(x=>x.id===+b.dataset.xs);if(confirm(`Übung «${p.title}» jetzt starten? ${p.invited?'Die aufgebotenen Personen werden':'Alle werden'} alarmiert.`))api('ex/start',{id:p.id}).then(()=>{secReset=true;return poll()}).catch(fail)});return}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
@@ -819,7 +819,7 @@ function prefs(o){const p=$('#prefs');if(!p)return;
 function prefsHash(){prefsPushed=false;if(location.hash==='#einstellungen')history.replaceState(null,'',location.pathname+location.search)}
 window.addEventListener('popstate',()=>{const p=$('#prefs');if(!p||!me)return;if(location.hash==='#einstellungen'){if(p.hidden)prefs(true)}else if(!p.hidden){prefsPushed=false;p.hidden=true}});
 function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#prefs input,#prefs select'))return; // Eingabe nicht überschreiben
-  const h=`<div class="pcard"><h4>Konto</h4><div class="pwho">${me.photo?`<img src="${esc(me.photo)}" alt="Profilbild">`:'<span class="ph0" aria-hidden="true">👤</span>'}<div><b>${esc(me.name)}</b><div class="mut">${esc(me.username)} · ${me.is_admin?'Administrator':me.is_planner?'Übungsleiter':'Einsatzkraft'}</div></div></div><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden></div>`
+  const h=`<div class="pcard"><h4>Konto</h4><div class="pwho">${me.photo?`<img src="${esc(me.photo)}" alt="Profilbild">`:'<span class="ph0" aria-hidden="true">👤</span>'}<div><b>${esc(me.name)}</b><div class="mut">${esc(me.username)} · ${esc(roleNames(me))}</div></div></div><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden></div>`
     +`<div class="pcard"><h4>Alarmierung</h4><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label>${pushHtml()}</div>`
     +`<div class="pcard"><h4>Anzeige</h4><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label>${feat('nav')?`<label class="mut">Navigations-App (Knopf 🧭)<select id="navA"><option value="">Standard: ${esc(NAV_APPS[me.nav_default]||NAV_APPS.google)}</option>${(me.nav_apps||[]).filter(navOk).map(k=>`<option value="${k}" ${k===me.nav_app?'selected':''}>${esc(NAV_APPS[k])}</option>`).join('')}</select></label>`:''}</div>`;
   if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;

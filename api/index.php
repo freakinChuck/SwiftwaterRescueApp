@@ -55,6 +55,10 @@ foreach ([
  // Vorlagen dafür aus der Verwaltung; lat/lon NULL = Standort beim Erfassen auf der Karte wählen; deaktiviert statt gelöscht
  // Web-Push-Abonnements je Gerät (Issue #67): endpoint des Push-Dienstes, Schlüssel des Browsers (p256dh, auth, base64url)
  "CREATE TABLE IF NOT EXISTS push_subs(id $ai, user_id INT, endpoint TEXT, p256dh $tx, auth $tx, created BIGINT)",
+ // Benutzerrollen (Issue #63): perms = JSON-Liste der Rechte (PERMS), sys 'admin' = Administrator (alle Rechte, auch künftige, nicht bearbeitbar), def = bei neuen Benutzern vorausgewählt.
+ // Eine Person kann mehrere Rollen haben (user_uroles) und erhält alle Rechte all ihrer Rollen
+ "CREATE TABLE IF NOT EXISTS uroles(id $ai, name $tx, perms TEXT, sys $tx NULL, def INT DEFAULT 0)",
+ "CREATE TABLE IF NOT EXISTS user_uroles(user_id INT, urole_id INT, PRIMARY KEY(user_id, urole_id))",
  "CREATE TABLE IF NOT EXISTS ext_templates(id $ai, name $tx, descr TEXT, role_id INT NULL, lat DOUBLE NULL, lon DOUBLE NULL, active INT DEFAULT 1)",
  // Verwendung je Overpass-Server (Issue #45): src server = Abfrage vom Hosting, device = direkte Abfrage des Geräts (Rückfall); ok_ms = Summe der Antwortzeiten der erfolgreichen
  "CREATE TABLE IF NOT EXISTS overpass_stats(url $tx, src $tx, uses INT DEFAULT 0, ok INT DEFAULT 0, fails INT DEFAULT 0, ok_ms BIGINT DEFAULT 0, last_ok BIGINT NULL, last_fail BIGINT NULL, last_err $tx NULL, PRIMARY KEY(url, src))",
@@ -85,6 +89,17 @@ if (!$db->query("SELECT COUNT(*) c FROM modes")->fetch()['c']) { // bisherige fe
 }
 if (!$db->query("SELECT COUNT(*) c FROM users")->fetch()['c'])
   $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin,must_change) VALUES(?,?,?,1,1)")->execute([$cfg['admin_user'], 'Administrator', password_hash($cfg['admin_pass'], PASSWORD_DEFAULT)]);
+// Berechtigungssystem (Issue #63): beim ersten Aufruf die bisherigen festen Benutzerrollen als Rollen anlegen und zuweisen
+// (alle = Einsatzkraft, is_planner = zusätzlich Übungsleiter, is_admin = zusätzlich Administrator). Die Spalten is_admin/is_planner gelten danach nicht mehr.
+if (!$db->query("SELECT COUNT(*) c FROM uroles")->fetch()['c']) {
+  $st = $db->prepare("INSERT INTO uroles(name,perms,sys,def) VALUES(?,?,?,?)"); $ids = [];
+  foreach ([['Administrator', [], 'admin', 0], ['Übungsleiter', ['ex_plan'], null, 0], ['Einsatzkraft', ['inc_start', 'ex_start'], null, 1]] as [$n, $p, $sy, $d]) { $st->execute([$n, json_encode($p), $sy, $d]); $ids[] = (int)$db->lastInsertId(); }
+  $st = $db->prepare("INSERT INTO user_uroles(user_id,urole_id) VALUES(?,?)");
+  foreach ($db->query("SELECT id,is_admin,is_planner FROM users")->fetchAll() as $u) {
+    $st->execute([(int)$u['id'], $ids[2]]);
+    if ((int)$u['is_admin']) $st->execute([(int)$u['id'], $ids[0]]); elseif ((int)$u['is_planner']) $st->execute([(int)$u['id'], $ids[1]]);
+  }
+}
 
 $route = $_GET['r'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: [];
@@ -106,6 +121,25 @@ function overpassOff() { $v = json_decode(setting('overpass_off', ''), true); re
 function overpassActive() { return setting('overpass_on', '1') === '1' ? array_values(array_diff(overpassUrls(), overpassOff())) : []; }
 // Abschaltbare Funktionen (Issue #35), je für scharfe Einsätze und Übungen getrennt (Abschnitt «Funktionen» in der Verwaltung).
 // Neue Funktionen hier aufnehmen (Schlüssel => Bezeichnung) und ihre Routen in FEATURE_ROUTES; das Frontend liest features aus incident/state bzw. me.
+// Rechte für Benutzerrollen (Issue #63): Schlüssel => [Gruppe, Bezeichnung, Erklärung]. Neue Rechte hier aufnehmen; Administratoren haben sie automatisch.
+// Rechte im Einsatz selbst (Nachrichten, Rettlinge, Markierungen …) regeln weiterhin Einsatzleitung, Spezialrollen und Einrückoptionen.
+const PERMS = [
+  'inc_start' => ['Einsatz-App', 'Einsätze starten', 'Scharfe Einsätze auslösen (kritischer Alarm an alle)'],
+  'ex_start' => ['Einsatz-App', 'Übungen starten', 'Übungen ohne Vorbereitung starten (vorbereitete startet die eingetragene Übungsleitung)'],
+  'inc_lead' => ['Einsatz-App', 'Jeden Einsatz leiten', 'Rechte der Einsatzleitung in jedem Einsatz, an dem die Person teilnimmt'],
+  'ex_plan' => ['Übungen', 'Übungen vorbereiten', 'Verwaltung → Übungen; im Einsatz die vorbereiteten Elemente sehen und freigeben'],
+  'users' => ['Verwaltung', 'Benutzer verwalten', 'Anlegen, bearbeiten, Passwort zurücksetzen, deaktivieren, Benutzerrollen zuweisen'],
+  'uroles' => ['Verwaltung', 'Benutzerrollen verwalten', 'Rollen anlegen, ändern und entfernen'],
+  'cfg_inc' => ['Verwaltung', 'Einsatz einstellen', 'Einrückoptionen, Spezialrollen, Nachrichten, Vorlagen für externe Einsatzkräfte'],
+  'cfg_func' => ['Verwaltung', 'Funktionen einstellen', 'Funktionen, Aufzeichnung, Flussdistanz, Navigation'],
+  'cfg_map' => ['Verwaltung', 'Karte & Daten einstellen', 'Koordinaten, Gewässerdaten (Overpass), Helikopter'],
+  'stats' => ['Auswertung', 'Alle Einsätze auswerten', 'Einsatzstatistik, Log und Replay aller Einsätze'],
+  'anon' => ['Auswertung', 'Anonymisieren und Aufzeichnungen löschen', 'Endgültig, nicht umkehrbar (zusammen mit «Alle Einsätze auswerten»)'],
+  'cfg_my' => ['Auswertung', 'Einsicht für Einsatzkräfte einstellen', 'Was Teilnehmende von ihren eigenen Einsätzen sehen (Meine Einsätze)'],
+];
+// Einstellungen (settings/save) und das Recht, das sie ändern darf
+const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'rec_real' => 'cfg_func', 'rec_ex' => 'cfg_func', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func',
+  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my'];
 const FEATURES = ['area' => 'Suchgebiet', 'res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
                   'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
 // Navigations-Apps (Funktion «nav»): in der Verwaltung einzeln ausschaltbar (nav_off), Standard nav_default, pro Person users.nav_app
@@ -335,20 +369,24 @@ if ($route === 'public/state') {
 }
 
 $tok = $_SERVER['HTTP_X_TOKEN'] ?? '';
-$st = $db->prepare("SELECT id,username,name,is_admin,is_planner,photo,exercise_mode,must_change,coord_sys,nav_app FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
+$st = $db->prepare("SELECT id,username,name,photo,exercise_mode,must_change,coord_sys,nav_app FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
 $me = $tok ? $st->fetch() : null; $st->closeCursor(); // Lesezugriff sofort beenden, nicht erst am Ende des Requests
 if (!$me) fail('Nicht angemeldet', 401);
-$me = ints($me, ['id', 'is_admin', 'is_planner', 'exercise_mode', 'must_change']); if ($me['is_admin']) $me['is_planner'] = 0; $uid = $me['id'];
+$me = ints($me, ['id', 'exercise_mode', 'must_change']); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
+// Benutzerrollen und Rechte (Issue #63): Vereinigung aller Rollen; is_admin = hat die Rolle Administrator (alle Rechte)
+$me['uroles'] = userRoles($uid); $me['is_admin'] = (int)array_reduce($me['uroles'], fn($c, $r) => $c || $r['sys'] === 'admin', false); $me['perms'] = permsOf($me['uroles']);
 // Nach einem Zurücksetzen durch die Verwaltung ist nur der Passwortwechsel erlaubt
 if ($me['must_change'] && !in_array($route, ['me', 'me/password'])) fail('Bitte zuerst ein eigenes Passwort setzen', 403);
 
 /* ---------- Hilfsfunktionen ---------- */
 function ints($r, $ks) { foreach ($ks as $k) if (isset($r[$k])) $r[$k] = (int)$r[$k]; return $r; }
 function floats($r, $ks) { foreach ($ks as $k) if (isset($r[$k])) $r[$k] = (float)$r[$k]; return $r; }
-function admin() { global $me; if (!$me['is_admin']) fail('Nur für Administratoren', 403); }
-// Übungen vorbereiten (Issue #29): Administratoren und die Benutzerrolle Übungsleiter (is_planner, sonst keine Rechte der Verwaltung)
-function planner() { global $me; return $me['is_admin'] || $me['is_planner']; }
-function plannerOnly() { if (!planner()) fail('Nur für Administratoren und Übungsleiter', 403); }
+// Rechte (Issue #63): can() prüft ein Recht der angemeldeten Person, need() lehnt ohne ab
+function can($p) { global $me; return in_array($p, $me['perms'], true); }
+function need(...$ps) { foreach ($ps as $p) if (can($p)) return; fail('Dafür fehlt dir das Recht «' . PERMS[$ps[0]][1] . '»', 403); }
+// Übungen vorbereiten (Issue #29): Recht ex_plan
+function planner() { return can('ex_plan'); }
+function plannerOnly() { need('ex_plan'); }
 // Log und Replay eines Einsatzes: Administratoren alle, Übungsleiter die Durchführungen vorbereiteter Übungen (Verwaltung → Übungen),
 // Teilnehmende ihre beendeten Einsätze (Issue #61, «Meine Einsätze», Einstellung my_runs). Rückgabe: 0 = Verwaltung, 1 = teilgenommen, mit allen Daten,
 // 2 = teilgenommen, nur anonym ausser sich selbst. Endgültig anonymisierte Daten (rp_anon, log_anon) bleiben für alle anonym.
@@ -356,10 +394,23 @@ const MY_RUNS = ['off' => 'Ausgeschaltet', 'anon' => 'Anonymisiert (ausser sich 
 function myRuns() { $v = setting('my_runs', 'anon'); return isset(MY_RUNS[$v]) ? $v : 'anon'; }
 function myPart($id) { global $db, $uid; $s = $db->prepare("SELECT 1 FROM participants p JOIN incidents i ON i.id=p.incident_id WHERE p.incident_id=? AND p.user_id=? AND p.mode<>'declined' AND i.ended_at IS NOT NULL"); $s->execute([$id, $uid]); $r = (bool)$s->fetch(); $s->closeCursor(); return $r; }
 // my=1 (Meine Einsätze): Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter, also nur eigene Einsätze gemäss my_runs
-function incView($id) { global $db, $me; $my = !empty($_GET['my']); if ($me['is_admin'] && !$my) return 0;
-  if ($me['is_planner'] && !$my) { $s = $db->prepare("SELECT plan_id FROM incidents WHERE id=?"); $s->execute([$id]); $r = $s->fetch(); if ($r && $r['plan_id'] !== null) return 0; }
+function incView($id) { global $db; $my = !empty($_GET['my']); if (can('stats') && !$my) return 0;
+  if (planner() && !$my) { $s = $db->prepare("SELECT plan_id FROM incidents WHERE id=?"); $s->execute([$id]); $r = $s->fetch(); if ($r && $r['plan_id'] !== null) return 0; }
   if (myRuns() !== 'off' && myPart($id)) return myRuns() === 'full' ? 1 : 2;
-  fail($my ? 'Kein Zugriff auf diesen Einsatz' : 'Nur für Administratoren', 403); }
+  fail($my ? 'Kein Zugriff auf diesen Einsatz' : 'Dafür fehlt dir das Recht «' . PERMS['stats'][1] . '»', 403); }
+// Benutzerrollen einer Person [{id, name, sys}] und die Rechte daraus (Administrator: alle aus PERMS)
+function userRoles($u) { global $db; $s = $db->prepare("SELECT r.id,r.name,r.perms,r.sys FROM user_uroles x JOIN uroles r ON r.id=x.urole_id WHERE x.user_id=? ORDER BY r.id"); $s->execute([$u]);
+  $r = array_map(fn($x) => ['id' => (int)$x['id'], 'name' => $x['name'], 'sys' => $x['sys'], 'perms' => rolePerms($x)], $s->fetchAll()); $s->closeCursor(); return $r; }
+function rolePerms($r) { return $r['sys'] === 'admin' ? array_keys(PERMS) : array_values(array_intersect(array_keys(PERMS), json_decode($r['perms'] ?? '[]', true) ?: [])); }
+function permsOf($roles) { $p = []; foreach ($roles as $r) $p = array_merge($p, $r['perms']); return array_values(array_intersect(array_keys(PERMS), $p)); }
+// Nur Rechte vergeben oder entziehen, die man selbst hat (sonst könnte sich jemand mit «Benutzer verwalten» zum Administrator machen)
+function permsMine($ps) { global $me; return !array_diff($ps, $me['perms']); }
+function uroleRow($id) { global $db; $s = $db->prepare("SELECT * FROM uroles WHERE id=?"); $s->execute([(int)$id]); $r = $s->fetch(); $s->closeCursor(); return $r ?: null; }
+// Wer die Rolle Administrator hat und aktiv ist; mindestens eine Person muss bleiben
+function adminCount() { global $db; return (int)$db->query("SELECT COUNT(DISTINCT u.id) c FROM users u JOIN user_uroles x ON x.user_id=u.id JOIN uroles r ON r.id=x.urole_id WHERE u.active=1 AND r.sys='admin'")->fetch()['c']; }
+// Benutzer bearbeiten (Name, Passwort, Rollen, deaktivieren) nur, wenn er keine Rechte hat, die man selbst nicht hat
+function userEditable($id) { return permsMine(permsOf(userRoles($id))); }
+function needUserEditable($id) { if (!userEditable($id)) fail('Diese Person hat Rechte, die du selbst nicht hast; nur jemand mit diesen Rechten kann sie bearbeiten', 403); }
 function pwCheck($p) { if (!is_string($p) || $p === '') fail('Das Passwort darf nicht leer sein'); }
 // Kritisch alarmieren: scharfe Einsätze immer, Übungen nur bei aktiviertem Übungsmodus
 function critical($inc) { global $me; return !(int)$inc['is_exercise'] || $me['exercise_mode']; }
@@ -376,7 +427,7 @@ function isLead($incId) {
 }
 function leadMode($code) { $m = modeRow($code); return $m && (int)$m['lead_rights']; }
 // Einsatzleitung nur mit Teilnahme (Einrückoption gewählt, nicht abgelehnt/ausgetreten, Issue #82); die Übungsleitung auch ohne
-function canManage($inc) { global $me, $uid; return exLead($inc) || isActivePart((int)$inc['id']) && ($me['is_admin'] || (int)$inc['created_by'] === $uid || isLead((int)$inc['id'])); }
+function canManage($inc) { global $uid; return exLead($inc) || isActivePart((int)$inc['id']) && (can('inc_lead') || (int)$inc['created_by'] === $uid || isLead((int)$inc['id'])); }
 // Vorbereitete Übung eines Einsatzes (Issue #29) und ob die angemeldete Person sie leitet (Übungsleitung: Rechte der Einsatzleitung, wird nicht alarmiert, kann zusätzlich teilnehmen)
 function exPlan($inc) { global $db; if (empty($inc['plan_id'])) return null; $s = $db->prepare("SELECT * FROM ex_plans WHERE id=?"); $s->execute([(int)$inc['plan_id']]); return $s->fetch() ?: null; }
 function exLeads($p) { return array_map('intval', json_decode($p['leads'] ?? '[]', true) ?: []); }
@@ -778,9 +829,9 @@ switch ($route) {
     opStat($x['url'], 'device', !empty($x['ok']), min(max(0, (float)($x['ms'] ?? 0)), 120000), empty($x['ok']) ? (mb_substr(trim((string)($x['err'] ?? '')), 0, 150) ?: 'Fehler') : null);
   }
   out(['ok' => true]);
- case 'overpass/stats': admin(); // Statistik für die Verwaltung (Gewässerdaten)
+ case 'overpass/stats': need('cfg_map'); // Statistik für die Verwaltung (Gewässerdaten)
   out(['since' => (int)setting('overpass_stats_since', '0') ?: null, 'rows' => array_map(fn($r) => ints($r, ['uses', 'ok', 'fails', 'ok_ms', 'last_ok', 'last_fail']), $db->query("SELECT * FROM overpass_stats ORDER BY url, src")->fetchAll())]);
- case 'overpass/stats/reset': admin();
+ case 'overpass/stats/reset': need('cfg_map');
   $db->exec("DELETE FROM overpass_stats"); setSetting('overpass_stats_since', (string)time()); out(['ok' => true]);
  case 'overpass/put': // Ergebnis einer direkten Abfrage des Geräts (Rückfall bei 502), gleiche Parameter wie overpass plus elements
   overpassPut(overpassQuery($in), $in['elements'] ?? null);
@@ -789,7 +840,7 @@ switch ($route) {
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz', 404);
   if (!airAllowed($inc)) fail('Helikopter sind für dich nicht freigegeben', 403);
   out(airServe($inc));
- case 'air/test': admin(); // Verwaltung: eine Quelle direkt abfragen (ohne Cache), Umkreis 120 NM um die Mitte der Schweiz
+ case 'air/test': need('cfg_map'); // Verwaltung: eine Quelle direkt abfragen (ohne Cache), Umkreis 120 NM um die Mitte der Schweiz
   $k = (string)($in['src'] ?? ''); if (!isset(AIR_SOURCES[$k])) fail('Unbekannte Datenquelle');
   $c = airCfg(); $t = microtime(true); $r = airFetch([$k], 46.8, 8.2, 120 * 1852); $ms = (int)((microtime(true) - $t) * 1000);
   if (!$r) out(['ok' => false, 'ms' => $ms, 'status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true)[$k] ?? null]);
@@ -797,6 +848,7 @@ switch ($route) {
   out(['ok' => true, 'ms' => $ms, 'total' => count($r[1]), 'heli' => array_map(fn($a) => ['cs' => $a['cs'], 'hex' => $a['hex'], 'reg' => $a['reg'], 'type' => $a['type'], 'alt' => $a['gnd'] ? 0 : $a['alt'], 'rescue' => airRescue($a, $c), 'age' => $now - $a['at']], $h)]);
 
  case 'incident/start':
+  need(empty($in['is_exercise']) ? 'inc_start' : 'ex_start'); // Issue #63
   if (activeIncident()) fail('Es läuft bereits ein Einsatz');
   if (trim($in['message'] ?? '') === '') fail('Die Meldung ist Pflicht');
   $at = !empty($in['alarm_at']) ? (int)$in['alarm_at'] : $now;
@@ -1385,7 +1437,7 @@ switch ($route) {
  // Replay: Einsatzkräfte im Replay ohne Verbindung zu den Konten (Bezeichnung, Einrückoption, Spezialrolle in rp_anon), Standortverläufe mit negativer ID,
  //   letzte Standorte der Teilnahmen gelöscht; das Replay zeigt danach auch Rettlinge, Externe und Log nur noch anonym. Einsatzprotokoll und Statistik bleiben.
  // Einsatzprotokoll: Log-Einträge und Nachrichten ohne Konto (Bezeichnung in actor, from_label, to_label), Namen im Text ersetzt, ebenso in der Alarmmeldung.
- case 'incident/anon/replay': admin();
+ case 'incident/anon/replay': need('anon');
   $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
   if ($inc['ended_at'] === null) fail('Nur beendete Einsätze lassen sich anonymisieren');
   if (!(int)$inc['recorded']) fail('Für diesen Einsatz gibt es keine Aufzeichnung');
@@ -1403,7 +1455,7 @@ switch ($route) {
   $db->prepare("UPDATE incidents SET rp_anon=? WHERE id=?")->execute([json_encode($people), $id]);
   logev($id, null, 'anon', 'Replay anonymisiert (Verwaltung)');
   $db->commit(); out(['ok' => true]);
- case 'incident/anon/log': admin();
+ case 'incident/anon/log': need('anon');
   $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
   if ($inc['ended_at'] === null) fail('Nur beendete Einsätze lassen sich anonymisieren');
   if ((int)$inc['log_anon']) fail('Das Einsatzprotokoll ist bereits anonymisiert');
@@ -1422,7 +1474,7 @@ switch ($route) {
   logev($id, null, 'anon', 'Einsatzprotokoll anonymisiert (Verwaltung)');
   $db->commit(); out(['ok' => true]);
 
- case 'incident/replay/delete': admin(); // Aufzeichnung eines Einsatzes löschen (Standortverläufe und Zeiträume); Log, Nachrichten usw. bleiben
+ case 'incident/replay/delete': need('anon'); // Aufzeichnung eines Einsatzes löschen (Standortverläufe und Zeiträume); Log, Nachrichten usw. bleiben
   $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([(int)($in['id'] ?? 0)]); $inc = $s->fetch();
   if (!$inc) fail('Einsatz nicht gefunden', 404);
   if (!(int)$inc['recorded']) fail('Für diesen Einsatz gibt es keine Aufzeichnung');
@@ -1439,7 +1491,7 @@ switch ($route) {
   if (myRuns() === 'anon') foreach ($rows as &$r) $r['message'] = anonText($r['message'], anonCtx($r['id'], $uid)); // Alarmmeldung wie im Log
   unset($r);
   out(['mode' => myRuns(), 'incidents' => $rows]);
- case 'stats': admin();
+ case 'stats': need('stats');
   $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area', 'rp_anon', 'log_anon']), $db->query(
    "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,u.name creator,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted,
@@ -1483,36 +1535,52 @@ switch ($route) {
   }
   out(['ok' => true]);
 
- /* ---------- Verwaltung (nur Benutzerrolle Administrator) ---------- */
- case 'users': plannerOnly(); // Übungsleiter nur Name und Benutzername (Auswahl von Übungsleitung und Aufgebotenen)
-  if (!$me['is_admin']) out(array_map(fn($r) => ints($r, ['id', 'active']), $db->query("SELECT id,username,name,active FROM users ORDER BY active DESC, name")->fetchAll()));
-  out(array_map(fn($r) => ints($r, ['id', 'is_admin', 'is_planner', 'active', 'exercise_mode', 'must_change']), $db->query("SELECT id,username,name,is_admin,is_planner,active,exercise_mode,must_change FROM users ORDER BY active DESC, name")->fetchAll()));
- case 'user/save': admin(); // anlegen oder Name/Benutzerrolle ändern (is_admin, is_planner = Übungsleiter; Administratoren brauchen es nicht)
-  $adm = empty($in['is_admin']) ? 0 : 1; $pl = $adm || empty($in['is_planner']) ? 0 : 1; $nm = trim($in['name'] ?? '');
-  if (!empty($in['id'])) {
-    $id = (int)$in['id'];
-    // Die eigene Rolle bleibt bestehen, damit immer mindestens ein Administrator übrig ist
-    if ($id === $uid && !$adm) fail('Die eigene Administratorrolle kann nicht entfernt werden');
+ /* ---------- Verwaltung (je nach Recht der Benutzerrollen, Issue #63) ---------- */
+ case 'users': need('users', 'ex_plan'); // Übungsleiter (nur ex_plan) nur Name und Benutzername (Auswahl von Übungsleitung und Aufgebotenen)
+  if (!can('users')) out(array_map(fn($r) => ints($r, ['id', 'active']), $db->query("SELECT id,username,name,active FROM users ORDER BY active DESC, name")->fetchAll()));
+  $ur = []; foreach ($db->query("SELECT user_id,urole_id FROM user_uroles")->fetchAll() as $x) $ur[(int)$x['user_id']][] = (int)$x['urole_id'];
+  out(array_map(fn($r) => ints($r, ['id', 'active', 'exercise_mode', 'must_change']) + ['uroles' => $ur[(int)$r['id']] ?? [], 'editable' => userEditable((int)$r['id']) ? 1 : 0], $db->query("SELECT id,username,name,active,exercise_mode,must_change FROM users ORDER BY active DESC, name")->fetchAll()));
+ case 'user/save': need('users'); // anlegen oder Name/Benutzerrollen ändern: uroles = Liste der Rollen-IDs (nicht übergeben = unverändert)
+  $nm = trim($in['name'] ?? ''); $id = (int)($in['id'] ?? 0);
+  if ($id) needUserEditable($id);
+  $old = $id ? array_column(userRoles($id), 'id') : [];
+  $new = isset($in['uroles']) ? array_values(array_unique(array_map('intval', (array)$in['uroles']))) : $old;
+  foreach (array_merge(array_diff($new, $old), array_diff($old, $new)) as $rid) { // geänderte Rollen: nur mit eigenen Rechten
+    $r = uroleRow($rid); if (!$r) fail('Unbekannte Benutzerrolle');
+    if (!permsMine(rolePerms($r))) fail('Die Rolle «' . $r['name'] . '» hat Rechte, die du selbst nicht hast', 403);
+    if ($id === $uid && $r['sys'] === 'admin' && !in_array($rid, $new, true)) fail('Die eigene Rolle Administrator kann nicht entfernt werden');
+  }
+  if ($id) {
     if ($nm === '') fail('Name fehlt');
-    $db->prepare("UPDATE users SET name=?,is_admin=?,is_planner=? WHERE id=?")->execute([$nm, $adm, $pl, $id]);
+    $db->prepare("UPDATE users SET name=? WHERE id=?")->execute([$nm, $id]);
   } else {
     $un = trim($in['username'] ?? ''); if ($un === '') fail('Benutzername ist Pflicht');
     pwCheck($in['password'] ?? '');
-    try { $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin,is_planner,must_change) VALUES(?,?,?,?,?,1)")->execute([$un, $nm ?: $un, password_hash($in['password'], PASSWORD_DEFAULT), $adm, $pl]); }
+    try { $db->prepare("INSERT INTO users(username,name,pass_hash,must_change) VALUES(?,?,?,1)")->execute([$un, $nm ?: $un, password_hash($in['password'], PASSWORD_DEFAULT)]); }
     catch (PDOException $e) { fail('Benutzername existiert bereits'); }
+    $id = (int)$db->lastInsertId();
   }
-  out(['ok' => true]);
- case 'user/password': admin(); // zurücksetzen: Person wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen
+  if ($new !== $old || !isset($in['id'])) {
+    $db->beginTransaction();
+    $db->prepare("DELETE FROM user_uroles WHERE user_id=?")->execute([$id]);
+    $s = $db->prepare("INSERT INTO user_uroles(user_id,urole_id) VALUES(?,?)"); foreach ($new as $rid) $s->execute([$id, $rid]);
+    if (!adminCount()) { $db->rollBack(); fail('Mindestens eine aktive Person muss die Rolle Administrator behalten'); }
+    $db->commit();
+  }
+  out(['ok' => true, 'id' => $id]);
+ case 'user/password': need('users'); // zurücksetzen: Person wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen
   $id = (int)($in['id'] ?? 0);
   if ($id === $uid) fail('Das eigene Passwort bitte über «Passwort ändern» setzen');
+  needUserEditable($id);
   pwCheck($in['password'] ?? '');
   $s = $db->prepare("UPDATE users SET pass_hash=?, must_change=1, token=NULL WHERE id=?"); $s->execute([password_hash($in['password'], PASSWORD_DEFAULT), $id]);
   $db->prepare("DELETE FROM push_subs WHERE user_id=?")->execute([$id]); // abgemeldet: Geräte erhalten keine Push-Nachrichten mehr
   if (!$s->rowCount()) fail('Benutzer nicht gefunden', 404);
   out(['ok' => true]);
- case 'user/active': admin(); // Benutzer entfernen (deaktivieren) oder reaktivieren, Einsatzdaten bleiben erhalten
+ case 'user/active': need('users'); // Benutzer entfernen (deaktivieren) oder reaktivieren, Einsatzdaten bleiben erhalten
   $id = (int)($in['id'] ?? 0); $a = empty($in['active']) ? 0 : 1;
   if ($id === $uid) fail('Das eigene Konto kann nicht deaktiviert werden');
+  needUserEditable($id);
   $s = $db->prepare("SELECT name FROM users WHERE id=?"); $s->execute([$id]); $u = $s->fetch();
   if (!$u) fail('Benutzer nicht gefunden', 404);
   $db->prepare("UPDATE users SET active=?" . ($a ? '' : ', token=NULL') . " WHERE id=?")->execute([$a, $id]);
@@ -1529,14 +1597,37 @@ switch ($route) {
   if (strlen($in['photo'] ?? '') > 200000) fail('Bild zu gross');
   $db->prepare("UPDATE users SET photo=? WHERE id=?")->execute([$in['photo'], $uid]);
   out(['ok' => true]);
- case 'role/save': admin();
+ /* ---------- Benutzerrollen (Issue #63) ---------- */
+ case 'uroles': need('users', 'uroles'); // alle Rollen mit Rechten und Anzahl Personen, dazu die Liste der Rechte (PERMS)
+  $n = []; foreach ($db->query("SELECT x.urole_id,COUNT(*) c FROM user_uroles x JOIN users u ON u.id=x.user_id WHERE u.active=1 GROUP BY x.urole_id")->fetchAll() as $x) $n[(int)$x['urole_id']] = (int)$x['c'];
+  out(['roles' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'sys' => $r['sys'], 'def' => (int)$r['def'], 'perms' => rolePerms($r), 'users' => $n[(int)$r['id']] ?? 0],
+    $db->query("SELECT * FROM uroles ORDER BY sys IS NULL, name")->fetchAll()), 'perms' => array_map(fn($k, $v) => ['k' => $k, 'group' => $v[0], 'name' => $v[1], 'hint' => $v[2]], array_keys(PERMS), PERMS)]);
+ case 'urole/save': need('uroles'); // anlegen oder ändern: id, name, perms (Liste), def (bei neuen Benutzern vorausgewählt); nur eigene Rechte
+  $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
+  $ps = array_values(array_unique(array_filter((array)($in['perms'] ?? []), 'is_string'))); foreach ($ps as $p) if (!isset(PERMS[$p])) fail('Unbekanntes Recht');
+  $id = (int)($in['id'] ?? 0); $old = $id ? uroleRow($id) : null; if ($id && !$old) fail('Benutzerrolle nicht gefunden', 404);
+  if ($old && $old['sys'] === 'admin') fail('Die Rolle Administrator hat immer alle Rechte und kann nicht geändert werden');
+  if (!permsMine(array_merge($ps, $old ? rolePerms($old) : []))) fail('Du kannst nur Rechte vergeben oder entziehen, die du selbst hast', 403);
+  $s = $db->prepare("SELECT COUNT(*) c FROM uroles WHERE name=? AND id<>?"); $s->execute([$nm, $id]); if ($s->fetch()['c']) fail('Eine Benutzerrolle mit diesem Namen gibt es schon');
+  $df = empty($in['def']) ? 0 : 1;
+  if ($id) $db->prepare("UPDATE uroles SET name=?,perms=?,def=? WHERE id=?")->execute([$nm, json_encode($ps), $df, $id]);
+  else { $db->prepare("INSERT INTO uroles(name,perms,def) VALUES(?,?,?)")->execute([$nm, json_encode($ps), $df]); $id = (int)$db->lastInsertId(); }
+  out(['ok' => true, 'id' => $id]);
+ case 'urole/remove': need('uroles'); // entfernen, die Personen verlieren die Rechte dieser Rolle
+  $r = uroleRow($in['id'] ?? 0); if (!$r) fail('Benutzerrolle nicht gefunden', 404);
+  if ($r['sys'] === 'admin') fail('Die Rolle Administrator kann nicht entfernt werden');
+  if (!permsMine(rolePerms($r))) fail('Die Rolle hat Rechte, die du selbst nicht hast', 403);
+  $db->prepare("DELETE FROM user_uroles WHERE urole_id=?")->execute([(int)$r['id']]); $db->prepare("DELETE FROM uroles WHERE id=?")->execute([(int)$r['id']]);
+  out(['ok' => true]);
+ case 'role/save': need('cfg_inc');
   if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message) VALUES(?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1)]);
   out(['ok' => true]);
- case 'settings': admin(); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_real' => recDefault()[0], 'rec_ex' => recDefault()[1], 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'features' => array_map(fn($k, $r, $e) => ['k' => $k, 'name' => FEATURES[$k], 'real' => $r, 'ex' => $e], array_keys(FEATURES), features(0), features(1)), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
+ case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_real' => recDefault()[0], 'rec_ex' => recDefault()[1], 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'features' => array_map(fn($k, $r, $e) => ['k' => $k, 'name' => FEATURES[$k], 'real' => $r, 'ex' => $e], array_keys(FEATURES), features(0), features(1)), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
    'air' => airCfg(), 'air_default' => AIR_DEFAULT + array_map(fn($x) => $x[0], AIR_NUM), 'air_num' => AIR_NUM, 'air_filters' => AIR_FILTERS, 'air_app' => AIR_APP, 'air_sources' => array_map(fn($s) => ['name' => $s['name'], 'site' => $s['site'], 'note' => $s['note']], AIR_SOURCES),
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[]]); // Helikopter (Issue #73)
- case 'settings/save': admin();
+ case 'settings/save': // jede übergebene Einstellung braucht ihr Recht (SETTING_PERMS)
+  foreach (SETTING_PERMS as $k => $p) if (isset($in[$k])) need($p);
   if (isset($in['air'])) setSetting('air', json_encode(airIn($in['air']), JSON_UNESCAPED_UNICODE)); // Helikopter (Issue #73)
   if (isset($in['my_runs'])) { if (!is_string($in['my_runs']) || !isset(MY_RUNS[$in['my_runs']])) fail('Ungültige Einstellung'); setSetting('my_runs', (string)$in['my_runs']); } // Meine Einsätze (Issue #61)
   if (isset($in['overpass_ttl'])) { // Haltedauer des Overpass-Caches in Minuten, 0 = kein Cache, höchstens 7 Tage
@@ -1581,9 +1672,9 @@ switch ($route) {
     }
   }
   out(['ok' => true]);
- case 'ext_templates': plannerOnly(); // Vorlagen für externe Einsatzkräfte, auch deaktivierte (Übungsleiter: Übernahme ins Element «Neue externe Einsatzkraft»)
+ case 'ext_templates': need('cfg_inc', 'ex_plan'); // Vorlagen für externe Einsatzkräfte, auch deaktivierte (Übungsleiter: Übernahme ins Element «Neue externe Einsatzkraft»)
   out(array_map(fn($r) => floats(ints($r, ['id', 'role_id', 'active']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,abbr,color,lat,lon,active FROM ext_templates ORDER BY active DESC, name")->fetchAll()));
- case 'ext_template/save': admin(); // anlegen oder ändern: name, descr, role_id, abbr, color, lat/lon (beide leer = Standort beim Erfassen wählen), active
+ case 'ext_template/save': need('cfg_inc'); // anlegen oder ändern: name, descr, role_id, abbr, color, lat/lon (beide leer = Standort beim Erfassen wählen), active
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
   $de = mb_substr(trim((string)($in['descr'] ?? '')), 0, 500); $rid = roleIn($in['role_id'] ?? null); [$ab, $co] = extStyle($in);
   $ll = isset($in['lat'], $in['lon']) && $in['lat'] !== '' && $in['lon'] !== '' ? llIn($in['lat'], $in['lon']) : [null, null];
@@ -1591,7 +1682,7 @@ switch ($route) {
   if (!empty($in['id'])) $db->prepare("UPDATE ext_templates SET name=?,descr=?,role_id=?,abbr=?,color=?,lat=?,lon=?,active=? WHERE id=?")->execute([$nm, $de, $rid, $ab, $co, $ll[0], $ll[1], $ac, (int)$in['id']]);
   else $db->prepare("INSERT INTO ext_templates(name,descr,role_id,abbr,color,lat,lon,active) VALUES(?,?,?,?,?,?,?,?)")->execute([$nm, $de, $rid, $ab, $co, $ll[0], $ll[1], $ac]);
   out(['ok' => true]);
- case 'mode/save': admin(); // Einrückoption anlegen oder ändern
+ case 'mode/save': need('cfg_inc'); // Einrückoption anlegen oder ändern
   $nm = trim($in['name'] ?? ''); if ($nm === '') fail('Name fehlt');
   $s = $db->prepare("SELECT * FROM modes WHERE id=?"); $s->execute([(int)($in['id'] ?? 0)]); $old = $s->fetch() ?: ['share_location' => 1, 'active' => 1, 'lead_rights' => 0, 'counts' => 1];
   $flag = fn($k) => isset($in[$k]) ? (empty($in[$k]) ? 0 : 1) : (int)$old[$k]; // nicht übergeben = bisheriger Wert
