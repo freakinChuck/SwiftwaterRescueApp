@@ -379,8 +379,8 @@ async function openReplay(id){let d;try{d=await api('incident/replay&id='+id)}ca
     p.mk=L.circleMarker([0,0],{radius:rz(8),color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'})});
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
   const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
-  if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17});
-  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:0,sz:rpSzSaved()};
+  if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17,animate:false}); // ohne Animation: ein verspätetes zoomstart beendete sonst die Auto-Übersicht
+  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:Date.now(),sz:rpSzSaved()};
   // Fenster «Ansicht» und Auto-Übersicht (Issue #53)
   const mc=$('#rpMap');mc.insertAdjacentHTML('beforeend','<button id="rpView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden">'+VIEW_ICON+'</button><div id="viewBox" hidden></div>');
   const vb=$('#viewBox'),bv=$('#rpView');[vb,bv].forEach(x=>{L.DomEvent.disableClickPropagation(x);L.DomEvent.disableScrollPropagation(x)});
