@@ -8,6 +8,7 @@
 <style>
 body{min-height:100dvh}
 header{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10}header h1{font-size:1.15rem;margin:0;flex:1 1 12rem}
+#wrap.my{grid-template-columns:minmax(0,1fr);max-width:900px} /* Meine Einsätze: ohne Navigation */
 #wrap{max-width:1300px;margin:0 auto;padding:1rem;display:grid;grid-template-columns:13rem minmax(0,1fr);gap:1.2rem;align-items:start} /* minmax: breite Tabellen scrollen in .tw statt die Seite zu verbreitern */
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:1.2rem}main>section[hidden]{display:none}
 /* Navigation nach Kategorien (Issue #32); am Handy als Auswahlliste */
@@ -62,7 +63,8 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 <div id="app"></div>
 <script src="common.js?v=0"></script>
 <script>
-/* Verwaltung: für die Benutzerrolle Administrator, die Benutzerrolle Übungsleiter sieht nur «Übungen vorbereiten». Die API prüft die Berechtigung bei jedem Aufruf. */
+/* Verwaltung: für die Benutzerrolle Administrator, die Benutzerrolle Übungsleiter sieht nur «Übungen vorbereiten». Die API prüft die Berechtigung bei jedem Aufruf.
+   Alle anderen sehen nur «Meine Einsätze» (Issue #61, Log und Replay der eigenen beendeten Einsätze), sofern die Verwaltung das nicht ausgeschaltet hat (my_runs). */
 let me=null,users=[],roles=[];
 onUnauth=()=>start();
 const ROLE_LABEL=u=>u.is_admin?'Administrator':u.is_planner?'Übungsleiter':'Einsatzkraft';
@@ -72,8 +74,14 @@ const ROLE_VAL=v=>({is_admin:v==1?1:0,is_planner:v==2?1:0});
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
-  if(!me.is_admin&&!me.is_planner){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren und Übungsleiter zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
-  a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
+  if(!me.is_admin&&!me.is_planner&&me.my_runs==='off'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Verwaltung ist nur für Administratoren und Übungsleiter zugänglich.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
+  MY=myMode();const adm=me.is_admin||me.is_planner;
+  if(MY){a.innerHTML=`<header><h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}<button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
+    <div id="wrap" class="my"><main><section id="sMy"><h2>Meine Einsätze</h2><div class="mut">Wird geladen …</div></section></main></div>`;
+    $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
+    if(adm)$('#bVw').onclick=e=>{e.preventDefault();location.hash='einsatzlog'};
+    document.title='Swiftwater Rescue – Meine Einsätze';return loadMy()}
+  a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine" title="Log und Replay deiner eigenen Einsätze, wie für Einsatzkräfte ohne Verwaltungsrechte">📋 Meine Einsätze</a>':''}<button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
     <div id="wrap"><nav id="nav" aria-label="Bereiche der Verwaltung"><select id="navSel" aria-label="Bereich wählen">${nav().map(([g,its])=>`<optgroup label="${esc(g)}">${its.map(([k,,l])=>`<option value="${k}">${esc(l)}</option>`).join('')}</optgroup>`).join('')}</select>
     <div class="navl">${nav().map(([g,its])=>`<div class="ng">${esc(g)}</div>${its.map(([k,,l])=>`<a href="#${k}" data-k="${k}">${esc(l)}</a>`).join('')}`).join('')}</div></nav>
     <main>${navItems().map(([k,id,l])=>`<section id="${id}" hidden><h2>${esc(l)}</h2><div class="mut">Wird geladen …</div></section>`).join('')}</main></div>`;
@@ -88,16 +96,19 @@ const NAV=[
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp]]],
-  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats]]],
+  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
 ];
 // Übungsleiter (Benutzerrolle ohne weitere Rechte der Verwaltung) sehen nur die Übungen
 const nav=()=>me.is_admin?NAV:NAV.map(([g,its])=>[g,its.filter(([k])=>k==='uebungen')]).filter(([,its])=>its.length);
+// «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
+// (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
+let MY=false;const myMode=()=>me.my_runs!=='off'&&(!(me.is_admin||me.is_planner)||location.hash==='#meine');const myQ=()=>MY?'&my=1':'';
 const navItems=()=>nav().flatMap(([,its])=>its);
 function showNav(){if(!$('#nav'))return;const its=navItems(),it=its.find(x=>x[0]===location.hash.slice(1))||its[0],[k,id,l,load]=it;
   its.forEach(([,i])=>{$('#'+i).hidden=i!==id});
   document.querySelectorAll('#nav a').forEach(a=>{if(a.dataset.k===k)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   $('#navSel').value=k;document.title='Swiftwater Rescue – Verwaltung – '+l;load()}
-window.addEventListener('hashchange',()=>{showNav();window.scrollTo(0,0)});
+window.addEventListener('hashchange',()=>{if(me&&myMode()!==MY)start();else showNav();window.scrollTo(0,0)}); // Wechsel zwischen Verwaltung und Meine Einsätze baut die Seite neu auf
 /* ---------- Benutzer ---------- */
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
@@ -376,8 +387,28 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
     if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Markierungen, Bereiche und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
       api('incident/replay/delete',{id:x.id}).then(loadStats).catch(fail)})}
 // Einsatzprotokoll im Gross-Modus mit Knopf «Anonym» (Issue #54, anonymisierte Fassung vom Server); endgültig anonymisierte ohne Knopf
-async function openLog(id,title,done){let l;try{l=await api('incident/log&id='+id)}catch(e){return fail(e)}
-  openBigLog(title+(done?' (anonymisiert)':''),()=>l,false,done?null:async on=>{l=await api('incident/log&id='+id+(on?'&anon=1':''))})}
+async function openLog(id,title,done,forced){let l;try{l=await api('incident/log&id='+id+myQ())}catch(e){return fail(e)}
+  openBigLog(title+(done||forced?' (anonymisiert)':''),()=>l,false,done||forced?null:async on=>{l=await api('incident/log&id='+id+myQ()+(on?'&anon=1':''))})}
+/* ---------- Meine Einsätze (Issue #61): Log und Replay der beendeten Einsätze, an denen man teilgenommen hat ---------- */
+// my_runs (Einstellung der Verwaltung): anon = alle anderen anonym, die eigene Person mit Namen (forced, ohne Umschalter); full = alle Daten.
+// Endgültig Anonymisiertes (rp_anon, log_anon) bleibt in jedem Fall ganz anonym.
+async function loadMy(){const el=$('#sMy');let r;try{r=await api('my/incidents')}catch(e){el.innerHTML='<h2>Meine Einsätze</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),forced=r.mode==='anon';
+  const card=x=>{const fl=[x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':''].join('');
+    return`<div class="inc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl?`<div class="fl">${fl}</div>`:''}</div>
+      <div class="kv"><span><small>Dauer</small>${Math.round((x.ended_at-x.alarm_at)/60)} min</span>${x.mode_name?`<span><small>Eingerückt</small>${esc(x.mode_name)}</span>`:''}</div>
+      <div class="ia"><button data-ml="${x.id}">Log</button>${x.recorded?`<button data-mr="${x.id}">Replay</button>`:''}</div></div>`};
+  el.innerHTML=`<h2>Meine Einsätze</h2><div class="mut">Beendete Einsätze und Übungen, an denen du teilgenommen hast. ${forced?'Andere Personen erscheinen anonymisiert (z. B. «Einsatzkraft 3»), du selbst mit deinem Namen.':'Log und Replay zeigen alle Daten, sofern sie nicht endgültig anonymisiert wurden.'} Ein Replay gibt es nur bei aufgezeichneten Einsätzen.</div>
+    ${r.incidents.map(card).join('')||'<div class="mut">Noch keine beendeten Einsätze mit deiner Teilnahme.</div>'}`;
+  const X=id=>r.incidents.find(x=>x.id==id);
+  el.querySelectorAll('[data-ml]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.ml);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon,forced)});
+  el.querySelectorAll('[data-mr]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.mr))}
+// Einstellung der Verwaltung: ob und wie Einsatzkräfte ihre Einsätze einsehen (my_runs), sofort gespeichert
+async function loadMyS(){const el=$('#sMyS');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Einsicht für Einsatzkräfte</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  el.innerHTML=`<h2>Einsicht für Einsatzkräfte</h2><div class="mut">Wer an einem Einsatz teilgenommen hat (angenommen, auch wenn später ausgetreten), sieht nach dem Einsatzende unter «Meine Einsätze» das Einsatzlog und, falls aufgezeichnet, das Replay.</div>
+    <label class="mut">Einsicht<select id="myS">${Object.entries(s.my_runs_opts).map(([k,v])=>`<option value="${k}" ${k===s.my_runs?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="mut">«Anonymisiert»: alle anderen Einsatzkräfte, Rettlinge und Externen erscheinen mit Bezeichnungen wie «Einsatzkraft 3», die Person selbst mit Namen. «Mit allen Daten»: wie in der Verwaltung, mit Umschalter «Anonym». Endgültig anonymisierte Replays und Protokolle (Einsatzstatistik → Anonymisieren) sind in jedem Fall nur noch ganz anonym zu sehen.</div>`;
+  $('#myS').onchange=e=>{const v=e.target.value;e.target.disabled=true;api('settings/save',{my_runs:v}).then(()=>{me.my_runs=v;loadMyS()}).catch(x=>{fail(x);loadMyS()})}}
 // Endgültig anonymisieren (Issue #54): Replay und Einsatzprotokoll getrennt, nur beendete Einsätze, nicht umkehrbar
 function anonDlg(x){const rpOk=x.recorded&&!x.rp_anon,lgOk=!x.log_anon;
   dlg('Anonymisieren',`<div class="mut">«${esc(x.message)}»</div>
@@ -400,9 +431,9 @@ const GAP_S=120; // längere Lücken zwischen zwei Standortmeldungen nicht inter
 const durT=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')};
 const lastIdx=(a,t)=>{let lo=0,hi=a.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(a[m][1]<=t){r=m;lo=m+1}else hi=m-1}return r}; // letzter Eintrag mit ts ≤ t
 // o.anon: anonymisierte Fassung (Issue #54), o.t: Zeitpunkt beim Umschalten beibehalten
-async function openReplay(id,o={}){let d;try{d=await api('incident/replay&id='+id+(o.anon?'&anon=1':''))}catch(e){return fail(e)}
+async function openReplay(id,o={}){let d;try{d=await api('incident/replay&id='+id+myQ()+(o.anon?'&anon=1':''))}catch(e){return fail(e)}
   closeReplay();const i=d.incident,ov=document.createElement('div');ov.id='replay';ov.setAttribute('role','dialog');ov.setAttribute('aria-label','Replay');
-  ov.innerHTML=`<div id="rpHead"><h2>${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} Replay – ${esc(i.message)}</h2><button id="rpPlay" class="pri">▶ Abspielen</button><select id="rpSpd" aria-label="Geschwindigkeit">${[1,5,10,30,60,120].map(v=>`<option value="${v}" ${v===30?'selected':''}>${v}× schneller</option>`).join('')}</select><select id="rpTrail" aria-label="Spurlänge">${TRAILS.map(([v,l])=>`<option value="${v}" ${v===trailWin()?'selected':''}>${l}</option>`).join('')}</select><button id="rpAuto" aria-pressed="false" title="Karte zeigt laufend alle sichtbaren aktiven Positionen und folgt ihnen">Auto-Übersicht</button><button id="rpAnon" aria-pressed="${!!d.anon}" ${i.rp_anon?'disabled title="Das Replay wurde endgültig anonymisiert"':'title="Namen von Einsatzkräften, Rettlingen und Externen durch Bezeichnungen ersetzen, auch im Log"'}>${d.anon?'✓ ':''}${i.rp_anon?'Anonymisiert':'Anonym'}</button><button id="rpX">Schliessen</button></div>
+  ov.innerHTML=`<div id="rpHead"><h2>${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} Replay – ${esc(i.message)}</h2><button id="rpPlay" class="pri">▶ Abspielen</button><select id="rpSpd" aria-label="Geschwindigkeit">${[1,5,10,30,60,120].map(v=>`<option value="${v}" ${v===30?'selected':''}>${v}× schneller</option>`).join('')}</select><select id="rpTrail" aria-label="Spurlänge">${TRAILS.map(([v,l])=>`<option value="${v}" ${v===trailWin()?'selected':''}>${l}</option>`).join('')}</select><button id="rpAuto" aria-pressed="false" title="Karte zeigt laufend alle sichtbaren aktiven Positionen und folgt ihnen">Auto-Übersicht</button><button id="rpAnon" aria-pressed="${!!d.anon}" ${i.rp_anon?'disabled title="Das Replay wurde endgültig anonymisiert"':d.forced?'disabled title="Für Einsatzkräfte nur anonymisiert freigegeben (du selbst mit Namen)"':'title="Namen von Einsatzkräften, Rettlingen und Externen durch Bezeichnungen ersetzen, auch im Log"'}>${d.anon?'✓ ':''}${i.rp_anon||d.forced?'Anonymisiert':'Anonym'}</button><button id="rpX">Schliessen</button></div>
     <div id="rpBody"><div id="rpMap"></div><div id="rpFollow" hidden><span></span><button id="rpUnf" aria-label="Folgen beenden" title="Folgen beenden">✕</button></div><aside id="rpSide"><div id="rpInfo"></div><h3 id="rpPH"></h3><div id="rpPeople"></div><h3>Einsatzlog bis zu diesem Zeitpunkt</h3><div id="rpLog"></div></aside></div>
     <div id="rpFoot"><span id="rpTime"></span><div id="rpTl"><input type="range" id="rpRange" aria-label="Zeitpunkt im Einsatz"><div id="rpSeg" title="Aufgezeichnete Zeiträume (Lücken: pausiert oder beendet)"></div></div><span id="rpEnd" class="mut"></span></div>`;
   document.body.appendChild(ov);ov.style.setProperty('--rpsz',rpSzSaved()/100);
@@ -420,7 +451,7 @@ async function openReplay(id,o={}){let d;try{d=await api('incident/replay&id='+i
   // Personen: Verlauf je Person, Farbe der Spezialrolle (Stand Einsatzende)
   // Aufgezeichnete Zeiträume [start, stop]; ausserhalb (Pause/aus) keine Standorte, Spuren und Interpolation enden dort
   const per=d.periods.map(p=>[p.start,p.stop??t1]),perIdx=ts=>per.length?per.findIndex(p=>p[0]<=ts&&ts<=p[1]):0;
-  const people=d.participants.map(p=>{const pts=d.track.filter(q=>q[0]===p.user_id);return{...p,col:p.color||'#cfd8dc',pts,per:pts.map(q=>perIdx(q[1]))}});
+  const people=d.participants.map(p=>{const pts=d.track.filter(q=>q[0]===p.user_id);return{...p,name:p.me?p.name+' (ich)':p.name,col:p.color||'#cfd8dc',pts,per:pts.map(q=>perIdx(q[1]))}}); // me: eigene Person (Meine Einsätze, Issue #61)
   const trailL=L.layerGroup().addTo(map),dynL=L.layerGroup().addTo(map),poiL=L.layerGroup().addTo(map);
   people.forEach(p=>{p.line=L.polyline([],{color:p.col,weight:3,opacity:.75}).addTo(trailL);
     p.mk=L.circleMarker([0,0],{radius:rz(8),color:'#0f2430',weight:2,fillColor:p.col,fillOpacity:1}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'})});
