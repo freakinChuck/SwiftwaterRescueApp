@@ -46,6 +46,12 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
 .exp{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.8rem 0}.exp h3{margin:0 0 .3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.exp .badge.run{background:var(--alarm)}.exp .badge.done{background:var(--line)}.exp td{vertical-align:top}.exp td small{display:block;color:var(--mut)}
 .lsel{display:flex;flex-wrap:wrap;gap:.35rem}.lchip{display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--line);border-radius:999px;padding:.1rem .2rem .1rem .6rem}.lchip button{padding:.1rem .45rem;min-height:0;border-radius:999px}
+/* Helikopter: Zahlenwerte als Karten mit Einheit, Bereich und Standard (geänderte Werte hervorgehoben) */
+.anums{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.6rem;margin:.4rem 0 .6rem}
+.anum{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem}.anum.chg{border-color:var(--ex)}
+.anum label{font-weight:600}.anum .h{color:var(--mut);font-size:.82rem;flex:1}
+.anum .ai{display:flex;align-items:center;gap:.4rem}.anum .ai input{width:7.5rem;margin:0;font-variant-numeric:tabular-nums}.anum .ai span{color:var(--mut)}
+.anum small{color:var(--mut);font-size:.75rem}.anum small b{color:var(--ex);font-weight:600}
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
 .exleg{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.3rem;font-size:.8rem}.exleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;border:1px solid #fff;margin-right:.3rem;vertical-align:-.05rem}
 .pickmap{height:min(14rem,32dvh);isolation:isolate;border-radius:8px;border:1px solid var(--line);background:#0c1c25}
@@ -213,7 +219,15 @@ async function loadNav(){const el=$('#sNv');let s;try{s=await api('settings')}ca
 /* ---------- Helikopter (Issue #73): Datenquellen (Reihenfolge, Ein/Aus, Test), Filter, Sichtbarkeit je Ansicht, Relevanzzone, Rettungshelikopter ---------- */
 // Alles in der Einstellung air (JSON), gespeichert erst mit «Speichern»; der Server prüft die Werte (airIn)
 let airS=null,airC=null;
-const airNumL={radius_km:['Umkreis in km','um PLS (plus Driftdistanz), Einsatzkräfte, Rettlinge, Externe, Markierungen und Bereiche'],max_alt_ft:['Höchste Flughöhe in ft','höher fliegende gelten als Durchflug (1000 ft ≈ 300 m, barometrische Höhe)'],max_age_s:['Höchstes Alter einer Position in s','ältere Positionen werden nicht mehr gezeigt'],trail_min:['Spur in Minuten','0 = keine Spur'],cache_s:['Abfrage höchstens alle … s','gilt für alle Geräte zusammen']};
+// Zahlenwerte: [Titel, Einheit, Erklärung], gruppiert; Bereich und Standard kommen vom Server (air_num)
+const airNumL={radius_km:['Umkreis','km','um PLS (plus Driftdistanz), Einsatzkräfte, Rettlinge, Externe, Markierungen und Bereiche'],max_alt_ft:['Höchste Flughöhe','ft','höher fliegende gelten als Durchflug (barometrische Höhe)'],
+  max_age_s:['Höchstes Alter einer Position','s','ältere Positionen werden nicht mehr gezeigt'],trail_min:['Spur','min','zurückgelegter Weg hinter dem Symbol, 0 = keine Spur'],cache_s:['Abfrage höchstens alle','s','eine Abfrage für alle Geräte zusammen']};
+const AIR_GRP=[['Relevanzzone',['radius_km','max_alt_ft']],['Anzeige',['max_age_s','trail_min']],['Abfrage',['cache_s']]];
+const airNumX=(k,v)=>k==='max_alt_ft'&&v!==''&&!isNaN(v)?'≈ '+Math.round(v*.3048).toLocaleString('de-CH')+' m':''; // Flughöhe zusätzlich in Metern
+function airNumCard(k){const[l,u,h]=airNumL[k],[d,lo,hi]=airS.air_num[k],v=airC[k],x=airNumX(k,v);
+  return`<div class="anum${+v!==d?' chg':''}" data-anc="${k}"><label for="an_${k}">${esc(l)}</label><div class="h">${esc(h)}</div>
+    <div class="ai"><input type="number" id="an_${k}" data-an="${k}" min="${lo}" max="${hi}" step="1" value="${esc(String(v))}" inputmode="numeric"><span>${esc(u)}</span><span data-anx="${k}">${x}</span></div>
+    <small>Bereich ${lo.toLocaleString('de-CH')}–${hi.toLocaleString('de-CH')} · Standard ${d.toLocaleString('de-CH')}${+v!==d?' · <b>geändert</b>':''}</small></div>`}
 async function loadAir(){const el=$('#sH');try{airS=await api('settings')}catch(e){el.innerHTML='<h2>Helikopter</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   airC=JSON.parse(JSON.stringify(airS.air));drawAir()}
 function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?new Date(t*1000).toLocaleString('de-CH'):'–';
@@ -232,12 +246,13 @@ function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?n
     <label class="chk"><input type="checkbox" id="aP" ${c.public?'checked':''}> In der öffentlichen Ansicht zeigen</label>
     <label class="chk"><input type="checkbox" id="aR" ${c.replay?'checked':''}> Aufzeichnen und im Replay zeigen (nur während der Einsatz aufgezeichnet wird)</label>
     <h3>Relevanzzone und Abfrage</h3><div class="mut">Relevant ist ein Luftfahrzeug, das sich im Umkreis um eine aktive Position des Einsatzes befindet. Um den PLS zählt zusätzlich die Driftdistanz (Fliessgeschwindigkeit × Zeit seit dem PLS, höchstens 30 km), damit das ganze Suchgebiet abgedeckt ist. 15 km entsprechen bei einem Rettungshelikopter etwa 4 Minuten Anflug.</div>
-    ${Object.entries(airNumL).map(([k,[l,h]])=>{const[d,lo,hi]=s.air_num[k];return`<label class="mut">${esc(l)} (${lo}–${hi}, Standard ${d}) <input type="number" data-an="${k}" min="${lo}" max="${hi}" step="1" value="${c[k]}"><small>${esc(h)}</small></label>`}).join('')}
+    ${AIR_GRP.map(([g,ks])=>`<div class="mut" style="margin-top:.5rem"><b>${g}</b></div><div class="anums">${ks.map(airNumCard).join('')}</div>`).join('')}
     <h3>Rettungshelikopter</h3><div class="mut">Diese werden hervorgehoben (rot) und mit ihrer Bezeichnung angeschrieben. Kennung: Anfang des Rufzeichens (Rega: RGA), Anfang des Kennzeichens (z. B. HB-Z) oder Transponder-Adresse (6 Zeichen, z. B. 4b330c).</div>
     <div id="aL">${c.rescue.map((x,i)=>`<div class="row" style="align-items:center"><input data-rk="${i}" value="${esc(x.k)}" aria-label="Kennung" style="max-width:8rem" maxlength="8"><input data-rn="${i}" value="${esc(x.n)}" aria-label="Bezeichnung" maxlength="40"><button data-rx="${i}" aria-label="Entfernen">✕</button></div>`).join('')||'<div class="mut">Keine Einträge</div>'}</div>
     <div class="row"><button id="aAdd">+ Eintrag</button></div>
     <div class="row"><button id="aSv" class="pri">Speichern</button><button id="aDf">Standard wiederherstellen</button><button id="aRl">Verwerfen</button></div>`;
-  el.oninput=e=>{const t=e.target;if(t.dataset.an)c[t.dataset.an]=t.value;else if(t.dataset.rk)c.rescue[+t.dataset.rk].k=t.value;else if(t.dataset.rn)c.rescue[+t.dataset.rn].n=t.value};
+  el.oninput=e=>{const t=e.target;if(t.dataset.an){const k=t.dataset.an,d=s.air_num[k][0],card=t.closest('.anum');c[k]=t.value;card.classList.toggle('chg',+t.value!==d);
+    card.querySelector('[data-anx]').textContent=airNumX(k,t.value);const sm=card.querySelector('small');sm.innerHTML=sm.innerHTML.split(' · <b>')[0]+(+t.value!==d?' · <b>geändert</b>':'')}else if(t.dataset.rk)c.rescue[+t.dataset.rk].k=t.value;else if(t.dataset.rn)c.rescue[+t.dataset.rn].n=t.value};
   el.onchange=e=>{const t=e.target;if(t.dataset.as){c.src=c.order.filter(k=>k===t.dataset.as?t.checked:c.src.includes(k))}else if(t.id==='aF')c.filter=t.value;else if(t.id==='aA')c.app=t.value;else if(t.id==='aP')c.public=t.checked?1:0;else if(t.id==='aR')c.replay=t.checked?1:0};
   el.onclick=async e=>{const b=e.target.closest('button');if(!b)return;const mv=(i,d)=>{const o=c.order;[o[i],o[i+d]]=[o[i+d],o[i]];c.src=o.filter(k=>c.src.includes(k));drawAir()};
     if(b.dataset.au)mv(+b.dataset.au,-1);else if(b.dataset.ad)mv(+b.dataset.ad,1);

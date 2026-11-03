@@ -133,7 +133,7 @@ const AIR_FILTERS = ['rescue' => 'Nur Rettungshelikopter (Liste unten)', 'heli' 
 const AIR_APP = ['all' => 'Alle angemeldeten Personen', 'part' => 'Teilnehmende und Einsatzleitung', 'lead' => 'Nur Einsatzleitung', 'off' => 'Niemand'];
 // Zahlen: [Standard, Minimum, Maximum]
 const AIR_NUM = ['radius_km' => [15, 1, 100], 'max_alt_ft' => [10000, 500, 60000], 'max_age_s' => [60, 10, 600], 'trail_min' => [5, 0, 60], 'cache_s' => [5, 2, 120]];
-const AIR_DEFAULT = ['src' => ['adsbfi', 'adsblol'], 'order' => ['adsbfi', 'adsblol', 'opensky'], 'filter' => 'heli', 'app' => 'all', 'public' => 0, 'replay' => 1, 'rescue' => [['k' => 'RGA', 'n' => 'Rega']]];
+const AIR_DEFAULT = ['src' => ['adsbfi', 'adsblol'], 'order' => ['adsbfi', 'adsblol', 'opensky'], 'filter' => 'heli', 'app' => 'all', 'public' => 0, 'replay' => 1, 'rescue' => [['k' => 'RGA', 'n' => 'Rega'], ['k' => 'AAA', 'n' => 'Alpine Air Ambulance']]];
 const AIR_BACKOFF_S = 20; // nach einem Fehlschlag aller Quellen so lange nicht erneut abfragen
 const AIR_REPLAY_S = 5;   // Aufzeichnung fürs Replay: höchstens ein Punkt je Luftfahrzeug in diesem Abstand
 function airCfg() { $v = json_decode(setting('air', ''), true); $v = is_array($v) ? $v : []; $c = AIR_DEFAULT; $ks = array_keys(AIR_SOURCES);
