@@ -90,16 +90,19 @@ if (!$db->query("SELECT COUNT(*) c FROM modes")->fetch()['c']) { // bisherige fe
 if (!$db->query("SELECT COUNT(*) c FROM users")->fetch()['c'])
   $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin,must_change) VALUES(?,?,?,1,1)")->execute([$cfg['admin_user'], 'Administrator', password_hash($cfg['admin_pass'], PASSWORD_DEFAULT)]);
 // Berechtigungssystem (Issue #63): beim ersten Aufruf die bisherigen festen Benutzerrollen als Rollen anlegen und zuweisen
-// (alle = Einsatzkraft, is_planner = zusätzlich Übungsleiter, is_admin = zusätzlich Administrator). Die Spalten is_admin/is_planner gelten danach nicht mehr.
+// (alle = Einsatzkraft, is_planner = zusätzlich Übungsleiter, is_admin = zusätzlich Systemadministrator). Die Spalten is_admin/is_planner gelten danach nicht mehr.
 if (!$db->query("SELECT COUNT(*) c FROM uroles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO uroles(name,perms,sys,def) VALUES(?,?,?,?)"); $ids = [];
-  foreach ([['Administrator', [], 'admin', 0], ['Übungsleiter', ['ex_plan'], null, 0], ['Einsatzkraft', ['inc_start', 'ex_start'], null, 1]] as [$n, $p, $sy, $d]) { $st->execute([$n, json_encode($p), $sy, $d]); $ids[] = (int)$db->lastInsertId(); }
+  foreach ([['Systemadministrator', [], 'admin', 0], ['Übungsleiter', ['ex_plan'], null, 0], ['Einsatzkraft', ['inc_start', 'ex_start'], null, 1]] as [$n, $p, $sy, $d]) { $st->execute([$n, json_encode($p), $sy, $d]); $ids[] = (int)$db->lastInsertId(); }
   $st = $db->prepare("INSERT INTO user_uroles(user_id,urole_id) VALUES(?,?)");
   foreach ($db->query("SELECT id,is_admin,is_planner FROM users")->fetchAll() as $u) {
     $st->execute([(int)$u['id'], $ids[2]]);
     if ((int)$u['is_admin']) $st->execute([(int)$u['id'], $ids[0]]); elseif ((int)$u['is_planner']) $st->execute([(int)$u['id'], $ids[1]]);
   }
 }
+// Die feste Rolle heisst Systemadministrator (früher «Administrator»)
+if ($db->query("SELECT COUNT(*) c FROM uroles WHERE sys='admin' AND name='Administrator'")->fetch()['c'])
+  $db->exec("UPDATE uroles SET name='Systemadministrator' WHERE sys='admin' AND name='Administrator'");
 
 $route = $_GET['r'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: [];
@@ -373,7 +376,7 @@ $st = $db->prepare("SELECT id,username,name,photo,exercise_mode,must_change,coor
 $me = $tok ? $st->fetch() : null; $st->closeCursor(); // Lesezugriff sofort beenden, nicht erst am Ende des Requests
 if (!$me) fail('Nicht angemeldet', 401);
 $me = ints($me, ['id', 'exercise_mode', 'must_change']); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
-// Benutzerrollen und Rechte (Issue #63): Vereinigung aller Rollen; is_admin = hat die Rolle Administrator (alle Rechte)
+// Benutzerrollen und Rechte (Issue #63): Vereinigung aller Rollen; is_admin = hat die Rolle Systemadministrator (alle Rechte)
 $me['uroles'] = userRoles($uid); $me['is_admin'] = (int)array_reduce($me['uroles'], fn($c, $r) => $c || $r['sys'] === 'admin', false); $me['perms'] = permsOf($me['uroles']);
 // Nach einem Zurücksetzen durch die Verwaltung ist nur der Passwortwechsel erlaubt
 if ($me['must_change'] && !in_array($route, ['me', 'me/password'])) fail('Bitte zuerst ein eigenes Passwort setzen', 403);
@@ -406,7 +409,7 @@ function permsOf($roles) { $p = []; foreach ($roles as $r) $p = array_merge($p, 
 // Nur Rechte vergeben oder entziehen, die man selbst hat (sonst könnte sich jemand mit «Benutzer verwalten» zum Administrator machen)
 function permsMine($ps) { global $me; return !array_diff($ps, $me['perms']); }
 function uroleRow($id) { global $db; $s = $db->prepare("SELECT * FROM uroles WHERE id=?"); $s->execute([(int)$id]); $r = $s->fetch(); $s->closeCursor(); return $r ?: null; }
-// Wer die Rolle Administrator hat und aktiv ist; mindestens eine Person muss bleiben
+// Wer die Rolle Systemadministrator hat und aktiv ist; mindestens eine Person muss bleiben
 function adminCount() { global $db; return (int)$db->query("SELECT COUNT(DISTINCT u.id) c FROM users u JOIN user_uroles x ON x.user_id=u.id JOIN uroles r ON r.id=x.urole_id WHERE u.active=1 AND r.sys='admin'")->fetch()['c']; }
 // Benutzer bearbeiten (Name, Passwort, Rollen, deaktivieren) nur, wenn er keine Rechte hat, die man selbst nicht hat
 function userEditable($id) { return permsMine(permsOf(userRoles($id))); }
@@ -1548,7 +1551,7 @@ switch ($route) {
   foreach (array_merge(array_diff($new, $old), array_diff($old, $new)) as $rid) { // geänderte Rollen: nur mit eigenen Rechten
     $r = uroleRow($rid); if (!$r) fail('Unbekannte Benutzerrolle');
     if (!permsMine(rolePerms($r))) fail('Die Rolle «' . $r['name'] . '» hat Rechte, die du selbst nicht hast', 403);
-    if ($id === $uid && $r['sys'] === 'admin' && !in_array($rid, $new, true)) fail('Die eigene Rolle Administrator kann nicht entfernt werden');
+    if ($id === $uid && $r['sys'] === 'admin' && !in_array($rid, $new, true)) fail('Die eigene Rolle Systemadministrator kann nicht entfernt werden');
   }
   if ($id) {
     if ($nm === '') fail('Name fehlt');
@@ -1564,7 +1567,7 @@ switch ($route) {
     $db->beginTransaction();
     $db->prepare("DELETE FROM user_uroles WHERE user_id=?")->execute([$id]);
     $s = $db->prepare("INSERT INTO user_uroles(user_id,urole_id) VALUES(?,?)"); foreach ($new as $rid) $s->execute([$id, $rid]);
-    if (!adminCount()) { $db->rollBack(); fail('Mindestens eine aktive Person muss die Rolle Administrator behalten'); }
+    if (!adminCount()) { $db->rollBack(); fail('Mindestens eine aktive Person muss die Rolle Systemadministrator behalten'); }
     $db->commit();
   }
   out(['ok' => true, 'id' => $id]);
@@ -1606,7 +1609,7 @@ switch ($route) {
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
   $ps = array_values(array_unique(array_filter((array)($in['perms'] ?? []), 'is_string'))); foreach ($ps as $p) if (!isset(PERMS[$p])) fail('Unbekanntes Recht');
   $id = (int)($in['id'] ?? 0); $old = $id ? uroleRow($id) : null; if ($id && !$old) fail('Benutzerrolle nicht gefunden', 404);
-  if ($old && $old['sys'] === 'admin') fail('Die Rolle Administrator hat immer alle Rechte und kann nicht geändert werden');
+  if ($old && $old['sys'] === 'admin') fail('Die Rolle Systemadministrator hat immer alle Rechte und kann nicht geändert werden');
   if (!permsMine(array_merge($ps, $old ? rolePerms($old) : []))) fail('Du kannst nur Rechte vergeben oder entziehen, die du selbst hast', 403);
   $s = $db->prepare("SELECT COUNT(*) c FROM uroles WHERE name=? AND id<>?"); $s->execute([$nm, $id]); if ($s->fetch()['c']) fail('Eine Benutzerrolle mit diesem Namen gibt es schon');
   $df = empty($in['def']) ? 0 : 1;
@@ -1615,7 +1618,7 @@ switch ($route) {
   out(['ok' => true, 'id' => $id]);
  case 'urole/remove': need('uroles'); // entfernen, die Personen verlieren die Rechte dieser Rolle
   $r = uroleRow($in['id'] ?? 0); if (!$r) fail('Benutzerrolle nicht gefunden', 404);
-  if ($r['sys'] === 'admin') fail('Die Rolle Administrator kann nicht entfernt werden');
+  if ($r['sys'] === 'admin') fail('Die Rolle Systemadministrator kann nicht entfernt werden');
   if (!permsMine(rolePerms($r))) fail('Die Rolle hat Rechte, die du selbst nicht hast', 403);
   $db->prepare("DELETE FROM user_uroles WHERE urole_id=?")->execute([(int)$r['id']]); $db->prepare("DELETE FROM uroles WHERE id=?")->execute([(int)$r['id']]);
   out(['ok' => true]);

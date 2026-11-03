@@ -85,7 +85,7 @@ const urOk=r=>r.perms.every(can);
 // Rollenauswahl: je Rolle eine Karte zum Antippen (aria-pressed) mit den enthaltenen Rechten
 const urPermTxt=r=>r.sys==='admin'?'Alle Rechte, auch künftige':r.perms.map(k=>(uroles.perms.find(p=>p.k===k)||{name:k}).name).join(' · ')||'keine Rechte';
 const roleChecks=u=>`<div class="urg" role="group" aria-label="Benutzerrollen">${uroles.roles.map(r=>{const on=u?u.uroles.includes(r.id):!!r.def&&urOk(r),lock=!urOk(r)||u&&u.id===me.id&&r.sys==='admin'&&on;
-  return`<button type="button" class="urb" data-ur="${r.id}" aria-pressed="${on}" ${lock?'disabled':''} title="${lock?(urOk(r)?'Die eigene Rolle Administrator bleibt':'Enthält Rechte, die du selbst nicht hast'):'Antippen zum Wählen'}"><b>${esc(r.name)}</b><small>${esc(urPermTxt(r))}</small></button>`}).join('')}</div>`;
+  return`<button type="button" class="urb" data-ur="${r.id}" aria-pressed="${on}" ${lock?'disabled':''} title="${lock?(urOk(r)?'Die eigene Rolle Systemadministrator bleibt':'Enthält Rechte, die du selbst nicht hast'):'Antippen zum Wählen'}"><b>${esc(r.name)}</b><small>${esc(urPermTxt(r))}</small></button>`}).join('')}</div>`;
 const pwField=(id,label)=>`<label class="mut">${label}<span class="pwr"><input id="${id}" autocomplete="off" spellcheck="false" value="${genPw()}"><button type="button" data-pwn title="Neues Passwort erzeugen">↻</button><button type="button" data-pwc>Kopieren</button></span></label>`;
 const pwWire=d=>{const i=d.querySelector('.pwr input');d.querySelector('[data-pwn]').onclick=()=>i.value=genPw();
   d.querySelector('[data-pwc]').onclick=()=>navigator.clipboard.writeText(i.value).then(()=>toast('Startpasswort kopiert.','ok'),()=>{i.select();toast('Kopieren nicht möglich, bitte von Hand kopieren.','info')})};
@@ -147,7 +147,7 @@ async function loadUsers(){const el=$('#sU');try{[users,uroles]=await Promise.al
     roleWire(d);pwWire(d)};
   const U=id=>users.find(x=>x.id==id);
   el.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.e),self=u.id===me.id;
-    dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><div class="mut">Benutzerrollen</div>${roleChecks(u)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Administrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
+    dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><div class="mut">Benutzerrollen</div>${roleChecks(u)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Systemadministrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
       async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,uroles:roleVal(d)});toast('Gespeichert.');if(self)me=(await api('me')).me;loadUsers()});roleWire(d)});
   el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.p);
     const d=dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div>${pwField('eP','Neues Startpasswort')}<div class="mut">Gib es vor dem Zurücksetzen weiter, es wird danach nicht mehr angezeigt.</div>`,
