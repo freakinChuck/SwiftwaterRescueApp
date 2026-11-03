@@ -150,6 +150,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **LO-02** – Einsatzstatistik in der Verwaltung mit Filter Alle / Scharfe Einsätze / Übungen (gemerkt), Kennzahlen je Art getrennt (AG).
 - **LO-03** – Anonymisierte Anzeige von Log und Replay sowie endgültiges Anonymisieren beendeter Einsätze (getrennt für Replay und Log, nicht umkehrbar) (#54).
 - **LO-04** – «Meine Einsätze»: Teilnehmende sehen Log und Replay ihrer beendeten Einsätze, je nach Einstellung aus, anonym (Standard) oder vollständig (#61).
+- **LO-05** – Statistik pro Person: Filter nach Art, Zeitraum (gesamt, Kalenderjahr, von–bis) und Einsatz; je Person Anzahl, Einsatzzeit, Reaktionszeit, Suchgebiet erreicht, Fahrten mit Kilometern, Weg laut Aufzeichnung, Einrückoptionen; Grafiken pro Monat und je Person; CSV-Export (#87).
 - Einsatzarchiv-Export (**offen**).
 
 ## 16. Aufzeichnung und Replay (AR)
