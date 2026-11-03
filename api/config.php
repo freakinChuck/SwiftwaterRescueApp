@@ -6,4 +6,5 @@ return [
   'db_pass' => null,
   'admin_user' => 'admin',
   'admin_pass' => 'BITTE-AENDERN',   // Nur für das erstmalige Anlegen des Admin-Kontos
+  // 'push_subject' => 'mailto:it@example.ch', // optional: Kontakt für die Push-Dienste (Web-Push, VAPID), Standard https://<Host>
 ];

@@ -2,6 +2,9 @@
 <html lang="de"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Swiftwater Rescue</title>
+<!-- PWA (Issue #67): installierbar, Service Worker sw.js; Icons sind Platzhalter bis zum Logo (Issue #56) -->
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0f2430"><link rel="icon" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Swiftwater">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
@@ -11,6 +14,9 @@ body{height:100dvh;display:flex;flex-direction:column}
 #map{position:fixed;inset:0}
 .fab{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:.7rem;z-index:1000;width:46px;height:46px;font-size:1.3rem;padding:0}
 #chip{position:fixed;top:calc(.7rem + env(safe-area-inset-top));left:4rem;right:4rem;z-index:1000;background:var(--alarm);color:#fff;border-radius:6px;padding:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600}#chip.ex{background:var(--ex)}
+/* Offline-Hinweis (Issue #67): letzter Stand mit Zeitpunkt der letzten Verbindung */
+#offline{position:fixed;top:0;left:0;right:0;z-index:9000;background:#e9a23b;color:#231400;font-size:.88rem;padding:calc(.35rem + env(safe-area-inset-top)) .8rem .35rem;text-align:center;box-shadow:0 1px 6px #0008}#offline[hidden]{display:none}
+body.off #chip,body.off #bMenu,body.off #bView,body.off #viewBox{margin-top:var(--offH,2.4rem)} /* Höhe des Hinweises, gesetzt in setOffline */
 #toasts{position:fixed;top:calc(4.2rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:8000;display:grid;gap:.4rem;width:min(420px,calc(100vw - 2rem))}
 .toast{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--ex);border-radius:6px;padding:.6rem .8rem;box-shadow:0 2px 8px #000a;cursor:pointer}
 #sheetWrap{position:fixed;z-index:1100;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;transition:transform .2s;left:0;right:0;bottom:0;max-height:58dvh;transform:translateY(105%)}
@@ -80,6 +86,7 @@ body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: K
 #alarm button{background:#fff;color:#000;font-weight:700;padding:1rem}#alarm h2{margin:0;font-size:1.8rem}
 </style></head><body>
 <div id="alarm" role="alertdialog"><h2 id="aT"></h2><div id="aB"></div><button id="aOk">Quittieren</button></div>
+<div id="offline" role="status" hidden></div>
 <div id="toasts" aria-live="polite"></div>
 <div id="app"></div>
 <script src="common.js?v=0"></script>
@@ -108,13 +115,16 @@ function ping(){try{actx=actx||new(window.AudioContext||webkitAudioContext)();co
 // critical: Vollbild-Alarm mit Dauerton (scharfer Einsatz oder Übungsmodus), sonst normale Benachrichtigung (Übung)
 function notify(t,b,key,critical){if(critical)return alarm(t,b,key);if(key){if(ackGet().includes(key))return false;ackAdd(key)}
   const d=document.createElement('div');d.className='toast';d.innerHTML=`<b>${esc(t)}</b><div>${esc(b)}</div>`;d.onclick=()=>d.remove();$('#toasts').appendChild(d);setTimeout(()=>d.remove(),20000);ping();
-  if('Notification'in window&&Notification.permission==='granted')new Notification(t,{body:b});return true}
+  sysNote(t,b,key,false);return true}
 const ackGet=()=>{try{return JSON.parse(localStorage.getItem('sw_acked')||'[]')}catch(e){return[]}};
 function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}}
 let curKey=null;
 function alarm(t,b,key){if(key&&(ackGet().includes(key)||key===curKey||alarmQ.some(q=>q[2]===key)))return false;alarmQ.push([t,b,key]);showAlarm();return true}
 function showAlarm(){if($('#alarm').style.display==='flex'||!alarmQ.length)return;const[t,b,k]=alarmQ.shift();curKey=k||null;$('#aT').textContent=t;$('#aB').textContent=b;$('#alarm').style.display='flex';beep(true);
-  if('Notification'in window&&Notification.permission==='granted')new Notification(t,{body:b,requireInteraction:true})}
+  sysNote(t,b,k,true)}
+// Systembenachrichtigung über den Service Worker (Issue #67), mit demselben tag wie die Push-Nachricht des Servers: ersetzt sie statt sie zu verdoppeln
+function sysNote(t,b,tag,crit){if(!('Notification'in window)||Notification.permission!=='granted')return;const o={body:b,tag:tag||undefined,requireInteraction:!!crit,icon:'img/icon-192.png'};
+  (navigator.serviceWorker?navigator.serviceWorker.getRegistration():Promise.resolve(null)).then(r=>r?r.showNotification(t,o):new Notification(t,o)).catch(()=>{try{new Notification(t,o)}catch(e){}})}
 $('#aOk').onclick=()=>{if(curKey)ackAdd(curKey);curKey=null;$('#alarm').style.display='none';beep(false);showAlarm()};
 /* ---------- Hauptansicht ---------- */
 // Beim Öffnen des Menüs Abschnitte zurücksetzen (siehe draw: secReset)
@@ -277,8 +287,8 @@ function leadWhy(i,m,joined){const why=[],r=joined&&roles.find(x=>x.id==m.role_i
   return why.join(', ')||'laut Server'}
 function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
   const ba=$('#bAdm');if(ba)ba.hidden=!(me&&(me.is_admin||me.is_planner)); // Verwaltung in der Kopfzeile des Menüs, nicht unter «Konto» (Issue #58)
-  const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`);
-  const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();stop();render()};
+  const acc=sec('acc','Konto',`<div class="mut">Angemeldet als ${esc(me.name)}</div><label class="row" style="align-items:center"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Übungsmodus: Übungen wie scharfe Einsätze kritisch alarmieren</span></label><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label><div class="row"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden>`+pushHtml());
+  const bindAcc=()=>{$('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=async()=>{await pushOff(true);logout();stop();render()};bindPush();
     $('#exm').onchange=e=>{const v=e.target.checked?1:0;api('me/settings',{exercise_mode:v}).then(()=>{me.exercise_mode=v;e.target.blur();return poll()}).catch(x=>{e.target.checked=!v;fail(x)})};
     // eigenes Koordinatensystem ('' = Standard der Verwaltung); Kartenebenen neu aufbauen, damit Popups die neue Anzeige zeigen
     $('#csys').onchange=e=>{const v=e.target.value,old=me.coord_sys;e.target.blur();me.coord_sys=v||null;poiKey=resKey='';api('me/settings',{coord_sys:v}).then(poll).catch(x=>{me.coord_sys=old;fail(x);poll()})}};
@@ -288,12 +298,12 @@ function draw(){const s=$('#sheet');if(!s||creating)return;const f=document.acti
   // vorbereitete Übungen (Issue #29): Übungsleitung und Administratoren starten sie hier, Alarm mit der vorbereiteten Aufgebotsmeldung
   const xps=(st&&!st.incident&&st.ex_plans)||[],xsec=!xps.length?'':sec('explans',`Vorbereitete Übungen (${xps.length})`,xps.map(p=>`<div class="row" style="align-items:center"><span style="flex:1">${esc(p.title)}</span><button class="pri" data-xs="${p.id}">Übung starten</button></div>`).join('')+'<div class="mut">Startet die Übung mit der vorbereiteten Aufgebotsmeldung. Du leitest sie als Übungsleitung: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.</div>');
   if((!st||!st.incident)&&secReset){secReset=false;openSec=new Set()} // alle Abschnitte zu, auch «Vorbereitete Übungen» (Issue #62); die Anzahl steht im Titel
-  if(!st||!st.incident){s.innerHTML=`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button><button id="bNewEx">Übung starten</button></div>`+xsec+tools+acc+footInfo();$('#bNew').onclick=()=>newView(0);$('#bNewEx').onclick=()=>newView(1);bindTools();
+  if(!st||!st.incident){s.innerHTML=pushNag()+`<h3>Kein aktiver Einsatz</h3><div class="row"><button class="pri" id="bNew">Einsatz starten</button><button id="bNewEx">Übung starten</button></div>`+xsec+tools+acc+footInfo();$('#bNew').onclick=()=>newView(0);$('#bNewEx').onclick=()=>newView(1);bindTools();
     s.querySelectorAll('[data-xs]').forEach(b=>b.onclick=()=>{const p=xps.find(x=>x.id===+b.dataset.xs);if(confirm(`Übung «${p.title}» jetzt starten? ${p.invited?'Die aufgebotenen Personen werden':'Alle werden'} alarmiert.`))api('ex/start',{id:p.id}).then(()=>{secReset=true;return poll()}).catch(fail)});return bindAcc()}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at;
   // nach dem Öffnen: «Mein Einsatz» offen, «Fliessgeschwindigkeit & Suchgebiet» nur solange keine gesetzt ist, alles andere zu
   if(secReset){secReset=false;openSec=new Set(st.ex_lead?['exlead','mine']:['mine']);if(!i.flow_ms)openSec.add('flow')}
-  let h=`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}${esc(fcs(i.lat,i.lon,' · PLS '))}${i.record===1?' · <b>● wird aufgezeichnet</b> (Standortverläufe für das Replay)':i.record===2?' · <b>❚❚ Aufzeichnung pausiert</b>':''}${i.public?` · <b>🌐 öffentlich sichtbar</b> (${i.public_anon?'ohne Namen':'mit Namen'})`:''}</div>`;
+  let h=pushNag()+`<h3 style="margin:0">${i.is_exercise?'<span class="badge">ÜBUNG</span> ':''}${esc(i.message)}</h3><div class="mut">${i.is_exercise?(st.critical?'Übung, kritische Alarmierung (Übungsmodus) · ':'Übung, normale Benachrichtigung · '):''}Alarmeingang ${new Date(i.alarm_at*1000).toLocaleString('de-CH')}${esc(fcs(i.lat,i.lon,' · PLS '))}${i.record===1?' · <b>● wird aufgezeichnet</b> (Standortverläufe für das Replay)':i.record===2?' · <b>❚❚ Aufzeichnung pausiert</b>':''}${i.public?` · <b>🌐 öffentlich sichtbar</b> (${i.public_anon?'ohne Namen':'mit Namen'})`:''}</div>`;
   if(st.ex_lead)h+=`<div class="mut"><b>Du leitest diese Übung${st.ex_title?' «'+esc(st.ex_title)+'»':''}</b> (Übungsleitung): Rechte der Einsatzleitung, du wirst nicht alarmiert.${joined?' Du nimmst zusätzlich als Einsatzkraft teil.':' Du kannst zusätzlich als Einsatzkraft teilnehmen:'}</div>`;
   // Übungsleitung: Teilnahme freiwillig, ohne «ablehnen» und ohne Hinweis zum Aufgebot
   if(st.ex_lead&&!joined)h+=`<div class="row">${modes.filter(x=>x.active).map(x=>`<button data-m="${esc(x.code)}">Zusätzlich teilnehmen<br><small>${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</small></button>`).join('')}</div>`;
@@ -695,11 +705,57 @@ let timer;async function poll(){try{const nx=await api(`incident/state&since=${l
       if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
       st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&shares(nx.me.mode))track();else stop()}
     else{if(st&&st.incident){const x=st.incident.is_exercise;if((st.alarm!==false||st.me)&&notify(x?'ÜBUNG BEENDET':'EINSATZ BEENDET',x?'Die Übung wurde beendet.':'Der Einsatz wurde beendet.','e:'+st.incident.id,st.critical!==false))toggleSheet(true)}st=nx;lastIncId=null;stop()}
-    if(st&&st.incident)creating=false;updateChip();drawMap();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}catch(e){console.error('Poll',e)}}
+    saveLast();setOffline(false);if(bootOff){bootOff=false;return render()} // offline gestartet: jetzt alles frisch laden
+    paint()}catch(e){if(e instanceof TypeError)setOffline(true);console.error('Poll',e)}} // TypeError = keine Verbindung (fetch)
+function paint(){if(st&&st.incident)creating=false;updateChip();drawMap();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
+/* ---------- Offline (Issue #67) ---------- */
+// Letzter Stand pro Gerät in localStorage: sw_last = {at, uid, st (mit allen Nachrichten)}, sw_boot = {uid, me, roles, modes}. Ohne Verbindung zeigt die App
+// diesen Stand mit einem Hinweis oben (Zeitpunkt der letzten Verbindung) und versucht es bei jedem Polling weiter. Aktionen schlagen offline fehl (Meldung in fail).
+let bootOff=false,offAt=null;
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+function saveLast(){if(me&&st)lsSet('sw_last',{at:Date.now(),uid:me.id,st:{...st,messages:msgData}})}
+function setOffline(on){const b=$('#offline');if(!b)return;document.body.classList.toggle('off',on);if(!on){b.hidden=true;offAt=null;return}
+  const l=lsGet('sw_last');offAt=offAt||(l&&me&&l.uid===me.id?l.at:Date.now());const m=Math.round((Date.now()-offAt)/60000);
+  b.textContent=`⚠ Offline – letzter Stand von ${new Date(offAt).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})}${m?` (vor ${m} min)`:''}. Wird aktualisiert, sobald die Verbindung zurück ist.`;b.hidden=false;
+  document.body.style.setProperty('--offH',b.offsetHeight+'px')}
+// Start ohne Verbindung: gemerkte Anmeldung und letzten Stand anzeigen (nur derselben Person)
+function bootOffline(){const b=lsGet('sw_boot'),l=lsGet('sw_last');if(!b||!b.me)return false;me=b.me;roles=b.roles||[];modes=b.modes||[];bootOff=true;shell();
+  if(l&&l.uid===me.id&&l.st){st=l.st;msgData=st.messages||[];msgInit=true;lastMsg=msgData.reduce((a,m)=>Math.max(a,m.id),0);lastIncId=st.incident?st.incident.id:null}
+  setOffline(true);paint();draw();timer=setInterval(poll,4000);return true}
+/* ---------- Web-Push und Installation (Issue #67) ---------- */
+// Push: pro Gerät ein Abonnement beim Push-Dienst des Browsers, beim Server unter der angemeldeten Person (push/subscribe). Der Server sendet Alarm, Nachrichten an einen selbst
+// und Einsatzende, auch wenn die App geschlossen ist. iPhone/iPad: nur als installierte App (Home-Bildschirm, ab iOS 16.4).
+let pushSt='?',instEv=null;
+const pushCan=()=>'serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window;
+const isIos=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+async function pushSub(){try{const r=await navigator.serviceWorker.getRegistration();return r?await r.pushManager.getSubscription():null}catch(e){return null}}
+// Zustand prüfen und ein bestehendes Abonnement dem Server melden (z. B. nach Anmeldung einer anderen Person auf diesem Gerät)
+async function pushSync(){if(!pushCan()){pushSt='no';return}if(Notification.permission==='denied'){pushSt='denied';return}
+  const sub=await pushSub();pushSt=sub?'on':'off';if(sub)api('push/subscribe',sub.toJSON()).catch(()=>{})}
+async function pushOn(){try{if(await Notification.requestPermission()!=='granted'){pushSt=Notification.permission==='denied'?'denied':'off';return draw()}
+    const k=await api('push/key');if(!k.enabled)throw new Error('Push ist auf diesem Server nicht verfügbar.');
+    const r=await navigator.serviceWorker.ready,raw=atob(k.key.replace(/-/g,'+').replace(/_/g,'/'));
+    const sub=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:Uint8Array.from(raw,c=>c.charCodeAt(0))});
+    await api('push/subscribe',sub.toJSON());pushSt='on'}catch(e){fail(e)}draw()}
+async function pushOff(quiet){const sub=await pushSub();if(!sub)return;try{await api('push/unsubscribe',{endpoint:sub.endpoint})}catch(e){}try{await sub.unsubscribe()}catch(e){}pushSt='off';if(!quiet)draw()}
+function pushHtml(){const t={on:'<b>Aktiv</b> auf diesem Gerät: Alarme, Nachrichten an dich und Einsatzende kommen auch bei geschlossener App.',off:'Aus. Ohne Push erfährst du von Alarmen nur, solange die App offen ist.',
+    denied:'Vom Browser blockiert. Benachrichtigungen in den Einstellungen des Browsers bzw. Geräts für diese Seite erlauben.',
+    no:isIos&&!standalone?'Auf dem iPhone/iPad zuerst über «Teilen → Zum Home-Bildschirm» installieren und die App von dort öffnen (ab iOS 16.4).':'Dieser Browser unterstützt keine Push-Benachrichtigungen.','?':'Wird geprüft …'}[pushSt];
+  return`<h4 style="margin:.8rem 0 .3rem">Push-Benachrichtigungen</h4><div class="mut">${t}</div><div class="row">${pushSt==='off'?'<button id="bPushOn" class="pri">Push einschalten</button>':pushSt==='on'?'<button id="bPushOff">Push ausschalten</button>':''}${instEv?'<button id="bInst">App installieren</button>':''}</div>`
+    +(!standalone&&!instEv&&isIos?'<div class="mut">Installieren: «Teilen → Zum Home-Bildschirm».</div>':'')}
+// Hinweis zuoberst im Menü, solange Push auf diesem Gerät aus ist: sonst merkt man erst beim verpassten Alarm, dass man es unter «Konto» einschalten muss
+function pushNag(){let later=0;try{later=+localStorage.getItem('sw_pushlater')||0}catch(e){}if(Date.now()-later<7*864e5)return'';
+  const t=pushSt==='off'?'Push ist auf diesem Gerät aus: Alarme kommen nur, solange die App offen ist.':pushSt==='no'&&isIos&&!standalone?'Für Alarme bei geschlossener App: «Teilen → Zum Home-Bildschirm», dann die App von dort öffnen und Push einschalten.':'';
+  return t?`<div class="pushNag"><span>${t}</span><span class="row" style="margin:0">${pushSt==='off'?'<button id="bPushNag" class="pri">Push einschalten</button>':''}<button id="bPushLater">Später</button></span></div>`:''}
+function bindPush(){if($('#bPushOn'))$('#bPushOn').onclick=pushOn;if($('#bPushNag'))$('#bPushNag').onclick=pushOn;if($('#bPushLater'))$('#bPushLater').onclick=()=>{try{localStorage.setItem('sw_pushlater',Date.now())}catch(e){}draw()};if($('#bPushOff'))$('#bPushOff').onclick=()=>pushOff();if($('#bInst'))$('#bInst').onclick=async()=>{const e=instEv;instEv=null;e.prompt();await e.userChoice.catch(()=>{});draw()}}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;if(me)draw()}); // eigener Knopf «App installieren» unter «Konto»
+window.addEventListener('appinstalled',()=>{instEv=null;if(me)draw()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('Service Worker',e));
 async function render(){clearInterval(timer);if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
-  try{me=(await api('me')).me}catch(e){return}
+  try{me=(await api('me')).me}catch(e){if(e instanceof TypeError&&!bootOff&&bootOffline())return;if(e instanceof TypeError)setTimeout(render,5000);return} // offline: letzter Stand (Issue #67)
   if(me.must_change){$('#app').innerHTML='';return pwDialog(true,render)} // nach Zurücksetzen zuerst eigenes Passwort setzen
   try{roles=await api('roles');modes=await api('modes')}catch(e){return}
+  lsSet('sw_boot',{uid:me.id,me,roles,modes});bootOff=false;pushSync().then(()=>{if($('#bPushOn,#bPushOff')||pushSt!=='?')draw()});
   shell();await poll();draw();timer=setInterval(poll,4000)}
 render();
 </script></body></html>
