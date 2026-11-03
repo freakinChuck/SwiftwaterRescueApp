@@ -167,7 +167,7 @@ async function loadRec(){const el=$('#sA');let s;try{s=await api('settings')}cat
 // Liste und Bezeichnungen kommen vom Server (FEATURES in api/index.php); gespeichert werden die ausgeschalteten je Art
 async function loadFeat(){const el=$('#sFn');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Funktionen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const fs=s.features||[];
-  el.innerHTML=`<h2>Funktionen</h2><div class="mut">Ausgeschaltete Funktionen erscheinen in der Einsatz-App nicht (Kartenknopf, Fenster, Kartenebene, Menü), und der Server lehnt sie ab. Die Einstellung gilt sofort, auch im laufenden Einsatz. Bereits erfasste Daten bleiben erhalten (Einsatzlog, Replay). Beim Ausschalten endet eine laufende Aufzeichnung, und der Link der öffentlichen Ansicht wird ungültig.</div>
+  el.innerHTML=`<h2>Funktionen</h2><div class="mut">Ausgeschaltete Funktionen erscheinen in der Einsatz-App nicht (Kartenknopf, Fenster, Kartenebene, Menü), und der Server lehnt sie ab. Die Einstellung gilt sofort, auch im laufenden Einsatz. Bereits erfasste Daten bleiben erhalten (Einsatzlog, Replay). Beim Ausschalten endet eine laufende Aufzeichnung, und der Link der öffentlichen Ansicht wird ungültig. Ohne Suchgebiet zeigt die Karte nur die PLS, und für das Suchgebiet werden keine Gewässerdaten mehr geladen.</div>
     <div class="tw"><table><thead><tr><th>Funktion</th><th>Scharfe Einsätze</th><th>Übungen</th></tr></thead><tbody>${fs.map(f=>`<tr><td>${esc(f.name)}</td>${['real','ex'].map(t=>`<td><input type="checkbox" data-fk="${esc(f.k)}" data-ft="${t}" ${f[t]?'checked':''} aria-label="${esc(f.name)}: ${t==='ex'?'Übungen':'Scharfe Einsätze'}"></td>`).join('')}</tr>`).join('')}</tbody></table></div>
     <div class="mut">Die Flussdistanz gibt es auch ohne laufenden Einsatz (☰ → Werkzeuge). Dort ist sie verfügbar, solange sie für scharfe Einsätze oder Übungen eingeschaltet ist. Für beide aus, verschwindet sie ganz.</div>`;
   el.onchange=e=>{const c=e.target;if(!c.dataset.fk)return;const all=[...el.querySelectorAll('[data-fk]')],off={real:[],ex:[]};
@@ -180,24 +180,28 @@ async function loadRd(){const el=$('#sF');let s;try{s=await api('settings')}catc
   $('#rdSv').onclick=()=>{const v=$('#rdS').value.replace(/km\/h/gi,' ').split(/[,;\s]+/).filter(Boolean); // «km/h» darf mitgeschrieben werden
     api('settings/save',{rd_speeds:v}).then(()=>{alert('Gespeichert. Die Einsatz-App übernimmt die Werte beim nächsten Laden.');loadRd()}).catch(fail)}}
 /* ---------- Gewässerdaten: Haltedauer des Overpass-Caches und Overpass-Server (Reihenfolge) ---------- */
-let opUrls=[],opDef=[];
+let opUrls=[],opDef=[],opOff=[];
 async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all([api('settings'),api('overpass/stats')])}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  opUrls=[...s.overpass_urls];opDef=s.overpass_default;
+  opUrls=[...s.overpass_urls];opDef=s.overpass_default;opOff=[...(s.overpass_off||[])];
   el.innerHTML=`<h2>Gewässerdaten</h2><div class="mut">Das Gewässernetz für Suchgebiet und Flussdistanz (OpenStreetMap via Overpass) holt der Server und speichert es zwischen. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal zu Overpass. Ist Overpass nicht erreichbar, verwendet der Server ältere Daten (bis 7 Tage).</div>
+    <label class="chk"><input type="checkbox" id="opOn" ${s.overpass_on?'checked':''}> Zugriff auf Overpass</label>
+    <div class="mut">Ausgeschaltet fragen weder der Server noch die Geräte Overpass ab. Suchgebiet und Flussdistanz erhalten dann nur noch Daten aus dem Zwischenspeicher (auch ältere); ohne solche erscheint das Suchgebiet als Kreis um den PLS, und die Flussdistanz ist nicht verfügbar. Gilt sofort.</div>
     <div class="row" style="align-items:end"><label class="mut">Haltedauer in Minuten (0 = nicht zwischenspeichern)<input id="opT" type="number" min="0" max="10080" step="1" value="${s.overpass_ttl}"></label><button id="opSv">Speichern</button></div>
-    <h3>Overpass-Server</h3><div class="mut">Der Server fragt sie in dieser Reihenfolge ab (je 15 s), bis einer antwortet. Antwortet keiner, fragt das Gerät dieselben Server direkt (je 30 s).</div>
+    <h3>Overpass-Server</h3><div class="mut">Der Server fragt die eingeschalteten in dieser Reihenfolge ab (je 15 s), bis einer antwortet. Antwortet keiner, fragt das Gerät dieselben Server direkt (je 30 s). Ausgeschaltete Server bleiben in der Liste, werden aber nicht abgefragt.</div>
     <div id="opList"></div>
     <div class="row"><input id="opN" placeholder="https://…/api/interpreter" aria-label="Adresse eines Overpass-Servers" inputmode="url"><button id="opA">Hinzufügen</button></div>
     <div class="row"><button id="opUs" class="pri">Server speichern</button><button id="opUd">Standard wiederherstellen</button></div>
     <h3>Verwendung und Verfügbarkeit</h3>${opStats(os,s.overpass_urls)}`;
+  $('#opOn').onchange=e=>{const c=e.target;c.disabled=true;api('settings/save',{overpass_on:c.checked?1:0}).catch(x=>{c.checked=!c.checked;fail(x)}).finally(()=>{c.disabled=false})};
   $('#opSr').onclick=()=>{if(confirm('Statistik der Overpass-Server zurücksetzen?'))api('overpass/stats/reset',{}).then(loadOp).catch(fail)};
   $('#opSv').onclick=()=>api('settings/save',{overpass_ttl:$('#opT').value}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail);
   $('#opA').onclick=()=>{const u=$('#opN').value.trim();if(!/^https:\/\/[^/?#@]+\//i.test(u))return alert('Bitte eine vollständige https-Adresse angeben, z. B. https://overpass-api.de/api/interpreter');
     if(!opUrls.includes(u))opUrls.push(u);$('#opN').value='';drawOpList()};
   $('#opN').onkeydown=e=>{if(e.key==='Enter')$('#opA').click()};
   $('#opUs').onclick=()=>{if(!opUrls.length)return alert('Mindestens ein Server ist nötig. «Standard wiederherstellen» setzt die vorgegebene Liste.');
-    api('settings/save',{overpass_urls:opUrls}).then(()=>{alert('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail)};
-  $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[]}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail)};
+    if(opUrls.every(u=>opOff.includes(u))&&!confirm('Alle Server sind ausgeschaltet. Overpass wird dann nicht mehr abgefragt. Trotzdem speichern?'))return;
+    api('settings/save',{overpass_urls:opUrls,overpass_off:opOff.filter(u=>opUrls.includes(u))}).then(()=>{alert('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail)};
+  $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[],overpass_off:[]}).then(()=>{alert('Gespeichert.');loadOp()}).catch(fail)};
   drawOpList()}
 // Statistik je Server (Issue #45): Versuche vom Server (Hosting) und direkt vom Gerät (Rückfall), Abfragen aus dem Zwischenspeicher zählen nicht
 function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',
@@ -209,7 +213,8 @@ function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?es
     <div class="tw"><table><thead><tr><th>Server</th><th>Quelle</th><th>Versuche</th><th>Erfolgreich</th><th>Fehlgeschlagen</th><th>Quote</th><th>Ø Antwortzeit</th><th>Zuletzt erfolgreich</th><th>Zuletzt fehlgeschlagen</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="row"><button id="opSr">Statistik zurücksetzen</button></div>`}
 function drawOpList(){const n=opUrls.length,el=$('#opList');
-  el.innerHTML=`<div class="tw"><table><tbody>${opUrls.map((u,k)=>`<tr><td style="width:2rem">${k+1}.</td><td style="overflow-wrap:anywhere">${esc(u)}</td><td class="act"><button data-op="up" data-k="${k}" ${k?'':'disabled'} aria-label="Nach oben" title="Früher abfragen">↑</button><button data-op="dn" data-k="${k}" ${k<n-1?'':'disabled'} aria-label="Nach unten" title="Später abfragen">↓</button><button data-op="rm" data-k="${k}" ${n>1?'':'disabled'} aria-label="Entfernen" title="Entfernen">✕</button></td></tr>`).join('')}</tbody></table></div>${JSON.stringify(opUrls)!==JSON.stringify(opDef)?'':'<div class="mut">Vorgegebene Liste.</div>'}`;
+  el.innerHTML=`<div class="tw"><table><tbody>${opUrls.map((u,k)=>`<tr><td style="width:2rem">${k+1}.</td><td style="width:2rem"><input type="checkbox" data-opk="${k}" ${opOff.includes(u)?'':'checked'} aria-label="Server abfragen" title="Eingeschaltet: wird abgefragt"></td><td style="overflow-wrap:anywhere${opOff.includes(u)?';opacity:.55':''}">${esc(u)}${opOff.includes(u)?' <span class="mut">(ausgeschaltet)</span>':''}</td><td class="act"><button data-op="up" data-k="${k}" ${k?'':'disabled'} aria-label="Nach oben" title="Früher abfragen">↑</button><button data-op="dn" data-k="${k}" ${k<n-1?'':'disabled'} aria-label="Nach unten" title="Später abfragen">↓</button><button data-op="rm" data-k="${k}" ${n>1?'':'disabled'} aria-label="Entfernen" title="Entfernen">✕</button></td></tr>`).join('')}</tbody></table></div>${JSON.stringify(opUrls)!==JSON.stringify(opDef)||opOff.length?'':'<div class="mut">Vorgegebene Liste.</div>'}<div class="mut">Änderungen gelten erst nach «Server speichern».</div>`;
+  el.querySelectorAll('[data-opk]').forEach(c=>c.onchange=()=>{const u=opUrls[+c.dataset.opk];opOff=opOff.filter(x=>x!==u);if(!c.checked)opOff.push(u);drawOpList()});
   el.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,o=b.dataset.op;
     if(o==='rm')opUrls.splice(k,1);else{const j=o==='up'?k-1:k+1;[opUrls[k],opUrls[j]]=[opUrls[j],opUrls[k]]}drawOpList()})}
 /* ---------- Übungen vorbereiten (Issue #29) ---------- */
