@@ -31,7 +31,7 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .inc.usr{border-left-color:var(--ok)}.inc.usr.off{border-left-color:var(--line);opacity:.6}.inc.usr .ih b{display:inline;margin-right:.4rem}.inc .fl .adm{color:#f0b429;border-color:#f0b429}.inc.url{border-left-color:var(--ex)}.inc.url.adm{border-left-color:#f0b429}.inc.url .ih b{display:inline;margin-right:.4rem}
 .inc .ia{display:flex;flex-wrap:wrap;gap:.3rem;margin-left:auto}.inc .ia button{padding:.35rem .6rem}.inc .ia .sec{background:none;color:var(--mut)}
 @media(max-width:760px){.inc .ia{margin-left:0;width:100%}.inc .ia button{flex:1 1 auto}}
-@media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}.inc.url .kv{grid-template-columns:repeat(3,1fr)}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
+@media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}.inc.url .kv,.inc .kv.aark{grid-template-columns:repeat(3,1fr)}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
 /* Replay */
 #replay{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;flex-direction:column}
 #rpHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--line)}#rpHead h2{margin:0;font-size:1.15rem;flex:1 1 16rem}
@@ -46,7 +46,7 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .rpl{display:block;width:100%;text-align:left;border:0;border-left:4px solid;border-radius:0;background:none;padding:.35rem .5rem;font-size:.9rem}.rpl:hover{background:var(--panel)}.rpl .t{color:var(--mut);margin-right:.4rem}
 .rpp{display:flex;gap:.4rem;align-items:center;font-size:.9rem;padding:.25rem 0;border-bottom:1px solid var(--line)}.rpp i{width:.8rem;height:.8rem;border-radius:50%;flex:0 0 auto}.rpp .nm{flex:1;min-width:0;overflow-wrap:anywhere}.rpp .nm small{display:block;color:var(--mut)}.rpp button{padding:.25rem .45rem;font-size:.8rem}.rpp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
 .exp{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.8rem 0}.exp h3{margin:0 0 .3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.exp .badge.run{background:var(--alarm)}.exp .badge.done{background:var(--line)}.exp td{vertical-align:top}.exp td small{display:block;color:var(--mut)}
-.dlg .card.mid{max-width:640px}.urh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem}.urh .urf{flex:1 1 12rem;max-width:18rem;margin:0}
+.dlg .card.mid{max-width:640px}.dlg label[hidden]{display:none}.dlg label small{font-size:.78rem}.dlg h3.aarq{margin:.6rem 0 0;border-bottom:1px solid var(--line);padding-bottom:.2rem}.inc .fl .rv{color:var(--ok);border-color:var(--ok)}.aarlogo{max-height:3.5rem;max-width:12rem;background:#fff;border-radius:4px;padding:.2rem}tr.aarh td{background:#ffffff0d}.urh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem}.urh .urf{flex:1 1 12rem;max-width:18rem;margin:0}
 .pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13rem),1fr));gap:0 .8rem} /* Rechte im Rollen-Dialog mehrspaltig */
 .urg{display:grid;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:.4rem}.urb{display:grid;gap:.1rem;text-align:left;padding:.45rem .6rem .45rem 2rem;position:relative;border-radius:8px;min-height:0}.urb[hidden]{display:none}.urb small{color:var(--mut);font-size:.78rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .urb::before{content:'';position:absolute;left:.6rem;top:.6rem;width:.9rem;height:.9rem;border-radius:50%;border:2px solid var(--mut)}.urb[aria-pressed=true]{background:#1d7fd133;border-color:var(--ex)}.urb[aria-pressed=true]::before{content:'✓';border-color:var(--ex);background:var(--ex);color:#fff;font-size:.7rem;line-height:.9rem;text-align:center}.urb:disabled{opacity:.55;cursor:not-allowed}
@@ -121,10 +121,10 @@ const NAV=[
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir]]],
-  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
+  ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aar','sAar','After Action Review',loadAar],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:'stats',einsicht:'cfg_my'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:'stats',aar:'aar',aarcfg:'aar_cfg',einsicht:'cfg_my'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>can(NAV_PERM[k]))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -485,7 +485,7 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
   const card=x=>{const fl=[x.record===1?'<span class="on">● Aufzeichnung läuft</span>':x.record===2?'<span>❚❚ Aufzeichnung pausiert</span>':x.recorded?'<span>● aufgezeichnet</span>':'',x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':''].join('');
     return`<div class="inc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl?`<div class="fl">${fl}</div>`:''}</div>
       <div class="kv"><span><small>Dauer</small>${x.ended_at?min(x.ended_at-x.alarm_at):'läuft'}</span><span><small>Angenommen</small>${x.accepted}${x.declined?` <small>${x.declined} abgelehnt</small>`:''}</span><span><small>1. Annahme</small>${min(x.first_accept==null?null:x.first_accept-x.alarm_at)}</span><span><small>1. im Gebiet</small>${min(x.first_area==null?null:x.first_area-x.alarm_at)}</span></div>
-      <div class="ia"><button data-l="${x.id}">Log</button>${x.recorded?`<button data-rp="${x.id}">Replay</button>`:''}${can('anon')&&x.ended_at&&(!x.log_anon||x.recorded&&!x.rp_anon)?`<button class="sec" data-an="${x.id}" title="Replay oder Einsatzprotokoll endgültig ohne Personendaten speichern">Anonymisieren</button>`:''}${can('anon')&&x.recorded?`<button class="sec" data-rpd="${x.id}" title="Aufzeichnung dieses Einsatzes löschen">Aufzeichnung löschen</button>`:''}</div></div>`};
+      <div class="ia"><button data-l="${x.id}">Log</button>${x.recorded?`<button data-rp="${x.id}">Replay</button>`:''}${can('aar')&&x.ended_at?`<button data-aar="${x.id}" title="After Action Review erfassen und herunterladen">After Action Review</button>`:''}${can('anon')&&x.ended_at&&(!x.log_anon||x.recorded&&!x.rp_anon)?`<button class="sec" data-an="${x.id}" title="Replay oder Einsatzprotokoll endgültig ohne Personendaten speichern">Anonymisieren</button>`:''}${can('anon')&&x.recorded?`<button class="sec" data-rpd="${x.id}" title="Aufzeichnung dieses Einsatzes löschen">Aufzeichnung löschen</button>`:''}</div></div>`};
   el.innerHTML=`<h2>Einsatzstatistik und Einsatzlog</h2><div class="row" style="align-items:center"><label class="mut" style="flex:0 0 auto">Anzeigen <select id="stF">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===statsF?'selected':''}>${v}</option>`).join('')}</select></label></div>
     <div class="ssum">${statsF!=='ex'?sum('real','Scharfe Einsätze'):''}${statsF!=='real'?sum('ex','Übungen'):''}</div>
     ${rows.map(card).join('')||`<div class="mut">Keine ${statsF==='ex'?'Übungen':statsF==='real'?'scharfen Einsätze':'Einsätze'}</div>`}`;
@@ -493,10 +493,181 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
   const X=id=>all.find(x=>x.id==id);
   el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.l);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon)});
   el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>anonDlg(X(b.dataset.an)));
+  el.querySelectorAll('[data-aar]').forEach(b=>b.onclick=()=>{aarOpen=+b.dataset.aar;location.hash='aar'});
   el.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.rp));
   el.querySelectorAll('[data-rpd]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.rpd);
     if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Markierungen, Bereiche und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
       api('incident/replay/delete',{id:x.id}).then(loadStats).catch(fail)})}
+/* ---------- After Action Review (Issue #55) ---------- */
+// Je beendetem Einsatz Angaben erfassen (Felder frei definierbar unter «After Action Review einrichten») und das Dokument im Browser erzeugen:
+// Word (.docx, Office Open XML mit JSZip) oder PDF (jsPDF mit AutoTable). Beide nutzen dasselbe Modell (aarModel); die Bibliotheken laden erst beim Herunterladen.
+let aarC=null,aarRows=[],aarOpen=null,aarF=(()=>{try{return localStorage.getItem('sw_aarf')||'all'}catch(e){return'all'}})(); // aarOpen: direkt bearbeiten (Knopf in der Einsatzstatistik)
+const AAR_LIB={zip:'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',pdf:'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',at:'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'};
+const aarJs={};const loadJs=u=>aarJs[u]=aarJs[u]||new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>{delete aarJs[u];no(new Error('Bibliothek für das Dokument konnte nicht geladen werden (Verbindung?)'))};document.head.appendChild(s)});
+const aarDt=t=>t?new Date(t*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
+const aarTm=t=>t?new Date(t*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'}):'–';
+const aarMin=s=>s==null?'–':Math.round(s/60)+' min';
+async function loadAar(){const el=$('#sAar');try{[aarC,aarRows]=await Promise.all([api('aar/cfg'),api('aar/list')])}catch(e){el.innerHTML='<h2>After Action Review</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  renderAar();if(aarOpen){const id=aarOpen;aarOpen=null;aarEdit(id)}}
+function renderAar(){const el=$('#sAar'),rows=aarRows.filter(x=>isArt(x,aarF)),n=aarRows.filter(x=>x.updated).length;
+  const card=x=>`<div class="inc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${aarDt(x.alarm_at)}</span><b>${esc(x.message)}</b>
+      <div class="fl">${x.updated?'<span class="rv">Review erfasst</span>':'<span>noch kein Review</span>'}</div></div>
+    <div class="kv aark"><span><small>Dauer</small>${aarMin(x.ended_at-x.alarm_at)}</span><span><small>Einsatzkräfte</small>${x.accepted}</span><span><small>Zuletzt bearbeitet</small>${x.updated?aarDt(x.updated)+'<br>'+esc(x.upd_name||'?'):'–'}</span></div>
+    <div class="ia"><button data-ae="${x.id}">${x.updated?'Bearbeiten':'Erfassen'}</button><button data-aw="${x.id}">Word</button><button data-ap="${x.id}">PDF</button></div></div>`;
+  el.innerHTML=`<h2>After Action Review</h2><div class="mut">Je beendetem Einsatz die Erkenntnisse erfassen und als Word- oder PDF-Dokument herunterladen. ${n} von ${aarRows.length} beendeten Einsätzen haben ein Review.${can('aar_cfg')?' Felder, Titel und Logo: <a href="#aarcfg">After Action Review einrichten</a>.':''}</div>
+    <div class="row" style="align-items:center"><label class="mut" style="flex:0 0 auto">Anzeigen <select id="aaF">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===aarF?'selected':''}>${v}</option>`).join('')}</select></label></div>
+    ${rows.map(card).join('')||`<div class="mut">Keine beendeten ${aarF==='ex'?'Übungen':aarF==='real'?'scharfen Einsätze':'Einsätze'}</div>`}`;
+  $('#aaF').onchange=e=>{aarF=e.target.value;try{localStorage.setItem('sw_aarf',aarF)}catch(_){}renderAar()};
+  el.querySelectorAll('[data-ae]').forEach(b=>b.onclick=()=>aarEdit(+b.dataset.ae));
+  el.querySelectorAll('[data-aw]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.aw,'docx'));
+  el.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.ap,'pdf'))}
+// Formular mit allen Feldern der Einstellungen; leere Felder werden nicht gespeichert
+async function aarEdit(id){let x;try{x=await api('aar/get&id='+id)}catch(e){return fail(e)}const i=x.inc,F=aarC.cfg.fields;
+  const inp=f=>{const v=x.data[f.id]??'',a=`data-af="${f.id}"`;
+    switch(f.type){case'area':return`<textarea ${a} rows="4">${esc(v)}</textarea>`;
+      case'date':return`<input type="date" ${a} value="${esc(v)}">`;case'time':return`<input type="time" ${a} value="${esc(v)}">`;
+      case'number':return`<input type="number" step="any" ${a} value="${esc(v)}">`;
+      case'select':return`<select ${a}><option value="">–</option>${f.opts.map(o=>`<option ${o===v?'selected':''}>${esc(o)}</option>`).join('')}${v&&!f.opts.includes(v)?`<option selected>${esc(v)}</option>`:''}</select>`;
+      case'check':return`<select ${a}><option value="">–</option><option value="1" ${v==='1'?'selected':''}>Ja</option><option value="0" ${v==='0'?'selected':''}>Nein</option></select>`;
+      default:return`<input ${a} value="${esc(v)}" maxlength="2000">`}};
+  const d=dlg('After Action Review – '+i.message,`<div class="mut">${i.is_exercise?'Übung':'Einsatz'} vom ${aarDt(i.alarm_at)}, Dauer ${aarMin(i.ended_at-i.alarm_at)}, ${x.people.length} Einsatzkräfte${x.updated?` · zuletzt bearbeitet ${aarDt(x.updated)} von ${esc(x.updated_by||'?')}`:''}</div>
+    ${F.map(f=>f.type==='head'?`<h3 class="aarq">${esc(f.label)}</h3>`:`<label class="mut">${esc(f.label)}${inp(f)}${f.hint?`<small>${esc(f.hint)}</small>`:''}</label>`).join('')||'<div class="mut">Es sind noch keine Felder eingerichtet (Auswertung → After Action Review einrichten).</div>'}`,
+    async d=>{const data={};d.querySelectorAll('[data-af]').forEach(e=>data[e.dataset.af]=e.value);await api('aar/save',{id,data});toast('After Action Review gespeichert.','ok');loadAar()});
+  d.firstElementChild.classList.add('mid')}
+function aarDl(id,fmt){const x=aarRows.find(r=>r.id===id);
+  dlg((fmt==='docx'?'Word':'PDF')+' herunterladen',`<div class="mut">${esc(x?x.message:'')}</div>
+    <label class="chk"><input type="checkbox" id="adL" ${aarC.cfg.auto.log?'checked':''}> Einsatzlog anhängen</label>
+    <label class="chk"><input type="checkbox" id="adA"> Namen anonymisieren</label>
+    <div class="mut">Anonymisiert stehen statt Namen Bezeichnungen wie «Einsatzkraft 1» oder «Rettling 1», ohne Beschreibungen der Rettlinge. Die im Review erfassten Angaben bleiben, wie sie geschrieben wurden. Endgültig anonymisierte Einsätze sind immer anonym.</div>`,
+    async d=>{const r=await api('aar/get&id='+id+($('#adA',d).checked?'&anon=1':''));await aarMake(r,fmt,{log:$('#adL',d).checked})},'Herunterladen')}
+// Wert fürs Dokument
+const aarV=(f,v)=>v==null||v===''?'':f.type==='date'?String(v).split('-').reverse().join('.'):f.type==='check'?(v==='1'?'Ja':'Nein'):String(v);
+// Dokumentmodell: title, sub, h (Abschnitt), q (Frage), p (Text), kv (Tabelle Bezeichnung/Wert), table (head, rows, w = Breiten in 1/50 %), note
+function aarModel(x,o){const C=aarC.cfg,A=C.auto,i=x.inc,B=[],act=r=>!r.removed;
+  B.push({t:'title',x:C.title},{t:'sub',x:[C.org,(i.is_exercise?'Übung':'Einsatz')+' vom '+aarDt(i.alarm_at)+' – '+i.message].filter(Boolean).join('\n')});
+  if(A.inc){const res=x.rescuees.filter(act);
+    B.push({t:'h',x:'Einsatzdaten'},{t:'kv',rows:[['Art',i.is_exercise?'Übung':'Scharfer Einsatz'],...(i.plan?[['Vorbereitete Übung',i.plan]]:[]),['Alarmmeldung',i.message],
+      ['Alarmeingang',aarDt(i.alarm_at)],['Einsatzende',aarDt(i.ended_at)],['Dauer',aarMin(i.ended_at-i.alarm_at)],['Ausgelöst von',i.creator||'–'],['Einsatzkräfte mit App',String(x.people.length)],
+      ['Erste Annahme nach',aarMin(i.first_accept==null?null:i.first_accept-i.alarm_at)],['Suchgebiet erreicht nach',aarMin(i.first_area==null?null:i.first_area-i.alarm_at)],
+      ...(i.flow_ms!=null?[['Fliessgeschwindigkeit',`${i.flow_ms} m/s (${Math.round(i.flow_ms*36)/10} km/h)`]]:[]),...(i.lat!=null?[['PLS des Einsatzes',fmtC(i.lat,i.lon,'lv95')+' (LV95)']]:[]),
+      ...(res.length?[['Rettlinge',`${res.length}, davon ${res.filter(r=>r.rescued_at).length} gerettet`]]:[])]})}
+  let kv=[];const flush=()=>{if(kv.length)B.push({t:'kv',rows:kv});kv=[]};
+  if(C.fields.length&&C.fields[0].type!=='head')B.push({t:'h',x:'Review'});
+  for(const f of C.fields){const v=aarV(f,x.data[f.id]);
+    if(f.type==='head'){flush();B.push({t:'h',x:f.label})}else if(f.type==='area'){flush();B.push({t:'q',x:f.label},{t:'p',x:v||'–'})}else kv.push([f.label,v||'–'])}
+  flush();
+  if(A.people&&x.people.length)B.push({t:'h',x:`Einsatzkräfte (${x.people.length})`},{t:'table',head:['Name','Einrückoption','Spezialrolle','Eingerückt','Ausgetreten'],w:[1500,1000,1100,700,700],
+    rows:x.people.map(p=>[p.name,p.mode||'–',p.role||'–',aarTm(p.joined),p.left_at?aarTm(p.left_at):'–'])});
+  const res=x.rescuees.filter(act);
+  if(A.res&&res.length)B.push({t:'h',x:`Rettlinge (${res.length})`},{t:'table',head:['Name','Beschreibung','Status'],w:[1300,2200,1500],
+    rows:res.map(r=>[r.name||'Unbekannter Rettling',r.descr||'–',r.rescued_at?'gerettet '+aarTm(r.rescued_at):r.lat!=null?'Fundort bekannt '+aarTm(r.loc_at):'vermisst'])});
+  if(A.ext&&x.externals.length)B.push({t:'h',x:`Externe Einsatzkräfte (${x.externals.length})`},{t:'table',head:['Name','Spezialrolle','Beschreibung','Im Einsatz'],w:[1300,1100,1600,1000],
+    rows:x.externals.map(e=>[e.name,e.role||'–',e.descr||'–',aarTm(e.created)+' – '+(e.removed?aarTm(e.removed):'Ende')])});
+  if(o.log&&x.log.length)B.push({t:'h',x:'Einsatzlog'},{t:'table',head:['Zeit','Person','Eintrag'],w:[600,1000,3400],rows:x.log.map(l=>[aarTm(l.ts),l.name||'System',l.text])});
+  B.push({t:'note',x:`Erstellt am ${aarDt(Date.now()/1000)} von ${me.name}${x.anon?' · Namen anonymisiert':''}`});return B}
+const aarLogo=()=>new Promise(ok=>{const s=aarC.logo;if(!s)return ok(null);const im=new Image(),png=s.startsWith('data:image/png');
+  im.onload=()=>ok({src:s,w:im.naturalWidth,h:im.naturalHeight,fmt:png?'PNG':'JPEG',ext:png?'png':'jpeg'});im.onerror=()=>ok(null);im.src=s});
+async function aarMake(x,fmt,o){const B=aarModel(x,o),logo=await aarLogo(),D=new Date(x.inc.alarm_at*1000),p=n=>String(n).padStart(2,'0');
+  const blob=fmt==='docx'?await aarDocx(B,logo,aarC.cfg.title):await aarPdf(B,logo,aarC.cfg.title);
+  const name=`AAR_${D.getFullYear()}-${p(D.getMonth()+1)}-${p(D.getDate())}_${(x.inc.message||'').replace(/[^\p{L}\p{N}]+/gu,'_').replace(/^_+|_+$/g,'').slice(0,40)||'Einsatz'}.${fmt}`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000);
+  toast(name+' heruntergeladen.','ok')}
+// Word: minimales Office-Open-XML-Paket (Dokument, Formatvorlagen, Fusszeile mit Seitenzahl, Logo)
+async function aarDocx(B,logo,title){await loadJs(AAR_LIB.zip);
+  const X=s=>String(s??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const run=(t,rp='')=>`<w:r>${rp?`<w:rPr>${rp}</w:rPr>`:''}${String(t??'').split('\n').map((l,n)=>`${n?'<w:br/>':''}<w:t xml:space="preserve">${X(l)}</w:t>`).join('')}</w:r>`;
+  const par=(st,t,rp,pp='')=>`<w:p><w:pPr>${st?`<w:pStyle w:val="${st}"/>`:''}${pp}</w:pPr>${run(t,rp)}</w:p>`;
+  const TW=9638,cell=(t,w,b,fill)=>`<w:tc><w:tcPr><w:tcW w:w="${Math.round(w*TW/5000)}" w:type="dxa"/>${fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:''}</w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr>${run(t,(b?'<w:b/>':'')+'<w:sz w:val="18"/><w:szCs w:val="18"/>')}</w:p></w:tc>`;
+  const tbl=(head,rows,ws)=>`<w:tbl><w:tblPr><w:tblStyle w:val="Tabelle"/><w:tblW w:w="${TW}" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${ws.map(w=>`<w:gridCol w:w="${Math.round(w*TW/5000)}"/>`).join('')}</w:tblGrid>`
+    +(head?`<w:tr><w:trPr><w:tblHeader/></w:trPr>${head.map((h,n)=>cell(h,ws[n],1,'D9E2F3')).join('')}</w:tr>`:'')
+    +rows.map(r=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${r.map((c,n)=>cell(c,ws[n],!head&&!n,!head&&!n?'F2F2F2':'')).join('')}</w:tr>`).join('')+`</w:tbl><w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>`;
+  let img='';
+  if(logo){const mm=36000,h=Math.min(22,logo.h*50/logo.w),w=h*logo.w/logo.h,cx=Math.round(w*mm),cy=Math.round(h*mm);
+    img=`<w:p><w:pPr><w:jc w:val="right"/><w:spacing w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="1" name="Logo"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1" name="logo.${logo.ext}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdL"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`}
+  const body=img+B.map(b=>b.t==='title'?par('Title',b.x):b.t==='sub'?par('Subtitle',b.x):b.t==='h'?par('Heading1',b.x):b.t==='q'?par('Heading2',b.x):b.t==='p'?par('',b.x)
+    :b.t==='note'?par('',b.x,'<w:i/><w:color w:val="7F7F7F"/><w:sz w:val="16"/>','<w:spacing w:before="240"/>'):b.t==='kv'?tbl(null,b.rows,[1600,3400]):tbl(b.head,b.rows,b.w)).join('');
+  const W='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"',R='xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const bd=['top','left','bottom','right','insideH','insideV'].map(k=>`<w:${k} w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>`).join('');
+  const z=new JSZip();
+  z.file('[Content_Types].xml',`${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`);
+  z.file('_rels/.rels',`${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+  z.file('word/_rels/document.xml.rels',`${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>${logo?`<Relationship Id="rIdL" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.${logo.ext}"/>`:''}</Relationships>`);
+  z.file('word/styles.xml',`${H}<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="de-CH"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="60"/></w:pPr><w:rPr><w:b/><w:color w:val="1F4E79"/><w:sz w:val="44"/><w:szCs w:val="44"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Subtitle"><w:name w:val="Subtitle"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:rPr><w:color w:val="595959"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="320" w:after="120"/><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="2" w:color="1F4E79"/></w:pBdr><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:color w:val="1F4E79"/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="40"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="0"/></w:pPr><w:rPr><w:color w:val="7F7F7F"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:style>
+<w:style w:type="table" w:styleId="Tabelle"><w:name w:val="Tabelle AAR"/><w:tblPr><w:tblBorders>${bd}</w:tblBorders><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`);
+  z.file('word/footer1.xml',`${H}<w:ftr ${W} ${R}><w:p><w:pPr><w:pStyle w:val="Footer"/><w:jc w:val="center"/></w:pPr>${run(title+' · Seite ')}<w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple>${run(' von ')}<w:fldSimple w:instr=" NUMPAGES "><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p></w:ftr>`);
+  z.file('word/document.xml',`${H}<w:document ${W} ${R} xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}<w:sectPr><w:footerReference w:type="default" r:id="rIdF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`);
+  if(logo)z.file('word/media/logo.'+logo.ext,logo.src.split(',')[1],{base64:true});
+  return z.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
+// PDF: A4, Helvetica (Zeichen ausserhalb von Windows-1252 werden zu «?»), Tabellen mit AutoTable, Fusszeile mit Seitenzahl
+async function aarPdf(B,logo,title){await loadJs(AAR_LIB.pdf);await loadJs(AAR_LIB.at);
+  const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'}),M=18,W=210-2*M,PH=297,T=s=>String(s??'').replace(/[^\n\x20-\x7e\xa0-\xff–—‘’‚“”„•…€]/g,'?');
+  let y=M,tw=W,lb=0;
+  if(logo){const h=Math.min(22,logo.h*50/logo.w),w=h*logo.w/logo.h;doc.addImage(logo.src,logo.fmt,210-M-w,M,w,h);tw=W-w-6;lb=M+h+2}
+  const brk=h=>{if(y+h>PH-M-6){doc.addPage();y=M;tw=W}};
+  const txt=(s,size,style,col,lh,gap)=>{doc.setFont('helvetica',style);doc.setFontSize(size);doc.setTextColor(...col);for(const l of doc.splitTextToSize(T(s),tw)){brk(lh);doc.text(l,M,y+lh*.75);y+=lh}y+=gap};
+  for(const b of B){
+    if(b.t==='title')txt(b.x,20,'bold',[31,78,121],8.5,1);
+    else if(b.t==='sub'){txt(b.x,11,'normal',[89,89,89],5,2);y=Math.max(y,lb);tw=W}
+    else if(b.t==='h'){y+=3;brk(16);txt(b.x,13,'bold',[31,78,121],6,0);doc.setDrawColor(31,78,121);doc.setLineWidth(.3);doc.line(M,y,M+W,y);y+=3}
+    else if(b.t==='q'){y+=1;brk(14);txt(b.x,10.5,'bold',[0,0,0],5,.5)}
+    else if(b.t==='p')txt(b.x,10.5,'normal',[0,0,0],4.8,2);
+    else if(b.t==='note'){y+=4;txt(b.x,8.5,'italic',[110,110,110],4,0)}
+    else{const kv=b.t==='kv';doc.autoTable({startY:y,margin:{left:M,right:M,top:M,bottom:M+6},theme:'grid',head:kv?undefined:[b.head.map(T)],body:b.rows.map(r=>r.map(T)),
+      styles:{font:'helvetica',fontSize:9,cellPadding:1.5,lineColor:[191,191,191],lineWidth:.2,textColor:[0,0,0],overflow:'linebreak',valign:'top'},
+      headStyles:{fillColor:[217,226,243],textColor:[0,0,0],fontStyle:'bold'},
+      columnStyles:kv?{0:{cellWidth:W*.32,fontStyle:'bold',fillColor:[242,242,242]}}:Object.fromEntries(b.w.map((w,n)=>[n,{cellWidth:W*w/5000}]))});
+      y=doc.lastAutoTable.finalY+4;tw=W}}
+  const n=doc.getNumberOfPages();
+  for(let k=1;k<=n;k++){doc.setPage(k);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(127,127,127);doc.text(T(`${title} · Seite ${k} von ${n}`),105,PH-10,{align:'center'})}
+  return doc.output('blob')}
+/* After Action Review einrichten: Dokument (Titel, Organisation, Logo), mitgelieferte Abschnitte, Felder (Reihenfolge, Art, Hinweis, Auswahlwerte) */
+const aarImg=file=>new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{const w0=im.naturalWidth||800,h0=im.naturalHeight||800,k=Math.min(1,800/Math.max(w0,h0)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w0*k));c.height=Math.max(1,Math.round(h0*k));
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);let s=c.toDataURL('image/png');if(s.length>1900000){const j=document.createElement('canvas');j.width=c.width;j.height=c.height;const g=j.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,j.width,j.height);g.drawImage(c,0,0);s=j.toDataURL('image/jpeg',.9)}ok(s)};
+  im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('Das Bild konnte nicht gelesen werden'))};im.src=u});
+async function loadAarCfg(){const el=$('#sAarC');try{aarC=await api('aar/cfg')}catch(e){el.innerHTML='<h2>After Action Review einrichten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const C=aarC.cfg,T=aarC.types,L=C.fields.length;
+  el.innerHTML=`<h2>After Action Review einrichten</h2><div class="mut">Gilt für alle Reviews. Das Dokument beginnt mit den Einsatzdaten, dann folgen die Felder in dieser Reihenfolge und danach die Listen.</div>
+    <h3>Dokument</h3><div class="jtwo"><label class="mut">Titel<input id="acT" value="${esc(C.title)}" maxlength="120"></label><label class="mut">Organisation (unter dem Titel)<input id="acO" value="${esc(C.org)}" maxlength="120"></label></div>
+    <div class="row"><button class="pri" id="acS">Speichern</button></div>
+    <h3>Logo</h3><div class="row" style="align-items:center">${aarC.logo?`<img src="${aarC.logo}" alt="Logo" class="aarlogo">`:'<span class="mut">Kein Logo</span>'}<button id="acL">${aarC.logo?'Anderes Bild wählen':'Bild wählen'}</button>${aarC.logo?'<button class="sec" id="acLx">Entfernen</button>':''}<input type="file" id="acLf" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></div>
+    <div class="mut">Optional, erscheint oben rechts im Dokument. PNG, JPEG, WebP oder SVG; es wird auf höchstens 800 Pixel verkleinert.</div>
+    <h3>Mitgelieferte Abschnitte</h3>${Object.entries(aarC.auto).map(([k,l])=>`<label class="chk"><input type="checkbox" data-aa="${k}" ${C.auto[k]?'checked':''}> ${esc(l)}</label>`).join('')}
+    <div class="mut">Die Listen erscheinen nur, wenn es im Einsatz solche gibt.</div>
+    <h3>Felder (${L})</h3><div class="row"><button class="pri" id="acA">+ Neues Feld</button></div>
+    <div class="tw"><table><thead><tr><th>Bezeichnung</th><th>Art</th><th>Hinweis</th><th></th></tr></thead><tbody>${C.fields.map((f,n)=>`<tr${f.type==='head'?' class="aarh"':''}><td>${f.type==='head'?'<b>'+esc(f.label)+'</b>':esc(f.label)}</td><td>${esc(T[f.type]||f.type)}${f.type==='select'?` <span class="mut">(${f.opts.length} Werte)</span>`:''}</td><td class="mut">${esc(f.hint)}</td>
+      <td class="act"><button data-fu="${n}" ${n?'':'disabled'} title="Nach oben" aria-label="Nach oben">↑</button><button data-fd="${n}" ${n<L-1?'':'disabled'} title="Nach unten" aria-label="Nach unten">↓</button><button data-fe="${n}">Bearbeiten</button><button data-fx="${n}">Entfernen</button></td></tr>`).join('')||'<tr><td colspan="4" class="mut">Keine Felder</td></tr>'}</tbody></table></div>
+    <div class="mut">Entfernte Felder verschwinden aus Formular und Dokument; bereits erfasste Angaben bleiben gespeichert. Kurze Angaben (Text einzeilig, Datum, Uhrzeit, Zahl, Auswahl, Ja/Nein) stehen im Dokument in einer Tabelle, mehrzeilige als Frage mit Antwort.</div>`;
+  const cur=()=>({title:C.title,org:C.org,auto:{...C.auto},fields:C.fields.map(f=>({...f}))});
+  const save=c=>api('aar/cfg/save',c).then(()=>{toast('Gespeichert.','ok');loadAarCfg()});
+  $('#acS').onclick=()=>save({...cur(),title:$('#acT').value,org:$('#acO').value}).catch(fail);
+  el.querySelectorAll('[data-aa]').forEach(c=>c.onchange=()=>{const x=cur();x.auto[c.dataset.aa]=c.checked?1:0;save(x).catch(fail)});
+  const mv=(n,k)=>{const x=cur();[x.fields[n],x.fields[n+k]]=[x.fields[n+k],x.fields[n]];save(x).catch(fail)};
+  el.querySelectorAll('[data-fu]').forEach(b=>b.onclick=()=>mv(+b.dataset.fu,-1));
+  el.querySelectorAll('[data-fd]').forEach(b=>b.onclick=()=>mv(+b.dataset.fd,1));
+  el.querySelectorAll('[data-fe]').forEach(b=>b.onclick=()=>{const n=+b.dataset.fe;aarField(C.fields[n],f=>{const x=cur();x.fields[n]=f;return save(x)})});
+  el.querySelectorAll('[data-fx]').forEach(b=>b.onclick=()=>{const n=+b.dataset.fx,f=C.fields[n];
+    if(confirm(`Feld «${f.label}» entfernen?\n\nEs verschwindet aus Formular und Dokument. Bereits erfasste Angaben bleiben gespeichert, erscheinen aber nicht mehr.`)){const x=cur();x.fields.splice(n,1);save(x).catch(fail)}});
+  $('#acA').onclick=()=>aarField(null,f=>{const x=cur();x.fields.push(f);return save(x)});
+  $('#acL').onclick=()=>$('#acLf').click();
+  $('#acLf').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{await api('aar/logo',{logo:await aarImg(f)});toast('Logo gespeichert.','ok');loadAarCfg()}catch(x){fail(x)}};
+  if($('#acLx'))$('#acLx').onclick=()=>{if(confirm('Logo entfernen?'))api('aar/logo',{logo:null}).then(loadAarCfg).catch(fail)}}
+function aarField(f,done){const T=aarC.types,neu=!f;f=f||{type:'area',label:'',hint:''};
+  const d=dlg(neu?'Neues Feld':'Feld bearbeiten',`<label class="mut">Bezeichnung<input id="afL" value="${esc(f.label)}" maxlength="150"></label>
+    <label class="mut">Art<select id="afT">${Object.entries(T).map(([k,l])=>`<option value="${k}" ${k===f.type?'selected':''}>${esc(l)}</option>`).join('')}</select></label>
+    <div class="mut" id="afN"></div>
+    <label class="mut" id="afHw">Hinweis (im Formular unter dem Feld, nicht im Dokument)<input id="afH" value="${esc(f.hint||'')}" maxlength="300"></label>
+    <label class="mut" id="afOw">Auswahlwerte (einer pro Zeile, höchstens 30)<textarea id="afO" rows="5">${esc((f.opts||[]).join('\n'))}</textarea></label>`,
+    async d=>{const t=$('#afT',d).value;await done({id:f.id,type:t,label:$('#afL',d).value,hint:t==='head'?'':$('#afH',d).value,...(t==='select'?{opts:$('#afO',d).value.split('\n')}:{})})},neu?'Hinzufügen':'Speichern');
+  const sync=()=>{const t=$('#afT',d).value;$('#afOw',d).hidden=t!=='select';$('#afHw',d).hidden=t==='head';
+    $('#afN',d).textContent=t==='head'?'Gliedert Formular und Dokument (Abschnittstitel), hat keinen Wert.':t==='area'?'Im Dokument als Frage mit der Antwort darunter.':'Im Dokument in einer Tabelle mit den übrigen kurzen Angaben.'};
+  $('#afT',d).onchange=sync;sync()}
 // Einsatzprotokoll im Gross-Modus mit Knopf «Anonym» (Issue #54, anonymisierte Fassung vom Server); endgültig anonymisierte ohne Knopf
 async function openLog(id,title,done,forced){let l;try{l=await api('incident/log&id='+id+myQ())}catch(e){return fail(e)}
   openBigLog(title+(done||forced?' (anonymisiert)':''),()=>l,false,done||forced?null:async on=>{l=await api('incident/log&id='+id+myQ()+(on?'&anon=1':''))})}
