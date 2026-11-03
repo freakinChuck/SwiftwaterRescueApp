@@ -77,6 +77,8 @@ try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
 foreach (['roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL"], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
+// Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
+try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX track_inc ON track(incident_id,ts)"); } catch (Throwable $e) {} // schlägt bei vorhandenem Index still fehl
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
@@ -131,7 +133,7 @@ const PERMS = [
   'ex_start' => ['Einsatz-App', 'Übungen starten', 'Übungen ohne Vorbereitung starten (vorbereitete startet die eingetragene Übungsleitung)'],
   'inc_lead' => ['Einsatz-App', 'Jeden Einsatz leiten', 'Rechte der Einsatzleitung in jedem Einsatz, an dem die Person teilnimmt'],
   'ex_plan' => ['Übungen', 'Übungen vorbereiten', 'Verwaltung → Übungen; im Einsatz die vorbereiteten Elemente sehen und freigeben'],
-  'users' => ['Verwaltung', 'Benutzer verwalten', 'Anlegen, bearbeiten, Passwort zurücksetzen, deaktivieren, Benutzerrollen zuweisen'],
+  'users' => ['Verwaltung', 'Benutzer verwalten', 'Anlegen, bearbeiten, Passwort zurücksetzen, deaktivieren, nie angemeldete löschen, Benutzerrollen zuweisen'],
   'uroles' => ['Verwaltung', 'Benutzerrollen verwalten', 'Rollen anlegen, ändern und entfernen'],
   'cfg_inc' => ['Verwaltung', 'Einsatz einstellen', 'Einrückoptionen, Spezialrollen, Nachrichten, Vorlagen für externe Einsatzkräfte'],
   'cfg_func' => ['Verwaltung', 'Funktionen einstellen', 'Funktionen, Aufzeichnung, Flussdistanz, Navigation'],
@@ -318,7 +320,7 @@ if ($route === 'login') {
   $u = $st->fetch();
   if (!$u || !password_verify($in['password'] ?? '', $u['pass_hash'])) fail('Benutzername oder Passwort falsch', 401);
   $t = bin2hex(random_bytes(24));
-  $db->prepare("UPDATE users SET token=? WHERE id=?")->execute([$t, $u['id']]);
+  $db->prepare("UPDATE users SET token=?, last_login=? WHERE id=?")->execute([$t, time(), $u['id']]);
   out(['token' => $t]);
 }
 
@@ -413,6 +415,10 @@ function uroleRow($id) { global $db; $s = $db->prepare("SELECT * FROM uroles WHE
 function adminCount() { global $db; return (int)$db->query("SELECT COUNT(DISTINCT u.id) c FROM users u JOIN user_uroles x ON x.user_id=u.id JOIN uroles r ON r.id=x.urole_id WHERE u.active=1 AND r.sys='admin'")->fetch()['c']; }
 // Benutzer bearbeiten (Name, Passwort, Rollen, deaktivieren) nur, wenn er keine Rechte hat, die man selbst nicht hat
 function userEditable($id) { return permsMine(permsOf(userRoles($id))); }
+// Konten, die irgendwo in Einsatz- oder Übungsdaten vorkommen (dürfen nie gelöscht werden, nur deaktiviert)
+function usersUsed() { global $db; $q = []; foreach (['participants' => 'user_id', 'messages' => 'from_user', 'incident_log' => 'user_id', 'incidents' => 'created_by', 'track' => 'user_id', 'rescuee_marks' => 'user_id', 'pois' => 'created_by', 'rescuees' => 'created_by', 'externals' => 'created_by', 'ex_plans' => 'created_by', 'ex_injects' => 'released_by'] as $t => $c) $q[] = "SELECT $c u FROM $t WHERE $c IS NOT NULL";
+  foreach (['loc_by', 'rescued_by'] as $c) $q[] = "SELECT $c u FROM rescuees WHERE $c IS NOT NULL";
+  return array_flip(array_map('intval', $db->query("SELECT DISTINCT u FROM (" . implode(' UNION ', $q) . ") x")->fetchAll(PDO::FETCH_COLUMN))); }
 function needUserEditable($id) { if (!userEditable($id)) fail('Diese Person hat Rechte, die du selbst nicht hast; nur jemand mit diesen Rechten kann sie bearbeiten', 403); }
 function pwCheck($p) { if (!is_string($p) || $p === '') fail('Das Passwort darf nicht leer sein'); }
 // Kritisch alarmieren: scharfe Einsätze immer, Übungen nur bei aktiviertem Übungsmodus
@@ -1542,7 +1548,8 @@ switch ($route) {
  case 'users': need('users', 'ex_plan'); // Übungsleiter (nur ex_plan) nur Name und Benutzername (Auswahl von Übungsleitung und Aufgebotenen)
   if (!can('users')) out(array_map(fn($r) => ints($r, ['id', 'active']), $db->query("SELECT id,username,name,active FROM users ORDER BY active DESC, name")->fetchAll()));
   $ur = []; foreach ($db->query("SELECT user_id,urole_id FROM user_uroles")->fetchAll() as $x) $ur[(int)$x['user_id']][] = (int)$x['urole_id'];
-  out(array_map(fn($r) => ints($r, ['id', 'active', 'exercise_mode', 'must_change']) + ['uroles' => $ur[(int)$r['id']] ?? [], 'editable' => userEditable((int)$r['id']) ? 1 : 0], $db->query("SELECT id,username,name,active,exercise_mode,must_change FROM users ORDER BY active DESC, name")->fetchAll()));
+  $used = usersUsed(); // deletable = nie angemeldet, in keinen Daten, nicht man selbst (Issue #63)
+  out(array_map(fn($r) => ints($r, ['id', 'active', 'exercise_mode', 'must_change', 'last_login']) + ['uroles' => $ur[(int)$r['id']] ?? [], 'editable' => ($e = userEditable((int)$r['id'])) ? 1 : 0, 'deletable' => $e && $r['last_login'] === null && !isset($used[(int)$r['id']]) && (int)$r['id'] !== $uid ? 1 : 0], $db->query("SELECT id,username,name,active,exercise_mode,must_change,last_login FROM users ORDER BY active DESC, name")->fetchAll()));
  case 'user/save': need('users'); // anlegen oder Name/Benutzerrollen ändern: uroles = Liste der Rollen-IDs (nicht übergeben = unverändert)
   $nm = trim($in['name'] ?? ''); $id = (int)($in['id'] ?? 0);
   if ($id) needUserEditable($id);
@@ -1579,6 +1586,23 @@ switch ($route) {
   $s = $db->prepare("UPDATE users SET pass_hash=?, must_change=1, token=NULL WHERE id=?"); $s->execute([password_hash($in['password'], PASSWORD_DEFAULT), $id]);
   $db->prepare("DELETE FROM push_subs WHERE user_id=?")->execute([$id]); // abgemeldet: Geräte erhalten keine Push-Nachrichten mehr
   if (!$s->rowCount()) fail('Benutzer nicht gefunden', 404);
+  out(['ok' => true]);
+ case 'user/delete': need('users'); // nur Personen, die sich nie angemeldet haben und in keinen Daten vorkommen; sonst deaktivieren
+  $id = (int)($in['id'] ?? 0);
+  if ($id === $uid) fail('Das eigene Konto kann nicht gelöscht werden');
+  needUserEditable($id);
+  $s = $db->prepare("SELECT last_login FROM users WHERE id=?"); $s->execute([$id]); $u = $s->fetch(); $s->closeCursor();
+  if (!$u) fail('Benutzer nicht gefunden', 404);
+  if ($u['last_login'] !== null || isset(usersUsed()[$id])) fail('Diese Person hat sich schon angemeldet oder kommt in Einsatzdaten vor; bitte deaktivieren');
+  $db->beginTransaction();
+  foreach (['user_uroles', 'push_subs'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
+  $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
+  foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
+    $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));
+    if ($fx($p['leads']) !== $p['leads'] || $fx($p['invite']) !== $p['invite']) $db->prepare("UPDATE ex_plans SET leads=?, invite=? WHERE id=?")->execute([$fx($p['leads']), $fx($p['invite']), $p['id']]);
+  }
+  if (!adminCount()) { $db->rollBack(); fail('Mindestens eine aktive Person muss die Rolle Systemadministrator behalten'); }
+  $db->commit();
   out(['ok' => true]);
  case 'user/active': need('users'); // Benutzer entfernen (deaktivieren) oder reaktivieren, Einsatzdaten bleiben erhalten
   $id = (int)($in['id'] ?? 0); $a = empty($in['active']) ? 0 : 1;

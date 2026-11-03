@@ -28,6 +28,7 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .inc{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1.2rem;border:1px solid var(--line);border-left:4px solid var(--alarm);border-radius:8px;padding:.6rem .8rem;margin:.5rem 0}.inc.ex{border-left-color:var(--ex)}
 .inc .ih{flex:1 1 15rem;min-width:0}.inc .ih b{display:block;overflow-wrap:anywhere;margin:.15rem 0}.inc .ih .mut{font-size:.85rem}
 .inc .fl{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.3rem}.inc .fl span{font-size:.75rem;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:0 .45rem}.inc .fl .on{color:#e05cb0;border-color:#e05cb0}
+.inc.usr{border-left-color:var(--ok)}.inc.usr.off{border-left-color:var(--line);opacity:.6}.inc.usr .ih b{display:inline;margin-right:.4rem}.inc .fl .adm{color:#f0b429;border-color:#f0b429}
 .inc .ia{display:flex;flex-wrap:wrap;gap:.3rem;margin-left:auto}.inc .ia button{padding:.35rem .6rem}.inc .ia .sec{background:none;color:var(--mut)}
 @media(max-width:760px){.inc .ia{margin-left:0;width:100%}.inc .ia button{flex:1 1 auto}}
 @media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
@@ -137,10 +138,16 @@ window.addEventListener('hashchange',()=>{if(me&&myMode()!==MY)start();else show
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
 async function loadUsers(){const el=$('#sU');try{[users,uroles]=await Promise.all([api('users'),api('uroles')])}catch(e){el.innerHTML='<h2>Benutzer</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  el.innerHTML=`<h2>Benutzer (${users.filter(u=>u.active).length} aktiv)</h2><div class="row"><button class="pri" id="uA">+ Neuer Benutzer</button></div><div class="tw"><table><thead><tr><th>Name</th><th>Benutzername</th><th>Benutzerrollen</th><th>Status</th><th></th></tr></thead><tbody>${users.map(u=>{const self=u.id===me.id;
-    return`<tr class="${u.active?'':'off'}"><td>${esc(u.name)}${self?' <span class="mut">(du)</span>':''}</td><td>${esc(u.username)}</td><td>${ROLE_LABEL(u)}</td><td>${u.active?'aktiv':'deaktiviert'}${u.must_change?'<br><span class="mut">Passwortwechsel ausstehend</span>':''}${u.exercise_mode?'<br><span class="mut">Übungsmodus an</span>':''}</td>
-      <td class="act">${!u.editable?'<span class="mut" title="Hat Rechte, die du selbst nicht hast">nur mit mehr Rechten</span>':`<button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.active?`<button data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}`}</td></tr>`}).join('')}</tbody></table></div>
-    <div class="mut">Deaktivierte Benutzer können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
+  // eine Karte pro Person wie in der Einsatzstatistik: Kopf (Name, Benutzername, Rollen), Kennzahlen, Knöpfe
+  const dt=t=>t?new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'vor der Erfassung';
+  const card=u=>{const self=u.id===me.id;
+    return`<div class="inc usr${u.active?'':' off'}"><div class="ih"><b>${esc(u.name)}${self?' <span class="mut">(du)</span>':''}</b><span class="mut">${esc(u.username)}</span>
+      <div class="fl">${u.uroles.length?u.uroles.map(id=>`<span${UR(id).sys==='admin'?' class="adm"':''}>${esc(UR(id).name)}</span>`).join(''):'<span>keine Benutzerrolle</span>'}</div></div>
+      <div class="kv"><span><small>Status</small>${u.active?'aktiv':'deaktiviert'}</span><span><small>Letzte Anmeldung</small>${u.last_login==null?'noch nie':dt(u.last_login)}</span><span><small>Passwort</small>${u.must_change?'Wechsel ausstehend':'eigenes'}</span><span><small>Übungsmodus</small>${u.exercise_mode?'an':'aus'}</span></div>
+      <div class="ia">${!u.editable?'<span class="mut" title="Hat Rechte, die du selbst nicht hast">nur mit mehr Rechten bearbeitbar</span>':`<button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.deletable?`<button class="sec" data-x="${u.id}" title="Hat sich noch nie angemeldet und kommt in keinen Einsatzdaten vor">Löschen</button>`:u.active?`<button class="sec" data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}`}</div></div>`};
+  el.innerHTML=`<h2>Benutzer (${users.filter(u=>u.active).length} aktiv)</h2><div class="row"><button class="pri" id="uA">+ Neuer Benutzer</button></div>
+    ${users.map(card).join('')}
+    <div class="mut">Wer sich noch nie angemeldet hat, kann gelöscht werden; alle anderen werden deaktiviert: Sie können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
   // Startpasswort nach dem Speichern nicht in einer Meldung anzeigen (Issue #59): es steht vorher im Feld und kann dort kopiert werden
   $('#uA').onclick=()=>{const d=dlg('Neuer Benutzer',`<div class="jtwo"><label class="mut">Name<input id="uf" autocomplete="off"></label><label class="mut">Benutzername<input id="un" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>
       ${pwField('up','Startpasswort')}
@@ -155,6 +162,8 @@ async function loadUsers(){const el=$('#sU');try{[users,uroles]=await Promise.al
   el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.p);
     const d=dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div>${pwField('eP','Neues Startpasswort')}<div class="mut">Gib es vor dem Zurücksetzen weiter, es wird danach nicht mehr angezeigt.</div>`,
       async d=>{await api('user/password',{id:u.id,password:$('#eP',d).value});toast(`Passwort von ${u.name} zurückgesetzt.`,'ok');loadUsers()},'Zurücksetzen');pwWire(d)});
+  el.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.x);
+    dlg('Benutzer löschen',`<div>«${esc(u.name)}» (${esc(u.username)}) hat sich noch nie angemeldet und wird endgültig gelöscht.</div>`,async()=>{await api('user/delete',{id:u.id});toast(`Benutzer «${u.name}» gelöscht.`,'ok');loadUsers()},'Löschen')});
   el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.d);
     if(confirm(u.name+' deaktivieren?\n\nDie Person wird abgemeldet, aus einem laufenden Einsatz ausgetragen und kann sich nicht mehr anmelden. Einsatzdaten bleiben erhalten.'))api('user/active',{id:u.id,active:0}).then(loadUsers).catch(fail)});
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>api('user/active',{id:+b.dataset.a,active:1}).then(loadUsers).catch(fail))}
