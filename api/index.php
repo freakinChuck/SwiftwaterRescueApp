@@ -185,13 +185,21 @@ const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 13,
 ]];
 // Zugriff auf ein Review: Verwaltung (aar, aar_rel) oder my=1 (Meine Einsätze: Teilnahme, freigegeben, my_runs nicht off)
 // Statistik pro Person (Issue #87): eine Zeile je Teilnahme; $only = nur diese Person (Meine Statistik)
-function psRows($only = null) { global $db, $now; $w = $only === null ? '' : 'user_id=' . (int)$only . ' AND ';
+function psRows($only = null) { global $db, $now; $only = $only === null ? null : (int)$only;
   // Einsatzzeit = Summe der Abschnitte von «angenommen»/«wieder eingestiegen» bis «verlassen», der letzte bis Austritt (left_at) bzw. Einsatzende
   // Fahrten = Log-Einträge «move» (Luftlinie gemäss Log), Weg = Summe der aufgezeichneten Standorte (nur mit Aufzeichnung, Lücken über 120 s nicht, wie GAP_S im Replay)
-  $inc = []; foreach ($db->query("SELECT id,alarm_at,ended_at,is_exercise,log_anon FROM incidents") as $r) $inc[(int)$r['id']] = ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'log_anon']);
-  $ev = []; foreach ($db->query("SELECT incident_id,user_id,ts,kind,text FROM incident_log WHERE {$w}kind IN ('accept','leave','move','area') AND user_id IS NOT NULL ORDER BY ts, id") as $r) $ev[$r['incident_id'] . ':' . $r['user_id']][] = $r;
-  $tr = []; $last = []; foreach ($db->query("SELECT incident_id,user_id,ts,lat,lon FROM track WHERE {$w}user_id IS NOT NULL ORDER BY incident_id,user_id,ts,id") as $r) {
-   $k = $r['incident_id'] . ':' . $r['user_id']; $l = $last[$k] ?? null;
+  // Endgültig anonymisierte Einsätze bleiben personenbezogen: Log-Einträge tragen dann die Bezeichnung «Einsatzkraft N» (actor), die Spuren eine negative ID (rp_anon);
+  // beide folgen der Reihenfolge der Teilnahmen (anonCtx, participants nach id), daraus ergibt sich wieder die Person
+  $inc = []; foreach ($db->query("SELECT id,alarm_at,ended_at,is_exercise,log_anon,rp_anon FROM incidents") as $r) $inc[(int)$r['id']] = ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'log_anon']);
+  $lab = []; $n = []; foreach ($db->query("SELECT incident_id,user_id FROM participants ORDER BY incident_id,id") as $r) { $i = (int)$r['incident_id']; $n[$i] = ($n[$i] ?? 0) + 1; $lab[$i]['Einsatzkraft ' . $n[$i]] = (int)$r['user_id']; }
+  $neg = []; foreach ($inc as $i => $x) if ($x['rp_anon'] !== null) foreach (json_decode($x['rp_anon'], true) ?: [] as $p) if (isset($p['user_id'], $p['name'], $lab[$i][$p['name']])) $neg[$i][(int)$p['user_id']] = $lab[$i][$p['name']];
+  $ev = []; foreach ($db->query("SELECT incident_id,user_id,actor,ts,kind,text FROM incident_log WHERE kind IN ('accept','leave','move','area') AND (user_id IS NOT NULL OR actor IS NOT NULL) ORDER BY ts, id") as $r) {
+   $i = (int)$r['incident_id']; $u = $r['user_id'] !== null ? (int)$r['user_id'] : ($lab[$i][(string)$r['actor']] ?? null);
+   if ($u !== null && ($only === null || $u === $only)) $ev[$i . ':' . $u][] = $r; }
+  $tr = []; $last = []; foreach ($db->query("SELECT incident_id,user_id,ts,lat,lon FROM track WHERE user_id IS NOT NULL ORDER BY incident_id,user_id,ts,id") as $r) {
+   $i = (int)$r['incident_id']; $u = (int)$r['user_id']; if ($u < 0) $u = $neg[$i][$u] ?? null;
+   if ($u === null || ($only !== null && $u !== $only)) continue;
+   $k = $i . ':' . $u; $l = $last[$k] ?? null;
    if ($l && (int)$r['ts'] - (int)$l['ts'] <= 120) $tr[$k] = ($tr[$k] ?? 0) + hav((float)$l['lat'], (float)$l['lon'], (float)$r['lat'], (float)$r['lon']);
    $last[$k] = $r; }
   $rows = [];
@@ -209,9 +217,7 @@ function psRows($only = null) { global $db, $now; $w = $only === null ? '' : 'us
    $row = ['incident_id' => $i['id'], 'is_exercise' => $i['is_exercise'], 'alarm_at' => $i['alarm_at'], 'declined' => $dec ? 1 : 0,
     'dur' => $dec ? 0 : $dur, 'react' => $first === null ? null : max(0, $first - $i['alarm_at']), 'area' => $area === null ? null : max(0, $area - $i['alarm_at']),
     'trips' => $trips, 'km' => round($km, 1), 'track_km' => isset($tr[$k]) ? round($tr[$k] / 1000, 1) : null, 'mode_name' => $dec ? null : $p['mode_name']];
-   // endgültig anonymisierte Protokolle: Teilnahme ohne Person (zählt in den Summen, nicht bei einer Person)
-   if ($i['log_anon']) $row += ['user_id' => null, 'name' => null, 'username' => null, 'active' => 1];
-   else $row += ['user_id' => (int)$p['user_id'], 'name' => $p['name'], 'username' => $p['username'], 'active' => (int)$p['active']];
+   $row += ['user_id' => (int)$p['user_id'], 'name' => $p['name'], 'username' => $p['username'], 'active' => (int)$p['active']];
    $rows[] = $row; }
 
   return $rows; }
@@ -1556,7 +1562,7 @@ switch ($route) {
 
  // Endgültig anonymisieren (Issue #54, nur Verwaltung, nur beendete Einsätze, nicht umkehrbar). Zwei getrennte Funktionen:
  // Replay: Einsatzkräfte im Replay ohne Verbindung zu den Konten (Bezeichnung, Einrückoption, Spezialrolle in rp_anon), Standortverläufe mit negativer ID,
- //   letzte Standorte der Teilnahmen gelöscht; das Replay zeigt danach auch Rettlinge, Externe und Log nur noch anonym. Einsatzprotokoll und Statistik bleiben.
+ //   letzte Standorte der Teilnahmen gelöscht; das Replay zeigt danach auch Rettlinge, Externe und Log nur noch anonym. Einsatzprotokoll und Statistik bleiben (Statistik pro Person weiter personenbezogen, psRows).
  // Einsatzprotokoll: Log-Einträge und Nachrichten ohne Konto (Bezeichnung in actor, from_label, to_label), Namen im Text ersetzt, ebenso in der Alarmmeldung.
  case 'incident/anon/replay': need('anon');
   $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
@@ -1612,8 +1618,8 @@ switch ($route) {
   if (myRuns() === 'anon') foreach ($rows as &$r) $r['message'] = anonText($r['message'], anonCtx($r['id'], $uid)); // Alarmmeldung wie im Log
   unset($r);
   out(['mode' => myRuns(), 'incidents' => $rows]);
- case 'my/stats': // Meine Statistik (Issue #87): nur die eigenen Teilnahmen, für alle Angemeldeten; endgültig anonymisierte Protokolle zählen nicht
-  out(['rows' => array_values(array_filter(psRows($uid), fn($r) => $r['user_id'] !== null))]);
+ case 'my/stats': // Meine Statistik (Issue #87): nur die eigenen Teilnahmen, für alle Angemeldeten, auch aus endgültig anonymisierten Einsätzen
+  out(['rows' => psRows($uid)]);
  case 'stats': need('stats', 'aar', 'aar_rel'); // mit nur aar (After Action Review, Issue #55) ohne Log und Replay, die prüfen incView
   $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area', 'rp_anon', 'log_anon', 'aar_at', 'aar_st']), $db->query(
    "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,u.name creator,(SELECT a.updated FROM aar a WHERE a.incident_id=i.id) aar_at,(SELECT a.status FROM aar a WHERE a.incident_id=i.id) aar_st,

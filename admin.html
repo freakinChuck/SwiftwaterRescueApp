@@ -525,9 +525,9 @@ function renderPS(){const el=$('#sPS'),f=psF,[a,b]=psRange(),save=()=>{try{local
   const incs=psData.inc.filter(x=>isArt(x,f.art)&&x.alarm_at>=a&&x.alarm_at<b);
   if(f.inc&&!incs.some(x=>x.id==f.inc))f.inc='';
   const sel=f.inc?incs.filter(x=>x.id==f.inc):incs,ids=new Set(sel.map(x=>x.id));
-  const rows=psData.rows.filter(r=>ids.has(r.incident_id)),acc=rows.filter(r=>!r.declined),anon=acc.filter(r=>r.user_id==null).length;
-  // pro Person zusammenfassen (anonymisierte Protokolle ohne Person zählen nur in den Summen)
-  const P=new Map();rows.filter(r=>r.user_id!=null).forEach(r=>{let p=P.get(r.user_id);if(!p)P.set(r.user_id,p={id:r.user_id,name:r.name,username:r.username,active:r.active,n:0,real:0,ex:0,dec:0,dur:0,react:[],area:0,trips:0,km:0,track:0,modes:{}});
+  const rows=psData.rows.filter(r=>ids.has(r.incident_id)),acc=rows.filter(r=>!r.declined);
+  // pro Person zusammenfassen (auch endgültig anonymisierte Einsätze, der Server ordnet sie den Personen zu)
+  const P=new Map();rows.forEach(r=>{let p=P.get(r.user_id);if(!p)P.set(r.user_id,p={id:r.user_id,name:r.name,username:r.username,active:r.active,n:0,real:0,ex:0,dec:0,dur:0,react:[],area:0,trips:0,km:0,track:0,modes:{}});
     if(r.declined){p.dec++;return}p.n++;r.is_exercise?p.ex++:p.real++;p.dur+=r.dur;if(r.react!=null)p.react.push(r.react);if(r.area!=null)p.area++;p.trips+=r.trips;p.km+=r.km;p.track+=r.track_km||0;if(r.mode_name)p.modes[r.mode_name]=(p.modes[r.mode_name]||0)+1});
   const ppl=[...P.values()],val=p=>f.m==='n'?p.n:f.m==='dur'?p.dur:f.m==='km'?p.km:p.track,fmt=v=>f.m==='n'?String(v):f.m==='dur'?psHrs(v):psKm(v);
   ppl.sort((x,y)=>val(y)-val(x)||y.n-x.n||x.name.localeCompare(y.name,'de'));
@@ -540,7 +540,7 @@ function renderPS(){const el=$('#sPS'),f=psF,[a,b]=psRange(),save=()=>{try{local
       <label class="mut psinc">Einsatz<select id="psInc"><option value="">Alle im Zeitraum (${incs.length})</option>${incs.map(x=>`<option value="${x.id}" ${x.id==f.inc?'selected':''}>${x.is_exercise?'Übung':'Einsatz'} ${dt(x.alarm_at)} – ${esc(x.message.slice(0,60))}</option>`).join('')}</select></label></div>
     <div class="ssum"><div class="${f.art==='ex'?'ex':''}"><h3>Übersicht</h3><div class="kv"><span><small>Einsätze</small>${sel.filter(x=>!x.is_exercise).length}</span><span><small>Übungen</small>${sel.filter(x=>x.is_exercise).length}</span><span><small>Teilnahmen</small>${acc.length}${rows.length>acc.length?` <small>${rows.length-acc.length} abgelehnt</small>`:''}</span><span><small>Personen</small>${ppl.filter(p=>p.n).length}</span>
       <span><small>Einsatzzeit gesamt</small>${psHrs(sumF('dur'))}</span><span><small>Ø Reaktionszeit</small>${psHrs(avg(acc.map(r=>r.react).filter(x=>x!=null)))}</span><span><small>Fahrten</small>${sumF('trips')} · ${psKm(sumF('km'))}</span><span><small>Weg (Aufzeichnung)</small>${psKm(sumF('track_km'))}</span></div>
-      ${anon?`<div class="mut" style="font-size:.8rem;margin-top:.3rem">${anon} Teilnahme${anon>1?'n':''} aus anonymisierten Protokollen ohne Person (nur in den Summen).</div>`:''}</div></div>
+</div></div>
     ${f.inc?'':psMonths(sel)}
     <div class="row" style="align-items:center;margin-top:.8rem"><h3 style="margin:0;flex:1 1 auto">Pro Person</h3><label class="mut" style="flex:0 0 auto">Sortieren nach<select id="psM">${Object.entries(PS_METRIC).map(([k,v])=>`<option value="${k}" ${k===f.m?'selected':''}>${v}</option>`).join('')}</select></label><button class="sec" id="psCsv" style="flex:0 0 auto">CSV</button></div>
     ${psBars(ppl.filter(p=>val(p)>0).slice(0,15),val,fmt)}
@@ -849,7 +849,7 @@ function renderMyPs(){const el=$('#myStat');if(!el||!myPs)return;const f=myF,[a,
       <span><small>Fahrten</small>${sum('trips')?sum('trips')+' · '+psKm(sum('km')):'–'}</span><span><small>Weg (Aufzeichnung)</small>${sum('track_km')?psKm(sum('track_km')):'–'}</span>${rows.length>acc.length?`<span><small>Abgelehnt</small>${rows.length-acc.length}</span>`:''}</div>
       ${Object.keys(modes).length?`<div class="fl" style="margin-top:.3rem">${Object.entries(modes).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`<span>${esc(k)} ${v}×</span>`).join('')}</div>`:''}</div></div>
     ${psMonths(acc)||'<div class="mut">Keine Teilnahmen im gewählten Zeitraum.</div>'}
-    <div class="mut" style="font-size:.8rem">Einsatzzeit: ab Annahme bis Verlassen bzw. Einsatzende. Reaktionszeit: Alarm bis Annahme. Fahrten: erkannte Fahrten mit Fahrzeug (Luftlinie). Weg: nur bei Einsätzen mit Aufzeichnung. Zählt auch laufende Einsätze, nicht aber endgültig anonymisierte.</div>`;
+    <div class="mut" style="font-size:.8rem">Einsatzzeit: ab Annahme bis Verlassen bzw. Einsatzende. Reaktionszeit: Alarm bis Annahme. Fahrten: erkannte Fahrten mit Fahrzeug (Luftlinie). Weg: nur bei Einsätzen mit Aufzeichnung. Zählt auch laufende und endgültig anonymisierte Einsätze.</div>`;
   const set=(k,v)=>{myF[k]=v;save();renderMyPs()};
   $('#myArt').onchange=e=>set('art',e.target.value);$('#myPer').onchange=e=>set('per',e.target.value);
   if($('#myFrom')){$('#myFrom').onchange=e=>set('from',e.target.value);$('#myTo').onchange=e=>set('to',e.target.value)}
