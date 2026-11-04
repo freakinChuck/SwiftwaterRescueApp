@@ -159,6 +159,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **LO-12** – Die Verwaltung stellt ein, welche Knöpfe Einsatzkräfte unter «Meine Einsätze» sehen: Log, Replay, After Action Review ansehen, als Word, als PDF (#87).
 - **LO-13** – Ob das Einsatzlog im After Action Review steht, legt allein die Einrichtung fest; Ansicht und Herunterladen fragen nicht danach. Einsatzkräfte laden Word und PDF ohne Rückfrage herunter (#87).
 - **LO-14** – Wer das Recht auf gesicherte After Action Reviews hat, kann das gesicherte PDF auch unter «Meine Einsätze» abrufen. Die Oberfläche zeigt es wie jedes andere PDF, ohne Unterscheidung (#87).
+- **LO-16** – «Meine Einsätze» zeigt keine Stufen der Anonymisierung: Ein Einsatz ist für Einsatzkräfte entweder anonymisiert oder nicht, und ab der ersten Stufe (ausser «Aufzeichnung löschen») sind Log und Replay dort anonym. Ein gesichertes Review erscheint als freigegeben (#87).
 - **LO-15** – Ist ein Einsatz anonymisiert (jede Stufe ausser «Aufzeichnung löschen»), ist bei nicht freigegebenem Review kein After Action Review mehr möglich: kein Erfassen, Bearbeiten, Ansehen oder Herunterladen. Wird nur die anonymisierte Anzeige aufgehoben, ist es wieder möglich (#87).
 - **LO-10** – Vorgegebene Fristen der automatischen Anonymisierung (scharf/Übung, Tage nach Ende): Anzeige 90/30, Replay 180/90, Einsatzprotokoll 365/180, Freitexte und Teilnahmen 730/365, Aufzeichnung 365/180; gelten ohne eigene Einstellung und lassen sich wieder einsetzen (#87).
 - Einsatzarchiv-Export (**offen**).

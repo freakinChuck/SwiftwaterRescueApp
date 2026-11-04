@@ -884,7 +884,8 @@ function renderMyPs(){const el=$('#myStat');if(!el||!myPs)return;const f=myF,[a,
   psTips(el)}
 async function loadMy(){const el=$('#sMy');let r;try{r=await api('my/incidents');myPs=await api('my/stats').then(x=>x.rows).catch(()=>null);if(r.incidents.some(x=>x.aar_rel))aarC=await api('aar/cfg')}catch(e){el.innerHTML='<h2>Meine Einsätze</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),forced=r.mode==='anon';myB=r.btns;const B=myB,bAar=B.aar||B.docx||B.pdf;
-  const card=x=>{const fl=stRows([['Anonymisierung',anonChips(x)],['AAR',x.aar_rel?`<span class="rv" title="Freigegeben am ${aarDt(x.aar_rel)}">freigegeben</span>`:x.aar_arch?'<span class="rv">freigegeben</span>':'']]),aa=(x.aar_rel&&aarC?(B.aar?`<button data-mv="${x.id}">Ansehen</button>`:'')+aarDlBtns(x.id,'m','rel',k=>B[k]):'')+(x.aar_arch?`<button data-mc="${x.id}" title="Als PDF herunterladen">PDF</button>`:'');
+  const anyAn=x=>x.view_anon||x.rp_anon||x.log_anon||x.txt_anon;
+  const card=x=>{const fl=stRows([['Anonymisierung',anyAn(x)?'<span>anonymisiert</span>':''],['AAR',x.aar_at?`<span class="rv" title="Freigegeben am ${aarDt(x.aar_at)}">freigegeben</span>`:'']]),aa=(x.aar_rel&&aarC?(B.aar?`<button data-mv="${x.id}">Ansehen</button>`:'')+aarDlBtns(x.id,'m','rel',k=>B[k]):'')+(x.aar_arch?`<button data-mc="${x.id}" title="Als PDF herunterladen">PDF</button>`:'');
     return`<div class="inc stc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl}</div>
       <div class="kv"><span><small>Dauer</small>${Math.round((x.ended_at-x.alarm_at)/60)} min</span>${x.mode_name?`<span><small>Eingerückt</small>${esc(x.mode_name)}</span>`:''}</div>
       ${(B.log||(B.replay&&x.recorded)||aa)?`<div class="ia">${B.log||(B.replay&&x.recorded)?`<span class="bg">${B.log?`<button data-ml="${x.id}">Log</button>`:''}${B.replay&&x.recorded?`<button data-mr="${x.id}">Replay</button>`:''}</span>`:''}${aa?`<span class="bg stad"><span class="bl">After Action Review</span>${aa}</span>`:''}</div>`:''}</div>`};
@@ -893,7 +894,7 @@ async function loadMy(){const el=$('#sMy');let r;try{r=await api('my/incidents')
     ${r.incidents.map(card).join('')||'<div class="mut">Noch keine beendeten Einsätze mit deiner Teilnahme.</div>'}`;
   renderMyPs();
   const X=id=>r.incidents.find(x=>x.id==id);
-  el.querySelectorAll('[data-ml]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.ml);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon,forced||!!x.view_anon)});
+  el.querySelectorAll('[data-ml]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.ml);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon,forced||!!anyAn(x))});
   el.querySelectorAll('[data-mr]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.mr));
   el.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>aarShow(+b.dataset.mv,true));
   el.querySelectorAll('[data-mw]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.mw,'docx','',true));
