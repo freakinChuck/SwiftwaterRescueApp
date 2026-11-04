@@ -72,6 +72,10 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS ex_injects(id $ai, plan_id INT, kind $tx, label $tx, name $tx NULL, descr TEXT NULL, lat DOUBLE, lon DOUBLE, ago INT DEFAULT 0, msg TEXT NULL, ref_id INT NULL, released BIGINT NULL, released_by INT NULL, rescuee_id INT NULL, removed INT DEFAULT 0, auto INT NULL, role_id INT NULL, abbr $tx NULL, color $tx NULL, ext_id INT NULL)",
   "CREATE TABLE IF NOT EXISTS aar(incident_id INT PRIMARY KEY, data MEDIUMTEXT, updated BIGINT, updated_by INT NULL)", // After Action Review (Issue #55)
   "CREATE TABLE IF NOT EXISTS aar_img(id $ai, incident_id INT, field_id $tx, caption TEXT, data MEDIUMTEXT, w INT, h INT, created BIGINT, created_by INT NULL)", // Bilder im After Action Review (Feldart img)
+  // Vor dem Anonymisieren gesichertes Review (aarArchive): snap/aar_arch_img bis das PDF steht, das PDF in Stücken (aar_arch_part, unabhängig von Upload- und Paketgrenzen), unveränderlich ab pdf_at
+  "CREATE TABLE IF NOT EXISTS aar_arch(incident_id INT PRIMARY KEY, created BIGINT, snap LONGTEXT NULL, pdf_at BIGINT NULL, pdf_parts INT NULL, pdf_name TEXT NULL, pdf_sha TEXT NULL)",
+  "CREATE TABLE IF NOT EXISTS aar_arch_img(incident_id INT, img_id INT, field_id $tx, caption TEXT, data MEDIUMTEXT, w INT, h INT, PRIMARY KEY(incident_id,img_id))",
+  "CREATE TABLE IF NOT EXISTS aar_arch_part(incident_id INT, n INT, data MEDIUMTEXT, PRIMARY KEY(incident_id,n))",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
@@ -152,6 +156,7 @@ const PERMS = [
   'aar' => ['Auswertung', 'After Action Reviews erstellen', 'In der Einsatzstatistik je beendetem Einsatz die Angaben erfassen, als nicht relevant markieren, ansehen und herunterladen (ohne «Alle Einsätze auswerten» nur Liste und Kennzahlen, ohne Log und Replay)'],
   'aar_rel' => ['Auswertung', 'After Action Reviews freigeben', 'Als abgeschlossen freigeben (danach gesperrt und für die Teilnehmenden unter «Meine Einsätze» sichtbar) und Freigaben zurücknehmen'],
   'aar_cfg' => ['Auswertung', 'After Action Review einrichten', 'Felder, Dokumenttitel, Organisation, Logo, mitgelieferte Abschnitte und erlaubte Formate'],
+  'aar_arch' => ['Auswertung', 'Gesicherte After Action Reviews abrufen', 'Das vor dem Anonymisieren gesicherte, vollständige PDF eines freigegebenen Reviews abrufen, mit allen Namen'],
 ];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'rec_real' => 'cfg_func', 'rec_ex' => 'cfg_func', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func',
@@ -164,6 +169,7 @@ const AAR_IMG_MAX = 50; // Bilder je Review, je höchstens 3 MB (der Browser ver
 const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'log' => 'Einsatzlog (Vorauswahl beim Herunterladen)'];
 // Status je Review: 0 = in Arbeit, 1 = freigegeben (abgeschlossen, gesperrt, für Teilnehmende sichtbar), 2 = nicht relevant
 const AAR_STATUS = [0 => 'in Arbeit', 1 => 'freigegeben', 2 => 'nicht relevant'];
+const AAR_ARCH_PARTS = 400; const AAR_ARCH_CHUNK = 2200000; // gesichertes PDF: höchstens so viele Stücke zu je so vielen Zeichen Base64 (reicht für 50 Bilder zu 3 MB)
 const AAR_DL = ['docx' => 'Word (.docx)', 'pdf' => 'PDF']; // Download je Format und Zustand erlaubt (Einstellung dl); Ansehen im Browser ist davon unabhängig
 const AAR_DL_ST = ['wip' => 'In Arbeit', 'rel' => 'Freigegeben', 'nr' => 'Nicht relevant']; // «noch kein AAR» zählt als in Arbeit
 // dl je Format und Zustand; die frühere Einstellung (nur Format ein/aus) gilt für «Freigegeben»
@@ -236,6 +242,36 @@ function aarTouch($id, $exists) { global $db, $now, $uid;
   if ($exists) $db->prepare("UPDATE aar SET updated=?,updated_by=?,status=0 WHERE incident_id=?")->execute([$now, $uid, $id]);
   else $db->prepare("INSERT INTO aar(incident_id,data,updated,updated_by,status) VALUES(?,'{}',?,?,0)")->execute([$id, $now, $uid]); }
 function aarImgRow($img) { global $db; $s = $db->prepare("SELECT id,incident_id FROM aar_img WHERE id=?"); $s->execute([(int)$img]); $r = $s->fetch(); $s->closeCursor(); return $r ?: fail('Bild nicht gefunden', 404); }
+// Inhalt des Dokuments (Route aar/get, Sicherung aarArchive); c = anonCtx oder null
+function aarDoc($inc, $c, $anon, $forced, $mine, $self) { global $db; $id = (int)$inc['id']; $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
+  $a = $q("SELECT data,updated,updated_by,status,rel_at,rel_by FROM aar WHERE incident_id=?")[0] ?? null;
+  $nm = fn($u) => $u === null ? null : ($c ? ($c['u'][(int)$u] ?? 'Person') : ($db->query('SELECT name FROM users WHERE id=' . (int)$u)->fetchColumn() ?: '?'));
+  $rpa = $inc['rp_anon'] !== null;
+  $parts = array_map(fn($p) => ['name' => $c && !$rpa ? ($c['u'][$p['user_id']] ?? 'Einsatzkraft') : $p['name'], 'mode' => $p['mode_name'] ?? null, 'role' => $p['role'] ?? null, 'joined' => $p['joined'] ?? null, 'left_at' => $p['left_at'] ?? null],
+    $rpa ? (json_decode($inc['rp_anon'], true) ?: []) : replayParts($id));
+  $res = array_map(function ($r) use ($c) { $r = ints($r, ['id', 'loc_at', 'rescued_at', 'created', 'removed']); if ($c) { $r['name'] = $c['r'][$r['id']] ?? 'Rettling'; $r['descr'] = null; } return $r; },
+    $q("SELECT id,name,descr,lat,lon,loc_at,rescued_at,created,removed FROM rescuees WHERE incident_id=? ORDER BY id"));
+  $ext = array_map(function ($r) use ($c) { $r = ints($r, ['id', 'created', 'removed']); if ($c) { $r['name'] = $c['e'][$r['id']] ?? 'Externe Einsatzkraft'; $r['descr'] = null; } return $r; },
+    $q("SELECT e.id,e.name,e.descr,e.created,e.removed,r.name role FROM externals e LEFT JOIN roles r ON r.id=e.role_id WHERE e.incident_id=? ORDER BY e.id"));
+  $first = function ($k) use ($q) { $v = $q("SELECT MIN(ts) v FROM incident_log WHERE incident_id=? AND kind='$k'")[0]['v'] ?? null; return $v === null ? null : (int)$v; };
+  $plan = $inc['plan_id'] ? ($db->query('SELECT title FROM ex_plans WHERE id=' . (int)$inc['plan_id'])->fetchColumn() ?: null) : null;
+  return ['inc' => ['id' => $id, 'message' => $c ? anonText($inc['message'], $c) : $inc['message'], 'alarm_at' => (int)$inc['alarm_at'], 'ended_at' => $inc['ended_at'] === null ? null : (int)$inc['ended_at'],
+      'is_exercise' => (int)$inc['is_exercise'], 'creator' => $nm($inc['created_by']), 'plan' => $plan, 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms'],
+      'lat' => $inc['lat'] === null ? null : (float)$inc['lat'], 'lon' => $inc['lon'] === null ? null : (float)$inc['lon'], 'first_accept' => $first('accept'), 'first_area' => $first('area')],
+    'anon' => $anon, 'forced' => $forced, 'people' => $parts, 'rescuees' => $res, 'externals' => $ext, 'log' => logRows($id, true, $anon, $self), 'my_anon' => $mine && myRuns() === 'anon',
+    'data' => $a ? (json_decode($a['data'], true) ?: (object)[]) : (object)[], 'updated' => $a && $a['updated'] !== null ? (int)$a['updated'] : null, 'updated_by' => $a ? $nm($a['updated_by']) : null,
+    'status' => $a ? (int)$a['status'] : 0, 'rel_at' => $a && $a['rel_at'] !== null ? (int)$a['rel_at'] : null, 'rel_by' => $a ? $nm($a['rel_by']) : null,
+    'imgs' => array_map(fn($r) => ints($r, ['id', 'w', 'h']), $q("SELECT id,field_id field,caption,w,h FROM aar_img WHERE incident_id=? ORDER BY id"))]; } // Bilder ohne Inhalt, der kommt einzeln über aar/img
+// Sicherung vor dem Anonymisieren: Ein freigegebenes Review bleibt als PDF vollständig erhalten (Tabelle aar_arch, Recht aar_arch). Das PDF entsteht im Browser (jsPDF), die automatische Anonymisierung läuft aber ohne Browser:
+// Deshalb hält anonDo in derselben Transaktion zuerst den Inhalt fest (snap, Bilder in aar_arch_img); der nächste Browser mit dem Recht erzeugt daraus das PDF. Danach ist es unveränderlich (pdf_at), und snap und Bilder entfallen.
+function aarArchive($inc) { global $db, $now, $my; $id = (int)$inc['id'];
+  $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([$id]); $st = $s->fetchColumn(); $s->closeCursor(); if ($st === false || (int)$st !== 1) return;
+  $s = $db->prepare(($my ? 'INSERT IGNORE' : 'INSERT OR IGNORE') . " INTO aar_arch(incident_id,created) VALUES(?,?)"); $s->execute([$id, $now]); if (!$s->rowCount()) return; // die erste Sicherung bleibt
+  $fin = (int)$inc['log_anon'] || $inc['rp_anon'] !== null; $doc = aarDoc($inc, null, false, $fin, false, null);
+  $doc['anon'] = $fin; $doc['cfg'] = aarCfg(); $doc['logo'] = setting('aar_logo', null); // Einrichtung mit sichern: spätere Änderungen betreffen das Archiv nicht
+  $db->prepare("UPDATE aar_arch SET snap=? WHERE incident_id=?")->execute([json_encode($doc, JSON_UNESCAPED_UNICODE), $id]);
+  $db->prepare("INSERT INTO aar_arch_img(incident_id,img_id,field_id,caption,data,w,h) SELECT incident_id,id,field_id,caption,data,w,h FROM aar_img WHERE incident_id=?")->execute([$id]); }
+function aarArchRow($id) { global $db; $s = $db->prepare("SELECT incident_id,created,pdf_at,pdf_parts,pdf_name,pdf_sha FROM aar_arch WHERE incident_id=?"); $s->execute([(int)$id]); $r = $s->fetch(); $s->closeCursor(); return $r ?: fail('Keine Sicherung für diesen Einsatz', 404); }
 function aarCfg() { $c = json_decode((string)setting('aar_cfg', ''), true);
   if (!is_array($c)) return AAR_DEFAULT;
   $c += AAR_DEFAULT; $a = []; foreach (AAR_AUTO as $k => $_) $a[$k] = (int)($c['auto'][$k] ?? AAR_DEFAULT['auto'][$k]); $c['auto'] = $a;
@@ -960,6 +996,7 @@ function anonDo($id, $k, $how) { global $db;
   try {
     $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([(int)$id]); $inc = $s->fetch(); $s->closeCursor();
     if (!$inc || $inc['ended_at'] === null || !anonTodo($inc, $k)) { $db->rollBack(); return false; }
+    if ($k !== 'track') aarArchive($inc); // vor dem ersten Eingriff, in derselben Transaktion: ohne Sicherung keine Anonymisierung («Aufzeichnung löschen» betrifft das Review nicht)
     if ($k === 'texts' && !(int)$inc['log_anon'] && anonStep($inc, 'log', $how)) $inc['log_anon'] = 1; // Freitexte setzen das pseudonymisierte Protokoll voraus (danach fehlten die Namen für die Ersetzung)
     if ($k === 'parts') { // Replay und Protokoll brauchen die Konten für ihre Bezeichnungen, also zuerst
       if ((int)$inc['recorded'] && $inc['rp_anon'] === null && anonStep($inc, 'replay', $how)) $inc['rp_anon'] = '[]';
@@ -1724,14 +1761,15 @@ switch ($route) {
   out(['mode' => myRuns(), 'incidents' => $rows]);
  case 'my/stats': // Meine Statistik (Issue #87): nur die eigenen Teilnahmen, für alle Angemeldeten, auch aus endgültig anonymisierten Einsätzen
   out(['rows' => psRows($uid)]);
- case 'stats': need('stats', 'aar', 'aar_rel'); // mit nur aar (After Action Review, Issue #55) ohne Log und Replay, die prüfen incView
-  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'part_anon', 'aar_at', 'aar_st']), $db->query(
-   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,i.part_anon,u.name creator,(SELECT a.updated FROM aar a WHERE a.incident_id=i.id) aar_at,(SELECT a.status FROM aar a WHERE a.incident_id=i.id) aar_st,
+ case 'stats': need('stats', 'aar', 'aar_rel', 'aar_arch'); // mit nur aar (After Action Review, Issue #55) ohne Log und Replay, die prüfen incView
+  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'part_anon', 'aar_at', 'aar_st', 'aar_arch']), $db->query(
+   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,i.part_anon,u.name creator,(SELECT a.updated FROM aar a WHERE a.incident_id=i.id) aar_at,(SELECT a.status FROM aar a WHERE a.incident_id=i.id) aar_st,(SELECT COUNT(*) FROM aar_arch r WHERE r.incident_id=i.id) aar_arch,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode='declined') declined,
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='accept') first_accept,
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='area') first_area
     FROM incidents i LEFT JOIN users u ON u.id=i.created_by ORDER BY i.id DESC")->fetchAll());
+  if (!can('aar_arch')) foreach ($rows as &$r) unset($r['aar_arch']); unset($r);
   $ended = array_filter($rows, fn($r) => $r['ended_at']);
   out(['incidents' => $rows, 'totals' => [
     'count' => count($rows), 'ended' => count($ended), 'exercises' => count(array_filter($rows, fn($r) => $r['is_exercise'])),
@@ -1758,27 +1796,36 @@ switch ($route) {
   setSetting('aar_logo', (string)$l); out(['ok' => true]);
  case 'aar/get': // Daten fürs Dokument; anon=1 oder endgültig anonymisiert: Bezeichnungen wie Issue #54 (die erfassten Angaben bleiben, wie sie geschrieben wurden)
   // my=1 (Meine Einsätze): nur freigegebene Reviews eigener Einsätze, Namen gemäss my_runs (anon: alle anderen anonym, die Person selbst mit Namen)
-  $inc = incById($_GET['id'] ?? 0); $id = (int)$inc['id']; $mine = aarView($id); $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
-  $a = $q("SELECT data,updated,updated_by,status,rel_at,rel_by FROM aar WHERE incident_id=?")[0] ?? null;
+  $inc = incById($_GET['id'] ?? 0); $id = (int)$inc['id']; $mine = aarView($id);
   $fin = (int)$inc['log_anon'] || $inc['rp_anon'] !== null; $forced = $fin || (int)$inc['view_anon']; $self = $mine && !$fin ? $uid : null; // Anzeige anonymisiert: die Person selbst behält den Namen
   $anon = $forced || !empty($_GET['anon']) || $mine && myRuns() === 'anon'; $c = $anon ? anonCtx($id, $self) : null;
-  $nm = fn($u) => $u === null ? null : ($c ? ($c['u'][(int)$u] ?? 'Person') : ($db->query('SELECT name FROM users WHERE id=' . (int)$u)->fetchColumn() ?: '?'));
-  $rpa = $inc['rp_anon'] !== null;
-  $parts = array_map(fn($p) => ['name' => $c && !$rpa ? ($c['u'][$p['user_id']] ?? 'Einsatzkraft') : $p['name'], 'mode' => $p['mode_name'] ?? null, 'role' => $p['role'] ?? null, 'joined' => $p['joined'] ?? null, 'left_at' => $p['left_at'] ?? null],
-    $rpa ? (json_decode($inc['rp_anon'], true) ?: []) : replayParts($id));
-  $res = array_map(function ($r) use ($c) { $r = ints($r, ['id', 'loc_at', 'rescued_at', 'created', 'removed']); if ($c) { $r['name'] = $c['r'][$r['id']] ?? 'Rettling'; $r['descr'] = null; } return $r; },
-    $q("SELECT id,name,descr,lat,lon,loc_at,rescued_at,created,removed FROM rescuees WHERE incident_id=? ORDER BY id"));
-  $ext = array_map(function ($r) use ($c) { $r = ints($r, ['id', 'created', 'removed']); if ($c) { $r['name'] = $c['e'][$r['id']] ?? 'Externe Einsatzkraft'; $r['descr'] = null; } return $r; },
-    $q("SELECT e.id,e.name,e.descr,e.created,e.removed,r.name role FROM externals e LEFT JOIN roles r ON r.id=e.role_id WHERE e.incident_id=? ORDER BY e.id"));
-  $first = function ($k) use ($q) { $v = $q("SELECT MIN(ts) v FROM incident_log WHERE incident_id=? AND kind='$k'")[0]['v'] ?? null; return $v === null ? null : (int)$v; };
-  $plan = $inc['plan_id'] ? ($db->query('SELECT title FROM ex_plans WHERE id=' . (int)$inc['plan_id'])->fetchColumn() ?: null) : null;
-  out(['inc' => ['id' => $id, 'message' => $c ? anonText($inc['message'], $c) : $inc['message'], 'alarm_at' => (int)$inc['alarm_at'], 'ended_at' => $inc['ended_at'] === null ? null : (int)$inc['ended_at'],
-      'is_exercise' => (int)$inc['is_exercise'], 'creator' => $nm($inc['created_by']), 'plan' => $plan, 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms'],
-      'lat' => $inc['lat'] === null ? null : (float)$inc['lat'], 'lon' => $inc['lon'] === null ? null : (float)$inc['lon'], 'first_accept' => $first('accept'), 'first_area' => $first('area')],
-    'anon' => $anon, 'forced' => $forced, 'people' => $parts, 'rescuees' => $res, 'externals' => $ext, 'log' => logRows($id, true, $anon, $self), 'my_anon' => $mine && myRuns() === 'anon',
-    'data' => $a ? (json_decode($a['data'], true) ?: (object)[]) : (object)[], 'updated' => $a && $a['updated'] !== null ? (int)$a['updated'] : null, 'updated_by' => $a ? $nm($a['updated_by']) : null,
-    'status' => $a ? (int)$a['status'] : 0, 'rel_at' => $a && $a['rel_at'] !== null ? (int)$a['rel_at'] : null, 'rel_by' => $a ? $nm($a['rel_by']) : null,
-    'imgs' => array_map(fn($r) => ints($r, ['id', 'w', 'h']), $q("SELECT id,field_id field,caption,w,h FROM aar_img WHERE incident_id=? ORDER BY id"))]); // Bilder ohne Inhalt, der kommt einzeln über aar/img
+  out(aarDoc($inc, $c, $anon, $forced, $mine, $self));
+ /* ---------- Vor dem Anonymisieren gesicherte Reviews, alles nur mit Recht aar_arch; das fertige PDF lässt sich nicht mehr ändern ---------- */
+ case 'aar/arch/pending': need('aar_arch'); // Sicherungen, aus denen der Browser noch das PDF erzeugen muss
+  out(['ids' => array_map('intval', $db->query("SELECT incident_id FROM aar_arch WHERE pdf_at IS NULL AND snap IS NOT NULL ORDER BY incident_id")->fetchAll(PDO::FETCH_COLUMN))]);
+ case 'aar/arch/snap': need('aar_arch'); $r = aarArchRow($_GET['id'] ?? 0); if ($r['pdf_at'] !== null) fail('Das PDF liegt bereits vor');
+  $s = $db->prepare("SELECT snap FROM aar_arch WHERE incident_id=?"); $s->execute([(int)$r['incident_id']]); out(['created' => (int)$r['created'], 'doc' => json_decode($s->fetchColumn(), true)]);
+ case 'aar/arch/img': need('aar_arch'); $s = $db->prepare("SELECT data FROM aar_arch_img WHERE incident_id=? AND img_id=?"); $s->execute([(int)($_GET['id'] ?? 0), (int)($_GET['img'] ?? 0)]); $v = $s->fetchColumn(); if ($v === false) fail('Bild nicht gefunden', 404); out(['src' => $v]);
+ case 'aar/arch/put': need('aar_arch'); // ein Stück des PDF: id, n, data (Base64)
+  $r = aarArchRow($in['id'] ?? 0); if ($r['pdf_at'] !== null) fail('Das gesicherte PDF lässt sich nicht mehr ändern', 409);
+  $n = (int)($in['n'] ?? -1); $d = (string)($in['data'] ?? ''); if ($n < 0 || $n >= AAR_ARCH_PARTS || $d === '' || strlen($d) > AAR_ARCH_CHUNK || base64_decode($d, true) === false) fail('Ungültiges Stück');
+  $db->prepare("DELETE FROM aar_arch_part WHERE incident_id=? AND n=?")->execute([(int)$r['incident_id'], $n]);
+  $db->prepare("INSERT INTO aar_arch_part(incident_id,n,data) VALUES(?,?,?)")->execute([(int)$r['incident_id'], $n, $d]); out(['ok' => true]);
+ case 'aar/arch/done': need('aar_arch'); // alle Stücke da: id, parts, sha (SHA-256 des PDF), name; ab hier unveränderlich
+  $r = aarArchRow($in['id'] ?? 0); $id = (int)$r['incident_id']; if ($r['pdf_at'] !== null) fail('Das gesicherte PDF lässt sich nicht mehr ändern', 409);
+  $parts = (int)($in['parts'] ?? 0); if ($parts < 1 || $parts > AAR_ARCH_PARTS) fail('Ungültige Anzahl Stücke');
+  $h = hash_init('sha256'); $s = $db->prepare("SELECT data FROM aar_arch_part WHERE incident_id=? AND n=?");
+  for ($n = 0; $n < $parts; $n++) { $s->execute([$id, $n]); $v = $s->fetchColumn(); $s->closeCursor(); if ($v === false) fail('Es fehlen Stücke des PDF'); $v = base64_decode($v); if (!$n && substr($v, 0, 5) !== '%PDF-') fail('Das ist kein PDF'); hash_update($h, $v); }
+  $sha = hash_final($h); if (!hash_equals($sha, (string)($in['sha'] ?? ''))) fail('Prüfsumme stimmt nicht');
+  $db->beginTransaction();
+  $u = $db->prepare("UPDATE aar_arch SET pdf_at=?,pdf_parts=?,pdf_name=?,pdf_sha=?,snap=NULL WHERE incident_id=? AND pdf_at IS NULL"); $u->execute([$now, $parts, mb_substr(basename((string)($in['name'] ?? 'AAR.pdf')), 0, 150), $sha, $id]);
+  if (!$u->rowCount()) { $db->rollBack(); fail('Das gesicherte PDF lässt sich nicht mehr ändern', 409); }
+  $db->prepare("DELETE FROM aar_arch_part WHERE incident_id=? AND n>=?")->execute([$id, $parts]); $db->prepare("DELETE FROM aar_arch_img WHERE incident_id=?")->execute([$id]);
+  $db->commit(); out(['ok' => true]);
+ case 'aar/arch/part': need('aar_arch'); // Abrufen: ein Stück mit den Angaben zum PDF; das Dokument setzt der Browser zusammen und prüft die Summe
+  $r = aarArchRow($_GET['id'] ?? 0); if ($r['pdf_at'] === null) out(['pending' => true]);
+  $s = $db->prepare("SELECT data FROM aar_arch_part WHERE incident_id=? AND n=?"); $s->execute([(int)$r['incident_id'], (int)($_GET['n'] ?? 0)]); $v = $s->fetchColumn(); if ($v === false) fail('Stück nicht gefunden', 404);
+  out(['parts' => (int)$r['pdf_parts'], 'name' => $r['pdf_name'], 'sha' => $r['pdf_sha'], 'data' => $v]);
  case 'aar/img': // ein Bild als Data-URL (Zugriff wie aar/get)
   $r = aarImgRow($_GET['id'] ?? 0); aarView((int)$r['incident_id']);
   $s = $db->prepare("SELECT data FROM aar_img WHERE id=?"); $s->execute([(int)$r['id']]); out(['src' => $s->fetchColumn()]);
