@@ -958,7 +958,7 @@ function renderAnon(){const el=$('#sAnon'),D=anonD,C=D.cfg,f=anonF,[a,b]=psRange
     e.target.disabled=true;try{await api('anon/cfg/save',{cfg});toast('Gespeichert','ok');await loadAnon()}catch(x){fail(x);e.target.disabled=false}}}
 // einzelner Einsatz aus der Einsatzstatistik: angebotene Stufen mit Stand, endgültige nach Rückfrage
 async function anonDlg(x){let D;try{D=await api('anon/cfg')}catch(e){return fail(e)}const i=D.incidents.find(y=>y.id===x.id);if(!i)return toast('Nur beendete Einsätze lassen sich anonymisieren.','err');
-  const norec=k=>(k==='replay'||k==='track')&&!i.recorded,done=k=>!anonTodoJ(i,k)&&!norec(k),why=k=>norec(k)?' (keine Aufzeichnung)':done(k)?' (bereits erledigt)':''; // ohne Aufzeichnung gibt es nichts zu tun, erledigt ist es deshalb nicht
+  const norec=k=>(k==='replay'||k==='track')&&!i.recorded&&!i.rec_del,done=k=>!anonTodoJ(i,k)&&!norec(k),why=k=>norec(k)?' (keine Aufzeichnung)':k==='replay'&&done(k)&&!i.recorded?' (Aufzeichnung gelöscht)':done(k)?' (bereits erledigt)':''; // nie aufgezeichnet: nichts zu tun, also nicht erledigt
   const steps=D.steps.filter(s=>D.cfg[s.key].on);
   const dA=dlg('Anonymisieren',`<div class="mut">«${esc(i.message)}»</div>${anonChips(i)?`<div class="fl" style="margin:.4rem 0">${anonChips(i)}</div>`:''}
     ${x.aar_st===1?'<div class="mut" style="font-size:.85rem">Das freigegebene After Action Review wird vorher vollständig als PDF gesichert.</div>':''}

@@ -1717,9 +1717,10 @@ switch ($route) {
   out(['ok' => true]);
  /* ---------- Anonymisierung einstellen und anwenden (Issue #87) ---------- */
  case 'anon/cfg': need('anon'); // Stufen, Einstellung und alle beendeten Einsätze mit ihrem Stand (für die Massenanonymisierung)
-  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'recorded', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'part_anon', 'accepted']), $db->query(
+  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'recorded', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'part_anon', 'accepted', 'rec_del']), $db->query(
     "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,i.part_anon,
-      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted FROM incidents i WHERE i.ended_at IS NOT NULL ORDER BY i.alarm_at DESC, i.id DESC")->fetchAll());
+      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted,
+      (SELECT COUNT(*) FROM incident_log l WHERE l.incident_id=i.id AND (l.kind='anon' AND l.text LIKE 'Aufzeichnung gelöscht%' OR l.kind='rec' AND l.text LIKE 'löscht die Aufzeichnung%')) rec_del FROM incidents i WHERE i.ended_at IS NOT NULL ORDER BY i.alarm_at DESC, i.id DESC")->fetchAll()); // rec_del: Aufzeichnung gelöscht, sonst nicht von «nie aufgezeichnet» zu unterscheiden; aus dem Log, gilt also auch für bereits gelöschte
   out(['steps' => array_map(fn($k, $v) => ['key' => $k, 'name' => $v[0], 'descr' => $v[1], 'final' => $v[2], 'def' => ANON_DEFAULT[$k] ?? null], array_keys(ANON_STEPS), ANON_STEPS), 'cfg' => anonCfg(), 'incidents' => $rows]);
  case 'anon/cfg/save': need('anon'); // cfg: {Stufe: {on, real, ex}}, Tage leer = nie
   $c = is_array($in['cfg'] ?? null) ? $in['cfg'] : fail('Ungültige Einstellung'); $r = [];
