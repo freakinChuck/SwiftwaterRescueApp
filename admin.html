@@ -881,8 +881,8 @@ async function loadMyS(){const el=$('#sMyS');let s;try{s=await api('settings')}c
 /* ---------- Anonymisierung (Issue #54, konfigurierbar und mehrstufig seit #87) ---------- */
 // Stufen (anon/cfg → steps): view = Anzeige anonymisieren (umkehrbar), replay/log = pseudonymisieren, texts = Personenangaben und Freitexte entfernen, track = Aufzeichnung löschen (endgültig).
 // Je Stufe einstellbar: angeboten (on) und automatisch nach N Tagen ab Einsatzende, getrennt für scharfe Einsätze und Übungen (leer = nie). Anwenden auch für viele Einsätze (anon/apply).
-const anonTodoJ=(x,k)=>k==='view'?!x.view_anon:k==='replay'?!!x.recorded&&!x.rp_anon:k==='log'?!x.log_anon:k==='texts'?!x.txt_anon:k==='track'?!!x.recorded:false;
-const anonChips=x=>[x.view_anon?'<span class="wip">Anzeige anonymisiert</span>':'',x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':'',x.txt_anon?'<span>Freitexte entfernt</span>':''].join('');
+const anonTodoJ=(x,k)=>k==='view'?!x.view_anon:k==='replay'?!!x.recorded&&!x.rp_anon:k==='log'?!x.log_anon:k==='texts'?!x.txt_anon:k==='parts'?!x.part_anon:k==='track'?!!x.recorded:false;
+const anonChips=x=>[x.view_anon?'<span class="wip">Anzeige anonymisiert</span>':'',x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':'',x.txt_anon?'<span>Freitexte entfernt</span>':'',x.part_anon?'<span>Teilnahmen gelöst</span>':''].join('');
 const anonDays=v=>v==null?'nie':v===0?'beim Einsatzende':v+(v===1?' Tag':' Tage')+' nach dem Einsatzende';
 // Stufen auf Einsätze anwenden; endgültige erst nach Rückfrage mit der Anzahl betroffener Einsätze
 async function anonApply(incs,steps,D){const fin=steps.filter(k=>D.steps.find(s=>s.key===k).final),nm=k=>D.steps.find(s=>s.key===k).name;
@@ -900,14 +900,14 @@ function renderAnon(){const el=$('#sAnon'),D=anonD,C=D.cfg,f=anonF,[a,b]=psRange
   const on=D.steps.filter(s=>C[s.key].on),st=f.st.filter(k=>on.some(s=>s.key===k));
   const day=v=>`<input type="number" min="0" max="36500" step="1" inputmode="numeric" value="${v??''}" placeholder="nie">`;
   el.innerHTML=`<h2>Anonymisierung</h2>
-    <div class="mut">Personendaten beendeter Einsätze lassen sich in Stufen anonymisieren: von Hand je Einsatz (Einsatzstatistik → «Anonymisieren»), unten für viele Einsätze auf einmal oder automatisch eine bestimmte Zeit nach dem Einsatzende. Nur «Anzeige anonymisieren» lässt sich aufheben, alle anderen Stufen sind endgültig. Die Statistik pro Person bleibt in jedem Fall erhalten.</div>
+    <div class="mut">Personendaten beendeter Einsätze lassen sich in Stufen anonymisieren: von Hand je Einsatz (Einsatzstatistik → «Anonymisieren»), unten für viele Einsätze auf einmal oder automatisch eine bestimmte Zeit nach dem Einsatzende. Nur «Anzeige anonymisieren» lässt sich aufheben, alle anderen Stufen sind endgültig. Die Statistik pro Person bleibt erhalten, ausser nach «Teilnahmen vom Konto lösen». Das After Action Review bleibt in jedem Fall unverändert. Ohne eigene Einstellung gelten die Vorgaben.</div>
     <h3>Stufen</h3>
     <div id="anCfg">${D.steps.map((s,i)=>`<div class="inc anst ${s.final?'fin':''}" data-k="${s.key}"><div class="ih"><span class="mut">Stufe ${i+1}</span> <b>${esc(s.name)}</b><div class="fl">${s.final?'<span class="on">endgültig</span>':'<span class="rv">umkehrbar</span>'}</div></div>
-      <div class="mut">${esc(s.descr)}</div>
+      <div class="mut">${esc(s.descr)}${s.def?` Vorgabe: ${s.def[0]??'nie'} Tage bei scharfen Einsätzen, ${s.def[1]??'nie'} Tage bei Übungen.`:''}</div>
       <div class="ansr"><label class="chk"><input type="checkbox" class="anOn" ${C[s.key].on?'checked':''}> Angeboten</label>
         <label class="mut">Automatisch bei scharfen Einsätzen, Tage nach Ende${day(C[s.key].real).replace('<input','<input class="anR"')}</label>
         <label class="mut">Automatisch bei Übungen, Tage nach Ende${day(C[s.key].ex).replace('<input','<input class="anX"')}</label></div></div>`).join('')}</div>
-    <div class="row"><button class="pri" id="anSave">Stufen speichern</button></div>
+    <div class="row"><button class="pri" id="anSave">Stufen speichern</button><button class="sec" id="anDef">Vorgaben einsetzen</button></div>
     <div class="mut" style="font-size:.8rem">Leer = nie automatisch, 0 = beim Einsatzende. Automatisch angewendet wird nur, was angeboten ist; die Prüfung läuft höchstens alle 10 Minuten bei einem Aufruf der App. Mehrstufig z. B.: Anzeige nach 30 Tagen anonymisieren, Aufzeichnung nach 90 Tagen löschen, Protokoll nach einem Jahr pseudonymisieren. Einträge im Einsatzlog halten jede Stufe fest.</div>
     <h3>Mehrere Einsätze anonymisieren</h3>
     <div class="row psf"><label class="mut">Art<select id="anArt">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===f.art?'selected':''}>${v}</option>`).join('')}</select></label>
@@ -926,6 +926,7 @@ function renderAnon(){const el=$('#sAnon'),D=anonD,C=D.cfg,f=anonF,[a,b]=psRange
   $('#anGo').onclick=async e=>{e.target.disabled=true;try{if(await anonApply(sel,st,D))anonSel.clear();await loadAnon()}catch(x){fail(x);renderAnon()}};
   if($('#anUndo'))$('#anUndo').onclick=async e=>{const l=sel.filter(x=>x.view_anon);if(!confirm(`Anonymisierte Anzeige bei ${l.length===1?'«'+l[0].message+'»':l.length+' Einsätzen'} aufheben?\n\nLog, Replay und After Action Review zeigen danach wieder Namen, soweit sie nicht endgültig anonymisiert sind.`))return;
     e.target.disabled=true;try{const r=await api('anon/undo',{ids:l.map(x=>x.id)});toast(`Aufgehoben: ${r.incidents} ${r.incidents===1?'Einsatz':'Einsätze'}`,'ok');await loadAnon()}catch(x){fail(x);renderAnon()}};
+  $('#anDef').onclick=()=>{el.querySelectorAll('.anst').forEach(d=>{const s=D.steps.find(x=>x.key===d.dataset.k);if(!s||!s.def)return;$('.anOn',d).checked=true;$('.anR',d).value=s.def[0]??'';$('.anX',d).value=s.def[1]??''});toast('Vorgaben eingesetzt, noch nicht gespeichert','info')};
   $('#anSave').onclick=async e=>{const cfg={},v=i=>i.value.trim();
     el.querySelectorAll('.anst').forEach(d=>{cfg[d.dataset.k]={on:$('.anOn',d).checked?1:0,real:v($('.anR',d)),ex:v($('.anX',d))}});
     for(const[k,c]of Object.entries(cfg))for(const t of['real','ex'])if(c[t]!==''&&!(/^\d+$/.test(c[t])&&+c[t]<=36500))return toast('Tage: ganze Zahl von 0 bis 36500 oder leer (nie).','err');
