@@ -78,6 +78,10 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS ex_injects(id $ai, plan_id INT, kind $tx, label $tx, name $tx NULL, descr TEXT NULL, lat DOUBLE, lon DOUBLE, ago INT DEFAULT 0, msg TEXT NULL, ref_id INT NULL, released BIGINT NULL, released_by INT NULL, rescuee_id INT NULL, removed INT DEFAULT 0, auto INT NULL, role_id INT NULL, abbr $tx NULL, color $tx NULL, ext_id INT NULL)",
   "CREATE TABLE IF NOT EXISTS aar(incident_id INT PRIMARY KEY, data MEDIUMTEXT, updated BIGINT, updated_by INT NULL)", // After Action Review (Issue #55)
   "CREATE TABLE IF NOT EXISTS aar_img(id $ai, incident_id INT, field_id $tx, caption TEXT, data MEDIUMTEXT, w INT, h INT, created BIGINT, created_by INT NULL)", // Bilder im After Action Review (Feldart img)
+  // Vor dem Anonymisieren gesichertes Review (aarArchive): snap/aar_arch_img bis das PDF steht, das PDF in Stücken (aar_arch_part, unabhängig von Upload- und Paketgrenzen), unveränderlich ab pdf_at
+  "CREATE TABLE IF NOT EXISTS aar_arch(incident_id INT PRIMARY KEY, created BIGINT, snap LONGTEXT NULL, pdf_at BIGINT NULL, pdf_parts INT NULL, pdf_name TEXT NULL, pdf_sha TEXT NULL)",
+  "CREATE TABLE IF NOT EXISTS aar_arch_img(incident_id INT, img_id INT, field_id $tx, caption TEXT, data MEDIUMTEXT, w INT, h INT, PRIMARY KEY(incident_id,img_id))",
+  "CREATE TABLE IF NOT EXISTS aar_arch_part(incident_id INT, n INT, data MEDIUMTEXT, PRIMARY KEY(incident_id,n))",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 // Aufgebot (Issue #90): incidents.invite = beim Start aufgelöste User-IDs (NULL = alle), inv_groups = aufgebotene Gruppen (JSON), type_id = Einsatztyp, open_join = Einsatzleitung erlaubt allen den Beitritt;
@@ -85,7 +89,7 @@ foreach ([
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ['log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL"], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'type_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
+foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL"], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'type_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
 try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
@@ -156,23 +160,25 @@ const PERMS = [
   'cfg_func' => ['Verwaltung', 'Funktionen einstellen', 'Funktionen, Aufzeichnung, Flussdistanz, Navigation'],
   'cfg_map' => ['Verwaltung', 'Karte & Daten einstellen', 'Koordinaten, Gewässerdaten (Overpass), Helikopter'],
   'stats' => ['Auswertung', 'Alle Einsätze auswerten', 'Einsatzstatistik, Log und Replay aller Einsätze'],
-  'anon' => ['Auswertung', 'Anonymisieren und Aufzeichnungen löschen', 'Endgültig, nicht umkehrbar (zusammen mit «Alle Einsätze auswerten»)'],
+  'anon' => ['Auswertung', 'Anonymisieren und Aufzeichnungen löschen', 'Anonymisierung einstellen (Stufen, automatisch nach Tagen) und anwenden, auch für mehrere Einsätze; endgültige Stufen sind nicht umkehrbar'],
   'cfg_my' => ['Auswertung', 'Einsicht für Einsatzkräfte einstellen', 'Was Teilnehmende von ihren eigenen Einsätzen sehen (Meine Einsätze)'],
   'aar' => ['Auswertung', 'After Action Reviews erstellen', 'In der Einsatzstatistik je beendetem Einsatz die Angaben erfassen, als nicht relevant markieren, ansehen und herunterladen (ohne «Alle Einsätze auswerten» nur Liste und Kennzahlen, ohne Log und Replay)'],
   'aar_rel' => ['Auswertung', 'After Action Reviews freigeben', 'Als abgeschlossen freigeben (danach gesperrt und für die Teilnehmenden unter «Meine Einsätze» sichtbar) und Freigaben zurücknehmen'],
   'aar_cfg' => ['Auswertung', 'After Action Review einrichten', 'Felder, Dokumenttitel, Organisation, Logo, mitgelieferte Abschnitte und erlaubte Formate'],
+  'aar_arch' => ['Auswertung', 'Gesicherte After Action Reviews abrufen', 'Das vor dem Anonymisieren gesicherte, vollständige PDF eines freigegebenen Reviews abrufen, mit allen Namen'],
 ];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'rec_real' => 'cfg_func', 'rec_ex' => 'cfg_func', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func',
-  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my'];
+  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my'];
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
 const AAR_TYPES = ['head' => 'Zwischentitel', 'text' => 'Text einzeilig', 'area' => 'Text mehrzeilig', 'date' => 'Datum', 'time' => 'Uhrzeit', 'number' => 'Zahl', 'select' => 'Auswahl', 'check' => 'Ja/Nein', 'img' => 'Bilder'];
 const AAR_IMG_MAX = 50; // Bilder je Review, je höchstens 3 MB (der Browser verkleinert auf 1600 px JPEG)
-const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'log' => 'Einsatzlog (Vorauswahl beim Herunterladen)'];
+const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'log' => 'Einsatzlog'];
 // Status je Review: 0 = in Arbeit, 1 = freigegeben (abgeschlossen, gesperrt, für Teilnehmende sichtbar), 2 = nicht relevant
 const AAR_STATUS = [0 => 'in Arbeit', 1 => 'freigegeben', 2 => 'nicht relevant'];
+const AAR_ARCH_PARTS = 400; const AAR_ARCH_CHUNK = 2200000; // gesichertes PDF: höchstens so viele Stücke zu je so vielen Zeichen Base64 (reicht für 50 Bilder zu 3 MB)
 const AAR_DL = ['docx' => 'Word (.docx)', 'pdf' => 'PDF']; // Download je Format und Zustand erlaubt (Einstellung dl); Ansehen im Browser ist davon unabhängig
 const AAR_DL_ST = ['wip' => 'In Arbeit', 'rel' => 'Freigegeben', 'nr' => 'Nicht relevant']; // «noch kein AAR» zählt als in Arbeit
 // dl je Format und Zustand; die frühere Einstellung (nur Format ein/aus) gilt für «Freigegeben»
@@ -193,13 +199,55 @@ const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 13,
   ['id' => 'f13', 'type' => 'img', 'label' => 'Bilder', 'hint' => 'Fotos, Skizzen, Kartenausschnitte'],
 ]];
 // Zugriff auf ein Review: Verwaltung (aar, aar_rel) oder my=1 (Meine Einsätze: Teilnahme, freigegeben, my_runs nicht off)
-function aarView($id) { global $db; if (empty($_GET['my'])) { need('aar', 'aar_rel'); return false; }
-  if (myRuns() === 'off' || !myPart($id)) fail('Kein Zugriff auf diesen Einsatz', 403);
+// Statistik pro Person (Issue #87): eine Zeile je Teilnahme; $only = nur diese Person (Meine Statistik)
+function psRows($only = null) { global $db, $now; $only = $only === null ? null : (int)$only;
+  // Einsatzzeit = Summe der Abschnitte von «angenommen»/«wieder eingestiegen» bis «verlassen», der letzte bis Austritt (left_at) bzw. Einsatzende
+  // Fahrten = Log-Einträge «move» (Luftlinie gemäss Log), Weg = Summe der aufgezeichneten Standorte (nur mit Aufzeichnung, Lücken über 120 s nicht, wie GAP_S im Replay)
+  // Endgültig anonymisierte Einsätze bleiben personenbezogen: Log-Einträge tragen dann die Bezeichnung «Einsatzkraft N» (actor), die Spuren eine negative ID (rp_anon);
+  // beide folgen der Reihenfolge der Teilnahmen (anonCtx, participants nach id), daraus ergibt sich wieder die Person
+  $inc = []; foreach ($db->query("SELECT id,alarm_at,ended_at,is_exercise,log_anon,rp_anon FROM incidents") as $r) $inc[(int)$r['id']] = ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'log_anon']);
+  $lab = []; $n = []; foreach ($db->query("SELECT incident_id,user_id FROM participants ORDER BY incident_id,id") as $r) { $i = (int)$r['incident_id']; $n[$i] = ($n[$i] ?? 0) + 1; $lab[$i]['Einsatzkraft ' . $n[$i]] = (int)$r['user_id']; }
+  $neg = []; foreach ($inc as $i => $x) if ($x['rp_anon'] !== null) foreach (json_decode($x['rp_anon'], true) ?: [] as $p) if (isset($p['user_id'], $p['name'], $lab[$i][$p['name']])) $neg[$i][(int)$p['user_id']] = $lab[$i][$p['name']];
+  $ev = []; foreach ($db->query("SELECT incident_id,user_id,actor,ts,kind,text FROM incident_log WHERE kind IN ('accept','leave','move','area') AND (user_id IS NOT NULL OR actor IS NOT NULL) ORDER BY ts, id") as $r) {
+   $i = (int)$r['incident_id']; $u = $r['user_id'] !== null ? (int)$r['user_id'] : ($lab[$i][(string)$r['actor']] ?? null);
+   if ($u !== null && ($only === null || $u === $only)) $ev[$i . ':' . $u][] = $r; }
+  $tr = []; $last = []; foreach ($db->query("SELECT incident_id,user_id,ts,lat,lon FROM track WHERE user_id IS NOT NULL ORDER BY incident_id,user_id,ts,id") as $r) {
+   $i = (int)$r['incident_id']; $u = (int)$r['user_id']; if ($u < 0) $u = $neg[$i][$u] ?? null;
+   if ($u === null || ($only !== null && $u !== $only)) continue;
+   $k = $i . ':' . $u; $l = $last[$k] ?? null;
+   if ($l && (int)$r['ts'] - (int)$l['ts'] <= 120) $tr[$k] = ($tr[$k] ?? 0) + hav((float)$l['lat'], (float)$l['lon'], (float)$r['lat'], (float)$r['lon']);
+   $last[$k] = $r; }
+  $rows = [];
+  foreach ($db->query("SELECT p.incident_id,p.user_id,p.mode,p.left_at,u.name,u.username,u.active,m.name mode_name FROM participants p JOIN users u ON u.id=p.user_id LEFT JOIN modes m ON m.code=p.mode" . ($only === null ? '' : ' WHERE p.user_id=' . (int)$only)) as $p) {
+   $i = $inc[(int)$p['incident_id']] ?? null; if (!$i) continue;
+   $k = $p['incident_id'] . ':' . $p['user_id']; $e = $ev[$k] ?? []; $dec = $p['mode'] === 'declined';
+   $dur = 0; $open = null; $first = null; $trips = 0; $km = 0.0; $area = null;
+   foreach ($e as $x) { $t = (int)$x['ts'];
+    if ($x['kind'] === 'accept') { if ($first === null) $first = $t; if ($open === null) $open = $t; }
+    elseif ($x['kind'] === 'leave') { if ($open !== null) { $dur += $t - $open; $open = null; } }
+    elseif ($x['kind'] === 'area') { if ($area === null) $area = $t; }
+    elseif (preg_match('~ca\. ([0-9.]+) km~', $x['text'], $mm)) { $trips++; $km += (float)$mm[1]; } }
+   $stop = $p['left_at'] !== null ? (int)$p['left_at'] : ($i['ended_at'] ?? $now);
+   if ($open !== null && !$dec) $dur += max(0, $stop - $open);
+   $row = ['incident_id' => $i['id'], 'is_exercise' => $i['is_exercise'], 'alarm_at' => $i['alarm_at'], 'declined' => $dec ? 1 : 0,
+    'dur' => $dec ? 0 : $dur, 'react' => $first === null ? null : max(0, $first - $i['alarm_at']), 'area' => $area === null ? null : max(0, $area - $i['alarm_at']),
+    'trips' => $trips, 'km' => round($km, 1), 'track_km' => isset($tr[$k]) ? round($tr[$k] / 1000, 1) : null, 'mode_name' => $dec ? null : $p['mode_name']];
+   $row += ['user_id' => (int)$p['user_id'], 'name' => $p['name'], 'username' => $p['username'], 'active' => (int)$p['active']];
+   $rows[] = $row; }
+
+  return $rows; }
+// Ab der Sicherung (aarArchive) gibt es das Review nur noch als PDF (Recht aar_arch), auch wenn die Anzeige wieder aufgehoben wird: nichts ansehen, nichts ändern
+// Anonymisiert (jede Stufe ausser track, solange sie gilt): kein Review mehr. Ein freigegebenes wäre gesichert (aarSealed); bleibt eines ohne Sicherung, stammt es von vor der Sicherung und bleibt lesbar
+const AAR_LOCK = "(i.rp_anon IS NOT NULL OR COALESCE(i.log_anon,0)<>0 OR COALESCE(i.view_anon,0)<>0 OR COALESCE(i.txt_anon,0)<>0 OR COALESCE(i.part_anon,0)<>0) AND NOT EXISTS (SELECT 1 FROM aar a WHERE a.incident_id=i.id AND a.status=1)";
+function aarSealed($id) { global $db; $s = $db->prepare("SELECT 1 FROM aar_arch WHERE incident_id=?"); $s->execute([(int)$id]); $v = $s->fetchColumn(); $s->closeCursor(); if ($v !== false) fail('Dieses After Action Review ist gesichert und nur noch als PDF verfügbar.', 409);
+  $s = $db->prepare("SELECT 1 FROM incidents i WHERE i.id=? AND " . AAR_LOCK); $s->execute([(int)$id]); $v = $s->fetchColumn(); $s->closeCursor(); if ($v !== false) fail('Dieser Einsatz ist anonymisiert, ein After Action Review ist nicht mehr möglich.', 409); }
+function aarView($id) { global $db; if (empty($_GET['my'])) { need('aar', 'aar_rel'); aarSealed($id); return false; }
+  if (myRuns() === 'off' || !myPart($id) || !myAar()) fail('Kein Zugriff auf diesen Einsatz', 403);
   $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([$id]); $st = $s->fetchColumn(); $s->closeCursor();
   if ($st === false || (int)$st !== 1) fail('Dieses After Action Review ist nicht freigegeben', 403);
-  return true; }
+  aarSealed($id); return true; }
 // Bearbeiten (Angaben, Bilder): Recht aar, Einsatz beendet, nicht freigegeben; danach gilt das Review als in Arbeit
-function aarEditable($inc) { global $db; need('aar');
+function aarEditable($inc) { global $db; need('aar'); aarSealed($inc['id']);
   if ($inc['ended_at'] === null) fail('Ein After Action Review gibt es erst nach dem Einsatzende');
   $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([(int)$inc['id']]); $st = $s->fetchColumn(); $s->closeCursor();
   if ($st !== false && (int)$st === 1) fail('Das After Action Review ist freigegeben. Zum Bearbeiten zuerst die Freigabe zurücknehmen.');
@@ -208,6 +256,36 @@ function aarTouch($id, $exists) { global $db, $now, $uid;
   if ($exists) $db->prepare("UPDATE aar SET updated=?,updated_by=?,status=0 WHERE incident_id=?")->execute([$now, $uid, $id]);
   else $db->prepare("INSERT INTO aar(incident_id,data,updated,updated_by,status) VALUES(?,'{}',?,?,0)")->execute([$id, $now, $uid]); }
 function aarImgRow($img) { global $db; $s = $db->prepare("SELECT id,incident_id FROM aar_img WHERE id=?"); $s->execute([(int)$img]); $r = $s->fetch(); $s->closeCursor(); return $r ?: fail('Bild nicht gefunden', 404); }
+// Inhalt des Dokuments (Route aar/get, Sicherung aarArchive); c = anonCtx oder null
+function aarDoc($inc, $c, $anon, $forced, $mine, $self) { global $db; $id = (int)$inc['id']; $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
+  $a = $q("SELECT data,updated,updated_by,status,rel_at,rel_by FROM aar WHERE incident_id=?")[0] ?? null;
+  $nm = fn($u) => $u === null ? null : ($c ? ($c['u'][(int)$u] ?? 'Person') : ($db->query('SELECT name FROM users WHERE id=' . (int)$u)->fetchColumn() ?: '?'));
+  $rpa = $inc['rp_anon'] !== null;
+  $parts = array_map(fn($p) => ['name' => $c && !$rpa ? ($c['u'][$p['user_id']] ?? 'Einsatzkraft') : $p['name'], 'mode' => $p['mode_name'] ?? null, 'role' => $p['role'] ?? null, 'joined' => $p['joined'] ?? null, 'left_at' => $p['left_at'] ?? null],
+    $rpa ? (json_decode($inc['rp_anon'], true) ?: []) : replayParts($id));
+  $res = array_map(function ($r) use ($c) { $r = ints($r, ['id', 'loc_at', 'rescued_at', 'created', 'removed']); if ($c) { $r['name'] = $c['r'][$r['id']] ?? 'Rettling'; $r['descr'] = null; } return $r; },
+    $q("SELECT id,name,descr,lat,lon,loc_at,rescued_at,created,removed FROM rescuees WHERE incident_id=? ORDER BY id"));
+  $ext = array_map(function ($r) use ($c) { $r = ints($r, ['id', 'created', 'removed']); if ($c) { $r['name'] = $c['e'][$r['id']] ?? 'Externe Einsatzkraft'; $r['descr'] = null; } return $r; },
+    $q("SELECT e.id,e.name,e.descr,e.created,e.removed,r.name role FROM externals e LEFT JOIN roles r ON r.id=e.role_id WHERE e.incident_id=? ORDER BY e.id"));
+  $first = function ($k) use ($q) { $v = $q("SELECT MIN(ts) v FROM incident_log WHERE incident_id=? AND kind='$k'")[0]['v'] ?? null; return $v === null ? null : (int)$v; };
+  $plan = $inc['plan_id'] ? ($db->query('SELECT title FROM ex_plans WHERE id=' . (int)$inc['plan_id'])->fetchColumn() ?: null) : null;
+  return ['inc' => ['id' => $id, 'message' => $c ? anonText($inc['message'], $c) : $inc['message'], 'alarm_at' => (int)$inc['alarm_at'], 'ended_at' => $inc['ended_at'] === null ? null : (int)$inc['ended_at'],
+      'is_exercise' => (int)$inc['is_exercise'], 'creator' => $nm($inc['created_by']), 'plan' => $plan, 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms'],
+      'lat' => $inc['lat'] === null ? null : (float)$inc['lat'], 'lon' => $inc['lon'] === null ? null : (float)$inc['lon'], 'first_accept' => $first('accept'), 'first_area' => $first('area')],
+    'anon' => $anon, 'forced' => $forced, 'people' => $parts, 'rescuees' => $res, 'externals' => $ext, 'log' => $mine && !myBtns()['log'] ? [] : logRows($id, true, $anon, $self), 'my_anon' => $mine && myRuns() === 'anon',
+    'data' => $a ? (json_decode($a['data'], true) ?: (object)[]) : (object)[], 'updated' => $a && $a['updated'] !== null ? (int)$a['updated'] : null, 'updated_by' => $a ? $nm($a['updated_by']) : null,
+    'status' => $a ? (int)$a['status'] : 0, 'rel_at' => $a && $a['rel_at'] !== null ? (int)$a['rel_at'] : null, 'rel_by' => $a ? $nm($a['rel_by']) : null,
+    'imgs' => array_map(fn($r) => ints($r, ['id', 'w', 'h']), $q("SELECT id,field_id field,caption,w,h FROM aar_img WHERE incident_id=? ORDER BY id"))]; } // Bilder ohne Inhalt, der kommt einzeln über aar/img
+// Sicherung vor dem Anonymisieren: Ein freigegebenes Review bleibt als PDF vollständig erhalten (Tabelle aar_arch, Recht aar_arch). Das PDF entsteht im Browser (jsPDF), die automatische Anonymisierung läuft aber ohne Browser:
+// Deshalb hält anonDo in derselben Transaktion zuerst den Inhalt fest (snap, Bilder in aar_arch_img); der nächste Browser mit dem Recht erzeugt daraus das PDF. Danach ist es unveränderlich (pdf_at), und snap und Bilder entfallen.
+function aarArchive($inc) { global $db, $now, $my; $id = (int)$inc['id'];
+  $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([$id]); $st = $s->fetchColumn(); $s->closeCursor(); if ($st === false || (int)$st !== 1) return;
+  $s = $db->prepare(($my ? 'INSERT IGNORE' : 'INSERT OR IGNORE') . " INTO aar_arch(incident_id,created) VALUES(?,?)"); $s->execute([$id, $now]); if (!$s->rowCount()) return; // die erste Sicherung bleibt
+  $fin = (int)$inc['log_anon'] || $inc['rp_anon'] !== null; $doc = aarDoc($inc, null, false, $fin, false, null);
+  $doc['anon'] = $fin; $doc['cfg'] = aarCfg(); $doc['logo'] = setting('aar_logo', null); // Einrichtung mit sichern: spätere Änderungen betreffen das Archiv nicht
+  $db->prepare("UPDATE aar_arch SET snap=? WHERE incident_id=?")->execute([json_encode($doc, JSON_UNESCAPED_UNICODE), $id]);
+  $db->prepare("INSERT INTO aar_arch_img(incident_id,img_id,field_id,caption,data,w,h) SELECT incident_id,id,field_id,caption,data,w,h FROM aar_img WHERE incident_id=?")->execute([$id]); }
+function aarArchRow($id) { global $db; $s = $db->prepare("SELECT incident_id,created,pdf_at,pdf_parts,pdf_name,pdf_sha FROM aar_arch WHERE incident_id=?"); $s->execute([(int)$id]); $r = $s->fetch(); $s->closeCursor(); return $r ?: fail('Keine Sicherung für diesen Einsatz', 404); }
 function aarCfg() { $c = json_decode((string)setting('aar_cfg', ''), true);
   if (!is_array($c)) return AAR_DEFAULT;
   $c += AAR_DEFAULT; $a = []; foreach (AAR_AUTO as $k => $_) $a[$k] = (int)($c['auto'][$k] ?? AAR_DEFAULT['auto'][$k]); $c['auto'] = $a;
@@ -487,6 +565,12 @@ function plannerOnly() { need('ex_plan'); }
 // 2 = teilgenommen, nur anonym ausser sich selbst. Endgültig anonymisierte Daten (rp_anon, log_anon) bleiben für alle anonym.
 const MY_RUNS = ['off' => 'Ausgeschaltet', 'anon' => 'Anonymisiert (ausser sich selbst)', 'full' => 'Mit allen Daten'];
 function myRuns() { $v = setting('my_runs', 'anon'); return isset(MY_RUNS[$v]) ? $v : 'anon'; }
+// Knöpfe in «Meine Einsätze» (Einstellung my_btns); noch nicht gespeichert: Word und PDF wie in der Einrichtung des After Action Review (dl, Freigegeben), der Rest an
+const MY_BTNS = ['log' => 'Log', 'replay' => 'Replay', 'aar' => 'After Action Review ansehen', 'docx' => 'After Action Review als Word', 'pdf' => 'After Action Review als PDF'];
+function myBtns() { $v = json_decode(setting('my_btns', '') ?: 'null', true); $dl = aarCfg()['dl']; $r = []; foreach (MY_BTNS as $k => $_) $r[$k] = is_array($v) && isset($v[$k]) ? (int)!empty($v[$k]) : (isset($dl[$k]) ? (int)$dl[$k]['rel'] : 1); return $r; }
+// Für Einsatzkräfte gibt es nur «anonymisiert»: Jede Stufe ausser track macht Log und Replay in «Meine Einsätze» anonym, auch bei my_runs full
+function anonAny($i) { return $i['rp_anon'] !== null || (int)$i['log_anon'] || (int)$i['view_anon'] || (int)$i['txt_anon'] || (int)$i['part_anon']; }
+function myAar() { $b = myBtns(); return $b['aar'] || $b['docx'] || $b['pdf']; } // Word und PDF entstehen im Browser aus denselben Daten wie die Ansicht
 function myPart($id) { global $db, $uid; $s = $db->prepare("SELECT 1 FROM participants p JOIN incidents i ON i.id=p.incident_id WHERE p.incident_id=? AND p.user_id=? AND p.mode<>'declined' AND i.ended_at IS NOT NULL"); $s->execute([$id, $uid]); $r = (bool)$s->fetch(); $s->closeCursor(); return $r; }
 // my=1 (Meine Einsätze): Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter, also nur eigene Einsätze gemäss my_runs
 function incView($id) { global $db; $my = !empty($_GET['my']); if (can('stats') && !$my) return 0;
@@ -940,10 +1024,113 @@ function anonText($t, $c, $kind = '') {
   $r = preg_replace_callback($c['re'], fn($m) => $c['map'][$m[0]] ?? $m[0], $t);
   return $r ?? '(Text nicht anonymisierbar)';
 }
+/* ---------- Anonymisierung in Stufen, einstellbar und automatisch (Issue #87) ---------- */
+// Stufen in dieser Reihenfolge: [Bezeichnung, Beschreibung, endgültig]. Einstellung anon_cfg je Stufe: on = angeboten (aus: weder von Hand noch automatisch),
+// real/ex = automatisch so viele Tage nach dem Einsatzende (null = nie). Spalten: view_anon, rp_anon, log_anon, txt_anon, part_anon; «Aufzeichnung löschen» setzt recorded 0.
+// Ohne gespeicherte Einstellung gelten die Fristen aus ANON_DEFAULT (Tage nach dem Einsatzende, [scharf, Übung]).
+const ANON_STEPS = [
+  'view' => ['Anzeige anonymisieren', 'Log, Replay und After Action Review zeigen für alle nur noch Bezeichnungen wie «Einsatzkraft 3», «Rettling 1» (in «Meine Einsätze» die Person selbst mit Namen). Die Daten bleiben unverändert, die Stufe lässt sich aufheben.', 0],
+  'replay' => ['Replay pseudonymisieren', 'Die Standortverläufe verlieren die Verbindung zu den Benutzerkonten, das Replay zeigt nur noch Bezeichnungen (mit Einrückoption und Spezialrolle). Nur bei aufgezeichneten Einsätzen.', 1],
+  'log' => ['Einsatzprotokoll pseudonymisieren', 'Log-Einträge und Nachrichten verlieren die Verbindung zu den Benutzerkonten, Namen im Text werden ersetzt, Beschreibungen der Rettlinge entfallen. Vornamen allein oder Spitznamen erkennt die Ersetzung nicht.', 1],
+  'texts' => ['Personenangaben und Freitexte entfernen', 'Namen und Beschreibungen von Rettlingen und externen Einsatzkräften werden auch in den Einsatzdaten ersetzt, Bezeichnungen von Markierungen und Bereichen anonymisiert und Nachrichtentexte gelöscht. Pseudonymisiert vorher das Einsatzprotokoll.', 1],
+  'parts' => ['Teilnahmen vom Konto lösen', 'Die Teilnahmen verlieren die Verbindung zu den Benutzerkonten: Der Einsatz fehlt danach in der Statistik pro Person und in «Meine Einsätze» der Teilnehmenden, Log, Replay und After Action Review zeigen nur noch Bezeichnungen. Pseudonymisiert vorher Replay und Einsatzprotokoll. Der Inhalt des After Action Reviews bleibt unverändert.', 1],
+  'track' => ['Aufzeichnung löschen', 'Standortverläufe, aufgezeichnete Zeiträume und Helikopterspuren werden gelöscht, ein Replay gibt es danach nicht mehr.', 1],
+];
+const ANON_DEFAULT = ['view' => [90, 30], 'replay' => [180, 90], 'log' => [365, 180], 'texts' => [730, 365], 'parts' => [730, 365], 'track' => [365, 180]];
+function anonCfg() { $c = json_decode(setting('anon_cfg', ''), true); $c = is_array($c) ? $c : []; $r = [];
+  $d = fn($v) => $v === null || $v === '' || !is_numeric($v) ? null : max(0, min(36500, (int)$v));
+  foreach (ANON_STEPS as $k => $_) { $x = is_array($c[$k] ?? null) ? $c[$k] : ['real' => ANON_DEFAULT[$k][0] ?? null, 'ex' => ANON_DEFAULT[$k][1] ?? null]; $r[$k] = ['on' => (int)($x['on'] ?? 1) ? 1 : 0, 'real' => $d($x['real'] ?? null), 'ex' => $d($x['ex'] ?? null)]; }
+  return $r; }
+// würde die Stufe an diesem Einsatz etwas ändern?
+function anonTodo($inc, $k) { switch ($k) {
+  case 'view': return !(int)$inc['view_anon'];
+  case 'replay': return (int)$inc['recorded'] && $inc['rp_anon'] === null;
+  case 'log': return !(int)$inc['log_anon'];
+  case 'texts': return !(int)$inc['txt_anon'];
+  case 'parts': return !(int)$inc['part_anon'];
+  case 'track': return (bool)(int)$inc['recorded']; } return false; }
+// eine Stufe an einem beendeten Einsatz ausführen, in einer Transaktion; false = nichts zu tun (schon erledigt, nicht beendet, keine Aufzeichnung)
+// how: Zusatz im Log, z. B. «(Verwaltung)» oder «(automatisch …)». Die Einträge stehen ohne Person (wie Issue #54).
+function anonDo($id, $k, $how) { global $db;
+  $db->beginTransaction();
+  try {
+    $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([(int)$id]); $inc = $s->fetch(); $s->closeCursor();
+    if (!$inc || $inc['ended_at'] === null || !anonTodo($inc, $k)) { $db->rollBack(); return false; }
+    if ($k !== 'track') aarArchive($inc); // vor dem ersten Eingriff, in derselben Transaktion: ohne Sicherung keine Anonymisierung («Aufzeichnung löschen» betrifft das Review nicht)
+    if ($k === 'texts' && !(int)$inc['log_anon'] && anonStep($inc, 'log', $how)) $inc['log_anon'] = 1; // Freitexte setzen das pseudonymisierte Protokoll voraus (danach fehlten die Namen für die Ersetzung)
+    if ($k === 'parts') { // Replay und Protokoll brauchen die Konten für ihre Bezeichnungen, also zuerst
+      if ((int)$inc['recorded'] && $inc['rp_anon'] === null && anonStep($inc, 'replay', $how)) $inc['rp_anon'] = '[]';
+      if (!(int)$inc['log_anon'] && anonStep($inc, 'log', $how)) $inc['log_anon'] = 1; }
+    $ok = anonStep($inc, $k, $how);
+    $db->commit(); return $ok;
+  } catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); throw $e; } }
+// zuerst schreibend sperren (UPDATE mit Bedingung): bei zwei gleichzeitigen Anfragen läuft nur eine durch
+function anonStep($inc, $k, $how) { global $db; $id = (int)$inc['id'];
+  $claim = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->rowCount() > 0; };
+  switch ($k) {
+  case 'view':
+    if (!$claim("UPDATE incidents SET view_anon=1 WHERE id=? AND view_anon=0")) return false;
+    logev($id, null, 'anon', "Anzeige anonymisiert $how"); return true;
+  case 'replay':
+    if (!$claim("UPDATE incidents SET rp_anon='[]' WHERE id=? AND rp_anon IS NULL AND recorded=1")) return false;
+    $c = anonCtx($id); $people = [];
+    $up = $db->prepare("UPDATE track SET user_id=? WHERE incident_id=? AND user_id=?");
+    foreach (replayParts($id) as $p) { $pid = -(count($people) + 1); $up->execute([$pid, $id, $p['user_id']]);
+      $people[] = ['user_id' => $pid, 'name' => $c['u'][$p['user_id']] ?? 'Einsatzkraft'] + array_intersect_key($p, array_flip(['mode', 'role_id', 'left_at', 'role', 'color', 'mode_name', 'joined'])); }
+    $db->prepare("DELETE FROM track WHERE incident_id=? AND user_id>0")->execute([$id]); // Verläufe ohne Teilnahme (z. B. abgelehnt)
+    $db->prepare("UPDATE participants SET lat=NULL, lon=NULL, loc_at=NULL, log_lat=NULL, log_lon=NULL, log_at=NULL, fast_at=NULL WHERE incident_id=?")->execute([$id]);
+    $db->prepare("UPDATE incidents SET rp_anon=? WHERE id=?")->execute([json_encode($people), $id]);
+    logev($id, null, 'anon', "Replay anonymisiert $how"); return true;
+  case 'log':
+    if (!$claim("UPDATE incidents SET log_anon=1 WHERE id=? AND log_anon=0")) return false;
+    $c = anonCtx($id); $who = fn($u) => $c['u'][(int)$u] ?? 'Person';
+    $s = $db->prepare("SELECT id,user_id,kind,text,actor FROM incident_log WHERE incident_id=?"); $s->execute([$id]);
+    $up = $db->prepare("UPDATE incident_log SET text=?, actor=?, user_id=NULL WHERE id=?");
+    foreach ($s->fetchAll() as $r) $up->execute([anonText($r['text'], $c, $r['kind']), $r['user_id'] !== null ? $who($r['user_id']) : $r['actor'], $r['id']]);
+    $s = $db->prepare("SELECT id,from_user,from_label,recipients,to_label,text FROM messages WHERE incident_id=?"); $s->execute([$id]);
+    $up = $db->prepare("UPDATE messages SET text=?, from_label=?, to_label=?, from_user=NULL, recipients=NULL WHERE id=?");
+    foreach ($s->fetchAll() as $r) $up->execute([anonText($r['text'], $c), $r['from_user'] !== null ? $who($r['from_user']) : $r['from_label'],
+      $r['to_label'] ?? ($r['recipients'] === null ? 'alle' : implode(', ', array_map($who, json_decode($r['recipients'], true) ?: []))), $r['id']]);
+    $db->prepare("UPDATE incidents SET message=? WHERE id=?")->execute([anonText($inc['message'], $c), $id]);
+    logev($id, null, 'anon', "Einsatzprotokoll anonymisiert $how"); return true;
+  case 'texts':
+    if (!$claim("UPDATE incidents SET txt_anon=1 WHERE id=? AND txt_anon=0")) return false;
+    $c = anonCtx($id); // vor dem Umbenennen: Bezeichnungen aus den bisherigen Namen
+    $up = $db->prepare("UPDATE rescuees SET name=?, descr=NULL WHERE id=?"); foreach ($c['r'] as $rid => $l) $up->execute([$l, $rid]);
+    $up = $db->prepare("UPDATE externals SET name=?, descr=NULL WHERE id=?"); foreach ($c['e'] as $eid => $l) $up->execute([$l, $eid]);
+    $s = $db->prepare("SELECT id,name FROM pois WHERE incident_id=?"); $s->execute([$id]); $up = $db->prepare("UPDATE pois SET name=? WHERE id=?");
+    foreach ($s->fetchAll() as $r) $up->execute([anonText($r['name'], $c), $r['id']]);
+    $db->prepare("UPDATE messages SET text='(Text entfernt)' WHERE incident_id=?")->execute([$id]);
+    logev($id, null, 'anon', "Personenangaben und Freitexte entfernt $how"); return true;
+  case 'parts': // negative ID in derselben Reihenfolge wie die Standortverläufe des Replays (Teilnahmen ohne Abgelehnte nach id, danach die Abgelehnten), Bezeichnung in label
+    if (!$claim("UPDATE incidents SET part_anon=1 WHERE id=? AND part_anon=0")) return false;
+    $c = anonCtx($id); $s = $db->prepare("SELECT id,user_id FROM participants WHERE incident_id=? ORDER BY CASE WHEN mode='declined' THEN 1 ELSE 0 END, id"); $s->execute([$id]);
+    $up = $db->prepare("UPDATE participants SET user_id=?, label=?, lat=NULL, lon=NULL, loc_at=NULL, log_lat=NULL, log_lon=NULL, log_at=NULL, fast_at=NULL WHERE id=?"); $n = 0;
+    foreach ($s->fetchAll() as $r) { $u = (int)$r['user_id']; $up->execute([-(++$n), $u < 0 ? null : ($c['u'][$u] ?? 'Einsatzkraft'), $r['id']]); }
+    // übrige Verweise auf Konten in den Einsatzdaten (ausgelöst von, erfasst/markiert/gerettet von); das After Action Review bleibt unverändert
+    $db->prepare("UPDATE incidents SET created_by=NULL WHERE id=?")->execute([$id]);
+    $db->prepare("UPDATE rescuees SET created_by=NULL, loc_by=NULL, rescued_by=NULL WHERE incident_id=?")->execute([$id]);
+    foreach (['externals', 'pois'] as $t) $db->prepare("UPDATE $t SET created_by=NULL WHERE incident_id=?")->execute([$id]);
+    logev($id, null, 'anon', "Teilnahmen vom Konto gelöst $how"); return true;
+  case 'track':
+    if (!$claim("UPDATE incidents SET record=0, recorded=0, rp_anon=NULL WHERE id=? AND recorded=1")) return false;
+    foreach (['track', 'rec_periods', 'air_track'] as $t) $db->prepare("DELETE FROM $t WHERE incident_id=?")->execute([$id]);
+    logev($id, null, 'anon', "Aufzeichnung gelöscht $how"); return true; }
+  return false; }
+// automatisch fällige Stufen (kein Cron: höchstens alle 10 Minuten bei einer Anfrage, je Lauf höchstens 20 Schritte, der Rest beim nächsten Mal)
+function anonAuto() { global $db, $now;
+  if ((int)setting('anon_auto_at', 0) > $now - 600) return; setSetting('anon_auto_at', (string)$now);
+  $n = 0;
+  foreach (anonCfg() as $k => $c) { if (!$c['on']) continue;
+    foreach (['real' => 0, 'ex' => 1] as $t => $ex) { if ($c[$t] === null) continue;
+      $s = $db->prepare("SELECT * FROM incidents WHERE ended_at IS NOT NULL AND ended_at<=? AND is_exercise=? ORDER BY ended_at"); $s->execute([$now - $c[$t] * 86400, $ex]);
+      foreach ($s->fetchAll() as $inc) { if (!anonTodo($inc, $k)) continue;
+        if (anonDo((int)$inc['id'], $k, '(automatisch, ' . ($c[$t] ? $c[$t] . ($c[$t] === 1 ? ' Tag' : ' Tage') . ' nach dem Einsatzende' : 'beim Einsatzende') . ')')) $n++;
+        if ($n >= 20) { setSetting('anon_auto_at', (string)($now - 540)); return; } } } } }
 // Einsatzkräfte fürs Replay: Spezialrolle mit Stand am Ende (Rollenwechsel stehen im Log); joined = erste Annahme (nach dem Anonymisieren des Protokolls: erste Standortmeldung)
 function replayParts($id) { global $db;
-  $s = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.left_at,u.name,r.name role,r.color,m.name mode_name,COALESCE((SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=p.incident_id AND l.user_id=p.user_id AND l.kind='accept'),(SELECT MIN(ts) FROM track t WHERE t.incident_id=p.incident_id AND t.user_id=p.user_id)) joined
-     FROM participants p JOIN users u ON u.id=p.user_id LEFT JOIN roles r ON r.id=p.role_id LEFT JOIN modes m ON m.code=p.mode WHERE p.incident_id=? AND p.mode<>'declined' ORDER BY p.id");
+  $s = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.left_at,COALESCE(u.name,p.label,'Einsatzkraft') name,r.name role,r.color,m.name mode_name,COALESCE((SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=p.incident_id AND l.user_id=p.user_id AND l.kind='accept'),(SELECT MIN(ts) FROM track t WHERE t.incident_id=p.incident_id AND t.user_id=p.user_id)) joined
+     FROM participants p LEFT JOIN users u ON u.id=p.user_id LEFT JOIN roles r ON r.id=p.role_id LEFT JOIN modes m ON m.code=p.mode WHERE p.incident_id=? AND p.mode<>'declined' ORDER BY p.id"); // label: vom Konto gelöste Teilnahme
   $s->execute([$id]); return array_map(fn($r) => ints($r, ['user_id', 'role_id', 'left_at', 'joined']), $s->fetchAll()); }
 function incById($id) { global $db; $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([(int)$id]); return $s->fetch() ?: fail('Einsatz nicht gefunden', 404); }
 
@@ -958,6 +1145,7 @@ if ($route === 'incident/location' && ($inc = activeIncident()) && ($p = part($i
 if (array_key_exists($route, FEATURE_ROUTES) && ($inc = activeIncident()) && !feature($inc, FEATURE_ROUTES[$route]))
   fail('Die Funktion «' . FEATURES[FEATURE_ROUTES[$route]] . '» ist für ' . ((int)$inc['is_exercise'] ? 'Übungen' : 'scharfe Einsätze') . ' ausgeschaltet', 403);
 
+try { anonAuto(); } catch (Throwable $e) { error_log('anonAuto: ' . $e->getMessage()); } // fällige automatische Anonymisierung (Issue #87)
 switch ($route) {
  case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_default' => recDefault(), 'air_default' => airCfg()['on'] ? [airDef(0), airDef(1)] : null, 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'features' => ['real' => features(0), 'ex' => features(1)], 'my_runs' => myRuns(), 'groups' => myGroups()]]); // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; features je Art (real, ex) für «Einsatz starten» und die Flussdistanz ohne Einsatz; rec_default für «Einsatz starten»
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
@@ -1584,15 +1772,15 @@ switch ($route) {
   $db->prepare("UPDATE ex_injects SET removed=1 WHERE id=?")->execute([$j['id']]);
   out(['ok' => true]);
 
- case 'incident/log': $v = incView((int)($_GET['id'] ?? 0)); // anon=1: anonymisierte Fassung (Issue #54); Teilnehmende (Issue #61) behalten den eigenen Namen, bei my_runs anon immer anonym
-  out(logRows((int)($_GET['id'] ?? 0), true, $v === 2 || !empty($_GET['anon']), $v ? $uid : null));
+ case 'incident/log': $v = incView((int)($_GET['id'] ?? 0)); if ($v && !myBtns()['log']) fail('Das Einsatzlog ist für Einsatzkräfte ausgeschaltet', 403); // anon=1: anonymisierte Fassung (Issue #54); Teilnehmende (Issue #61) behalten den eigenen Namen, bei my_runs anon immer anonym
+  $inc = incById($_GET['id'] ?? 0); out(logRows((int)$inc['id'], true, $v === 2 || !empty($_GET['anon']) || (int)$inc['view_anon'] || ($v && anonAny($inc)), $v ? $uid : null)); // view_anon: Anzeige anonymisiert (Issue #87)
 
- case 'incident/replay': $v = incView((int)($_GET['id'] ?? 0)); $self = $v ? $uid : null; // alle Daten eines aufgezeichneten Einsatzes für das Replay in der Verwaltung; anon=1: ohne Personendaten (Issue #54)
+ case 'incident/replay': $v = incView((int)($_GET['id'] ?? 0)); if ($v && !myBtns()['replay']) fail('Das Replay ist für Einsatzkräfte ausgeschaltet', 403); $self = $v ? $uid : null; // alle Daten eines aufgezeichneten Einsatzes für das Replay in der Verwaltung; anon=1: ohne Personendaten (Issue #54)
   $inc = incById($_GET['id'] ?? 0);
   if (!(int)$inc['recorded']) fail('Für diesen Einsatz gibt es keine Aufzeichnung');
   $id = (int)$inc['id']; $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
   // endgültig anonymisiertes Replay (rp_anon): Einsatzkräfte ohne Verbindung zu Konten, Standortverläufe mit negativer ID; immer anonym
-  $rpa = $inc['rp_anon'] !== null; $anon = $rpa || $v === 2 || !empty($_GET['anon']); $c = $anon ? anonCtx($id, $self) : null;
+  $rpa = $inc['rp_anon'] !== null; $va = (int)$inc['view_anon']; $fa = $v && anonAny($inc); $anon = $rpa || $va || $fa || $v === 2 || !empty($_GET['anon']); $c = $anon ? anonCtx($id, $self) : null;
   $parts = $rpa ? (json_decode($inc['rp_anon'], true) ?: []) : replayParts($id);
   if ($anon && !$rpa) foreach ($parts as &$p) $p['name'] = $c['u'][$p['user_id']] ?? 'Einsatzkraft';
   unset($p);
@@ -1624,48 +1812,50 @@ switch ($route) {
   $per = array_map(fn($r) => ints($r, ['start', 'stop']), $q("SELECT start,stop FROM rec_periods WHERE incident_id=? ORDER BY start,id"));
   $inc = floats(ints($inc, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'log_anon']), ['lat', 'lon', 'flow_ms']); $inc['pls_at'] = plsAt($inc);
   unset($inc['public_token']); $inc['rp_anon'] = $rpa ? 1 : 0; if ($anon && $v) $inc['created_by'] = null;
-  out(['incident' => $inc, 'anon' => $anon ? 1 : 0, 'forced' => $v === 2 ? 1 : 0, 'periods' => $per, 'participants' => $parts, 'track' => $tr['u'], 'rtrack' => $tr['r'], 'pois' => $pois, 'rescuees' => $res, 'externals' => $ext, 'marks' => $marks, 'flow' => $flow, 'air' => airReplay($id), 'log' => logRows($id, true, $anon, $self), 'now' => $now]); // air: Helikopter (Issue #73)
+  out(['incident' => $inc, 'anon' => $anon ? 1 : 0, 'forced' => $v === 2 || $va || $fa ? 1 : 0, 'view_anon' => $va, 'periods' => $per, 'participants' => $parts, 'track' => $tr['u'], 'rtrack' => $tr['r'], 'pois' => $pois, 'rescuees' => $res, 'externals' => $ext, 'marks' => $marks, 'flow' => $flow, 'air' => airReplay($id), 'log' => $v && !myBtns()['log'] ? array_values(array_filter(logRows($id, true, $anon, $self), fn($l) => ($l['kind'] ?? '') === 'pls')) : logRows($id, true, $anon, $self), 'now' => $now]); // air: Helikopter (Issue #73)
 
  // Endgültig anonymisieren (Issue #54, nur Verwaltung, nur beendete Einsätze, nicht umkehrbar). Zwei getrennte Funktionen:
  // Replay: Einsatzkräfte im Replay ohne Verbindung zu den Konten (Bezeichnung, Einrückoption, Spezialrolle in rp_anon), Standortverläufe mit negativer ID,
- //   letzte Standorte der Teilnahmen gelöscht; das Replay zeigt danach auch Rettlinge, Externe und Log nur noch anonym. Einsatzprotokoll und Statistik bleiben.
+ //   letzte Standorte der Teilnahmen gelöscht; das Replay zeigt danach auch Rettlinge, Externe und Log nur noch anonym. Einsatzprotokoll und Statistik bleiben (Statistik pro Person weiter personenbezogen, psRows).
  // Einsatzprotokoll: Log-Einträge und Nachrichten ohne Konto (Bezeichnung in actor, from_label, to_label), Namen im Text ersetzt, ebenso in der Alarmmeldung.
- case 'incident/anon/replay': need('anon');
-  $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
+ case 'incident/anon/replay': need('anon'); // einzelne Stufen wie bisher (Issue #54); allgemein: anon/apply
+  $inc = incById($in['id'] ?? 0);
   if ($inc['ended_at'] === null) fail('Nur beendete Einsätze lassen sich anonymisieren');
   if (!(int)$inc['recorded']) fail('Für diesen Einsatz gibt es keine Aufzeichnung');
-  if ($inc['rp_anon'] !== null) fail('Das Replay ist bereits anonymisiert');
-  $db->beginTransaction();
-  // zuerst schreibend sperren: bei zwei gleichzeitigen Anfragen (Doppelklick) läuft nur eine durch, die andere wartet und erhält danach die Meldung
-  $cl = $db->prepare("UPDATE incidents SET rp_anon='[]' WHERE id=? AND rp_anon IS NULL"); $cl->execute([$id]);
-  if (!$cl->rowCount()) { $db->rollBack(); fail('Das Replay ist bereits anonymisiert'); }
-  $c = anonCtx($id); $people = [];
-  $up = $db->prepare("UPDATE track SET user_id=? WHERE incident_id=? AND user_id=?");
-  foreach (replayParts($id) as $p) { $pid = -(count($people) + 1); $up->execute([$pid, $id, $p['user_id']]);
-    $people[] = ['user_id' => $pid, 'name' => $c['u'][$p['user_id']] ?? 'Einsatzkraft'] + array_intersect_key($p, array_flip(['mode', 'role_id', 'left_at', 'role', 'color', 'mode_name', 'joined'])); }
-  $db->prepare("DELETE FROM track WHERE incident_id=? AND user_id>0")->execute([$id]); // Verläufe ohne Teilnahme (z. B. abgelehnt)
-  $db->prepare("UPDATE participants SET lat=NULL, lon=NULL, loc_at=NULL, log_lat=NULL, log_lon=NULL, log_at=NULL, fast_at=NULL WHERE incident_id=?")->execute([$id]);
-  $db->prepare("UPDATE incidents SET rp_anon=? WHERE id=?")->execute([json_encode($people), $id]);
-  logev($id, null, 'anon', 'Replay anonymisiert (Verwaltung)');
-  $db->commit(); out(['ok' => true]);
+  if (!anonDo((int)$inc['id'], 'replay', '(Verwaltung)')) fail('Das Replay ist bereits anonymisiert');
+  out(['ok' => true]);
  case 'incident/anon/log': need('anon');
-  $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
+  $inc = incById($in['id'] ?? 0);
   if ($inc['ended_at'] === null) fail('Nur beendete Einsätze lassen sich anonymisieren');
-  if ((int)$inc['log_anon']) fail('Das Einsatzprotokoll ist bereits anonymisiert');
-  $db->beginTransaction();
-  $cl = $db->prepare("UPDATE incidents SET log_anon=1 WHERE id=? AND log_anon=0"); $cl->execute([$id]); // sperren wie beim Replay
-  if (!$cl->rowCount()) { $db->rollBack(); fail('Das Einsatzprotokoll ist bereits anonymisiert'); }
-  $c = anonCtx($id); $who = fn($u) => $c['u'][(int)$u] ?? 'Person';
-  $s = $db->prepare("SELECT id,user_id,kind,text,actor FROM incident_log WHERE incident_id=?"); $s->execute([$id]);
-  $up = $db->prepare("UPDATE incident_log SET text=?, actor=?, user_id=NULL WHERE id=?");
-  foreach ($s->fetchAll() as $r) $up->execute([anonText($r['text'], $c, $r['kind']), $r['user_id'] !== null ? $who($r['user_id']) : $r['actor'], $r['id']]);
-  $s = $db->prepare("SELECT id,from_user,from_label,recipients,to_label,text FROM messages WHERE incident_id=?"); $s->execute([$id]);
-  $up = $db->prepare("UPDATE messages SET text=?, from_label=?, to_label=?, from_user=NULL, recipients=NULL WHERE id=?");
-  foreach ($s->fetchAll() as $r) $up->execute([anonText($r['text'], $c), $r['from_user'] !== null ? $who($r['from_user']) : $r['from_label'],
-    $r['to_label'] ?? ($r['recipients'] === null ? 'alle' : implode(', ', array_map($who, json_decode($r['recipients'], true) ?: []))), $r['id']]);
-  $db->prepare("UPDATE incidents SET message=?, log_anon=1 WHERE id=?")->execute([anonText($inc['message'], $c), $id]);
-  logev($id, null, 'anon', 'Einsatzprotokoll anonymisiert (Verwaltung)');
-  $db->commit(); out(['ok' => true]);
+  if (!anonDo((int)$inc['id'], 'log', '(Verwaltung)')) fail('Das Einsatzprotokoll ist bereits anonymisiert');
+  out(['ok' => true]);
+ /* ---------- Anonymisierung einstellen und anwenden (Issue #87) ---------- */
+ case 'anon/cfg': need('anon'); // Stufen, Einstellung und alle beendeten Einsätze mit ihrem Stand (für die Massenanonymisierung)
+  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'recorded', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'part_anon', 'accepted', 'rec_del']), $db->query(
+    "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,i.part_anon,
+      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted,
+      (SELECT COUNT(*) FROM incident_log l WHERE l.incident_id=i.id AND (l.kind='anon' AND l.text LIKE 'Aufzeichnung gelöscht%' OR l.kind='rec' AND l.text LIKE 'löscht die Aufzeichnung%')) rec_del FROM incidents i WHERE i.ended_at IS NOT NULL ORDER BY i.alarm_at DESC, i.id DESC")->fetchAll()); // rec_del: Aufzeichnung gelöscht, sonst nicht von «nie aufgezeichnet» zu unterscheiden; aus dem Log, gilt also auch für bereits gelöschte
+  out(['steps' => array_map(fn($k, $v) => ['key' => $k, 'name' => $v[0], 'descr' => $v[1], 'final' => $v[2], 'def' => ANON_DEFAULT[$k] ?? null], array_keys(ANON_STEPS), ANON_STEPS), 'cfg' => anonCfg(), 'incidents' => $rows]);
+ case 'anon/cfg/save': need('anon'); // cfg: {Stufe: {on, real, ex}}, Tage leer = nie
+  $c = is_array($in['cfg'] ?? null) ? $in['cfg'] : fail('Ungültige Einstellung'); $r = [];
+  foreach (ANON_STEPS as $k => $_) { $x = is_array($c[$k] ?? null) ? $c[$k] : [];
+    foreach (['real', 'ex'] as $t) { $v = $x[$t] ?? null; if ($v !== null && $v !== '' && (!is_numeric($v) || (int)$v < 0 || (int)$v > 36500)) fail('Tage: 0 bis 36500 oder leer (nie)'); }
+    $r[$k] = ['on' => empty($x['on']) ? 0 : 1, 'real' => ($x['real'] ?? '') === '' ? null : (int)$x['real'], 'ex' => ($x['ex'] ?? '') === '' ? null : (int)$x['ex']]; }
+  setSetting('anon_cfg', json_encode($r)); setSetting('anon_auto_at', '0'); out(['cfg' => anonCfg()]);
+ case 'anon/apply': need('anon'); // ids = Einsätze (beendete, höchstens 1000), steps = Stufen; je Einsatz in der Reihenfolge der Stufen, schon Erledigtes wird übersprungen
+  $ids = array_values(array_unique(array_map('intval', is_array($in['ids'] ?? null) ? $in['ids'] : [])));
+  $steps = array_values(array_intersect(array_keys(ANON_STEPS), is_array($in['steps'] ?? null) ? $in['steps'] : []));
+  if (!$ids) fail('Keine Einsätze gewählt'); if (count($ids) > 1000) fail('Höchstens 1000 Einsätze auf einmal');
+  if (!$steps) fail('Bitte mindestens eine Stufe wählen');
+  $cfg = anonCfg(); foreach ($steps as $k) if (!$cfg[$k]['on']) fail('Die Stufe «' . ANON_STEPS[$k][0] . '» ist ausgeschaltet');
+  @set_time_limit(300); $done = array_fill_keys($steps, 0); $n = 0;
+  foreach ($ids as $id) { $any = false; foreach ($steps as $k) if (anonDo($id, $k, '(Verwaltung)')) { $done[$k]++; $any = true; } if ($any) $n++; }
+  out(['done' => $done, 'incidents' => $n]);
+ case 'anon/undo': need('anon'); // nur die umkehrbare Stufe «Anzeige anonymisieren» aufheben
+  $ids = array_values(array_unique(array_map('intval', is_array($in['ids'] ?? null) ? $in['ids'] : []))); if (!$ids) fail('Keine Einsätze gewählt');
+  $up = $db->prepare("UPDATE incidents SET view_anon=0 WHERE id=? AND view_anon=1"); $n = 0;
+  foreach ($ids as $id) { $up->execute([$id]); if ($up->rowCount()) { logev($id, null, 'anon', 'Anonymisierte Anzeige aufgehoben (Verwaltung)'); $n++; } }
+  out(['incidents' => $n]);
 
  case 'incident/replay/delete': need('anon'); // Aufzeichnung eines Einsatzes löschen (Standortverläufe und Zeiträume); Log, Nachrichten usw. bleiben
   $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([(int)($in['id'] ?? 0)]); $inc = $s->fetch();
@@ -1678,21 +1868,28 @@ switch ($route) {
 
  case 'my/incidents': // Meine Einsätze (Issue #61): beendete Einsätze, an denen die Person teilgenommen hat (nicht abgelehnt), für Log und Replay
   if (myRuns() === 'off') fail('Die Einsicht in eigene Einsätze ist ausgeschaltet', 403);
-  $s = $db->prepare("SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,m.name mode_name,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1) aar_rel
+  $s = $db->prepare("SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,(SELECT t.name FROM inc_types t WHERE t.id=i.type_id) type_name,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,m.name mode_name,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1 AND NOT EXISTS (SELECT 1 FROM aar_arch r WHERE r.incident_id=i.id)) aar_rel,(SELECT COUNT(*) FROM aar_arch r WHERE r.incident_id=i.id) aar_arch,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1) aar_at
     FROM participants p JOIN incidents i ON i.id=p.incident_id LEFT JOIN modes m ON m.code=p.mode WHERE p.user_id=? AND p.mode<>'declined' AND i.ended_at IS NOT NULL ORDER BY i.alarm_at DESC, i.id DESC");
-  $s->execute([$uid]); $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'recorded', 'rp_anon', 'log_anon', 'aar_rel']), $s->fetchAll()); // aar_rel: Zeitpunkt der Freigabe des After Action Reviews (Issue #55)
+  $s->execute([$uid]); $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'recorded', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'aar_rel', 'aar_arch', 'aar_at']), $s->fetchAll()); // aar_rel: Review verfügbar (Zeitpunkt der Freigabe, Issue #55); aar_at: freigegeben, auch wenn gesichert
   if (myRuns() === 'anon') foreach ($rows as &$r) $r['message'] = anonText($r['message'], anonCtx($r['id'], $uid)); // Alarmmeldung wie im Log
   unset($r);
-  out(['mode' => myRuns(), 'incidents' => $rows]);
- case 'stats': need('stats', 'aar', 'aar_rel'); // mit nur aar (After Action Review, Issue #55) ohne Log und Replay, die prüfen incView
-  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area', 'rp_anon', 'log_anon', 'aar_at', 'aar_st']), $db->query(
-   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.type_id,i.invite,i.inv_groups,(SELECT t.name FROM inc_types t WHERE t.id=i.type_id) type_name,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,u.name creator,(SELECT a.updated FROM aar a WHERE a.incident_id=i.id) aar_at,(SELECT a.status FROM aar a WHERE a.incident_id=i.id) aar_st,
+  if (!myAar()) foreach ($rows as &$r) { $r['aar_rel'] = null; if (empty($r['aar_arch']) || !can('aar_arch')) $r['aar_at'] = null; }
+  unset($r);
+  if (!can('aar_arch')) foreach ($rows as &$r) unset($r['aar_arch']); // das gesicherte PDF nur mit dem Recht, unabhängig von my_btns
+  unset($r);
+  out(['mode' => myRuns(), 'btns' => myBtns(), 'incidents' => $rows]);
+ case 'my/stats': // Meine Statistik (Issue #87): nur die eigenen Teilnahmen, für alle Angemeldeten, auch aus endgültig anonymisierten Einsätzen
+  out(['rows' => psRows($uid)]);
+ case 'stats': need('stats', 'aar', 'aar_rel', 'aar_arch'); // mit nur aar (After Action Review, Issue #55) ohne Log und Replay, die prüfen incView
+  $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'part_anon', 'aar_at', 'aar_st', 'aar_arch', 'aar_lock']), $db->query(
+   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.type_id,i.invite,i.inv_groups,(SELECT t.name FROM inc_types t WHERE t.id=i.type_id) type_name,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,i.part_anon,u.name creator,(SELECT a.updated FROM aar a WHERE a.incident_id=i.id) aar_at,(SELECT a.status FROM aar a WHERE a.incident_id=i.id) aar_st,(SELECT COUNT(*) FROM aar_arch r WHERE r.incident_id=i.id) aar_arch,CASE WHEN " . AAR_LOCK . " THEN 1 ELSE 0 END aar_lock,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode='declined') declined,
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='accept') first_accept,
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='area') first_area
     FROM incidents i LEFT JOIN users u ON u.id=i.created_by ORDER BY i.id DESC")->fetchAll());
   foreach ($rows as &$r) { $r['type_id'] = $r['type_id'] === null ? null : (int)$r['type_id']; $r['aufgebot'] = invInfo($r); unset($r['invite'], $r['inv_groups']); } unset($r); // Issue #90
+  foreach ($rows as &$r) { $r['aar_seal'] = $r['aar_arch']; if (!can('aar_arch')) unset($r['aar_arch']); } unset($r); // aar_seal: Review nur noch als PDF, sehen alle; das PDF selbst nur mit dem Recht
   $ended = array_filter($rows, fn($r) => $r['ended_at']);
   out(['types' => array_map(fn($t) => ints($t, ['id']), $db->query("SELECT id,name FROM inc_types ORDER BY pos, name")->fetchAll()), 'incidents' => $rows, 'totals' => [
     'count' => count($rows), 'ended' => count($ended), 'exercises' => count(array_filter($rows, fn($r) => $r['is_exercise'])),
@@ -1700,6 +1897,9 @@ switch ($route) {
     'avg_accepted' => avg(array_column($rows, 'accepted')),
     'avg_first_accept' => avg(array_map(fn($r) => $r['first_accept'] === null ? null : $r['first_accept'] - $r['alarm_at'], $rows)),
     'avg_first_area' => avg(array_map(fn($r) => $r['first_area'] === null ? null : $r['first_area'] - $r['alarm_at'], $rows))]]);
+
+ case 'stats/people': need('stats'); // Statistik pro Person (Issue #87): eine Zeile je Teilnahme, ausgewertet (Zeitraum, Einsatz, Art) im Frontend
+  out(['rows' => psRows()]);
 
  /* ---------- After Action Review (Issue #55) ---------- */
  case 'aar/cfg': if (myRuns() === 'off') need('aar', 'aar_rel', 'aar_cfg'); // mit Meine Einsätze für alle (Ansicht freigegebener Reviews)
@@ -1716,27 +1916,36 @@ switch ($route) {
   setSetting('aar_logo', (string)$l); out(['ok' => true]);
  case 'aar/get': // Daten fürs Dokument; anon=1 oder endgültig anonymisiert: Bezeichnungen wie Issue #54 (die erfassten Angaben bleiben, wie sie geschrieben wurden)
   // my=1 (Meine Einsätze): nur freigegebene Reviews eigener Einsätze, Namen gemäss my_runs (anon: alle anderen anonym, die Person selbst mit Namen)
-  $inc = incById($_GET['id'] ?? 0); $id = (int)$inc['id']; $mine = aarView($id); $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
-  $a = $q("SELECT data,updated,updated_by,status,rel_at,rel_by FROM aar WHERE incident_id=?")[0] ?? null;
-  $forced = (int)$inc['log_anon'] || $inc['rp_anon'] !== null; $self = $mine && !$forced ? $uid : null;
+  $inc = incById($_GET['id'] ?? 0); $id = (int)$inc['id']; $mine = aarView($id);
+  $fin = (int)$inc['log_anon'] || $inc['rp_anon'] !== null; $forced = $fin || (int)$inc['view_anon']; $self = $mine && !$fin ? $uid : null; // Anzeige anonymisiert: die Person selbst behält den Namen
   $anon = $forced || !empty($_GET['anon']) || $mine && myRuns() === 'anon'; $c = $anon ? anonCtx($id, $self) : null;
-  $nm = fn($u) => $u === null ? null : ($c ? ($c['u'][(int)$u] ?? 'Person') : ($db->query('SELECT name FROM users WHERE id=' . (int)$u)->fetchColumn() ?: '?'));
-  $rpa = $inc['rp_anon'] !== null;
-  $parts = array_map(fn($p) => ['name' => $c && !$rpa ? ($c['u'][$p['user_id']] ?? 'Einsatzkraft') : $p['name'], 'mode' => $p['mode_name'] ?? null, 'role' => $p['role'] ?? null, 'joined' => $p['joined'] ?? null, 'left_at' => $p['left_at'] ?? null],
-    $rpa ? (json_decode($inc['rp_anon'], true) ?: []) : replayParts($id));
-  $res = array_map(function ($r) use ($c) { $r = ints($r, ['id', 'loc_at', 'rescued_at', 'created', 'removed']); if ($c) { $r['name'] = $c['r'][$r['id']] ?? 'Rettling'; $r['descr'] = null; } return $r; },
-    $q("SELECT id,name,descr,lat,lon,loc_at,rescued_at,created,removed FROM rescuees WHERE incident_id=? ORDER BY id"));
-  $ext = array_map(function ($r) use ($c) { $r = ints($r, ['id', 'created', 'removed']); if ($c) { $r['name'] = $c['e'][$r['id']] ?? 'Externe Einsatzkraft'; $r['descr'] = null; } return $r; },
-    $q("SELECT e.id,e.name,e.descr,e.created,e.removed,r.name role FROM externals e LEFT JOIN roles r ON r.id=e.role_id WHERE e.incident_id=? ORDER BY e.id"));
-  $first = function ($k) use ($q) { $v = $q("SELECT MIN(ts) v FROM incident_log WHERE incident_id=? AND kind='$k'")[0]['v'] ?? null; return $v === null ? null : (int)$v; };
-  $plan = $inc['plan_id'] ? ($db->query('SELECT title FROM ex_plans WHERE id=' . (int)$inc['plan_id'])->fetchColumn() ?: null) : null;
-  out(['inc' => ['id' => $id, 'message' => $c ? anonText($inc['message'], $c) : $inc['message'], 'alarm_at' => (int)$inc['alarm_at'], 'ended_at' => $inc['ended_at'] === null ? null : (int)$inc['ended_at'],
-      'is_exercise' => (int)$inc['is_exercise'], 'creator' => $nm($inc['created_by']), 'plan' => $plan, 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms'],
-      'lat' => $inc['lat'] === null ? null : (float)$inc['lat'], 'lon' => $inc['lon'] === null ? null : (float)$inc['lon'], 'first_accept' => $first('accept'), 'first_area' => $first('area')],
-    'anon' => $anon, 'forced' => $forced, 'people' => $parts, 'rescuees' => $res, 'externals' => $ext, 'log' => logRows($id, true, $anon, $self), 'my_anon' => $mine && myRuns() === 'anon',
-    'data' => $a ? (json_decode($a['data'], true) ?: (object)[]) : (object)[], 'updated' => $a && $a['updated'] !== null ? (int)$a['updated'] : null, 'updated_by' => $a ? $nm($a['updated_by']) : null,
-    'status' => $a ? (int)$a['status'] : 0, 'rel_at' => $a && $a['rel_at'] !== null ? (int)$a['rel_at'] : null, 'rel_by' => $a ? $nm($a['rel_by']) : null,
-    'imgs' => array_map(fn($r) => ints($r, ['id', 'w', 'h']), $q("SELECT id,field_id field,caption,w,h FROM aar_img WHERE incident_id=? ORDER BY id"))]); // Bilder ohne Inhalt, der kommt einzeln über aar/img
+  out(aarDoc($inc, $c, $anon, $forced, $mine, $self));
+ /* ---------- Vor dem Anonymisieren gesicherte Reviews, alles nur mit Recht aar_arch; das fertige PDF lässt sich nicht mehr ändern ---------- */
+ case 'aar/arch/pending': need('aar_arch'); // Sicherungen, aus denen der Browser noch das PDF erzeugen muss
+  out(['ids' => array_map('intval', $db->query("SELECT incident_id FROM aar_arch WHERE pdf_at IS NULL AND snap IS NOT NULL ORDER BY incident_id")->fetchAll(PDO::FETCH_COLUMN))]);
+ case 'aar/arch/snap': need('aar_arch'); $r = aarArchRow($_GET['id'] ?? 0); if ($r['pdf_at'] !== null) fail('Das PDF liegt bereits vor');
+  $s = $db->prepare("SELECT snap FROM aar_arch WHERE incident_id=?"); $s->execute([(int)$r['incident_id']]); out(['created' => (int)$r['created'], 'doc' => json_decode($s->fetchColumn(), true)]);
+ case 'aar/arch/img': need('aar_arch'); $s = $db->prepare("SELECT data FROM aar_arch_img WHERE incident_id=? AND img_id=?"); $s->execute([(int)($_GET['id'] ?? 0), (int)($_GET['img'] ?? 0)]); $v = $s->fetchColumn(); if ($v === false) fail('Bild nicht gefunden', 404); out(['src' => $v]);
+ case 'aar/arch/put': need('aar_arch'); // ein Stück des PDF: id, n, data (Base64)
+  $r = aarArchRow($in['id'] ?? 0); if ($r['pdf_at'] !== null) fail('Das gesicherte PDF lässt sich nicht mehr ändern', 409);
+  $n = (int)($in['n'] ?? -1); $d = (string)($in['data'] ?? ''); if ($n < 0 || $n >= AAR_ARCH_PARTS || $d === '' || strlen($d) > AAR_ARCH_CHUNK || base64_decode($d, true) === false) fail('Ungültiges Stück');
+  $db->prepare("DELETE FROM aar_arch_part WHERE incident_id=? AND n=?")->execute([(int)$r['incident_id'], $n]);
+  $db->prepare("INSERT INTO aar_arch_part(incident_id,n,data) VALUES(?,?,?)")->execute([(int)$r['incident_id'], $n, $d]); out(['ok' => true]);
+ case 'aar/arch/done': need('aar_arch'); // alle Stücke da: id, parts, sha (SHA-256 des PDF), name; ab hier unveränderlich
+  $r = aarArchRow($in['id'] ?? 0); $id = (int)$r['incident_id']; if ($r['pdf_at'] !== null) fail('Das gesicherte PDF lässt sich nicht mehr ändern', 409);
+  $parts = (int)($in['parts'] ?? 0); if ($parts < 1 || $parts > AAR_ARCH_PARTS) fail('Ungültige Anzahl Stücke');
+  $h = hash_init('sha256'); $s = $db->prepare("SELECT data FROM aar_arch_part WHERE incident_id=? AND n=?");
+  for ($n = 0; $n < $parts; $n++) { $s->execute([$id, $n]); $v = $s->fetchColumn(); $s->closeCursor(); if ($v === false) fail('Es fehlen Stücke des PDF'); $v = base64_decode($v); if (!$n && substr($v, 0, 5) !== '%PDF-') fail('Das ist kein PDF'); hash_update($h, $v); }
+  $sha = hash_final($h); if (!hash_equals($sha, (string)($in['sha'] ?? ''))) fail('Prüfsumme stimmt nicht');
+  $db->beginTransaction();
+  $u = $db->prepare("UPDATE aar_arch SET pdf_at=?,pdf_parts=?,pdf_name=?,pdf_sha=?,snap=NULL WHERE incident_id=? AND pdf_at IS NULL"); $u->execute([$now, $parts, mb_substr(basename((string)($in['name'] ?? 'AAR.pdf')), 0, 150), $sha, $id]);
+  if (!$u->rowCount()) { $db->rollBack(); fail('Das gesicherte PDF lässt sich nicht mehr ändern', 409); }
+  $db->prepare("DELETE FROM aar_arch_part WHERE incident_id=? AND n>=?")->execute([$id, $parts]); $db->prepare("DELETE FROM aar_arch_img WHERE incident_id=?")->execute([$id]);
+  $db->commit(); out(['ok' => true]);
+ case 'aar/arch/part': need('aar_arch'); // Abrufen: ein Stück mit den Angaben zum PDF; das Dokument setzt der Browser zusammen und prüft die Summe
+  $r = aarArchRow($_GET['id'] ?? 0); if ($r['pdf_at'] === null) out(['pending' => true]);
+  $s = $db->prepare("SELECT data FROM aar_arch_part WHERE incident_id=? AND n=?"); $s->execute([(int)$r['incident_id'], (int)($_GET['n'] ?? 0)]); $v = $s->fetchColumn(); if ($v === false) fail('Stück nicht gefunden', 404);
+  out(['parts' => (int)$r['pdf_parts'], 'name' => $r['pdf_name'], 'sha' => $r['pdf_sha'], 'data' => $v]);
  case 'aar/img': // ein Bild als Data-URL (Zugriff wie aar/get)
   $r = aarImgRow($_GET['id'] ?? 0); aarView((int)$r['incident_id']);
   $s = $db->prepare("SELECT data FROM aar_img WHERE id=?"); $s->execute([(int)$r['id']]); out(['src' => $s->fetchColumn()]);
@@ -1764,7 +1973,7 @@ switch ($route) {
     $db->prepare("UPDATE aar SET data=? WHERE incident_id=?")->execute([json_encode((object)$d, JSON_UNESCAPED_UNICODE), $id]); }
   aarTouch($id, $ex); out(['ok' => true]);
  case 'aar/save': need('aar'); // nur Felder der Einstellungen; Werte entfernter Felder bleiben erhalten
-  $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
+  $inc = incById($in['id'] ?? 0); $id = (int)$inc['id']; aarSealed($id);
   if ($inc['ended_at'] === null) fail('Ein After Action Review gibt es erst nach dem Einsatzende');
   $s = $db->prepare("SELECT data,status FROM aar WHERE incident_id=?"); $s->execute([$id]); $old = $s->fetch(); $s->closeCursor(); $d = $old ? (json_decode((string)$old['data'], true) ?: []) : [];
   if ($old && (int)$old['status'] === 1) fail('Das After Action Review ist freigegeben. Zum Bearbeiten zuerst die Freigabe zurücknehmen.');
@@ -1785,6 +1994,7 @@ switch ($route) {
   if ($inc['ended_at'] === null) fail('Ein After Action Review gibt es erst nach dem Einsatzende');
   $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([$id]); $cur = $s->fetchColumn(); $s->closeCursor(); $cur = $cur === false ? null : (int)$cur;
   if ($st === 1 || $cur === 1) need('aar_rel'); else need('aar');
+  aarSealed($id);
   if ($cur === null) $db->prepare("INSERT INTO aar(incident_id,data,status) VALUES(?,'{}',0)")->execute([$id]);
   $db->prepare("UPDATE aar SET status=?,rel_at=?,rel_by=? WHERE incident_id=?")->execute([$st, $st === 1 ? $now : null, $st === 1 ? $uid : null, $id]);
   out(['ok' => true]);
@@ -1961,13 +2171,14 @@ switch ($route) {
   if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message) VALUES(?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1)]);
   out(['ok' => true]);
- case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_real' => recDefault()[0], 'rec_ex' => recDefault()[1], 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'features' => array_map(fn($k, $r, $e) => ['k' => $k, 'name' => FEATURES[$k], 'real' => $r, 'ex' => $e], array_keys(FEATURES), features(0), features(1)), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
+ case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_real' => recDefault()[0], 'rec_ex' => recDefault()[1], 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'features' => array_map(fn($k, $r, $e) => ['k' => $k, 'name' => FEATURES[$k], 'real' => $r, 'ex' => $e], array_keys(FEATURES), features(0), features(1)), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
    'air' => airCfg(), 'air_default' => AIR_DEFAULT + array_map(fn($x) => $x[0], AIR_NUM), 'air_num' => AIR_NUM, 'air_filters' => AIR_FILTERS, 'air_app' => AIR_APP, 'air_sources' => array_map(fn($s) => ['name' => $s['name'], 'site' => $s['site'], 'note' => $s['note']], AIR_SOURCES),
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[]]); // Helikopter (Issue #73)
  case 'settings/save': // jede übergebene Einstellung braucht ihr Recht (SETTING_PERMS)
   foreach (SETTING_PERMS as $k => $p) if (isset($in[$k])) need($p);
   if (isset($in['air'])) setSetting('air', json_encode(airIn($in['air']), JSON_UNESCAPED_UNICODE)); // Helikopter (Issue #73)
   if (isset($in['my_runs'])) { if (!is_string($in['my_runs']) || !isset(MY_RUNS[$in['my_runs']])) fail('Ungültige Einstellung'); setSetting('my_runs', (string)$in['my_runs']); } // Meine Einsätze (Issue #61)
+  if (isset($in['my_btns'])) { if (!is_array($in['my_btns'])) fail('Ungültige Einstellung'); $b = myBtns(); foreach (MY_BTNS as $k => $_) if (array_key_exists($k, $in['my_btns'])) $b[$k] = (int)!empty($in['my_btns'][$k]); setSetting('my_btns', json_encode($b)); }
   if (isset($in['overpass_ttl'])) { // Haltedauer des Overpass-Caches in Minuten, 0 = kein Cache, höchstens 7 Tage
     if (!is_numeric($in['overpass_ttl']) || (int)$in['overpass_ttl'] < 0 || (int)$in['overpass_ttl'] > 10080) fail('Haltedauer: 0 bis 10080 Minuten');
     setSetting('overpass_ttl', (string)(int)$in['overpass_ttl']);
