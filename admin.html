@@ -592,11 +592,11 @@ const aarTm=t=>t?new Date(t*1000).toLocaleTimeString('de-CH',{hour:'2-digit',min
 const aarMin=s=>s==null?'–':Math.round(s/60)+' min';
 // Status in der Einsatzstatistik: rel = freigegeben, nr = nicht relevant, wip = in Arbeit (Angaben gespeichert), open = noch nichts
 const aarSt=x=>x.aar_st===1?'rel':x.aar_st===2?'nr':x.aar_at?'wip':'open';
-const aarChip=x=>({rel:'<span class="rv">AAR freigegeben</span>',nr:'<span>AAR nicht relevant</span>',wip:`<span class="wip" title="Zuletzt bearbeitet ${aarDt(x.aar_at)}">AAR in Arbeit</span>`,open:'<span>noch kein AAR</span>'})[aarSt(x)];
+const aarChip=x=>x.aar_seal?'<span class="rv" title="Vor dem Anonymisieren gesichert, nur noch als PDF verfügbar (eigenes Recht)">AAR gesichert</span>':({rel:'<span class="rv">AAR freigegeben</span>',nr:'<span>AAR nicht relevant</span>',wip:`<span class="wip" title="Zuletzt bearbeitet ${aarDt(x.aar_at)}">AAR in Arbeit</span>`,open:'<span>noch kein AAR</span>'})[aarSt(x)];
 // Knöpfe: Erfassen/Bearbeiten (nicht bei freigegebenen, die sind gesperrt), Ansehen (dort auch Freigabe), Word/PDF gemäss Einstellung dl (je Format und Zustand wip, rel, nr)
 const aarDlOk=(k,s)=>!!aarC.cfg.dl[k][s==='open'?'wip':s];
 const aarDlBtns=(id,p,s)=>(aarDlOk('docx',s)?`<button data-${p}w="${id}" title="Als Word-Dokument herunterladen">Word</button>`:'')+(aarDlOk('pdf',s)?`<button data-${p}p="${id}" title="Als PDF herunterladen">PDF</button>`:'');
-function aarBtns(x){const s=aarSt(x);
+function aarBtns(x){if(x.aar_seal)return'';const s=aarSt(x);
   const b=`${s!=='rel'&&can('aar')?`<button data-ae="${x.id}" title="After Action Review ${s==='wip'?'bearbeiten':'erfassen'}">${s==='wip'?'Bearbeiten':'Erfassen'}</button>`:''}${s!=='nr'?`<button data-av="${x.id}" title="Ansehen${can('aar_rel')?(s==='rel'?', Freigabe zurücknehmen':', freigeben'):''}">Ansehen</button>`:''}${aarDlBtns(x.id,'a',s)}`;return b?`<span class="bg"><span class="bl">AAR</span>${b}</span>`:''}
 // Formular mit allen Feldern der Einstellungen; leere Felder werden nicht gespeichert
 async function aarEdit(id){let x;try{x=await api('aar/get&id='+id);await aarImgs(x)}catch(e){return fail(e)}const i=x.inc,F=aarC.cfg.fields;let chg=false;
@@ -922,7 +922,7 @@ function renderAnon(){const el=$('#sAnon'),D=anonD,C=D.cfg,f=anonF,[a,b]=psRange
   const on=D.steps.filter(s=>C[s.key].on),st=f.st.filter(k=>on.some(s=>s.key===k));
   const day=v=>`<input type="number" min="0" max="36500" step="1" inputmode="numeric" value="${v??''}" placeholder="nie">`;
   el.innerHTML=`<h2>Anonymisierung</h2>
-    <div class="mut">Personendaten beendeter Einsätze lassen sich in Stufen anonymisieren: von Hand je Einsatz (Einsatzstatistik → «Anonymisieren»), unten für viele Einsätze auf einmal oder automatisch eine bestimmte Zeit nach dem Einsatzende. Nur «Anzeige anonymisieren» lässt sich aufheben, alle anderen Stufen sind endgültig. Die Statistik pro Person bleibt erhalten, ausser nach «Teilnahmen vom Konto lösen». Die im After Action Review erfassten Angaben bleiben unverändert. Ein freigegebenes Review wird vor der ersten Stufe zusätzlich vollständig als PDF gesichert, abrufbar mit dem Recht «Gesicherte After Action Reviews abrufen». Ohne eigene Einstellung gelten die Vorgaben.</div>
+    <div class="mut">Personendaten beendeter Einsätze lassen sich in Stufen anonymisieren: von Hand je Einsatz (Einsatzstatistik → «Anonymisieren»), unten für viele Einsätze auf einmal oder automatisch eine bestimmte Zeit nach dem Einsatzende. Nur «Anzeige anonymisieren» lässt sich aufheben, alle anderen Stufen sind endgültig. Die Statistik pro Person bleibt erhalten, ausser nach «Teilnahmen vom Konto lösen». Die im After Action Review erfassten Angaben bleiben unverändert. Ein freigegebenes Review wird vor der ersten Stufe (ausser «Aufzeichnung löschen») vollständig als PDF gesichert und ist ab dann nur noch so verfügbar: mit dem Recht «Gesicherte After Action Reviews abrufen», in «Meine Einsätze» nicht mehr. Ohne eigene Einstellung gelten die Vorgaben.</div>
     <h3>Stufen</h3>
     <div id="anCfg">${D.steps.map((s,i)=>`<div class="inc anst ${s.final?'fin':''}" data-k="${s.key}"><div class="ansh"><div class="anst1"><span class="mut">Stufe ${i+1}</span><b>${esc(s.name)}</b><div class="fl">${s.final?'<span class="on">endgültig</span>':'<span class="rv">umkehrbar</span>'}</div></div><label class="chk"><input type="checkbox" class="anOn" ${C[s.key].on?'checked':''}> Angeboten</label></div>
       <div class="mut">${esc(s.descr)}${s.def?` Vorgabe: ${s.def[0]??'nie'} Tage bei scharfen Einsätzen, ${s.def[1]??'nie'} Tage bei Übungen.`:''}</div>
@@ -961,13 +961,13 @@ async function anonDlg(x){let D;try{D=await api('anon/cfg')}catch(e){return fail
   const norec=k=>(k==='replay'||k==='track')&&!i.recorded&&!i.rec_del,done=k=>!anonTodoJ(i,k)&&!norec(k),why=k=>norec(k)?' (keine Aufzeichnung)':k==='replay'&&done(k)&&!i.recorded?' (Aufzeichnung gelöscht)':done(k)?' (bereits erledigt)':''; // nie aufgezeichnet: nichts zu tun, also nicht erledigt
   const steps=D.steps.filter(s=>D.cfg[s.key].on);
   const dA=dlg('Anonymisieren',`<div class="mut">«${esc(i.message)}»</div>${anonChips(i)?`<div class="fl" style="margin:.4rem 0">${anonChips(i)}</div>`:''}
-    ${x.aar_st===1?'<div class="mut" style="font-size:.85rem">Das freigegebene After Action Review wird vorher vollständig als PDF gesichert.</div>':''}
+    ${x.aar_st===1?'<div class="mut" style="font-size:.85rem">Das freigegebene After Action Review wird vorher vollständig als PDF gesichert und ist danach nur noch als dieses PDF verfügbar, auch wenn die Stufe wieder aufgehoben wird. «Aufzeichnung löschen» allein ist davon ausgenommen.</div>':''}
     ${steps.map(s=>`<label class="anit"><input type="checkbox" class="anS" value="${s.key}" ${done(s.key)?'checked disabled':norec(s.key)?'disabled':''}><span><b style="display:inline">${esc(s.name)}</b>${why(s.key)}${s.final?' · <span class="mut">endgültig</span>':''}<span class="mut" style="display:block;font-size:.85rem">${esc(s.descr)}${D.cfg[s.key][i.is_exercise?'ex':'real']!=null?` Automatisch ${anonDays(D.cfg[s.key][i.is_exercise?'ex':'real'])}.`:''}</span></span></label>`).join('')||'<div class="mut">Keine Stufe angeboten (Verwaltung → Auswertung → Anonymisierung).</div>'}
     ${i.view_anon?'<div class="row"><button class="sec" id="anU">Anonymisierte Anzeige aufheben</button></div>':''}`,
     async d=>{const st=[...d.querySelectorAll('.anS:checked:not(:disabled)')].map(c=>c.value);if(!st.length)throw new Error('Bitte mindestens eine Stufe wählen.');
       if(!await anonApply([i],st,D))throw new Error('Abgebrochen.');loadStats()},'Anwenden');
   dA.firstElementChild.classList.add('anond');
-  const u=$('#anU');if(u)u.onclick=async()=>{if(!confirm('Anonymisierte Anzeige aufheben? Log, Replay und After Action Review zeigen danach wieder Namen, soweit sie nicht endgültig anonymisiert sind.'))return;
+  const u=$('#anU');if(u)u.onclick=async()=>{if(!confirm('Anonymisierte Anzeige aufheben? Log, Replay und After Action Review zeigen danach wieder Namen, soweit sie nicht endgültig anonymisiert sind. Ein bereits gesichertes After Action Review bleibt nur als PDF verfügbar.'))return;
     try{await api('anon/undo',{ids:[i.id]});toast('Aufgehoben','ok');u.closest('.dlg').remove();loadStats()}catch(e){fail(e)}}}
 /* ---------- Replay eines aufgezeichneten Einsatzes ---------- */
 // Zeitachse aus den gespeicherten Daten: Standortverläufe (track), Rettlinge (rtrack, created/removed/rescued_at), Positionen & Bereiche (created/removed), Nachrichten-Markierungen (created/unmarked), Log

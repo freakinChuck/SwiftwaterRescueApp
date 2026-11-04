@@ -227,13 +227,15 @@ function psRows($only = null) { global $db, $now; $only = $only === null ? null 
    $rows[] = $row; }
 
   return $rows; }
-function aarView($id) { global $db; if (empty($_GET['my'])) { need('aar', 'aar_rel'); return false; }
+// Ab der Sicherung (aarArchive) gibt es das Review nur noch als PDF (Recht aar_arch), auch wenn die Anzeige wieder aufgehoben wird: nichts ansehen, nichts ändern
+function aarSealed($id) { global $db; $s = $db->prepare("SELECT 1 FROM aar_arch WHERE incident_id=?"); $s->execute([(int)$id]); $v = $s->fetchColumn(); $s->closeCursor(); if ($v !== false) fail('Dieses After Action Review ist gesichert und nur noch als PDF verfügbar.', 409); }
+function aarView($id) { global $db; if (empty($_GET['my'])) { need('aar', 'aar_rel'); aarSealed($id); return false; }
   if (myRuns() === 'off' || !myPart($id)) fail('Kein Zugriff auf diesen Einsatz', 403);
   $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([$id]); $st = $s->fetchColumn(); $s->closeCursor();
   if ($st === false || (int)$st !== 1) fail('Dieses After Action Review ist nicht freigegeben', 403);
-  return true; }
+  aarSealed($id); return true; }
 // Bearbeiten (Angaben, Bilder): Recht aar, Einsatz beendet, nicht freigegeben; danach gilt das Review als in Arbeit
-function aarEditable($inc) { global $db; need('aar');
+function aarEditable($inc) { global $db; need('aar'); aarSealed($inc['id']);
   if ($inc['ended_at'] === null) fail('Ein After Action Review gibt es erst nach dem Einsatzende');
   $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([(int)$inc['id']]); $st = $s->fetchColumn(); $s->closeCursor();
   if ($st !== false && (int)$st === 1) fail('Das After Action Review ist freigegeben. Zum Bearbeiten zuerst die Freigabe zurücknehmen.');
@@ -1754,7 +1756,7 @@ switch ($route) {
 
  case 'my/incidents': // Meine Einsätze (Issue #61): beendete Einsätze, an denen die Person teilgenommen hat (nicht abgelehnt), für Log und Replay
   if (myRuns() === 'off') fail('Die Einsicht in eigene Einsätze ist ausgeschaltet', 403);
-  $s = $db->prepare("SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,m.name mode_name,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1) aar_rel
+  $s = $db->prepare("SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,m.name mode_name,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1 AND NOT EXISTS (SELECT 1 FROM aar_arch r WHERE r.incident_id=i.id)) aar_rel
     FROM participants p JOIN incidents i ON i.id=p.incident_id LEFT JOIN modes m ON m.code=p.mode WHERE p.user_id=? AND p.mode<>'declined' AND i.ended_at IS NOT NULL ORDER BY i.alarm_at DESC, i.id DESC");
   $s->execute([$uid]); $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'recorded', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'aar_rel']), $s->fetchAll()); // aar_rel: Zeitpunkt der Freigabe des After Action Reviews (Issue #55)
   if (myRuns() === 'anon') foreach ($rows as &$r) $r['message'] = anonText($r['message'], anonCtx($r['id'], $uid)); // Alarmmeldung wie im Log
@@ -1770,7 +1772,7 @@ switch ($route) {
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='accept') first_accept,
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='area') first_area
     FROM incidents i LEFT JOIN users u ON u.id=i.created_by ORDER BY i.id DESC")->fetchAll());
-  if (!can('aar_arch')) foreach ($rows as &$r) unset($r['aar_arch']); unset($r);
+  foreach ($rows as &$r) { $r['aar_seal'] = $r['aar_arch']; if (!can('aar_arch')) unset($r['aar_arch']); } unset($r); // aar_seal: Review nur noch als PDF, sehen alle; das PDF selbst nur mit dem Recht
   $ended = array_filter($rows, fn($r) => $r['ended_at']);
   out(['incidents' => $rows, 'totals' => [
     'count' => count($rows), 'ended' => count($ended), 'exercises' => count(array_filter($rows, fn($r) => $r['is_exercise'])),
@@ -1854,7 +1856,7 @@ switch ($route) {
     $db->prepare("UPDATE aar SET data=? WHERE incident_id=?")->execute([json_encode((object)$d, JSON_UNESCAPED_UNICODE), $id]); }
   aarTouch($id, $ex); out(['ok' => true]);
  case 'aar/save': need('aar'); // nur Felder der Einstellungen; Werte entfernter Felder bleiben erhalten
-  $inc = incById($in['id'] ?? 0); $id = (int)$inc['id'];
+  $inc = incById($in['id'] ?? 0); $id = (int)$inc['id']; aarSealed($id);
   if ($inc['ended_at'] === null) fail('Ein After Action Review gibt es erst nach dem Einsatzende');
   $s = $db->prepare("SELECT data,status FROM aar WHERE incident_id=?"); $s->execute([$id]); $old = $s->fetch(); $s->closeCursor(); $d = $old ? (json_decode((string)$old['data'], true) ?: []) : [];
   if ($old && (int)$old['status'] === 1) fail('Das After Action Review ist freigegeben. Zum Bearbeiten zuerst die Freigabe zurücknehmen.');
@@ -1875,6 +1877,7 @@ switch ($route) {
   if ($inc['ended_at'] === null) fail('Ein After Action Review gibt es erst nach dem Einsatzende');
   $s = $db->prepare("SELECT status FROM aar WHERE incident_id=?"); $s->execute([$id]); $cur = $s->fetchColumn(); $s->closeCursor(); $cur = $cur === false ? null : (int)$cur;
   if ($st === 1 || $cur === 1) need('aar_rel'); else need('aar');
+  aarSealed($id);
   if ($cur === null) $db->prepare("INSERT INTO aar(incident_id,data,status) VALUES(?,'{}',0)")->execute([$id]);
   $db->prepare("UPDATE aar SET status=?,rel_at=?,rel_by=? WHERE incident_id=?")->execute([$st, $st === 1 ? $now : null, $st === 1 ? $uid : null, $id]);
   out(['ok' => true]);
