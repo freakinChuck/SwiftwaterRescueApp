@@ -36,7 +36,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 ## 3. Benutzer und Berechtigungen (BE)
 
 - **BE-01** – Frei definierbare Benutzerrollen mit einer Auswahl an Rechten; eine Person kann mehrere Rollen haben und erhält alle Rechte (#63).
-- **BE-02** – Rechte: Einsätze starten, Übungen starten, jeden Einsatz leiten, Übungen vorbereiten, Benutzer verwalten, Benutzerrollen verwalten, Einstellungen je Kategorie (Einsatz, Funktionen, Karte & Daten), Statistik/Log/Replay aller Einsätze, Anonymisieren und Aufzeichnungen löschen, Einsicht für Einsatzkräfte (#63).
+- **BE-02** – Rechte: Einsätze starten, Übungen starten, jeden Einsatz leiten, Übungen vorbereiten, Benutzer verwalten, Benutzerrollen verwalten, Einstellungen je Kategorie (Einsatz, Funktionen, Karte & Daten), Statistik/Log/Replay aller Einsätze, Anonymisieren und Aufzeichnungen löschen, Einsicht für Einsatzkräfte, Einsatzgruppen verwalten (#63, #90).
 - **BE-03** – Die Rolle Systemadministrator hat immer alle Rechte, auch künftige, und ist weder änderbar noch entfernbar; mindestens eine aktive Person behält sie (#63).
 - **BE-04** – Niemand kann Rechte vergeben oder Personen bearbeiten, deren Rechte über die eigenen hinausgehen (#63).
 - **BE-05** – Eine Rolle kann bei neuen Benutzern vorausgewählt sein (#63).
@@ -58,6 +58,12 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EI-10** – Einsatzleitung = Rolle Einsatzleitung, Einrückoption mit Leitungsrechten, Recht «Jeden Einsatz leiten» oder Ersteller des Einsatzes, jeweils nur, solange die Person teilnimmt (Ausnahme Übungsleitung) (AG, #82).
 - **EI-11** – Die Einsatzleitung kann den Einsatz beenden, Einsatzkräfte entfernen und deren Spezialrollen ändern (AG).
 - **EI-12** – Einsatzart sichtbar und unterscheidbar: «Einsatz» rot, «Übung» blau (AG).
+- **EI-13** – Einsatzgruppen in der Verwaltung: Name, Farbe, Mitglieder, ob für scharfe Einsätze aufbietbar oder nur für Übungen; deaktivieren statt löschen; jede Person sieht ihre Gruppen im Profil (#90).
+- **EI-14** – Beim Start werden Einsatzgruppen aufgeboten; nur ihre Mitglieder werden alarmiert. Bei Übungen zusätzlich einzelne Personen. Ohne Einsatzgruppen werden alle alarmiert (#90).
+- **EI-15** – Welche Einsatzgruppen eine Person aufbieten darf, legen ihre Benutzerrollen fest; «Alle Personen» nur, wer alle Gruppen aufbieten darf (#90).
+- **EI-16** – Einsatztypen (z. B. «Person im Wasser») mit vorausgewählten Einsatzgruppen, je für scharfe Einsätze, Übungen oder beide; der Typ steht im Einsatz, im Log und in der Statistik (filterbar) (#90).
+- **EI-17** – Nicht Aufgebotene sehen einen scharfen Einsatz nicht und können nicht beitreten, ausser die Einsatzleitung erlaubt allen den Beitritt (ohne Alarm) (#90).
+- **EI-18** – Die Einsatzleitung kann weitere Gruppen (bei Übungen auch Personen) oder alle nachbieten; alarmiert werden nur die neu Aufgebotenen (#90).
 
 ## 5. Karte (KA)
 
@@ -174,7 +180,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **UE-02** – Elemente: PLS, neuer Rettling, Sichtung, neue externe Einsatzkraft, Entfernen einer externen Einsatzkraft; je mit Standort, PLS-Zeitpunkt und optionaler Meldung; Vorschau auf der Karte (#29).
 - **UE-03** – Freigabe von Hand oder automatisch nach Minuten ab Start; erst dann sichtbar; Meldung geht als Nachricht an alle (#29).
 - **UE-04** – Die Übungsleitung hat die Rechte der Einsatzleitung, wird nicht alarmiert und kann zusätzlich teilnehmen (#29).
-- **UE-05** – Nur Aufgebotene werden alarmiert; teilnehmen dürfen alle (#29).
+- **UE-05** – Nur Aufgebotene (Einsatzgruppen und Einzelpersonen) werden alarmiert; teilnehmen dürfen alle (#29, #90).
 - **UE-06** – Gestartete Übungen sind gesperrt, können kopiert und nach dem Ende zurückgesetzt werden; alle Durchführungen mit Log und Replay (#29).
 
 ## 19. PWA, Push und Offline (PW)
