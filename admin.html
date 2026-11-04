@@ -595,8 +595,9 @@ const aarMin=s=>s==null?'–':Math.round(s/60)+' min';
 const aarSt=x=>x.aar_st===1?'rel':x.aar_st===2?'nr':x.aar_at?'wip':'open';
 const aarChip=x=>x.aar_seal?'<span class="rv" title="Vor dem Anonymisieren gesichert, nur noch als PDF verfügbar (eigenes Recht)">AAR gesichert</span>':({rel:'<span class="rv">AAR freigegeben</span>',nr:'<span>AAR nicht relevant</span>',wip:`<span class="wip" title="Zuletzt bearbeitet ${aarDt(x.aar_at)}">AAR in Arbeit</span>`,open:'<span>noch kein AAR</span>'})[aarSt(x)];
 // Knöpfe: Erfassen/Bearbeiten (nicht bei freigegebenen, die sind gesperrt), Ansehen (dort auch Freigabe), Word/PDF gemäss Einstellung dl (je Format und Zustand wip, rel, nr)
+let myB={}; // Knöpfe in «Meine Einsätze» (my_btns); dort gilt das statt der Einstellung dl
 const aarDlOk=(k,s)=>!!aarC.cfg.dl[k][s==='open'?'wip':s];
-const aarDlBtns=(id,p,s)=>(aarDlOk('docx',s)?`<button data-${p}w="${id}" title="Als Word-Dokument herunterladen">Word</button>`:'')+(aarDlOk('pdf',s)?`<button data-${p}p="${id}" title="Als PDF herunterladen">PDF</button>`:'');
+const aarDlBtns=(id,p,s,ok=aarDlOk)=>(ok('docx',s)?`<button data-${p}w="${id}" title="Als Word-Dokument herunterladen">Word</button>`:'')+(ok('pdf',s)?`<button data-${p}p="${id}" title="Als PDF herunterladen">PDF</button>`:'');
 function aarBtns(x){if(x.aar_seal)return'';const s=aarSt(x);
   const b=`${s!=='rel'&&can('aar')?`<button data-ae="${x.id}" title="After Action Review ${s==='wip'?'bearbeiten':'erfassen'}">${s==='wip'?'Bearbeiten':'Erfassen'}</button>`:''}${s!=='nr'?`<button data-av="${x.id}" title="Ansehen${can('aar_rel')?(s==='rel'?', Freigabe zurücknehmen':', freigeben'):''}">Ansehen</button>`:''}${aarDlBtns(x.id,'a',s)}`;return b?`<span class="bg"><span class="bl">AAR</span>${b}</span>`:''}
 // Formular mit allen Feldern der Einstellungen; leere Felder werden nicht gespeichert
@@ -655,15 +656,15 @@ function aarImgEdit(d,x,id,fid,changed,ta){const el=$(`[data-aimg="${fid}"]`,d);
 function aarBtn(d,t,cls,fn){const row=d.querySelector('[data-ok]').parentNode,b=document.createElement('button');b.textContent=t;if(cls)b.className=cls;
   b.onclick=async()=>{if(b.disabled)return;b.disabled=true;try{if(await fn()!==false)d.remove()}catch(e){fail(e)}finally{b.disabled=false}};row.appendChild(b);return b}
 // Ansicht im Browser (geht immer, auch wenn Word und PDF ausgeschaltet sind); my = Meine Einsätze (nur freigegebene, Namen gemäss my_runs)
-async function aarShow(id,my){const o={log:!!aarC.cfg.auto.log,anon:false};let x;const get=()=>api('aar/get&id='+id+(my?'&my=1':'')+(o.anon?'&anon=1':''));
+async function aarShow(id,my){const lg=!my||!!myB.log,o={log:lg&&!!aarC.cfg.auto.log,anon:false};let x;const get=()=>api('aar/get&id='+id+(my?'&my=1':'')+(o.anon?'&anon=1':''));
   try{x=await get();await aarImgs(x,my)}catch(e){return fail(e)}const logo=await aarLogo(),anonOk=!x.forced&&!x.my_anon;
-  const d=dlg(aarC.cfg.title+' – '+x.inc.message,`<div class="row aaro"><label class="chk"><input type="checkbox" id="avL" ${o.log?'checked':''}> Einsatzlog</label>${anonOk?'<label class="chk"><input type="checkbox" id="avA"> Namen anonymisieren</label>':''}</div>
+  const d=dlg(aarC.cfg.title+' – '+x.inc.message,`<div class="row aaro">${lg?`<label class="chk"><input type="checkbox" id="avL" ${o.log?'checked':''}> Einsatzlog</label>`:''}${anonOk?'<label class="chk"><input type="checkbox" id="avA"> Namen anonymisieren</label>':''}</div>
     <div class="aardoc" id="avD"></div>`,async()=>{},'Schliessen');
   d.firstElementChild.classList.add('aarv');d.querySelector('[data-x]').remove();
   const draw=()=>$('#avD',d).innerHTML=aarHtml(aarModel(x,o),logo);draw();
-  $('#avL',d).onchange=e=>{o.log=e.target.checked;draw()};
+  if(lg)$('#avL',d).onchange=e=>{o.log=e.target.checked;draw()};
   if(anonOk)$('#avA',d).onchange=async e=>{o.anon=e.target.checked;try{x=await get();await aarImgs(x,my);draw()}catch(er){fail(er)}};
-  for(const [k,l] of [['docx','Word'],['pdf','PDF']])if(aarDlOk(k,x.status===1?'rel':x.status===2?'nr':'wip'))aarBtn(d,l,'',async()=>{await aarMake(x,k,o);return false});
+  for(const [k,l] of [['docx','Word'],['pdf','PDF']])if(my?myB[k]:aarDlOk(k,x.status===1?'rel':x.status===2?'nr':'wip'))aarBtn(d,l,'',async()=>{await aarMake(x,k,o);return false});
   if(!my&&can('aar_rel')&&x.status===1)aarBtn(d,'Freigabe zurücknehmen','sec',async()=>{if(!confirm('Freigabe zurücknehmen?\n\nDas Review ist wieder in Arbeit, bearbeitbar und für die Teilnehmenden nicht mehr sichtbar.'))return false;
     await api('aar/status',{id,status:0});toast('Freigabe zurückgenommen.','ok');loadStats()});
   if(!my&&can('aar_rel')&&x.status!==1)aarBtn(d,'Freigeben','',async()=>{if(!confirm('Freigeben?\n\nDas Review ist danach abgeschlossen und gesperrt, und alle Teilnehmenden sehen es unter «Meine Einsätze».'))return false;
@@ -675,10 +676,10 @@ function aarHtml(B,logo){const tb=(h,rows)=>`<div class="tw"><table>${h?`<thead>
 // my = Meine Einsätze; anonOk = false, wenn die Namen dort ohnehin anonym sind (my_runs anon)
 function aarDl(id,fmt,msg,my,anonOk=true){
   dlg((fmt==='docx'?'Word':'PDF')+' herunterladen',`<div class="mut">${esc(msg||'')}</div>
-    <label class="chk"><input type="checkbox" id="adL" ${aarC.cfg.auto.log?'checked':''}> Einsatzlog anhängen</label>
+    ${!my||myB.log?`<label class="chk"><input type="checkbox" id="adL" ${aarC.cfg.auto.log?'checked':''}> Einsatzlog anhängen</label>`:''}
     ${anonOk?`<label class="chk"><input type="checkbox" id="adA"> Namen anonymisieren</label>
     <div class="mut">Anonymisiert stehen statt Namen Bezeichnungen wie «Einsatzkraft 1» oder «Rettling 1», ohne Beschreibungen der Rettlinge. Die im Review erfassten Angaben bleiben, wie sie geschrieben wurden. Endgültig anonymisierte Einsätze sind immer anonym.</div>`:''}`,
-    async d=>{const r=await api('aar/get&id='+id+(my?'&my=1':'')+($('#adA',d)?.checked?'&anon=1':''));await aarImgs(r,my);await aarMake(r,fmt,{log:$('#adL',d).checked})},'Herunterladen')}
+    async d=>{const r=await api('aar/get&id='+id+(my?'&my=1':'')+($('#adA',d)?.checked?'&anon=1':''));await aarImgs(r,my);await aarMake(r,fmt,{log:!!$('#adL',d)?.checked})},'Herunterladen')}
 // Wert fürs Dokument
 const aarV=(f,v)=>v==null||v===''?'':f.type==='date'?String(v).split('-').reverse().join('.'):f.type==='check'?(v==='1'?'Ja':'Nein'):String(v);
 const AAR_MARK=/\[Bild (\d+)\]/g; // Marke im Text (Feldart area): dort steht im Dokument das Bild; ohne passendes Bild bleibt es gewöhnlicher Text
@@ -823,7 +824,7 @@ async function loadAarCfg(){const el=$('#sAarC');try{aarC=await api('aar/cfg')}c
     <h3>Mitgelieferte Abschnitte</h3>${Object.entries(aarC.auto).map(([k,l])=>`<label class="chk"><input type="checkbox" data-aa="${k}" ${C.auto[k]?'checked':''}> ${esc(l)}</label>`).join('')}
     <div class="mut">Die Listen erscheinen nur, wenn es im Einsatz solche gibt.</div>
     <h3>Herunterladen</h3><div class="tw"><table><thead><tr><th>Dokument</th>${Object.values(aarC.dlst).map(l=>`<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${Object.entries(aarC.dls).map(([k,l])=>`<tr><td>${esc(l)}</td>${Object.entries(aarC.dlst).map(([s,sl])=>`<td><input type="checkbox" data-adl="${k}" data-ads="${s}" aria-label="${esc(l)}: ${esc(sl)}" ${C.dl[k][s]?'checked':''}></td>`).join('')}</tr>`).join('')}</tbody></table></div>
-    <div class="mut">Legt fest, in welchem Zustand des Reviews welches Dokument heruntergeladen werden kann. «In Arbeit» umfasst auch Einsätze ohne erfasstes Review. Unter «Meine Einsätze» zählt nur «Freigegeben». Das Ansehen im Browser ist davon unabhängig.</div>
+    <div class="mut">Legt fest, in welchem Zustand des Reviews welches Dokument heruntergeladen werden kann. «In Arbeit» umfasst auch Einsätze ohne erfasstes Review. Das gilt für die Verwaltung; was Einsatzkräfte unter «Meine Einsätze» sehen, steht unter «Einsicht für Einsatzkräfte». Das Ansehen im Browser ist davon unabhängig.</div>
     <h3>Felder (${L})</h3><div class="row"><button class="pri" id="acA">+ Neues Feld</button></div>
     <div class="tw"><table><thead><tr><th>Bezeichnung</th><th>Art</th><th>Hinweis</th><th></th></tr></thead><tbody>${C.fields.map((f,n)=>`<tr${f.type==='head'?' class="aarh"':''}><td>${f.type==='head'?'<b>'+esc(f.label)+'</b>':esc(f.label)}</td><td>${esc(T[f.type]||f.type)}${f.type==='select'?` <span class="mut">(${f.opts.length} Werte)</span>`:''}</td><td class="mut">${esc(f.hint)}</td>
       <td class="act"><button data-fu="${n}" ${n?'':'disabled'} title="Nach oben" aria-label="Nach oben">↑</button><button data-fd="${n}" ${n<L-1?'':'disabled'} title="Nach unten" aria-label="Nach unten">↓</button><button data-fe="${n}">Bearbeiten</button><button data-fx="${n}">Entfernen</button></td></tr>`).join('')||'<tr><td colspan="4" class="mut">Keine Felder</td></tr>'}</tbody></table></div>
@@ -880,12 +881,12 @@ function renderMyPs(){const el=$('#myStat');if(!el||!myPs)return;const f=myF,[a,
   if($('#myFrom')){$('#myFrom').onchange=e=>set('from',e.target.value);$('#myTo').onchange=e=>set('to',e.target.value)}
   psTips(el)}
 async function loadMy(){const el=$('#sMy');let r;try{r=await api('my/incidents');myPs=await api('my/stats').then(x=>x.rows).catch(()=>null);if(r.incidents.some(x=>x.aar_rel))aarC=await api('aar/cfg')}catch(e){el.innerHTML='<h2>Meine Einsätze</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),forced=r.mode==='anon';
+  const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),forced=r.mode==='anon';myB=r.btns;const B=myB,bAar=B.aar||B.docx||B.pdf;
   const card=x=>{const fl=stRows([['Anonymisierung',anonChips(x)],['AAR',x.aar_rel?`<span class="rv" title="Freigegeben am ${aarDt(x.aar_rel)}">freigegeben</span>`:'']]);
     return`<div class="inc stc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl}</div>
       <div class="kv"><span><small>Dauer</small>${Math.round((x.ended_at-x.alarm_at)/60)} min</span>${x.mode_name?`<span><small>Eingerückt</small>${esc(x.mode_name)}</span>`:''}</div>
-      <div class="ia"><span class="bg"><button data-ml="${x.id}">Log</button>${x.recorded?`<button data-mr="${x.id}">Replay</button>`:''}</span>${x.aar_rel&&aarC?`<span class="bg"><span class="bl">After Action Review</span><button data-mv="${x.id}">Ansehen</button>${aarDlBtns(x.id,'m','rel')}</span>`:''}</div></div>`};
-  el.innerHTML=`<h2>Meine Einsätze</h2><div class="mut">Beendete Einsätze und Übungen, an denen du teilgenommen hast. ${forced?'Andere Personen erscheinen anonymisiert (z. B. «Einsatzkraft 3»), du selbst mit deinem Namen.':'Log und Replay zeigen alle Daten, sofern sie nicht endgültig anonymisiert wurden.'} Ein Replay gibt es nur bei aufgezeichneten Einsätzen, ein After Action Review nur, wenn es freigegeben wurde.</div>
+      ${(B.log||(B.replay&&x.recorded)||(x.aar_rel&&aarC))?`<div class="ia">${B.log||(B.replay&&x.recorded)?`<span class="bg">${B.log?`<button data-ml="${x.id}">Log</button>`:''}${B.replay&&x.recorded?`<button data-mr="${x.id}">Replay</button>`:''}</span>`:''}${x.aar_rel&&aarC?`<span class="bg"><span class="bl">After Action Review</span>${B.aar?`<button data-mv="${x.id}">Ansehen</button>`:''}${aarDlBtns(x.id,'m','rel',k=>B[k])}</span>`:''}</div>`:''}</div>`};
+  el.innerHTML=`<h2>Meine Einsätze</h2><div class="mut">Beendete Einsätze und Übungen, an denen du teilgenommen hast. ${forced?'Andere Personen erscheinen anonymisiert (z. B. «Einsatzkraft 3»), du selbst mit deinem Namen.':'Es werden alle Daten gezeigt, sofern sie nicht endgültig anonymisiert wurden.'} ${[B.replay&&'Ein Replay gibt es nur bei aufgezeichneten Einsätzen',bAar&&(B.replay?'ein':'Ein')+' After Action Review nur, wenn es freigegeben und noch nicht anonymisiert wurde'].filter(Boolean).join(', ')}${B.replay||bAar?'.':''}</div>
     <div id="myStat"></div><h3>Einsätze</h3>
     ${r.incidents.map(card).join('')||'<div class="mut">Noch keine beendeten Einsätze mit deiner Teilnahme.</div>'}`;
   renderMyPs();
@@ -897,9 +898,12 @@ async function loadMy(){const el=$('#sMy');let r;try{r=await api('my/incidents')
   el.querySelectorAll('[data-mp]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.mp,'pdf',X(b.dataset.mp).message,true,!forced))}
 // Einstellung der Verwaltung: ob und wie Einsatzkräfte ihre Einsätze einsehen (my_runs), sofort gespeichert
 async function loadMyS(){const el=$('#sMyS');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Einsicht für Einsatzkräfte</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  el.innerHTML=`<h2>Einsicht für Einsatzkräfte</h2><div class="mut">Wer an einem Einsatz teilgenommen hat (angenommen, auch wenn später ausgetreten), sieht nach dem Einsatzende unter «Meine Einsätze» das Einsatzlog und, falls aufgezeichnet, das Replay.</div>
+  el.innerHTML=`<h2>Einsicht für Einsatzkräfte</h2><div class="mut">Wer an einem Einsatz teilgenommen hat (angenommen, auch wenn später ausgetreten), sieht nach dem Einsatzende unter «Meine Einsätze» die unten gewählten Knöpfe.</div>
     <label class="mut">Einsicht<select id="myS">${Object.entries(s.my_runs_opts).map(([k,v])=>`<option value="${k}" ${k===s.my_runs?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
-    <div class="mut">«Anonymisiert»: alle anderen Einsatzkräfte, Rettlinge und Externen erscheinen mit Bezeichnungen wie «Einsatzkraft 3», die Person selbst mit Namen. «Mit allen Daten»: wie in der Verwaltung, mit Umschalter «Anonym». Anonymisierte Einsätze (Auswertung → Anonymisierung) sind in jedem Fall nur noch anonym zu sehen, bei «Anzeige anonymisieren» die Person selbst weiterhin mit Namen.</div>`;
+    <div class="mut">«Anonymisiert»: alle anderen Einsatzkräfte, Rettlinge und Externen erscheinen mit Bezeichnungen wie «Einsatzkraft 3», die Person selbst mit Namen. «Mit allen Daten»: wie in der Verwaltung, mit Umschalter «Anonym». Anonymisierte Einsätze (Auswertung → Anonymisierung) sind in jedem Fall nur noch anonym zu sehen, bei «Anzeige anonymisieren» die Person selbst weiterhin mit Namen.</div>
+    ${s.my_runs==='off'?'':`<h3>Knöpfe in «Meine Einsätze»</h3>${Object.entries(s.my_btns_opts).map(([k,l])=>`<label class="chk"><input type="checkbox" data-myb="${k}" ${s.my_btns[k]?'checked':''}> ${esc(l)}</label>`).join('')}
+    <div class="mut">Ein Replay gibt es nur bei aufgezeichneten Einsätzen. Ein After Action Review gibt es nur, wenn es freigegeben und noch nicht anonymisiert ist. Ohne «Log» fehlt das Einsatzlog auch im Replay und im After Action Review. Word und PDF entstehen im Browser: Der Server kann sie nur sperren, wenn alle drei Knöpfe zum After Action Review aus sind.</div>`}`;
+  el.querySelectorAll('[data-myb]').forEach(c=>c.onchange=()=>{c.disabled=true;api('settings/save',{my_btns:{[c.dataset.myb]:c.checked?1:0}}).then(()=>{toast('Gespeichert.','ok');loadMyS()}).catch(x=>{fail(x);loadMyS()})});
   $('#myS').onchange=e=>{const v=e.target.value;e.target.disabled=true;api('settings/save',{my_runs:v}).then(()=>{me.my_runs=v;loadMyS()}).catch(x=>{fail(x);loadMyS()})}}
 /* ---------- Anonymisierung (Issue #54, konfigurierbar und mehrstufig seit #87) ---------- */
 // Stufen (anon/cfg → steps): view = Anzeige anonymisieren (umkehrbar), replay/log = pseudonymisieren, texts = Personenangaben und Freitexte entfernen, track = Aufzeichnung löschen (endgültig).
