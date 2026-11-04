@@ -148,10 +148,13 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **LO-01** – Einsatzlog mit Beitritt, Rollen, Fahrten, Suchgebiet erreicht, Nachrichten im Volltext, Markierungen, Rettlingen, Entfernen u. a.; live im Einsatz und in der Auswertung, mit Gross-Modus (Spec, AG).
 - **LO-02** – Einsatzstatistik in der Verwaltung mit Filter Alle / Scharfe Einsätze / Übungen (gemerkt), Kennzahlen je Art getrennt (AG).
-- **LO-03** – Anonymisierte Anzeige von Log und Replay sowie endgültiges Anonymisieren beendeter Einsätze (getrennt für Replay und Log, nicht umkehrbar) (#54).
+- **LO-03** – Anonymisierte Anzeige von Log und Replay sowie endgültiges Anonymisieren beendeter Einsätze (getrennt für Replay und Log, nicht umkehrbar) (#54); erweitert zu Stufen (LO-07).
 - **LO-04** – «Meine Einsätze»: Teilnehmende sehen Log und Replay ihrer beendeten Einsätze, je nach Einstellung aus, anonym (Standard) oder vollständig (#61).
 - **LO-05** – Statistik pro Person: Filter nach Art, Zeitraum (gesamt, Kalenderjahr, von–bis) und Einsatz; je Person Anzahl, Einsatzzeit, Reaktionszeit, Suchgebiet erreicht, Fahrten mit Kilometern, Weg laut Aufzeichnung, Einrückoptionen; Grafiken pro Monat und je Person; CSV-Export; bleibt nach dem endgültigen Anonymisieren personenbezogen (#87).
 - **LO-06** – Meine Statistik: Jede Einsatzkraft sieht unter «Meine Einsätze» die eigene Statistik (Einsätze, Übungen, Einsatzzeit, Reaktionszeit, Suchgebiet erreicht, Fahrten, Weg, Einrückoptionen, Einsätze pro Monat) mit Filter nach Art und Zeitraum, auch für endgültig anonymisierte Einsätze (#87).
+- **LO-07** – Anonymisierung in Stufen, einzeln in der Verwaltung einstellbar (angeboten ja/nein, automatisch nach N Tagen getrennt für scharfe Einsätze und Übungen): Anzeige anonymisieren (umkehrbar), Replay pseudonymisieren, Einsatzprotokoll pseudonymisieren, Personenangaben und Freitexte entfernen, Aufzeichnung löschen (endgültig) (#87).
+- **LO-08** – Massenanonymisierung: beendete Einsätze nach Art und Zeitraum filtern, mehrere oder alle wählen und gewählte Stufen auf einmal anwenden; anonymisierte Anzeige mehrerer Einsätze aufheben (#87).
+- **LO-09** – Automatische Anonymisierung: fällige Stufen werden ohne Cron bei Aufrufen der App angewendet und im Einsatzlog vermerkt (#87).
 - Einsatzarchiv-Export (**offen**).
 
 ## 16. Aufzeichnung und Replay (AR)
