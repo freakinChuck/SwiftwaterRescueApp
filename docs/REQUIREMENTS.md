@@ -36,7 +36,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 ## 3. Benutzer und Berechtigungen (BE)
 
 - **BE-01** – Frei definierbare Benutzerrollen mit einer Auswahl an Rechten; eine Person kann mehrere Rollen haben und erhält alle Rechte (#63).
-- **BE-02** – Rechte: Einsätze starten, Übungen starten, jeden Einsatz leiten, Übungen vorbereiten, Benutzer verwalten, Benutzerrollen verwalten, Einstellungen je Kategorie (Einsatz, Funktionen, Karte & Daten), Statistik/Log/Replay aller Einsätze, Anonymisieren und Aufzeichnungen löschen, Einsicht für Einsatzkräfte, Einsatzgruppen verwalten (#63, #90).
+- **BE-02** – Rechte: Einsätze starten, Übungen starten, jeden Einsatz leiten, Übungen vorbereiten, Benutzer verwalten, Benutzerrollen verwalten, Einstellungen je Kategorie (Einsatz, Funktionen, Karte & Daten), Statistik/Log/Replay aller Einsätze, Anonymisieren und Aufzeichnungen löschen, Einsicht für Einsatzkräfte, Einsatzgruppen verwalten, Abwesenheiten verwalten (#63, #90, #91).
 - **BE-03** – Die Rolle Systemadministrator hat immer alle Rechte, auch künftige, und ist weder änderbar noch entfernbar; mindestens eine aktive Person behält sie (#63).
 - **BE-04** – Niemand kann Rechte vergeben oder Personen bearbeiten, deren Rechte über die eigenen hinausgehen (#63).
 - **BE-05** – Eine Rolle kann bei neuen Benutzern vorausgewählt sein (#63).
@@ -64,6 +64,9 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EI-16** – Einsatztypen (z. B. «Person im Wasser») mit vorausgewählten Einsatzgruppen, je für scharfe Einsätze, Übungen oder beide; der Typ steht im Einsatz, im Log und in der Statistik (filterbar) (#90).
 - **EI-17** – Nicht Aufgebotene sehen einen scharfen Einsatz nicht und können nicht beitreten, ausser die Einsatzleitung erlaubt allen den Beitritt (ohne Alarm) (#90).
 - **EI-18** – Die Einsatzleitung kann weitere Gruppen (bei Übungen auch Personen) oder alle nachbieten; alarmiert werden nur die neu Aufgebotenen (#90).
+- **EI-19** – Jede Person kann sich selbst abwesend melden oder ihre Einsatzfähigkeit vorübergehend aussetzen (von–bis oder bis auf Weiteres, mit Bemerkung); beides wirkt gleich: kein Alarm und kein Aufgebot, laufende Einsätze bleiben sichtbar und ein freiwilliger Beitritt ist möglich (#91).
+- **EI-20** – Personen mit dem Recht «Abwesenheiten verwalten» erfassen, ändern und beenden Abwesenheiten aller Personen in der Verwaltung (#91).
+- **EI-21** – Abwesenheiten sind bei der Zuteilung der Einsatzgruppen und beim Aufbieten ersichtlich (je Person und Anzahl je Gruppe) (#91).
 
 ## 5. Karte (KA)
 

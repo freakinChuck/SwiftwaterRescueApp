@@ -155,7 +155,7 @@ function parseC(s){const n=String(s||'').replace(/['’]/g,'').trim().split(/\s*
   return{lat:(16.9023892+3.238272*x-.270978*y*y-.002528*x*x-.0447*y*y*x-.014*x*x*x)*100/36,lon:(2.6779094+4.728982*y+.791484*y*x+.1306*y*x*x-.0436*y*y*y)*100/36}}
 // Rechte der angemeldeten Person aus ihren Benutzerrollen (Issue #63, me.perms vom Server); nur zum Ausblenden, der Server prüft selbst
 const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
-const ADMIN_PERMS=['users','uroles','groups','cfg_inc','ex_plan','cfg_func','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 function logout(){token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k))} // letzter Stand gehört der abgemeldeten Person
 /* ---------- Anmeldung ---------- */
@@ -174,6 +174,31 @@ function dlg(title,body,save,okText='Speichern',xText='Abbrechen',onX){const d=d
   d.querySelector('[data-x]').onclick=()=>{d.remove();onX&&onX()};
   // während des Speicherns gesperrt: ein zweiter Klick schickte sonst dieselbe Anfrage nochmals (z. B. Anonymisieren doppelt)
   const ok=d.querySelector('[data-ok]');ok.onclick=async()=>{if(ok.disabled)return;ok.disabled=true;try{await save(d);d.remove()}catch(e){fail(e)}finally{ok.disabled=false}};return d}
+/* ---------- Abwesenheiten (Issue #91): abwesend bzw. Einsatzfähigkeit ausgesetzt = nicht aufgeboten, kein Alarm; laufende Einsätze bleiben sichtbar ---------- */
+const ABS_KIND={abs:'Abwesend',sus:'Einsatzfähigkeit ausgesetzt'};
+const absDT=ts=>new Date(ts*1000).toLocaleString('de-CH',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+const absUntil=a=>a.until!=null||a.until_at!=null?'bis '+absDT(a.until??a.until_at):'bis auf Weiteres';
+// a = laufende Abwesenheit {kind, until, note} (me.absent, users[].absent, my_abs)
+const absChip=a=>a?`<span class="abschip" title="${esc(ABS_KIND[a.kind]||ABS_KIND.abs)} ${esc(absUntil(a))}${a.note?' – '+esc(a.note):''}">⏸ ${esc(a.kind==='sus'?'ausgesetzt':'abwesend')} ${esc(absUntil(a))}</span>`:'';
+const absLocal=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16),absTs=v=>v?Math.floor(new Date(v).getTime()/1000)||0:0;
+// Liste der Einträge (Route absences) mit Entfernen; who = Namen zeigen
+function absRows(rs,who){return rs.length?rs.map(a=>`<div class="absrow"><span><b>${esc(ABS_KIND[a.kind]||ABS_KIND.abs)}</b>${who?' · '+esc(a.name):''}<br><small class="mut">${a.now?'seit':'ab'} ${esc(absDT(a.from_at))}, ${esc(absUntil(a))}${a.note?' · '+esc(a.note):''}${who&&a.created_by!==a.user_id&&a.by_name?' · erfasst von '+esc(a.by_name):''}</small></span><span class="row" style="margin:0;flex:0 0 auto"><button data-abe="${a.id}">Ändern</button><button data-abx="${a.id}" aria-label="Eintrag entfernen">${a.now?'Beenden':'Entfernen'}</button></span></div>`).join(''):'<div class="mut">Keine Einträge.</div>'}
+// Dialog erfassen/ändern: a = bestehender Eintrag oder null; people = Auswahl der Person (Verwaltung) oder null (eigene); done nach dem Speichern
+function absDialog(a,people,done){const now=Date.now()/1000,mo=new Date();mo.setDate(mo.getDate()+1);mo.setHours(6,0,0,0);
+  const d=dlg(a?'Eintrag ändern':'Abwesenheit erfassen',`${people&&!a?`<label class="mut">Person<select id="abU">${people.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select></label>`:''}
+    <label class="mut">Art<select id="abK">${Object.entries(ABS_KIND).map(([k,v])=>`<option value="${k}" ${(a?a.kind:'abs')===k?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="mut">Beides wirkt gleich: nicht aufgeboten und kein Alarm. Laufende Einsätze bleiben sichtbar, freiwillig beitreten ist möglich.</div>
+    <label class="mut">Von<input id="abF" type="datetime-local" value="${absLocal(a?a.from_at:now)}"></label>
+    <label class="mut">Bis (leer = bis auf Weiteres)<input id="abT" type="datetime-local" value="${a&&a.until_at?absLocal(a.until_at):''}"></label>
+    <div class="row"><button data-abq="m">Bis morgen 06:00</button><button data-abq="w">1 Woche</button><button data-abq="x">Bis auf Weiteres</button></div>
+    <label class="mut">Bemerkung (optional)<input id="abN" maxlength="200" value="${esc(a&&a.note||'')}" placeholder="z. B. Ferien, Krankheit"></label>`,async d=>{
+    const f=absTs($('#abF',d).value),t=absTs($('#abT',d).value);
+    await api('absence/save',{id:a?a.id:undefined,user_id:people&&!a?+$('#abU',d).value:undefined,from:f,until:t||null,kind:$('#abK',d).value,note:$('#abN',d).value});toast('Gespeichert.','ok');done&&done()});
+  d.querySelectorAll('[data-abq]').forEach(b=>b.onclick=()=>{const q=b.dataset.abq,fr=absTs($('#abF',d).value)||now;
+    $('#abT',d).value=q==='x'?'':absLocal(q==='m'?Math.max(mo.getTime()/1000,fr+3600):fr+7*86400)});return d}
+// Klicks einer Liste aus absRows: rs = Einträge, people/done wie absDialog
+function absBind(el,rs,done){el.querySelectorAll('[data-abe]').forEach(b=>b.onclick=()=>absDialog(rs.find(a=>a.id===+b.dataset.abe),null,done));
+  el.querySelectorAll('[data-abx]').forEach(b=>b.onclick=async()=>{const a=rs.find(x=>x.id===+b.dataset.abx);if(!confirm(a.now?'Eintrag jetzt beenden?':'Eintrag entfernen?'))return;try{await api('absence/remove',{id:a.id});toast(a.now?'Beendet.':'Entfernt.','ok');done&&done()}catch(e){fail(e)}})}
 // Eigenes Passwort ändern; forced = nach Zurücksetzen durch die Verwaltung (nur Abmelden als Alternative)
 function pwDialog(forced,done){
   dlg('Passwort ändern',`${forced?'<div class="mut">Dein Passwort wurde neu gesetzt. Bitte vergib jetzt ein eigenes Passwort.</div>':''}
