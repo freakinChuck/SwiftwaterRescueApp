@@ -656,14 +656,14 @@ function aarImgEdit(d,x,id,fid,changed,ta){const el=$(`[data-aimg="${fid}"]`,d);
 // zusätzlicher Knopf in der Knopfzeile eines Dialogs; fn liefert false = Dialog bleibt offen
 function aarBtn(d,t,cls,fn){const row=d.querySelector('[data-ok]').parentNode,b=document.createElement('button');b.textContent=t;if(cls)b.className=cls;
   b.onclick=async()=>{if(b.disabled)return;b.disabled=true;try{if(await fn()!==false)d.remove()}catch(e){fail(e)}finally{b.disabled=false}};row.appendChild(b);return b}
+const aarLogOn=my=>(!my||!!myB.log)&&!!aarC.cfg.auto.log; // Einsatzlog im Dokument: wie in der Einrichtung, nie eine Auswahl beim Erzeugen
 // Ansicht im Browser (geht immer, auch wenn Word und PDF ausgeschaltet sind); my = Meine Einsätze (nur freigegebene, Namen gemäss my_runs)
-async function aarShow(id,my){const lg=!my||!!myB.log,o={log:lg&&!!aarC.cfg.auto.log,anon:false};let x;const get=()=>api('aar/get&id='+id+(my?'&my=1':'')+(o.anon?'&anon=1':''));
+async function aarShow(id,my){const o={log:aarLogOn(my),anon:false};let x;const get=()=>api('aar/get&id='+id+(my?'&my=1':'')+(o.anon?'&anon=1':''));
   try{x=await get();await aarImgs(x,my)}catch(e){return fail(e)}const logo=await aarLogo(),anonOk=!x.forced&&!x.my_anon;
-  const d=dlg(aarC.cfg.title+' – '+x.inc.message,`<div class="row aaro">${lg?`<label class="chk"><input type="checkbox" id="avL" ${o.log?'checked':''}> Einsatzlog</label>`:''}${anonOk?'<label class="chk"><input type="checkbox" id="avA"> Namen anonymisieren</label>':''}</div>
+  const d=dlg(aarC.cfg.title+' – '+x.inc.message,`${anonOk?'<div class="row aaro"><label class="chk"><input type="checkbox" id="avA"> Namen anonymisieren</label></div>':''}
     <div class="aardoc" id="avD"></div>`,async()=>{},'Schliessen');
   d.firstElementChild.classList.add('aarv');d.querySelector('[data-x]').remove();
   const draw=()=>$('#avD',d).innerHTML=aarHtml(aarModel(x,o),logo);draw();
-  if(lg)$('#avL',d).onchange=e=>{o.log=e.target.checked;draw()};
   if(anonOk)$('#avA',d).onchange=async e=>{o.anon=e.target.checked;try{x=await get();await aarImgs(x,my);draw()}catch(er){fail(er)}};
   for(const [k,l] of [['docx','Word'],['pdf','PDF']])if(my?myB[k]:aarDlOk(k,x.status===1?'rel':x.status===2?'nr':'wip'))aarBtn(d,l,'',async()=>{await aarMake(x,k,o);return false});
   if(!my&&can('aar_rel')&&x.status===1)aarBtn(d,'Freigabe zurücknehmen','sec',async()=>{if(!confirm('Freigabe zurücknehmen?\n\nDas Review ist wieder in Arbeit, bearbeitbar und für die Teilnehmenden nicht mehr sichtbar.'))return false;
@@ -674,13 +674,14 @@ async function aarShow(id,my){const lg=!my||!!myB.log,o={log:lg&&!!aarC.cfg.auto
 function aarHtml(B,logo){const tb=(h,rows)=>`<div class="tw"><table>${h?`<thead><tr>${h.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>`:''}<tbody>${rows.map(r=>`<tr>${r.map((c,n)=>`<td${!h&&!n?' class="mut"':''} style="white-space:pre-wrap">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   return(logo?`<img src="${logo.src}" alt="" class="aarlogo" style="float:right;margin-left:.5rem">`:'')+B.map(b=>({title:()=>`<h2>${esc(b.x)}</h2>`,sub:()=>`<div class="mut" style="white-space:pre-line">${esc(b.x)}</div>`,status:()=>`<div style="font-weight:600;margin-top:.3rem;color:${{rel:'var(--ok)',wip:'var(--warn,#e0a030)',nr:'var(--mut)'}[b.k]}">${esc(b.x)}</div>`,h:()=>`<h3 class="aarq" style="clear:both">${esc(b.x)}</h3>`,
     q:()=>`<div style="margin-top:.4rem"><b>${esc(b.x)}</b></div>`,img:()=>`<figure><img src="${b.src}" alt="${esc(b.cap)}">${b.cap?`<figcaption>${esc(b.cap)}</figcaption>`:''}</figure>`,p:()=>`<div style="white-space:pre-wrap">${esc(b.x)}</div>`,kv:()=>tb(null,b.rows),table:()=>tb(b.head,b.rows),note:()=>`<div class="mut" style="margin-top:.6rem"><small>${esc(b.x)}</small></div>`})[b.t]?.()||'').join('')}
-// my = Meine Einsätze; anonOk = false, wenn die Namen dort ohnehin anonym sind (my_runs anon)
-function aarDl(id,fmt,msg,my,anonOk=true){
+// my = Meine Einsätze: ohne Rückfrage, Namen gemäss my_runs; die Verwaltung wählt nur, ob die Namen anonym sein sollen
+function aarDl(id,fmt,msg,my){
+  const run=async anon=>{const r=await api('aar/get&id='+id+(my?'&my=1':'')+(anon?'&anon=1':''));await aarImgs(r,my);await aarMake(r,fmt,{log:aarLogOn(my)})};
+  if(my)return run(false).catch(fail);
   dlg((fmt==='docx'?'Word':'PDF')+' herunterladen',`<div class="mut">${esc(msg||'')}</div>
-    ${!my||myB.log?`<label class="chk"><input type="checkbox" id="adL" ${aarC.cfg.auto.log?'checked':''}> Einsatzlog anhängen</label>`:''}
-    ${anonOk?`<label class="chk"><input type="checkbox" id="adA"> Namen anonymisieren</label>
-    <div class="mut">Anonymisiert stehen statt Namen Bezeichnungen wie «Einsatzkraft 1» oder «Rettling 1», ohne Beschreibungen der Rettlinge. Die im Review erfassten Angaben bleiben, wie sie geschrieben wurden. Endgültig anonymisierte Einsätze sind immer anonym.</div>`:''}`,
-    async d=>{const r=await api('aar/get&id='+id+(my?'&my=1':'')+($('#adA',d)?.checked?'&anon=1':''));await aarImgs(r,my);await aarMake(r,fmt,{log:!!$('#adL',d)?.checked})},'Herunterladen')}
+    <label class="chk"><input type="checkbox" id="adA"> Namen anonymisieren</label>
+    <div class="mut">Anonymisiert stehen statt Namen Bezeichnungen wie «Einsatzkraft 1» oder «Rettling 1», ohne Beschreibungen der Rettlinge. Die im Review erfassten Angaben bleiben, wie sie geschrieben wurden. Endgültig anonymisierte Einsätze sind immer anonym.</div>`,
+    d=>run($('#adA',d).checked),'Herunterladen')}
 // Wert fürs Dokument
 const aarV=(f,v)=>v==null||v===''?'':f.type==='date'?String(v).split('-').reverse().join('.'):f.type==='check'?(v==='1'?'Ja':'Nein'):String(v);
 const AAR_MARK=/\[Bild (\d+)\]/g; // Marke im Text (Feldart area): dort steht im Dokument das Bild; ohne passendes Bild bleibt es gewöhnlicher Text
@@ -730,7 +731,7 @@ async function aarMake(x,fmt,o){const B=aarModel(x,o),logo=await aarLogo();
 const AAR_CHUNK=1200000; // durch 3 teilbar: jedes Stück ist für sich gültiges Base64
 const aarHex=async buf=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',buf))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const aarB64=u=>{let s='';for(let i=0;i<u.length;i+=32766)s+=String.fromCharCode.apply(null,u.subarray(i,i+32766));return btoa(s)};
-// Immer vollständig: alle Abschnitte und das Einsatzlog, ohne Rücksicht auf die Auswahl beim Herunterladen, mit der Einrichtung vom Zeitpunkt der Sicherung
+// Immer vollständig: alle Abschnitte und das Einsatzlog, auch wenn sie in der Einrichtung ausgeschaltet sind; sonst mit der Einrichtung vom Zeitpunkt der Sicherung
 async function aarArchBuild(id){const r=await api('aar/arch/snap&id='+id),x=r.doc;
   for(const m of x.imgs||[])m.src=(await api(`aar/arch/img&id=${id}&img=${m.id}`)).src;
   const keep=aarC;let B,lg;aarC={cfg:{...x.cfg,auto:{...x.cfg.auto,inc:1,people:1,res:1,ext:1,log:1}},logo:x.logo};try{B=aarModel(x,{log:true,arch:r.created});lg=aarLogo()}finally{aarC=keep}
@@ -823,7 +824,7 @@ async function loadAarCfg(){const el=$('#sAarC');try{aarC=await api('aar/cfg')}c
     <h3>Logo</h3><div class="row aarrow" style="align-items:center">${aarC.logo?`<img src="${aarC.logo}" alt="Logo" class="aarlogo">`:'<span class="mut">Kein Logo</span>'}<button id="acL">${aarC.logo?'Anderes Bild wählen':'Bild wählen'}</button>${aarC.logo?'<button class="sec" id="acLx">Entfernen</button>':''}<input type="file" id="acLf" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></div>
     <div class="mut">Optional, erscheint oben rechts im Dokument. PNG, JPEG, WebP oder SVG; es wird auf höchstens 800 Pixel verkleinert.</div>
     <h3>Mitgelieferte Abschnitte</h3>${Object.entries(aarC.auto).map(([k,l])=>`<label class="chk"><input type="checkbox" data-aa="${k}" ${C.auto[k]?'checked':''}> ${esc(l)}</label>`).join('')}
-    <div class="mut">Die Listen erscheinen nur, wenn es im Einsatz solche gibt.</div>
+    <div class="mut">Gilt für die Ansicht, Word und PDF; beim Herunterladen wird nicht mehr danach gefragt. Die Listen erscheinen nur, wenn es im Einsatz solche gibt.</div>
     <h3>Herunterladen</h3><div class="tw"><table><thead><tr><th>Dokument</th>${Object.values(aarC.dlst).map(l=>`<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${Object.entries(aarC.dls).map(([k,l])=>`<tr><td>${esc(l)}</td>${Object.entries(aarC.dlst).map(([s,sl])=>`<td><input type="checkbox" data-adl="${k}" data-ads="${s}" aria-label="${esc(l)}: ${esc(sl)}" ${C.dl[k][s]?'checked':''}></td>`).join('')}</tr>`).join('')}</tbody></table></div>
     <div class="mut">Legt fest, in welchem Zustand des Reviews welches Dokument heruntergeladen werden kann. «In Arbeit» umfasst auch Einsätze ohne erfasstes Review. Das gilt für die Verwaltung; was Einsatzkräfte unter «Meine Einsätze» sehen, steht unter «Einsicht für Einsatzkräfte». Das Ansehen im Browser ist davon unabhängig.</div>
     <h3>Felder (${L})</h3><div class="row"><button class="pri" id="acA">+ Neues Feld</button></div>
@@ -883,10 +884,10 @@ function renderMyPs(){const el=$('#myStat');if(!el||!myPs)return;const f=myF,[a,
   psTips(el)}
 async function loadMy(){const el=$('#sMy');let r;try{r=await api('my/incidents');myPs=await api('my/stats').then(x=>x.rows).catch(()=>null);if(r.incidents.some(x=>x.aar_rel))aarC=await api('aar/cfg')}catch(e){el.innerHTML='<h2>Meine Einsätze</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),forced=r.mode==='anon';myB=r.btns;const B=myB,bAar=B.aar||B.docx||B.pdf;
-  const card=x=>{const fl=stRows([['Anonymisierung',anonChips(x)],['AAR',x.aar_rel?`<span class="rv" title="Freigegeben am ${aarDt(x.aar_rel)}">freigegeben</span>`:'']]);
+  const card=x=>{const fl=stRows([['Anonymisierung',anonChips(x)],['AAR',x.aar_rel?`<span class="rv" title="Freigegeben am ${aarDt(x.aar_rel)}">freigegeben</span>`:x.aar_arch?'<span class="rv" title="Vor dem Anonymisieren als PDF gesichert">gesichert</span>':'']]),aa=(x.aar_rel&&aarC?(B.aar?`<button data-mv="${x.id}">Ansehen</button>`:'')+aarDlBtns(x.id,'m','rel',k=>B[k]):'')+(x.aar_arch?`<button data-mc="${x.id}" title="Vollständiges PDF des After Action Reviews, vor dem Anonymisieren gesichert, mit allen Namen">Gesichertes PDF</button>`:'');
     return`<div class="inc stc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl}</div>
       <div class="kv"><span><small>Dauer</small>${Math.round((x.ended_at-x.alarm_at)/60)} min</span>${x.mode_name?`<span><small>Eingerückt</small>${esc(x.mode_name)}</span>`:''}</div>
-      ${(B.log||(B.replay&&x.recorded)||(x.aar_rel&&aarC))?`<div class="ia">${B.log||(B.replay&&x.recorded)?`<span class="bg">${B.log?`<button data-ml="${x.id}">Log</button>`:''}${B.replay&&x.recorded?`<button data-mr="${x.id}">Replay</button>`:''}</span>`:''}${x.aar_rel&&aarC?`<span class="bg stad"><span class="bl">After Action Review</span>${B.aar?`<button data-mv="${x.id}">Ansehen</button>`:''}${aarDlBtns(x.id,'m','rel',k=>B[k])}</span>`:''}</div>`:''}</div>`};
+      ${(B.log||(B.replay&&x.recorded)||aa)?`<div class="ia">${B.log||(B.replay&&x.recorded)?`<span class="bg">${B.log?`<button data-ml="${x.id}">Log</button>`:''}${B.replay&&x.recorded?`<button data-mr="${x.id}">Replay</button>`:''}</span>`:''}${aa?`<span class="bg stad"><span class="bl">After Action Review</span>${aa}</span>`:''}</div>`:''}</div>`};
   el.innerHTML=`<h2>Meine Einsätze</h2><div class="mut">Beendete Einsätze und Übungen, an denen du teilgenommen hast. ${forced?'Andere Personen erscheinen anonymisiert (z. B. «Einsatzkraft 3»), du selbst mit deinem Namen.':'Es werden alle Daten gezeigt, sofern sie nicht endgültig anonymisiert wurden.'} ${B.replay?'Ein Replay gibt es nur bei aufgezeichneten Einsätzen. ':''}${bAar?'Ein After Action Review gibt es nur, wenn es freigegeben und noch nicht anonymisiert wurde.':''}</div>
     <div id="myStat"></div><h3>Einsätze</h3>
     ${r.incidents.map(card).join('')||'<div class="mut">Noch keine beendeten Einsätze mit deiner Teilnahme.</div>'}`;
@@ -895,8 +896,9 @@ async function loadMy(){const el=$('#sMy');let r;try{r=await api('my/incidents')
   el.querySelectorAll('[data-ml]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.ml);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon,forced||!!x.view_anon)});
   el.querySelectorAll('[data-mr]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.mr));
   el.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>aarShow(+b.dataset.mv,true));
-  el.querySelectorAll('[data-mw]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.mw,'docx',X(b.dataset.mw).message,true,!forced));
-  el.querySelectorAll('[data-mp]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.mp,'pdf',X(b.dataset.mp).message,true,!forced))}
+  el.querySelectorAll('[data-mw]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.mw,'docx','',true));
+  el.querySelectorAll('[data-mp]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.mp,'pdf','',true));
+  el.querySelectorAll('[data-mc]').forEach(b=>b.onclick=()=>aarArchGet(+b.dataset.mc))}
 // Einstellung der Verwaltung: ob und wie Einsatzkräfte ihre Einsätze einsehen (my_runs), sofort gespeichert
 async function loadMyS(){const el=$('#sMyS');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Einsicht für Einsatzkräfte</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   el.innerHTML=`<h2>Einsicht für Einsatzkräfte</h2><div class="mut">Wer an einem Einsatz teilgenommen hat (angenommen, auch wenn später ausgetreten), sieht nach dem Einsatzende unter «Meine Einsätze» die unten gewählten Knöpfe.</div>

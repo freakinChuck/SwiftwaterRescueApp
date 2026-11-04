@@ -157,6 +157,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **LO-09** – Automatische Anonymisierung: fällige Stufen werden ohne Cron bei Aufrufen der App angewendet und im Einsatzlog vermerkt (#87).
 - **LO-11** – Vor der ersten Stufe der Anonymisierung (von Hand, als Masse oder automatisch) wird ein freigegebenes After Action Review vollständig als PDF gesichert. Das PDF bleibt unverändert erhalten und ist nur mit dem eigenen Recht «Gesicherte After Action Reviews abrufen» zugänglich. Ab der Sicherung ist das Review nur noch als dieses PDF verfügbar: Ansehen, Herunterladen und Bearbeiten entfallen, auch in «Meine Einsätze» und nach dem Aufheben der anonymisierten Anzeige (#87).
 - **LO-12** – Die Verwaltung stellt ein, welche Knöpfe Einsatzkräfte unter «Meine Einsätze» sehen: Log, Replay, After Action Review ansehen, als Word, als PDF (#87).
+- **LO-13** – Ob das Einsatzlog im After Action Review steht, legt allein die Einrichtung fest; Ansicht und Herunterladen fragen nicht danach. Einsatzkräfte laden Word und PDF ohne Rückfrage herunter (#87).
+- **LO-14** – Wer das Recht auf gesicherte After Action Reviews hat, kann das gesicherte PDF auch unter «Meine Einsätze» abrufen (#87).
 - **LO-10** – Vorgegebene Fristen der automatischen Anonymisierung (scharf/Übung, Tage nach Ende): Anzeige 90/30, Replay 180/90, Einsatzprotokoll 365/180, Freitexte und Teilnahmen 730/365, Aufzeichnung 365/180; gelten ohne eigene Einstellung und lassen sich wieder einsetzen (#87).
 - Einsatzarchiv-Export (**offen**).
 

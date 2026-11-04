@@ -166,7 +166,7 @@ const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
 const AAR_TYPES = ['head' => 'Zwischentitel', 'text' => 'Text einzeilig', 'area' => 'Text mehrzeilig', 'date' => 'Datum', 'time' => 'Uhrzeit', 'number' => 'Zahl', 'select' => 'Auswahl', 'check' => 'Ja/Nein', 'img' => 'Bilder'];
 const AAR_IMG_MAX = 50; // Bilder je Review, je höchstens 3 MB (der Browser verkleinert auf 1600 px JPEG)
-const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'log' => 'Einsatzlog (Vorauswahl beim Herunterladen)'];
+const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'log' => 'Einsatzlog'];
 // Status je Review: 0 = in Arbeit, 1 = freigegeben (abgeschlossen, gesperrt, für Teilnehmende sichtbar), 2 = nicht relevant
 const AAR_STATUS = [0 => 'in Arbeit', 1 => 'freigegeben', 2 => 'nicht relevant'];
 const AAR_ARCH_PARTS = 400; const AAR_ARCH_CHUNK = 2200000; // gesichertes PDF: höchstens so viele Stücke zu je so vielen Zeichen Base64 (reicht für 50 Bilder zu 3 MB)
@@ -1760,12 +1760,14 @@ switch ($route) {
 
  case 'my/incidents': // Meine Einsätze (Issue #61): beendete Einsätze, an denen die Person teilgenommen hat (nicht abgelehnt), für Log und Replay
   if (myRuns() === 'off') fail('Die Einsicht in eigene Einsätze ist ausgeschaltet', 403);
-  $s = $db->prepare("SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,m.name mode_name,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1 AND NOT EXISTS (SELECT 1 FROM aar_arch r WHERE r.incident_id=i.id)) aar_rel
+  $s = $db->prepare("SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,m.name mode_name,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1 AND NOT EXISTS (SELECT 1 FROM aar_arch r WHERE r.incident_id=i.id)) aar_rel,(SELECT COUNT(*) FROM aar_arch r WHERE r.incident_id=i.id) aar_arch
     FROM participants p JOIN incidents i ON i.id=p.incident_id LEFT JOIN modes m ON m.code=p.mode WHERE p.user_id=? AND p.mode<>'declined' AND i.ended_at IS NOT NULL ORDER BY i.alarm_at DESC, i.id DESC");
-  $s->execute([$uid]); $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'recorded', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'aar_rel']), $s->fetchAll()); // aar_rel: Zeitpunkt der Freigabe des After Action Reviews (Issue #55)
+  $s->execute([$uid]); $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'recorded', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'aar_rel', 'aar_arch']), $s->fetchAll()); // aar_rel: Zeitpunkt der Freigabe des After Action Reviews (Issue #55)
   if (myRuns() === 'anon') foreach ($rows as &$r) $r['message'] = anonText($r['message'], anonCtx($r['id'], $uid)); // Alarmmeldung wie im Log
   unset($r);
   if (!myAar()) foreach ($rows as &$r) $r['aar_rel'] = null;
+  unset($r);
+  if (!can('aar_arch')) foreach ($rows as &$r) unset($r['aar_arch']); // das gesicherte PDF nur mit dem Recht, unabhängig von my_btns
   unset($r);
   out(['mode' => myRuns(), 'btns' => myBtns(), 'incidents' => $rows]);
  case 'my/stats': // Meine Statistik (Issue #87): nur die eigenen Teilnahmen, für alle Angemeldeten, auch aus endgültig anonymisierten Einsätzen
