@@ -40,3 +40,4 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 .tst{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--ok);border-radius:6px;padding:.6rem .8rem;box-shadow:0 2px 10px #000b;cursor:pointer;white-space:pre-line;animation:tstIn .2s ease-out;transition:opacity .25s}
 .tst.info{border-left-color:var(--ex)}.tst.err{border-left-color:var(--alarm)}.tst.out{opacity:0}
 @keyframes tstIn{from{opacity:0;transform:translateY(.6rem)}}
+.lglk{display:block;text-align:center;font-size:.85rem;margin-top:.4rem}header .lglk{display:inline;margin:0;font-size:.8rem}

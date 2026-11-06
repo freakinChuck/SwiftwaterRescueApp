@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<title>Swiftwater Rescue – Impressum, Lizenzen & Datenschutz</title>
+<link rel="icon" href="img/icon-192.png">
+<link rel="stylesheet" href="common.css?v=0">
+<style>
+/* Impressum, Lizenzen & Datenschutz (Issue #102): ohne Anmeldung, Angaben der Organisation und aktueller Stand der Einstellungen über die Route legal */
+body{line-height:1.5}
+#lgHead{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;padding-top:calc(.6rem + env(safe-area-inset-top));border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10}
+#lgHead h1{margin:0;font-size:1.15rem;flex:1 1 16rem}
+#lgTabs{display:flex;gap:.3rem;flex-wrap:wrap;padding:.6rem 1rem 0;max-width:62rem;margin:0 auto}
+#lgTabs a{color:inherit;text-decoration:none;padding:.45rem .8rem;border:1px solid var(--line);border-radius:999px;font-size:.95rem}
+#lgTabs a[aria-current=page]{background:var(--ex);border-color:var(--ex);color:#fff}
+main{max-width:62rem;margin:0 auto;padding:.4rem 1rem calc(2rem + env(safe-area-inset-bottom))}
+main h2{font-size:1.35rem;margin:1rem 0 .4rem}main h3{font-size:1.05rem;margin:1.3rem 0 .3rem}
+main a{color:#7cc4ff}
+.lgc{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.8rem 1rem;margin:.6rem 0}
+.lgc dl{display:grid;grid-template-columns:minmax(9rem,max-content) 1fr;gap:.3rem 1rem;margin:0}.lgc dt{color:var(--mut)}.lgc dd{margin:0;white-space:pre-line;overflow-wrap:anywhere}
+.lgw{border-left:4px solid var(--alarm)}
+.lgt{width:100%;border-collapse:collapse;font-size:.92rem}.lgt th{text-align:left;color:var(--mut);font-weight:600;padding:.35rem;border-bottom:1px solid var(--line)}
+.lgt td{vertical-align:top;overflow-wrap:anywhere}.lgt td:first-child{font-weight:600;min-width:9rem}
+.lic{display:inline-block;padding:.05rem .45rem;border-radius:4px;font-size:.8rem;font-weight:700;background:#24485a;white-space:nowrap}
+.lic.w{background:#7a4a00}
+.pre{white-space:pre-line}
+ul{padding-left:1.2rem;margin:.3rem 0}li{margin:.15rem 0}
+@media(max-width:700px){#lgHead h1{font-size:1rem;flex-basis:10rem}#lgTabs{flex-wrap:nowrap}#lgTabs a{white-space:nowrap;font-size:.9rem;padding:.35rem .7rem}.lgx{display:none}.lgt thead{display:none}.lgt tr{display:block;border-bottom:1px solid var(--line);padding:.4rem 0}.lgt td{display:block;border:0;padding:.1rem 0}.lgc dl{grid-template-columns:1fr;gap:0}.lgc dd{margin-bottom:.4rem}}
+</style></head><body>
+<header id="lgHead"><h1>Swiftwater Rescue – Impressum, Lizenzen & Datenschutz</h1><a class="btn" href="./">Zur Einsatz-App</a></header>
+<nav id="lgTabs" aria-label="Abschnitte"><a href="#impressum">Impressum</a><a href="#lizenzen">Lizenzen<span class="lgx"> & Nutzungsbedingungen</span></a><a href="#datenschutz">Datenschutz</a></nav>
+<main id="lgMain"><div class="mut">Wird geladen …</div></main>
+<script src="common.js?v=0"></script>
+<script>
+// Inhalt aus der Route legal (ohne Anmeldung). Schlägt sie fehl (z. B. offline), erscheinen die festen Teile ohne Angaben der Organisation.
+let D=null;
+const SECS=['impressum','lizenzen','datenschutz'];
+const days=n=>n==null?'nie automatisch':n===0?'gleich nach dem Einsatzende':n===1?'1 Tag nach dem Einsatzende':n+' Tage nach dem Einsatzende';
+const lnk=(u,t)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t||u.replace(/^https?:\/\//,'').replace(/\/$/,''))}</a>`;
+const host=u=>{try{return new URL(u).host}catch(e){return u}};
+const lic=(t,w)=>`<span class="lic${w?' w':''}">${esc(t)}</span>`;
+const fOn=k=>{const f=D&&D.features.find(x=>x.k===k);return!f||f.real||f.ex};
+
+function impressum(){const c=(D&&D.cfg)||{},F=[['org','Organisation'],['addr','Adresse'],['contact','Kontakt'],['resp','Verantwortlich'],['hosting','Hosting']];
+  const rows=F.filter(([k])=>c[k]).map(([k,l])=>`<dt>${l}</dt><dd>${esc(c[k])}</dd>`).join('');
+  return`<h2>Impressum</h2>
+  <div class="lgc">${rows?`<dl>${rows}</dl>`:`<div class="mut">Die betreibende Organisation hat noch keine Angaben hinterlegt (Verwaltung → Rechtliches → «Impressum & Datenschutz»).</div>`}
+  ${c.note?`<p class="pre">${esc(c.note)}</p>`:''}${D&&D.updated?`<div class="mut">Angaben zuletzt geändert am ${new Date(D.updated*1000).toLocaleDateString('de-CH')}</div>`:''}</div>
+  <h3>Zweck</h3>
+  <p>Swiftwater Rescue ist eine Web-App für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und Lageübersicht bei der Suche nach vermissten Personen in Fliessgewässern sowie bei Übungen. Sie richtet sich an die Mitglieder der betreibenden Organisation; ein Konto vergibt die Verwaltung.</p>
+  <h3>Verwendungseinschränkungen und Haftung</h3>
+  <div class="lgc lgw"><ul>
+    <li><b>Kein Ersatz für die offiziellen Notrufnummern und Alarmierungssysteme</b> (112, 117, 118, 144, Rega 1414). Die App unterstützt die Einsatzgruppe, sie alarmiert keine Blaulichtorganisationen.</li>
+    <li><b>Alarmierung ohne Gewähr.</b> Benachrichtigungen hängen von Gerät, Browser, Netz und den Push-Diensten der Hersteller ab. «Nicht stören» und Lautlos-Modus werden nicht umgangen. Auf dem iPhone kommen Benachrichtigungen nur bei installierter App an.</li>
+    <li><b>Standorte, Suchgebiet und Treibzeiten sind Schätzungen.</b> GPS-Standorte können ungenau oder veraltet sein. Das Suchgebiet folgt dem Gewässernetz aus OpenStreetMap und der eingegebenen Fliessgeschwindigkeit; es ersetzt keine Lagebeurteilung vor Ort. Die Umrechnung in Schweizer Koordinaten ist auf rund 1 m genau.</li>
+    <li><b>Kartendaten ohne Gewähr</b> für Vollständigkeit und Aktualität (swisstopo, OpenStreetMap).</li>
+    <li><b>Luftfahrzeuge (Helikopter)</b> stammen aus offenen ADS-B-Empfängernetzen von Freiwilligen. Sie sind unvollständig (tief fliegende Helikopter in Tälern fehlen oft), verzögert und dürfen nicht für die Flugsicherung oder Kollisionsvermeidung genutzt werden.</li>
+    <li><b>Nicht-kommerzielle Nutzung.</b> Mehrere Datenquellen (Overpass, Nominatim, OpenStreetMap-Kacheln, ADS-B-Dienste) sind für gemeinnützige, nicht-kommerzielle Nutzung in vernünftigem Umfang gedacht. Wer die App kommerziell einsetzen will, muss eigene Dienste mit passender Lizenz verwenden (siehe «Lizenzen & Nutzungsbedingungen»).</li>
+    <li>Die App wird ohne Gewährleistung bereitgestellt. Für Schäden aus der Nutzung oder dem Ausfall der App oder externer Dienste wird, soweit gesetzlich zulässig, keine Haftung übernommen.</li>
+  </ul></div>`}
+
+function lizenzen(){const op=D?D.overpass.servers:[],air=D?D.air:null;
+  const sw=[['Leaflet 1.9.4','Kartendarstellung in Einsatz-App, Verwaltung (Replay) und öffentlicher Ansicht','https://leafletjs.com',lic('BSD-2-Clause'),'Copyright-Hinweis und Lizenztext müssen erhalten bleiben (im Quelltext der Bibliothek enthalten).'],
+    ['Leaflet.Rotate 0.2.8','Drehbare Karte in der Einsatz-App','https://github.com/Raruto/leaflet-rotate',lic('GPL-3.0',1),'Copyleft: Wer die App weitergibt oder verändert verbreitet, muss die Bedingungen der GPL 3.0 einhalten (Quelltext und Lizenz zugänglich). Die Bibliothek wird unverändert von jsDelivr geladen. Bei Bedenken lässt sie sich entfernen; die Karte ist dann nicht mehr drehbar.'],
+    ['JSZip 3.10.1','Word-Dokumente (After Action Review)','https://stuk.github.io/jszip/',lic('MIT')+' oder '+lic('GPL-3.0'),'Genutzt unter der MIT-Lizenz: Copyright-Hinweis erhalten.'],
+    ['jsPDF 2.5.1','PDF-Dokumente (After Action Review)','https://github.com/parallax/jsPDF',lic('MIT'),'Copyright-Hinweis erhalten.'],
+    ['jsPDF-AutoTable 3.8.2','Tabellen in PDF-Dokumenten','https://github.com/simonbengtsson/jsPDF-AutoTable',lic('MIT'),'Copyright-Hinweis erhalten.'],
+    ['PHP','Server (API)','https://www.php.net',lic('PHP License 3.01'),'Läuft beim Hosting, wird nicht mitgeliefert.'],
+    ['SQLite / MySQL','Datenbank','https://sqlite.org',lic('Public Domain')+' / '+lic('GPL-2.0'),'Läuft beim Hosting, wird nicht mitgeliefert.']];
+  const data=[['swisstopo Luftbild (SWISSIMAGE) und Landeskarte','Grundkarten (Standard: Luftbild)','https://www.geo.admin.ch/de/nutzungsbedingungen',lic('OGD, frei nutzbar'),'Quellenangabe «© swisstopo» auf der Karte ist Pflicht. Dienste wmts.geo.admin.ch nach «Fair Use»: keine Massendownloads.'],
+    ['swisstopo Ortschaftenverzeichnis (api3.geo.admin.ch)','Ortsnamen für Fahrten im Einsatzlog','https://www.geo.admin.ch/de/nutzungsbedingungen',lic('OGD, frei nutzbar'),'Quellenangabe, «Fair Use».'],
+    ['OpenStreetMap-Kacheln (tile.openstreetmap.org)','Grundkarte «OpenStreetMap»','https://operations.osmfoundation.org/policies/tiles/',lic('ODbL')+' '+lic('Tile Usage Policy',1),'Quellenangabe «© OpenStreetMap» Pflicht. Die Kachelserver sind ein Gratisangebot der OSM Foundation ohne Zusicherung; kein starker Verkehr, kein Vorausladen ganzer Gebiete. Bei viel Nutzung einen eigenen Anbieter wählen.'],
+    ['OpenStreetMap-Gewässernetz über Overpass API','Suchgebiet entlang des Flusses, Flussdistanz',op.length?op.map(u=>lnk(u,host(u))).join(', '):'https://wiki.openstreetmap.org/wiki/Overpass_API',lic('ODbL')+' '+lic('Nutzungsgrenzen',1),'Daten © OpenStreetMap-Mitwirkende, ODbL. Öffentliche Overpass-Server sind gratis mit Grenzen (z. B. overpass-api.de: weniger als 10 000 Abfragen und 1 GB pro Tag); deshalb speichert der Server Antworten zwischen. Kein Anspruch auf Verfügbarkeit.'+(D&&!op.length?' Zurzeit ausgeschaltet.':'')],
+    ['Nominatim (nominatim.openstreetmap.org)','Ortsnamen ausserhalb der Schweiz im Einsatzlog','https://operations.osmfoundation.org/policies/nominatim/',lic('ODbL')+' '+lic('höchstens 1 Abfrage/s',1),'Nur geringe Nutzung, kein Massen-Geocoding, Quellenangabe.']];
+  if(!air||air.on)data.push(...[['adsb.fi (Open Data)','Helikopter auf der Karte','https://adsb.fi',lic('nur nicht-kommerziell',1),'Gratis, ohne Schlüssel, höchstens 1 Abfrage pro Sekunde, nur für nicht-kommerzielle Nutzung.'],
+    ['adsb.lol','Helikopter auf der Karte','https://adsb.lol',lic('ODbL')+' '+lic('nicht-kommerziell',1),'Quellenangabe auf der Karte, Limits kann der Betreiber jederzeit ändern.'],
+    ['OpenSky Network','Helikopter (Rückfall, standardmässig aus)','https://opensky-network.org/about/terms-of-use',lic('nur nicht-kommerziell',1),'Nur für Forschung und gemeinnützige Zwecke; ohne Konto rund 400 Abfragen pro Tag.']]
+    .filter(r=>!air||air.src.some(s=>s.site===r[2]||r[2].startsWith(s.site))));
+  const svc=[['Push-Dienste der Browser-Hersteller (Google Firebase Cloud Messaging, Apple Push Notification service, Mozilla Push Service)','Benachrichtigungen bei geschlossener App','—',lic('Bedingungen der Hersteller'),'Nur verschlüsselte Nachrichten (RFC 8291), der Dienst kann den Inhalt nicht lesen.'],
+    ['cdnjs (Cloudflare) und jsDelivr','Auslieferung der Bibliotheken oben','https://cdnjs.com',lic('Gratis-CDN'),'Der Browser lädt die Bibliotheken von dort.'],
+    ['Navigations-Apps (Google Maps, Apple Karten, Waze, andere)','Knopf 🧭: Ziel an die App übergeben','—',lic('Bedingungen der Anbieter'),'Nur auf Knopfdruck, es gelten die Bedingungen der gewählten App.']];
+  const tbl=(rows,h)=>`<table class="lgt"><thead><tr><th>${h}</th><th>Verwendung</th><th>Lizenz</th><th>Bedingungen und Einschränkungen</th></tr></thead><tbody>${rows.map(([n,u,l,b,t])=>`<tr><td>${esc(n)}${l!=='—'?'<br><small>'+(l.startsWith('<')?l:lnk(l))+'</small>':''}</td><td>${esc(u)}</td><td>${b}</td><td>${esc(t)}</td></tr>`).join('')}</tbody></table>`;
+  return`<h2>Lizenzen & Nutzungsbedingungen</h2>
+  <p>Die App verwendet die folgenden Programmbibliotheken, Daten und Dienste. Es gelten jeweils deren Lizenzen und Nutzungsbedingungen.</p>
+  <h3>Programmbibliotheken und Server</h3>${tbl(sw,'Komponente')}
+  <h3>Karten und Daten</h3>${tbl(data,'Quelle')}
+  <h3>Weitere Dienste</h3>${tbl(svc,'Dienst')}
+  <h3>Eigener Programmcode und Logo</h3><p>Programmcode, Gestaltung und Logo der Swiftwater Rescue App: alle Rechte bei den Urheberinnen und Urhebern bzw. der betreibenden Organisation. Eine Open-Source-Lizenz ist für den eigenen Code nicht festgelegt.</p>`}
+
+function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],op=D?D.overpass:null,air=D?D.air:null;
+  const who=[c.org,c.addr].filter(Boolean).join('\n');
+  return`<h2>Datenschutzerklärung</h2>
+  <p>Diese Erklärung beschreibt, welche Personendaten die App bearbeitet, wo sie gespeichert werden und wie lange. Grundlage ist das Schweizer Datenschutzgesetz (DSG).</p>
+  <div class="lgc"><dl><dt>Verantwortlich</dt><dd>${who?esc(who):'<span class="mut">Noch nicht hinterlegt</span>'}</dd>${c.privacy||c.contact?`<dt>Kontakt Datenschutz</dt><dd>${esc(c.privacy||c.contact)}</dd>`:''}${c.hosting?`<dt>Hosting</dt><dd>${esc(c.hosting)}</dd>`:''}</dl></div>
+  <h3>Wo die Daten liegen</h3>
+  <p>Alle Einsatz- und Kontodaten liegen in der Datenbank der App beim Hosting der betreibenden Organisation${c.hosting?' ('+esc(c.hosting)+')':''}. Es gibt keine Werbung, keine Analyse- oder Tracking-Dienste und keine Cookies. Daten werden nicht verkauft und nur an die unten genannten Dienste übermittelt, soweit eine Funktion es braucht.</p>
+  <h3>Welche Daten gespeichert werden</h3>
+  <table class="lgt"><thead><tr><th>Daten</th><th>Inhalt</th><th>Wie lange</th></tr></thead><tbody>
+   <tr><td>Benutzerkonto</td><td>Name, Benutzername, Passwort (nur als Hash, nicht lesbar), Profilbild (falls hochgeladen), Benutzerrollen, persönliche Einstellungen (Übungsmodus, Koordinatensystem, Navigations-App), Zeitpunkt der letzten Anmeldung, Anmeldeschlüssel.</td><td>Bis die Verwaltung das Konto löscht. Deaktivierte Konten bleiben erhalten, damit vergangene Einsätze nachvollziehbar bleiben.</td></tr>
+   <tr><td>Teilnahme an Einsätzen und Übungen</td><td>Annahme mit Einrückoption, Spezialrolle, Zeitpunkte von Beitritt und Austritt.</td><td>Mit dem Einsatz, gemäss den Fristen unten pseudonymisiert.</td></tr>
+   <tr><td>Standort</td><td>Nur während eines Einsatzes, an dem du teilnimmst, und nur bei Einrückoptionen mit Standortfreigabe: der jeweils letzte Standort (GPS des Geräts oder von Hand gesetzt), Hinweis «auf dem Gewässer». Alle Teilnehmenden sehen ihn auf der Karte.</td><td>Letzter Standort bis zur Pseudonymisierung des Einsatzes. Nach dem Einsatz sendet die App keinen Standort mehr.</td></tr>
+   <tr><td>Aufzeichnung (Replay)</td><td>Nur wenn die Einsatzleitung sie eingeschaltet hat (im Einsatz sichtbar «● wird aufgezeichnet»): jede Standortmeldung mit Zeitpunkt${air&&air.on&&air.replay?', Positionen von Luftfahrzeugen in der Nähe':''}.</td><td>Bis die Aufzeichnung gelöscht wird (Fristen unten).</td></tr>
+   <tr><td>Einsatzprotokoll</td><td>Beitritte, Rollen, Fahrten mit Ortsnamen und Geschwindigkeit (erkannt aus den Standortmeldungen), «Suchgebiet erreicht», Änderungen an Rettlingen, Markierungen und Bereichen.</td><td>Mit dem Einsatz, gemäss den Fristen unten pseudonymisiert.</td></tr>
+   <tr><td>Nachrichten</td><td>Text, Empfänger, Zeitpunkt, Standort der sendenden Person (falls geteilt), optionale Kartenmarkierung.</td><td>Mit dem Einsatz; Texte gemäss den Fristen unten entfernt.</td></tr>
+   <tr><td>Rettlinge und externe Einsatzkräfte</td><td>Name und Beschreibung (z. B. Aussehen, Kleidung), Fundort, PLS, Zeitpunkte. Diese können besonders schützenswerte Angaben enthalten (Gesundheit); bitte nur das Nötige erfassen.</td><td>Mit dem Einsatz; Namen und Beschreibungen gemäss den Fristen unten entfernt.</td></tr>
+   <tr><td>After Action Review</td><td>Erfasste Angaben und Bilder, wer es erfasst und freigegeben hat.</td><td>Bis zur Löschung durch die Verwaltung. Wird beim Anonymisieren nicht verändert; ein freigegebenes Review wird vorher als PDF gesichert.</td></tr>
+   <tr><td>Push-Abonnement</td><td>${D&&!D.push?'Zurzeit nicht eingerichtet. ':''}Je Gerät die Adresse beim Push-Dienst des Browsers und die Schlüssel zum Verschlüsseln, verbunden mit deinem Konto.</td><td>Bis du Push ausschaltest, dich auf dem Gerät eine andere Person anmeldet, das Konto deaktiviert oder das Passwort zurückgesetzt wird.</td></tr>
+   <tr><td>Zwischenspeicher auf dem Server</td><td>Gewässernetz aus OpenStreetMap${air&&air.on?', Luftfahrzeuge je Einsatz':''} (keine Personendaten).</td><td>Gewässernetz ${op?op.ttl+' min':'gemäss Einstellung'} (bei Ausfall von Overpass bis 7 Tage)${air&&air.on?', Luftfahrzeuge nur kurz für den laufenden Einsatz':''}.</td></tr>
+  </tbody></table>
+  <h3>Pseudonymisierung und Löschung nach dem Einsatz</h3>
+  <p>Nach dem Einsatzende werden Personendaten in Stufen automatisch unkenntlich gemacht. Die Verwaltung kann dies auch früher von Hand auslösen. Aktuell eingestellt:</p>
+  ${an.length?`<table class="lgt"><thead><tr><th>Stufe</th><th>Scharfe Einsätze</th><th>Übungen</th></tr></thead><tbody>${an.map(s=>`<tr><td>${esc(s.name)}</td><td>${s.on?days(s.real):'ausgeschaltet'}</td><td>${s.on?days(s.ex):'ausgeschaltet'}</td></tr>`).join('')}</tbody></table>`:'<div class="mut">Fristen zurzeit nicht abrufbar.</div>'}
+  <h3>Wer die Daten sieht</h3>
+  <ul><li>Im Einsatz: alle Teilnehmenden (Karte, Einsatzkräfte, Nachrichten, Rettlinge). Die Einsatzleitung kann eine öffentliche Ansicht über einen geheimen Link freigeben, standardmässig anonym (Spezialrolle statt Namen, ohne Profilbilder und Nachrichten); beim Ausschalten wird der Link ungültig.</li>
+   <li>Nach dem Einsatz: Personen mit den entsprechenden Rechten in der Verwaltung (Statistik, Log, Replay, After Action Review). Teilnehmende sehen unter «Meine Einsätze» ihre eigenen Einsätze, je nach Einstellung mit anonymisierten Namen der anderen.</li></ul>
+  <h3>Übermittlung an Dritte</h3>
+  <table class="lgt"><thead><tr><th>Empfänger</th><th>Was</th><th>Wann</th></tr></thead><tbody>
+   <tr><td>swisstopo (Bund) bzw. OpenStreetMap Foundation</td><td>Kartenausschnitte; dein Browser ruft die Kacheln direkt ab, dabei sieht der Anbieter deine IP-Adresse und den Kartenausschnitt.</td><td>Beim Anzeigen der Karte.</td></tr>
+   <tr><td>cdnjs (Cloudflare), jsDelivr</td><td>IP-Adresse beim Laden der Bibliotheken.</td><td>Beim Öffnen der App (danach meist aus dem Zwischenspeicher).</td></tr>
+   ${fOn('area')||fOn('rd')?`<tr><td>Overpass-Server${op&&op.servers.length?' ('+op.servers.map(host).map(esc).join(', ')+')':''}</td><td>Ausschnitt um den PLS bzw. die gewählten Punkte, ohne Personenbezug. Normalerweise fragt der Server; lehnt Overpass ihn ab, fragt dein Gerät direkt (IP-Adresse sichtbar).</td><td>Suchgebiet und Flussdistanz.</td></tr>`:''}
+   <tr><td>swisstopo, Nominatim (OSM Foundation)</td><td>Koordinaten von Anfang und Ende einer Fahrt, ohne Namen; der Server fragt.</td><td>Bei erkannten Fahrten im Einsatz.</td></tr>
+   ${!air||air.on?`<tr><td>ADS-B-Dienste${air&&air.src.length?' ('+air.src.map(s=>esc(s.name)).join(', ')+')':''}</td><td>Ein Kreis um das Einsatzgebiet, ohne Personenbezug; der Server fragt.</td><td>Während Einsätzen mit eingeschalteten Helikoptern.</td></tr>`:''}
+   <tr><td>Push-Dienst deines Browsers (Google, Apple, Mozilla)</td><td>Verschlüsselte Benachrichtigung (Alarm, Nachricht, Einsatzende); der Dienst sieht nur Zeitpunkt und Grösse.</td><td>Nur wenn du Push eingeschaltet hast.</td></tr>
+   ${fOn('nav')?`<tr><td>Gewählte Navigations-App</td><td>Koordinaten des Ziels.</td><td>Nur beim Antippen von 🧭.</td></tr>`:''}
+  </tbody></table>
+  <p class="mut">Einige dieser Anbieter haben ihren Sitz oder Server ausserhalb der Schweiz (z. B. in der EU oder den USA).</p>
+  <h3>Daten auf deinem Gerät</h3>
+  <p>Die App speichert im Browser (localStorage): den Anmeldeschlüssel, den letzten Stand des laufenden Einsatzes samt Nachrichten (damit sie offline startet), quittierte Alarme, gelesene Nachrichten und Anzeige-Einstellungen (Grundkarte, ausgeblendete Kategorien, Filter). Der Service Worker speichert die App-Dateien und zuletzt gesehene Kartenkacheln. Abmelden löscht den Anmeldeschlüssel und den gemerkten Einsatzstand; den Rest löscht das Entfernen der Website-Daten im Browser.</p>
+  <h3>Berechtigungen des Geräts</h3>
+  <ul><li><b>Standort:</b> nur während eines Einsatzes und nur bei Einrückoptionen mit Standortfreigabe. Ohne Einsatz wird der Standort höchstens im Menü angezeigt, aber nicht gesendet.</li>
+   <li><b>Benachrichtigungen:</b> nur wenn du Push in den Einstellungen einschaltest.</li>
+   <li><b>Kamera/Fotos:</b> nur beim Wählen eines Profilbilds oder eines Bildes für ein After Action Review.</li></ul>
+  <h3>Deine Rechte</h3>
+  <p>Du kannst Auskunft über deine Daten verlangen sowie deren Berichtigung oder Löschung, soweit keine Aufbewahrungspflichten oder überwiegenden Interessen (z. B. Nachvollziehbarkeit eines Einsatzes) entgegenstehen. Wende dich dazu an ${c.privacy||c.contact?esc(c.privacy||c.contact):'die betreibende Organisation'}.</p>
+  ${c.privacy_note?`<h3>Ergänzungen</h3><p class="pre">${esc(c.privacy_note)}</p>`:''}`}
+
+function draw(){$('#lgMain').innerHTML=`<section id="impressum">${impressum()}</section><section id="lizenzen">${lizenzen()}</section><section id="datenschutz">${datenschutz()}</section>`;show()}
+// immer nur ein Abschnitt sichtbar, gewählt über den Hash (wie die Verwaltung)
+function show(){const k=SECS.includes(location.hash.slice(1))?location.hash.slice(1):'impressum';
+  SECS.forEach(s=>{const e=document.getElementById(s);if(e)e.hidden=s!==k});
+  document.querySelectorAll('#lgTabs a').forEach(a=>a.setAttribute('aria-current',a.getAttribute('href')==='#'+k?'page':'false'));scrollTo(0,0)}
+addEventListener('hashchange',show);
+api('legal').then(d=>{D=d;draw()}).catch(()=>{draw();toast('Angaben der Organisation nicht abrufbar.','info')});
+</script>
+</body></html>

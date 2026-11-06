@@ -54,3 +54,7 @@ In `index.html` oben: `DEFAULT_BASE` ändern oder in `MAP_PROVIDERS` einen Eintr
 - BAFU-Vorschlag: Abfluss (m³/s) der nächsten BAFU-Station via api.existenz.ch (inoffiziell, Quelle BAFU angeben), Geschwindigkeit nur grob geschätzt (v ≈ 0.8·Q^0.18). Abfrage ist ungetestet gegen die Live-API.
 - Rettling-Markierung: Teilnehmende markieren die Position des Rettlings mit ihrem Standort; Einsatzleitung/Admin/Einsatzersteller kann Markierungen entfernen oder manuell setzen.
 - Einsatzlog (Beitritt, Rollen, Fliessgeschwindigkeit, Nachrichten, Fahrten mit Fahrzeug mit Ortsnamen, Suchgebiet erreicht) und Statistik im Admin-Bereich.
+
+## Impressum, Lizenzen & Datenschutz
+
+`legal.html` ist ohne Anmeldung erreichbar (Link bei der Anmeldung, im Profil, in der öffentlichen Ansicht und in der Verwaltung). Lizenzen, Datenquellen und Aufbewahrungsfristen stellt die Seite aus den aktuellen Einstellungen zusammen. Die Angaben der betreibenden Organisation (Name, Adresse, Kontakt, Hosting, Zusatztexte) erfasst man in der Verwaltung unter «Rechtliches → Impressum & Datenschutz».
