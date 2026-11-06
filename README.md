@@ -20,10 +20,11 @@ powershell -File scripts\deploy.ps1 -Config deploy.prod.json         # Produktiv
 Beim ersten Mal auf dem Server `api/config.php` von Hand anlegen (Vorlage im Repo), das Skript lädt sie nicht hoch.
 
 ## Lokales DEV-Environment (`scripts/deploy-dev.ps1`)
-Jeder offene PR läuft im lokalen IIS in einem eigenen Unterordner mit seiner Nummer (`C:\inetpub\swiftwaterdev\<PR>`, http://localhost:8099/<PR>/). Das Skript liefert den gepushten Stand des PR aus, nicht die Arbeitskopie, mit der Dateiliste aus `scripts/deploy.ps1` dieses Stands. `api/config.php` und `api/data/` bleiben erhalten, jeder PR hat also seine eigene Datenbank. DEV behält die grün umrandeten Icons, und der Seitentitel zeigt die PR-Nummer (`[PR 100] Swiftwater Rescue`).
+Jeder offene PR läuft im lokalen IIS in einem eigenen Unterordner mit seiner Nummer (`C:\inetpub\swiftwaterdev\<PR>`, http://localhost:8099/<PR>/). Das Skript liefert den gepushten Stand des PR aus, nicht die Arbeitskopie, mit der Dateiliste aus `scripts/deploy.ps1` dieses Stands. `api/config.php` und `api/data/` bleiben erhalten, jeder PR hat also seine eigene Datenbank. Der Ordner `testbase` (http://localhost:8099/testbase/) zeigt den Stand von `origin/main`; seine Datenbank ist die Basis für neue PRs: Ein PR-Ordner ohne Datenbank erhält beim ersten Deploy eine Kopie davon, ohne Push-Abonnements. DEV behält die grün umrandeten Icons, und der Seitentitel zeigt die PR-Nummer (`[PR 100] Swiftwater Rescue`).
 ```
 powershell -File scripts\deploy-dev.ps1 -Pr 100    # ein PR
-powershell -File scripts\deploy-dev.ps1 -All       # alle offenen PRs
+powershell -File scripts\deploy-dev.ps1 -All       # alle offenen PRs und testbase
+powershell -File scripts\deploy-dev.ps1 -Testbase  # nur testbase (origin/main)
 ```
 IIS wertet `.htaccess` nicht aus. Das Skript sperrt die Datenbank darum mit `api/data/web.config`, die `no-cache`-Header fehlen lokal. PHP braucht die Erweiterungen curl, mbstring, openssl, pdo_sqlite und sqlite3.
 
