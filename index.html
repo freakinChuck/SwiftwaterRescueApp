@@ -68,7 +68,10 @@ body.off #chip,body.off #bMenu,body.off #bView,body.off #viewBox{margin-top:var(
 /* Zeile im Fenster «Markierungen»: Häkchen und Farbe links, Name und Angaben über die ganze Breite, Knöpfe darunter (wie .pp) */
 .pi{display:grid;grid-template-columns:auto auto 1fr;align-items:center;column-gap:.45rem;row-gap:.3rem;padding:.4rem 0;border-bottom:1px solid var(--line)}.pi .sw{width:14px;height:14px;border-radius:3px;flex:0 0 auto}.pi .nm{min-width:0;overflow-wrap:anywhere}.pi .pa{grid-column:3;display:flex;flex-wrap:wrap;gap:.35rem}.pi .nm small{display:block;color:var(--mut)}.pi button{padding:.3rem .5rem;font-size:.82rem}
 .pi .nochk{width:13px;flex:0 0 auto}.pi .plsw{width:11px;height:11px;margin:0 1.5px;background:var(--alarm);border:2px solid #fff;transform:rotate(45deg);flex:0 0 auto}
-label.pg{display:flex;gap:.4rem;align-items:center}#poiForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem}
+label.pg{display:flex;gap:.4rem;align-items:center}
+/* Häkchenzeilen am Handy (Issue #90): Häkchen und Text bleiben auf einer Zeile, der Text bricht daneben um; Auswahllisten in Labels volle Breite */
+label.row{flex-wrap:nowrap;align-items:flex-start!important}label.row>input[type=checkbox],label.row>input[type=radio]{flex:0 0 auto;margin-top:.2rem}label.row>span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+#sheet label.mut{display:grid;gap:.25rem;margin:.4rem 0}#sheet label.mut>select{width:100%}#poiForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem}
 #drawBar{position:fixed;top:calc(4.3rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:1200;background:var(--panel);border:2px solid var(--ex);border-radius:8px;padding:.5rem .6rem;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;width:max-content;max-width:calc(100vw - 1.4rem);box-shadow:0 2px 10px #000a}#drawBar[hidden]{display:none}
 /* Einsatzkräfte im ☰-Menü: Name mit Einrückoption, Spezialrolle (für die Einsatzleitung wählbar), Entfernen */
 table.crew{table-layout:fixed}table.crew td:first-child{width:42%;overflow-wrap:anywhere}table.crew td:last-child{width:2.6rem;text-align:right}
@@ -424,13 +427,13 @@ function invPick(el,o,ex,allowed,sel){const gs=o.groups.filter(g=>(ex||g.for_rea
   const pp=ex?o.people:[],pn=id=>(pp.find(u=>u.id===id)||{}).name||'?';
   el.innerHTML=`<h4 style="margin:.3rem 0">Aufgebot</h4>${allowed==null?'<label class="row" style="align-items:center"><input type="checkbox" id="iAll" style="flex:0 0 auto"> <span>Alle Personen alarmieren</span></label>'+(o.absent_all?`<div class="mut">${o.absent_all} ${o.absent_all===1?'Person ist':'Personen sind'} abwesend und ${o.absent_all===1?'wird':'werden'} nicht alarmiert.</div>`:''):''}
     <div id="iGs">${gs.map(g=>`<label class="row" style="align-items:center"><input type="checkbox" data-ig="${g.id}" style="flex:0 0 auto" ${(sel||[]).includes(g.id)?'checked':''}> <span><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)} <small class="mut">${g.n} ${g.n===1?'Person':'Personen'}${g.na?`, davon ${g.na} abwesend`:''}</small></span></label>`).join('')||`<div class="mut">Du darfst keine Einsatzgruppe ${ex?'':'für scharfe Einsätze '}aufbieten.</div>`}
-    ${ex&&pp.length?`<label class="mut">Einzelpersonen<input id="iPq" placeholder="Name suchen" autocomplete="off"></label><div id="iPr" class="isr"></div><div id="iPs" class="isel"></div>`:''}</div>`;
-  const drawP=()=>{if(!$('#iPq',el))return;const q=$('#iPq',el).value.trim().toLowerCase(),m=q?pp.filter(u=>!ps.includes(u.id)&&u.name.toLowerCase().includes(q)).slice(0,8):[];
-    $('#iPr',el).innerHTML=m.map(u=>`<button data-ipa="${u.id}">${esc(u.name)}${u.absent?' <small>(abwesend)</small>':''}</button>`).join('');
+    ${ex&&pp.length?`<label class="mut">Einzelpersonen<input id="iPq" type="search" placeholder="Liste filtern: Name" autocomplete="off"></label><div id="iPr" class="isr"></div><div id="iPs" class="isel"></div>`:''}</div>`;
+  const drawP=()=>{if(!$('#iPq',el))return;const q=$('#iPq',el).value.trim().toLowerCase(),m=pp.filter(u=>!ps.includes(u.id)&&(!q||u.name.toLowerCase().includes(q))); // leere Suche = alle (scrollbare Liste)
+    $('#iPr',el).innerHTML=m.map(u=>`<button data-ipa="${u.id}">+ ${esc(u.name)}${u.absent?' <small>(abwesend)</small>':''}</button>`).join('')||`<div class="mut">${q?'Keine passende Person':'Alle ausgewählt'}</div>`;
     $('#iPs',el).innerHTML=ps.map(id=>`<span class="lchip">${esc(pn(id))}<button data-ipx="${id}" aria-label="${esc(pn(id))} entfernen">✕</button></span>`).join('')};
   if($('#iPq',el)){$('#iPq',el).oninput=drawP;$('#iPq',el).onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const b=$('[data-ipa]',el);b&&b.click()}}}
-  el.onclick=e=>{const a=e.target.closest('[data-ipa]'),x=e.target.closest('[data-ipx]');if(a){ps.push(+a.dataset.ipa);$('#iPq',el).value='';drawP();$('#iPq',el).focus()}else if(x){ps=ps.filter(i=>i!==+x.dataset.ipx);drawP()}};
-  const all=$('#iAll',el);if(all)all.onchange=()=>{$('#iGs',el).style.opacity=all.checked?.4:1;$('#iGs',el).querySelectorAll('input').forEach(c=>c.disabled=all.checked)};
+  el.onclick=e=>{const a=e.target.closest('[data-ipa]'),x=e.target.closest('[data-ipx]');if(a){ps.push(+a.dataset.ipa);drawP()}else if(x){ps=ps.filter(i=>i!==+x.dataset.ipx);drawP()}};
+  drawP();const all=$('#iAll',el);if(all)all.onchange=()=>{$('#iGs',el).style.opacity=all.checked?.4:1;$('#iGs',el).querySelectorAll('input').forEach(c=>c.disabled=all.checked)};
   return{get:()=>all&&all.checked?{all:1}:{groups:[...el.querySelectorAll('[data-ig]')].filter(c=>c.checked).map(c=>+c.dataset.ig),persons:ps},
     set:ids=>el.querySelectorAll('[data-ig]').forEach(c=>c.checked=ids.includes(+c.dataset.ig))}}
 const invTxt=a=>(!a||a.all?'Alle Personen':[...a.groups,a.persons?a.persons+(a.persons===1?' Einzelperson':' Einzelpersonen'):''].filter(Boolean).join(', ')+` (${a.n} ${a.n===1?'Person':'Personen'})`)+(a&&a.absent?`, davon ${a.absent} abwesend (nicht alarmiert)`:'');
@@ -449,8 +452,9 @@ function newView(ex){creating=true;$('#sheet').innerHTML=`<h3>${ex?'<span class=
   // Einsatztyp und Aufgebot (Issue #90): der Typ wählt seine Gruppen vor
   let INV=null;api('start/options').then(o=>{if(!$('#nInv'))return;const ty=o.types.filter(t=>t.applies==='both'||t.applies===(ex?'ex':'real'));
     if(ty.length){$('#nTy').innerHTML=`<label class="mut">Einsatztyp<select id="nty"><option value="">– kein Einsatztyp –</option>${ty.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></label>`;
-      $('#nty').onchange=e=>{const t=ty.find(x=>x.id===+e.target.value);e.target.blur();if(t&&INV)INV.set(t.grp_ids)}}
-    INV=invPick($('#nInv'),o,ex,o.start[ex?'ex':'real'],[])}).catch(()=>{});
+      $('#nty').onchange=e=>{const t=ty.find(x=>x.id===+e.target.value);e.target.blur();if(INV)INV.set(t?t.grp_ids:def)}}
+    // ohne Einsatztyp: Vorauswahl je Art aus der Gruppe (def_real/def_ex)
+    const def=o.groups.filter(g=>ex?g.def_ex:g.def_real).map(g=>g.id);INV=invPick($('#nInv'),o,ex,o.start[ex?'ex':'real'],def)}).catch(()=>{});
   let pin;map.once('click',function f(e){$('#nlat').value=e.latlng.lat.toFixed(6);$('#nlon').value=e.latlng.lng.toFixed(6);pin&&map.removeLayer(pin);pin=L.marker(e.latlng).addTo(map);map.once('click',f)});
   $('#nX').onclick=()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);draw()};
   $('#nGo').onclick=()=>api('incident/start',{is_exercise:+$('#nex').value,record:$('#nrec').checked?1:0,...(me&&me.air_default?{air:$('#nair').checked?1:0}:{}),message:$('#nm').value,...($('#nlat').value.trim()||$('#nlon').value.trim()?{lat:+$('#nlat').value,lon:+$('#nlon').value}:{}),alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined,...($('#nty')&&$('#nty').value?{type_id:+$('#nty').value}:{}),...(INV?(v=>v.all?{invite_all:1}:v)(INV.get()):{})}).then(()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);poll()}).catch(fail)}

@@ -58,15 +58,17 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EI-10** – Einsatzleitung = Rolle Einsatzleitung, Einrückoption mit Leitungsrechten, Recht «Jeden Einsatz leiten» oder Ersteller des Einsatzes, jeweils nur, solange die Person teilnimmt (Ausnahme Übungsleitung) (AG, #82).
 - **EI-11** – Die Einsatzleitung kann den Einsatz beenden, Einsatzkräfte entfernen und deren Spezialrollen ändern (AG).
 - **EI-12** – Einsatzart sichtbar und unterscheidbar: «Einsatz» rot, «Übung» blau (AG).
-- **EI-13** – Einsatzgruppen in der Verwaltung: Name, Farbe, Mitglieder, ob für scharfe Einsätze aufbietbar oder nur für Übungen; deaktivieren statt löschen; jede Person sieht ihre Gruppen im Profil (#90).
+- **EI-13** – Einsatzgruppen in der Verwaltung: Name, Farbe, Mitglieder, ob für scharfe Einsätze aufbietbar oder nur für Übungen; deaktivieren oder löschen (bisherige Einsätze behalten den Namen); neue Gruppen erhalten eine noch nicht verwendete Farbe; Mitglieder aus einer filterbaren Liste aller Personen; jede Person sieht ihre Gruppen im Profil (#90).
 - **EI-14** – Beim Start werden Einsatzgruppen aufgeboten; nur ihre Mitglieder werden alarmiert. Bei Übungen zusätzlich einzelne Personen. Ohne Einsatzgruppen werden alle alarmiert (#90).
 - **EI-15** – Welche Einsatzgruppen eine Person aufbieten darf, legen ihre Benutzerrollen fest; «Alle Personen» nur, wer alle Gruppen aufbieten darf (#90).
-- **EI-16** – Einsatztypen (z. B. «Person im Wasser») mit vorausgewählten Einsatzgruppen, je für scharfe Einsätze, Übungen oder beide; der Typ steht im Einsatz, im Log und in der Statistik (filterbar) (#90).
+- **EI-16** – Einsatztypen (z. B. «Person im Wasser») mit vorausgewählten Einsatzgruppen, je für scharfe Einsätze, Übungen oder beide; der Typ steht im Einsatz, im Log und in der Statistik (filterbar); Einsatztypen lassen sich löschen, bisherige Einsätze behalten den Namen (#90).
 - **EI-17** – Nicht Aufgebotene sehen einen scharfen Einsatz nicht und können nicht beitreten, ausser die Einsatzleitung erlaubt allen den Beitritt (ohne Alarm) (#90).
 - **EI-18** – Die Einsatzleitung kann weitere Gruppen (bei Übungen auch Personen) oder alle nachbieten; alarmiert werden nur die neu Aufgebotenen (#90).
 - **EI-19** – Jede Person kann sich selbst abwesend melden oder ihre Einsatzfähigkeit vorübergehend aussetzen (von–bis oder bis auf Weiteres, mit Bemerkung); beides wirkt gleich: kein Alarm und kein Aufgebot, laufende Einsätze bleiben sichtbar und ein freiwilliger Beitritt ist möglich (#91).
 - **EI-20** – Personen mit dem Recht «Abwesenheiten verwalten» erfassen, ändern und beenden Abwesenheiten aller Personen in der Verwaltung (#91).
 - **EI-21** – Abwesenheiten sind bei der Zuteilung der Einsatzgruppen und beim Aufbieten ersichtlich (je Person und Anzahl je Gruppe) (#91).
+- **EI-22** – Je Einsatzgruppe einstellbar, ob sie im Startformular ohne Einsatztyp vorausgewählt ist, getrennt für scharfe Einsätze und Übungen (#90).
+- **EI-23** – Einzelpersonen fürs Aufgebot werden aus einer filterbaren Liste aller Personen gewählt, ohne Texteingabe (#90).
 
 ## 5. Karte (KA)
 
