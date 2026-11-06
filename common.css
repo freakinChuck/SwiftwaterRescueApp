@@ -48,3 +48,4 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 .isel .lchip,.lchip{display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--line);border-radius:999px;padding:.1rem .2rem .1rem .6rem}.lchip button{padding:.1rem .45rem;min-height:0;border-radius:999px}
 .abschip{display:inline-block;font-size:.8em;padding:.05rem .45rem;border-radius:999px;background:#7c4a0033;border:1px solid #d9822b;color:#ffcf99;white-space:nowrap}
 .absrow{display:flex;gap:.5rem;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:.35rem 0}.absrow:first-child{border-top:0}
+.lglk{display:block;text-align:center;font-size:.85rem;margin-top:.4rem}header .lglk{display:inline;margin:0;font-size:.8rem}

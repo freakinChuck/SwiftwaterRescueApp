@@ -192,13 +192,14 @@ const PERMS = [
   'aar' => ['Auswertung', 'After Action Reviews erstellen', 'In der Einsatzstatistik je beendetem Einsatz die Angaben erfassen, als nicht relevant markieren, ansehen und herunterladen (ohne «Alle Einsätze auswerten» nur Liste und Kennzahlen, ohne Log und Replay)'],
   'aar_rel' => ['Auswertung', 'After Action Reviews freigeben', 'Als abgeschlossen freigeben (danach gesperrt und für die Teilnehmenden unter «Meine Einsätze» sichtbar) und Freigaben zurücknehmen'],
   'aar_cfg' => ['Auswertung', 'After Action Review einrichten', 'Felder, Dokumenttitel, Organisation, Logo, mitgelieferte Abschnitte und erlaubte Formate'],
+  'legal' => ['Verwaltung', 'Impressum & Datenschutz einstellen', 'Angaben zur betreibenden Organisation, Kontakt und Zusatztexte der Seite «Impressum, Lizenzen & Datenschutz»'],
   'aar_arch' => ['Auswertung', 'Gesicherte After Action Reviews abrufen', 'Das vor dem Anonymisieren gesicherte, vollständige PDF eines freigegebenen Reviews abrufen, mit allen Namen'],
 ];
 // Alarmstufen der Einsatztypen (Issue #90), von stark nach schwach: Schlüssel => [Bezeichnung, Erklärung]; Einsatz-App und Service Worker setzen sie um
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'rec_kinds' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func',
-  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my'];
+  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal'];
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
@@ -352,6 +353,19 @@ const FEATURE_ROUTES = ['incident/mark' => 'res', 'incident/mark/remove' => 'res
                         'incident/message' => 'msg', 'incident/message/unmark' => 'msg', 'incident/poi' => 'poi', 'incident/poi/remove' => 'poi',
                         'incident/external/save' => 'ext', 'incident/external/remove' => 'ext', 'incident/public' => 'pub', 'incident/record' => 'rec', 'incident/event' => 'area'];
 const OVERPASS_KEEP_S = 7 * 86400; // abgelaufene Einträge so lange als Rückfall behalten, falls Overpass nicht erreichbar ist
+/* ---------- Anonymisierung in Stufen, einstellbar und automatisch (Issue #87) ---------- */
+// Stufen in dieser Reihenfolge: [Bezeichnung, Beschreibung, endgültig]. Einstellung anon_cfg je Stufe: on = angeboten (aus: weder von Hand noch automatisch),
+// real/ex = automatisch so viele Tage nach dem Einsatzende (null = nie). Spalten: view_anon, rp_anon, log_anon, txt_anon, part_anon; «Aufzeichnung löschen» setzt recorded 0.
+// Ohne gespeicherte Einstellung gelten die Fristen aus ANON_DEFAULT (Tage nach dem Einsatzende, [scharf, Übung]).
+const ANON_STEPS = [
+  'view' => ['Anzeige anonymisieren', 'Log, Replay und After Action Review zeigen für alle nur noch Bezeichnungen wie «Einsatzkraft 3», «Rettling 1» (in «Meine Einsätze» die Person selbst mit Namen). Die Daten bleiben unverändert, die Stufe lässt sich aufheben.', 0],
+  'replay' => ['Replay pseudonymisieren', 'Die Standortverläufe verlieren die Verbindung zu den Benutzerkonten, das Replay zeigt nur noch Bezeichnungen (mit Einrückoption und Spezialrolle). Nur bei aufgezeichneten Einsätzen.', 1],
+  'log' => ['Einsatzprotokoll pseudonymisieren', 'Log-Einträge und Nachrichten verlieren die Verbindung zu den Benutzerkonten, Namen im Text werden ersetzt, Beschreibungen der Rettlinge entfallen. Vornamen allein oder Spitznamen erkennt die Ersetzung nicht.', 1],
+  'texts' => ['Personenangaben und Freitexte entfernen', 'Namen und Beschreibungen von Rettlingen und externen Einsatzkräften werden auch in den Einsatzdaten ersetzt, Bezeichnungen von Markierungen und Bereichen anonymisiert und Nachrichtentexte gelöscht. Pseudonymisiert vorher das Einsatzprotokoll.', 1],
+  'parts' => ['Teilnahmen vom Konto lösen', 'Die Teilnahmen verlieren die Verbindung zu den Benutzerkonten: Der Einsatz fehlt danach in der Statistik pro Person und in «Meine Einsätze» der Teilnehmenden, Log, Replay und After Action Review zeigen nur noch Bezeichnungen. Pseudonymisiert vorher Replay und Einsatzprotokoll. Der Inhalt des After Action Reviews bleibt unverändert.', 1],
+  'track' => ['Aufzeichnung löschen', 'Standortverläufe, aufgezeichnete Zeiträume und Helikopterspuren werden gelöscht, ein Replay gibt es danach nicht mehr.', 1],
+];
+const ANON_DEFAULT = ['view' => [90, 30], 'replay' => [180, 90], 'log' => [365, 180], 'texts' => [730, 365], 'parts' => [730, 365], 'track' => [365, 180]]; // steht vor den öffentlichen Routen (legal, Issue #102)
 const EX_KINDS = ['pls' => 'PLS des Einsatzes', 'res' => 'Neuer Rettling', 'seen' => 'Rettling gesichtet', 'ext' => 'Neue externe Einsatzkraft', 'extdel' => 'Externe Einsatzkraft entfernen']; // Elemente vorbereiteter Übungen (Issue #29), steht vor public/state
 /* ---------- Helikopter / Luftlage (Issue #73) ---------- */
 // Positionen aus offenen ADS-B-Daten, immer über den Server (die Dienste erlauben keine Abfrage aus dem Browser, kein CORS), mit Datei-Cache je Einsatz
@@ -519,6 +533,23 @@ if ($route === 'login') {
   $t = bin2hex(random_bytes(24));
   $db->prepare("UPDATE users SET token=?, last_login=? WHERE id=?")->execute([$t, time(), $u['id']]);
   out(['token' => $t]);
+}
+
+/* ---------- Impressum, Lizenzen & Datenschutz (Issue #102) ---------- */
+// Seite legal.html, ohne Anmeldung. Angaben der Organisation in der Einstellung legal (JSON, LEGAL_FIELDS, legalCfg), geändert über settings/save (Recht legal).
+// Dazu der aktuelle Stand der Einstellungen, damit die Datenschutzerklärung stimmt: Funktionen, Overpass, Helikopter, Push, Fristen der Anonymisierung.
+const LEGAL_FIELDS = ['org' => [120, 'Organisation'], 'addr' => [400, 'Adresse'], 'contact' => [300, 'Kontakt'], 'resp' => [200, 'Verantwortliche Person'], 'privacy' => [300, 'Kontakt für Datenschutzfragen'],
+  'hosting' => [300, 'Hosting'], 'note' => [4000, 'Zusatztext Impressum'], 'privacy_note' => [4000, 'Zusatztext Datenschutz']];
+function legalCfg() { $v = json_decode(setting('legal', ''), true); $v = is_array($v) ? $v : []; $r = [];
+  foreach (LEGAL_FIELDS as $k => [$n]) $r[$k] = is_string($v[$k] ?? null) ? mb_substr(trim($v[$k]), 0, $n) : '';
+  return $r; }
+if ($route === 'legal') {
+  $air = airCfg(); $f0 = features(0); $f1 = features(1);
+  out(['cfg' => legalCfg(), 'updated' => (int)setting('legal_at', '0'),
+    'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'real' => $f0[$k], 'ex' => $f1[$k]], array_keys(FEATURES)),
+    'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120')],
+    'air' => ['on' => (int)$air['on'], 'public' => (int)$air['public'], 'replay' => (int)$air['replay'], 'src' => array_map(fn($k) => ['name' => AIR_SOURCES[$k]['name'], 'site' => AIR_SOURCES[$k]['site']], $air['src'])],
+    'push' => pushOk() ? 1 : 0, 'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'real' => $c['real'], 'ex' => $c['ex']], array_keys(anonCfg()), anonCfg())]);
 }
 
 // Öffentliche Ansicht (Public Mode): ohne Anmeldung, nur lesend, nur mit dem geheimen Link der Einsatzleitung (k = public_token).
@@ -1072,19 +1103,6 @@ function anonText($t, $c, $kind = '') {
   $r = preg_replace_callback($c['re'], fn($m) => $c['map'][$m[0]] ?? $m[0], $t);
   return $r ?? '(Text nicht anonymisierbar)';
 }
-/* ---------- Anonymisierung in Stufen, einstellbar und automatisch (Issue #87) ---------- */
-// Stufen in dieser Reihenfolge: [Bezeichnung, Beschreibung, endgültig]. Einstellung anon_cfg je Stufe: on = angeboten (aus: weder von Hand noch automatisch),
-// real/ex = automatisch so viele Tage nach dem Einsatzende (null = nie). Spalten: view_anon, rp_anon, log_anon, txt_anon, part_anon; «Aufzeichnung löschen» setzt recorded 0.
-// Ohne gespeicherte Einstellung gelten die Fristen aus ANON_DEFAULT (Tage nach dem Einsatzende, [scharf, Übung]).
-const ANON_STEPS = [
-  'view' => ['Anzeige anonymisieren', 'Log, Replay und After Action Review zeigen für alle nur noch Bezeichnungen wie «Einsatzkraft 3», «Rettling 1» (in «Meine Einsätze» die Person selbst mit Namen). Die Daten bleiben unverändert, die Stufe lässt sich aufheben.', 0],
-  'replay' => ['Replay pseudonymisieren', 'Die Standortverläufe verlieren die Verbindung zu den Benutzerkonten, das Replay zeigt nur noch Bezeichnungen (mit Einrückoption und Spezialrolle). Nur bei aufgezeichneten Einsätzen.', 1],
-  'log' => ['Einsatzprotokoll pseudonymisieren', 'Log-Einträge und Nachrichten verlieren die Verbindung zu den Benutzerkonten, Namen im Text werden ersetzt, Beschreibungen der Rettlinge entfallen. Vornamen allein oder Spitznamen erkennt die Ersetzung nicht.', 1],
-  'texts' => ['Personenangaben und Freitexte entfernen', 'Namen und Beschreibungen von Rettlingen und externen Einsatzkräften werden auch in den Einsatzdaten ersetzt, Bezeichnungen von Markierungen und Bereichen anonymisiert und Nachrichtentexte gelöscht. Pseudonymisiert vorher das Einsatzprotokoll.', 1],
-  'parts' => ['Teilnahmen vom Konto lösen', 'Die Teilnahmen verlieren die Verbindung zu den Benutzerkonten: Der Einsatz fehlt danach in der Statistik pro Person und in «Meine Einsätze» der Teilnehmenden, Log, Replay und After Action Review zeigen nur noch Bezeichnungen. Pseudonymisiert vorher Replay und Einsatzprotokoll. Der Inhalt des After Action Reviews bleibt unverändert.', 1],
-  'track' => ['Aufzeichnung löschen', 'Standortverläufe, aufgezeichnete Zeiträume und Helikopterspuren werden gelöscht, ein Replay gibt es danach nicht mehr.', 1],
-];
-const ANON_DEFAULT = ['view' => [90, 30], 'replay' => [180, 90], 'log' => [365, 180], 'texts' => [730, 365], 'parts' => [730, 365], 'track' => [365, 180]];
 function anonCfg() { $c = json_decode(setting('anon_cfg', ''), true); $c = is_array($c) ? $c : []; $r = [];
   $d = fn($v) => $v === null || $v === '' || !is_numeric($v) ? null : max(0, min(36500, (int)$v));
   foreach (ANON_STEPS as $k => $_) { $x = is_array($c[$k] ?? null) ? $c[$k] : null; $days = []; // fehlt die Stufe: Vorgabe des Typs, days je Einsatztyp (auch gelöschte, ihre Einsätze laufen weiter nach ihrer Frist)
@@ -2295,6 +2313,10 @@ switch ($route) {
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[]]); // Helikopter (Issue #73)
  case 'settings/save': // jede übergebene Einstellung braucht ihr Recht (SETTING_PERMS)
   foreach (SETTING_PERMS as $k => $p) if (isset($in[$k])) need($p);
+  if (isset($in['legal'])) { // Impressum & Datenschutz (Issue #102): nur bekannte Felder, gekürzt
+    if (!is_array($in['legal'])) fail('Ungültige Einstellung'); $v = legalCfg();
+    foreach (LEGAL_FIELDS as $k => [$n]) if (array_key_exists($k, $in['legal'])) $v[$k] = mb_substr(trim((string)$in['legal'][$k]), 0, $n);
+    setSetting('legal', json_encode($v, JSON_UNESCAPED_UNICODE)); setSetting('legal_at', (string)time()); }
   if (isset($in['air'])) setSetting('air', json_encode(airIn($in['air']), JSON_UNESCAPED_UNICODE)); // Helikopter (Issue #73)
   if (isset($in['my_runs'])) { if (!is_string($in['my_runs']) || !isset(MY_RUNS[$in['my_runs']])) fail('Ungültige Einstellung'); setSetting('my_runs', (string)$in['my_runs']); } // Meine Einsätze (Issue #61)
   if (isset($in['my_btns'])) { if (!is_array($in['my_btns'])) fail('Ungültige Einstellung'); $b = myBtns(); foreach (MY_BTNS as $k => $_) if (array_key_exists($k, $in['my_btns'])) $b[$k] = (int)!empty($in['my_btns'][$k]); setSetting('my_btns', json_encode($b)); }

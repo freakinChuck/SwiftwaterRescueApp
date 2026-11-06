@@ -90,6 +90,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EK-04** – «Mein Standort» unten im Menü immer in LV95 und WGS84 Grad/Min/Sek (#76).
 - **EK-05** – Fahrten mit Fahrzeug werden erkannt und im Log festgehalten («fährt von A nach B, ca. X km Luftlinie, Ø Y km/h»); Bewegungen auf dem Gewässer und manuell gesetzte Positionen zählen nicht (AG).
 - **EK-06** – «Suchgebiet erreicht» wird geloggt (AG).
+- **EK-07** – Der eigene Standort ist immer gesondert auf der Karte sichtbar (blauer Punkt mit Genauigkeitskreis), auch ohne laufenden Einsatz; ausgeblendet nur, solange man an einem laufenden Einsatz bzw. einer Übung mit einer Einrückoption ohne Standortfreigabe teilnimmt (#118).
 
 ## 7. Externe Einsatzkräfte (EX)
 
@@ -212,6 +213,15 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 20. Verwaltung (VW)
 
-- **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
+- **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen, Rechtliches), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
 - **VW-02** – Neue Einstellungen erscheinen als Unterpunkt einer Kategorie mit eigenem Recht (#32, #63).
 - **VW-03** – Hinweise verschwinden von selbst; nur Rückfragen brauchen einen Klick (AG).
+
+## 21. Rechtliches (RC)
+
+- **RC-01** – Eine Seite «Impressum, Lizenzen & Datenschutz» ist ohne Anmeldung erreichbar, verlinkt bei der Anmeldung, im Profil der Einsatz-App, in der öffentlichen Ansicht und in der Verwaltung (#102).
+- **RC-02** – Impressum mit den Angaben der betreibenden Organisation und den Verwendungseinschränkungen: kein Ersatz für Notrufnummern, Alarmierung ohne Gewähr, Standorte und Suchgebiet sind Schätzungen, Kartendaten und Luftfahrzeuge ohne Gewähr, nur nicht-kommerzielle Nutzung, keine Haftung (#102).
+- **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, Helikopter-Quellen) (#102).
+- **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen, Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen, Speicher im Gerät, Rechte der betroffenen Personen (#102).
+- **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
+

@@ -159,11 +159,11 @@ const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
 const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
 const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
-const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 function logout(){token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k))} // letzter Stand gehört der abgemeldeten Person
 /* ---------- Anmeldung ---------- */
-function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button></div>`;
+function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a></div>`;
   const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 /* ---------- Dialoge ---------- */
