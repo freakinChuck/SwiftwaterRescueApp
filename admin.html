@@ -69,6 +69,7 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .anum small{color:var(--mut);font-size:.75rem}.anum small b{color:var(--ex);font-weight:600}
 #sH .afld{display:flex;flex-direction:column;gap:.25rem;max-width:28rem;margin:.5rem 0}#sH .afld select{margin:0}#sH label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* Helikopter: je Eingabe eine Zeile */
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
+.explc{width:20px;height:20px;border-radius:3px;border:2px solid #fff;color:#fff;display:grid;place-items:center;font-size:.6rem;font-weight:700;box-shadow:0 0 0 1px #0008;text-shadow:0 0 2px #000;overflow:hidden;white-space:nowrap}
 .exleg{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.3rem;font-size:.8rem}.exleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;border:1px solid #fff;margin-right:.3rem;vertical-align:-.05rem}
 .pickmap{height:min(14rem,32dvh);isolation:isolate;border-radius:8px;border:1px solid var(--line);background:#0c1c25}
 /* Dialog «Element»: breit, links die Felder, rechts Standort und Karte; am Handy untereinander */
@@ -129,11 +130,11 @@ const NAV=[
   ['Einsatz',[['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
-  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir]]],
+  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['standorte','sPl','Feste Standorte',loadPlaces]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -238,6 +239,32 @@ async function loadExt(){const el=$('#sX');let xs,rs;try{[xs,rs]=await Promise.a
   // Vorschau der erkannten Koordinaten während der Eingabe
   const prev=d=>{const i=$('#xL',d);i.oninput=()=>{const p=parseC(i.value);$('#xLi',d).textContent=!i.value.trim()?'LV95, LV03 oder WGS84 dezimal. Leer = Standort beim Erfassen auf der Karte wählen.':p?'Erkannt: '+fmtC(p.lat,p.lon,'lv95')+' (LV95) · '+fmtC(p.lat,p.lon,'wgs84')+' (WGS84)':'Nicht erkannt'}};
   $('#xA').onclick=()=>prev(extStyleBind(edit({})));el.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>prev(extStyleBind(edit(xs.find(x=>x.id==b.dataset.x)))))}
+/* ---------- Feste Standorte (Issue #96): permanente (Recht cfg_map) und solche einer vorbereiteten Übung (plan_id, Recht ex_plan, nur vor dem Start) ---------- */
+const PLACE_COL='#1d7fd1',plSw=f=>`<span style="display:inline-block;width:.9em;height:.9em;border-radius:3px;vertical-align:-.1em;background:${esc(f.color||PLACE_COL)}"></span> ${esc(f.abbr||'')}`;
+// Dialog: Name, Beschreibung, Kürzel/Farbe, Standort (Eingabe oder Klick auf die Karte, übrige Standorte grau); done nach dem Speichern
+function placeDlg(f,planId,others,done){const perm=planId==null;
+  const d=dlg(f.id?'Standort bearbeiten':'Neuer fester Standort',`<div class="jgrid"><div class="jcol"><label class="mut">Name<input id="fN" maxlength="80" value="${esc(f.name||'')}" placeholder="z. B. Bootseinwasserung Aarburg"></label>
+    <label class="mut">Beschreibung (Zufahrt, Schlüssel, Telefon …)<textarea id="fD" rows="3" maxlength="500">${esc(f.descr||'')}</textarea></label>${extStyleFields(f)}
+    ${perm&&f.id?`<label class="chk"><input type="checkbox" id="fAc" ${f.active?'checked':''}> Aktiv (in Einsätzen und Übungen sichtbar)</label>`:''}</div>
+    <div class="jcol jm"><label class="mut">Standort<input id="fP" value="${f.lat!=null?esc(fmtC(f.lat,f.lon,'lv95')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div class="mut" id="fPi">LV95, LV03 oder WGS84 dezimal, oder auf der Karte antippen.</div><div id="fMap" class="pickmap"></div></div></div>`,
+    async d=>{const q=parseC($('#fP',d).value);if(!q)throw new Error('Standort fehlt oder nicht erkannt. Beispiele: 2635600 / 1245500 (LV95) oder 47.36, 7.91 (WGS84).');
+      await api('place/save',{id:f.id,plan_id:planId,name:$('#fN',d).value,descr:$('#fD',d).value,...extStyleVal(d),lat:+q.lat.toFixed(7),lon:+q.lon.toFixed(7),active:$('#fAc',d)?($('#fAc',d).checked?1:0):1});done()});
+  d.firstElementChild.classList.add('wide');extStyleBind(d);
+  const os=others.filter(x=>x.id!==f.id&&x.lat!=null),m=L.map($('#fMap',d)).setView(f.lat!=null?[f.lat,f.lon]:os.length?[os[0].lat,os[0].lon]:[46.8,8.2],f.lat!=null||os.length?14:8);
+  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}const B=MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE];L.tileLayer(B.url,{attribution:B.attr,maxZoom:B.maxZoom}).addTo(m);
+  os.forEach(x=>L.circleMarker([x.lat,x.lon],{radius:6,color:'#fff',weight:2,fillColor:'#8a9aa5',fillOpacity:.9}).bindTooltip(esc(x.name||x.label||'')).addTo(m));
+  let mk=null;const setMk=(la,lo)=>{if(!mk)mk=L.circleMarker([la,lo],{radius:9,color:'#fff',weight:3,fillColor:PLACE_COL,fillOpacity:1}).addTo(m);else mk.setLatLng([la,lo])};
+  setTimeout(()=>m.invalidateSize(),0);
+  const pi=$('#fP',d);pi.oninput=()=>{const q=parseC(pi.value);$('#fPi',d).textContent=!pi.value.trim()?'LV95, LV03 oder WGS84 dezimal, oder auf der Karte antippen.':q?'Erkannt: '+fmtC(q.lat,q.lon,'lv95')+' (LV95) · '+fmtC(q.lat,q.lon,'wgs84')+' (WGS84)':'Nicht erkannt';if(q){setMk(q.lat,q.lon);m.panTo([q.lat,q.lon])}};if(pi.value)pi.oninput();
+  m.on('click',e=>{pi.value=fmtC(e.latlng.lat,e.latlng.lng,'lv95');pi.oninput()});return d}
+async function loadPlaces(){const el=$('#sPl');let fs;try{fs=await api('places')}catch(e){el.innerHTML='<h2>Feste Standorte</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const cs=me&&(me.coord_sys&&me.coord_sys!=='none'?me.coord_sys:me.coord_default)||'lv95';
+  el.innerHTML=`<h2>Feste Standorte</h2><div class="mut">Orte, die bei jedem Einsatz und jeder Übung auf der Karte stehen, z. B. Bootseinwasserungen, Magazine, Treffpunkte oder Brücken. Sie erscheinen in der Einsatz-App als eigene Kategorie («Ansicht» und Fenster «Markierungen») und lassen sich dort ein- und ausblenden. Bei vorbereiteten Übungen wählt man, welche gelten, und kann eigene ergänzen. Die Funktion «Feste Standorte» lässt sich unter «Funktionen» je Art ausschalten.</div>
+    ${fs.length?`<div class="tw"><table><thead><tr><th>Name</th><th>Kürzel / Farbe</th><th>Standort</th><th></th></tr></thead><tbody>${fs.map(f=>`<tr${f.active?'':' class="mut"'}><td>${esc(f.name)}${f.descr?`<div class="mut">${esc(f.descr)}</div>`:''}${f.active?'':' <span class="mut">(deaktiviert)</span>'}</td><td>${plSw(f)}</td><td>${esc(fmtC(f.lat,f.lon,cs))}</td><td class="act"><button data-fe="${f.id}">Bearbeiten</button><button data-fr="${f.id}" aria-label="${esc(f.name)} entfernen" title="Entfernen">✕</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="mut">Noch keine festen Standorte.</div>'}
+    <div class="row"><button id="fA">Standort anlegen</button></div>`;
+  $('#fA').onclick=()=>placeDlg({},null,fs,loadPlaces);
+  el.querySelectorAll('[data-fe]').forEach(b=>b.onclick=()=>placeDlg(fs.find(f=>f.id==b.dataset.fe),null,fs,loadPlaces));
+  el.querySelectorAll('[data-fr]').forEach(b=>b.onclick=()=>{const f=fs.find(x=>x.id==b.dataset.fr);if(confirm(`Standort «${f.name}» endgültig entfernen? Deaktivieren (Bearbeiten) blendet ihn nur aus.`))api('place/remove',{id:f.id}).then(loadPlaces).catch(fail)})}
 /* ---------- Koordinatensystem (Standard für alle, pro Person in der Einsatz-App unter «Konto» übersteuerbar) ---------- */
 async function loadCoords(){const el=$('#sC');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Koordinaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   el.innerHTML=`<h2>Koordinaten</h2><label class="mut">Standard-Koordinatensystem für die Anzeige<select id="cS">${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===s.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
@@ -376,16 +403,20 @@ const EXK={pls:'PLS des Einsatzes',res:'Neuer Rettling',seen:'Rettling gesichtet
 const exOwn=x=>x.kind==='res'||x.kind==='seen'&&x.ref_id==null,exRN=x=>x.name||'Unbekannter Rettling';
 // Kartenvorschau je Übung: alle Elemente in der Übersicht, Sichtungen mit Linie vom Rettling; offene Vorschauen bleiben beim Neuladen offen
 const EXC={pls:'#ff5533',res:'#ff9f1c',seen:'#b06cff',ext:'#2a9d5c',extdel:'#7d8b93'},exMapOpen=new Set();
-function exMap(p,box){const m=L.map(box);let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}const B=MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE];L.tileLayer(B.url,{attribution:B.attr,maxZoom:B.maxZoom}).addTo(m);
+function exMap(p,box,fp){const m=L.map(box);let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}const B=MAP_PROVIDERS[sv]||MAP_PROVIDERS[DEFAULT_BASE];L.tileLayer(B.url,{attribution:B.attr,maxZoom:B.maxZoom}).addTo(m);
   const js=p.injects.filter(j=>j.lat!=null&&j.kind!=='extdel'); // Entfernen liegt auf der externen Einsatzkraft
   js.forEach(j=>{const r=j.kind==='seen'&&js.find(x=>x.id===j.ref_id);if(r)L.polyline([[r.lat,r.lon],[j.lat,j.lon]],{color:EXC.seen,weight:2,dashArray:'6 6'}).addTo(m)});
   js.forEach(j=>L.circleMarker([j.lat,j.lon],{radius:8,color:'#fff',weight:2,fillColor:EXC[j.kind],fillOpacity:j.released?.45:1})
     .bindTooltip(esc(j.label)+(j.released?' (freigegeben)':'')+p.injects.filter(x=>x.kind==='extdel'&&x.ref_id===j.id).map(x=>' · entfernt: '+esc(x.label)).join(''),{permanent:true,direction:'top',offset:[0,-8]}).addTo(m));
-  if(js.length)m.fitBounds(L.latLngBounds(js.map(j=>[j.lat,j.lon])),{padding:[40,40],maxZoom:15});else m.setView([46.8,8.2],8);
+  // feste Standorte der Übung (Issue #96): gewählte permanente und eigene, eckig in ihrer Farbe
+  const fs=exPlaces(p,fp||[]);fs.forEach(f=>L.marker([f.lat,f.lon],{icon:L.divIcon({className:'',html:`<div class="explc" style="background:${esc(f.color||PLACE_COL)}">${esc(f.abbr||'◆')}</div>`,iconSize:[20,20],iconAnchor:[10,10]})}).bindTooltip(esc(f.name),{permanent:true,direction:'right',offset:[10,0]}).addTo(m));
+  const all=js.map(j=>[j.lat,j.lon]).concat(fs.map(f=>[f.lat,f.lon]));
+  if(all.length)m.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:15});else m.setView([46.8,8.2],8);
   setTimeout(()=>m.invalidateSize(),0);return m}
+const exPlaces=(p,fp)=>fp.filter(f=>f.active&&(p.places==null||p.places.includes(f.id))).concat(p.own_places||[]);
 const pubLink=t=>location.origin+location.pathname.replace(/[^/]*$/,'')+'public.html?k='+t;
-async function loadEx(){const el=$('#sEx');let ps,us,ros,xt;try{[ps,us,ros,xt]=await Promise.all([api('ex/plans'),api('users'),api('roles'),api('ext_templates')])}catch(e){el.innerHTML='<h2>Übungen vorbereiten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  const un=id=>(us.find(u=>u.id===id)||{}).name||'?',stat=p=>p.incident_id==null?['vorbereitet','']:p.ended_at==null?['läuft','run']:['beendet','done'];
+async function loadEx(){const el=$('#sEx');let ps,us,ros,xt,fp;try{[ps,us,ros,xt,fp]=await Promise.all([api('ex/plans'),api('users'),api('roles'),api('ext_templates'),api('places')])}catch(e){el.innerHTML='<h2>Übungen vorbereiten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const fq=features('place'),un=id=>(us.find(u=>u.id===id)||{}).name||'?',stat=p=>p.incident_id==null?['vorbereitet','']:p.ended_at==null?['läuft','run']:['beendet','done'];
   const rn=id=>(ros.find(r=>r.id===id)||{}).name,inj=(p,j)=>{const ref=(j.kind==='seen'||j.kind==='extdel')&&p.injects.find(x=>x.id===j.ref_id),xk=j.kind==='ext'||j.kind==='extdel';
     return `<tr><td>${esc(j.label)}<small>${EXK[j.kind]}${j.kind==='res'?': '+esc(j.name):j.kind==='ext'?': '+esc(j.name)+(j.role_id?', '+esc(rn(j.role_id)||'?'):''):j.kind==='extdel'?': '+esc(ref?ref.name:'?'):ref?': '+esc(exRN(ref)):j.kind==='seen'?(j.name?': neu, '+esc(j.name):': unbekannt'):''}</small></td><td>${esc(fmtC(j.lat,j.lon,'lv95'))}<small>${xk?'':j.ago==null?'PLS-Zeitpunkt gibt die Übungsleitung an':j.ago?'PLS '+j.ago+' min vor der Freigabe':'PLS bei der Freigabe'}</small></td><td>${j.msg?esc(j.msg):'<span class="mut">keine Meldung</span>'}</td>
       <td>${j.released?'freigegeben '+esc(new Date(j.released*1000).toLocaleString('de-CH'))+'<small>'+esc(j.released_by?j.released_name||'':'automatisch')+'</small>':'<span class="mut">nicht freigegeben</span><small>'+(j.auto==null?'von Hand':'automatisch '+j.auto+' min nach dem Start')+'</small>'}</td>
@@ -396,10 +427,12 @@ async function loadEx(){const el=$('#sEx');let ps,us,ros,xt;try{[ps,us,ros,xt]=a
       <div class="mut">Aufgebotsmeldung: ${esc(p.message)}</div>
       <div class="mut">Übungsleitung: ${esc(p.leads.map(un).join(', '))} · Alarmiert: ${p.invite?esc(p.invite.length+(p.invite.length===1?' Person: ':' Personen: ')+p.invite.map(un).join(', ')):'alle'} · Aufzeichnung: ${p.record?'ja':'nein'} · Öffentliche Ansicht: ${p.public_token?(p.public_anon?'ja, anonym':'ja, mit Namen'):'nein'}</div>
       ${p.public_token&&!p.ended_at?`<div class="row"><input readonly value="${esc(pubLink(p.public_token))}" aria-label="Öffentlicher Link" onfocus="this.select()"><a class="btn" href="${esc(pubLink(p.public_token))}" target="_blank" rel="noopener">Öffnen</a></div>`:''}
+      ${fq?`<div class="mut">Feste Standorte: ${p.places==null?'alle aktiven':p.places.length?esc(fp.filter(f=>f.active&&p.places.includes(f.id)).map(f=>f.name).join(', ')||'keine'):'keine'}${p.own_places.length?' · eigene dieser Übung: '+p.own_places.length:''}</div>`:''}
+      ${fq&&p.own_places.length?`<div class="tw"><table><thead><tr><th>Standort dieser Übung</th><th>Kürzel / Farbe</th><th>Koordinaten</th><th></th></tr></thead><tbody>${p.own_places.map(f=>`<tr><td>${esc(f.name)}${f.descr?`<small>${esc(f.descr)}</small>`:''}</td><td>${plSw(f)}</td><td>${esc(fmtC(f.lat,f.lon,'lv95'))}</td><td class="act">${p.incident_id==null?`<button data-fpe="${f.id}" data-p="${p.id}">Bearbeiten</button><button data-fpr="${f.id}" data-p="${p.id}" aria-label="Standort entfernen" title="Entfernen">✕</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:''}
       <div class="tw"><table><thead><tr><th>Element</th><th>Standort</th><th>Meldung</th><th>Status</th><th></th></tr></thead><tbody>${p.injects.map(j=>inj(p,j)).join('')||'<tr><td colspan="5" class="mut">Noch keine Elemente</td></tr>'}</tbody></table></div>
       ${p.runs.length?`<div class="tw"><table><thead><tr><th>Durchführung</th><th>Dauer</th><th></th></tr></thead><tbody>${p.runs.map(r=>`<tr><td>${esc(new Date(r.alarm_at*1000).toLocaleString('de-CH'))}${r.id===p.incident_id?'':'<small>vor dem Zurücksetzen</small>'}</td><td>${r.ended_at?Math.round((r.ended_at-r.alarm_at)/60)+' min':'läuft'}</td><td class="act"><button data-xl="${r.id}" data-p="${p.id}">Log</button>${r.recorded?`<button data-rp="${r.id}">Replay</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:''}
-      <div data-mapbox="${p.id}" hidden><div class="exmap"></div><div class="mut exleg">${Object.entries(EXK).map(([k,t])=>`<span><i style="background:${EXC[k]}"></i>${t}</span>`).join('')}<span>blass = freigegeben · gestrichelt = Sichtung des Rettlings</span></div></div>
-      <div class="row">${p.injects.length?`<button data-pm="${p.id}" aria-pressed="false">Karte</button>`:''}${p.ended_at?'':`<button data-ja="${p.id}">+ Element</button>`}${p.incident_id==null?`<button data-pe="${p.id}">Übung bearbeiten</button>`:''}<button data-pc="${p.id}">Kopieren</button>${p.ended_at?`<button data-pz="${p.id}" title="Wieder vorbereitet, alle Elemente nicht freigegeben">Zurücksetzen</button>`:''}${p.incident_id!=null&&!p.ended_at?'':`<button data-pr="${p.id}">Entfernen</button>`}</div></div>`}).join('')||'<div class="mut">Noch keine vorbereiteten Übungen.</div>'}`;
+      <div data-mapbox="${p.id}" hidden><div class="exmap"></div><div class="mut exleg">${Object.entries(EXK).map(([k,t])=>`<span><i style="background:${EXC[k]}"></i>${t}</span>`).join('')}${fq?'<span><i style="background:'+PLACE_COL+';border-radius:2px"></i>Fester Standort</span>':''}<span>blass = freigegeben · gestrichelt = Sichtung des Rettlings</span></div></div>
+      <div class="row">${p.injects.length||fq&&exPlaces(p,fp).length?`<button data-pm="${p.id}" aria-pressed="false">Karte</button>`:''}${p.ended_at?'':`<button data-ja="${p.id}">+ Element</button>`}${fq&&p.incident_id==null?`<button data-fpa="${p.id}">+ Standort</button>`:''}${p.incident_id==null?`<button data-pe="${p.id}">Übung bearbeiten</button>`:''}<button data-pc="${p.id}">Kopieren</button>${p.ended_at?`<button data-pz="${p.id}" title="Wieder vorbereitet, alle Elemente nicht freigegeben">Zurücksetzen</button>`:''}${p.incident_id!=null&&!p.ended_at?'':`<button data-pr="${p.id}">Entfernen</button>`}</div></div>`}).join('')||'<div class="mut">Noch keine vorbereiteten Übungen.</div>'}`;
   // Personenauswahl (Übungsleitung, Aufgebotene): Suchfeld mit Trefferliste statt Häkchen pro Person, damit es auch mit vielen Benutzern übersichtlich bleibt
   // x = Präfix der Element-IDs, sel = Auswahl, skip = zusätzlich nicht wählbar; liefert die aktuelle Auswahl
   const pplPick=(d,x,sel,skip,empty)=>{const k=x.toLowerCase(),act=us.filter(u=>u.active),q=$('#'+x+'q',d);sel=sel.filter(id=>act.some(u=>u.id===id));
@@ -413,14 +446,16 @@ async function loadEx(){const el=$('#sEx');let ps,us,ros,xt;try{[ps,us,ros,xt]=a
     const d=dlg(p.id?'Übung bearbeiten':'Neue Übung',`<div class="jgrid"><div class="jcol"><label class="mut">Titel (für Verwaltung, Übungsleitung und Warteseite des öffentlichen Links)<input id="pT" maxlength="120" value="${esc(p.title||'')}" placeholder="z. B. Übung Aare Olten, Herbst"></label>
       <label class="mut">Aufgebotsmeldung (Alarm beim Start)<textarea id="pM" rows="4">${esc(p.message||'')}</textarea></label>
       ${features('rec')?`<label class="chk"><input type="checkbox" id="pR" ${p.record??1?'checked':''}> Aufzeichnen (Replay)</label>`:''}
+      ${fq&&fp.some(f=>f.active)?`<div class="mut">Feste Standorte in dieser Übung</div><div class="row"><label class="chk"><input type="radio" name="pFm" value="all" ${p.places==null?'checked':''}> Alle aktiven (auch künftige)</label><label class="chk"><input type="radio" name="pFm" value="sel" ${p.places==null?'':'checked'}> Nur gewählte</label></div>
+      <div id="pFb" class="jcol">${fp.filter(f=>f.active).map(f=>`<label class="chk"><input type="checkbox" data-pf="${f.id}" ${p.places==null||p.places.includes(f.id)?'checked':''}> ${plSw(f)} ${esc(f.name)}</label>`).join('')}</div>`:''}
       <label class="chk"><input type="checkbox" id="pP" ${p.public_token?'checked':''}> Öffentliche Ansicht vorbereiten (Link schon vor dem Start)</label><label class="chk"><input type="checkbox" id="pA" ${p.public_anon??1?'checked':''}> Anonym: Namen ausblenden</label></div>
       <div class="jcol"><div class="mut">Übungsleitung (Rechte der Einsatzleitung, nimmt nicht teil)</div><div id="pLs" class="lsel"></div><input id="pLq" type="search" autocomplete="off" placeholder="Person hinzufügen: Name oder Benutzername suchen" aria-label="Person als Übungsleitung hinzufügen"><div id="pLr" class="lres"></div>
       <div class="mut">Alarmieren beim Start (teilnehmen können trotzdem alle)</div><div class="row"><label class="chk"><input type="radio" name="pIm" value="all" ${p.invite?'':'checked'}> Alle</label><label class="chk"><input type="radio" name="pIm" value="sel" ${p.invite?'checked':''}> Nur aufgebotene Personen</label></div>
       <div id="pIb" class="jcol"><div id="pIs" class="lsel"></div><input id="pIq" type="search" autocomplete="off" placeholder="Person aufbieten: Name oder Benutzername suchen" aria-label="Person aufbieten"><div id="pIr" class="lres"></div></div></div></div>`,
-    async d=>{await api('ex/plan/save',{id:p.id,title:$('#pT',d).value,message:$('#pM',d).value,leads:L.get(),invite:$('[name=pIm]:checked',d).value==='sel'?I.get():null,record:$('#pR',d)?($('#pR',d).checked?1:0):(p.record??1),public:$('#pP',d).checked?1:0,public_anon:$('#pA',d).checked?1:0});loadEx()});
+    async d=>{await api('ex/plan/save',{id:p.id,title:$('#pT',d).value,message:$('#pM',d).value,leads:L.get(),invite:$('[name=pIm]:checked',d).value==='sel'?I.get():null,record:$('#pR',d)?($('#pR',d).checked?1:0):(p.record??1),public:$('#pP',d).checked?1:0,public_anon:$('#pA',d).checked?1:0,...($('[name=pFm]:checked',d)?{places:$('[name=pFm]:checked',d).value==='all'?null:[...d.querySelectorAll('[data-pf]:checked')].map(x=>+x.dataset.pf)}:{})});loadEx()});
     d.firstElementChild.classList.add('wide');L=pplPick(d,'pL',p.leads||[me.id],()=>[],'Noch niemand ausgewählt');I=pplPick(d,'pI',p.invite||[],()=>L.get(),'Noch niemand aufgeboten');
     // die Übungsleitung wird nicht alarmiert, also nicht aufbieten; Liste nur bei «Nur aufgebotene Personen»
-    const im=()=>{$('#pIb',d).hidden=$('[name=pIm]:checked',d).value!=='sel'};d.addEventListener('change',e=>{if(e.target.name==='pIm')im()});im();
+    const im=()=>{$('#pIb',d).hidden=$('[name=pIm]:checked',d).value!=='sel';if($('#pFb',d))$('#pFb',d).hidden=$('[name=pFm]:checked',d).value!=='sel'};d.addEventListener('change',e=>{if(e.target.name==='pIm'||e.target.name==='pFm')im()});im();
     d.addEventListener('click',e=>{if(e.target.closest('[data-pla]')){const l=L.get(),v=I.get();for(let k=v.length-1;k>=0;k--)if(l.includes(v[k]))v.splice(k,1);I.draw()}})};
   // Sichtung: neuer Rettling, unbekannter Rettling oder einer, den ein anderes Element der Übung erfasst
   // externe Einsatzkraft: Vorlage aus der Verwaltung übernehmen (Name, Beschreibung, Rolle, Kürzel, Farbe, Standort falls vorhanden); entfernen: eine externe Einsatzkraft dieser Übung
@@ -465,9 +500,14 @@ async function loadEx(){const el=$('#sEx');let ps,us,ros,xt;try{[ps,us,ros,xt]=a
     m.on('click',e=>{if($('#jK',d).value==='extdel')return;pi.value=fmtC(e.latlng.lat,e.latlng.lng,'lv95');pi.oninput()});kind()};
   const P=id=>ps.find(p=>p.id===+id);
   const mapT=(b,on)=>{const id=+b.dataset.pm,box=el.querySelector(`[data-mapbox="${id}"]`);box.hidden=!on;b.textContent=on?'Karte ausblenden':'Karte';b.setAttribute('aria-pressed',on);
-    if(on){exMapOpen.add(id);if(!box._m)box._m=exMap(P(id),box.firstElementChild)}else exMapOpen.delete(id)};
+    if(on){exMapOpen.add(id);if(!box._m)box._m=exMap(P(id),box.firstElementChild,fp)}else exMapOpen.delete(id)};
   el.querySelectorAll('[data-pm]').forEach(b=>{b.onclick=()=>mapT(b,b.getAttribute('aria-pressed')!=='true');if(exMapOpen.has(+b.dataset.pm))mapT(b,true)});
   $('#exA').onclick=()=>editP({});
+  // eigene feste Standorte einer Übung (Issue #96)
+  const fOth=p=>exPlaces(p,fp).concat(p.injects.filter(j=>j.lat!=null));
+  el.querySelectorAll('[data-fpa]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.fpa);placeDlg({},p.id,fOth(p),loadEx)});
+  el.querySelectorAll('[data-fpe]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p);placeDlg(p.own_places.find(f=>f.id==b.dataset.fpe),p.id,fOth(p),loadEx)});
+  el.querySelectorAll('[data-fpr]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p),f=p.own_places.find(x=>x.id==b.dataset.fpr);if(confirm(`Standort «${f.name}» aus der Übung entfernen?`))api('place/remove',{id:f.id}).then(loadEx).catch(fail)});
   el.querySelectorAll('[data-pe]').forEach(b=>b.onclick=()=>editP(P(b.dataset.pe)));
   el.querySelectorAll('[data-ja]').forEach(b=>b.onclick=()=>editJ(P(b.dataset.ja),{}));
   el.querySelectorAll('[data-ji]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p);editJ(p,p.injects.find(j=>j.id===+b.dataset.ji))});

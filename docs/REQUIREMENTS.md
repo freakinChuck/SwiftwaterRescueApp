@@ -63,7 +63,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **KA-01** – Karte im Vollbild; alle Bedienelemente in einem versteckten Menü (☰) (AG).
 - **KA-02** – Grundkarte swisstopo Luftbild (Standard), umschaltbar auf Landeskarte und OpenStreetMap; Anbieter leicht austauschbar; Wahl pro Gerät gemerkt (AG, #34).
-- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Nachrichten-Markierungen, Helikopter), «Alle ein-/ausblenden», pro Gerät gemerkt (#34).
+- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Nachrichten-Markierungen, Helikopter, Feste Standorte), «Alle ein-/ausblenden», pro Gerät gemerkt (#34).
 - **KA-04** – Karte drehbar (zwei Finger, Shift + Mausrad, Kompass); Klick auf den Kompass richtet nach Norden aus (AG).
 - **KA-05** – Startansicht beim Öffnen eines Einsatzes: Übersicht über alle aktiven Positionen (AG).
 - **KA-06** – Kamerafokus: Suchgebiet (ganz und je Teilgebiet), Einsatzkräfte, Auto-Übersicht (hält alle sichtbaren aktiven Positionen im Bild) (AG, #51).
@@ -121,7 +121,9 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 ## 11. Markierungen und Bereiche (MB)
 
 - **MB-01** – Die Einsatzleitung setzt Markierungen (Punkt) und Bereiche (Polygon, 3–200 Eckpunkte) mit Bezeichnung und Farbe; für alle sichtbar (AG).
-- **MB-02** – Fenster «Markierungen»: PLS zuoberst, danach Markierungen und Bereiche, je Eintrag und Gruppe ein-/ausblendbar, «Zeigen» (AG).
+- **MB-02** – Fenster «Markierungen»: PLS zuoberst, danach feste Standorte, Markierungen und Bereiche, je Eintrag und Gruppe ein-/ausblendbar, «Zeigen» (AG, #96).
+- **MB-03** – Feste Standorte: in der Verwaltung gepflegte Orte (Name, Beschreibung, Kürzel, Farbe, Standort, aktiv/deaktiviert), z. B. Bootseinwasserungen, Magazine oder Treffpunkte; erscheinen in jedem Einsatz und jeder Übung auf der Karte und im Fenster «Markierungen», mit Navigation (#96).
+- **MB-04** – Vorbereitete Übungen wählen, welche festen Standorte gelten (alle aktiven oder eine Auswahl), und können bis zum Start eigene Standorte ergänzen; sichtbar in der Vorschau auf der Karte (#96).
 - PLS auf eine Markierung verschieben (**offen**).
 
 ## 12. Werkzeuge (WZ)
@@ -140,7 +142,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je für scharfe Einsätze und Übungen ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation (#35, #79).
+- **FU-01** – In der Verwaltung je für scharfe Einsätze und Übungen ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte (#35, #79, #96).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
 
