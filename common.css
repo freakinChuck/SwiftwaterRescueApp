@@ -41,3 +41,6 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 .tst.info{border-left-color:var(--ex)}.tst.err{border-left-color:var(--alarm)}.tst.out{opacity:0}
 @keyframes tstIn{from{opacity:0;transform:translateY(.6rem)}}
 .lglk{display:block;text-align:center;font-size:.85rem;margin-top:.4rem}header .lglk{display:inline;margin:0;font-size:.8rem}
+
+/* Auswahl der Grundkarte in kleinen Karten der Verwaltung (addBases, #96) */
+.basesel select{font-size:.8rem;padding:.2rem .3rem;border:0;border-radius:4px;background:#fff;color:#122;max-width:11rem}
