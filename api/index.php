@@ -84,12 +84,13 @@ foreach ([
   "CREATE TABLE IF NOT EXISTS aar_arch_part(incident_id INT, n INT, data MEDIUMTEXT, PRIMARY KEY(incident_id,n))",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
-// Aufgebot (Issue #90): incidents.invite = beim Start aufgelöste User-IDs (NULL = alle), inv_groups = aufgebotene Gruppen (JSON), type_id = Einsatztyp, open_join = Einsatzleitung erlaubt allen den Beitritt;
+// Aufgebot (Issue #90): incidents.invite = beim Start aufgelöste User-IDs (NULL = alle), inv_groups = aufgebotene Gruppen (JSON, gn = Namen gelöschter Gruppen), type_id = Einsatztyp (type_label = Name eines gelöschten),
+// inc_groups.def_real/def_ex = im Startformular ohne Einsatztyp vorausgewählt; open_join = Einsatzleitung erlaubt allen den Beitritt;
 // ex_plans.grp_ids = aufgebotene Gruppen einer vorbereiteten Übung (zusätzlich zu invite = Einzelpersonen); uroles.grp_ids = Gruppen, die diese Rolle aufbieten darf (NULL = alle)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL"], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'type_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
+foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL"], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'type_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', "type_label $tx NULL"], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_groups' => ['def_real INT DEFAULT 0', 'def_ex INT DEFAULT 0'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
 try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
@@ -627,11 +628,11 @@ function incAllowed($inc) { global $uid; if ((int)$inc['is_exercise'] || (int)($
 // Einsatzgruppen (Issue #90)
 function idsIn($v) { return array_values(array_unique(array_filter(array_map('intval', (array)$v), fn($x) => $x > 0))); }
 function qm($a) { return implode(',', array_fill(0, count($a), '?')); }
-function grpRows($active = false) { global $db; return array_map(fn($g) => ints($g, ['id', 'pos', 'active', 'for_real']), $db->query("SELECT id,name,color,pos,active,for_real FROM inc_groups" . ($active ? ' WHERE active=1' : '') . " ORDER BY active DESC, pos, name")->fetchAll()); }
+function grpRows($active = false) { global $db; return array_map(fn($g) => ints($g, ['id', 'pos', 'active', 'for_real', 'def_real', 'def_ex']), $db->query("SELECT id,name,color,pos,active,for_real,def_real,def_ex FROM inc_groups" . ($active ? ' WHERE active=1' : '') . " ORDER BY active DESC, pos, name")->fetchAll()); }
 function grpMembers($gids) { global $db; if (!$gids) return []; // aktive Personen der aktiven Gruppen
   $s = $db->prepare("SELECT DISTINCT m.user_id FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id JOIN users u ON u.id=m.user_id WHERE g.active=1 AND u.active=1 AND m.group_id IN (" . qm($gids) . ")"); $s->execute($gids);
   return array_map('intval', array_column($s->fetchAll(), 'user_id')); }
-function grpNames($gids) { global $db; if (!$gids) return []; $s = $db->prepare("SELECT id,name FROM inc_groups WHERE id IN (" . qm($gids) . ")"); $s->execute($gids); $n = array_column($s->fetchAll(), 'name', 'id');
+function grpNames($gids, $gone = []) { global $db; if (!$gids) return []; $s = $db->prepare("SELECT id,name FROM inc_groups WHERE id IN (" . qm($gids) . ")"); $s->execute($gids); $n = array_column($s->fetchAll(), 'name', 'id') + (array)$gone; // gone = Namen gelöschter Gruppen
   return array_values(array_filter(array_map(fn($g) => $n[$g] ?? null, $gids))); }
 // Gruppen, die die Person aufbieten darf (Issue #90, Antwort 2): nur Benutzerrollen mit dem Recht zum Starten zählen; NULL = alle (auch «alle Personen alarmieren»)
 function startGroups($ex) { global $db, $uid, $me; if ($me['is_admin']) return null; $perm = $ex ? 'ex_start' : 'inc_start'; $r = [];
@@ -652,8 +653,8 @@ function resolveInvite($ex, $groups, $persons, $allowed) { global $db;
   return [array_values(array_unique(array_merge(grpMembers($g), $p))), $g, $p]; }
 // Aufgebot zur Anzeige: null = alle, sonst Gruppen (Namen), Anzahl Einzelpersonen und Anzahl Aufgebotene
 function invInfo($inc) { $v = incInvite($inc); if ($v === null) return null; $g = json_decode($inc['inv_groups'] ?? 'null', true) ?: [];
-  return ['groups' => grpNames(idsIn($g['g'] ?? [])), 'persons' => count($g['p'] ?? []), 'n' => count($v)]; }
-function typeName($id) { global $db; if (!$id) return null; $s = $db->prepare("SELECT name FROM inc_types WHERE id=?"); $s->execute([(int)$id]); $r = $s->fetch(); $s->closeCursor(); return $r['name'] ?? null; }
+  return ['groups' => grpNames(idsIn($g['g'] ?? []), $g['gn'] ?? []), 'persons' => count($g['p'] ?? []), 'n' => count($v)]; }
+function typeName($id, $label = null) { global $db; if (!$id) return null; $s = $db->prepare("SELECT name FROM inc_types WHERE id=?"); $s->execute([(int)$id]); $r = $s->fetch(); $s->closeCursor(); return $r['name'] ?? $label; }
 function myGroups() { global $db, $uid; $s = $db->prepare("SELECT g.id,g.name,g.color,g.for_real FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id WHERE m.user_id=? AND g.active=1 ORDER BY g.pos, g.name"); $s->execute([$uid]); return array_map(fn($g) => ints($g, ['id', 'for_real']), $s->fetchAll()); }
 function invText($g, $p) { $t = grpNames($g); if ($p) $t[] = count($p) === 1 ? '1 Einzelperson' : count($p) . ' Einzelpersonen'; return implode(', ', $t); }
 function typeRow($id, $ex) { global $db; if (!$id) return null; $s = $db->prepare("SELECT * FROM inc_types WHERE id=? AND active=1"); $s->execute([(int)$id]); $t = $s->fetch();
@@ -1247,7 +1248,7 @@ switch ($route) {
   // Öffentliche Ansicht: alle sehen, ob sie eingeschaltet ist (public); den geheimen Link (public_token) nur die Einsatzleitung
   $inc['public'] = $inc['public_token'] !== null ? 1 : 0; $inc['public_anon'] = (int)$inc['public_anon']; $inc['public_log'] = (int)$inc['public_log'];
   if (!canManage($inc)) unset($inc['public_token']);
-  $inc['aufgebot'] = invInfo($inc); $inc['type_name'] = typeName($inc['type_id']); $inc['open_join'] = (int)$inc['open_join']; unset($inc['invite'], $inc['inv_groups'], $inc['type_id']); // Aufgebot (Issue #90)
+  $inc['aufgebot'] = invInfo($inc); $inc['type_name'] = typeName($inc['type_id'], $inc['type_label'] ?? null); $inc['open_join'] = (int)$inc['open_join']; unset($inc['invite'], $inc['inv_groups'], $inc['type_id'], $inc['type_label']); // Aufgebot (Issue #90)
   // Externe Einsatzkräfte für alle; Vorlagen nur für die Einsatzleitung (nur sie erfasst Externe)
   // Einsatz-Vorlagen: von Hand erfasste Externe dieses Einsatzes (auch entfernte), je Name die neuste, ohne Standort und ohne Namen der Verwaltungsvorlagen
   $ext = $F['ext'] ? incExternals($id) : []; $tpl = []; $itpl = [];
@@ -1868,7 +1869,7 @@ switch ($route) {
 
  case 'my/incidents': // Meine Einsätze (Issue #61): beendete Einsätze, an denen die Person teilgenommen hat (nicht abgelehnt), für Log und Replay
   if (myRuns() === 'off') fail('Die Einsicht in eigene Einsätze ist ausgeschaltet', 403);
-  $s = $db->prepare("SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,(SELECT t.name FROM inc_types t WHERE t.id=i.type_id) type_name,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,m.name mode_name,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1 AND NOT EXISTS (SELECT 1 FROM aar_arch r WHERE r.incident_id=i.id)) aar_rel,(SELECT COUNT(*) FROM aar_arch r WHERE r.incident_id=i.id) aar_arch,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1) aar_at
+  $s = $db->prepare("SELECT i.id,i.message,i.alarm_at,i.ended_at,i.is_exercise,COALESCE((SELECT t.name FROM inc_types t WHERE t.id=i.type_id),i.type_label) type_name,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,m.name mode_name,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1 AND NOT EXISTS (SELECT 1 FROM aar_arch r WHERE r.incident_id=i.id)) aar_rel,(SELECT COUNT(*) FROM aar_arch r WHERE r.incident_id=i.id) aar_arch,(SELECT a.rel_at FROM aar a WHERE a.incident_id=i.id AND a.status=1) aar_at
     FROM participants p JOIN incidents i ON i.id=p.incident_id LEFT JOIN modes m ON m.code=p.mode WHERE p.user_id=? AND p.mode<>'declined' AND i.ended_at IS NOT NULL ORDER BY i.alarm_at DESC, i.id DESC");
   $s->execute([$uid]); $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'is_exercise', 'recorded', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'aar_rel', 'aar_arch', 'aar_at']), $s->fetchAll()); // aar_rel: Review verfügbar (Zeitpunkt der Freigabe, Issue #55); aar_at: freigegeben, auch wenn gesichert
   if (myRuns() === 'anon') foreach ($rows as &$r) $r['message'] = anonText($r['message'], anonCtx($r['id'], $uid)); // Alarmmeldung wie im Log
@@ -1882,7 +1883,7 @@ switch ($route) {
   out(['rows' => psRows($uid)]);
  case 'stats': need('stats', 'aar', 'aar_rel', 'aar_arch'); // mit nur aar (After Action Review, Issue #55) ohne Log und Replay, die prüfen incView
   $rows = array_map(fn($r) => ints($r, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'accepted', 'declined', 'first_accept', 'first_area', 'rp_anon', 'log_anon', 'view_anon', 'txt_anon', 'part_anon', 'aar_at', 'aar_st', 'aar_arch', 'aar_lock']), $db->query(
-   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.type_id,i.invite,i.inv_groups,(SELECT t.name FROM inc_types t WHERE t.id=i.type_id) type_name,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,i.part_anon,u.name creator,(SELECT a.updated FROM aar a WHERE a.incident_id=i.id) aar_at,(SELECT a.status FROM aar a WHERE a.incident_id=i.id) aar_st,(SELECT COUNT(*) FROM aar_arch r WHERE r.incident_id=i.id) aar_arch,CASE WHEN " . AAR_LOCK . " THEN 1 ELSE 0 END aar_lock,
+   "SELECT i.id,i.message,i.alarm_at,i.ended_at,i.created_by,i.is_exercise,i.type_id,i.invite,i.inv_groups,COALESCE((SELECT t.name FROM inc_types t WHERE t.id=i.type_id),i.type_label) type_name,i.record,i.recorded,CASE WHEN i.rp_anon IS NULL THEN 0 ELSE 1 END rp_anon,i.log_anon,i.view_anon,i.txt_anon,i.part_anon,u.name creator,(SELECT a.updated FROM aar a WHERE a.incident_id=i.id) aar_at,(SELECT a.status FROM aar a WHERE a.incident_id=i.id) aar_st,(SELECT COUNT(*) FROM aar_arch r WHERE r.incident_id=i.id) aar_arch,CASE WHEN " . AAR_LOCK . " THEN 1 ELSE 0 END aar_lock,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') accepted,
      (SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode='declined') declined,
      (SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='accept') first_accept,
@@ -2141,17 +2142,29 @@ switch ($route) {
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
   $col = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($in['color'] ?? '')) ? $in['color'] : '#2563eb';
   $id = (int)($in['id'] ?? 0); $fr = empty($in['for_real']) ? 0 : 1; $ac = array_key_exists('active', $in) ? (empty($in['active']) ? 0 : 1) : 1;
+  $dr = $fr && !empty($in['def_real']) ? 1 : 0; $de = empty($in['def_ex']) ? 0 : 1; // Vorauswahl je Art (scharf nur, wenn für scharfe Einsätze aufbietbar)
   $s = $db->prepare("SELECT COUNT(*) c FROM inc_groups WHERE name=? AND id<>?"); $s->execute([$nm, $id]); if ($s->fetch()['c']) fail('Eine Einsatzgruppe mit diesem Namen gibt es schon');
   $db->beginTransaction();
   if ($id) { $s = $db->prepare("SELECT id FROM inc_groups WHERE id=?"); $s->execute([$id]); if (!$s->fetch()) { $db->rollBack(); fail('Einsatzgruppe nicht gefunden', 404); }
-    $db->prepare("UPDATE inc_groups SET name=?,color=?,for_real=?,active=? WHERE id=?")->execute([$nm, $col, $fr, $ac, $id]); }
-  else { $db->prepare("INSERT INTO inc_groups(name,color,for_real,active,pos) VALUES(?,?,?,?,?)")->execute([$nm, $col, $fr, $ac, (int)$db->query("SELECT COALESCE(MAX(pos),0)+1 m FROM inc_groups")->fetch()['m']]); $id = (int)$db->lastInsertId(); }
+    $db->prepare("UPDATE inc_groups SET name=?,color=?,for_real=?,active=?,def_real=?,def_ex=? WHERE id=?")->execute([$nm, $col, $fr, $ac, $dr, $de, $id]); }
+  else { $db->prepare("INSERT INTO inc_groups(name,color,for_real,active,def_real,def_ex,pos) VALUES(?,?,?,?,?,?,?)")->execute([$nm, $col, $fr, $ac, $dr, $de, (int)$db->query("SELECT COALESCE(MAX(pos),0)+1 m FROM inc_groups")->fetch()['m']]); $id = (int)$db->lastInsertId(); }
   if (array_key_exists('members', $in)) { $mb = idsIn($in['members']);
     if ($mb) { $s = $db->prepare("SELECT COUNT(*) c FROM users WHERE id IN (" . qm($mb) . ")"); $s->execute($mb); if ((int)$s->fetch()['c'] !== count($mb)) { $db->rollBack(); fail('Unbekannte Person'); } }
     $db->prepare("DELETE FROM inc_group_members WHERE group_id=?")->execute([$id]);
     $st = $db->prepare("INSERT INTO inc_group_members(group_id,user_id) VALUES(?,?)"); foreach ($mb as $u) $st->execute([$id, $u]); }
   $db->commit();
   out(['ok' => true, 'id' => $id]);
+ case 'group/delete': need('groups'); // endgültig löschen (Issue #90): Mitglieder, Vorauswahl der Einsatztypen, Aufgebot vorbereiteter Übungen und Einschränkungen der Benutzerrollen verlieren die Gruppe;
+  // Einsätze behalten den Namen (inv_groups.gn), ihr Aufgebot ist ohnehin beim Start aufgelöst
+  $id = (int)($in['id'] ?? 0); $s = $db->prepare("SELECT name FROM inc_groups WHERE id=?"); $s->execute([$id]); $g = $s->fetch(); if (!$g) fail('Einsatzgruppe nicht gefunden', 404);
+  $db->beginTransaction();
+  $drop = function ($tbl, $col, $null) use ($db, $id) { foreach ($db->query("SELECT id,$col FROM $tbl WHERE $col IS NOT NULL")->fetchAll() as $x) { $v = json_decode($x[$col], true); if (!is_array($v) || !in_array($id, array_map('intval', $v), true)) continue;
+    $db->prepare("UPDATE $tbl SET $col=? WHERE id=?")->execute([json_encode(array_values(array_diff(idsIn($v), [$id]))), $x['id']]); } };
+  $drop('inc_types', 'grp_ids', 0); $drop('ex_plans', 'grp_ids', 0); $drop('uroles', 'grp_ids', 1);
+  foreach ($db->query("SELECT id,inv_groups FROM incidents WHERE inv_groups IS NOT NULL")->fetchAll() as $x) { $v = json_decode($x['inv_groups'], true); if (!in_array($id, idsIn($v['g'] ?? []), true)) continue;
+    $v['gn'] = (array)($v['gn'] ?? []); $v['gn'][$id] = $g['name']; $db->prepare("UPDATE incidents SET inv_groups=? WHERE id=?")->execute([json_encode($v), $x['id']]); }
+  $db->prepare("DELETE FROM inc_group_members WHERE group_id=?")->execute([$id]); $db->prepare("DELETE FROM inc_groups WHERE id=?")->execute([$id]);
+  $db->commit(); out(['ok' => true]);
  case 'group/order': need('groups'); // ids = Reihenfolge
   $st = $db->prepare("UPDATE inc_groups SET pos=? WHERE id=?"); foreach (idsIn($in['ids'] ?? []) as $i => $g) $st->execute([$i + 1, $g]); out(['ok' => true]);
  case 'inc_types': need('cfg_inc'); // alle Einsatztypen, auch deaktivierte
@@ -2165,6 +2178,10 @@ switch ($route) {
   if ($id) $db->prepare("UPDATE inc_types SET name=?,applies=?,grp_ids=?,active=? WHERE id=?")->execute([$nm, $ap, json_encode($gi), $ac, $id]);
   else { $db->prepare("INSERT INTO inc_types(name,applies,grp_ids,active,pos) VALUES(?,?,?,?,?)")->execute([$nm, $ap, json_encode($gi), $ac, (int)$db->query("SELECT COALESCE(MAX(pos),0)+1 m FROM inc_types")->fetch()['m']]); $id = (int)$db->lastInsertId(); }
   out(['ok' => true, 'id' => $id]);
+ case 'inc_type/delete': need('cfg_inc'); // endgültig löschen (Issue #90): Einsätze behalten den Namen (type_label)
+  $id = (int)($in['id'] ?? 0); $s = $db->prepare("SELECT name FROM inc_types WHERE id=?"); $s->execute([$id]); $t = $s->fetch(); if (!$t) fail('Einsatztyp nicht gefunden', 404);
+  $db->beginTransaction(); $db->prepare("UPDATE incidents SET type_label=? WHERE type_id=?")->execute([$t['name'], $id]); $db->prepare("DELETE FROM inc_types WHERE id=?")->execute([$id]); $db->commit();
+  out(['ok' => true]);
  case 'inc_type/order': need('cfg_inc');
   $st = $db->prepare("UPDATE inc_types SET pos=? WHERE id=?"); foreach (idsIn($in['ids'] ?? []) as $i => $t) $st->execute([$i + 1, $t]); out(['ok' => true]);
  case 'role/save': need('cfg_inc');
