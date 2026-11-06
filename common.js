@@ -155,11 +155,11 @@ function parseC(s){const n=String(s||'').replace(/['’]/g,'').trim().split(/\s*
   return{lat:(16.9023892+3.238272*x-.270978*y*y-.002528*x*x-.0447*y*y*x-.014*x*x*x)*100/36,lon:(2.6779094+4.728982*y+.791484*y*x+.1306*y*x*x-.0436*y*y*y)*100/36}}
 // Rechte der angemeldeten Person aus ihren Benutzerrollen (Issue #63, me.perms vom Server); nur zum Ausblenden, der Server prüft selbst
 const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
-const ADMIN_PERMS=['users','uroles','cfg_inc','ex_plan','cfg_func','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','cfg_inc','ex_plan','cfg_func','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 function logout(){token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k))} // letzter Stand gehört der abgemeldeten Person
 /* ---------- Anmeldung ---------- */
-function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button></div>`;
+function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a></div>`;
   const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 /* ---------- Dialoge ---------- */
