@@ -155,6 +155,10 @@ function parseC(s){const n=String(s||'').replace(/['’]/g,'').trim().split(/\s*
   return{lat:(16.9023892+3.238272*x-.270978*y*y-.002528*x*x-.0447*y*y*x-.014*x*x*x)*100/36,lon:(2.6779094+4.728982*y+.791484*y*x+.1306*y*x*x-.0436*y*y*y)*100/36}}
 // Rechte der angemeldeten Person aus ihren Benutzerrollen (Issue #63, me.perms vom Server); nur zum Ausblenden, der Server prüft selbst
 const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
+// Einsatztyp einer Zeile (Issue #90): Name und Farbe vom Server; ältere gesicherte Reviews kennen nur is_exercise
+const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
+const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
+const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
 const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 function logout(){token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k))} // letzter Stand gehört der abgemeldeten Person
