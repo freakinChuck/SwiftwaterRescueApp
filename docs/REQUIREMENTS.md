@@ -63,7 +63,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EI-14** – Beim Start werden Einsatzgruppen aufgeboten; nur ihre Mitglieder werden alarmiert. Bei Einsatztypen, die das erlauben, zusätzlich einzelne Personen. Starten und aufgeboten werden (auch als Einzelperson, über «Alle aufbietbaren Personen» und in vorbereiteten Übungen) kann nur, wer einer beim Einsatztyp aufbietbaren Einsatzgruppe angehört; das gilt auch für den Systemadministrator. Die Übungsleitung startet ihre vorbereitete Übung ohne diese Bedingung. Ohne Einsatzgruppen werden alle alarmiert (#90).
 - **EI-15** – Welche Einsatzgruppen eine Person aufbieten darf, legen ihre Benutzerrollen fest; «Alle aufbietbaren Personen» nur, wer alle Gruppen aufbieten darf (#90).
 - **EI-16** – Einsatztypen sind frei konfigurierbar und erweiterbar (Name, Farbe, Reihenfolge, aktiv); angelegt «Einsatz» und «Übung» mit den bisherigen Einstellungen. Je Typ einstellbar: Alarmstufe, Startrecht je Benutzerrolle, aufbietbare und vorausgewählte Einsatzgruppen, Einzelpersonen, Sichtbarkeit für Nicht-Aufgebotene, vorbereitete Übungen, Funktionen, Vorauswahl von Aufzeichnung und Helikopter, Fristen der Anonymisierung. Ein neuer Typ übernimmt die Einstellungen von einem bestehenden. Löschen ist möglich, bisherige Einsätze behalten Name, Farbe und Fristen; mindestens ein Typ bleibt aktiv (#90).
-- **EI-17** – Nicht Aufgebotene sehen einen Einsatz eines Typs ohne «für alle sichtbar» nicht und können nicht beitreten, ausser die Einsatzleitung erlaubt allen den Beitritt (ohne Alarm) (#90).
+- **EI-17** – Nicht Aufgebotene sehen einen Einsatz nicht und können nicht beitreten. Ausnahmen: Beim Einsatztyp ist «für alle zugelassenen Gruppen sichtbar» eingestellt und die Person gehört einer dort aufbietbaren Einsatzgruppe an, oder die Einsatzleitung erlaubt im Einsatz allen den Beitritt (beides ohne Alarm). Die Übungsleitung sieht ihre Übung immer (#90).
 - **EI-18** – Die Einsatzleitung kann weitere Gruppen (bei Typen, die das erlauben, auch Personen) oder alle nachbieten; alarmiert werden nur die neu Aufgebotenen (#90).
 - **EI-19** – Jede Person kann sich selbst abwesend melden oder ihre Einsatzfähigkeit vorübergehend aussetzen (von–bis oder bis auf Weiteres, mit Bemerkung); beides wirkt gleich: kein Alarm und kein Aufgebot, laufende Einsätze bleiben sichtbar und ein freiwilliger Beitritt ist möglich (#91).
 - **EI-20** – Personen mit dem Recht «Abwesenheiten verwalten» erfassen, ändern und beenden Abwesenheiten aller Personen in der Verwaltung (#91).
@@ -199,7 +199,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **UE-02** – Elemente: PLS, neuer Rettling, Sichtung, neue externe Einsatzkraft, Entfernen einer externen Einsatzkraft; je mit Standort, PLS-Zeitpunkt und optionaler Meldung; Vorschau auf der Karte (#29).
 - **UE-03** – Freigabe von Hand oder automatisch nach Minuten ab Start; erst dann sichtbar; Meldung geht als Nachricht an alle (#29).
 - **UE-04** – Die Übungsleitung hat die Rechte der Einsatzleitung, wird nicht alarmiert und kann zusätzlich teilnehmen (#29).
-- **UE-05** – Nur Aufgebotene (Einsatzgruppen und Einzelpersonen) werden alarmiert; teilnehmen dürfen alle (#29, #90).
+- **UE-05** – Nur Aufgebotene (Einsatzgruppen und Einzelpersonen) werden alarmiert; teilnehmen dürfen alle gemäss EI-17 (#29, #90).
 - **UE-06** – Gestartete Übungen sind gesperrt, können kopiert und nach dem Ende zurückgesetzt werden; alle Durchführungen mit Log und Replay (#29).
 
 ## 19. PWA, Push und Offline (PW)

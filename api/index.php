@@ -697,9 +697,9 @@ function exInvite($p) { return $p['invite'] === null ? null : array_map('intval'
 // Aufgebot eines Einsatzes (Issue #90): incidents.invite (beim Start aufgelöst), bei älteren vorbereiteten Übungen das Aufgebot der Übung; NULL = alle
 function incInvite($inc) { $g = json_decode($inc['inv_groups'] ?? 'null', true); if (!empty($g['all'])) return null; if (($inc['invite'] ?? null) !== null) return array_map('intval', json_decode($inc['invite'], true) ?: []); $p = exPlan($inc); return $p ? exInvite($p) : null; }
 function alarmed($inc) { global $uid; if (exLead($inc) || incAbsent($inc, $uid)) return false; $v = incInvite($inc); return $v === null || in_array($uid, $v, true); }
-// Darf die Person den laufenden Einsatz sehen und ihm beitreten? Einsatztyp mit open_all: alle (Nicht-Aufgebotene mit Hinweis). Sonst mit Aufgebot: nur Aufgebotene,
-// bisherige Teilnehmende, wer ihn gestartet hat, wer jeden Einsatz leiten darf, oder alle, wenn die Einsatzleitung den Beitritt für alle erlaubt (open_join)
-function incAllowed($inc) { global $uid; if (kindOf($inc)['open_all'] || (int)($inc['open_join'] ?? 0) || (int)$inc['created_by'] === $uid || can('inc_lead')) return true;
+// Darf die Person den laufenden Einsatz sehen und ihm beitreten? Einsatztyp mit open_all: alle Mitglieder der beim Typ zugelassenen Gruppen (Nicht-Aufgebotene mit Hinweis). Sonst mit Aufgebot: nur Aufgebotene,
+// bisherige Teilnehmende, wer ihn gestartet hat, wer jeden Einsatz leiten darf, die Übungsleitung, oder alle, wenn die Einsatzleitung den Beitritt für alle erlaubt (open_join)
+function incAllowed($inc) { global $uid; $k = kindOf($inc); if (($k['open_all'] && kindMember($k)) || (int)($inc['open_join'] ?? 0) || (int)$inc['created_by'] === $uid || can('inc_lead') || exLead($inc)) return true;
   $v = incInvite($inc); if ($v === null || in_array($uid, $v, true)) return true; $p = part((int)$inc['id']); return $p && $p['mode'] !== 'declined'; }
 // Abwesenheiten (Issue #91): abwesende Personen werden beim Aufbieten nicht alarmiert (incidents.inv_absent), bleiben aber im Aufgebot (sehen den Einsatz, dürfen beitreten)
 function absentIds() { global $db, $now; $s = $db->prepare("SELECT DISTINCT a.user_id FROM absences a JOIN users u ON u.id=a.user_id WHERE a.removed=0 AND u.active=1 AND a.from_at<=? AND (a.until_at IS NULL OR a.until_at>?)"); $s->execute([$now, $now]); return array_map('intval', array_column($s->fetchAll(), 'user_id')); }
