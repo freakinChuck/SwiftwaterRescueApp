@@ -2,13 +2,18 @@
 # Ausgeliefert wird der gepushte Stand des PR, nicht die Arbeitskopie. Die Dateiliste kommt aus scripts/deploy.ps1 dieses Stands.
 # api/config.php und api/data/ im Unterordner bleiben erhalten (eigene Datenbank je PR).
 # IIS wertet .htaccess nicht aus: api/data/web.config sperrt darum die Datenbank.
+# Der Ordner testbase zeigt den Stand von origin/main. Seine Datenbank ist die Basis fuer neue PR-Ordner:
+# Ein PR-Ordner ohne Datenbank erhaelt beim ersten Deploy eine Kopie davon (ohne Push-Abonnements), bestehende bleiben unberuehrt.
 #
 #   powershell -File scripts\deploy-dev.ps1 -Pr 100
-#   powershell -File scripts\deploy-dev.ps1 -All        # alle offenen PRs
+#   powershell -File scripts\deploy-dev.ps1 -All        # alle offenen PRs und testbase
+#   powershell -File scripts\deploy-dev.ps1 -Testbase   # nur testbase (origin/main)
 param(
   [int[]]$Pr,
   [switch]$All,
+  [switch]$Testbase,
   [string]$Root = 'C:\inetpub\swiftwaterdev',
+  [string]$Base = 'C:\inetpub\swiftwaterdev\testbase',
   [string]$Php = 'C:\inetpub\tools\php\php.exe'
 )
 $ErrorActionPreference = 'Stop'
@@ -28,10 +33,24 @@ $deny = @'
 '@
 
 if ($All) { $Pr = (gh pr list --state open --limit 100 --json number | ConvertFrom-Json).number; Check 'gh pr list' }
-if (-not $Pr) { throw 'Bitte -Pr <Nummer> oder -All angeben.' }
+if (-not $Pr -and -not $Testbase -and -not $All) { throw 'Bitte -Pr <Nummer>, -All oder -Testbase angeben.' }
 
-foreach ($n in $Pr) {
-  git fetch -q origin "pull/$n/head"; Check "git fetch PR $n"
+# Kopie ueber SQLite statt Dateikopie: enthaelt auch, was noch in der WAL-Datei liegt
+$seedPhp = @'
+<?php
+[, $src, $dst] = $argv;
+$db = new PDO('sqlite:' . $src, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$db->exec('VACUUM INTO ' . $db->quote($dst));
+$db = new PDO('sqlite:' . $dst, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+try { $db->exec('DELETE FROM push_subs'); } catch (PDOException $e) {} // Test-Alarme sollen keine echten Geraete erreichen
+'@
+
+$targets = @($Pr | Where-Object { $_ })
+if ($All -or $Testbase) { $targets += 'testbase' }
+foreach ($n in $targets) {
+  $isBase = "$n" -eq 'testbase'
+  $label = if ($isBase) { '[testbase] ' } else { "[PR $n] " }
+  if ($isBase) { git fetch -q origin main; Check 'git fetch main' } else { git fetch -q origin "pull/$n/head"; Check "git fetch PR $n" }
   $full = (git rev-parse FETCH_HEAD); Check 'git rev-parse'
   $sha = $full.Substring(0, 7)
   $m = [regex]::Match((git show "${full}:scripts/deploy.ps1" | Out-String), '\$files\s*=\s*([^\r\n]+)')
@@ -52,12 +71,12 @@ foreach ($n in $Pr) {
   $enc = New-Object System.Text.UTF8Encoding($false)
   Get-ChildItem $stage -File | Where-Object { $_.Extension -eq '.html' -or $_.Name -eq 'sw.js' } | ForEach-Object {
     $t = [IO.File]::ReadAllText($_.FullName, $enc) -replace '\?v=[0-9a-z]*', "?v=$sha"
-    # PR-Nummer im Seitentitel, auch dort, wo die Seite den Titel zur Laufzeit neu setzt
-    $t = $t -replace '<title>', "<title>[PR $n] " -replace 'document\.title=(?!=)', "document.title='[PR $n] '+"
+    # Kennung im Seitentitel, auch dort, wo die Seite den Titel zur Laufzeit neu setzt
+    $t = $t -replace '<title>', "<title>$label" -replace 'document\.title=(?!=)', "document.title='$label'+"
     [IO.File]::WriteAllText($_.FullName, $t, $enc)
   }
 
-  $dest = Join-Path $Root $n
+  $dest = if ($isBase) { $Base } else { Join-Path $Root $n }
   # /XD braucht den Pfad in Quelle UND Ziel: mit dem Ziel allein leert /MIR den Datenordner samt Datenbank
   $data = Join-Path $dest 'api\data'
   robocopy $stage $dest /MIR /XD (Join-Path $stage 'api\data') $data /XF config.php /NFL /NDL /NJH /NJS /NP | Out-Null
@@ -68,8 +87,17 @@ foreach ($n in $Pr) {
   [IO.File]::WriteAllText((Join-Path $data 'web.config'), $deny, $enc)
   $cfg = Join-Path $dest 'api\config.php'
   if (-not (Test-Path $cfg)) { git show "${full}:api/config.php" | Set-Content -Encoding Ascii $cfg }
-  [IO.File]::WriteAllText((Join-Path $data 'deployed.txt'), "PR $n $sha`n", $enc)
+  [IO.File]::WriteAllText((Join-Path $data 'deployed.txt'), "$($label.Trim()) $sha`n", $enc)
+  $db = Join-Path $data 'swiftwater.sqlite'
+  $baseDb = Join-Path $Base 'api\data\swiftwater.sqlite'
+  $seeded = ''
+  if (-not $isBase -and -not (Test-Path $db) -and (Test-Path $baseDb)) {
+    $tmp = Join-Path $stage 'seed.php'
+    [IO.File]::WriteAllText($tmp, $seedPhp, $enc)
+    & $Php $tmp $baseDb $db; Check "Datenbankbasis PR $n"
+    $seeded = ', Datenbank aus testbase'
+  }
   Remove-Item -Recurse -Force $stage
-  Write-Host "PR $n ($sha) -> $dest"
+  Write-Host "$($label.Trim()) ($sha) -> $dest$seeded"
 }
 $global:LASTEXITCODE = 0
