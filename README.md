@@ -14,10 +14,18 @@ Liefert einen eingecheckten Git-Stand aus (nicht die Arbeitskopie): Dateien per 
 3. Ausliefern:
 ```
 powershell -File scripts\deploy.ps1                                  # origin/main
-powershell -File scripts\deploy.ps1 -Ref origin/feature/irgendwas    # anderer Stand, z. B. zum Testen eines PR
+powershell -File scripts\deploy.ps1 -Ref origin/feature/irgendwas    # anderer Stand
 powershell -File scripts\deploy.ps1 -Config deploy.prod.json         # Produktivsystem (origin/main)
 ```
 Beim ersten Mal auf dem Server `api/config.php` von Hand anlegen (Vorlage im Repo), das Skript lädt sie nicht hoch.
+
+## Lokales DEV-Environment (`scripts/deploy-dev.ps1`)
+Jeder offene PR läuft im lokalen IIS in einem eigenen Unterordner mit seiner Nummer (`C:\inetpub\swiftwaterdev\<PR>`, http://localhost:8099/<PR>/). Das Skript liefert den gepushten Stand des PR aus, nicht die Arbeitskopie, mit der Dateiliste aus `scripts/deploy.ps1` dieses Stands. `api/config.php` und `api/data/` bleiben erhalten, jeder PR hat also seine eigene Datenbank. DEV behält die grün umrandeten Icons, und der Seitentitel zeigt die PR-Nummer (`[PR 100] Swiftwater Rescue`).
+```
+powershell -File scripts\deploy-dev.ps1 -Pr 100    # ein PR
+powershell -File scripts\deploy-dev.ps1 -All       # alle offenen PRs
+```
+IIS wertet `.htaccess` nicht aus. Das Skript sperrt die Datenbank darum mit `api/data/web.config`, die `no-cache`-Header fehlen lokal. PHP braucht die Erweiterungen curl, mbstring, openssl, pdo_sqlite und sqlite3.
 
 ## Verwaltung, Passwörter, Übungen
 - `admin.html` (ohne Karte) ist nur für die Benutzerrolle Administrator: Benutzer anlegen, Rolle ändern, Passwort zurücksetzen, deaktivieren/reaktivieren, Einrückoptionen, Spezialrollen, Einsatzstatistik.
