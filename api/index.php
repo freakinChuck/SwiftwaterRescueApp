@@ -662,7 +662,7 @@ function kindsActive() { return array_filter(kinds(), fn($k) => $k['active'] && 
 function kindOf($inc) { $ks = kinds(); return $ks[(int)($inc['kind_id'] ?? 0)] ?? reset($ks); }
 function kindAdd($r) { $k = kindOf($r); $r['kind_id'] = $k['id']; $r['kind_name'] = $k['name']; $r['kind_color'] = $k['color']; return $r; }
 // fürs Frontend: was Startformular, Menü und Filter brauchen; air null = Hauptschalter aus
-function kindPub($k) { return ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'alarm' => $k['alarm'], 'alarm_name' => ALARM_LEVELS[$k['alarm']][0] ?? $k['alarm'], 'mode_up' => $k['mode_up'], 'rec' => $k['rec'], 'air' => airCfg()['on'] ? $k['air'] : null, 'grp_off' => $k['grp_off'], 'grp_def' => $k['grp_def'], 'persons' => $k['persons'], 'open_all' => $k['open_all'], 'plans' => $k['plans'], 'can' => can($k['perm']) ? 1 : 0, 'features' => features($k['id'])]; }
+function kindPub($k) { return ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'alarm' => $k['alarm'], 'alarm_name' => ALARM_LEVELS[$k['alarm']][0] ?? $k['alarm'], 'mode_up' => $k['mode_up'], 'rec' => $k['rec'], 'air' => airCfg()['on'] ? $k['air'] : null, 'grp_off' => $k['grp_off'], 'grp_def' => $k['grp_def'], 'persons' => $k['persons'], 'open_all' => $k['open_all'], 'plans' => $k['plans'], 'can' => can($k['perm']) && kindMember($k) ? 1 : 0, 'no_grp' => can($k['perm']) && !kindMember($k) ? 1 : 0, 'features' => features($k['id'])]; }
 function kindsPub() { return array_values(array_map('kindPub', kindsActive())); }
 // Einsatztyp beim Start; ohne kind_id wie früher is_exercise (Geräte mit noch nicht neu geladener App)
 function kindStart($in) { $ks = kinds(); $k = null; if (isset($in['kind_id'])) $k = $ks[(int)$in['kind_id']] ?? null; else foreach ($ks as $x) if ($x['perm'] === (empty($in['is_exercise']) ? 'inc_start' : 'ex_start')) $k = $x;
@@ -715,6 +715,11 @@ function grpRows($active = false) { global $db; return array_map(fn($g) => ints(
 function grpMembers($gids) { global $db; if (!$gids) return []; // aktive Personen der aktiven Gruppen
   $s = $db->prepare("SELECT DISTINCT m.user_id FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id JOIN users u ON u.id=m.user_id WHERE g.active=1 AND u.active=1 AND m.group_id IN (" . qm($gids) . ")"); $s->execute($gids);
   return array_map('intval', array_column($s->fetchAll(), 'user_id')); }
+// Für einen Einsatztyp zugelassene Gruppen: aktiv und beim Typ aufbietbar. Nur ihre Mitglieder können ihn starten und dafür aufgeboten werden.
+function kindGroups($k) { return array_values(array_diff(array_column(grpRows(true), 'id'), array_map('intval', $k['grp_off']))); }
+// Mitglieder der zugelassenen Gruppen; null = keine Einschränkung (es gibt keine aktive Einsatzgruppe)
+function kindPeople($k) { return grpRows(true) ? grpMembers(kindGroups($k)) : null; }
+function kindMember($k) { static $mine = null, $any; if ($mine === null) { $mine = array_column(myGroups(), 'id'); $any = (bool)grpRows(true); } return !$any || (bool)array_diff($mine, array_map('intval', $k['grp_off'])); }
 function grpNames($gids, $gone = []) { global $db; if (!$gids) return []; $s = $db->prepare("SELECT id,name FROM inc_groups WHERE id IN (" . qm($gids) . ")"); $s->execute($gids); $n = array_column($s->fetchAll(), 'name', 'id') + (array)$gone; // gone = Namen gelöschter Gruppen
   return array_values(array_filter(array_map(fn($g) => $n[$g] ?? null, $gids))); }
 // Gruppen, die die Person aufbieten darf (Issue #90, Antwort 2): nur Benutzerrollen mit dem Recht zum Starten zählen; NULL = alle (auch «alle Personen alarmieren»)
@@ -732,6 +737,7 @@ function resolveInvite($k, $groups, $persons, $allowed) { global $db;
     if (array_intersect($g, array_map('intval', $k['grp_off']))) fail('Diese Einsatzgruppe ist bei «' . $k['name'] . '» nicht aufbietbar'); }
   if ($allowed !== null && array_diff($g, $allowed)) fail('Diese Einsatzgruppe darfst du nicht aufbieten', 403);
   if ($p) { $s = $db->prepare("SELECT COUNT(*) c FROM users WHERE active=1 AND id IN (" . qm($p) . ")"); $s->execute($p); if ((int)$s->fetch()['c'] !== count($p)) fail('Unbekannte oder deaktivierte Person');
+    if (($kp = kindPeople($k)) !== null && array_diff($p, $kp)) fail('Aufgeboten werden kann nur, wer einer bei «' . $k['name'] . '» aufbietbaren Einsatzgruppe angehört');
     if ($allowed !== null && array_diff($p, grpMembers($allowed))) fail('Einzelpersonen darfst du nur aus deinen Einsatzgruppen aufbieten', 403); }
   return [array_values(array_unique(array_merge(grpMembers($g), $p))), $g, $p]; }
 // Aufgebot zur Anzeige: null = alle, sonst Gruppen (Namen), Anzahl Einzelpersonen und Anzahl Aufgebotene
@@ -1250,6 +1256,7 @@ switch ($route) {
 
  case 'incident/start':
   $kind = kindStart($in); $kid = $kind['id']; need($kind['perm']); // Recht je Einsatztyp (Issue #63, #90)
+  if (!kindMember($kind)) fail('Du bist in keiner Einsatzgruppe, die bei «' . $kind['name'] . '» aufbietbar ist', 403);
   if (activeIncident()) fail('Es läuft bereits ein Einsatz');
   if (trim($in['message'] ?? '') === '') fail('Die Meldung ist Pflicht');
   $at = !empty($in['alarm_at']) ? (int)$in['alarm_at'] : $now;
@@ -1259,10 +1266,10 @@ switch ($route) {
   $pls = isset($in['lat'], $in['lon']) && $in['lat'] !== '' && $in['lon'] !== '' ? plsIn($in, $at) : [null, null];
   $rec = empty($in['record']) || !features($kid)['rec'] ? 0 : 1;
   $air = airCfg()['on'] ? (isset($in['air']) ? (empty($in['air']) ? 0 : 1) : airDef($kid)) : null; // Helikopter: Häkchen beim Start, sonst Vorauswahl; Hauptschalter aus = offen lassen (NULL)
-  // Aufgebot (Issue #90): groups, persons (wenn der Typ das erlaubt) oder invite_all=1; ohne aktive Einsatzgruppen wie bisher alle
+  // Aufgebot (Issue #90): groups, persons (wenn der Typ das erlaubt) oder invite_all=1 (alle beim Typ aufbietbaren Gruppen); ohne aktive Einsatzgruppen wie bisher alle
   $allowed = startGroups($kind); $ids = null; $ig = null;
-  if (!empty($in['invite_all']) || !grpRows(true)) { if ($allowed !== null && grpRows(true)) fail('Du darfst nur bestimmte Einsatzgruppen aufbieten', 403); }
-  else { [$ids, $g, $pp] = resolveInvite($kind, $in['groups'] ?? [], $in['persons'] ?? [], $allowed);
+  if (grpRows(true)) { if (!empty($in['invite_all'])) { if ($allowed !== null) fail('Du darfst nur bestimmte Einsatzgruppen aufbieten', 403); $in['groups'] = kindGroups($kind); $in['persons'] = []; }
+    [$ids, $g, $pp] = resolveInvite($kind, $in['groups'] ?? [], $in['persons'] ?? [], $allowed);
     if (!$g && !$pp) fail('Bitte mindestens eine Einsatzgruppe aufbieten');
     if (!array_diff($ids, [$uid])) fail('Die gewählten Einsatzgruppen haben keine (weiteren) aktiven Mitglieder');
     $ig = ['g' => $g, 'p' => $pp]; }
@@ -1340,14 +1347,10 @@ switch ($route) {
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz'); if (!canManage($inc)) fail('Nur die Einsatzleitung kann nachbieten', 403);
   $kind = kindOf($inc); $old = incInvite($inc); if ($old === null) fail('Es sind bereits alle Personen aufgeboten');
   $allowed = addGroups($kind); $o = json_decode($inc['inv_groups'] ?? 'null', true) ?: ['g' => [], 'p' => $old];
-  if (!empty($in['all'])) {
-    if ($allowed !== null) fail('Du darfst nur bestimmte Einsatzgruppen aufbieten', 403);
-    $new = array_map('intval', array_column($db->query("SELECT id FROM users WHERE active=1")->fetchAll(), 'id')); $inv = $inc['invite']; $o['all'] = 1; $txt = 'alle Personen';
-  } else {
-    [$new, $g, $pp] = resolveInvite($kind, $in['groups'] ?? [], $in['persons'] ?? [], $allowed);
-    if (!$g && !$pp) fail('Bitte mindestens eine Einsatzgruppe wählen');
-    $inv = json_encode(array_values(array_unique(array_merge($old, $new)))); $o = ['g' => idsIn(array_merge($o['g'] ?? [], $g)), 'p' => idsIn(array_merge($o['p'] ?? [], $pp))]; $txt = invText($g, $pp);
-  }
+  if (!empty($in['all'])) { if ($allowed !== null) fail('Du darfst nur bestimmte Einsatzgruppen aufbieten', 403); $in['groups'] = kindGroups($kind); $in['persons'] = []; } // alle beim Typ aufbietbaren Gruppen
+  [$new, $g, $pp] = resolveInvite($kind, $in['groups'] ?? [], $in['persons'] ?? [], $allowed);
+  if (!$g && !$pp) fail('Bitte mindestens eine Einsatzgruppe wählen');
+  $inv = json_encode(array_values(array_unique(array_merge($old, $new)))); $o = ['g' => idsIn(array_merge($o['g'] ?? [], $g)), 'p' => idsIn(array_merge($o['p'] ?? [], $pp))]; $txt = invText($g, $pp);
   $skip = ($p = exPlan($inc)) ? exLeads($p) : []; // die Übungsleitung wird nie alarmiert
   $new = array_values(array_diff($new, $old, $skip, [$uid]));
   $abs = array_values(array_intersect($new, absentIds())); $new = array_values(array_diff($new, $abs)); // Abwesende (Issue #91): aufgeboten, aber kein Alarm
@@ -1367,12 +1370,12 @@ switch ($route) {
   foreach ($db->query("SELECT m.group_id,COUNT(*) c FROM inc_group_members m JOIN users u ON u.id=m.user_id WHERE u.active=1 GROUP BY m.group_id")->fetchAll() as $x) $cnt[(int)$x['group_id']] = (int)$x['c'];
   $ab = absentIds(); $na = []; if ($ab) { $s = $db->prepare("SELECT group_id,COUNT(*) c FROM inc_group_members WHERE user_id IN (" . qm($ab) . ") GROUP BY group_id"); $s->execute($ab); foreach ($s->fetchAll() as $x) $na[(int)$x['group_id']] = (int)$x['c']; }
   foreach ($gs as &$g) { $g['n'] = $cnt[$g['id']] ?? 0; $g['na'] = $na[$g['id']] ?? 0; } unset($g); // na = davon abwesend (Issue #91)
-  $sg = []; $ag = []; $pl = []; foreach (kindsActive() as $id => $k) { $sg[$id] = can($k['perm']) ? startGroups($k) : []; $ag[$id] = addGroups($k); }
+  $sg = []; $ag = []; $pl = []; foreach (kindsActive() as $id => $k) { $sg[$id] = can($k['perm']) && kindMember($k) ? startGroups($k) : []; $ag[$id] = addGroups($k); }
   // Einzelpersonen (Typen mit persons): alle aktiven, mit Einschränkung nur Mitglieder der erlaubten Gruppen
   foreach (kindsActive() as $id => $k) if ($k['persons']) foreach ([$sg[$id], $ag[$id]] as $a) { if ($a === null) { $pl = null; break 2; } $pl = array_merge($pl, $a); }
   if ($pl !== null) $pl = grpMembers(array_values(array_unique($pl)));
   $people = array_values(array_filter(array_map(fn($r) => ints($r, ['id']) + ['absent' => in_array((int)$r['id'], $ab, true) ? 1 : 0], $db->query("SELECT id,name FROM users WHERE active=1 ORDER BY name")->fetchAll()), fn($r) => $pl === null || in_array($r['id'], $pl, true)));
-  out(['groups' => $gs, 'kinds' => kindsPub(), 'start' => (object)$sg, 'add' => (object)$ag, 'people' => $people, 'absent_all' => count($ab)]);
+  out(['groups' => $gs, 'kinds' => kindsPub(), 'start' => (object)$sg, 'add' => (object)$ag, 'people' => $people, 'kind_people' => (object)array_map('kindPeople', kindsActive()), 'kind_absent' => (object)array_map(fn($k) => ($kp = kindPeople($k)) === null ? count($ab) : count(array_intersect($ab, $kp)), kindsActive())]);
  case 'incident/join': // mode: code einer aktiven Einrückoption oder declined
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
   $mode = (string)($in['mode'] ?? '');
@@ -1725,9 +1728,11 @@ switch ($route) {
   if (!in_array($uid, exLeads($p), true)) fail('Nur die Übungsleitung dieser Übung kann sie starten', 403);
   $kind = planKind($p); if (!$kind) fail('Kein aktiver Einsatztyp erlaubt vorbereitete Übungen (Verwaltung → Einsatztypen)'); $kid = $kind['id'];
   $rec = (int)$p['record'] && features($kid)['rec'] ? 1 : 0; $tok = features($kid)['pub'] ? $p['public_token'] : null;
-  // Aufgebot (Issue #90): Gruppen (beim Start aufgelöst) und Einzelpersonen, ohne die Übungsleitung; beides leer = alle
-  $pg = idsIn(json_decode($p['grp_ids'] ?? '[]', true)); $pi = exInvite($p); $iv = null; $ig = null;
-  if ($pg || $pi !== null) { $iv = array_values(array_diff(array_unique(array_merge(grpMembers($pg), $pi ?? [])), exLeads($p))); $ig = ['g' => $pg, 'p' => $pi ?? []]; }
+  // Aufgebot (Issue #90): Gruppen (beim Start aufgelöst) und Einzelpersonen, ohne die Übungsleitung; beides leer = alle beim Typ aufbietbaren Gruppen.
+  // Der Einsatztyp kann sich seit dem Vorbereiten geändert haben: Wer nicht zugelassen ist, fällt hier weg. Ohne aktive Einsatzgruppen wie bisher.
+  $pg = idsIn(json_decode($p['grp_ids'] ?? '[]', true)); $pi = exInvite($p); $iv = null; $ig = null; $pall = !$pg && $pi === null; $kp = kindPeople($kind);
+  if ($kp !== null) { $kg = kindGroups($kind); $pg = $pall ? $kg : array_values(array_intersect($pg, $kg)); if ($pi !== null) $pi = array_values(array_intersect($pi, $kp)); }
+  if ($kp !== null || !$pall) { $iv = array_values(array_diff(array_unique(array_merge(grpMembers($pg), $pi ?? [])), exLeads($p))); $ig = ['g' => $pg, 'p' => $pi ?? []]; }
   $abs = array_values(array_diff($iv === null ? absentIds() : array_intersect(absentIds(), $iv), exLeads($p))); // Abwesende (Issue #91)
   $db->prepare("INSERT INTO incidents(message,alarm_at,created_by,is_exercise,kind_id,plan_id,public_token,public_anon,air,invite,inv_groups,inv_absent) VALUES(?,?,?,1,?,?,?,?,?,?,?,?)")->execute([$p['message'], $now, $uid, $kid, $p['id'], $tok, (int)$p['public_anon'], airCfg()['on'] ? airDef($kid) : null, $iv === null ? null : json_encode($iv), $ig === null ? null : json_encode($ig), $abs ? json_encode($abs) : null]);
   $nid = (int)$db->lastInsertId();
