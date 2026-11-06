@@ -93,6 +93,7 @@ body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: K
 .mk.cl{border-radius:8px;background:#fff;color:#000}
 .mk.ext{border-radius:6px;border-style:dashed}.mk.sm{font-size:.62rem;letter-spacing:-.02em}
 .xt .mk{width:30px;height:30px;border-width:3px;flex:0 0 auto;align-self:center}
+.self{width:18px;height:18px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 2px #0006,0 0 10px #1a73e8;pointer-events:none}.selfacc{pointer-events:none}
 .pls{width:22px;height:22px;background:var(--alarm);border:3px solid #fff;transform:rotate(45deg)}.pls.off,.plsw.off{opacity:.45}
 #alarm{position:fixed;inset:0;background:var(--alarm);color:#fff;display:none;flex-direction:column;justify-content:center;padding:2rem;gap:1rem;z-index:9999;animation:bl 1s steps(2) infinite}
 @keyframes bl{50%{background:#8f1d0a}}@media(prefers-reduced-motion:reduce){#alarm{animation:none}}
@@ -145,6 +146,20 @@ let secReset=true;
 // eigener Standort für die Anzeige im Menü (Issue #76), wenn keine Standortfreigabe läuft; wird nicht gesendet
 function hereLoc(){if(!navigator.geolocation){hereErr='nicht verfügbar';return}if(lastPos)return;
   navigator.geolocation.getCurrentPosition(p=>{herePos={lat:p.coords.latitude,lon:p.coords.longitude};hereErr='';draw()},e=>{if(!herePos){hereErr=e.code===1?'nicht freigegeben (Standortzugriff im Browser erlauben)':'nicht ermittelbar';draw()}},{maximumAge:30000,timeout:20000,enableHighAccuracy:true})}
+// eigener Standort auf der Karte (Issue #118): immer als blauer Punkt mit Genauigkeitskreis, auch ohne Einsatz; nur Anzeige, wird nicht gesendet.
+// Ausgeblendet (und ohne Standortabfrage) nur, solange man im laufenden Einsatz mit einer Einrückoption ohne Standortfreigabe teilnimmt.
+let selfWatch=null,selfPos=null,selfMk=null,selfAcc=null;
+function selfHidden(){const m=st&&st.incident&&st.me;return!!(m&&!m.left_at&&m.mode!=='declined'&&!shares(m.mode))}
+function selfSync(){if(!map)return;if(selfHidden()){if(selfWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(selfWatch);selfWatch=null;selfPos=null;selfDraw();return}
+  if(selfWatch==null&&navigator.geolocation)selfWatch=navigator.geolocation.watchPosition(p=>{selfPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy};herePos={lat:selfPos.lat,lon:selfPos.lon};hereErr='';selfDraw()},
+    e=>{if(e.code===1){hereErr='nicht freigegeben (Standortzugriff im Browser erlauben)';navigator.geolocation.clearWatch(selfWatch)}},{enableHighAccuracy:true,maximumAge:10000,timeout:30000});
+  selfDraw()}
+function selfDraw(){const p=selfHidden()?null:(manual&&lastPos?lastPos:selfPos); // manuell gesetzter Standort (Test) hat Vorrang
+  if(selfMk&&selfMk._map!==map)selfMk=selfAcc=null; // Karte neu aufgebaut (shell)
+  if(!p||!map){selfMk&&map.removeLayer(selfMk);selfAcc&&map.removeLayer(selfAcc);selfMk=selfAcc=null;return}
+  const ll=[p.lat,p.lon],r=p===selfPos&&p.acc>15&&p.acc<2000?p.acc:0;
+  if(!selfMk)selfMk=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="self"></div>',iconSize:[24,24],iconAnchor:[12,12]}),interactive:false,keyboard:false,zIndexOffset:3000}).addTo(map);else selfMk.setLatLng(ll);
+  if(r){if(!selfAcc)selfAcc=L.circle(ll,{radius:r,color:'#1a73e8',weight:1,opacity:.5,fillOpacity:.1,interactive:false,className:'selfacc'}).addTo(map);else selfAcc.setLatLng(ll).setRadius(r)}else if(selfAcc){map.removeLayer(selfAcc);selfAcc=null}}
 function toggleSheet(f){const w=$('#sheetWrap');if(!w)return;const was=w.classList.contains('open'),o=f===undefined?!was:f;if(o&&!was){secReset=true;hereLoc();draw()}w.classList.toggle('open',o);document.body.classList.toggle('so',o);if(o&&panel)togglePanel(panel,false)}
 function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);
   [['bRes','res'],['bMsg','msg'],['bPoi','poi'],['bRd','rd']].forEach(([b,k])=>$('#'+b).hidden=!feat(k));if(panel&&PANEL_FEAT[panel]&&!feat(PANEL_FEAT[panel]))togglePanel(panel,false); // ausgeschaltete Funktionen (Issue #35)
@@ -249,7 +264,7 @@ function drawNote(){const n=$('#areaNote');if(!n)return;const pick=window.markPi
   if(more){n.setAttribute('role','button');n.setAttribute('aria-expanded',areaOpen);n.tabIndex=0}else{n.removeAttribute('role');n.removeAttribute('aria-expanded');n.removeAttribute('tabindex')}
   n.innerHTML=pick?esc(pick):!more?esc(areaInfo):areaOpen?areaLines.map(l=>`<div class="ln">${esc(l)}</div>`).join('')+'<div class="tg">▴ weniger</div>':`${esc(areaShort)} <span class="tg">▸ Details</span>`;
   n.hidden=!(areaInfo||pick)}
-function drawMap(){const n=$('#areaNote');drawMsgMarks();drawPois();drawRes();drawAir();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
+function drawMap(){const n=$('#areaNote');selfSync();drawMsgMarks();drawPois();drawRes();drawAir();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.layerGroup(plsList().map(p=>navOn(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))),p.lat,p.lon,p.label)));if(vis('pls'))layers.pls.addTo(map);
   try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
@@ -358,7 +373,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
     if(confirm(`«${j.label}» freigeben?\n\n${exWhat(j)}${j.msg?'\nMeldung an alle: '+j.msg:''}`)){b.disabled=true;api('ex/release',{id:j.id}).then(poll).catch(e=>{b.disabled=false;fail(e)})}});
   s.querySelectorAll('[data-xz]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xz);exShow(j)});
   if(joined){if($('#rs'))$('#rs').onchange=e=>{e.target.blur();api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail)};$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
-    if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});draw()})};
+    if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;selfDraw();draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});selfDraw();draw()})};
   }
   if(st.can_flow)$('#bFl').onclick=()=>api('incident/flow',{flow_ms:+$('#fl').value}).then(poll).catch(fail);
   if(st.can_manage){$('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail);
