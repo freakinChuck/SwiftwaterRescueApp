@@ -58,10 +58,13 @@ foreach ($n in $Pr) {
   }
 
   $dest = Join-Path $Root $n
-  robocopy $stage $dest /MIR /XD (Join-Path $dest 'api\data') /XF config.php /NFL /NDL /NJH /NJS /NP | Out-Null
-  if ($LASTEXITCODE -ge 8) { throw "robocopy PR $n fehlgeschlagen (Exit-Code $LASTEXITCODE)" }
+  # /XD braucht den Pfad in Quelle UND Ziel: mit dem Ziel allein leert /MIR den Datenordner samt Datenbank
   $data = Join-Path $dest 'api\data'
+  robocopy $stage $dest /MIR /XD (Join-Path $stage 'api\data') $data /XF config.php /NFL /NDL /NJH /NJS /NP | Out-Null
+  if ($LASTEXITCODE -ge 8) { throw "robocopy PR $n fehlgeschlagen (Exit-Code $LASTEXITCODE)" }
   if (-not (Test-Path $data)) { New-Item -ItemType Directory $data | Out-Null }
+  $ht = Join-Path $stage 'api\data\.htaccess'
+  if (Test-Path $ht) { Copy-Item $ht (Join-Path $data '.htaccess') -Force }
   [IO.File]::WriteAllText((Join-Path $data 'web.config'), $deny, $enc)
   $cfg = Join-Path $dest 'api\config.php'
   if (-not (Test-Path $cfg)) { git show "${full}:api/config.php" | Set-Content -Encoding Ascii $cfg }
