@@ -51,3 +51,4 @@ button.aib{border-color:#a78bfa88}button.aib.rdy{border-color:#a78bfa;box-shadow
 .aibar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;border:1px dashed #a78bfa88;border-radius:6px;padding:.4rem .6rem;margin:.4rem 0}
 .aimx{border-collapse:collapse;font-size:.85rem}.aimx th,.aimx td{border-bottom:1px solid var(--line);padding:.3rem .4rem;text-align:left;vertical-align:middle}.aimx select{min-width:7.5rem}
 .aimxw{overflow-x:auto}
+.lglk{display:block;text-align:center;font-size:.85rem;margin-top:.4rem}header .lglk{display:inline;margin:0;font-size:.8rem}
