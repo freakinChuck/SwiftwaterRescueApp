@@ -76,12 +76,15 @@ foreach ([
   "CREATE TABLE IF NOT EXISTS aar_arch(incident_id INT PRIMARY KEY, created BIGINT, snap LONGTEXT NULL, pdf_at BIGINT NULL, pdf_parts INT NULL, pdf_name TEXT NULL, pdf_sha TEXT NULL)",
   "CREATE TABLE IF NOT EXISTS aar_arch_img(incident_id INT, img_id INT, field_id $tx, caption TEXT, data MEDIUMTEXT, w INT, h INT, PRIMARY KEY(incident_id,img_id))",
   "CREATE TABLE IF NOT EXISTS aar_arch_part(incident_id INT, n INT, data MEDIUMTEXT, PRIMARY KEY(incident_id,n))",
+  // AI-Assistent (Issue #111): jede Abfrage beim Anbieter (Kostenbremse, Statistik) und die letzte Antwort je Funktion und Objekt (Companion, keine doppelten Kosten)
+  "CREATE TABLE IF NOT EXISTS ai_usage(id $ai, ts BIGINT, user_id INT, fn $tx, incident_id INT NULL, tokens INT DEFAULT 0, ok INT DEFAULT 1, err TEXT NULL)",
+  "CREATE TABLE IF NOT EXISTS ai_cache(k VARCHAR(64) PRIMARY KEY, ts BIGINT, ctx_hash VARCHAR(64), text MEDIUMTEXT, tokens INT DEFAULT 0, model $tx NULL)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL"], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
+foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'ai_modes TEXT NULL'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
 try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
@@ -150,6 +153,7 @@ const PERMS = [
   'cfg_inc' => ['Verwaltung', 'Einsatz einstellen', 'Einrückoptionen, Spezialrollen, Nachrichten, Vorlagen für externe Einsatzkräfte'],
   'cfg_func' => ['Verwaltung', 'Funktionen einstellen', 'Funktionen, Aufzeichnung, Flussdistanz, Navigation'],
   'cfg_map' => ['Verwaltung', 'Karte & Daten einstellen', 'Koordinaten, Gewässerdaten (Overpass), Helikopter'],
+  'cfg_ai' => ['Verwaltung', 'AI-Assistent einstellen', 'Anbieter, API-Schlüssel, erlaubte Modi je Benutzerrolle, Datenschutz und Limits des AI-Assistenten; Nutzung einsehen'],
   'stats' => ['Auswertung', 'Alle Einsätze auswerten', 'Einsatzstatistik, Log und Replay aller Einsätze'],
   'anon' => ['Auswertung', 'Anonymisieren und Aufzeichnungen löschen', 'Anonymisierung einstellen (Stufen, automatisch nach Tagen) und anwenden, auch für mehrere Einsätze; endgültige Stufen sind nicht umkehrbar'],
   'cfg_my' => ['Auswertung', 'Einsicht für Einsatzkräfte einstellen', 'Was Teilnehmende von ihren eigenen Einsätzen sehen (Meine Einsätze)'],
@@ -160,7 +164,7 @@ const PERMS = [
 ];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'rec_real' => 'cfg_func', 'rec_ex' => 'cfg_func', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func',
-  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my'];
+  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'ai' => 'cfg_ai']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
@@ -533,10 +537,11 @@ if ($route === 'public/state') {
 }
 
 $tok = $_SERVER['HTTP_X_TOKEN'] ?? '';
-$st = $db->prepare("SELECT id,username,name,photo,exercise_mode,must_change,coord_sys,nav_app FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
+$st = $db->prepare("SELECT id,username,name,photo,exercise_mode,must_change,coord_sys,nav_app,ai_modes FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
 $me = $tok ? $st->fetch() : null; $st->closeCursor(); // Lesezugriff sofort beenden, nicht erst am Ende des Requests
 if (!$me) fail('Nicht angemeldet', 401);
 $me = ints($me, ['id', 'exercise_mode', 'must_change']); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
+$me['ai_modes'] = json_decode((string)$me['ai_modes'], true) ?: []; // AI-Assistent (Issue #111): gewählter Modus je Funktion
 // Benutzerrollen und Rechte (Issue #63): Vereinigung aller Rollen; is_admin = hat die Rolle Systemadministrator (alle Rechte)
 $me['uroles'] = userRoles($uid); $me['is_admin'] = (int)array_reduce($me['uroles'], fn($c, $r) => $c || $r['sys'] === 'admin', false); $me['perms'] = permsOf($me['uroles']);
 // Nach einem Zurücksetzen durch die Verwaltung ist nur der Passwortwechsel erlaubt
@@ -1085,6 +1090,161 @@ function replayParts($id) { global $db;
   $s->execute([$id]); return array_map(fn($r) => ints($r, ['user_id', 'role_id', 'left_at', 'joined']), $s->fetchAll()); }
 function incById($id) { global $db; $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([(int)$id]); return $s->fetch() ?: fail('Einsatz nicht gefunden', 404); }
 
+/* ---------- AI-Assistent (Issue #111) ---------- */
+// Der Server baut den Kontext je Funktion selbst (gleiche Rechte wie die Ansicht) und fragt den Anbieter per curl; der API-Schlüssel verlässt den Server nie.
+// Funktionen: Schlüssel => [Bezeichnung, Einsatzarten (real = scharf, ex = Übung, adm = Verwaltung ohne Einsatz), Companion möglich, Beschreibung]
+const AI_FN = [
+  'aar' => ['After Action Review', ['real', 'ex'], 1, 'Entwürfe für die Textfelder aus Einsatzdaten und Einsatzlog; begleitend: Entwurf für die leeren Felder beim Öffnen'],
+  'log' => ['Zusammenfassung des Einsatzlogs', ['real', 'ex'], 1, 'Zusammenfassung in Worten zum Log (Verwaltung und Meine Einsätze); begleitend: beim Öffnen des Logs'],
+  'plan' => ['Übungsvorbereitung', ['ex'], 0, 'Vorschläge für weitere Elemente, Meldungen und den Ablauf einer vorbereiteten Übung'],
+  'stats' => ['Statistik in Worten', ['adm'], 0, 'Auswertung der Einsatzstatistik in Worten: Entwicklung, Auffälligkeiten'],
+  'sit' => ['Lagezusammenfassung im Einsatz', ['real', 'ex'], 1, 'Kurze Lagezusammenfassung im laufenden Einsatz (☰-Menü); begleitend: höchstens alle 5 Minuten neu'],
+];
+const AI_CTX = ['real' => 'Scharfe Einsätze', 'ex' => 'Übungen', 'adm' => 'Verwaltung'];
+const AI_MODES = ['off' => 'Aus', 'cmd' => 'Auf Abruf', 'comp' => 'Begleitend'];
+const AI_RANK = ['off' => 0, 'cmd' => 1, 'comp' => 2];
+const AI_PROV = ['openai' => 'OpenAI-kompatibel (Chat Completions)', 'anthropic' => 'Anthropic (Claude)'];
+const AI_DEFAULT = ['on' => 0, 'provider' => 'openai', 'base_url' => '', 'model' => '', 'timeout' => 60, 'max_tokens' => 1500, 'anon' => 1, 'round_loc' => 1, 'day_limit' => 200, 'user_limit' => 30, 'matrix' => null];
+const AI_SIT_S = 300; // Lagezusammenfassung: so lange gilt die letzte Antwort (Companion)
+// Einstellung ai (ohne Schlüssel, der steht getrennt in ai_key); matrix {Benutzerrolle: {Funktion: {Art: Modus}}}, ohne Einstellung: Systemadministrator auf Abruf überall ausser Lage im scharfen Einsatz
+function aiCfg() { $c = json_decode((string)setting('ai', ''), true); $c = (is_array($c) ? $c : []) + AI_DEFAULT;
+  if (!is_array($c['matrix'])) { global $db; $c['matrix'] = [];
+    foreach ($db->query("SELECT id FROM uroles WHERE sys='admin'")->fetchAll(PDO::FETCH_COLUMN) as $r) foreach (AI_FN as $f => $x) foreach ($x[1] as $k) $c['matrix'][(string)$r][$f][$k] = $f === 'sit' && $k === 'real' ? 'off' : 'cmd'; }
+  return $c; }
+function aiKey() { return (string)setting('ai_key', ''); }
+function aiReady() { $c = aiCfg(); return (int)$c['on'] && aiKey() !== '' && trim((string)$c['model']) !== '' && ($c['provider'] === 'anthropic' || trim((string)$c['base_url']) !== ''); }
+// höchster erlaubter Modus über alle Benutzerrollen der Person (wie die Rechte)
+function aiMax($fn, $ctx) { global $me; if (!aiReady() || !isset(AI_FN[$fn]) || !in_array($ctx, AI_FN[$fn][1], true)) return 'off'; $m = aiCfg()['matrix']; $r = 0;
+  foreach ($me['uroles'] as $u) $r = max($r, AI_RANK[$m[(string)$u['id']][$fn][$ctx] ?? 'off'] ?? 0);
+  if (!AI_FN[$fn][2]) $r = min($r, 1); return array_search($r, AI_RANK, true); }
+// gewählter Modus der Person (users.ai_modes, fehlt = höchster erlaubter), höchstens der erlaubte
+function aiMode($fn, $ctx) { global $me; $mx = aiMax($fn, $ctx); $w = $me['ai_modes'][$fn] ?? null; return isset(AI_RANK[$w]) && AI_RANK[$w] < AI_RANK[$mx] ? $w : $mx; }
+// für me: je Funktion die Modi je Art, den höchsten erlaubten (Profil) und die Wahl; null = für diese Person gibt es keinen AI-Assistenten
+function aiMe() { global $me; $r = [];
+  foreach (AI_FN as $f => $x) { $mx = 0; $m = []; foreach ($x[1] as $k) { $m[$k] = aiMode($f, $k); $mx = max($mx, AI_RANK[aiMax($f, $k)]); }
+    if ($mx) $r[$f] = ['name' => $x[0], 'descr' => $x[3], 'modes' => $m, 'max' => array_search($mx, AI_RANK, true), 'choice' => $me['ai_modes'][$f] ?? null]; }
+  return $r ?: null; }
+function aiCtxOf($inc) { return (int)$inc['is_exercise'] ? 'ex' : 'real'; }
+function aiT($ts) { return $ts === null ? '–' : (new DateTime('@' . (int)$ts))->setTimezone(new DateTimeZone('Europe/Zurich'))->format('d.m.Y H:i'); }
+function aiHm($ts) { return $ts === null ? '–' : (new DateTime('@' . (int)$ts))->setTimezone(new DateTimeZone('Europe/Zurich'))->format('H:i'); }
+function aiDur($s) { $s = max(0, (int)$s); return $s >= 3600 ? floor($s / 3600) . ' h ' . floor($s % 3600 / 60) . ' min' : floor($s / 60) . ' min'; }
+// Standorte gerundet senden: Koordinaten auf 3 Nachkommastellen (ca. 100 m)
+function aiRound($t) { return preg_replace('/(?<![\d.])(\d{1,3}\.\d{3})\d+/', '$1', $t); }
+// Einsatz als Text für die KI; c = anonCtx (Bezeichnungen statt Namen) oder null
+function aiIncText($inc, $c, $withLog = true) { $d = aarDoc($inc, $c, (bool)$c, false, false, null); $i = $d['inc']; $L = [];
+  $L[] = ($i['is_exercise'] ? 'Übung' : 'Scharfer Einsatz') . ($i['plan'] ? ' (vorbereitete Übung «' . ($c ? anonText($i['plan'], $c) : $i['plan']) . '»)' : '') . ', Alarm ' . aiT($i['alarm_at']) . ($i['ended_at'] ? ', Ende ' . aiT($i['ended_at']) . ', Dauer ' . aiDur($i['ended_at'] - $i['alarm_at']) : ', läuft seit ' . aiDur(time() - $i['alarm_at']));
+  $L[] = 'Alarmmeldung: ' . ($i['message'] ?: '–');
+  if ($i['creator']) $L[] = 'Ausgelöst von: ' . $i['creator'];
+  if ($i['flow_ms'] !== null) $L[] = 'Fliessgeschwindigkeit: ' . round($i['flow_ms'] * 3.6, 1) . ' km/h';
+  if ($i['lat'] !== null) $L[] = 'PLS (Point last seen) des Einsatzes: ' . sprintf('%.5F, %.5F', $i['lat'], $i['lon']);
+  if ($i['first_accept']) $L[] = 'Erste Annahme: ' . aiDur($i['first_accept'] - $i['alarm_at']) . ' nach dem Alarm';
+  if ($i['first_area']) $L[] = 'Suchgebiet erstmals erreicht: ' . aiDur($i['first_area'] - $i['alarm_at']) . ' nach dem Alarm';
+  $L[] = ''; $L[] = 'Einsatzkräfte (' . count($d['people']) . '):';
+  foreach ($d['people'] as $p) $L[] = '- ' . $p['name'] . ($p['mode'] ? ', ' . $p['mode'] : '') . ($p['role'] ? ', Spezialrolle ' . $p['role'] : '') . ($p['joined'] ? ', dabei ab ' . aiHm($p['joined']) : '') . ($p['left_at'] ? ', ausgetreten ' . aiHm($p['left_at']) : '');
+  $res = array_filter($d['rescuees'], fn($r) => !$r['removed']);
+  if ($res) { $L[] = ''; $L[] = 'Rettlinge:'; foreach ($res as $r) $L[] = '- ' . $r['name'] . ($r['descr'] ? ': ' . $r['descr'] : '') . ($r['loc_at'] ? ', Fundort gemeldet ' . aiHm($r['loc_at']) : ', vermisst') . ($r['rescued_at'] ? ', gerettet ' . aiHm($r['rescued_at']) : ''); }
+  $ext = array_filter($d['externals'], fn($r) => !$r['removed']);
+  if ($ext) { $L[] = ''; $L[] = 'Externe Einsatzkräfte:'; foreach ($ext as $r) $L[] = '- ' . $r['name'] . ($r['role'] ? ' (' . $r['role'] . ')' : '') . ($r['descr'] ? ': ' . $r['descr'] : ''); }
+  if ($withLog) { $L[] = ''; $L[] = 'Einsatzlog (chronologisch, Zeit Person: Eintrag):'; $n = 0;
+    foreach ($d['log'] as $r) { if (++$n > 600) { $L[] = '… (weitere Einträge gekürzt)'; break; } $L[] = aiHm($r['ts']) . ' ' . ($r['name'] ?: 'System') . ': ' . mb_substr((string)$r['text'], 0, 500); } }
+  return [implode("\n", $L), $d]; }
+const AI_SYS = 'Du unterstützt eine Einsatzgruppe der Wasserrettung (Fliessgewässer, Schweiz). Schreibe auf Deutsch in Schweizer Rechtschreibung (immer «ss», nie «ß»), sachlich und knapp. '
+  . 'Stütze dich nur auf die gelieferten Daten und erfinde keine Fakten, Zeiten, Namen oder Zahlen; fehlt etwas, schreibe «(bitte ergänzen)». '
+  . 'Bezeichnungen wie «Einsatzkraft 3», «Person 1», «Rettling 2» oder «Externe Einsatzkraft 1» sind Pseudonyme: übernimm sie unverändert und versuche nie, Personen zu erraten.';
+// Anfrage beim Anbieter: [Text, Tokens, Modell]; Fehler mit fail (502)
+function aiCall($sys, $user, $maxTok = null) { $c = aiCfg(); $key = aiKey(); if ($key === '') fail('Für den AI-Assistenten ist kein API-Schlüssel hinterlegt', 503);
+  if (!function_exists('curl_init')) fail('Auf dem Server fehlt curl', 503);
+  $mt = (int)($maxTok ?? $c['max_tokens']); $model = trim((string)$c['model']); @set_time_limit((int)$c['timeout'] + 20);
+  if ($c['provider'] === 'anthropic') { $url = rtrim(trim((string)$c['base_url']) ?: 'https://api.anthropic.com', '/') . '/v1/messages';
+    $h = ['Content-Type: application/json', 'x-api-key: ' . $key, 'anthropic-version: 2023-06-01'];
+    $body = ['model' => $model, 'max_tokens' => $mt, 'system' => $sys, 'messages' => [['role' => 'user', 'content' => $user]]]; }
+  else { $url = rtrim(trim((string)$c['base_url']), '/') . '/chat/completions'; $h = ['Content-Type: application/json', 'Authorization: Bearer ' . $key];
+    $body = ['model' => $model, 'max_tokens' => $mt, 'temperature' => 0.3, 'messages' => [['role' => 'system', 'content' => $sys], ['role' => 'user', 'content' => $user]]]; }
+  $k = curl_init($url); curl_setopt_array($k, [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => json_encode($body, JSON_UNESCAPED_UNICODE), CURLOPT_HTTPHEADER => $h, CURLOPT_RETURNTRANSFER => 1,
+    CURLOPT_TIMEOUT => (int)$c['timeout'], CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
+  $r = curl_exec($k); $code = curl_getinfo($k, CURLINFO_HTTP_CODE); $err = $r === false ? (curl_errno($k) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($k)) : ''; curl_close($k);
+  if ($r === false) throw new AiErr('Keine Antwort vom AI-Anbieter: ' . $err);
+  $j = json_decode($r, true);
+  if ($code !== 200) { $m = is_array($j) ? ($j['error']['message'] ?? (is_string($j['error'] ?? null) ? $j['error'] : null) ?? $j['message'] ?? null) : null; throw new AiErr('AI-Anbieter (HTTP ' . $code . '): ' . mb_substr((string)($m ?? $r), 0, 300)); }
+  if ($c['provider'] === 'anthropic') { $t = implode('', array_map(fn($x) => $x['text'] ?? '', array_filter((array)($j['content'] ?? []), fn($x) => ($x['type'] ?? '') === 'text'))); $tok = (int)($j['usage']['input_tokens'] ?? 0) + (int)($j['usage']['output_tokens'] ?? 0); }
+  else { $t = (string)($j['choices'][0]['message']['content'] ?? ''); $tok = (int)($j['usage']['total_tokens'] ?? 0); }
+  if (trim($t) === '') throw new AiErr('Der AI-Anbieter lieferte keine Antwort');
+  return [trim($t), $tok, (string)($j['model'] ?? $model)]; }
+class AiErr extends Exception {}
+function aiUse($fn, $incId, $tok, $ok, $err = null) { global $db, $now, $uid; $db->prepare("INSERT INTO ai_usage(ts,user_id,fn,incident_id,tokens,ok,err) VALUES(?,?,?,?,?,?,?)")->execute([$now, $uid, $fn, $incId, (int)$tok, $ok ? 1 : 0, $err === null ? null : mb_substr($err, 0, 300)]); }
+// Kostenbremse: Abfragen der letzten 24 Stunden gesamt und je Person (0 = unbegrenzt)
+function aiLimit() { global $db, $now, $uid; $c = aiCfg();
+  $q = fn($w, $a) => (int)(function () use ($db, $w, $a) { $s = $db->prepare("SELECT COUNT(*) FROM ai_usage WHERE ts>? $w"); $s->execute($a); $v = $s->fetchColumn(); $s->closeCursor(); return $v; })();
+  if ((int)$c['day_limit'] && $q('', [$now - 86400]) >= (int)$c['day_limit']) fail('Tageslimit des AI-Assistenten erreicht (' . (int)$c['day_limit'] . ' Abfragen in 24 Stunden)', 429);
+  if ((int)$c['user_limit'] && $q('AND user_id=?', [$now - 86400, $uid]) >= (int)$c['user_limit']) fail('Dein Tageslimit für den AI-Assistenten ist erreicht (' . (int)$c['user_limit'] . ' Abfragen in 24 Stunden)', 429); }
+// Pseudonyme der Antwort zurück in die Namen, die die Person sehen darf: c = Kontext der Anfrage, cv = anonCtx der Ansicht oder null (Namen)
+function aiDeanon($t, $c, $cv, $id) { global $db; if (!$c) return $t; $map = [];
+  $nm = $db->query("SELECT id,name FROM users")->fetchAll(PDO::FETCH_KEY_PAIR);
+  foreach ($c['u'] as $u => $l) $map[$l] = $cv ? ($cv['u'][$u] ?? $l) : ($nm[$u] ?? $l);
+  foreach (['r' => 'rescuees', 'e' => 'externals'] as $k => $tb) { $s = $db->prepare("SELECT id,name FROM $tb WHERE incident_id=?"); $s->execute([$id]); $n = $s->fetchAll(PDO::FETCH_KEY_PAIR);
+    foreach ($c[$k] as $x => $l) $map[$l] = $map[$l] ?? ($cv ? ($cv[$k][$x] ?? $l) : (trim((string)($n[$x] ?? '')) !== '' ? $n[$x] : $l)); }
+  $map = array_filter($map, fn($v, $k) => $v !== $k, ARRAY_FILTER_USE_BOTH); if (!$map) return $t;
+  $ks = array_keys($map); usort($ks, fn($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+  return preg_replace_callback('/(?<![\p{L}\p{N}])(?:' . implode('|', array_map(fn($k) => preg_quote($k, '/'), $ks)) . ')(?![\p{L}\p{N}])/u', fn($m) => $map[$m[0]], $t) ?? $t; }
+function aiJson($t) { if (preg_match('/\{.*\}/s', $t, $m)) { $j = json_decode($m[0], true); if (is_array($j)) return $j; } return null; }
+// Eingaben der Verwaltung prüfen (ai/cfg/save)
+function aiIn($in) { global $db; $o = aiCfg(); $c = [];
+  $c['on'] = (int)!empty($in['on'] ?? $o['on']);
+  $c['provider'] = (string)($in['provider'] ?? $o['provider']); if (!isset(AI_PROV[$c['provider']])) fail('Unbekannter Anbieter');
+  $u = trim((string)($in['base_url'] ?? $o['base_url']));
+  if ($u !== '' && (strlen($u) > 300 || !filter_var($u, FILTER_VALIDATE_URL) || !preg_match('#^(https://[^/?\#@\s]+|http://(localhost|127\.0\.0\.1)(:\d+)?)(/|$)#i', $u))) fail('Ungültige Basis-URL (nur https://…)');
+  if ($u === '' && $c['provider'] === 'openai' && $c['on']) fail('Für OpenAI-kompatible Anbieter braucht es eine Basis-URL');
+  $c['base_url'] = $u;
+  $c['model'] = mb_substr(trim((string)($in['model'] ?? $o['model'])), 0, 120); if ($c['on'] && $c['model'] === '') fail('Bitte ein Modell angeben');
+  foreach (['timeout' => [5, 300], 'max_tokens' => [100, 8000], 'day_limit' => [0, 100000], 'user_limit' => [0, 10000]] as $k => [$a, $b]) {
+    $v = $in[$k] ?? $o[$k]; if (!is_numeric($v) || (int)$v < $a || (int)$v > $b) fail("Ungültiger Wert für $k ($a bis $b)"); $c[$k] = (int)$v; }
+  $c['anon'] = (int)!empty($in['anon'] ?? $o['anon']); $c['round_loc'] = (int)!empty($in['round_loc'] ?? $o['round_loc']);
+  $ids = array_map('strval', $db->query("SELECT id FROM uroles")->fetchAll(PDO::FETCH_COLUMN)); $m = [];
+  foreach ((array)($in['matrix'] ?? $o['matrix']) as $r => $fs) { if (!in_array((string)$r, $ids, true) || !is_array($fs)) continue;
+    foreach ($fs as $f => $ks) { if (!isset(AI_FN[$f]) || !is_array($ks)) continue;
+      foreach ($ks as $k => $v) { if (!in_array($k, AI_FN[$f][1], true) || !isset(AI_MODES[$v])) continue; if ($v === 'comp' && !AI_FN[$f][2]) $v = 'cmd'; $m[(string)$r][$f][$k] = $v; } } }
+  $c['matrix'] = (object)$m; return $c; }
+// Kontext und Auftrag je Funktion; prüft die Rechte wie die zugehörige Ansicht. Rückgabe: [Benutzer-Prompt, Art, Einsatz-ID, c (Anfrage), cv (Ansicht), Zusatz]
+function aiTask($fn, $in) { global $db, $uid, $now; $anon = (int)aiCfg()['anon']; $q = trim(mb_substr((string)($in['q'] ?? ''), 0, 1000));
+  $wish = $q !== '' ? "\n\nZusätzlicher Wunsch der Person: $q" : '';
+  if ($fn === 'aar') { $inc = incById($in['id'] ?? 0); aarEditable($inc); $id = (int)$inc['id'];
+    $forced = (int)$inc['log_anon'] || $inc['rp_anon'] !== null || (int)$inc['view_anon']; $c = $anon || $forced ? anonCtx($id) : null; $cv = $forced ? anonCtx($id) : null;
+    [$txt, $d] = aiIncText($inc, $c); $data = (array)$d['data'];
+    $fs = array_values(array_filter(aarCfg()['fields'], fn($f) => in_array($f['type'], ['text', 'area'], true)));
+    $only = isset($in['field']) ? (string)$in['field'] : null; if ($only !== null) $fs = array_values(array_filter($fs, fn($f) => $f['id'] === $only));
+    elseif (empty($in['all'])) $fs = array_values(array_filter($fs, fn($f) => trim((string)($data[$f['id']] ?? '')) === ''));
+    if (!$fs) fail($only !== null ? 'Für dieses Feld gibt es keinen Vorschlag' : 'Alle Textfelder sind bereits ausgefüllt');
+    $known = []; foreach (aarCfg()['fields'] as $f) if (in_array($f['type'], ['head', 'img'], true) || trim((string)($data[$f['id']] ?? '')) === '') continue; else $known[] = '- ' . $f['label'] . ': ' . mb_substr(is_scalar($data[$f['id']]) ? (string)$data[$f['id']] : json_encode($data[$f['id']], JSON_UNESCAPED_UNICODE), 0, 1500);
+    $ask = implode("\n", array_map(fn($f) => '- ' . $f['id'] . ' (' . ($f['type'] === 'area' ? 'mehrzeilig, einige Sätze oder Stichpunkte' : 'einzeilig, kurz') . '): ' . $f['label'] . ($f['hint'] ? ' – Hinweis: ' . $f['hint'] : '') . (trim((string)($data[$f['id']] ?? '')) !== '' ? "\n  Bisheriger Text (überarbeiten, Inhalt beibehalten): " . mb_substr((string)$data[$f['id']], 0, 3000) : ''), $fs));
+    $p = "Erstelle Entwürfe für Felder eines After Action Review (Nachbesprechung) zu diesem Einsatz.\n\n=== Einsatzdaten ===\n$txt\n\n" . ($known ? "=== Bereits erfasste Angaben ===\n" . implode("\n", $known) . "\n\n" : '')
+      . "=== Gesuchte Felder (ID, Art: Bezeichnung) ===\n$ask\n\nAntworte ausschliesslich mit einem JSON-Objekt {\"<Feld-ID>\": \"<Text>\"} für genau diese Felder, ohne weitere Erklärung. Was sich aus den Daten nicht ableiten lässt (z. B. Bewertungen, Gefühle, Lehren), formuliere als Frage zur Nachbesprechung oder «(bitte ergänzen)».$wish";
+    return [$p, aiCtxOf($inc), $id, $c, $cv, ['fields' => array_column($fs, 'id'), 'key' => $only ?? (empty($in['all']) ? 'empty' : 'all')]]; }
+  if ($fn === 'log') { $inc = incById($in['id'] ?? 0); $id = (int)$inc['id']; $v = incView($id); if ($v && !myBtns()['log']) fail('Das Einsatzlog ist für Einsatzkräfte ausgeschaltet', 403);
+    $va = $v === 2 || (int)$inc['view_anon'] || ($v && anonAny($inc)); $self = $v ? $uid : null; $c = $anon || $va ? anonCtx($id) : null; $cv = $va ? anonCtx($id, $self) : null;
+    [$txt] = aiIncText($inc, $c);
+    $p = "Fasse diesen Einsatz anhand der Daten und des Einsatzlogs zusammen. Gliederung mit kurzen Zwischentiteln: Überblick (2–3 Sätze), Ablauf mit den wichtigsten Zeitpunkten, Kräfte und Rettlinge, Auffälligkeiten (z. B. lange Wartezeiten, offene Punkte). Höchstens 300 Wörter, keine Bewertung von Personen.\n\n$txt$wish";
+    return [$p, aiCtxOf($inc), $id, $c, $cv, ['key' => $v ? "v$v:$self" : 'adm']]; }
+  if ($fn === 'sit') { $inc = activeIncident(); if (!$inc || (int)$inc['id'] !== (int)($in['id'] ?? 0)) fail('Der Einsatz läuft nicht mehr', 409); $id = (int)$inc['id'];
+    $pp = part($id); if (!(($pp && $pp['mode'] !== 'declined') || canManage($inc) || exLead($inc))) fail('Die Lagezusammenfassung gibt es nur für Teilnehmende', 403);
+    $c = $anon ? anonCtx($id) : null; [$txt, $d] = aiIncText($inc, $c, false);
+    $s = $db->prepare("SELECT p.user_id,p.lat,p.lon,p.loc_at,p.left_at,p.mode FROM participants p WHERE p.incident_id=? AND p.mode<>'declined'"); $s->execute([$id]); $loc = [];
+    foreach ($s->fetchAll() as $r) if ($r['lat'] !== null && $r['left_at'] === null) $loc[] = '- ' . ($c ? ($c['u'][(int)$r['user_id']] ?? 'Einsatzkraft') : ($db->query('SELECT name FROM users WHERE id=' . (int)$r['user_id'])->fetchColumn() ?: '?')) . ': ' . sprintf('%.5F, %.5F', $r['lat'], $r['lon']) . ($r['loc_at'] ? ' (Stand ' . aiHm($r['loc_at']) . ')' : '');
+    $src = array_map(fn($x) => sprintf('%.5F, %.5F', $x['lat'], $x['lon']) . (isset($x['at']) ? ' seit ' . aiHm($x['at']) : ''), plsSources($inc, incRes($inc)));
+    $log = array_slice($d['log'], -80); $lt = implode("\n", array_map(fn($r) => aiHm($r['ts']) . ' ' . ($r['name'] ?: 'System') . ': ' . mb_substr((string)$r['text'], 0, 300), $log));
+    $p = "Erstelle eine kurze Lagezusammenfassung für den laufenden Einsatz (jetzt " . aiHm($now) . "). Höchstens 8 kurze Punkte: Lage und Auftrag, Suchgebiet/PLS, eingesetzte Kräfte und Positionen, Rettlinge, offene Punkte und nächste sinnvolle Schritte (nur als Hinweis, keine Befehle).\n\n$txt\n\nPLS fürs Suchgebiet:\n" . ($src ? '- ' . implode("\n- ", $src) : '–') . "\n\nStandorte der Einsatzkräfte:\n" . ($loc ? implode("\n", $loc) : '–') . "\n\nLetzte Log-Einträge und Nachrichten:\n" . ($lt ?: '–') . $wish;
+    return [$p, aiCtxOf($inc), $id, $c, null, ['key' => 'u']]; }
+  if ($fn === 'plan') { plannerOnly(); $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)($in['id'] ?? 0)]); $pl = $s->fetch(); $s->closeCursor(); if (!$pl) fail('Übung nicht gefunden', 404);
+    $roles = $db->query("SELECT name FROM roles WHERE active=1 ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
+    $el = array_map(fn($j) => '- ' . (EX_KINDS[$j['kind']] ?? $j['kind']) . ': ' . $j['label'] . ($j['name'] ? ', Name ' . $j['name'] : '') . ($j['descr'] ? ', ' . $j['descr'] : '') . ($j['lat'] !== null ? sprintf(', Standort %.5F, %.5F', $j['lat'], $j['lon']) : '') . ($j['auto'] !== null ? ', automatisch ' . (int)$j['auto'] . ' min nach dem Start' : ', Freigabe von Hand') . ((int)$j['ago'] ? ', PLS ' . (int)$j['ago'] . ' min vor der Freigabe' : '') . ($j['msg'] ? ', Meldung: ' . $j['msg'] : ''), exInjects((int)$pl['id']));
+    $p = "Hilf bei der Vorbereitung einer Übung. Mache konkrete Vorschläge für weitere Elemente (Arten: " . implode(', ', EX_KINDS) . "), je mit Bezeichnung, ungefährem Ort relativ zu den bestehenden Elementen, Zeitpunkt (Minuten nach dem Start) und Meldung an die Teilnehmenden; dazu Hinweise zum Ablauf und zu Lernzielen. Keine erfundenen Ortsnamen, Koordinaten nur relativ (z. B. «ca. 500 m flussabwärts»). Höchstens 300 Wörter.\n\n"
+      . "Titel: {$pl['title']}\nAufgebotsmeldung: " . ($pl['message'] ?: '–') . "\nSpezialrollen: " . (implode(', ', $roles) ?: '–') . "\n\nBisherige Elemente:\n" . ($el ? implode("\n", $el) : '– (noch keine)') . $wish;
+    return [$p, 'ex', null, null, null, ['key' => 'p' . (int)$pl['id']]]; }
+  if ($fn === 'stats') { need('stats'); $rows = $db->query("SELECT i.id,i.alarm_at,i.ended_at,i.is_exercise,(SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') acc,(SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='accept') fa,(SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='area') far,(SELECT COUNT(*) FROM rescuees r WHERE r.incident_id=i.id AND r.removed IS NULL) res,(SELECT COUNT(*) FROM rescuees r WHERE r.incident_id=i.id AND r.removed IS NULL AND r.rescued_at IS NOT NULL) rsd FROM incidents i WHERE i.ended_at IS NOT NULL ORDER BY i.id DESC LIMIT 200")->fetchAll();
+    if (!$rows) fail('Es gibt noch keine beendeten Einsätze');
+    $L = array_map(fn($r) => '- ' . ((int)$r['is_exercise'] ? 'Übung' : 'Einsatz') . ' ' . aiT($r['alarm_at']) . ', Dauer ' . aiDur($r['ended_at'] - $r['alarm_at']) . ', ' . (int)$r['acc'] . ' Einsatzkräfte' . ($r['fa'] ? ', erste Annahme nach ' . aiDur($r['fa'] - $r['alarm_at']) : '') . ($r['far'] ? ', Suchgebiet nach ' . aiDur($r['far'] - $r['alarm_at']) : '') . ((int)$r['res'] ? ', Rettlinge ' . (int)$r['res'] . ' (gerettet ' . (int)$r['rsd'] . ')' : ''), $rows);
+    $p = "Werte diese Einsatzstatistik in Worten aus (ohne Personen): Anzahl und Entwicklung scharfer Einsätze und Übungen, Reaktionszeiten (Alarm bis erste Annahme, bis Suchgebiet), Anzahl Einsatzkräfte, Auffälligkeiten und Anregungen. Scharfe Einsätze und Übungen getrennt betrachten. Höchstens 300 Wörter.\n\nBeendete Einsätze (neueste zuerst, heute ist " . aiT($now) . "):\n" . implode("\n", $L) . $wish;
+    return [$p, 'adm', null, null, null, ['key' => 's']]; }
+  fail('Unbekannte Funktion'); }
 // Einrückoption ohne Standortfreigabe: Standortmeldungen werden nicht gespeichert (serverseitig erzwungen)
 if ($route === 'incident/location' && ($inc = activeIncident()) && ($p = part($inc['id'])) && !modeShares($p['mode'])) out(['ok' => true, 'shared' => false]);
 
@@ -1094,7 +1254,7 @@ if (array_key_exists($route, FEATURE_ROUTES) && ($inc = activeIncident()) && !fe
 
 try { anonAuto(); } catch (Throwable $e) { error_log('anonAuto: ' . $e->getMessage()); } // fällige automatische Anonymisierung (Issue #87)
 switch ($route) {
- case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_default' => recDefault(), 'air_default' => airCfg()['on'] ? [airDef(0), airDef(1)] : null, 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'features' => ['real' => features(0), 'ex' => features(1)], 'my_runs' => myRuns()]]); // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; features je Art (real, ex) für «Einsatz starten» und die Flussdistanz ohne Einsatz; rec_default für «Einsatz starten»
+ case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'rec_default' => recDefault(), 'air_default' => airCfg()['on'] ? [airDef(0), airDef(1)] : null, 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'features' => ['real' => features(0), 'ex' => features(1)], 'my_runs' => myRuns(), 'ai' => aiMe(), 'ai_anon' => (int)aiCfg()['anon']]]); // ai: AI-Assistent je Funktion (Issue #111); my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; features je Art (real, ex) für «Einsatz starten» und die Flussdistanz ohne Einsatz; rec_default für «Einsatz starten»
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts FROM modes ORDER BY id")->fetchAll()));
@@ -1118,6 +1278,46 @@ switch ($route) {
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz', 404);
   if (!airAllowed($inc)) fail('Helikopter sind für dich nicht freigegeben', 403);
   out(airServe($inc));
+ /* ---------- AI-Assistent (Issue #111) ---------- */
+ case 'ai/cfg': need('cfg_ai'); $c = aiCfg();
+  $u = fn($w, $a) => (function () use ($db, $w, $a) { $s = $db->prepare("SELECT COUNT(*) n, COALESCE(SUM(tokens),0) t, COALESCE(SUM(CASE WHEN ok=0 THEN 1 ELSE 0 END),0) e FROM ai_usage WHERE ts>? $w"); $s->execute($a); $r = $s->fetch(); $s->closeCursor(); return ints($r, ['n', 't', 'e']); })();
+  $fu = $db->prepare("SELECT fn, COUNT(*) n, COALESCE(SUM(tokens),0) t FROM ai_usage WHERE ts>? GROUP BY fn"); $fu->execute([$now - 30 * 86400]);
+  $last = $db->query("SELECT a.ts,a.fn,a.incident_id,a.tokens,a.ok,a.err,u.name FROM ai_usage a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 10")->fetchAll();
+  out(['cfg' => $c, 'has_key' => aiKey() !== '' ? 1 : 0, 'ready' => aiReady() ? 1 : 0, 'fn' => array_map(fn($x) => ['name' => $x[0], 'ctx' => $x[1], 'comp' => $x[2], 'descr' => $x[3]], AI_FN),
+   'ctx' => AI_CTX, 'modes' => AI_MODES, 'prov' => AI_PROV, 'curl' => function_exists('curl_init') ? 1 : 0,
+   'uroles' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'sys' => $r['sys']], $db->query("SELECT id,name,sys FROM uroles ORDER BY id")->fetchAll()),
+   'usage' => ['day' => $u('', [$now - 86400]), 'month' => $u('', [$now - 30 * 86400]), 'fn' => array_map(fn($r) => ints($r, ['n', 't']), $fu->fetchAll()), 'last' => array_map(fn($r) => ints($r, ['ts', 'incident_id', 'tokens', 'ok']), $last)]]);
+ case 'ai/cfg/save': need('cfg_ai'); $c = aiIn($in);
+  if (isset($in['key']) && trim((string)$in['key']) !== '') { $k = trim((string)$in['key']); if (strlen($k) > 500 || preg_match('/\s/', $k)) fail('Ungültiger API-Schlüssel'); setSetting('ai_key', $k); }
+  if (!empty($in['key_clear'])) setSetting('ai_key', '');
+  if ($c['on'] && aiKey() === '') fail('Bitte zuerst einen API-Schlüssel hinterlegen');
+  setSetting('ai', json_encode($c, JSON_UNESCAPED_UNICODE)); out(['ok' => true, 'ready' => aiReady() ? 1 : 0]);
+ case 'ai/test': need('cfg_ai'); $t0 = microtime(true);
+  try { [$t, $tok, $model] = aiCall('Antworte kurz auf Deutsch.', 'Antworte nur mit: Verbindung funktioniert.', 50); }
+  catch (AiErr $e) { aiUse('test', null, 0, 0, $e->getMessage()); fail($e->getMessage(), 502); }
+  aiUse('test', null, $tok, 1); out(['text' => $t, 'ms' => (int)round((microtime(true) - $t0) * 1000), 'tokens' => $tok, 'model' => $model]);
+ case 'ai/ask': // fn, id, q (zusätzlicher Wunsch), auto (begleitend), fresh (Cache übergehen), field/all (aar); my=1 im GET für Meine Einsätze
+  $fn = (string)($in['fn'] ?? ''); if (!isset(AI_FN[$fn])) fail('Unbekannte Funktion');
+  if (!aiReady()) fail('Der AI-Assistent ist nicht eingerichtet', 503);
+  [$prompt, $ctx, $incId, $c, $cv, $x] = aiTask($fn, $in);
+  $mode = aiMode($fn, $ctx); $auto = !empty($in['auto']); $q = trim((string)($in['q'] ?? ''));
+  if (AI_RANK[$mode] < ($auto ? 2 : 1)) fail($auto ? 'Der begleitende Modus ist für dich nicht eingeschaltet' : 'Diese Funktion des AI-Assistenten ist für dich nicht freigegeben', 403);
+  $cfg = aiCfg(); if ((int)$cfg['round_loc']) $prompt = aiRound($prompt);
+  $ck = sha1($fn . '|' . ($incId ?? '') . '|' . $x['key']); $hash = sha1($cfg['model'] . '|' . $prompt);
+  $deliver = function ($t, $cached, $ts, $tok) use ($fn, $c, $cv, $incId, $x) { $t = aiDeanon($t, $c, $cv, $incId);
+    $o = ['text' => $t, 'cached' => $cached ? 1 : 0, 'ts' => (int)$ts, 'tokens' => (int)$tok, 'fn' => $fn];
+    if ($fn === 'aar') { $j = aiJson($t); if (!$j) fail('Die Antwort des AI-Anbieters liess sich nicht auswerten', 502);
+      $o['fields'] = (object)array_filter(array_map(fn($v) => is_scalar($v) ? trim((string)$v) : null, array_intersect_key($j, array_flip($x['fields']))), fn($v) => $v !== null && $v !== ''); unset($o['text']); }
+    out($o); };
+  if ($q === '' && empty($in['fresh'])) { $s = $db->prepare("SELECT * FROM ai_cache WHERE k=?"); $s->execute([$ck]); $r = $s->fetch(); $s->closeCursor();
+    if ($r && ($r['ctx_hash'] === $hash || $auto && ($fn === 'aar' || $fn === 'sit' && $now - (int)$r['ts'] < AI_SIT_S))) $deliver($r['text'], true, $r['ts'], $r['tokens']); }
+  aiLimit();
+  try { [$t, $tok, $model] = aiCall(AI_SYS, $prompt); }
+  catch (AiErr $e) { aiUse($fn, $incId, 0, 0, $e->getMessage()); fail($e->getMessage(), 502); }
+  aiUse($fn, $incId, $tok, 1);
+  if ($q === '') { $db->prepare("DELETE FROM ai_cache WHERE k=?")->execute([$ck]); $db->prepare("INSERT INTO ai_cache(k,ts,ctx_hash,text,tokens,model) VALUES(?,?,?,?,?,?)")->execute([$ck, $now, $hash, $t, $tok, $model]); }
+  $deliver($t, false, $now, $tok);
+
  case 'air/test': need('cfg_map'); // Verwaltung: eine Quelle direkt abfragen (ohne Cache), Umkreis 120 NM um die Mitte der Schweiz
   $k = (string)($in['src'] ?? ''); if (!isset(AIR_SOURCES[$k])) fail('Unbekannte Datenquelle');
   $c = airCfg(); $t = microtime(true); $r = airFetch([$k], 46.8, 8.2, 120 * 1852); $ms = (int)((microtime(true) - $t) * 1000);
@@ -1917,6 +2117,10 @@ switch ($route) {
     $c = (string)$in['coord_sys']; if ($c !== '' && $c !== 'none' && !in_array($c, COORDS, true)) fail('Unbekanntes Koordinatensystem'); // none = Koordinaten ausblenden (nur persönlich)
     $db->prepare("UPDATE users SET coord_sys=? WHERE id=?")->execute([$c === '' ? null : $c, $uid]);
   }
+  if (isset($in['ai_modes'])) { // AI-Assistent (Issue #111): {Funktion: Modus oder '' = höchster erlaubter}; nur bekannte Funktionen und Modi
+    $v = []; foreach ((array)$in['ai_modes'] as $f => $m) if (isset(AI_FN[$f]) && is_string($m) && isset(AI_RANK[$m])) $v[$f] = $m;
+    $db->prepare("UPDATE users SET ai_modes=? WHERE id=?")->execute([$v ? json_encode($v) : null, $uid]);
+  }
   if (isset($in['nav_app'])) { // '' = Standard der Verwaltung
     $c = (string)$in['nav_app']; if ($c !== '' && !in_array($c, navApps(), true)) fail('Diese Navigations-App ist nicht verfügbar');
     $db->prepare("UPDATE users SET nav_app=? WHERE id=?")->execute([$c === '' ? null : $c, $uid]);
@@ -2034,6 +2238,7 @@ switch ($route) {
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[]]); // Helikopter (Issue #73)
  case 'settings/save': // jede übergebene Einstellung braucht ihr Recht (SETTING_PERMS)
   foreach (SETTING_PERMS as $k => $p) if (isset($in[$k])) need($p);
+  if (isset($in['ai'])) fail('Den AI-Assistenten über ai/cfg/save einstellen');
   if (isset($in['air'])) setSetting('air', json_encode(airIn($in['air']), JSON_UNESCAPED_UNICODE)); // Helikopter (Issue #73)
   if (isset($in['my_runs'])) { if (!is_string($in['my_runs']) || !isset(MY_RUNS[$in['my_runs']])) fail('Ungültige Einstellung'); setSetting('my_runs', (string)$in['my_runs']); } // Meine Einsätze (Issue #61)
   if (isset($in['my_btns'])) { if (!is_array($in['my_btns'])) fail('Ungültige Einstellung'); $b = myBtns(); foreach (MY_BTNS as $k => $_) if (array_key_exists($k, $in['my_btns'])) $b[$k] = (int)!empty($in['my_btns'][$k]); setSetting('my_btns', json_encode($b)); }

@@ -155,7 +155,7 @@ function parseC(s){const n=String(s||'').replace(/['’]/g,'').trim().split(/\s*
   return{lat:(16.9023892+3.238272*x-.270978*y*y-.002528*x*x-.0447*y*y*x-.014*x*x*x)*100/36,lon:(2.6779094+4.728982*y+.791484*y*x+.1306*y*x*x-.0436*y*y*y)*100/36}}
 // Rechte der angemeldeten Person aus ihren Benutzerrollen (Issue #63, me.perms vom Server); nur zum Ausblenden, der Server prüft selbst
 const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
-const ADMIN_PERMS=['users','uroles','cfg_inc','ex_plan','cfg_func','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 function logout(){token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k))} // letzter Stand gehört der abgemeldeten Person
 /* ---------- Anmeldung ---------- */
@@ -203,3 +203,30 @@ function renderBigLog(){const o=$('#bigLog');if(!big||!o)return;const got=big.ge
   $('#bigT').textContent=`${big.title} · ${l.length} von ${all.length} Einträgen${big.live&&!got?' · Einsatz beendet':''}`;
   $('#bigS').textContent=big.desc?'Neueste zuerst':'Älteste zuerst';
   $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
+/* ---------- AI-Assistent (Issue #111): Fenster mit Vorschlag, Übernehmen / Verwerfen / Neu und zusätzlichem Wunsch ---------- */
+// Modus der Person je Funktion und Art (me.ai vom Server: aiMe, schon begrenzt auf das Erlaubte und die eigene Wahl): off, cmd (auf Abruf), comp (begleitend)
+const aiM=(fn,ctx)=>(typeof me!=='undefined'&&me&&me.ai&&me.ai[fn]&&me.ai[fn].modes[ctx])||'off';
+const aiOn=(fn,ctx)=>aiM(fn,ctx)!=='off';
+// Antworttext: Zeilenumbrüche bleiben, **fett** und Zwischentitel (#) werden hervorgehoben, sonst nur Text (kein HTML vom Anbieter)
+const aiFmt=t=>esc(t||'').replace(/^#{1,6}\s*(.+)$/gm,'<b>$1</b>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');
+const aiMeta=r=>`${r.cached?'Gespeicherter Vorschlag vom ':'Erstellt '}${new Date(r.ts*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'})}${r.tokens?` · ${r.tokens.toLocaleString('de-CH')} Tokens`:''}`;
+// o: title, req (fn, id, field, all …), my (Meine Einsätze), pre (bereits geladener Vorschlag), show(r) → HTML, apply(r) (ohne: Kopieren), applyText
+function aiPanel(o){let res=o.pre||null,busy=false;
+  const d=dlg('✨ '+o.title,`<div class="aiw"><div class="aio" data-aio></div><div class="mut aim" data-aim></div>
+    <div class="mut aih">Vorschlag des AI-Assistenten: bitte prüfen, bevor du ihn übernimmst. Es gehen nur die Daten dieser Ansicht an den Anbieter${me&&me.ai_anon?', Namen ersetzt durch Bezeichnungen':''}.</div>
+    <label class="mut">Zusätzlicher Wunsch (optional)<input data-aiq maxlength="1000" placeholder="z. B. kürzer, mehr zur Alarmierung"></label></div>`,
+    async()=>{if(!res)throw new Error('Es gibt noch keinen Vorschlag');if(o.apply)return o.apply(res);
+      try{await navigator.clipboard.writeText(res.text||'');toast('In die Zwischenablage kopiert.')}catch(e){throw new Error('Kopieren nicht möglich, bitte den Text markieren')}},
+    o.apply?(o.applyText||'Übernehmen'):'Kopieren','Verwerfen');
+  d.firstElementChild.classList.add('aip');
+  const out=$('[data-aio]',d),meta=$('[data-aim]',d),q=$('[data-aiq]',d),ok=$('[data-ok]',d);
+  const show=()=>{out.innerHTML=res?(o.show?o.show(res):`<div class="aitx">${aiFmt(res.text)}</div>`):'';meta.textContent=res?aiMeta(res):'';ok.disabled=!res};
+  const run=async fresh=>{if(busy)return;busy=true;nb.disabled=true;ok.disabled=true;out.innerHTML='<div class="mut aild">✨ Der AI-Assistent schreibt …</div>';meta.textContent='';
+    try{res=await api('ai/ask'+(o.my?'&my=1':''),Object.assign({},o.req,fresh?{fresh:1}:{},q.value.trim()?{q:q.value.trim()}:{}))}
+    catch(e){out.innerHTML=`<div class="aierr">${esc(e.message)}</div>`;res=res&&!fresh?res:null}
+    busy=false;nb.disabled=false;if(res)show();else ok.disabled=true};
+  const nb=document.createElement('button');nb.textContent='↻ Neu';nb.title='Neuen Vorschlag erstellen (mit dem zusätzlichen Wunsch)';nb.onclick=()=>run(true);ok.parentNode.appendChild(nb);
+  q.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();run(true)}};
+  if(res)show();else run(false);return d}
+// begleitender Modus: Vorschlag im Hintergrund holen (auto=1, der Server nimmt gespeicherte Vorschläge, solange sie gelten); Fehler still
+const aiAuto=(req,my)=>api('ai/ask'+(my?'&my=1':''),Object.assign({auto:1},req)).catch(()=>null);

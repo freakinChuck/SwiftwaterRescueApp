@@ -68,6 +68,7 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .anum .ai{display:flex;align-items:center;gap:.4rem}.anum .ai input{width:7.5rem;margin:0;font-variant-numeric:tabular-nums}.anum .ai span{color:var(--mut)}
 .anum small{color:var(--mut);font-size:.75rem}.anum small b{color:var(--ex);font-weight:600}
 #sH .afld{display:flex;flex-direction:column;gap:.25rem;max-width:28rem;margin:.5rem 0}#sH .afld select{margin:0}#sH label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* Helikopter: je Eingabe eine Zeile */
+#sAi label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
 .exleg{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.3rem;font-size:.8rem}.exleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;border:1px solid #fff;margin-right:.3rem;vertical-align:-.05rem}
 .pickmap{height:min(14rem,32dvh);isolation:isolate;border-radius:8px;border:1px solid var(--line);background:#0c1c25}
@@ -128,12 +129,12 @@ const NAV=[
   ['Personen',[['benutzer','sU','Benutzer',loadUsers],['benutzerrollen','sUR','Benutzerrollen',loadURoles]]],
   ['Einsatz',[['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
-  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav]]],
+  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['aufzeichnung','sA','Aufzeichnung',loadRec],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['ai','sAi','AI-Assistent',loadAi]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',aufzeichnung:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -277,6 +278,55 @@ async function loadNav(){const el=$('#sNv');let s;try{s=await api('settings')}ca
     if(c.dataset.na)p={nav_off:[...el.querySelectorAll('[data-na]')].filter(x=>!x.checked).map(x=>x.dataset.na)};
     else if(c.id==='nvD')p={nav_default:c.value};else return;
     el.querySelectorAll('input,select').forEach(x=>x.disabled=true);api('settings/save',p).catch(fail).finally(loadNav)}}
+/* ---------- AI-Assistent (Issue #111): Anbieter, Schlüssel, Datenschutz, Grenzen, Freigabe je Benutzerrolle × Funktion × Art, Test, Verbrauch ---------- */
+// Einstellung ai (JSON, aiIn im Server), Schlüssel getrennt (ai_key, wird nie ausgeliefert); gespeichert erst mit «Speichern»
+let aiS=null,aiC=null;
+const AI_PRESET={openai:['OpenAI','openai','https://api.openai.com/v1','gpt-4.1-mini'],anthropic:['Anthropic (Claude)','anthropic','','claude-haiku-4-5'],
+  mistral:['Mistral (EU)','openai','https://api.mistral.ai/v1','mistral-small-latest'],local:['Eigener Server (z. B. Ollama, LM Studio)','openai','http://localhost:11434/v1','llama3.1']};
+const AI_NUM={timeout:['Wartezeit je Anfrage','s',5,300],max_tokens:['Länge der Antwort höchstens','Tokens',100,8000],day_limit:['Anfragen pro Tag höchstens (alle zusammen)','0 = unbegrenzt',0,100000],user_limit:['Anfragen pro Person und Tag höchstens','0 = unbegrenzt',0,10000]};
+async function loadAi(){const el=$('#sAi');try{aiS=await api('ai/cfg')}catch(e){el.innerHTML='<h2>AI-Assistent</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  aiC=JSON.parse(JSON.stringify(aiS.cfg));if(Array.isArray(aiC.matrix))aiC.matrix={};drawAi()}
+function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'}),n=x=>(x||0).toLocaleString('de-CH');
+  const F=Object.entries(s.fn),mv=(r,f,k)=>((c.matrix[r]||{})[f]||{})[k]||'off';
+  const mx=`<div class="aimxw"><table class="aimx"><thead><tr><th>Funktion</th><th>Art</th>${s.uroles.map(r=>`<th>${esc(r.name)}</th>`).join('')}</tr></thead><tbody>
+    ${F.map(([f,x])=>x.ctx.map((k,i)=>`<tr>${i?'':`<td rowspan="${x.ctx.length}"><b>${esc(x.name)}</b><div class="mut" style="font-size:.78rem;max-width:18rem">${esc(x.descr)}</div></td>`}<td>${esc(s.ctx[k])}</td>
+      ${s.uroles.map(r=>`<td><select data-mx="${r.id}|${f}|${k}" aria-label="${esc(x.name+', '+s.ctx[k]+', '+r.name)}">${Object.entries(s.modes).filter(([m])=>m!=='comp'||x.comp).map(([m,l])=>`<option value="${m}" ${mv(r.id,f,k)===m?'selected':''}>${esc(l)}</option>`).join('')}</select></td>`).join('')}</tr>`).join('')).join('')}</tbody></table></div>`;
+  el.innerHTML=`<h2>AI-Assistent</h2>
+    <div class="mut">Ein Sprachmodell eines externen Anbieters erstellt auf Wunsch Texte: Entwürfe fürs After Action Review, Zusammenfassungen des Einsatzlogs, Vorschläge für Übungen, die Statistik in Worten und eine Lagezusammenfassung im Einsatz. Die App übernimmt nie etwas selbst: Vorschläge erscheinen in einem Fenster und gelten erst mit «Übernehmen». Ohne Anbieter, Schlüssel und Freigabe gibt es den AI-Assistenten nicht.</div>
+    <div class="inc" style="padding:.6rem .8rem"><label class="chk"><input type="checkbox" id="aiOn" ${c.on?'checked':''}> <b>AI-Assistent einschalten</b></label>
+      <div class="mut">${s.ready?'✓ Eingerichtet und eingeschaltet.':c.on?'Eingeschaltet, aber noch nicht gespeichert.':'Ausgeschaltet: niemand sieht den AI-Assistenten, es geht nichts an einen Anbieter.'}${s.curl?'':' ⚠ Auf dem Server fehlt curl, Anfragen sind nicht möglich.'}</div></div>
+    <h3>Anbieter</h3>
+    <div class="row">${Object.entries(AI_PRESET).map(([k,v])=>`<button data-aip="${k}" class="sec">${esc(v[0])}</button>`).join('')}</div>
+    <div class="mut" style="font-size:.8rem">Vorlagen füllen Schnittstelle, Basis-URL und ein Beispielmodell aus; das Modell bitte gemäss Angebot des Anbieters prüfen.</div>
+    <div class="row"><label class="mut">Schnittstelle<select id="aiPv">${Object.entries(s.prov).map(([k,l])=>`<option value="${k}" ${k===c.provider?'selected':''}>${esc(l)}</option>`).join('')}</select></label>
+      <label class="mut">Basis-URL${c.provider==='anthropic'?' (leer = api.anthropic.com)':''}<input id="aiU" value="${esc(c.base_url)}" placeholder="https://…/v1" inputmode="url"></label>
+      <label class="mut">Modell<input id="aiMd" value="${esc(c.model)}" maxlength="120"></label></div>
+    <div class="row" style="align-items:end"><label class="mut">API-Schlüssel ${s.has_key?'(<b>hinterlegt</b>, leer lassen zum Behalten)':'(noch keiner)'}<input id="aiK" type="password" autocomplete="off" placeholder="${s.has_key?'••••••••':'sk-…'}"></label>
+      ${s.has_key?'<label class="chk"><input type="checkbox" id="aiKc"> Schlüssel löschen</label>':''}</div>
+    <div class="mut" style="font-size:.8rem">Der Schlüssel wird nur auf dem Server gespeichert und nie an Geräte ausgeliefert. Basis-URL nur https (lokal auch http://localhost).</div>
+    <h3>Datenschutz</h3>
+    <label class="chk"><input type="checkbox" id="aiAn" ${c.anon?'checked':''}> Namen vor dem Senden durch Bezeichnungen ersetzen (Einsatzkraft N, Rettling N …); die Antwort zeigt wieder die Namen</label>
+    <label class="chk"><input type="checkbox" id="aiRl" ${c.round_loc?'checked':''}> Koordinaten auf ca. 100 m runden</label>
+    <div class="mut" style="font-size:.8rem">Beschreibungen von Rettlingen gehen nie mit. Freitexte (Nachrichten, AAR-Angaben) können Namen enthalten, die die Ersetzung nicht erkennt. Bitte nur Anbieter mit passendem Vertrag (Auftragsbearbeitung, keine Verwendung fürs Training) einsetzen.</div>
+    <h3>Grenzen</h3>
+    <div class="row">${Object.entries(AI_NUM).map(([k,[l,u,a,b]])=>`<label class="mut">${esc(l)} (${esc(u)})<input type="number" data-ain="${k}" min="${a}" max="${b}" step="1" value="${esc(String(c[k]))}" inputmode="numeric"></label>`).join('')}</div>
+    <h3>Freigabe je Benutzerrolle</h3>
+    <div class="mut">Eine Person erhält den höchsten Modus ihrer Benutzerrollen. «Auf Abruf» = Knopf ✨, «Begleitend» = der Vorschlag wird beim Öffnen schon vorbereitet (Knopf leuchtet). Jede Person kann in ihrem Profil weniger wählen.</div>
+    ${mx}
+    <div class="row"><button class="pri" id="aiSv">Speichern</button><button id="aiT" ${s.has_key?'':'disabled'}>Verbindung testen</button></div><div class="mut" id="aiTr"></div>
+    <h3>Verbrauch</h3>
+    <div class="ssum"><div><div class="kv"><span><small>Anfragen 24 h</small>${n(U.day.n)}</span><span><small>Tokens 24 h</small>${n(U.day.t)}</span><span><small>Anfragen 30 Tage</small>${n(U.month.n)}</span><span><small>Tokens 30 Tage</small>${n(U.month.t)}</span><span><small>Fehler 30 Tage</small>${n(U.month.e)}</span></div>
+      ${U.fn.length?`<div class="fl" style="margin-top:.3rem">${U.fn.map(r=>`<span>${esc(s.fn[r.fn]?s.fn[r.fn].name:r.fn==='test'?'Test':r.fn)} ${n(r.n)}× · ${n(r.t)} Tokens</span>`).join('')}</div>`:''}</div></div>
+    ${U.last.length?`<div class="mut" style="font-size:.82rem">Letzte Anfragen:<br>${U.last.map(r=>`${dt(r.ts)} · ${esc(r.name||'?')} · ${esc(s.fn[r.fn]?s.fn[r.fn].name:r.fn==='test'?'Test':r.fn)}${r.incident_id?' · Einsatz '+r.incident_id:''} · ${r.ok?n(r.tokens)+' Tokens':'⚠ '+esc(r.err||'Fehler')}`).join('<br>')}</div>`:'<div class="mut">Noch keine Anfragen.</div>'}`;
+  const pull=()=>{c.on=$('#aiOn').checked?1:0;c.provider=$('#aiPv').value;c.base_url=$('#aiU').value.trim();c.model=$('#aiMd').value.trim();c.anon=$('#aiAn').checked?1:0;c.round_loc=$('#aiRl').checked?1:0;
+    el.querySelectorAll('[data-ain]').forEach(x=>c[x.dataset.ain]=x.value)};
+  el.querySelectorAll('[data-aip]').forEach(b=>b.onclick=()=>{pull();const[,pv,u,m]=AI_PRESET[b.dataset.aip];c.provider=pv;c.base_url=u;c.model=m;drawAi();toast('Vorlage eingesetzt, bitte Modell prüfen und speichern.','info')});
+  $('#aiPv').onchange=()=>{pull();drawAi()};
+  el.querySelectorAll('[data-mx]').forEach(x=>x.onchange=()=>{const[r,f,k]=x.dataset.mx.split('|');((c.matrix[r]=c.matrix[r]||{})[f]=c.matrix[r][f]||{})[k]=x.value});
+  $('#aiSv').onclick=async()=>{pull();const p=Object.assign({},c),k=$('#aiK').value.trim();if(k)p.key=k;if($('#aiKc')&&$('#aiKc').checked){if(!confirm('API-Schlüssel löschen? Der AI-Assistent steht danach niemandem mehr zur Verfügung.'))return;p.key_clear=1;p.on=0}
+    $('#aiSv').disabled=true;try{const r=await api('ai/cfg/save',p);toast(r.ready?'Gespeichert. Der AI-Assistent ist eingerichtet.':'Gespeichert.');me=(await api('me')).me;loadAi()}catch(e){fail(e);$('#aiSv').disabled=false}};
+  $('#aiT').onclick=async()=>{const b=$('#aiT'),o=$('#aiTr');b.disabled=true;o.textContent='Teste die gespeicherte Einstellung …';
+    try{const r=await api('ai/test',{});o.innerHTML=`✓ Antwort in ${n(r.ms)} ms von <b>${esc(r.model)}</b>: «${esc(r.text)}»${r.tokens?` · ${n(r.tokens)} Tokens`:''}`}catch(e){o.innerHTML=`<span class="aierr">⚠ ${esc(e.message)}</span>`}b.disabled=false}}
 /* ---------- Helikopter (Issue #73): Datenquellen (Reihenfolge, Ein/Aus, Test), Filter, Sichtbarkeit je Ansicht, Relevanzzone, Rettungshelikopter ---------- */
 // Alles in der Einstellung air (JSON), gespeichert erst mit «Speichern»; der Server prüft die Werte (airIn)
 let airS=null,airC=null;
@@ -399,7 +449,7 @@ async function loadEx(){const el=$('#sEx');let ps,us,ros,xt;try{[ps,us,ros,xt]=a
       <div class="tw"><table><thead><tr><th>Element</th><th>Standort</th><th>Meldung</th><th>Status</th><th></th></tr></thead><tbody>${p.injects.map(j=>inj(p,j)).join('')||'<tr><td colspan="5" class="mut">Noch keine Elemente</td></tr>'}</tbody></table></div>
       ${p.runs.length?`<div class="tw"><table><thead><tr><th>Durchführung</th><th>Dauer</th><th></th></tr></thead><tbody>${p.runs.map(r=>`<tr><td>${esc(new Date(r.alarm_at*1000).toLocaleString('de-CH'))}${r.id===p.incident_id?'':'<small>vor dem Zurücksetzen</small>'}</td><td>${r.ended_at?Math.round((r.ended_at-r.alarm_at)/60)+' min':'läuft'}</td><td class="act"><button data-xl="${r.id}" data-p="${p.id}">Log</button>${r.recorded?`<button data-rp="${r.id}">Replay</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:''}
       <div data-mapbox="${p.id}" hidden><div class="exmap"></div><div class="mut exleg">${Object.entries(EXK).map(([k,t])=>`<span><i style="background:${EXC[k]}"></i>${t}</span>`).join('')}<span>blass = freigegeben · gestrichelt = Sichtung des Rettlings</span></div></div>
-      <div class="row">${p.injects.length?`<button data-pm="${p.id}" aria-pressed="false">Karte</button>`:''}${p.ended_at?'':`<button data-ja="${p.id}">+ Element</button>`}${p.incident_id==null?`<button data-pe="${p.id}">Übung bearbeiten</button>`:''}<button data-pc="${p.id}">Kopieren</button>${p.ended_at?`<button data-pz="${p.id}" title="Wieder vorbereitet, alle Elemente nicht freigegeben">Zurücksetzen</button>`:''}${p.incident_id!=null&&!p.ended_at?'':`<button data-pr="${p.id}">Entfernen</button>`}</div></div>`}).join('')||'<div class="mut">Noch keine vorbereiteten Übungen.</div>'}`;
+      <div class="row">${p.injects.length?`<button data-pm="${p.id}" aria-pressed="false">Karte</button>`:''}${p.ended_at?'':`<button data-ja="${p.id}">+ Element</button>`}${p.incident_id==null?`<button data-pe="${p.id}">Übung bearbeiten</button>`:''}<button data-pc="${p.id}">Kopieren</button>${aiOn('plan','ex')?`<button class="aib" data-pai="${p.id}" title="Vorschläge des AI-Assistenten zur Übung">✨ Vorschläge</button>`:''}${p.ended_at?`<button data-pz="${p.id}" title="Wieder vorbereitet, alle Elemente nicht freigegeben">Zurücksetzen</button>`:''}${p.incident_id!=null&&!p.ended_at?'':`<button data-pr="${p.id}">Entfernen</button>`}</div></div>`}).join('')||'<div class="mut">Noch keine vorbereiteten Übungen.</div>'}`;
   // Personenauswahl (Übungsleitung, Aufgebotene): Suchfeld mit Trefferliste statt Häkchen pro Person, damit es auch mit vielen Benutzern übersichtlich bleibt
   // x = Präfix der Element-IDs, sel = Auswahl, skip = zusätzlich nicht wählbar; liefert die aktuelle Auswahl
   const pplPick=(d,x,sel,skip,empty)=>{const k=x.toLowerCase(),act=us.filter(u=>u.active),q=$('#'+x+'q',d);sel=sel.filter(id=>act.some(u=>u.id===id));
@@ -472,10 +522,11 @@ async function loadEx(){const el=$('#sEx');let ps,us,ros,xt;try{[ps,us,ros,xt]=a
   el.querySelectorAll('[data-ja]').forEach(b=>b.onclick=()=>editJ(P(b.dataset.ja),{}));
   el.querySelectorAll('[data-ji]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p);editJ(p,p.injects.find(j=>j.id===+b.dataset.ji))});
   el.querySelectorAll('[data-jr]').forEach(b=>b.onclick=()=>confirm('Element entfernen?')&&api('ex/inject/remove',{id:+b.dataset.jr}).then(loadEx).catch(fail));
+  el.querySelectorAll('[data-pai]').forEach(b=>b.onclick=()=>{const p=ps.find(x=>x.id===+b.dataset.pai);aiPanel({title:'Vorschläge – '+(p?p.title:''),req:{fn:'plan',id:+b.dataset.pai}})});
   el.querySelectorAll('[data-pc]').forEach(b=>b.onclick=()=>api('ex/plan/copy',{id:+b.dataset.pc}).then(loadEx).catch(fail));
   el.querySelectorAll('[data-pz]').forEach(b=>b.onclick=()=>confirm('Übung «'+P(b.dataset.pz).title+'» zurücksetzen? Sie ist danach wieder vorbereitet und alle Elemente sind nicht freigegeben. Log und Replay der bisherigen Durchführung bleiben erhalten.'+(P(b.dataset.pz).public_token?' Der öffentliche Link zeigt wieder die Warteseite.':''))&&api('ex/plan/reset',{id:+b.dataset.pz}).then(loadEx).catch(fail));
   // Log und Replay der Durchführungen
-  el.querySelectorAll('[data-xl]').forEach(b=>b.onclick=()=>openLog(b.dataset.xl,'Übungslog – '+P(b.dataset.p).title,false));
+  el.querySelectorAll('[data-xl]').forEach(b=>b.onclick=()=>openLog(b.dataset.xl,'Übungslog – '+P(b.dataset.p).title,false,false,true));
   el.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.rp));
   el.querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>confirm('Übung «'+P(b.dataset.pr).title+'» entfernen?'+(P(b.dataset.pr).incident_id==null?' Der vorbereitete öffentliche Link wird ungültig.':''))&&api('ex/plan/remove',{id:+b.dataset.pr}).then(loadEx).catch(fail))}
 // Funktion für Übungen eingeschaltet (aus me.features), z. B. Aufzeichnung
@@ -497,13 +548,14 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
     return`<div class="inc stc ${x.is_exercise?'ex':'real'}"><div class="ih">${x.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl}</div>
       <div class="kv"><span><small>Dauer</small>${x.ended_at?min(x.ended_at-x.alarm_at):'läuft'}</span><span><small>Angenommen</small>${x.accepted}${x.declined?` <small>${x.declined} abgelehnt</small>`:''}</span><span><small>1. Annahme</small>${min(x.first_accept==null?null:x.first_accept-x.alarm_at)}</span><span><small>1. im Gebiet</small>${min(x.first_area==null?null:x.first_area-x.alarm_at)}</span></div>
       <div class="ia">${st?`<span class="bg"><button data-l="${x.id}">Log</button>${x.recorded?`<button data-rp="${x.id}">Replay</button>`:''}</span>`:''}${aar&&x.ended_at?aarBtns(x):''}${x.aar_arch?`<span class="bg"><span class="bl">AAR</span><button data-aarc="${x.id}" title="Als PDF herunterladen">PDF</button></span>`:''}${can('anon')&&(x.ended_at||x.recorded)?`<span class="bg stad">${x.ended_at?`<button class="sec" data-an="${x.id}" title="Personendaten in Stufen anonymisieren (Verwaltung → Anonymisierung)">Anonymisieren</button>`:''}${can('anon')&&x.recorded?`<button class="sec" data-rpd="${x.id}" title="Aufzeichnung dieses Einsatzes löschen">Aufzeichnung löschen</button>`:''}</span>`:''}</div></div>`};
-  el.innerHTML=`<h2>Einsatzstatistik und Einsatzlog</h2><div class="row" style="align-items:center"><label class="mut" style="flex:0 0 auto">Anzeigen <select id="stF">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===statsF?'selected':''}>${v}</option>`).join('')}</select></label></div>
+  el.innerHTML=`<h2>Einsatzstatistik und Einsatzlog</h2><div class="row" style="align-items:center"><label class="mut" style="flex:0 0 auto">Anzeigen <select id="stF">${Object.entries(ARTS).map(([k,v])=>`<option value="${k}" ${k===statsF?'selected':''}>${v}</option>`).join('')}</select></label>${st&&aiOn('stats','adm')?'<button class="aib" id="stAi" title="Die Statistik vom AI-Assistenten in Worten zusammenfassen lassen">✨ In Worten</button>':''}</div>
     ${aar?`<div class="mut">After Action Review (AAR): je beendetem Einsatz die Erkenntnisse erfassen, freigeben (danach für die Teilnehmenden unter «Meine Einsätze» sichtbar) oder als nicht relevant markieren. Von ${ended.length} beendeten: ${nSt('rel')} freigegeben, ${nSt('wip')} in Arbeit, ${nSt('nr')} nicht relevant, ${nSt('open')} offen${nLock?`, ${nLock} wegen Anonymisierung nicht mehr möglich`:''}.${can('aar_cfg')?' Felder, Titel und Logo: <a href="#aarcfg">After Action Review einrichten</a>.':''}</div>`:''}
     <div class="ssum">${statsF!=='ex'?sum('real','Scharfe Einsätze'):''}${statsF!=='real'?sum('ex','Übungen'):''}</div>
     ${rows.map(card).join('')||`<div class="mut">Keine ${statsF==='ex'?'Übungen':statsF==='real'?'scharfen Einsätze':'Einsätze'}</div>`}`;
+  $('#stAi')&&($('#stAi').onclick=()=>aiPanel({title:'Einsatzstatistik in Worten',req:{fn:'stats'}}));
   $('#stF').onchange=e=>{statsF=e.target.value;try{localStorage.setItem('sw_statsf',statsF)}catch(_){}renderStats()};
   const X=id=>all.find(x=>x.id==id);
-  el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.l);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon||!!x.view_anon)});
+  el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.l);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon||!!x.view_anon,false,x.is_exercise)});
   el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>anonDlg(X(b.dataset.an)));
   el.querySelectorAll('[data-ae]').forEach(b=>b.onclick=()=>aarEdit(+b.dataset.ae));
   el.querySelectorAll('[data-av]').forEach(b=>b.onclick=()=>aarShow(+b.dataset.av));
@@ -618,7 +670,7 @@ async function aarEdit(id){let x;try{x=await api('aar/get&id='+id);await aarImgs
     ${x.status===2?'<div class="mut"><b>Als nicht relevant markiert.</b> Speichern macht es wieder zu einem Review in Arbeit.</div>':''}
     ${form||'<div class="mut">Es sind noch keine Felder eingerichtet (Auswertung → After Action Review einrichten).</div>'}`,
     async d=>{await api('aar/save',{id,data:collect()});toast('After Action Review gespeichert.','ok');loadStats()},'Speichern','Abbrechen',()=>{if(chg)loadStats()});
-  d.firstElementChild.classList.add('aarf');
+  d.firstElementChild.classList.add('aarf');aiAar(d,x,id,F);
   F.filter(f=>f.type==='img'||f.type==='area').forEach(f=>aarImgEdit(d,x,id,f.id,()=>chg=true,f.type==='area'?$(`textarea[data-af="${f.id}"]`,d):null));
   const collect=()=>{const data={};d.querySelectorAll('[data-af]').forEach(e=>data[e.dataset.af]=e.value);return data};
   // Speichern und freigeben (Recht aar_rel), Nicht relevant (erfasste Angaben bleiben gespeichert)
@@ -626,6 +678,19 @@ async function aarEdit(id){let x;try{x=await api('aar/get&id='+id);await aarImgs
     await api('aar/save',{id,data:collect()});await api('aar/status',{id,status:1});toast('After Action Review freigegeben.','ok');loadStats()});
   if(x.status!==2)aarBtn(d,'Nicht relevant','sec',async()=>{if(!confirm('Als nicht relevant markieren?\n\nEs zählt dann nicht mehr als offen. Die Angaben im Formular werden gespeichert, das Review lässt sich jederzeit wieder erfassen.'))return false;
     await api('aar/save',{id,data:collect()});await api('aar/status',{id,status:2});toast('Als nicht relevant markiert.','ok');loadStats()})}
+// AI-Assistent (Issue #111) im AAR-Formular: ✨ je Textfeld (überarbeitet vorhandenen Text) und «Entwurf für leere Felder»;
+// begleitend wird der Entwurf für die leeren Felder beim Öffnen vorbereitet. Übernehmen füllt nur das Formular, gespeichert wird wie immer.
+function aiAar(d,x,id,F){const m=aiM('aar',x.inc.is_exercise?'ex':'real');if(m==='off')return;const T=F.filter(f=>f.type==='text'||f.type==='area'),L=k=>(F.find(f=>f.id===k)||{}).label||k;if(!T.length)return;
+  const el=k=>$(`[data-af="${k}"]`,d),show=r=>Object.entries(r.fields||{}).map(([k,v])=>`<div class="aif"><b>${esc(L(k))}</b><div class="aitx">${aiFmt(v)}</div></div>`).join('')||'<div class="mut">Kein Vorschlag.</div>';
+  const put=(r,over)=>{let n=0,skip=0;for(const[k,v]of Object.entries(r.fields||{})){const e=el(k);if(!e)continue;if(!over&&e.value.trim()){skip++;continue}e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}));n++}
+    toast(n?`${n} ${n===1?'Feld':'Felder'} übernommen${skip?`, ${skip} bereits ausgefüllte nicht überschrieben`:''}. Bitte prüfen und speichern.`:'Nichts übernommen: die Felder sind inzwischen ausgefüllt.',n?'ok':'info')};
+  const bar=document.createElement('div');bar.className='aibar';bar.innerHTML='<button class="aib" data-aia>✨ Entwurf für leere Felder</button><span class="mut" style="font-size:.82rem">Der AI-Assistent schlägt Texte aus Einsatzdaten und Einsatzlog vor. Übernommenes wird erst mit «Speichern» gespeichert.</span>';
+  const card=d.firstElementChild;card.insertBefore(bar,card.children[2]||null);let pre=null;const ba=$('[data-aia]',bar);
+  ba.onclick=()=>aiPanel({title:'Entwurf für leere Felder',req:{fn:'aar',id},pre,show,apply:r=>{put(r,false);return false},applyText:'In leere Felder übernehmen'});
+  for(const f of T){const e=el(f.id);if(!e)continue;const b=document.createElement('button');b.type='button';b.className='aib';b.textContent='✨';b.title='Vorschlag des AI-Assistenten für «'+f.label+'»'+(f.type==='area'?' (vorhandener Text wird überarbeitet)':'');
+    b.onclick=ev=>{ev.preventDefault();aiPanel({title:f.label,req:{fn:'aar',id,field:f.id},show,apply:r=>{put(r,true);return false}})};
+    const ft=e.closest('.aara');if(ft)$('.aarft',ft).prepend(b);else e.after(b)}
+  if(m==='comp')aiAuto({fn:'aar',id}).then(r=>{if(r&&ba.isConnected&&Object.keys(r.fields||{}).length){pre=r;ba.classList.add('rdy');ba.textContent=`✨ Entwurf für ${Object.keys(r.fields).length} leere Felder bereit`}})}
 // Bilder (Feldart img): werden sofort gespeichert (nicht erst mit «Speichern»), Inhalt einzeln über aar/img geladen und hier zwischengespeichert
 const aarIC={};
 const aarImgs=(x,my)=>Promise.all((x.imgs||[]).map(async m=>{m.src=await(aarIC[m.id]=aarIC[m.id]||api('aar/img&id='+m.id+(my?'&my=1':'')).then(r=>r.src).catch(e=>{delete aarIC[m.id];throw e}))}));
@@ -857,8 +922,13 @@ function aarField(f,done){const T=aarC.types,neu=!f;f=f||{type:'area',label:'',h
     $('#afN',d).textContent=t==='head'?'Gliedert Formular und Dokument (Abschnittstitel), hat keinen Wert.':t==='img'?'Beliebig viele Bilder mit Beschriftung (höchstens 50 je Review); im Dokument unter der Bezeichnung.':t==='area'?'Im Dokument als Frage mit der Antwort darunter. Im Formular lassen sich Bilder an beliebiger Stelle im Text einfügen.':'Im Dokument in einer Tabelle mit den übrigen kurzen Angaben.'};
   $('#afT',d).onchange=sync;sync()}
 // Einsatzprotokoll im Gross-Modus mit Knopf «Anonym» (Issue #54, anonymisierte Fassung vom Server); endgültig anonymisierte ohne Knopf
-async function openLog(id,title,done,forced){let l;try{l=await api('incident/log&id='+id+myQ())}catch(e){return fail(e)}
-  openBigLog(title+(done||forced?' (anonymisiert)':''),()=>l,false,done||forced?null:async on=>{l=await api('incident/log&id='+id+myQ()+(on?'&anon=1':''))})}
+async function openLog(id,title,done,forced,ex){let l;try{l=await api('incident/log&id='+id+myQ())}catch(e){return fail(e)}
+  openBigLog(title+(done||forced?' (anonymisiert)':''),()=>l,false,done||forced?null:async on=>{l=await api('incident/log&id='+id+myQ()+(on?'&anon=1':''))});aiLogBtn(id,title,ex)}
+// AI-Assistent (Issue #111): Zusammenfassung des Logs; begleitend schon beim Öffnen vorbereitet (Knopf leuchtet), Namen wie die Ansicht (Server)
+function aiLogBtn(id,title,ex){const m=aiM('log',ex?'ex':'real'),h=$('#bigHead');if(m==='off'||!h)return;let pre=null;
+  const b=document.createElement('button');b.className='aib';b.textContent='✨ Zusammenfassung';b.title='Zusammenfassung des Einsatzlogs durch den AI-Assistenten';h.insertBefore(b,$('#bigS'));
+  b.onclick=()=>aiPanel({title:'Zusammenfassung – '+title,req:{fn:'log',id},my:MY,pre});
+  if(m==='comp')aiAuto({fn:'log',id},MY).then(r=>{if(r&&b.isConnected){pre=r;b.classList.add('rdy');b.textContent='✨ Zusammenfassung bereit'}})}
 /* ---------- Meine Einsätze (Issue #61): Log und Replay der beendeten Einsätze, an denen man teilgenommen hat ---------- */
 // my_runs (Einstellung der Verwaltung): anon = alle anderen anonym, die eigene Person mit Namen (forced, ohne Umschalter); full = alle Daten.
 // Endgültig Anonymisiertes (rp_anon, log_anon) bleibt in jedem Fall ganz anonym.
@@ -894,7 +964,7 @@ async function loadMy(){const el=$('#sMy');let r;try{r=await api('my/incidents')
     ${r.incidents.map(card).join('')||'<div class="mut">Noch keine beendeten Einsätze mit deiner Teilnahme.</div>'}`;
   renderMyPs();
   const X=id=>r.incidents.find(x=>x.id==id);
-  el.querySelectorAll('[data-ml]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.ml);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon,forced||!!anyAn(x))});
+  el.querySelectorAll('[data-ml]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.ml);openLog(x.id,(x.is_exercise?'Übungslog – ':'Einsatzlog – ')+x.message,!!x.log_anon,forced||!!anyAn(x),x.is_exercise)});
   el.querySelectorAll('[data-mr]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.mr));
   el.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>aarShow(+b.dataset.mv,true));
   el.querySelectorAll('[data-mw]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.mw,'docx','',true));

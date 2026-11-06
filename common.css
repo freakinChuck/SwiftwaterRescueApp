@@ -40,3 +40,14 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 .tst{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--ok);border-radius:6px;padding:.6rem .8rem;box-shadow:0 2px 10px #000b;cursor:pointer;white-space:pre-line;animation:tstIn .2s ease-out;transition:opacity .25s}
 .tst.info{border-left-color:var(--ex)}.tst.err{border-left-color:var(--alarm)}.tst.out{opacity:0}
 @keyframes tstIn{from{opacity:0;transform:translateY(.6rem)}}
+/* AI-Assistent (Issue #111) */
+.dlg .card.aip{max-width:680px}
+.aiw{display:grid;gap:.6rem}
+.aio{min-height:3rem}.aitx{white-space:pre-wrap;line-height:1.45;background:var(--bg);border:1px solid var(--line);border-left:4px solid #a78bfa;border-radius:6px;padding:.7rem .8rem;max-height:55dvh;overflow-y:auto}
+.aild{animation:aiPulse 1.2s ease-in-out infinite alternate}@keyframes aiPulse{from{opacity:.45}to{opacity:1}}
+.aierr{color:var(--err,#ff6b6b)}.aim{font-size:.8rem}.aih{font-size:.8rem}
+.aif{margin:.4rem 0}.aif b{display:block;margin-bottom:.2rem}
+button.aib{border-color:#a78bfa88}button.aib.rdy{border-color:#a78bfa;box-shadow:0 0 0 2px #a78bfa55}
+.aibar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;border:1px dashed #a78bfa88;border-radius:6px;padding:.4rem .6rem;margin:.4rem 0}
+.aimx{border-collapse:collapse;font-size:.85rem}.aimx th,.aimx td{border-bottom:1px solid var(--line);padding:.3rem .4rem;text-align:left;vertical-align:middle}.aimx select{min-width:7.5rem}
+.aimxw{overflow-x:auto}

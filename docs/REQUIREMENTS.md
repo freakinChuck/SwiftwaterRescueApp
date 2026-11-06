@@ -204,3 +204,12 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
 - **VW-02** – Neue Einstellungen erscheinen als Unterpunkt einer Kategorie mit eigenem Recht (#32, #63).
 - **VW-03** – Hinweise verschwinden von selbst; nur Rückfragen brauchen einen Klick (AG).
+
+## 21. AI-Assistent (AI)
+
+- **AI-01** – Optionaler AI-Assistent über einen externen Anbieter (OpenAI-kompatibel inkl. Mistral und eigener Server, oder Anthropic); ohne Anbieter, Schlüssel und Freigabe gibt es ihn nicht. Der Schlüssel bleibt auf dem Server (#111).
+- **AI-02** – Funktionen: Entwürfe für leere Textfelder des After Action Review, Zusammenfassung des Einsatzlogs (Verwaltung und Meine Einsätze), Vorschläge zu vorbereiteten Übungen, Einsatzstatistik in Worten, Lagezusammenfassung im laufenden Einsatz (#111).
+- **AI-03** – Kein freier Chat: feste Aufgaben, optional mit einem zusätzlichen Wunsch; Vorschläge erscheinen in einem Fenster und gelten erst mit «Übernehmen» bzw. werden kopiert (#111).
+- **AI-04** – Modi je Funktion: Aus, «Auf Abruf» (Knopf), «Begleitend» (Vorschlag beim Öffnen vorbereitet). Freigabe je Benutzerrolle, Funktion und Art (scharf/Übung/Verwaltung); jede Person kann im Profil weniger wählen. Standard: nur Systemadministratoren «Auf Abruf», Lagezusammenfassung bei scharfen Einsätzen aus (#111).
+- **AI-05** – Datenschutz: Namen vor dem Senden durch Bezeichnungen ersetzen (Standard ein, abschaltbar), Koordinaten runden, Beschreibungen von Rettlingen nie senden; die Daten folgen den Rechten und der Anonymisierung der jeweiligen Ansicht (#111).
+- **AI-06** – Grenzen und Kontrolle: Wartezeit, Antwortlänge, Anfragen pro Tag gesamt und je Person, Verbindungstest und Verbrauchsübersicht in der Verwaltung (Recht «AI-Assistent einstellen») (#111).
