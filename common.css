@@ -48,7 +48,7 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 .aild{animation:aiPulse 1.2s ease-in-out infinite alternate}@keyframes aiPulse{from{opacity:.45}to{opacity:1}}
 .aierr{color:var(--err,#ff6b6b)}.aim{font-size:.8rem}.aih{font-size:.8rem}
 .aif{margin:.4rem 0}.aif b{display:block;margin-bottom:.2rem}
-button.aib{border-color:#a78bfa88;font-size:.85rem;padding:.3rem .65rem;min-height:0;flex:0 0 auto;width:auto}button.aib.ico{font-size:.8rem;padding:.12rem .45rem;line-height:1.2}button.aib.rdy{border-color:#a78bfa;box-shadow:0 0 0 2px #a78bfa55}
+button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-size:.8rem;padding:.12rem .45rem;line-height:1.2;min-height:0}button.aib.rdy{border-color:#a78bfa;box-shadow:0 0 0 2px #a78bfa55}
 .aibar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;border:1px dashed #a78bfa88;border-radius:6px;padding:.4rem .6rem;margin:.4rem 0}
 .aimx{display:grid;gap:.6rem;margin:.4rem 0}.aimf{border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem;display:grid;gap:.5rem}
 .aimg h4{margin:0 0 .25rem;font-size:.78rem;color:var(--mut);font-weight:600}.aimr{display:grid;grid-template-columns:repeat(auto-fill,minmax(10.5rem,1fr));gap:.4rem .6rem}
