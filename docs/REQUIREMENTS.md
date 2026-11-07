@@ -80,7 +80,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **KA-01** – Karte im Vollbild; alle Bedienelemente in einem versteckten Menü (☰) (AG).
 - **KA-02** – Grundkarte swisstopo Luftbild (Standard), umschaltbar auf Landeskarte und OpenStreetMap; Anbieter leicht austauschbar; Wahl pro Gerät gemerkt (AG, #34).
-- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Nachrichten-Markierungen, Helikopter, Feste Standorte), «Alle ein-/ausblenden», pro Gerät gemerkt (#34).
+- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Nachrichten-Markierungen, Helikopter, Feste Standorte, Messstationen), «Alle ein-/ausblenden», pro Gerät gemerkt (#34); ohne Einsatz feste Standorte, Helikopter und eigene Messstationen (#96, #125, #130).
 - **KA-04** – Karte drehbar (zwei Finger, Shift + Mausrad, Kompass); Klick auf den Kompass richtet nach Norden aus (AG).
 - **KA-05** – Startansicht beim Öffnen eines Einsatzes: Übersicht über alle aktiven Positionen (AG).
 - **KA-06** – Kamerafokus: Suchgebiet (ganz und je Teilgebiet), Einsatzkräfte, Auto-Übersicht (hält alle sichtbaren aktiven Positionen im Bild) (AG, #51).
@@ -123,6 +123,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **SG-10** – Gewässerdaten über den Server mit Cache, Sperre gegen doppelte Abfragen, abgelaufene Daten als Rückfall, konfigurierbare Overpass-Server mit Reihenfolge, Abfrage notfalls direkt vom Gerät (#28).
 - **SG-11** – Statistik der Overpass-Abfragen je Server und Quelle, zurücksetzbar (#45).
 - **SG-12** – Zugriff auf Overpass gesamt und je Server abschaltbar (#75).
+- **SG-13** – Hauptquelle für das Gewässernetz ist eine eigene PostGIS-Datenbank mit dem OSM-Auszug der Schweiz (Geofabrik), regelmässig aktualisiert; Overpass bleibt Rückfall, wenn sie nicht antwortet (#131).
+- **SG-14** – PostGIS in der Verwaltung einstellbar (Verbindung, Tabelle, Verschlüsselung, Passwort nie sichtbar), mit Verbindungstest und eigener Zeile in der Statistik; Skripte für Einrichtung und Aktualisierung liegen bei (#131).
 - Gewässerwahl am PLS korrigierbar (Auswahlschritt) (**offen**).
 
 ## 9. Rettlinge (RE)
@@ -166,11 +168,12 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **HE-02** – Hauptschalter, Ein/Aus je Einsatz mit Vorauswahl je Art; die Einsatzleitung schaltet im Einsatz um (#73).
 - **HE-03** – Konfigurierbar: Quellen (nur gratis und ohne Schlüssel), Filter (Rettungshelikopter, Helikopter, alle), Sichtbarkeit in App, öffentlicher Ansicht und Replay, Umkreis, Flughöhe, Alter, Spur, Abfrageintervall, Liste der Rettungshelikopter (#73).
 - **HE-04** – Abfrage nur in der Relevanzzone um PLS, Einsatzkräfte, Rettlinge, Markierungen und Bereiche (#73); weit auseinanderliegende Gebiete werden je einzeln abgefragt, damit alle abgedeckt sind (#107).
+- **HE-05** – Auch ohne Einsatz: Helikopter im einstellbaren Umkreis um die aktiven permanenten festen Standorte, für alle Angemeldeten; kein Umkreis (0) schaltet das aus (#130).
 - Tief fliegende Helikopter in Tälern fehlen oft (keine Empfänger in Sicht) (**Grenze**).
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte (#35, #79, #96).
+- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss (#35, #79, #96, #125).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
 
@@ -254,7 +257,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **RC-01** – Eine Seite «Impressum, Lizenzen & Datenschutz» ist ohne Anmeldung erreichbar, verlinkt bei der Anmeldung, im Profil der Einsatz-App, in der öffentlichen Ansicht und in der Verwaltung (#102).
 - **RC-02** – Impressum mit den Angaben der betreibenden Organisation und den Verwendungseinschränkungen: kein Ersatz für Notrufnummern, Alarmierung ohne Gewähr, Standorte und Suchgebiet sind Schätzungen, Kartendaten und Luftfahrzeuge ohne Gewähr, nur nicht-kommerzielle Nutzung, keine Haftung (#102).
-- **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, Helikopter-Quellen) (#102).
+- **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, PostGIS, Helikopter-Quellen, BAFU-Hydrodaten) (#102, #125, #131).
 - **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen, Speicher im Gerät, Rechte der betroffenen Personen (#102).
 - **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
 
@@ -273,3 +276,14 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **NT-11** – Verwaltung, «Meine Einsätze» und Rechtliches öffnen sich in der nativen App in einer WebView, angemeldet mit dem Konto, ohne eigene Anmeldung. «Zur Einsatz-App» und Zurück führen zur Karte, fremde Adressen öffnen sich ausserhalb. Dateien (AAR als Word/PDF, CSV) bietet die App zum Teilen bzw. Speichern an. Abmelden dort meldet das Konto in der App ab; ein neuer Alarm schliesst die Seite (Feedback zu #108).
 - **NT-10** – Die Einsatz-App ist in der nativen App ganz nativ gebaut, ohne WebView (Feedback zu #108): Karte mit denselben Anbietern, Ebenen und Kartenknöpfen, Seitenfenster Einsatzkräfte, Nachrichten, Rettlinge, Markierungen & Bereiche (mit festen Standorten) und Flussdistanz, Suchgebiet entlang des Gewässers, Fenster «Ansicht», Kamerafokus und Auto-Übersicht, ☰-Menü mit den Registern Einsatz/Leitung/Übung/Log/Info, Einsatz starten, vorbereitete Übungen und Profil, mit denselben Abläufen und Rechten wie die Web-App. Verwaltung, «Meine Einsätze» und Rechtliches öffnen sich in der App (siehe NT-11). Noch nicht nativ: Gross-Modus des Logs, freie Fragen an den AI-Assistenten und dessen Modus «Begleitend» (**Grenze**) (#108).
 - Kritische Hinweise unter iOS (umgehen «Nicht stören» und Lautlos) verlangen eine Freigabe von Apple (**offen**).
+
+## 24. Pegel und Abfluss (PA)
+
+- **PA-01** – Abfluss, Pegel, Wassertemperatur und Gefahrenstufe der Messstationen des BAFU (offene Daten), über den Server mit Zwischenspeicher abgefragt; Quellenangabe «BAFU» (#125).
+- **PA-02** – Zu Beginn eines Einsatzes (sobald ein PLS bekannt ist) und am Einsatzende werden die Werte der nächsten Stationen um jeden PLS automatisch ermittelt und im Einsatzlog festgehalten; am Ende dieselben Stationen wie zu Beginn (#125).
+- **PA-03** – Die erfassten Werte sind danach sichtbar: im Einsatzlog (Verwaltung, «Meine Einsätze», After Action Review) und im Menü der Einsatz-App mit Beginn, Ende und aktuellem Wert (#125).
+- **PA-04** – Jede Person definiert im Profil persönliche Messstationen (Suche nach Ort, Gewässer oder Nummer, Reihenfolge, höchstens 20); sie erscheinen als Liste im Menü und als Markierung auf der Karte, auch ohne Einsatz (#125).
+- **PA-05** – In der Verwaltung einstellbar: Umkreis um jeden PLS, Anzahl Stationen je PLS, Seen ja/nein; Stand des Datenabrufs mit «Jetzt abrufen»; als Funktion je Einsatztyp ein- und ausschaltbar (#125).
+- **PA-06** – Je Station die Gefahrenstufe (1–5, aus den Schwellen des BAFU) und die Einordnung (sehr tief … sehr hoch); Marker auf der Karte ab Stufe 2 eingefärbt, Link zur Stationsseite des BAFU (Feedback zu #125).
+- **PA-07** – Zwei Datenquellen, je in der Verwaltung ein- und ausschaltbar, mit Lizenz, Hinweis, Stand und Test: die Schnittstelle api.existenz.ch mit Vorrang und die Webseite hydrodaten.admin.ch, die Fehlendes (Gefahrenstufe, Stationen) ergänzt und bei Ausfall der Schnittstelle einspringt; die Seite «Impressum, Lizenzen & Datenschutz» nennt die eingeschalteten (Feedback zu #125).
+

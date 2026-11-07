@@ -79,7 +79,9 @@ h3.lgh{margin:1rem 0 .2rem;font-size:.95rem}details.lgd{margin-top:1rem;border-t
 .anum .ai{display:flex;align-items:center;gap:.4rem}.anum .ai input{width:7.5rem;margin:0;font-variant-numeric:tabular-nums}.anum .ai span{color:var(--mut)}
 .anum small{color:var(--mut);font-size:.75rem}.anum small b{color:var(--ex);font-weight:600}
 #sH .afld{display:flex;flex-direction:column;gap:.25rem;max-width:28rem;margin:.5rem 0}#sH .afld select{margin:0}#sH label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* Helikopter: je Eingabe eine Zeile */
-#sAi label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
+#sAi label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0}
+.pgf{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.4rem 1rem;max-width:46rem;margin:.5rem 0}.pgf label{display:flex;flex-direction:column;gap:.25rem;margin:0}.pgf input,.pgf select{margin:0;width:100%;box-sizing:border-box}
+#sO label.chk,#sHy label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
 #sAi .aiflds{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:.6rem;margin:.4rem 0 .6rem}#sAi .aifld{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem;margin:.4rem 0}#sAi .aiflds .aifld{margin:0}#sAi .aifld>label:first-child,#sAi .aifld>b{font-weight:600}#sAi .aifld input,#sAi .aifld select{margin:0;width:100%}#sAi .aifld .h{color:var(--mut);font-size:.82rem}#sAi .aifld label.chk{margin:.1rem 0}
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
 .explc{width:20px;height:20px;border-radius:3px;border:2px solid #fff;color:#fff;display:grid;place-items:center;font-size:.6rem;font-weight:700;box-shadow:0 0 0 1px #0008;text-shadow:0 0 2px #000;overflow:hidden;white-space:nowrap}
@@ -144,12 +146,12 @@ const NAV=[
   ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['ai','sAi','AI-Assistent',loadAi]]],
-  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['standorte','sPl','Feste Standorte',loadPlaces]]],
+  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -546,8 +548,9 @@ function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000
 let airS=null,airC=null;
 // Zahlenwerte: [Titel, Einheit, Erklärung], gruppiert; Bereich und Standard kommen vom Server (air_num)
 const airNumL={radius_km:['Umkreis','km','um PLS (plus Driftdistanz), Einsatzkräfte, Rettlinge, Externe, Markierungen und Bereiche; abgefragt werden höchstens ca. 460 km um die Mitte (Grenze der Dienste)'],max_alt_ft:['Höchste Flughöhe','ft','höher fliegende gelten als Durchflug (barometrische Höhe)'],
-  max_age_s:['Höchstes Alter einer Position','s','ältere Positionen werden nicht mehr gezeigt'],trail_min:['Spur','min','zurückgelegter Weg hinter dem Symbol, 0 = keine Spur'],cache_s:['Abfrage höchstens alle','s','eine Abfrage für alle Geräte zusammen']};
-const AIR_GRP=[['Relevanzzone',['radius_km','max_alt_ft']],['Anzeige',['max_age_s','trail_min']],['Abfrage',['cache_s']]];
+  max_age_s:['Höchstes Alter einer Position','s','ältere Positionen werden nicht mehr gezeigt'],trail_min:['Spur','min','zurückgelegter Weg hinter dem Symbol, 0 = keine Spur'],cache_s:['Abfrage höchstens alle','s','eine Abfrage für alle Geräte zusammen'],
+  home_km:['Umkreis ohne Einsatz','km','um die aktiven permanenten festen Standorte (Karte & Daten → Feste Standorte), auch ohne laufenden Einsatz für alle Angemeldeten (ausser «Wer sieht die Helikopter» steht auf «Niemand»); 0 = ohne Einsatz keine Helikopter']};
+const AIR_GRP=[['Relevanzzone',['radius_km','max_alt_ft']],['Anzeige',['max_age_s','trail_min']],['Abfrage',['cache_s']],['Ohne Einsatz',['home_km']]];
 const airNumX=(k,v)=>k==='max_alt_ft'&&v!==''&&!isNaN(v)?'≈ '+Math.round(v*.3048).toLocaleString('de-CH')+' m':''; // Flughöhe zusätzlich in Metern
 function airNumCard(k){const[l,u,h]=airNumL[k],[d,lo,hi]=airS.air_num[k],v=airC[k],x=airNumX(k,v);
   return`<div class="anum${+v!==d?' chg':''}" data-anc="${k}"><label for="an_${k}">${esc(l)}</label><div class="h">${esc(h)}</div>
@@ -558,7 +561,7 @@ async function loadAir(){const el=$('#sH');try{airS=await api('settings')}catch(
   airC=JSON.parse(JSON.stringify(airS.air));airK={};(airS.kinds||[]).forEach(k=>airK[k.id]=k.air);drawAir()}
 function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?new Date(t*1000).toLocaleString('de-CH'):'–';
   const srcRow=(k,i)=>{const S=s.air_sources[k],x=st[k],on=c.src.includes(k);
-    return`<div class="inc" style="padding:.5rem .7rem"><div class="row" style="align-items:center;margin:0"><label class="chk" style="flex:1"><input type="checkbox" data-as="${k}" ${on?'checked':''}> <b>${esc(S.name)}</b> <a href="${esc(S.site)}" target="_blank" rel="noopener" class="mut">${esc(S.site.replace(/^https:\/\//,''))}</a></label>
+    return`<div class="inc" style="display:block;padding:.5rem .7rem"><div class="row" style="align-items:center;margin:0"><label class="chk" style="flex:1"><input type="checkbox" data-as="${k}" ${on?'checked':''}> <b>${esc(S.name)}</b> <a href="${esc(S.site)}" target="_blank" rel="noopener" class="mut">${esc(S.site.replace(/^https:\/\//,''))}</a></label>
       <button data-au="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button data-ad="${i}" ${i<c.order.length-1?'':'disabled'} aria-label="Nach unten">↓</button><button data-at="${k}">Testen</button></div>
       <div class="mut">⚠ ${esc(S.note)}</div>
       <div class="mut">${x?`Abfragen ${x.uses}, fehlgeschlagen ${x.fails} · letzter Erfolg ${dt(x.last_ok)}${x.ms!=null?` (${x.ms} ms, ${x.n} Luftfahrzeuge)`:''}${x.last_fail?` · letzter Fehler ${dt(x.last_fail)}: ${esc(x.err||'')}`:''}`:'Noch nicht abgefragt'}</div><div class="mut" id="at_${k}"></div></div>`};
@@ -598,7 +601,9 @@ function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?n
 let opUrls=[],opDef=[],opOff=[];
 async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all([api('settings'),api('overpass/stats')])}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   opUrls=[...s.overpass_urls];opDef=s.overpass_default;opOff=[...(s.overpass_off||[])];
-  el.innerHTML=`<h2>Gewässerdaten</h2><div class="mut">Das Gewässernetz für Suchgebiet und Flussdistanz (OpenStreetMap via Overpass) holt der Server und speichert es zwischen. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal zu Overpass. Ist Overpass nicht erreichbar, verwendet der Server ältere Daten (bis 7 Tage).</div>
+  el.innerHTML=`<h2>Gewässerdaten</h2><div class="mut">Das Gewässernetz für Suchgebiet und Flussdistanz (OpenStreetMap) holt der Server und speichert es zwischen: zuerst aus der eigenen PostGIS-Datenbank, sofern eingerichtet, sonst über Overpass. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal hinaus. Antwortet keine Quelle, verwendet der Server ältere Daten (bis 7 Tage).</div>
+    ${pgHtml(s)}
+    <h3>Overpass</h3>
     <label class="chk"><input type="checkbox" id="opOn" ${s.overpass_on?'checked':''}> Zugriff auf Overpass</label>
     <div class="mut">Ausgeschaltet fragen weder der Server noch die Geräte Overpass ab. Suchgebiet und Flussdistanz erhalten dann nur noch Daten aus dem Zwischenspeicher (auch ältere); ohne solche erscheint das Suchgebiet als Kreis um den PLS, und die Flussdistanz ist nicht verfügbar. Gilt sofort.</div>
     <div class="row" style="align-items:end"><label class="mut">Haltedauer in Minuten (0 = nicht zwischenspeichern)<input id="opT" type="number" min="0" max="10080" step="1" value="${s.overpass_ttl}"></label><button id="opSv">Speichern</button></div>
@@ -608,6 +613,7 @@ async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all(
     <div class="row"><button id="opUs" class="pri">Server speichern</button><button id="opUd">Standard wiederherstellen</button></div>
     <h3>Verwendung und Verfügbarkeit</h3>${opStats(os,s.overpass_urls)}`;
   $('#opOn').onchange=e=>{const c=e.target;c.disabled=true;api('settings/save',{overpass_on:c.checked?1:0}).catch(x=>{c.checked=!c.checked;fail(x)}).finally(()=>{c.disabled=false})};
+  if(s.postgis)pgBind();
   $('#opSr').onclick=()=>{if(confirm('Statistik der Overpass-Server zurücksetzen?'))api('overpass/stats/reset',{}).then(loadOp).catch(fail)};
   $('#opSv').onclick=()=>api('settings/save',{overpass_ttl:$('#opT').value}).then(()=>{toast('Gespeichert.');loadOp()}).catch(fail);
   $('#opA').onclick=()=>{const u=$('#opN').value.trim();if(!/^https:\/\/[^/?#@]+\//i.test(u))return toast('Bitte eine vollständige https-Adresse angeben, z. B. https://overpass-api.de/api/interpreter','err');
@@ -618,10 +624,26 @@ async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all(
     api('settings/save',{overpass_urls:opUrls,overpass_off:opOff.filter(u=>opUrls.includes(u))}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail)};
   $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[],overpass_off:[]}).then(()=>{toast('Gespeichert.');loadOp()}).catch(fail)};
   drawOpList()}
-// Statistik je Server (Issue #45): Versuche vom Server (Hosting) und direkt vom Gerät (Rückfall), Abfragen aus dem Zwischenspeicher zählen nicht
-function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',
-    us=[...urls,...[...new Set(os.rows.map(r=>r.url))].filter(u=>!urls.includes(u))];
-  const rows=us.flatMap(u=>{const rs=os.rows.filter(r=>r.url===u);return(rs.length?rs:[{url:u,src:'',uses:0,ok:0,fails:0}]).map((r,k)=>`<tr>${k?'':`<td rowspan="${rs.length||1}" style="overflow-wrap:anywhere">${esc(u)}${urls.includes(u)?'':' <span class="mut">(nicht mehr hinterlegt)</span>'}</td>`}
+// PostGIS als Hauptquelle (Issue #131): Verbindung (Passwort nie angezeigt, leer = behalten), Test mit Beispielabfrage um Bern
+function pgHtml(s){const p=s.postgis;if(!p)return'';
+  return`<h3>PostGIS (Hauptquelle)</h3><div class="mut">Eigene PostgreSQL-Datenbank mit PostGIS und dem Gewässernetz aus OpenStreetMap (Auszug der Schweiz von Geofabrik; Einrichtung und wöchentliche Aktualisierung mit den Skripten in <code>scripts/postgis/</code>). Eingeschaltet fragt der Server zuerst sie ab. Antwortet sie nicht, gelten Zwischenspeicher und Overpass wie unten.</div>
+    ${p.ext?'':'<div class="mut">⚠ Auf diesem Webserver fehlt die PHP-Erweiterung <b>pdo_pgsql</b>. Ohne sie bleibt PostGIS unbenutzt, es gilt Overpass.</div>'}
+    <label class="chk"><input type="checkbox" id="pgOn" ${p.on?'checked':''}> PostGIS als Hauptquelle verwenden${p.on?(p.ready?' <b>✓ aktiv</b>':' <span class="mut">(nicht aktiv)</span>'):''}</label>
+    <div class="pgf"><label class="mut">Host<input id="pgH" value="${esc(p.host)}" placeholder="z. B. db.example.ch" autocomplete="off" inputmode="url"></label><label class="mut">Port<input id="pgP" type="number" min="1" max="65535" value="${p.port}"></label>
+    <label class="mut">Datenbank<input id="pgD" value="${esc(p.db)}" autocomplete="off"></label><label class="mut">Benutzer (nur Leserechte)<input id="pgU" value="${esc(p.user)}" autocomplete="off"></label>
+    <label class="mut">Passwort<input id="pgW" type="password" autocomplete="new-password" placeholder="${p.pass_set?'gespeichert, leer lassen zum Behalten':'kein Passwort gespeichert'}"></label><label class="mut">Tabelle<input id="pgT" value="${esc(p.table)}" placeholder="${esc(s.postgis_default.table)}"></label>
+    <label class="mut">Verschlüsselung<select id="pgS">${Object.entries(s.postgis_ssl).map(([k,l])=>`<option value="${k}" ${k===p.ssl?'selected':''}>${esc(l)}</option>`).join('')}</select></label></div>
+    <div class="row"><button id="pgSv" class="pri">PostGIS speichern</button><button id="pgTs">Verbindung testen</button>${p.pass_set?'<button id="pgWx">Passwort entfernen</button>':''}</div><div class="mut" id="pgR"></div>`}
+function pgBind(){const v=()=>({on:$('#pgOn').checked?1:0,host:$('#pgH').value.trim(),port:+$('#pgP').value||5432,db:$('#pgD').value.trim(),user:$('#pgU').value.trim(),table:$('#pgT').value.trim(),ssl:$('#pgS').value,pass:$('#pgW').value});
+  $('#pgSv').onclick=()=>api('settings/save',{postgis:v()}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail);
+  $('#pgTs').onclick=async e=>{const b=e.target,o=$('#pgR');b.disabled=true;o.textContent='Wird getestet …';
+    try{const r=await api('postgis/test',{cfg:v()});o.innerHTML=r.ok?`✓ Verbunden in ${r.connect_ms} ms (PostGIS ${esc(r.postgis)}), Tabelle mit rund ${r.rows.toLocaleString('de-CH')} Gewässern. Beispiel 5 km um Bern: ${r.ways} Wege in ${r.query_ms} ms${r.names.length?' ('+esc(r.names.join(', '))+')':''}. Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}
+    catch(x){o.textContent='✗ '+x.message}b.disabled=false};
+  if($('#pgWx'))$('#pgWx').onclick=()=>{if(confirm('Gespeichertes Passwort für PostGIS entfernen?'))api('settings/save',{postgis:{...v(),pass:'',pass_clear:1}}).then(loadOp).catch(fail)}}
+// Statistik je Server (Issue #45): Versuche vom Server (Hosting) und direkt vom Gerät (Rückfall), Abfragen aus dem Zwischenspeicher zählen nicht; PostGIS (Issue #131) als eigene Zeile «postgis»
+function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',PG='postgis',
+    us=[...(os.rows.some(r=>r.url===PG)?[PG]:[]),...urls,...[...new Set(os.rows.map(r=>r.url))].filter(u=>u!==PG&&!urls.includes(u))];
+  const rows=us.flatMap(u=>{const rs=os.rows.filter(r=>r.url===u);return(rs.length?rs:[{url:u,src:'',uses:0,ok:0,fails:0}]).map((r,k)=>`<tr>${k?'':`<td rowspan="${rs.length||1}" style="overflow-wrap:anywhere">${u===PG?'<b>PostGIS</b> (eigene Datenbank)':esc(u)+(urls.includes(u)?'':' <span class="mut">(nicht mehr hinterlegt)</span>')}</td>`}
     <td>${SRC[r.src]||'–'}</td><td>${r.uses}</td><td>${r.ok}</td><td>${r.fails}</td><td>${r.uses?Math.round(r.ok/r.uses*100)+' %':'–'}</td><td>${r.ok?(r.ok_ms/r.ok/1000).toFixed(1)+' s':'–'}</td>
     <td>${dt(r.last_ok)}</td><td>${dt(r.last_fail)}${r.last_err?`<br><span class="mut">${esc(r.last_err)}</span>`:''}</td></tr>`)}).join('');
   return `<div class="mut">Jeder Versuch zählt: «Server» = Abfrage vom Hosting, «Gerät» = direkte Abfrage eines Geräts, wenn der Server keine Antwort erhielt. Der nächste Server wird nur gefragt, wenn der vorherige nicht antwortet. Abfragen aus dem Zwischenspeicher zählen nicht.${os.since?' Erfasst seit '+dt(os.since)+'.':''}</div>
@@ -632,6 +654,26 @@ function drawOpList(){const n=opUrls.length,el=$('#opList');
   el.querySelectorAll('[data-opk]').forEach(c=>c.onchange=()=>{const u=opUrls[+c.dataset.opk];opOff=opOff.filter(x=>x!==u);if(!c.checked)opOff.push(u);drawOpList()});
   el.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,o=b.dataset.op;
     if(o==='rm')opUrls.splice(k,1);else{const j=o==='up'?k-1:k+1;[opUrls[k],opUrls[j]]=[opUrls[j],opUrls[k]]}drawOpList()})}
+/* ---------- Pegel & Abfluss (Issue #125): Stationen im Einsatz (Umkreis, Anzahl, Seen) und Stand des Datenabrufs beim BAFU ---------- */
+async function loadHydro(){const el=$('#sHy');let s,h;try{[s,h]=await Promise.all([api('settings'),api('hydro/status',{})])}catch(e){el.innerHTML='<h2>Pegel &amp; Abfluss</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const c=s.hydro,N=s.hydro_num,dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',on=Object.values(s.feat_on||{}).some(f=>f.hydro);
+  const st=x=>`${x.stations} Messstationen (${x.rivers} an Fliessgewässern), aktuelle Werte für ${x.values}${x.at?`, Stand ${dt(x.at)}`:''}${x.fail_at?` · ⚠ letzter Fehlschlag ${dt(x.fail_at)}`:''}. Die Werte werden 5 Minuten zwischengespeichert (das BAFU misst alle 10 Minuten).`;
+  // Datenquellen (Feedback zu #125): Schnittstelle mit Vorrang, Webseite ergänzt und springt ein; je ein-/ausschaltbar mit Lizenz, Hinweis, Stand und «Testen»
+  const SS=s.hydro_sources,ks=Object.keys(SS),srcSt=k=>{const x=(h.status||{})[k];return x?`Letzte Abfrage ${dt(x.at)}: ${x.ok?`✓ ${x.ms} ms, ${x.stations} Stationen, Werte für ${x.values}`:`✗ ${esc(x.err||'Fehler')}`}${!x.ok&&x.ok_at?` · letzter Erfolg ${dt(x.ok_at)}`:''}`:'Noch nicht abgefragt'};
+  const srcRow=(k,i)=>{const S=SS[k];return`<div class="inc" style="display:block;padding:.5rem .7rem"><div class="row" style="align-items:center;margin:0"><label class="chk" style="flex:1"><input type="checkbox" data-hs="${k}" ${c.src[k]?'checked':''}> <b>${i+1}. ${esc(S.name)}</b> <a href="${esc(S.site)}" target="_blank" rel="noopener" class="mut">${esc(S.site.replace(/^https:\/\//,''))}</a></label><button data-ht="${k}">Testen</button></div>
+      <div class="mut">Lizenz: ${esc(S.lic)}</div><div class="mut">⚠ ${esc(S.note)}</div><div class="mut">${srcSt(k)}</div><div class="mut" id="ht_${k}"></div></div>`};
+  el.innerHTML=`<h2>Pegel &amp; Abfluss</h2><div class="mut">Abfluss, Pegel und Wassertemperatur der Messstationen des BAFU (offene Daten, Werte ungeprüft; Quellen unten), mit Gefahrenstufe gemäss den Schwellen des BAFU, soweit die Webseite eingeschaltet ist. Im Einsatz hält die App zu Beginn, sobald ein PLS bekannt ist, und am Einsatzende die Werte der nächsten Stationen um jeden PLS fest: im Einsatzlog und im Menü der Einsatz-App. Jede Person kann im Profil eigene Messstationen wählen, die sie im Menü und auf der Karte sieht.</div>
+    ${on?'':'<div class="mut">⚠ Die Funktion «Pegel & Abfluss (BAFU)» ist bei keinem Einsatztyp eingeschaltet (Funktionen → Funktionen).</div>'}
+    <h3>Datenquellen</h3><div class="mut">Zuerst fragt der Server die Schnittstelle, die Werte daraus gehen vor. Die Webseite ergänzt, was der Schnittstelle fehlt (Gefahrenstufe, Einordnung, weitere Stationen), und springt ganz ein, wenn sie nicht antwortet. Sind beide aus, gibt es keine Messwerte.</div>${ks.map(srcRow).join('')}
+    <h3>Stationen im Einsatz</h3><div class="pgf"><label class="mut">Umkreis um jeden PLS in km (${N.radius_km[1]}–${N.radius_km[2]}, Standard ${N.radius_km[0]})<input id="hyR" type="number" min="${N.radius_km[1]}" max="${N.radius_km[2]}" step="1" value="${c.radius_km}"></label>
+      <label class="mut">Stationen je PLS (${N.n[1]}–${N.n[2]}, Standard ${N.n[0]})<input id="hyN" type="number" min="${N.n[1]}" max="${N.n[2]}" step="1" value="${c.n}"></label></div>
+    <label class="chk"><input type="checkbox" id="hyL" ${c.lakes?'checked':''}> Auch Messstationen an Seen (meist nur Pegel)</label>
+    <div class="row"><button id="hySv" class="pri">Speichern</button></div>
+    <h3>Datenabruf</h3><div class="mut" id="hySt">${st(h)}</div><div class="row"><button id="hyRf">Jetzt abrufen</button></div>`;
+  $('#hySv').onclick=()=>api('settings/save',{hydro:{radius_km:$('#hyR').value,n:$('#hyN').value,lakes:$('#hyL').checked?1:0,src:Object.fromEntries(ks.map(k=>[k,el.querySelector(`[data-hs="${k}"]`).checked?1:0]))}}).then(()=>{toast(ks.some(k=>el.querySelector(`[data-hs="${k}"]`).checked)?'Gespeichert. Gilt für die nächsten Erfassungen.':'Gespeichert. Ohne Datenquelle gibt es keine Messwerte.',ks.some(k=>el.querySelector(`[data-hs="${k}"]`).checked)?'ok':'info');loadHydro()}).catch(fail);
+  el.querySelectorAll('[data-ht]').forEach(b=>b.onclick=async()=>{const k=b.dataset.ht,o=$('#ht_'+k);b.disabled=true;o.textContent='Wird abgefragt …';
+    try{const r=await api('hydro/test',{src:k});o.innerHTML=r.ok?`✓ Antwort in ${r.ms} ms: ${r.stations} Stationen, Werte für ${r.values}.${r.example?' Beispiel '+esc(r.example):''}`:`✗ Keine gültige Antwort (${r.ms} ms)${r.err?': '+esc(r.err):''}`}catch(e){o.textContent='✗ '+e.message}finally{b.disabled=false}});
+  $('#hyRf').onclick=e=>{const b=e.target;b.disabled=true;api('hydro/status',{fresh:1}).then(x=>{$('#hySt').innerHTML=st(x)+` Abruf in ${x.ms} ms.`}).catch(fail).finally(()=>{b.disabled=false})}}
 /* ---------- Übungen vorbereiten (Issue #29) ---------- */
 // Aufgebotsmeldung, Übungsleitung (Rechte der Einsatzleitung, nimmt nicht teil), Aufzeichnung, öffentlicher Link (schon vor dem Start gültig, zeigt bis dahin eine Warteseite)
 // und Elemente, die die Übungsleitung in der Einsatz-App freigibt: PLS des Einsatzes, neuer Rettling, Rettling gesichtet, je mit optionaler Meldung (Nachricht an alle)
