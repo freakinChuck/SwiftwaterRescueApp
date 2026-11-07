@@ -36,6 +36,9 @@ abstract class MapCtl {
   /// Kamerafokus auf ein Teilgebiet des Suchgebiets (AreaPart.key), null = ganzes Gebiet
   void fitArea([String? key]);
 
+  /// Einsatzgebiet zeigen (Suchgebiet und PLS, ohne Einsatzkräfte), auch wenn es erst noch berechnet wird
+  void focusArea();
+
   /// Werkzeug Flussdistanz öffnen
   void openRd();
 }

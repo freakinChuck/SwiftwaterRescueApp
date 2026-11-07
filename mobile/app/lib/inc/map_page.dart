@@ -28,7 +28,7 @@ import 'store.dart';
 import 'util.dart';
 
 const _fitPad = EdgeInsets.fromLTRB(50, 90, 80, 50);
-const _homeWaitMs = 20000;
+const _homeWaitMs = 20000, _areaWaitMs = 30000;
 
 class IncPage extends StatefulWidget {
   const IncPage({super.key, required this.account});
@@ -36,6 +36,9 @@ class IncPage extends StatefulWidget {
 
   /// Konto, dessen Einsatz-App gerade offen ist (openAccount öffnet nicht doppelt)
   static String? openId;
+
+  /// Konto, dessen Einsatz-App nach dem Antippen einer Meldung das Einsatzgebiet zeigen soll (openAccount mit focus)
+  static final focusReq = ValueNotifier<String?>(null);
 
   @override
   State<IncPage> createState() => _IncPageState();
@@ -51,6 +54,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   bool _mapReady = false, _closing = false, _fold = false, _camOpen = false, _noteOpen = false;
   String? _panel;
   int? _follow, _fitted;
+  int? _areaFocus; // seit wann das Einsatzgebiet gezeigt werden soll (focusArea)
   double _rot = 0;
 
   // Punktwahl und Bereich zeichnen
@@ -88,6 +92,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (e == 'inc') _fitted = null;
     });
     s.addListener(_onStore);
+    IncPage.focusReq.addListener(_onFocusReq);
+    _onFocusReq();
     s.start();
     WidgetsBinding.instance.addPostFrameCallback((_) => _askLocation());
   }
@@ -95,6 +101,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   @override
   void dispose() {
     if (IncPage.openId == widget.account.id) IncPage.openId = null;
+    IncPage.focusReq.removeListener(_onFocusReq);
     s.removeListener(_onStore);
     _tSub?.cancel();
     _eSub?.cancel();
@@ -162,6 +169,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     }
     if (_mapReady) {
       final i = s.inc;
+      if (_areaFocus != null) _focusNow();
       if (i != null && _fitted != ji(i['id'])) _startView(i);
       if (i == null) _homeView();
       if (s.autoView) _autoFit();
@@ -314,11 +322,11 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     if (_sk.currentState?.isDrawerOpen == true) Navigator.of(context).pop();
   }
 
-  @override
-  void fitArea([String? key]) {
+  /// Eckpunkte des Suchgebiets (key = Teilgebiet), leer ohne berechnetes Gebiet
+  List<LatLng> _areaPts([String? key]) {
     final a = s.area;
-    if (a == null) return;
     final pts = <LatLng>[];
+    if (a == null) return pts;
     void add(List<List<LatLng>> polys, List<({LatLng c, double r})> circles) {
       for (final pl in polys) {
         pts.addAll(pl);
@@ -340,12 +348,56 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       final p = a.parts.where((x) => x.key == key).firstOrNull;
       if (p != null) add(p.polys, p.circles);
     }
+    return pts;
+  }
+
+  @override
+  void fitArea([String? key]) {
+    final pts = _areaPts(key);
     if (pts.isEmpty) {
       s.toast('Kein Suchgebiet', 'info');
       return;
     }
     fitPts(pts);
     if (MediaQuery.of(context).size.width < 760) setState(() => _panel = null);
+  }
+
+  // Einsatzgebiet zeigen (Feedback zu #108, wie focusArea in index.html): nach dem Antippen einer Meldung und nach dem Annehmen.
+  // Suchgebiet mit den PLS, ohne Einsatzkräfte; solange das Suchgebiet noch berechnet wird, die PLS. Wartet höchstens _areaWaitMs,
+  // ersetzt die Startansicht und endet beim Verschieben der Karte von Hand.
+  void _onFocusReq() {
+    if (IncPage.focusReq.value != widget.account.id) return;
+    IncPage.focusReq.value = null;
+    focusArea();
+  }
+
+  @override
+  void focusArea() {
+    _areaFocus = DateTime.now().millisecondsSinceEpoch;
+    if (mounted && MediaQuery.of(context).size.width < 760) {
+      _sk.currentState?.closeDrawer();
+      setState(() => _panel = null);
+    }
+    _focusNow();
+  }
+
+  void _focusNow() {
+    final i = s.inc;
+    if (_areaFocus == null || !_mapReady || i == null) return;
+    if (DateTime.now().millisecondsSinceEpoch - _areaFocus! > _areaWaitMs) {
+      _areaFocus = null;
+      return;
+    }
+    final area = s.feat('area') ? _areaPts() : <LatLng>[];
+    final pls = s.plsList(), on = pls.where((p) => p.on).toList();
+    final pts = [...area, ...(on.isNotEmpty ? on : pls).map((p) => LatLng(p.lat, p.lon))];
+    if (pts.isEmpty) return; // noch kein PLS: beim nächsten Polling
+    if (area.isNotEmpty || !s.feat('area')) _areaFocus = null;
+    _fitted = ji(i['id']);
+    _homeDone = true;
+    _follow = null;
+    if (s.autoView) s.setAuto(false);
+    _fitRaw(pts);
   }
 
   @override
@@ -1045,6 +1097,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         final hand = e.source == MapEventSource.onDrag || e.source == MapEventSource.onMultiFinger || e.source == MapEventSource.doubleTap || e.source == MapEventSource.doubleTapHold || e.source == MapEventSource.scrollWheel;
                         if (hand && e is MapEventMoveStart) {
                           if (!_homeBusy) _homeDone = true;
+                          _areaFocus = null;
                           if (!_autoBusy) _stopFollow();
                         }
                       }),

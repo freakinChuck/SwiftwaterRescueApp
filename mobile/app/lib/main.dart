@@ -17,7 +17,8 @@ import 'accounts.dart';
 final navKey = GlobalKey<NavigatorState>();
 
 /// Einsatz-App eines Kontos öffnen (aus der Liste, nach dem Antippen einer Meldung oder einer Push-Nachricht).
-Future<void> openAccount(String id) async {
+/// focus: aus einer Meldung geöffnet, die Einsatz-App zeigt das Einsatzgebiet (IncPage.focusReq).
+Future<void> openAccount(String id, {bool focus = false}) async {
   final l = await Accounts.load();
   final a = l.where((x) => x.id == id).firstOrNull;
   final nav = navKey.currentState;
@@ -26,6 +27,7 @@ Future<void> openAccount(String id) async {
     nav.push(MaterialPageRoute(builder: (_) => LoginPage(relogin: a)));
     return;
   }
+  if (focus) IncPage.focusReq.value = id;
   // bereits offen: nicht doppelt öffnen
   if (IncPage.openId == id) return;
   nav.popUntil((r) => r.isFirst);
@@ -39,7 +41,7 @@ Future<void> main() async {
   await initNotes(onTap: (r) {
     alarmStop(); // Meldung angetippt: Weckton aus
     final p = r.payload;
-    if (p != null && p.isNotEmpty) openAccount(p);
+    if (p != null && p.isNotEmpty) openAccount(p, focus: true);
   });
   final start = await notes.getNotificationAppLaunchDetails();
   if (start?.didNotificationLaunchApp == true) _pendingOpen = start!.notificationResponse?.payload;
@@ -67,12 +69,12 @@ class _AppState extends State<SwiftwaterApp> with WidgetsBindingObserver {
   Future<void> _boot() async {
     await requestNotePerms();
     await syncService();
-    unawaited(initPush(openAccount));
+    unawaited(initPush((id) => openAccount(id, focus: true)));
     final l = await Accounts.load();
     final p = _pendingOpen;
     _pendingOpen = null;
     if (p != null && p.isNotEmpty) {
-      await openAccount(p);
+      await openAccount(p, focus: true);
     } else if (l.length == 1 && !l.first.loggedOut) {
       await openAccount(l.first.id); // nur ein Konto: gleich die Web-App zeigen
     }

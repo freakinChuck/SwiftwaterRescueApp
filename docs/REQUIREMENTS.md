@@ -54,7 +54,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **EI-01** – Einsatz bzw. Übung starten mit Alarmmeldung; getrennte Knöpfe «Einsatz starten» und «Übung starten», je nach Recht (Spec, #64).
 - **EI-02** – Der Zeitpunkt des Alarmeingangs kann beim Start übersteuert werden (AG).
-- **EI-03** – Die Alarmstufe stellt man je Einsatztyp ein: Kritisch (Vollbild, Dauerton, Vibration, Push bleibt stehen), Hoch (Vollbild, einmaliger Ton, Push bleibt stehen), Normal (Hinweis, kurzer Ton), Leise (Hinweis ohne Ton), Keine (nur in der App). Je Typ einstellbar, ob Personen mit Übungsmodus kritisch alarmiert werden. Angelegt: Einsatz kritisch, Übung normal mit Übungsmodus (Spec, AG, #90).
+- **EI-03** – Die Alarmstufe stellt man je Einsatztyp ein: Kritisch (rote Benachrichtigung, bleibt bis zum Antippen, dreifacher Ton, Vibration, Push bleibt stehen), Hoch (rote Benachrichtigung, bleibt bis zum Antippen, einmaliger Ton, Push bleibt stehen), Normal (Hinweis, kurzer Ton), Leise (Hinweis ohne Ton), Keine (nur in der App). Die Web-App zeigt keinen Vollbild-Alarm mehr (Feedback zu #108); Vollbild und Weckton gibt es nur in der nativen App (NT-03). Je Typ einstellbar, ob Personen mit Übungsmodus kritisch alarmiert werden. Angelegt: Einsatz kritisch, Übung normal mit Übungsmodus (Spec, AG, #90).
 - **EI-04** – Annehmen mit einer Einrückoption (z. B. Basis, Anfahrt direkt, Logistik, Koordinator KP Rück); die Optionen sind in der Verwaltung konfigurierbar, werden deaktiviert statt gelöscht, mindestens eine bleibt aktiv (Spec, AG).
 - **EI-05** – Je Einrückoption einstellbar: Standort teilen, Leitungsrechte, Zählung im Zähler der Einsatzkräfte (AG, #30).
 - **EI-06** – Ablehnen gibt es nicht mehr; ältere Ablehnungen bleiben in Log und Statistik (AG).
@@ -89,6 +89,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KA-09** – Am Handy decken Seitenfenster die Kartenknöpfe ab (AG).
 - **KA-10** – Startansicht beim Öffnen der App ohne laufenden Einsatz: eigener Standort und alle eingeblendeten festen Standorte im Bild; trifft der eigene Standort erst später ein, wird die Ansicht in den ersten 20 s nachgeführt, solange man die Karte nicht selbst verschoben oder gezoomt hat (#96).
 - **KA-11** – Das Menü (☰) zeigt im Einsatz oben den Einsatz mit Alarmzeit, Alarmstufe, PLS, Fliessgeschwindigkeit, Aufzeichnung und öffentlicher Ansicht, darunter Register: «Einsatz» (AI-Assistent, Teilnahme bzw. Mein Einsatz, Fliessgeschwindigkeit, Werkzeuge), «Leitung» (nur Einsatzleitung: Aufgebot, PLS, Aufzeichnung, Helikopter, öffentliche Ansicht, Einsatzkräfte, Einsatz beenden), «Übung» (Übungsleitung, mit Anzahl offener Elemente), «Log» und «Info» (eigene Rechte). Jedes Thema steht in einer eigenen Karte. Beim Öffnen gilt «Einsatz», für die Übungsleitung «Übung» (#129).
+- **KA-12** – Wird eine Benachrichtigung zum laufenden Einsatz geöffnet (Alarm, Nachricht, Entfernen; als Systembenachrichtigung oder in der App), zeigt die Karte das Einsatzgebiet: Suchgebiet mit den PLS, ohne Einsatzkräfte (solange das Suchgebiet noch berechnet wird, die PLS). Nach dem Annehmen mit einer Einrückoption kehrt sie ebenso aufs Einsatzgebiet zurück. Verschieben von Hand beendet es. Web-App und native App (Feedback zu #108).
 
 ## 6. Einsatzkräfte und Standort (EK)
 

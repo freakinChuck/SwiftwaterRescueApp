@@ -456,7 +456,10 @@ class _IncMenuState extends State<IncMenu> {
 
   Future<void> _join(J x) async {
     final r = await _run('join', 'incident/join', {'mode': x['code']});
-    if (r != null && mounted) setState(() => _tab = 'main');
+    if (r != null && mounted) {
+      setState(() => _tab = 'main');
+      map.focusArea(); // zurück aufs Einsatzgebiet
+    }
   }
 
   void _setFlow() {
