@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Push über APNs (Firebase Cloud Messaging). Beim Export für den App Store wird daraus «production». -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- Kritische Hinweise (ertönen auch bei «Nicht stören» und Lautlos) verlangen eine Freigabe von Apple:
+	     https://developer.apple.com/contact/request/notifications-critical-alerts-entitlement/
+	     Nach der Freigabe hier ergänzen und im Provisioning-Profil aktivieren:
+	<key>com.apple.developer.usernotifications.critical-alerts</key>
+	<true/>
+	-->
+	<!-- Zeitkritische Hinweise (Alarmstufe «hoch»): Fähigkeit «Time Sensitive Notifications» bei der App-ID einschalten, dann hier ergänzen:
+	<key>com.apple.developer.usernotifications.time-sensitive</key>
+	<true/>
+	-->
+</dict>
+</plist>

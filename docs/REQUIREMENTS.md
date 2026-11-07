@@ -33,6 +33,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KO-04** – Persönliche Einstellungen auf einer eigenen Seite «Profil»: Profilbild, Passwort, Abmelden, Einsatzfähigkeit/Abwesenheiten, Übungsmodus, Push, App installieren, Koordinatensystem, Navigations-App, AI-Assistent (#58, #91, #111).
 - **KO-05** – Abmelden löscht den auf dem Gerät gemerkten Stand (#67).
 - **KO-06** – Das Profil ist in Karten gegliedert (Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches), je Thema mit eigenem Titel; Knöpfe stehen als gleich breite Spalten. Unter «Alarmierung» stehen der Stand der Einsatzfähigkeit und die eigenen Abwesenheiten mit Erfassen, Ändern und Beenden (#126).
+- **KO-07** – Abmelden meldet auch auf dem Server ab: Der Anmeldeschlüssel des Browsers bzw. die Sitzung der App ist danach ungültig (#108).
+- **KO-08** – Die nativen Apps erhalten je Gerät eine eigene Anmeldung: Eine Anmeldung in der App meldet weder den Browser noch andere Geräte ab und umgekehrt. Im Profil stehen die angemeldeten Apps, entfernen meldet sie ab. Passwort zurücksetzen und Deaktivieren melden auch alle Apps ab, das eigene Passwort ändern nicht (#108).
 - Zugriffsschutz bzw. Rate-Limit für den Login (**offen**).
 
 ## 3. Benutzer und Berechtigungen (BE)
@@ -52,7 +54,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **EI-01** – Einsatz bzw. Übung starten mit Alarmmeldung; getrennte Knöpfe «Einsatz starten» und «Übung starten», je nach Recht (Spec, #64).
 - **EI-02** – Der Zeitpunkt des Alarmeingangs kann beim Start übersteuert werden (AG).
-- **EI-03** – Die Alarmstufe stellt man je Einsatztyp ein: Kritisch (Vollbild, Dauerton, Vibration, Push bleibt stehen), Hoch (Vollbild, einmaliger Ton, Push bleibt stehen), Normal (Hinweis, kurzer Ton), Leise (Hinweis ohne Ton), Keine (nur in der App). Je Typ einstellbar, ob Personen mit Übungsmodus kritisch alarmiert werden. Angelegt: Einsatz kritisch, Übung normal mit Übungsmodus (Spec, AG, #90).
+- **EI-03** – Die Alarmstufe stellt man je Einsatztyp ein: Kritisch (rote Benachrichtigung, bleibt bis zum Antippen, dreifacher Ton, Vibration, Push bleibt stehen), Hoch (rote Benachrichtigung, bleibt bis zum Antippen, einmaliger Ton, Push bleibt stehen), Normal (Hinweis, kurzer Ton), Leise (Hinweis ohne Ton), Keine (nur in der App). Die Web-App zeigt keinen Vollbild-Alarm mehr (Feedback zu #108); Vollbild und Weckton gibt es nur in der nativen App (NT-03). Je Typ einstellbar, ob Personen mit Übungsmodus kritisch alarmiert werden. Angelegt: Einsatz kritisch, Übung normal mit Übungsmodus (Spec, AG, #90).
 - **EI-04** – Annehmen mit einer Einrückoption (z. B. Basis, Anfahrt direkt, Logistik, Koordinator KP Rück); die Optionen sind in der Verwaltung konfigurierbar, werden deaktiviert statt gelöscht, mindestens eine bleibt aktiv (Spec, AG).
 - **EI-05** – Je Einrückoption einstellbar: Standort teilen, Leitungsrechte, Zählung im Zähler der Einsatzkräfte (AG, #30).
 - **EI-06** – Ablehnen gibt es nicht mehr; ältere Ablehnungen bleiben in Log und Statistik (AG).
@@ -87,6 +89,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KA-09** – Am Handy decken Seitenfenster die Kartenknöpfe ab (AG).
 - **KA-10** – Startansicht beim Öffnen der App ohne laufenden Einsatz: eigener Standort und alle eingeblendeten festen Standorte im Bild; trifft der eigene Standort erst später ein, wird die Ansicht in den ersten 20 s nachgeführt, solange man die Karte nicht selbst verschoben oder gezoomt hat (#96).
 - **KA-11** – Das Menü (☰) zeigt im Einsatz oben den Einsatz mit Alarmzeit, Alarmstufe, PLS, Fliessgeschwindigkeit, Aufzeichnung und öffentlicher Ansicht, darunter Register: «Einsatz» (AI-Assistent, Teilnahme bzw. Mein Einsatz, Fliessgeschwindigkeit, Werkzeuge), «Leitung» (nur Einsatzleitung: Aufgebot, PLS, Aufzeichnung, Helikopter, öffentliche Ansicht, Einsatzkräfte, Einsatz beenden), «Übung» (Übungsleitung, mit Anzahl offener Elemente), «Log» und «Info» (eigene Rechte). Jedes Thema steht in einer eigenen Karte. Beim Öffnen gilt «Einsatz», für die Übungsleitung «Übung» (#129).
+- **KA-12** – Wird eine Benachrichtigung zum laufenden Einsatz geöffnet (Alarm, Nachricht, Entfernen; als Systembenachrichtigung oder in der App), zeigt die Karte das Einsatzgebiet: Suchgebiet mit den PLS, ohne Einsatzkräfte (solange das Suchgebiet noch berechnet wird, die PLS). Nach dem Annehmen mit einer Einrückoption kehrt sie ebenso aufs Einsatzgebiet zurück. Verschieben von Hand beendet es. Web-App und native App (Feedback zu #108).
 
 ## 6. Einsatzkräfte und Standort (EK)
 
@@ -225,6 +228,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **PW-05** – Updates gelten sofort (eigene Dateien zuerst übers Netz) (#67).
 - Kritischer Alarm trotz «Nicht stören»/Lautlos (braucht native App) (**Grenze**).
 - Push auf iPhone/iPad nur als installierte App ab iOS 16.4 (**Grenze**).
+- **PW-04** – In der nativen App zeigt die Web-App keinen Web-Push und kein «App installieren»; Benachrichtigungen kommen über die App (#108).
 
 ## 20. Verwaltung (VW)
 
@@ -254,3 +258,18 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen, Speicher im Gerät, Rechte der betroffenen Personen (#102).
 - **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
 
+
+## 23. Native Apps (NT)
+
+- **NT-01** – Native Apps für Android und iOS (Flutter), die die Einsatz-App des gewählten Backends nativ zeigen (ohne WebView, siehe NT-10) und Alarme selbst melden (#108).
+- **NT-02** – In der App lassen sich mehrere Backends (Server der Organisationen) hinzufügen, je mit eigener Anmeldung; auf jedem ist die App einzeln «aktiv» schaltbar, und auf allen aktiven gleichzeitig kommen Alarme, Nachrichten an einen selbst und das Einsatzende an. Die Kontenliste zeigt je Backend den Stand (kein Einsatz, Alarm, angenommen, Fehler, abgemeldet) (#108).
+- **NT-03** – Alarmstufen wie in der Web-App (EI-03): kritisch mit Vollbild und Dauerton (Android als Wecker, auch lautlos und bei «Nicht stören», bis angetippt oder quittiert, höchstens 5 min), hoch mit Vollbild, normal, leise, keine. Was schon gemeldet ist, meldet weder die App noch die Web-App ein zweites Mal; ist die Einsatz-App eines Kontos offen, zeigt sie Alarme als Vollbild (kritisch mit Weckton über die Meldung der App), Quittieren schliesst die Meldung (#108).
+- **NT-04** – Android: Die App fragt alle aktiven Backends in einem Vordergrunddienst im eingestellten Abstand ab (10–60 s), auch bei geschlossener App und nach einem Neustart («Bereit für Alarme») (#108).
+- **NT-05** – Optional Push über Firebase Cloud Messaging (Android und iOS), sobald der Server ein Firebase-Dienstkonto hat und die App mit den Firebase-Angaben gebaut ist; ohne Push meldet iOS Alarme nur bei offener App (**Grenze** von iOS) (#108).
+- **NT-06** – Anmeldeschlüssel nur im sicheren Speicher des Geräts; jedes Konto spricht nur mit seinem Backend, fremde Adressen (Navigation, Telefon, Mail) öffnen sich ausserhalb der App (#108).
+- **NT-07** – Eine GitHub-Actions-Pipeline baut die fertigen Pakete (Android APK und AAB, iOS IPA), signiert, sofern die Schlüssel als Geheimnisse hinterlegt sind; ein Tag «mobile-v<Version>» erstellt ein Release (#108).
+- **NT-08** – Standortfreigabe, eigener Standort und «Mein Standort» nutzen den Standort des Geräts, sobald die App ihn darf (#108).
+- **NT-09** – Im Einsatz teilt die App den Standort auch bei gesperrtem Bildschirm oder geschlossener App, solange man teilnimmt und die Einrückoption den Standort teilt; dafür fragt sie nach «Immer zulassen» und zeigt den Stand in ihren Einstellungen. Im Hintergrund (ohne Gewässernetz) gilt dabei keine Position als «auf dem Gewässer» (**Grenze**) (#108).
+- **NT-11** – Verwaltung, «Meine Einsätze» und Rechtliches öffnen sich in der nativen App in einer WebView, angemeldet mit dem Konto, ohne eigene Anmeldung. «Zur Einsatz-App» und Zurück führen zur Karte, fremde Adressen öffnen sich ausserhalb. Dateien (AAR als Word/PDF, CSV) bietet die App zum Teilen bzw. Speichern an. Abmelden dort meldet das Konto in der App ab; ein neuer Alarm schliesst die Seite (Feedback zu #108).
+- **NT-10** – Die Einsatz-App ist in der nativen App ganz nativ gebaut, ohne WebView (Feedback zu #108): Karte mit denselben Anbietern, Ebenen und Kartenknöpfen, Seitenfenster Einsatzkräfte, Nachrichten, Rettlinge, Markierungen & Bereiche (mit festen Standorten) und Flussdistanz, Suchgebiet entlang des Gewässers, Fenster «Ansicht», Kamerafokus und Auto-Übersicht, ☰-Menü mit den Registern Einsatz/Leitung/Übung/Log/Info, Einsatz starten, vorbereitete Übungen und Profil, mit denselben Abläufen und Rechten wie die Web-App. Verwaltung, «Meine Einsätze» und Rechtliches öffnen sich in der App (siehe NT-11). Noch nicht nativ: Gross-Modus des Logs, freie Fragen an den AI-Assistenten und dessen Modus «Begleitend» (**Grenze**) (#108).
+- Kritische Hinweise unter iOS (umgehen «Nicht stören» und Lautlos) verlangen eine Freigabe von Apple (**offen**).

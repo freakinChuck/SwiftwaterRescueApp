@@ -840,7 +840,7 @@ function renderPS(){const el=$('#sPS'),f=psF,[a,b]=psRange(),save=()=>{try{local
   if($('#psFrom')){$('#psFrom').onchange=e=>set('from',e.target.value);$('#psTo').onchange=e=>set('to',e.target.value)}
   $('#psCsv').onclick=()=>{const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['Name','Benutzername',...psKinds.map(k=>k.name),'Abgelehnt','Einsatzzeit (min)','Ø Reaktionszeit (min)','Suchgebiet erreicht','Fahrten','Fahrtkilometer','Weg Aufzeichnung (km)'];
     const csv=[h,...ppl.map(p=>[p.name,p.username,...psKinds.map(k=>p.kn[k.id]||0),p.dec,Math.round(p.dur/60),p.react.length?Math.round(avg(p.react)/60):'',p.area,p.trips,p.km.toFixed(1),p.track.toFixed(1)])].map(r=>r.map(q).join(';')).join('\r\n');
-    const u=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'})),l=document.createElement('a');l.href=u;l.download='statistik-pro-person.csv';l.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};
+    saveBlob(new Blob(['﻿'+csv],{type:'text/csv'}),'statistik-pro-person.csv')};
   psTips(el)}
 let psKinds=[]; // Einsatztypen im gewählten Bereich, für Karten, CSV und Diagramme
 const psLeg=()=>psKinds.length?`<div class="pslg">${psKinds.map(k=>`<span><i style="background:${esc(k.color)}"></i>${esc(k.name)}</span>`).join('')}</div>`:'';
@@ -1056,7 +1056,7 @@ function aarModel(x,o){const C=aarC.cfg,A=C.auto,i=x.inc,B=[],act=r=>!r.removed;
 const aarLogo=()=>new Promise(ok=>{const s=aarC.logo;if(!s)return ok(null);const im=new Image(),png=s.startsWith('data:image/png');
   im.onload=()=>ok({src:s,w:im.naturalWidth,h:im.naturalHeight,fmt:png?'PNG':'JPEG',ext:png?'png':'jpeg'});im.onerror=()=>ok(null);im.src=s});
 const aarName=(x,fmt,pre='AAR')=>{const D=new Date(x.inc.alarm_at*1000),p=n=>String(n).padStart(2,'0');return`${pre}_${D.getFullYear()}-${p(D.getMonth()+1)}-${p(D.getDate())}_${(x.inc.message||'').replace(/[^\p{L}\p{N}]+/gu,'_').replace(/^_+|_+$/g,'').slice(0,40)||'Einsatz'}.${fmt}`};
-const aarSave=(blob,name)=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000);toast(name+' heruntergeladen.','ok')};
+const aarSave=(blob,name)=>{saveBlob(blob,name);toast(name+(NATIVE?' erstellt.':' heruntergeladen.'),'ok')};
 async function aarMake(x,fmt,o){const B=aarModel(x,o),logo=await aarLogo();
   const blob=fmt==='docx'?await aarDocx(B,logo,aarC.cfg.title):await aarPdf(B,logo,aarC.cfg.title);
   aarSave(blob,aarName(x,fmt))}

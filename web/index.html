@@ -22,6 +22,7 @@ body{height:100dvh;display:flex;flex-direction:column}#app{flex:1;min-height:0;o
 body.off #chip,body.off #bMenu,body.off #bView,body.off #viewBox{margin-top:var(--offH,2.4rem)} /* Höhe des Hinweises, gesetzt in setOffline */
 #toasts{position:fixed;top:calc(4.2rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:8000;display:grid;gap:.4rem;width:min(420px,calc(100vw - 2rem))}
 .toast{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--ex);border-radius:6px;padding:.6rem .8rem;box-shadow:0 2px 8px #000a;cursor:pointer}
+.toast.al{background:var(--alarm);border-color:var(--alarm);color:#fff}.toast.al b{font-size:1.1rem} /* Alarm (crit/high): rote Benachrichtigung statt Vollbild, bleibt bis zum Antippen */
 #sheetWrap{position:fixed;z-index:1100;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;transition:transform .2s;left:0;right:0;bottom:0;max-height:58dvh;transform:translateY(105%)}
 #sheetWrap.open{transform:none}#sheetBar{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.5rem .8rem;border-bottom:1px solid var(--line)}
 #sheet{overflow:auto;padding:.8rem;flex:1;padding-bottom:calc(.8rem + env(safe-area-inset-bottom))}
@@ -112,11 +113,7 @@ body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: K
 .xt .mk{width:30px;height:30px;border-width:3px;flex:0 0 auto;align-self:center}
 .self{width:18px;height:18px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 2px #0006,0 0 10px #1a73e8;pointer-events:none}.selfacc{pointer-events:none}
 .pls{width:22px;height:22px;background:var(--alarm);border:3px solid #fff;transform:rotate(45deg)}.pls.off,.plsw.off{opacity:.45}
-#alarm{position:fixed;inset:0;background:var(--alarm);color:#fff;display:none;flex-direction:column;justify-content:center;padding:2rem;gap:1rem;z-index:9999;animation:bl 1s steps(2) infinite}
-@keyframes bl{50%{background:#8f1d0a}}@media(prefers-reduced-motion:reduce){#alarm{animation:none}}
-#alarm button{background:#fff;color:#000;font-weight:700;padding:1rem}#alarm h2{margin:0;font-size:1.8rem}
 </style></head><body>
-<div id="alarm" role="alertdialog"><h2 id="aT"></h2><div id="aB"></div><button id="aOk">Quittieren</button></div>
 <div id="offline" role="status" hidden></div>
 <div id="toasts" aria-live="polite"></div>
 <div id="app"></div>
@@ -137,26 +134,24 @@ const roleSel=(id,cur,attr)=>`<select ${attr}><option value="">Keine Spezialroll
 const csys=()=>(me&&(me.coord_sys||me.coord_default))||'lv95',fc=(lat,lon)=>fmtC(lat,lon,csys());
 // mit Trennzeichen, leer wenn ausgeblendet (persönliche Einstellung «Keine Koordinaten anzeigen», coord_sys none)
 const fcs=(lat,lon,pre=' · ',post='')=>{const t=fc(lat,lon);return t?pre+t+post:''};
-let msgData=[],msgInit=false,areaShape=null,areaLogged={},creating=false,locStatus='',lastPos=null,herePos=null,hereErr='',manual=false,hb=null,me=null,roles=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,alarmQ=[],watchId=null,lastSent=0,fitted=null;
+let msgData=[],msgInit=false,areaShape=null,areaLogged={},creating=false,locStatus='',lastPos=null,herePos=null,hereErr='',manual=false,hb=null,me=null,roles=[],st=null,map,layers={},lastMsg=0,lastIncId=null,lastEnded=null,watchId=null,lastSent=0,fitted=null;
 onUnauth=()=>render();
 /* ---------- Alarm ---------- */
-let actx,beepT;function beep(on){clearInterval(beepT);if(!on)return;actx=actx||new(window.AudioContext||webkitAudioContext)();
-  beepT=setInterval(()=>{const o=actx.createOscillator();o.frequency.value=880;o.connect(actx.destination);o.start();o.stop(actx.currentTime+.4);navigator.vibrate&&navigator.vibrate([300,100,300])},1000)}
-function ping(){try{actx=actx||new(window.AudioContext||webkitAudioContext)();const o=actx.createOscillator();o.frequency.value=660;o.connect(actx.destination);o.start();o.stop(actx.currentTime+.25)}catch(e){}navigator.vibrate&&navigator.vibrate(200)}
-// Alarmstufe des Einsatztyps (Issue #90, ALARM_LEVELS): crit Vollbild mit Dauerton, high Vollbild mit einmaligem Ton, normal Hinweis mit kurzem Ton, low Hinweis still, none nichts
-function notify(t,b,key,lvl){if(lvl==='none')return false;if(lvl==='crit'||lvl==='high')return alarm(t,b,key,lvl);if(key){if(ackGet().includes(key))return false;ackAdd(key)}
-  const d=document.createElement('div');d.className='toast';d.innerHTML=`<b>${esc(t)}</b><div>${esc(b)}</div>`;d.onclick=()=>d.remove();$('#toasts').appendChild(d);setTimeout(()=>d.remove(),20000);if(lvl!=='low')ping();
-  sysNote(t,b,key,false,lvl==='low');return true}
+let actx;function tone(f,ms){try{actx=actx||new(window.AudioContext||webkitAudioContext)();const o=actx.createOscillator();o.frequency.value=f;o.connect(actx.destination);o.start();o.stop(actx.currentTime+ms/1000)}catch(e){}}
+function ping(){tone(660,250);navigator.vibrate&&navigator.vibrate(200)}
+function alarmTone(){[0,600,1200].forEach(t=>setTimeout(()=>tone(880,400),t));navigator.vibrate&&navigator.vibrate([300,100,300,100,300])}
+// Alarmstufe des Einsatztyps (Issue #90, ALARM_LEVELS). Im Web kein Vollbild mehr (Feedback zu #108): crit/high rote Benachrichtigung, bleibt bis zum Antippen (crit dreifacher, high einfacher Ton),
+// normal Hinweis mit kurzem Ton, low Hinweis still, none nichts. Antippen eines Alarms oder einer Nachricht im Einsatz zeigt das Einsatzgebiet (focusArea).
+function notify(t,b,key,lvl){if(lvl==='none')return false;if(key){if(ackGet().includes(key))return false;ackAdd(key)}const al=lvl==='crit'||lvl==='high';
+  const d=document.createElement('div');d.className='toast'+(al?' al':'');d.setAttribute('role',al?'alert':'status');d.innerHTML=`<b>${esc(t)}</b><div>${esc(b)}</div>`;
+  d.onclick=()=>{d.remove();if(key&&/^[imk]:/.test(key))focusArea()};$('#toasts').appendChild(d);if(!al)setTimeout(()=>d.remove(),20000);
+  if(lvl==='crit')alarmTone();else if(lvl!=='low')ping();
+  sysNote(t,b,key,al,lvl==='low');return true}
 const ackGet=()=>{try{return JSON.parse(localStorage.getItem('sw_acked')||'[]')}catch(e){return[]}};
-function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}}
-let curKey=null;
-function alarm(t,b,key,lvl){if(key&&(ackGet().includes(key)||key===curKey||alarmQ.some(q=>q[2]===key)))return false;alarmQ.push([t,b,key,lvl]);showAlarm();return true}
-function showAlarm(){if($('#alarm').style.display==='flex'||!alarmQ.length)return;const[t,b,k,lvl]=alarmQ.shift();curKey=k||null;$('#aT').textContent=t;$('#aB').textContent=b;$('#alarm').style.display='flex';if(lvl==='high')ping();else beep(true);
-  sysNote(t,b,k,true)}
+function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}swNative('swAck',k)} // native App: ihre Meldung dazu schliessen
 // Systembenachrichtigung über den Service Worker (Issue #67), mit demselben tag wie die Push-Nachricht des Servers: ersetzt sie statt sie zu verdoppeln
 function sysNote(t,b,tag,crit,silent){if(!('Notification'in window)||Notification.permission!=='granted')return;const o={body:b,tag:tag||undefined,requireInteraction:!!crit,silent:!!silent,icon:'img/icon-192.png'};
   (navigator.serviceWorker?navigator.serviceWorker.getRegistration():Promise.resolve(null)).then(r=>r?r.showNotification(t,o):new Notification(t,o)).catch(()=>{try{new Notification(t,o)}catch(e){}})}
-$('#aOk').onclick=()=>{if(curKey)ackAdd(curKey);curKey=null;$('#alarm').style.display='none';beep(false);showAlarm()};
 /* ---------- Hauptansicht ---------- */
 // Beim Öffnen des Menüs Abschnitte zurücksetzen (siehe draw: secReset)
 let secReset=true;
@@ -218,7 +213,7 @@ const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOp
   airLayer=L.layerGroup().addTo(map);airLayer._air=new Map();airData=null;map.on('rotate',()=>airRot(map,airLayer)); // Helikopter (Issue #73)
   $('#mmShow').checked=mmVisible();$('#mmShow').onchange=e=>setMmVisible(e.target.checked,true);
   $('#msgList').onclick=e=>{const b=e.target.closest('[data-goto]');if(!b)return;const[a,o]=b.dataset.goto.split(',').map(Number);stopFollow();map.panTo([a,o]);if(narrow())togglePanel('msgs',false)};
-  layers={};fitted=null;map.on('zoomend',drawMap);map.on('dragstart',()=>{homeDone=true;if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen, die Auto-Übersicht und die Startansicht
+  layers={};fitted=null;map.on('zoomend',drawMap);map.on('dragstart',()=>{homeDone=true;areaFocus=0;if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen, die Auto-Übersicht und die Startansicht
   map.on('zoomstart',()=>{if(Date.now()-homeBusy>1500)homeDone=true;if(autoView&&Date.now()-autoBusy>1500)stopFollow()}); // Zoomen von Hand beendet die Auto-Übersicht (nicht deren eigenes Zoomen)
   homeDone=false;homeT0=Date.now();homeKey='';
   if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}
@@ -312,7 +307,7 @@ function drawMap(){const n=$('#areaNote');selfSync();drawMsgMarks();drawPois();d
     const m=L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="mk cl">${g.items.length}</div>`,iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(g.items.map(x=>esc(x.name)).join(', '));
     return g.items.every(x=>geoDist(x,a)<=30)?navOn(m,a.lat,a.lon,g.items.map(x=>x.name).join(', ')):m.on('click',()=>{stopFollow();map.fitBounds(L.latLngBounds(g.items.map(x=>[x.lat,x.lon])),{padding:[60,60],maxZoom:19})})})).addTo(map);
   layers.rm=L.layerGroup((vis('res')&&st.marks||[]).map(x=>navOn(L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="rm">R</div>',iconSize:[34,34],iconAnchor:[17,17]}),zIndexOffset:1000}).bindTooltip('Rettling – '+(x.manual?'manuell (Einsatzleitung)':esc(x.name))+' · '+fmtT(x.ts)),x.lat,x.lon,'Rettling'))).addTo(map);
-  if(fitted!==i.id)startView(i)}
+  if(areaFocus)areaFocusNow();if(fitted!==i.id)startView(i)}
 // Startansicht beim Öffnen des Einsatzes: Übersicht über alle aktiven Positionen (Einsatzkräfte mit Standort inkl. Externe, nicht gerettete Rettlinge mit Standort, PLS fürs Suchgebiet).
 // Nur einmal pro Einsatz; gibt es noch keine Position, wird es beim nächsten Polling erneut versucht.
 function startView(i){if(autoView){fitted=i.id;return} // die Auto-Übersicht übernimmt
@@ -475,9 +470,8 @@ const pubUrl=t=>location.origin+location.pathname.replace(/[^/]*$/,'')+'public.h
 function pubSec(i){const u=i.public&&i.public_token?pubUrl(i.public_token):'';
   return `<label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubOn" ${i.public?'checked':''}> Zuschauen ohne Anmeldung erlauben</label><label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubAnon" ${i.public_anon?'checked':''}> Anonym: Namen ausblenden (nur Spezialrolle bzw. Einrückoption)</label><label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubLog" ${i.public_log?'checked':''}> Einsatzprotokoll zeigen (live, mit Nachrichten; anonym wie die Ansicht)</label>
     ${u?`<div class="row"><input id="pubUrl" readonly value="${esc(u)}" aria-label="Link zur öffentlichen Ansicht" onfocus="this.select()"><button id="bPubCp">Link kopieren</button><a class="btn" href="${esc(u)}" target="_blank" rel="noopener">Öffnen</a></div>`:''}<div class="mut">Sichtbar sind Karte, Standorte, Markierungen, Bereiche und Rettlinge${i.public_log?', dazu das Einsatzprotokoll mit den Nachrichten':', keine Nachrichten und kein Einsatzlog'}. Ausschalten macht den Link ungültig.</div>`}
-async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'&&shares(mode))track();await poll()}catch(e){fail(e)}}
 function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
-async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'){track();menuTab='main'}await poll()}catch(e){fail(e)}}
+async function join(mode){try{await api('incident/join',{mode});if(mode!=='declined'){track();menuTab='main'}await poll();if(mode!=='declined')focusArea()}catch(e){fail(e)}} // danach zurück aufs Einsatzgebiet
 // Abstand zur nächsten Gewässerachse im geladenen Gewässernetz (Meter), Infinity ohne Daten
 function waterDist(p){const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);let best=Infinity;
   [...nets.values()].flatMap(n=>n.ways||[]).forEach(w=>{const g=w.geometry;for(let j=1;j<g.length;j++){const ax=(g[j-1].lon-p.lon)*kx,ay=(g[j-1].lat-p.lat)*ky,dx=(g[j].lon-g[j-1].lon)*kx,dy=(g[j].lat-g[j-1].lat)*ky,L=dx*dx+dy*dy,t=L?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L)):0;best=Math.min(best,Math.hypot(ax+t*dx,ay+t*dy))}});return best}
@@ -551,6 +545,17 @@ function overviewPts(){if(!st||!st.incident)return[];return[...(vis('app')?st.pa
   ...(vis('res')?(st.rescuees||[]).filter(r=>r.lat!=null&&!r.rescued_at):[]),...(vis('pls')?plsList().filter(p=>p.on):[])].map(p=>[p.lat,p.lon])}
 function autoFit(){if(!autoView||!map)return;const pts=overviewPts(),k=JSON.stringify(pts.map(p=>p.map(x=>x.toFixed(5))));if(!pts.length||k===autoKey)return;autoKey=k;
   autoBusy=Date.now();if(pts.length===1)map.setView(pts[0],15);else map.fitBounds(L.latLngBounds(pts),FITPAD)}
+// Einsatzgebiet zeigen (Feedback zu #108): nach dem Öffnen einer Benachrichtigung zum laufenden Einsatz und nach dem Annehmen.
+// Suchgebiet mit den PLS, ohne Einsatzkräfte. Solange das Suchgebiet noch berechnet wird (Gewässernetz lädt), die PLS; wartet höchstens AREA_WAIT_MS.
+// Ersetzt die Startansicht (startView) und endet beim Verschieben der Karte von Hand.
+const AREA_WAIT_MS=30000;let areaFocus=0;
+function focusArea(){areaFocus=Date.now();if(narrow())toggleSheet(false);areaFocusNow()}
+function areaFocusNow(){if(!areaFocus||!map||!st||!st.incident)return;if(Date.now()-areaFocus>AREA_WAIT_MS){areaFocus=0;return}
+  const b=areaBounds(),pls=plsList(),on=pls.filter(p=>p.on),pts=(on.length?on:pls).map(p=>[p.lat,p.lon]);if(!b&&!pts.length)return; // noch kein PLS: beim nächsten Polling
+  fitted=st.incident.id;followId=null;endAuto();updateFollowChip();
+  if(b){pts.forEach(p=>b.extend(p));areaFocus=0;return map.fitBounds(b,FITPAD)}
+  if(!feat('area'))areaFocus=0; // ohne Suchgebiet bleiben nur die PLS
+  if(pts.length===1)map.setView(pts[0],15);else map.fitBounds(L.latLngBounds(pts),FITPAD)}
 // key = Teilgebiet (partKey), sonst ganzes Suchgebiet
 function fitArea(key){toggleSheet(false);const p=key?areaParts.find(x=>x.key===key):null;if(key&&!p)return toast('Das Suchgebiet dieses Rettlings ist noch nicht berechnet. '+(areaInfo||'Zuerst die Fliessgeschwindigkeit setzen.'),'info');
   const b=areaBounds(p||areaShape);if(!b)return toast('Das Suchgebiet ist noch nicht berechnet. '+(areaInfo||'Zuerst die Fliessgeschwindigkeit setzen.'),'info');
@@ -916,7 +921,8 @@ const pushCan=()=>'serviceWorker'in navigator&&'PushManager'in window&&'Notifica
 const isIos=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 async function pushSub(){try{const r=await navigator.serviceWorker.getRegistration();return r?await r.pushManager.getSubscription():null}catch(e){return null}}
 // Zustand prüfen und ein bestehendes Abonnement dem Server melden (z. B. nach Anmeldung einer anderen Person auf diesem Gerät)
-async function pushSync(){if(!pushCan()){pushSt='no';return}if(Notification.permission==='denied'){pushSt='denied';return}
+async function pushSync(){if(NATIVE){pushSt='native';return} // in der App-Hülle (Issue #108): Push kommt über die App
+  if(!pushCan()){pushSt='no';return}if(Notification.permission==='denied'){pushSt='denied';return}
   const sub=await pushSub();pushSt=sub?'on':'off';if(sub)api('push/subscribe',sub.toJSON()).catch(()=>{})}
 async function pushOn(){try{if(await Notification.requestPermission()!=='granted'){pushSt=Notification.permission==='denied'?'denied':'off';return draw()}
     const k=await api('push/key');if(!k.enabled)throw new Error('Push ist auf diesem Server nicht verfügbar.');
@@ -924,17 +930,18 @@ async function pushOn(){try{if(await Notification.requestPermission()!=='granted
     const sub=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:Uint8Array.from(raw,c=>c.charCodeAt(0))});
     await api('push/subscribe',sub.toJSON());pushSt='on'}catch(e){fail(e)}draw()}
 async function pushOff(quiet){const sub=await pushSub();if(!sub)return;try{await api('push/unsubscribe',{endpoint:sub.endpoint})}catch(e){}try{await sub.unsubscribe()}catch(e){}pushSt='off';if(!quiet)draw()}
-function pushHtml(){const t={on:'<b>Aktiv</b> auf diesem Gerät: Alarme, Nachrichten an dich und Einsatzende kommen auch bei geschlossener App.',off:'Aus. Ohne Push erfährst du von Alarmen nur, solange die App offen ist.',
+function pushHtml(){if(NATIVE)return'<h5>Benachrichtigungen</h5><div class="mut">Benachrichtigungen kommen über die App. Ein- und ausschalten in den Einstellungen der App bzw. des Geräts.</div>';
+  const t={on:'<b>Aktiv</b> auf diesem Gerät: Alarme, Nachrichten an dich und Einsatzende kommen auch bei geschlossener App.',off:'Aus. Ohne Push erfährst du von Alarmen nur, solange die App offen ist.',
     denied:'Vom Browser blockiert. Benachrichtigungen in den Einstellungen des Browsers bzw. Geräts für diese Seite erlauben.',
     no:isIos&&!standalone?'Auf dem iPhone/iPad zuerst über «Teilen → Zum Home-Bildschirm» installieren und die App von dort öffnen (ab iOS 16.4).':'Dieser Browser unterstützt keine Push-Benachrichtigungen.','?':'Wird geprüft …'}[pushSt];
   return`<h5>Push-Benachrichtigungen</h5><div class="mut">${t}</div><div class="pbtns">${pushSt==='off'?'<button id="bPushOn" class="pri">Push einschalten</button>':pushSt==='on'?'<button id="bPushOff">Push ausschalten</button>':''}${instEv?'<button id="bInst">App installieren</button>':''}</div>`
     +(!standalone&&!instEv&&isIos?'<div class="mut">Installieren: «Teilen → Zum Home-Bildschirm».</div>':'')}
 // Hinweis zuoberst im Menü, solange Push auf diesem Gerät aus ist: sonst merkt man erst beim verpassten Alarm, dass man es in den Einstellungen einschalten muss
-function pushNag(){let later=0;try{later=+localStorage.getItem('sw_pushlater')||0}catch(e){}if(Date.now()-later<7*864e5)return'';
+function pushNag(){if(NATIVE)return'';let later=0;try{later=+localStorage.getItem('sw_pushlater')||0}catch(e){}if(Date.now()-later<7*864e5)return'';
   const t=pushSt==='off'?'Push ist auf diesem Gerät aus: Alarme kommen nur, solange die App offen ist.':pushSt==='no'&&isIos&&!standalone?'Für Alarme bei geschlossener App: «Teilen → Zum Home-Bildschirm», dann die App von dort öffnen und Push einschalten.':'';
   return t?`<div class="pushNag"><span>${t}</span><span class="row" style="margin:0">${pushSt==='off'?'<button id="bPushNag" class="pri">Push einschalten</button>':''}<button id="bPushLater">Später</button></span></div>`:''}
 function bindPush(){if($('#bPushOn'))$('#bPushOn').onclick=pushOn;if($('#bPushNag'))$('#bPushNag').onclick=pushOn;if($('#bPushLater'))$('#bPushLater').onclick=()=>{try{localStorage.setItem('sw_pushlater',Date.now())}catch(e){}draw()};if($('#bPushOff'))$('#bPushOff').onclick=()=>pushOff();if($('#bInst'))$('#bInst').onclick=async()=>{const e=instEv;instEv=null;e.prompt();await e.userChoice.catch(()=>{});draw()}}
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;if(me)draw()}); // eigener Knopf «App installieren» in den Einstellungen
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();if(NATIVE)return;instEv=e;if(me)draw()}); // eigener Knopf «App installieren» in den Einstellungen
 window.addEventListener('appinstalled',()=>{instEv=null;if(me)draw()});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('Service Worker',e));
 /* ---------- Seite «Einstellungen»: persönliche Einstellungen (bis dahin Abschnitt «Konto» im Menü) ---------- */
@@ -953,14 +960,14 @@ function aiPrefs(){if(!me.ai)return'';const o=['off','cmd','comp'];
   return`<div class="pcard"><h4>AI-Assistent</h4><div class="mut">Texte, die der AI-Assistent auf Wunsch erstellt. «Begleitend» bereitet sie schon beim Öffnen vor.</div>${Object.entries(me.ai).map(([k,f])=>`<label class="mut">${esc(f.name)}<select data-aisel="${k}"><option value="">Standard: ${AI_MN[f.max]}</option>${o.slice(0,o.indexOf(f.max)+1).map(m=>`<option value="${m}" ${f.choice===m?'selected':''}>${AI_MN[m]}</option>`).join('')}</select></label>`).join('')}</div>`}
 function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#prefs input,#prefs select'))return; // Eingabe nicht überschreiben
   // Karten Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches (Issue #126: je Thema ein Unterabschnitt mit Titel, Knöpfe bündig)
-  const h=`<div class="pcard"><h4>Konto</h4><div class="pwho">${me.photo?`<img src="${esc(me.photo)}" alt="Profilbild">`:'<span class="ph0" aria-hidden="true">👤</span>'}<div><b>${esc(me.name)}</b><div class="mut">${esc(me.username)} · ${esc(roleNames(me))}</div></div></div>${(me.groups||[]).length?`<h5>Meine Einsatzgruppen</h5><div class="isel">${me.groups.map(g=>`<span class="lchip ro"><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)}</span>`).join('')}</div>`:''}<div class="pbtns"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden></div>`
+  const h=`<div class="pcard"><h4>Konto</h4><div class="pwho">${me.photo?`<img src="${esc(me.photo)}" alt="Profilbild">`:'<span class="ph0" aria-hidden="true">👤</span>'}<div><b>${esc(me.name)}</b><div class="mut">${esc(me.username)} · ${esc(roleNames(me))}</div></div></div>${(me.groups||[]).length?`<h5>Meine Einsatzgruppen</h5><div class="isel">${me.groups.map(g=>`<span class="lchip ro"><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)}</span>`).join('')}</div>`:''}<div class="pbtns"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden><div id="sessMine"></div></div>`
     +`<div class="pcard"><h4>Alarmierung</h4><div class="phd"><h5>Einsatzfähigkeit</h5>${me.absent?absChip(me.absent):'<span class="okchip">✓ einsatzfähig</span>'}</div><div class="mut">Abwesend oder Einsatzfähigkeit ausgesetzt: kein Aufgebot und kein Alarm. Laufende Einsätze bleiben sichtbar.</div><div id="absMine" class="pabs"><div class="mut">Wird geladen …</div></div>`
     +`<h5>Übungsmodus</h5><label class="row" style="align-items:center;margin:0"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Einsatztypen, die das vorsehen (z. B. Übungen), kritisch alarmieren</span></label>${pushHtml()}</div>`
     +`<div class="pcard"><h4>Anzeige</h4><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label>${feat('nav')?`<label class="mut">Navigations-App (Knopf 🧭)<select id="navA"><option value="">Standard: ${esc(NAV_APPS[me.nav_default]||NAV_APPS.google)}</option>${(me.nav_apps||[]).filter(navOk).map(k=>`<option value="${k}" ${k===me.nav_app?'selected':''}>${esc(NAV_APPS[k])}</option>`).join('')}</select></label>`:''}</div>`
     +aiPrefs()
     +`<div class="pcard"><h4>Rechtliches</h4><div class="mut">Wer die App betreibt, welche Daten sie speichert und welche Lizenzen gelten.</div><div class="pbtns"><a class="btn" href="legal.html#impressum" target="_blank" rel="noopener">Impressum</a><a class="btn" href="legal.html#lizenzen" target="_blank" rel="noopener">Lizenzen</a><a class="btn" href="legal.html#datenschutz" target="_blank" rel="noopener">Datenschutz</a></div></div>`;
   // Issue #126: früher stand diese Prüfung doppelt; die zweite brach immer ab, Knöpfe und Abwesenheiten blieben ohne Funktion
-  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();
+  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();sessMine();
   p.querySelectorAll('[data-aisel]').forEach(x=>x.onchange=e=>{e.target.blur();const v={};p.querySelectorAll('[data-aisel]').forEach(y=>{if(y.value)v[y.dataset.aisel]=y.value});
     api('me/settings',{ai_modes:v}).then(()=>api('me')).then(r=>{me=r.me;prefsHtml='';prefsDraw();draw()}).catch(fail)});
   $('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=async()=>{await pushOff(true);prefsHash();logout();stop();render()};bindPush();
@@ -970,12 +977,19 @@ function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.ac
   const na=$('#navA');if(na)na.onchange=e=>{const v=e.target.value,old=me.nav_app;e.target.blur();me.nav_app=v||null;prefsHtml='';api('me/settings',{nav_app:v}).catch(x=>{me.nav_app=old;fail(x);draw()})}}
 // eigene Abwesenheiten im Profil (Issue #91): laden, erfassen, ändern, beenden
 function absMine(){const el=$('#absMine');if(!el)return;api('absences').then(rs=>{if(!el.isConnected)return;el.innerHTML=absRows(rs,false)+'<div class="pbtns"><button id="bAbsN">+ Abwesenheit erfassen</button></div>';absBind(el,rs,absDone);$('#bAbsN').onclick=()=>absDialog(null,null,absDone)}).catch(()=>{if(el.isConnected)el.innerHTML='<div class="mut">Abwesenheiten nicht verfügbar (keine Verbindung).</div>'})}
+// Angemeldete Apps im Profil (Issue #108): Gerätesitzungen der nativen Apps, nur angezeigt, wenn es welche gibt; die eigene lässt sich hier nicht entfernen (dafür Abmelden)
+function sessMine(){const el=$('#sessMine');if(!el)return;api('me/sessions').then(rs=>{if(!el.isConnected)return;
+  el.innerHTML=rs.length?`<h5>Angemeldete Apps</h5>${rs.map(r=>`<div class="row" style="align-items:center;justify-content:space-between;margin:.2rem 0"><span><b>${esc(r.device)}</b>${r.platform?' · '+esc({android:'Android',ios:'iOS'}[r.platform]||r.platform):''}${r.cur?' · <i>dieses Gerät</i>':''}<br><span class="mut">angemeldet ${esc(fmtDT(r.created))} · zuletzt ${esc(fmtDT(r.last_seen))}</span></span>${r.cur?'':`<button data-sess="${r.id}">Entfernen</button>`}</div>`).join('')}`:'';
+  el.querySelectorAll('[data-sess]').forEach(b=>b.onclick=async()=>{if(!confirm('App auf diesem Gerät abmelden? Sie erhält danach keine Alarme mehr.'))return;try{await api('me/session/remove',{id:+b.dataset.sess});toast('App abgemeldet');sessMine()}catch(e){fail(e)}})}).catch(()=>{})}
 function absDone(){api('me').then(r=>{me.absent=r.me.absent;prefsHtml='';prefsDraw();return poll()}).catch(fail)}
 async function render(){clearInterval(timer);if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
   try{me=(await api('me')).me}catch(e){if(e instanceof TypeError&&!bootOff&&bootOffline())return;if(e instanceof TypeError)setTimeout(render,5000);return} // offline: letzter Stand (Issue #67)
   if(me.must_change){$('#app').innerHTML='';return pwDialog(true,render)} // nach Zurücksetzen zuerst eigenes Passwort setzen
   try{roles=await api('roles');modes=await api('modes')}catch(e){return}
   lsSet('sw_boot',{uid:me.id,me,roles,modes});bootOff=false;pushSync().then(()=>{if($('#bPushOn,#bPushOff')||pushSt!=='?')draw()});
-  shell();await poll();draw();timer=setInterval(poll,4000);if(location.hash==='#einstellungen')prefs(true)}
+  shell();await poll();draw();timer=setInterval(poll,4000);if(location.hash==='#einstellungen')prefs(true);if(focusReq){focusReq=false;focusArea()}}
+// Geöffnet über eine Benachrichtigung zum laufenden Einsatz (sw.js, notificationclick): ?fokus=1 beim Öffnen, Nachricht {sw:'focus'} an eine offene App
+let focusReq=new URLSearchParams(location.search).has('fokus');if(focusReq)history.replaceState(null,'',location.pathname+location.hash);
+if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.sw==='focus'&&me)focusArea()});
 render();
 </script></body></html>

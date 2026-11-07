@@ -1,0 +1,198 @@
+# Native Apps (Issue #108): baut aus mobile/app die fertigen Pakete für Android (APK, AAB) und iOS (IPA).
+# Ohne Geheimnisse entstehen ein mit dem Debug-Schlüssel signiertes APK/AAB und ein unsigniertes IPA.
+# Geheimnisse (Repository → Settings → Secrets and variables → Actions), alle optional, siehe mobile/README.md:
+#   Android: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#   iOS:     IOS_CERT_P12_BASE64, IOS_CERT_PASSWORD, IOS_PROFILE_BASE64, IOS_TEAM_ID, IOS_EXPORT_METHOD (app-store-connect | ad-hoc | enterprise)
+#   Push:    FCM_API_KEY, FCM_PROJECT_ID, FCM_SENDER_ID, FCM_APP_ID_ANDROID, FCM_APP_ID_IOS
+# Ein Tag «mobile-v<Version>» (z. B. mobile-v1.2.0) setzt die Version und hängt die Pakete an ein GitHub-Release.
+name: Native Apps
+
+on:
+  push:
+    branches: [main]
+    paths: ['mobile/**', '.github/workflows/mobile.yml']
+    tags: ['mobile-v*']
+  pull_request:
+    paths: ['mobile/**', '.github/workflows/mobile.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.47.9'
+
+defaults:
+  run:
+    working-directory: mobile/app
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  android:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Version
+        id: ver
+        shell: bash
+        run: |
+          v=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')
+          if [[ "$GITHUB_REF" == refs/tags/mobile-v* ]]; then v="${GITHUB_REF#refs/tags/mobile-v}"; fi
+          echo "name=$v" >> "$GITHUB_OUTPUT"
+      - name: Signierschlüssel
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        shell: bash
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "Release-Schlüssel eingerichtet"
+          else
+            echo "::warning::Kein ANDROID_KEYSTORE_BASE64: signiert mit dem Debug-Schlüssel (nicht für den Play Store)"
+          fi
+      - run: flutter pub get
+      - name: APK und AAB bauen
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          DEFINES: >-
+            --dart-define=FCM_API_KEY=${{ secrets.FCM_API_KEY }}
+            --dart-define=FCM_PROJECT_ID=${{ secrets.FCM_PROJECT_ID }}
+            --dart-define=FCM_SENDER_ID=${{ secrets.FCM_SENDER_ID }}
+            --dart-define=FCM_APP_ID_ANDROID=${{ secrets.FCM_APP_ID_ANDROID }}
+        shell: bash
+        run: |
+          args="--release --build-name=${{ steps.ver.outputs.name }} --build-number=${{ github.run_number }} $DEFINES"
+          flutter build apk $args
+          flutter build appbundle $args
+          mkdir -p out
+          cp build/app/outputs/flutter-apk/app-release.apk "out/swiftwater-rescue-${{ steps.ver.outputs.name }}.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "out/swiftwater-rescue-${{ steps.ver.outputs.name }}.aab"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: mobile/app/out/*
+          if-no-files-found: error
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/mobile-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: mobile/app/out/*
+
+  ios:
+    needs: check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Version
+        id: ver
+        shell: bash
+        run: |
+          v=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')
+          if [[ "$GITHUB_REF" == refs/tags/mobile-v* ]]; then v="${GITHUB_REF#refs/tags/mobile-v}"; fi
+          echo "name=$v" >> "$GITHUB_OUTPUT"
+      - name: Zertifikat und Profil
+        id: sign
+        env:
+          P12: ${{ secrets.IOS_CERT_P12_BASE64 }}
+          P12_PW: ${{ secrets.IOS_CERT_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROFILE_BASE64 }}
+          TEAM: ${{ secrets.IOS_TEAM_ID }}
+          METHOD: ${{ secrets.IOS_EXPORT_METHOD }}
+        shell: bash
+        run: |
+          if [ -z "$P12" ] || [ -z "$PROFILE" ] || [ -z "$TEAM" ]; then
+            echo "::warning::Keine iOS-Signatur eingerichtet: es entsteht ein unsigniertes IPA (nicht installierbar ohne Nachsignieren)"
+            echo "signed=0" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          kc="$RUNNER_TEMP/build.keychain-db"; kpw=$(uuidgen)
+          echo "$P12" | base64 -d > "$RUNNER_TEMP/cert.p12"
+          echo "$PROFILE" | base64 -d > "$RUNNER_TEMP/app.mobileprovision"
+          security create-keychain -p "$kpw" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$kpw" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -P "$P12_PW" -A -t cert -f pkcs12 -k "$kc"
+          security set-key-partition-list -S apple-tool:,apple: -k "$kpw" "$kc"
+          security list-keychain -d user -s "$kc"
+          security cms -D -i "$RUNNER_TEMP/app.mobileprovision" > "$RUNNER_TEMP/profile.plist"
+          uuid=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")
+          pname=$(/usr/libexec/PlistBuddy -c 'Print Name' "$RUNNER_TEMP/profile.plist")
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$RUNNER_TEMP/app.mobileprovision" ~/Library/MobileDevice/Provisioning\ Profiles/"$uuid".mobileprovision
+          # Nur das Ziel Runner manuell signieren (Bibliotheken bleiben unverändert)
+          sed -i '' "s|CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;|CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements; CODE_SIGN_STYLE = Manual; DEVELOPMENT_TEAM = $TEAM; PROVISIONING_PROFILE_SPECIFIER = \"$pname\"; \"CODE_SIGN_IDENTITY[sdk=iphoneos*]\" = \"iPhone Distribution\";|" ios/Runner.xcodeproj/project.pbxproj
+          cat > "$RUNNER_TEMP/export.plist" <<PL
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>${METHOD:-app-store-connect}</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key><dict><key>ch.swiftwaterrescue.app</key><string>$pname</string></dict>
+          </dict></plist>
+          PL
+          echo "signed=1" >> "$GITHUB_OUTPUT"
+      - run: flutter pub get
+      - name: IPA bauen
+        env:
+          DEFINES: >-
+            --dart-define=FCM_API_KEY=${{ secrets.FCM_API_KEY }}
+            --dart-define=FCM_PROJECT_ID=${{ secrets.FCM_PROJECT_ID }}
+            --dart-define=FCM_SENDER_ID=${{ secrets.FCM_SENDER_ID }}
+            --dart-define=FCM_APP_ID_IOS=${{ secrets.FCM_APP_ID_IOS }}
+        shell: bash
+        run: |
+          args="--release --build-name=${{ steps.ver.outputs.name }} --build-number=${{ github.run_number }} $DEFINES"
+          mkdir -p out
+          if [ "${{ steps.sign.outputs.signed }}" = "1" ]; then
+            flutter build ipa $args --export-options-plist="$RUNNER_TEMP/export.plist"
+            cp build/ios/ipa/*.ipa "out/swiftwater-rescue-${{ steps.ver.outputs.name }}.ipa"
+          else
+            flutter build ios $args --no-codesign
+            mkdir -p "$RUNNER_TEMP/ipa/Payload"
+            cp -R build/ios/iphoneos/Runner.app "$RUNNER_TEMP/ipa/Payload/"
+            (cd "$RUNNER_TEMP/ipa" && zip -qr - Payload) > "out/swiftwater-rescue-${{ steps.ver.outputs.name }}-unsigned.ipa"
+          fi
+      - name: Schlüsselbund aufräumen
+        if: always()
+        shell: bash
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: mobile/app/out/*
+          if-no-files-found: error
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/mobile-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: mobile/app/out/*
