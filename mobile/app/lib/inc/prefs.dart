@@ -487,9 +487,9 @@ class _PrefsPageState extends State<PrefsPage> {
   }
 
   Widget _legal() => MCard(title: 'Rechtliches', buttons: [
-        OutlinedButton(onPressed: () => openWeb(s, 'legal.html#impressum'), child: const Text('Impressum')),
-        OutlinedButton(onPressed: () => openWeb(s, 'legal.html#lizenzen'), child: const Text('Lizenzen')),
-        OutlinedButton(onPressed: () => openWeb(s, 'legal.html#datenschutz'), child: const Text('Datenschutz')),
+        OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#impressum'), child: const Text('Impressum')),
+        OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#lizenzen'), child: const Text('Lizenzen')),
+        OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#datenschutz'), child: const Text('Datenschutz')),
       ], children: const [
         Mut('Wer die App betreibt, welche Daten sie speichert und welche Lizenzen gelten.'),
       ]);

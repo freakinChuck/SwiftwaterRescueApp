@@ -104,8 +104,8 @@ class _IncMenuState extends State<IncMenu> {
               map.closeMenu();
               widget.openPrefs();
             }),
-        if (my) IconButton(tooltip: 'Meine Einsätze', icon: const Text('📋', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(s, 'admin.html#meine')),
-        if (adm) IconButton(tooltip: 'Verwaltung', icon: const Text('⚙', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(s, 'admin.html')),
+        if (my) IconButton(tooltip: 'Meine Einsätze', icon: const Text('📋', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html#meine')),
+        if (adm) IconButton(tooltip: 'Verwaltung', icon: const Text('⚙', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html')),
         IconButton(tooltip: 'Menü schliessen', icon: const Icon(Icons.close), onPressed: map.closeMenu),
       ]),
     );

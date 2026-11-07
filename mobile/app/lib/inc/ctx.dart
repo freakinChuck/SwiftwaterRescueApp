@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'store.dart';
+import 'web.dart';
 import 'util.dart';
 
 /// Was die Fenster von der Karte brauchen (umgesetzt in map_page.dart).
@@ -241,13 +242,9 @@ Widget? navBtn(IncStore s, dynamic lat, dynamic lon, String name, {String? label
       : OutlinedButton(onPressed: () => navGo(s, a, b, name), child: Text('🧭 $label'));
 }
 
-/// Seite der Web-App im Browser öffnen (Verwaltung, Meine Einsätze, Rechtliches)
-Future<void> openWeb(IncStore s, String page) async {
-  try {
-    await launchUrl(Uri.parse('${s.acc.base}$page'), mode: LaunchMode.externalApplication);
-  } catch (_) {
-    s.toast('Browser nicht verfügbar', 'err');
-  }
+/// Seite der Web-App (Verwaltung, Meine Einsätze, Rechtliches) in der App öffnen, angemeldet mit dem Konto (web.dart)
+void openWeb(BuildContext context, IncStore s, String page) {
+  Navigator.of(context).push(MaterialPageRoute(builder: (_) => WebPage(s: s, page: page)));
 }
 
 /// kleiner Knopf in Listen
