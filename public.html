@@ -89,11 +89,11 @@ function plsList(d){const i=d.incident,l=[];if(i.lat!=null)l.push({lat:i.lat,lon
 async function load(){let d;try{d=await api('public/state&k='+encodeURIComponent(K))}catch(e){return stopWith('Öffentliche Ansicht nicht verfügbar',e.message)}
   // vorbereitete Übung noch nicht gestartet (Issue #29): Warteseite, die Seite prüft weiter und wechselt beim Start zur Live-Ansicht
   const w=$('#pbWait');w.hidden=!d.waiting;
-  if(d.waiting){$('#pbTitle').innerHTML='<span class="badge">Übung</span> '+esc(d.title);document.title='Übung: '+d.title;$('#pbTime').textContent='öffentliche Ansicht, nur lesen';
-    w.innerHTML=`<div id="pbMsg" class="card"><h2>Die Übung hat noch nicht begonnen</h2><div class="mut">Diese Seite aktualisiert sich automatisch und zeigt die Übung, sobald sie gestartet ist.</div></div>`;return}
+  if(d.waiting){$('#pbTitle').innerHTML=kindBadge(d)+' '+esc(d.title);document.title=kindOf(d).name+': '+d.title;$('#pbTime').textContent='öffentliche Ansicht, nur lesen';
+    w.innerHTML=`<div id="pbMsg" class="card"><h2>Noch nicht begonnen</h2><div class="mut">Diese Seite aktualisiert sich automatisch und zeigt die Ansicht, sobald es losgeht.</div></div>`;return}
   ps=d;const i=d.incident;cs=d.coord_sys||'lv95';
-  $('#pbTitle').innerHTML=`${i.is_exercise?'<span class="badge">Übung</span>':'<span class="badge real">Einsatz</span>'} ${esc(i.message)}`;document.title=(i.is_exercise?'Übung: ':'Einsatz: ')+i.message;
-  if(i.ended_at)return stopWith(i.is_exercise?'Die Übung ist beendet.':'Der Einsatz ist beendet.','Die öffentliche Ansicht zeigt nur laufende Einsätze.');
+  $('#pbTitle').innerHTML=`${kindBadge(i)} ${esc(i.message)}`;document.title=kindOf(i).name+': '+i.message;
+  if(i.ended_at)return stopWith(kindOf(i).name+' beendet.','Die öffentliche Ansicht zeigt nur laufende Einsätze.');
   $('#pbTime').textContent='seit '+Math.round((d.now-i.alarm_at)/60)+' min · öffentliche Ansicht, nur lesen';
   if(!map)initMap(d);draw();loadAir()}
 function draw(){const d=ps,i=d.incident,col=p=>(d.roles.find(r=>r.id===p.role_id)||{}).color||'#cfd8dc',ll=(a,b)=>`data-ll="${a},${b}"`;lay.clearLayers();

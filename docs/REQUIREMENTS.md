@@ -36,7 +36,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 ## 3. Benutzer und Berechtigungen (BE)
 
 - **BE-01** – Frei definierbare Benutzerrollen mit einer Auswahl an Rechten; eine Person kann mehrere Rollen haben und erhält alle Rechte (#63).
-- **BE-02** – Rechte: Einsätze starten, Übungen starten, jeden Einsatz leiten, Übungen vorbereiten, Benutzer verwalten, Benutzerrollen verwalten, Einstellungen je Kategorie (Einsatz, Funktionen, Karte & Daten), Statistik/Log/Replay aller Einsätze, Anonymisieren und Aufzeichnungen löschen, Einsicht für Einsatzkräfte (#63).
+- **BE-02** – Rechte: Einsätze starten, Übungen starten, jeden Einsatz leiten, Übungen vorbereiten, Benutzer verwalten, Benutzerrollen verwalten, Einstellungen je Kategorie (Einsatz, Funktionen, Karte & Daten), Statistik/Log/Replay aller Einsätze, Anonymisieren und Aufzeichnungen löschen, Einsicht für Einsatzkräfte, Einsatzgruppen verwalten, Abwesenheiten verwalten (#63, #90, #91).
 - **BE-03** – Die Rolle Systemadministrator hat immer alle Rechte, auch künftige, und ist weder änderbar noch entfernbar; mindestens eine aktive Person behält sie (#63).
 - **BE-04** – Niemand kann Rechte vergeben oder Personen bearbeiten, deren Rechte über die eigenen hinausgehen (#63).
 - **BE-05** – Eine Rolle kann bei neuen Benutzern vorausgewählt sein (#63).
@@ -49,7 +49,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **EI-01** – Einsatz bzw. Übung starten mit Alarmmeldung; getrennte Knöpfe «Einsatz starten» und «Übung starten», je nach Recht (Spec, #64).
 - **EI-02** – Der Zeitpunkt des Alarmeingangs kann beim Start übersteuert werden (AG).
-- **EI-03** – Scharfer Einsatz = immer kritischer Alarm (Vollbild, Dauerton, Vibration); Übung = normale Benachrichtigung, ausser die Person hat den Übungsmodus eingeschaltet (Spec, AG).
+- **EI-03** – Die Alarmstufe stellt man je Einsatztyp ein: Kritisch (Vollbild, Dauerton, Vibration, Push bleibt stehen), Hoch (Vollbild, einmaliger Ton, Push bleibt stehen), Normal (Hinweis, kurzer Ton), Leise (Hinweis ohne Ton), Keine (nur in der App). Je Typ einstellbar, ob Personen mit Übungsmodus kritisch alarmiert werden. Angelegt: Einsatz kritisch, Übung normal mit Übungsmodus (Spec, AG, #90).
 - **EI-04** – Annehmen mit einer Einrückoption (z. B. Basis, Anfahrt direkt, Logistik, Koordinator KP Rück); die Optionen sind in der Verwaltung konfigurierbar, werden deaktiviert statt gelöscht, mindestens eine bleibt aktiv (Spec, AG).
 - **EI-05** – Je Einrückoption einstellbar: Standort teilen, Leitungsrechte, Zählung im Zähler der Einsatzkräfte (AG, #30).
 - **EI-06** – Ablehnen gibt es nicht mehr; ältere Ablehnungen bleiben in Log und Statistik (AG).
@@ -58,19 +58,31 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EI-09** – Spezialrollen (z. B. Einsatzleitung, Sicherungsposten, Beobachtungsposten) in der Verwaltung definierbar, mit Reihenfolge, Farbe, Flag «Posten» (begrenzt das Suchgebiet) und Recht «Nachrichten senden» (Spec, AG).
 - **EI-10** – Einsatzleitung = Rolle Einsatzleitung, Einrückoption mit Leitungsrechten, Recht «Jeden Einsatz leiten» oder Ersteller des Einsatzes, jeweils nur, solange die Person teilnimmt (Ausnahme Übungsleitung) (AG, #82).
 - **EI-11** – Die Einsatzleitung kann den Einsatz beenden, Einsatzkräfte entfernen und deren Spezialrollen ändern (AG).
-- **EI-12** – Einsatzart sichtbar und unterscheidbar: «Einsatz» rot, «Übung» blau (AG).
+- **EI-12** – Einsatztyp überall sichtbar und unterscheidbar, in seiner Farbe; angelegt «Einsatz» rot, «Übung» blau (AG, #90).
+- **EI-13** – Einsatzgruppen in der Verwaltung: Name, Farbe, Mitglieder; deaktivieren oder löschen (bisherige Einsätze behalten den Namen); neue Gruppen erhalten eine noch nicht verwendete Farbe; Mitglieder aus einer filterbaren Liste aller Personen; jede Person sieht ihre Gruppen im Profil (#90).
+- **EI-14** – Beim Start werden Einsatzgruppen aufgeboten; nur ihre Mitglieder werden alarmiert. Bei Einsatztypen, die das erlauben, zusätzlich einzelne Personen. Starten und aufgeboten werden (auch als Einzelperson, über «Alle aufbietbaren Personen» und in vorbereiteten Übungen) kann nur, wer einer beim Einsatztyp aufbietbaren Einsatzgruppe angehört; das gilt auch für den Systemadministrator. Die Übungsleitung startet ihre vorbereitete Übung ohne diese Bedingung. Ohne Einsatzgruppen werden alle alarmiert (#90).
+- **EI-15** – Welche Einsatzgruppen eine Person aufbieten darf, legen ihre Benutzerrollen fest; «Alle aufbietbaren Personen» nur, wer alle Gruppen aufbieten darf (#90).
+- **EI-16** – Einsatztypen sind frei konfigurierbar und erweiterbar (Name, Farbe, Reihenfolge, aktiv); angelegt «Einsatz» und «Übung» mit den bisherigen Einstellungen. Je Typ einstellbar: Alarmstufe, Startrecht je Benutzerrolle, aufbietbare und vorausgewählte Einsatzgruppen, Einzelpersonen, Sichtbarkeit für Nicht-Aufgebotene, vorbereitete Übungen, Funktionen, Vorauswahl von Aufzeichnung und Helikopter, Fristen der Anonymisierung. Ein neuer Typ übernimmt die Einstellungen von einem bestehenden. Löschen ist möglich, bisherige Einsätze behalten Name, Farbe und Fristen; mindestens ein Typ bleibt aktiv (#90).
+- **EI-17** – Nicht Aufgebotene sehen einen Einsatz nicht und können nicht beitreten. Ausnahmen: Beim Einsatztyp ist «für alle zugelassenen Gruppen sichtbar» eingestellt und die Person gehört einer dort aufbietbaren Einsatzgruppe an, oder die Einsatzleitung erlaubt im Einsatz allen den Beitritt (beides ohne Alarm). Die Übungsleitung sieht ihre Übung immer (#90).
+- **EI-18** – Die Einsatzleitung kann weitere Gruppen (bei Typen, die das erlauben, auch Personen) oder alle nachbieten; alarmiert werden nur die neu Aufgebotenen (#90).
+- **EI-19** – Jede Person kann sich selbst abwesend melden oder ihre Einsatzfähigkeit vorübergehend aussetzen (von–bis oder bis auf Weiteres, mit Bemerkung); beides wirkt gleich: kein Alarm und kein Aufgebot, laufende Einsätze bleiben sichtbar und ein freiwilliger Beitritt ist möglich (#91).
+- **EI-20** – Personen mit dem Recht «Abwesenheiten verwalten» erfassen, ändern und beenden Abwesenheiten aller Personen in der Verwaltung (#91).
+- **EI-21** – Abwesenheiten sind bei der Zuteilung der Einsatzgruppen und beim Aufbieten ersichtlich (je Person und Anzahl je Gruppe) (#91).
+- **EI-22** – entfallen: Die Vorauswahl der Einsatzgruppen steht beim Einsatztyp (EI-16) (#90).
+- **EI-23** – Einzelpersonen fürs Aufgebot werden aus einer filterbaren Liste aller Personen gewählt, ohne Texteingabe (#90).
 
 ## 5. Karte (KA)
 
 - **KA-01** – Karte im Vollbild; alle Bedienelemente in einem versteckten Menü (☰) (AG).
 - **KA-02** – Grundkarte swisstopo Luftbild (Standard), umschaltbar auf Landeskarte und OpenStreetMap; Anbieter leicht austauschbar; Wahl pro Gerät gemerkt (AG, #34).
-- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Nachrichten-Markierungen, Helikopter), «Alle ein-/ausblenden», pro Gerät gemerkt (#34).
+- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Nachrichten-Markierungen, Helikopter, Feste Standorte), «Alle ein-/ausblenden», pro Gerät gemerkt (#34).
 - **KA-04** – Karte drehbar (zwei Finger, Shift + Mausrad, Kompass); Klick auf den Kompass richtet nach Norden aus (AG).
 - **KA-05** – Startansicht beim Öffnen eines Einsatzes: Übersicht über alle aktiven Positionen (AG).
 - **KA-06** – Kamerafokus: Suchgebiet (ganz und je Teilgebiet), Einsatzkräfte, Auto-Übersicht (hält alle sichtbaren aktiven Positionen im Bild) (AG, #51).
 - **KA-07** – Kartenknöpfe rechts unten einklappbar; eingeklappt zeigen sie die Summe der roten Zähler (#42).
 - **KA-08** – Die Seite selbst scrollt und zoomt nie, nur die Karte (#84).
 - **KA-09** – Am Handy decken Seitenfenster die Kartenknöpfe ab (AG).
+- **KA-10** – Startansicht beim Öffnen der App ohne laufenden Einsatz: eigener Standort und alle eingeblendeten festen Standorte im Bild; trifft der eigene Standort erst später ein, wird die Ansicht in den ersten 20 s nachgeführt, solange man die Karte nicht selbst verschoben oder gezoomt hat (#96).
 
 ## 6. Einsatzkräfte und Standort (EK)
 
@@ -81,6 +93,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EK-05** – Fahrten mit Fahrzeug werden erkannt und im Log festgehalten («fährt von A nach B, ca. X km Luftlinie, Ø Y km/h»); Bewegungen auf dem Gewässer und manuell gesetzte Positionen zählen nicht (AG).
 - **EK-06** – «Suchgebiet erreicht» wird geloggt (AG).
 - **EK-07** – Der eigene Standort ist immer gesondert auf der Karte sichtbar (blauer Punkt mit Genauigkeitskreis), auch ohne laufenden Einsatz; ausgeblendet nur, solange man an einem laufenden Einsatz bzw. einer Übung mit einer Einrückoption ohne Standortfreigabe teilnimmt (#118).
+- **EK-08** – Im Einsatz erscheint man selbst nur als blauer Punkt, nicht zusätzlich mit dem eigenen Personen-Icon; ohne Standort des Geräts steht der Punkt am zuletzt gemeldeten Standort (#96).
 
 ## 7. Externe Einsatzkräfte (EX)
 
@@ -123,7 +136,15 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 ## 11. Markierungen und Bereiche (MB)
 
 - **MB-01** – Die Einsatzleitung setzt Markierungen (Punkt) und Bereiche (Polygon, 3–200 Eckpunkte) mit Bezeichnung und Farbe; für alle sichtbar (AG).
-- **MB-02** – Fenster «Markierungen»: PLS zuoberst, danach Markierungen und Bereiche, je Eintrag und Gruppe ein-/ausblendbar, «Zeigen» (AG).
+- **MB-02** – Fenster «Markierungen»: PLS zuoberst, danach feste Standorte, Markierungen und Bereiche, je Eintrag und Gruppe ein-/ausblendbar, «Zeigen» (AG, #96).
+- **MB-03** – Feste Standorte: in der Verwaltung gepflegte Orte (Name, Beschreibung, Kürzel, Farbe, Standort, aktiv/deaktiviert), z. B. Bootseinwasserungen, Magazine oder Treffpunkte; erscheinen in jedem Einsatz und jeder Übung (und ohne Einsatz) auf der Karte und im Fenster «Markierungen», mit Navigation (#96).
+- **MB-04** – Vorbereitete Übungen wählen, welche festen Standorte gelten (alle aktiven oder eine Auswahl), und können bis zum Start eigene Standorte ergänzen; sichtbar in der Vorschau auf der Karte (#96).
+- **MB-05** – Feste Standorte stehen auch ohne laufenden Einsatz auf der Karte der Einsatz-App (alle aktiven permanenten, ausblendbar im Fenster «Ansicht»). Ohne Einsatz öffnet der Kartenknopf «Feste Standorte» eine Übersichtsliste wie im Fenster «Markierungen» (nach Kategorie, je Standort ein-/ausblendbar, «Zeigen», Navigation) (#96).
+- **MB-06** – Auswahl- und Vorschaukarten der Verwaltung sind gross genug zum Wählen und bieten alle Kartenanbieter zur Wahl (wie das Fenster «Ansicht») (#96).
+- **MB-07** – Kategorien fester Standorte (z. B. Bootseinwasserungen, Magazine): in der Verwaltung angelegt, je Standort zugeordnet, je Kategorie mit Standard «eingeblendet» oder «ausgeblendet». In der Einsatz-App (Fenster «Ansicht» und «Markierungen») einzeln ein- und ausblendbar; die eigene Wahl wird pro Person gespeichert (auf allen Geräten) und lässt sich auf den Standard zurücksetzen (#96).
+- **MB-10** – Namen fester Standorte: Im Fenster «Ansicht» lässt sich unter «Feste Standorte» einstellen, ob die Namen auf der Karte stehen («Namen auf der Karte», Standard an). Ausgeschaltet erscheint der Name nur beim Darüberfahren und im Popup. Gespeichert pro Person, «Standard der Verwaltung» lässt die Wahl stehen (#96).
+- **MB-09** – Reihenfolge fester Standorte: In der Verwaltung lassen sich die Kategorien und innerhalb jeder Kategorie die Standorte mit ↑/↓ sortieren; die Einsatz-App zeigt sie in dieser Reihenfolge (#96).
+- **MB-08** – Feste Bereiche: Ein fester Standort kann statt eines Punkts eine Fläche sein (3–200 Eckpunkte, in der Verwaltung auf der Karte eingezeichnet), z. B. Sperrzonen oder Sammelplätze. In der Einsatz-App gestrichelt in seiner Farbe mit Beschriftung, Navigation zur Mitte, «Zeigen» zeigt die ganze Fläche; gilt auch für Kategorien, vorbereitete Übungen und die Startansicht. Bereiche haben kein Kürzel (#96).
 - PLS auf eine Markierung verschieben (**offen**).
 
 ## 12. Werkzeuge (WZ)
@@ -142,19 +163,19 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je für scharfe Einsätze und Übungen ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation (#35, #79).
+- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte (#35, #79, #96).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
 
 ## 15. Einsatzlog und Auswertung (LO)
 
 - **LO-01** – Einsatzlog mit Beitritt, Rollen, Fahrten, Suchgebiet erreicht, Nachrichten im Volltext, Markierungen, Rettlingen, Entfernen u. a.; live im Einsatz und in der Auswertung, mit Gross-Modus (Spec, AG).
-- **LO-02** – Einsatzstatistik in der Verwaltung mit Filter Alle / Scharfe Einsätze / Übungen (gemerkt), Kennzahlen je Art getrennt (AG).
+- **LO-02** – Einsatzstatistik in der Verwaltung mit Filter nach Einsatztyp (gemerkt), Kennzahlen je Typ getrennt (AG, #90).
 - **LO-03** – Anonymisierte Anzeige von Log und Replay sowie endgültiges Anonymisieren beendeter Einsätze (getrennt für Replay und Log, nicht umkehrbar) (#54); erweitert zu Stufen (LO-07).
 - **LO-04** – «Meine Einsätze»: Teilnehmende sehen Log und Replay ihrer beendeten Einsätze, je nach Einstellung aus, anonym (Standard) oder vollständig (#61).
 - **LO-05** – Statistik pro Person: Filter nach Art, Zeitraum (gesamt, Kalenderjahr, von–bis) und Einsatz; je Person Anzahl, Einsatzzeit, Reaktionszeit, Suchgebiet erreicht, Fahrten mit Kilometern, Weg laut Aufzeichnung, Einrückoptionen; Grafiken pro Monat und je Person; CSV-Export; bleibt nach dem endgültigen Anonymisieren personenbezogen (#87).
 - **LO-06** – Meine Statistik: Jede Einsatzkraft sieht unter «Meine Einsätze» die eigene Statistik (Einsätze, Übungen, Einsatzzeit, Reaktionszeit, Suchgebiet erreicht, Fahrten, Weg, Einrückoptionen, Einsätze pro Monat) mit Filter nach Art und Zeitraum, auch für endgültig anonymisierte Einsätze (#87).
-- **LO-07** – Anonymisierung in Stufen, einzeln in der Verwaltung einstellbar (angeboten ja/nein, automatisch nach N Tagen getrennt für scharfe Einsätze und Übungen): Anzeige anonymisieren (umkehrbar), Replay pseudonymisieren, Einsatzprotokoll pseudonymisieren, Personenangaben und Freitexte entfernen, Teilnahmen vom Konto lösen (danach auch in der Statistik pro Person und in «Meine Einsätze» nicht mehr zugeordnet), Aufzeichnung löschen (endgültig). Im Dialog je Einsatz sind erledigte Stufen angehakt und gesperrt. Das After Action Review bleibt unverändert (#87).
+- **LO-07** – Anonymisierung in Stufen, einzeln in der Verwaltung einstellbar (angeboten ja/nein, automatisch nach N Tagen je Einsatztyp): Anzeige anonymisieren (umkehrbar), Replay pseudonymisieren, Einsatzprotokoll pseudonymisieren, Personenangaben und Freitexte entfernen, Teilnahmen vom Konto lösen (danach auch in der Statistik pro Person und in «Meine Einsätze» nicht mehr zugeordnet), Aufzeichnung löschen (endgültig). Im Dialog je Einsatz sind erledigte Stufen angehakt und gesperrt. Das After Action Review bleibt unverändert (#87).
 - **LO-08** – Massenanonymisierung: beendete Einsätze nach Art und Zeitraum filtern, mehrere oder alle wählen und gewählte Stufen auf einmal anwenden; anonymisierte Anzeige mehrerer Einsätze aufheben (#87).
 - **LO-09** – Automatische Anonymisierung: fällige Stufen werden ohne Cron bei Aufrufen der App angewendet und im Einsatzlog vermerkt (#87).
 - **LO-11** – Vor der ersten Stufe der Anonymisierung (von Hand, als Masse oder automatisch) wird ein freigegebenes After Action Review vollständig als PDF gesichert. Das PDF bleibt unverändert erhalten und ist nur mit dem eigenen Recht «Gesicherte After Action Reviews abrufen» zugänglich. Ab der Sicherung ist das Review nur noch als dieses PDF verfügbar: Ansehen, Herunterladen und Bearbeiten entfallen, auch in «Meine Einsätze» und nach dem Aufheben der anonymisierten Anzeige (#87).
@@ -163,7 +184,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **LO-14** – Wer das Recht auf gesicherte After Action Reviews hat, kann das gesicherte PDF auch unter «Meine Einsätze» abrufen. Die Oberfläche zeigt es wie jedes andere PDF, ohne Unterscheidung (#87).
 - **LO-16** – «Meine Einsätze» zeigt keine Stufen der Anonymisierung: Ein Einsatz ist für Einsatzkräfte entweder anonymisiert oder nicht, und ab der ersten Stufe (ausser «Aufzeichnung löschen») sind Log und Replay dort anonym. Ein gesichertes Review erscheint als freigegeben (#87).
 - **LO-15** – Ist ein Einsatz anonymisiert (jede Stufe ausser «Aufzeichnung löschen»), ist bei nicht freigegebenem Review kein After Action Review mehr möglich: kein Erfassen, Bearbeiten, Ansehen oder Herunterladen. Wird nur die anonymisierte Anzeige aufgehoben, ist es wieder möglich (#87).
-- **LO-10** – Vorgegebene Fristen der automatischen Anonymisierung (scharf/Übung, Tage nach Ende): Anzeige 90/30, Replay 180/90, Einsatzprotokoll 365/180, Freitexte und Teilnahmen 730/365, Aufzeichnung 365/180; gelten ohne eigene Einstellung und lassen sich wieder einsetzen (#87).
+- **LO-10** – Vorgegebene Fristen der automatischen Anonymisierung (Einsatz/Übung, Tage nach Ende): Anzeige 90/30, Replay 180/90, Einsatzprotokoll 365/180, Freitexte und Teilnahmen 730/365, Aufzeichnung 365/180; gelten ohne eigene Einstellung und lassen sich wieder einsetzen (#87).
 - Einsatzarchiv-Export (**offen**).
 
 ## 16. Aufzeichnung und Replay (AR)
@@ -188,7 +209,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **UE-02** – Elemente: PLS, neuer Rettling, Sichtung, neue externe Einsatzkraft, Entfernen einer externen Einsatzkraft; je mit Standort, PLS-Zeitpunkt und optionaler Meldung; Vorschau auf der Karte (#29).
 - **UE-03** – Freigabe von Hand oder automatisch nach Minuten ab Start; erst dann sichtbar; Meldung geht als Nachricht an alle (#29).
 - **UE-04** – Die Übungsleitung hat die Rechte der Einsatzleitung, wird nicht alarmiert und kann zusätzlich teilnehmen (#29).
-- **UE-05** – Nur Aufgebotene werden alarmiert; teilnehmen dürfen alle (#29).
+- **UE-05** – Nur Aufgebotene (Einsatzgruppen und Einzelpersonen) werden alarmiert; teilnehmen dürfen alle gemäss EI-17 (#29, #90).
 - **UE-06** – Gestartete Übungen sind gesperrt, können kopiert und nach dem Ende zurückgesetzt werden; alle Durchführungen mit Log und Replay (#29).
 
 ## 19. PWA, Push und Offline (PW)
@@ -209,19 +230,20 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 21. AI-Assistent (AI)
 
-- **AI-01** – Optionaler AI-Assistent über einen externen Anbieter (OpenAI-kompatibel inkl. Mistral und eigener Server, oder Anthropic); ohne Anbieter, Schlüssel und Freigabe gibt es ihn nicht. Der Schlüssel bleibt auf dem Server (#111).
+- **AI-01** – Optionaler AI-Assistent über einen externen Anbieter (OpenAI-kompatibel inkl. Mistral, oder Anthropic) oder einen selbst gehosteten Server (z. B. Ollama, ohne Schlüssel, auch über http im eigenen Netz); ohne Anbieter und Freigabe gibt es ihn nicht. Ein Schlüssel bleibt auf dem Server (#111).
 - **AI-02** – Funktionen: Entwürfe für leere Textfelder des After Action Review, Zusammenfassung des Einsatzlogs (Verwaltung und Meine Einsätze), Vorschläge zu vorbereiteten Übungen, Einsatzstatistik in Worten, Lagezusammenfassung im laufenden Einsatz (#111).
-- **AI-03** – Kein freier Chat: feste Aufgaben, optional mit einem zusätzlichen Wunsch; Vorschläge erscheinen in einem Fenster und gelten erst mit «Übernehmen» bzw. werden kopiert (#111).
-- **AI-04** – Modi je Funktion: Aus, «Auf Abruf» (Knopf), «Begleitend» (Vorschlag beim Öffnen vorbereitet). Freigabe je Benutzerrolle, Funktion und Art (scharf/Übung/Verwaltung); jede Person kann im Profil weniger wählen. Standard: nur Systemadministratoren «Auf Abruf», Lagezusammenfassung bei scharfen Einsätzen aus (#111).
-- **AI-05** – Datenschutz: Namen vor dem Senden durch Bezeichnungen ersetzen (Standard ein, abschaltbar), Koordinaten runden, Beschreibungen von Rettlingen nie senden; die Daten folgen den Rechten und der Anonymisierung der jeweiligen Ansicht (#111).
+- **AI-03** – Feste Aufgaben, optional mit einem zusätzlichen Wunsch, dazu freie Fragen (siehe AI-08); Vorschläge erscheinen in einem Fenster und gelten erst mit «Übernehmen» bzw. werden kopiert (#111, geändert: früher ohne freie Eingabe).
+- **AI-04** – Modi je Funktion: Aus, «Auf Abruf» (Knopf), «Begleitend» (Vorschlag beim Öffnen vorbereitet). Freigabe je Einsatztyp (bzw. Verwaltung ohne Einsatz), Funktion und Rolle: Benutzerrollen und Spezialrollen im Einsatz (nur mit Teilnahme), der höchste Modus gilt; jede Person kann im Profil weniger wählen. Standard: nur Systemadministratoren «Auf Abruf», Lagezusammenfassung bei Einsatztypen ohne vorbereitete Übungen aus (#111, AG).
+- **AI-05** – Datenschutz je Einsatztyp einstellbar: Namen vor dem Senden durch Bezeichnungen ersetzen (Standard ein), Koordinaten runden (Standard ein); Beschreibungen von Rettlingen gehen nie mit; die Daten folgen den Rechten und der Anonymisierung der jeweiligen Ansicht (#111, AG).
 - **AI-06** – Grenzen und Kontrolle: Wartezeit, Antwortlänge, Anfragen pro Tag gesamt und je Person, Verbindungstest und Verbrauchsübersicht in der Verwaltung (Recht «AI-Assistent einstellen») (#111).
-- **AI-07** – Die Datenschutzerklärung führt den Anbieter des AI-Assistenten als Empfänger auf, solange der Assistent eingeschaltet ist (#111, #102).
+- **AI-07** – Die Datenschutzerklärung führt den Anbieter des AI-Assistenten als Empfänger auf, solange der Assistent eingerichtet ist, mit dem Datenschutz je Einsatztyp (#111, #102).
+- **AI-08** – Freie Fragen: Im Fenster jeder Funktion lassen sich eigene Fragen zu den Daten der Ansicht stellen (mit Verlauf im Fenster, nicht gespeichert); in der Einsatz-App zum laufenden Einsatz, in der Verwaltung auch ohne Einsatzdaten. Eigene Funktion in der Freigabe, nur «Auf Abruf»; Namen in den Fragen werden wie die Daten ersetzt (#111, AG).
 
 ## 22. Rechtliches (RC)
 
 - **RC-01** – Eine Seite «Impressum, Lizenzen & Datenschutz» ist ohne Anmeldung erreichbar, verlinkt bei der Anmeldung, im Profil der Einsatz-App, in der öffentlichen Ansicht und in der Verwaltung (#102).
 - **RC-02** – Impressum mit den Angaben der betreibenden Organisation und den Verwendungseinschränkungen: kein Ersatz für Notrufnummern, Alarmierung ohne Gewähr, Standorte und Suchgebiet sind Schätzungen, Kartendaten und Luftfahrzeuge ohne Gewähr, nur nicht-kommerzielle Nutzung, keine Haftung (#102).
 - **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, Helikopter-Quellen) (#102).
-- **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen, Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen, Speicher im Gerät, Rechte der betroffenen Personen (#102).
+- **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen, Speicher im Gerät, Rechte der betroffenen Personen (#102).
 - **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
 

@@ -25,7 +25,7 @@ main a{color:#7cc4ff}
 .lic.w{background:#7a4a00}
 .pre{white-space:pre-line}
 ul{padding-left:1.2rem;margin:.3rem 0}li{margin:.15rem 0}
-@media(max-width:700px){#lgHead h1{font-size:1rem;flex-basis:10rem}#lgTabs{flex-wrap:nowrap}#lgTabs a{white-space:nowrap;font-size:.9rem;padding:.35rem .7rem}.lgx{display:none}.lgt thead{display:none}.lgt tr{display:block;border-bottom:1px solid var(--line);padding:.4rem 0}.lgt td{display:block;border:0;padding:.1rem 0}.lgc dl{grid-template-columns:1fr;gap:0}.lgc dd{margin-bottom:.4rem}}
+@media(max-width:700px){#lgHead h1{font-size:1rem;flex-basis:10rem}#lgTabs{flex-wrap:nowrap}#lgTabs a{white-space:nowrap;font-size:.9rem;padding:.35rem .7rem}.lgx{display:none}.lgt thead{display:none}.lgt tr{display:block;border-bottom:1px solid var(--line);padding:.4rem 0}.lgt td{display:block;border:0;padding:.1rem 0}.lgt td[data-k]::before{content:attr(data-k) ': ';color:var(--mut)}.lgc dl{grid-template-columns:1fr;gap:0}.lgc dd{margin-bottom:.4rem}}
 </style></head><body>
 <header id="lgHead"><h1>Swiftwater Rescue – Impressum, Lizenzen & Datenschutz</h1><a class="btn" href="./">Zur Einsatz-App</a></header>
 <nav id="lgTabs" aria-label="Abschnitte"><a href="#impressum">Impressum</a><a href="#lizenzen">Lizenzen<span class="lgx"> & Nutzungsbedingungen</span></a><a href="#datenschutz">Datenschutz</a></nav>
@@ -39,7 +39,10 @@ const days=n=>n==null?'nie automatisch':n===0?'gleich nach dem Einsatzende':n===
 const lnk=(u,t)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t||u.replace(/^https?:\/\//,'').replace(/\/$/,''))}</a>`;
 const host=u=>{try{return new URL(u).host}catch(e){return u}};
 const lic=(t,w)=>`<span class="lic${w?' w':''}">${esc(t)}</span>`;
-const fOn=k=>{const f=D&&D.features.find(x=>x.k===k);return!f||f.real||f.ex};
+// AI-Assistent (Issue #111): Datenschutz je Einsatztyp ({Typ-ID: 0|1}); gemischt mit den Typen in Klammern
+const aiPer=(D,p,on,off)=>{const v=(D.ai&&D.ai[p])||{},ks=(D.kinds||[]).filter(k=>k.id in v),a=ks.filter(k=>v[k.id]),b=ks.filter(k=>!v[k.id]),n=l=>l.map(k=>'«'+esc(k.name)+'»').join(', ');
+  return!b.length?on:!a.length?off:`${on} (${n(a)})${off?`${off} (${n(b)})`:''}`};
+const fOn=k=>{const f=D&&(D.features||[]).find(x=>x.k===k);return!f||Object.values(f.on||{}).some(Boolean)}; // an, wenn für einen Einsatztyp an
 
 function impressum(){const c=(D&&D.cfg)||{},F=[['org','Organisation'],['addr','Adresse'],['contact','Kontakt'],['resp','Verantwortlich'],['hosting','Hosting']];
   const rows=F.filter(([k])=>c[k]).map(([k,l])=>`<dt>${l}</dt><dd>${esc(c[k])}</dd>`).join('');
@@ -87,7 +90,7 @@ function lizenzen(){const op=D?D.overpass.servers:[],air=D?D.air:null;
   <h3>Weitere Dienste</h3>${tbl(svc,'Dienst')}
   <h3>Eigener Programmcode und Logo</h3><p>Programmcode, Gestaltung und Logo der Swiftwater Rescue App: alle Rechte bei den Urheberinnen und Urhebern bzw. der betreibenden Organisation. Eine Open-Source-Lizenz ist für den eigenen Code nicht festgelegt.</p>`}
 
-function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],op=D?D.overpass:null,air=D?D.air:null;
+function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],ks=(D&&D.kinds)||[],op=D?D.overpass:null,air=D?D.air:null;
   const who=[c.org,c.addr].filter(Boolean).join('\n');
   return`<h2>Datenschutzerklärung</h2>
   <p>Diese Erklärung beschreibt, welche Personendaten die App bearbeitet, wo sie gespeichert werden und wie lange. Grundlage ist das Schweizer Datenschutzgesetz (DSG).</p>
@@ -109,7 +112,7 @@ function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],op=D?D.overpass:nul
   </tbody></table>
   <h3>Pseudonymisierung und Löschung nach dem Einsatz</h3>
   <p>Nach dem Einsatzende werden Personendaten in Stufen automatisch unkenntlich gemacht. Die Verwaltung kann dies auch früher von Hand auslösen. Aktuell eingestellt:</p>
-  ${an.length?`<table class="lgt"><thead><tr><th>Stufe</th><th>Scharfe Einsätze</th><th>Übungen</th></tr></thead><tbody>${an.map(s=>`<tr><td>${esc(s.name)}</td><td>${s.on?days(s.real):'ausgeschaltet'}</td><td>${s.on?days(s.ex):'ausgeschaltet'}</td></tr>`).join('')}</tbody></table>`:'<div class="mut">Fristen zurzeit nicht abrufbar.</div>'}
+  ${an.length&&ks.length?`<table class="lgt"><thead><tr><th>Stufe</th>${ks.map(k=>`<th>${esc(k.name)}</th>`).join('')}</tr></thead><tbody>${an.map(s=>`<tr><td>${esc(s.name)}</td>${ks.map(k=>`<td data-k="${esc(k.name)}">${s.on?days((s.days||{})[k.id]??null):'ausgeschaltet'}</td>`).join('')}</tr>`).join('')}</tbody></table>`:'<div class="mut">Fristen zurzeit nicht abrufbar.</div>'}
   <h3>Wer die Daten sieht</h3>
   <ul><li>Im Einsatz: alle Teilnehmenden (Karte, Einsatzkräfte, Nachrichten, Rettlinge). Die Einsatzleitung kann eine öffentliche Ansicht über einen geheimen Link freigeben, standardmässig anonym (Spezialrolle statt Namen, ohne Profilbilder und Nachrichten); beim Ausschalten wird der Link ungültig.</li>
    <li>Nach dem Einsatz: Personen mit den entsprechenden Rechten in der Verwaltung (Statistik, Log, Replay, After Action Review). Teilnehmende sehen unter «Meine Einsätze» ihre eigenen Einsätze, je nach Einstellung mit anonymisierten Namen der anderen.</li></ul>
@@ -121,7 +124,7 @@ function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],op=D?D.overpass:nul
    <tr><td>swisstopo, Nominatim (OSM Foundation)</td><td>Koordinaten von Anfang und Ende einer Fahrt, ohne Namen; der Server fragt.</td><td>Bei erkannten Fahrten im Einsatz.</td></tr>
    ${!air||air.on?`<tr><td>ADS-B-Dienste${air&&air.src.length?' ('+air.src.map(s=>esc(s.name)).join(', ')+')':''}</td><td>Ein Kreis um das Einsatzgebiet, ohne Personenbezug; der Server fragt.</td><td>Während Einsätzen mit eingeschalteten Helikoptern.</td></tr>`:''}
    <tr><td>Push-Dienst deines Browsers (Google, Apple, Mozilla)</td><td>Verschlüsselte Benachrichtigung (Alarm, Nachricht, Einsatzende); der Dienst sieht nur Zeitpunkt und Grösse.</td><td>Nur wenn du Push eingeschaltet hast.</td></tr>
-   ${D&&D.ai&&D.ai.on?`<tr><td>Anbieter des AI-Assistenten${D.ai.host?' ('+esc(D.ai.host)+')':''}</td><td>Daten der gewünschten Aufgabe (z. B. Einsatzlog, Lage, Felder des After Action Review)${D.ai.anon?', Namen durch Bezeichnungen wie «Einsatzkraft 3» ersetzt':', mit Namen'}${D.ai.round_loc?', Koordinaten gerundet':''}; Beschreibungen von Rettlingen nie. Freitexte können Namen enthalten. Der Server fragt.</td><td>Nur auf Abruf bzw. begleitend für Personen, denen der Assistent freigegeben ist.</td></tr>`:''}
+   ${D&&D.ai&&D.ai.on?`<tr><td>Anbieter des AI-Assistenten${D.ai.host?' ('+esc(D.ai.host)+')':''}</td><td>Daten der gewünschten Aufgabe (z. B. Einsatzlog, Lage, Felder des After Action Review)${aiPer(D,'anon',', Namen durch Bezeichnungen wie «Einsatzkraft 3» ersetzt',', mit Namen')}${aiPer(D,'round_loc',', Koordinaten gerundet','')}; Beschreibungen von Rettlingen nie. Freitexte können Namen enthalten. Der Server fragt.</td><td>Nur auf Abruf bzw. begleitend für Personen, denen der Assistent freigegeben ist.</td></tr>`:''}
    ${fOn('nav')?`<tr><td>Gewählte Navigations-App</td><td>Koordinaten des Ziels.</td><td>Nur beim Antippen von 🧭.</td></tr>`:''}
   </tbody></table>
   <p class="mut">Einige dieser Anbieter haben ihren Sitz oder Server ausserhalb der Schweiz (z. B. in der EU oder den USA).</p>

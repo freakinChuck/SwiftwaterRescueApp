@@ -17,7 +17,7 @@ const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte s
 // Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
 const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 // Fenster «Ansicht» (Issue #34, öffentliche Ansicht #48): Kategorien auf der Karte [Schlüssel, Bezeichnung, Funktion (feat)]. Neue Kartenelemente hier aufnehmen.
-const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
+const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
 const VIEW_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 // Inhalt des Fensters: Grundkarte (Radio vbase) und, wenn cats (Liste aus VIEW), Häkchen je Kategorie (data-vk) mit «Alle einblenden/ausblenden» (data-va)
 function viewHtml(base,cats,vis){return'<div class="vh"><b>Ansicht</b><button id="bViewX" aria-label="Ansicht schliessen">✕</button></div><h4>Grundkarte</h4>'
@@ -28,6 +28,12 @@ const MAP_PROVIDERS={
   swisstopo:{label:'Landeskarte (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
   osm:{label:'OpenStreetMap',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap',maxZoom:19}
 };
+// Kleine Karten der Verwaltung (Auswahl- und Vorschaukarten, Änderungswunsch #96): alle Anbieter aus MAP_PROVIDERS, umschaltbar über eine Auswahl oben rechts, gemerkt in sw_base wie die übrigen Karten
+function addBases(m){let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}let cur=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;const ls={};
+  Object.entries(MAP_PROVIDERS).forEach(([k,P])=>ls[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));ls[cur].addTo(m);
+  const C=L.Control.extend({options:{position:'topright'},onAdd(){const d=L.DomUtil.create('div','leaflet-bar basesel');d.innerHTML=`<select aria-label="Grundkarte">${Object.entries(MAP_PROVIDERS).map(([k,P])=>`<option value="${k}" ${k===cur?'selected':''}>${esc(P.label)}</option>`).join('')}</select>`;
+    L.DomEvent.disableClickPropagation(d);L.DomEvent.disableScrollPropagation(d);d.firstChild.onchange=e=>{const k=e.target.value;if(!ls[k]||k===cur)return;m.removeLayer(ls[cur]);cur=k;ls[k].addTo(m);try{localStorage.setItem('sw_base',k)}catch(_){}};return d}});
+  new C().addTo(m);return m}
 /* ---------- Helikopter / Luftlage (Issue #73): Anzeige in Einsatz-App, öffentlicher Ansicht und Replay ---------- */
 // Daten vom Server (incident/air, public/air, air in incident/replay): hex, cs, reg, type, desc, cat (A7 = Helikopter), lat, lon, alt (ft), gnd, gs (kt), trk, vr (ft/min), at, rescue, pls_m, trail [[ts, lat, lon, alt]]
 const AIR_STALE_S=20,AIR_GAP_S=60; // ältere Positionen blass; im Replay längere Lücken nicht interpolieren
@@ -155,7 +161,11 @@ function parseC(s){const n=String(s||'').replace(/['’]/g,'').trim().split(/\s*
   return{lat:(16.9023892+3.238272*x-.270978*y*y-.002528*x*x-.0447*y*y*x-.014*x*x*x)*100/36,lon:(2.6779094+4.728982*y+.791484*y*x+.1306*y*x*x-.0436*y*y*y)*100/36}}
 // Rechte der angemeldeten Person aus ihren Benutzerrollen (Issue #63, me.perms vom Server); nur zum Ausblenden, der Server prüft selbst
 const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
-const ADMIN_PERMS=['users','uroles','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon']; // Rechte mit einem Bereich in der Verwaltung
+// Einsatztyp einer Zeile (Issue #90): Name und Farbe vom Server; ältere gesicherte Reviews kennen nur is_exercise
+const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
+const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
+const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
+const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 function logout(){token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k))} // letzter Stand gehört der abgemeldeten Person
 /* ---------- Anmeldung ---------- */
@@ -174,6 +184,31 @@ function dlg(title,body,save,okText='Speichern',xText='Abbrechen',onX){const d=d
   d.querySelector('[data-x]').onclick=()=>{d.remove();onX&&onX()};
   // während des Speicherns gesperrt: ein zweiter Klick schickte sonst dieselbe Anfrage nochmals (z. B. Anonymisieren doppelt)
   const ok=d.querySelector('[data-ok]');ok.onclick=async()=>{if(ok.disabled)return;ok.disabled=true;try{await save(d);d.remove()}catch(e){fail(e)}finally{ok.disabled=false}};return d}
+/* ---------- Abwesenheiten (Issue #91): abwesend bzw. Einsatzfähigkeit ausgesetzt = nicht aufgeboten, kein Alarm; laufende Einsätze bleiben sichtbar ---------- */
+const ABS_KIND={abs:'Abwesend',sus:'Einsatzfähigkeit ausgesetzt'};
+const absDT=ts=>new Date(ts*1000).toLocaleString('de-CH',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+const absUntil=a=>a.until!=null||a.until_at!=null?'bis '+absDT(a.until??a.until_at):'bis auf Weiteres';
+// a = laufende Abwesenheit {kind, until, note} (me.absent, users[].absent, my_abs)
+const absChip=a=>a?`<span class="abschip" title="${esc(ABS_KIND[a.kind]||ABS_KIND.abs)} ${esc(absUntil(a))}${a.note?' – '+esc(a.note):''}">⏸ ${esc(a.kind==='sus'?'ausgesetzt':'abwesend')} ${esc(absUntil(a))}</span>`:'';
+const absLocal=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16),absTs=v=>v?Math.floor(new Date(v).getTime()/1000)||0:0;
+// Liste der Einträge (Route absences) mit Entfernen; who = Namen zeigen
+function absRows(rs,who){return rs.length?rs.map(a=>`<div class="absrow"><span><b>${esc(ABS_KIND[a.kind]||ABS_KIND.abs)}</b>${who?' · '+esc(a.name):''}<br><small class="mut">${a.now?'seit':'ab'} ${esc(absDT(a.from_at))}, ${esc(absUntil(a))}${a.note?' · '+esc(a.note):''}${who&&a.created_by!==a.user_id&&a.by_name?' · erfasst von '+esc(a.by_name):''}</small></span><span class="row" style="margin:0;flex:0 0 auto"><button data-abe="${a.id}">Ändern</button><button data-abx="${a.id}" aria-label="Eintrag entfernen">${a.now?'Beenden':'Entfernen'}</button></span></div>`).join(''):'<div class="mut">Keine Einträge.</div>'}
+// Dialog erfassen/ändern: a = bestehender Eintrag oder null; people = Auswahl der Person (Verwaltung) oder null (eigene); done nach dem Speichern
+function absDialog(a,people,done){const now=Date.now()/1000,mo=new Date();mo.setDate(mo.getDate()+1);mo.setHours(6,0,0,0);
+  const d=dlg(a?'Eintrag ändern':'Abwesenheit erfassen',`${people&&!a?`<label class="mut">Person<select id="abU">${people.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select></label>`:''}
+    <label class="mut">Art<select id="abK">${Object.entries(ABS_KIND).map(([k,v])=>`<option value="${k}" ${(a?a.kind:'abs')===k?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="mut">Beides wirkt gleich: nicht aufgeboten und kein Alarm. Laufende Einsätze bleiben sichtbar, freiwillig beitreten ist möglich.</div>
+    <label class="mut">Von<input id="abF" type="datetime-local" value="${absLocal(a?a.from_at:now)}"></label>
+    <label class="mut">Bis (leer = bis auf Weiteres)<input id="abT" type="datetime-local" value="${a&&a.until_at?absLocal(a.until_at):''}"></label>
+    <div class="row"><button data-abq="m">Bis morgen 06:00</button><button data-abq="w">1 Woche</button><button data-abq="x">Bis auf Weiteres</button></div>
+    <label class="mut">Bemerkung (optional)<input id="abN" maxlength="200" value="${esc(a&&a.note||'')}" placeholder="z. B. Ferien, Krankheit"></label>`,async d=>{
+    const f=absTs($('#abF',d).value),t=absTs($('#abT',d).value);
+    await api('absence/save',{id:a?a.id:undefined,user_id:people&&!a?+$('#abU',d).value:undefined,from:f,until:t||null,kind:$('#abK',d).value,note:$('#abN',d).value});toast('Gespeichert.','ok');done&&done()});
+  d.querySelectorAll('[data-abq]').forEach(b=>b.onclick=()=>{const q=b.dataset.abq,fr=absTs($('#abF',d).value)||now;
+    $('#abT',d).value=q==='x'?'':absLocal(q==='m'?Math.max(mo.getTime()/1000,fr+3600):fr+7*86400)});return d}
+// Klicks einer Liste aus absRows: rs = Einträge, people/done wie absDialog
+function absBind(el,rs,done){el.querySelectorAll('[data-abe]').forEach(b=>b.onclick=()=>absDialog(rs.find(a=>a.id===+b.dataset.abe),null,done));
+  el.querySelectorAll('[data-abx]').forEach(b=>b.onclick=async()=>{const a=rs.find(x=>x.id===+b.dataset.abx);if(!confirm(a.now?'Eintrag jetzt beenden?':'Eintrag entfernen?'))return;try{await api('absence/remove',{id:a.id});toast(a.now?'Beendet.':'Entfernt.','ok');done&&done()}catch(e){fail(e)}})}
 // Eigenes Passwort ändern; forced = nach Zurücksetzen durch die Verwaltung (nur Abmelden als Alternative)
 function pwDialog(forced,done){
   dlg('Passwort ändern',`${forced?'<div class="mut">Dein Passwort wurde neu gesetzt. Bitte vergib jetzt ein eigenes Passwort.</div>':''}
@@ -203,30 +238,45 @@ function renderBigLog(){const o=$('#bigLog');if(!big||!o)return;const got=big.ge
   $('#bigT').textContent=`${big.title} · ${l.length} von ${all.length} Einträgen${big.live&&!got?' · Einsatz beendet':''}`;
   $('#bigS').textContent=big.desc?'Neueste zuerst':'Älteste zuerst';
   $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
-/* ---------- AI-Assistent (Issue #111): Fenster mit Vorschlag, Übernehmen / Verwerfen / Neu und zusätzlichem Wunsch ---------- */
-// Modus der Person je Funktion und Art (me.ai vom Server: aiMe, schon begrenzt auf das Erlaubte und die eigene Wahl): off, cmd (auf Abruf), comp (begleitend)
-const aiM=(fn,ctx)=>(typeof me!=='undefined'&&me&&me.ai&&me.ai[fn]&&me.ai[fn].modes[ctx])||'off';
+/* ---------- AI-Assistent (Issue #111): Fenster mit Vorschlag, Übernehmen / Verwerfen / Neu, zusätzlichem Wunsch und freien Fragen ---------- */
+// Modus der Person je Funktion und Bereich (Einsatztyp-ID oder 'adm'; me.ai vom Server: aiMe, schon begrenzt auf das Erlaubte und die eigene Wahl): off, cmd (auf Abruf), comp (begleitend)
+const aiM=(fn,ctx)=>(typeof me!=='undefined'&&me&&me.ai&&me.ai[fn]&&me.ai[fn].modes[String(ctx)])||'off';
 const aiOn=(fn,ctx)=>aiM(fn,ctx)!=='off';
+// je Einsatz: x.ai vom Server (mit der Spezialrolle der Person im Einsatz), sonst nach Einsatztyp
+const aiMi=(fn,x)=>x&&x.ai?(x.ai[fn]||'off'):aiM(fn,x&&x.kind_id);
 // Antworttext: Zeilenumbrüche bleiben, **fett** und Zwischentitel (#) werden hervorgehoben, sonst nur Text (kein HTML vom Anbieter)
 const aiFmt=t=>esc(t||'').replace(/^#{1,6}\s*(.+)$/gm,'<b>$1</b>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');
-const aiMeta=r=>`${r.cached?'Gespeicherter Vorschlag vom ':'Erstellt '}${new Date(r.ts*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'})}${r.tokens?` · ${r.tokens.toLocaleString('de-CH')} Tokens`:''}`;
+const aiMeta=r=>`${r.cached?'Gespeicherter Vorschlag vom ':'Erstellt '}${new Date(r.ts*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'})}${r.tokens?` · ${r.tokens.toLocaleString('de-CH')} Tokens`:''}${r.anon?' · Namen ersetzt durch Bezeichnungen':''}`;
+const aiCopy=async t=>{try{await navigator.clipboard.writeText(t||'');toast('In die Zwischenablage kopiert.')}catch(e){throw new Error('Kopieren nicht möglich, bitte den Text markieren')}};
 // o: title, req (fn, id, field, all …), my (Meine Einsätze), pre (bereits geladener Vorschlag), show(r) → HTML, apply(r) (ohne: Kopieren), applyText
-function aiPanel(o){let res=o.pre||null,busy=false;
-  const d=dlg('✨ '+o.title,`<div class="aiw"><div class="aio" data-aio></div><div class="mut aim" data-aim></div>
-    <div class="mut aih">Vorschlag des AI-Assistenten: bitte prüfen, bevor du ihn übernimmst. Es gehen nur die Daten dieser Ansicht an den Anbieter${me&&me.ai_anon?', Namen ersetzt durch Bezeichnungen':''}.</div>
-    <label class="mut">Zusätzlicher Wunsch (optional)<input data-aiq maxlength="1000" placeholder="z. B. kürzer, mehr zur Alarmierung"></label></div>`,
-    async()=>{if(!res)throw new Error('Es gibt noch keinen Vorschlag');if(o.apply)return o.apply(res);
-      try{await navigator.clipboard.writeText(res.text||'');toast('In die Zwischenablage kopiert.')}catch(e){throw new Error('Kopieren nicht möglich, bitte den Text markieren')}},
-    o.apply?(o.applyText||'Übernehmen'):'Kopieren','Verwerfen');
+// chat: freie Fragen zu den Daten von req (about = req.fn); chatOnly: nur freie Fragen, ohne Auftrag (req null = ohne Daten)
+function aiPanel(o){let res=o.pre||null,busy=false;const hist=[],only=!!o.chatOnly,chat=only||!!o.chat;
+  const d=dlg('✨ '+o.title,`<div class="aiw">${only?'':`<div class="aio" data-aio></div><div class="mut aim" data-aim></div>`}
+    <div class="mut aih">${only?'Antworten':'Vorschlag'} des AI-Assistenten: bitte prüfen, bevor du ${only?'sie verwendest':'ihn übernimmst'}. Es gehen nur die Daten dieser Ansicht an den Anbieter${o.req?'':' (hier keine Einsatzdaten)'}.</div>
+    ${only?'':'<label class="mut">Zusätzlicher Wunsch (optional)<input data-aiq maxlength="1000" placeholder="z. B. kürzer, mehr zur Alarmierung"></label>'}
+    ${chat?`<div class="aichat"><div class="aith" data-aith></div><label class="mut">${only?'Deine Frage':'Eigene Frage dazu (freie Eingabe)'}<textarea data-aic rows="2" maxlength="2000" placeholder="z. B. Wo gab es Verzögerungen?"></textarea></label><div class="row"><button data-aisend>Fragen</button>${only?'':'<span class="mut" style="font-size:.8rem">Fragen und Antworten werden nicht gespeichert.</span>'}</div></div>`:''}</div>`,
+    async()=>{if(only){const l=hist.filter(h=>h.a).pop();if(!l)throw new Error('Es gibt noch keine Antwort');return aiCopy(l.a)}
+      if(!res)throw new Error('Es gibt noch keinen Vorschlag');if(o.apply)return o.apply(res);return aiCopy(res.text)},
+    only?'Letzte Antwort kopieren':o.apply?(o.applyText||'Übernehmen'):'Kopieren',only?'Schliessen':'Verwerfen');
   d.firstElementChild.classList.add('aip');
-  const out=$('[data-aio]',d),meta=$('[data-aim]',d),q=$('[data-aiq]',d),ok=$('[data-ok]',d);
-  const show=()=>{out.innerHTML=res?(o.show?o.show(res):`<div class="aitx">${aiFmt(res.text)}</div>`):'';meta.textContent=res?aiMeta(res):'';ok.disabled=!res};
-  const run=async fresh=>{if(busy)return;busy=true;nb.disabled=true;ok.disabled=true;out.innerHTML='<div class="mut aild">✨ Der AI-Assistent schreibt …</div>';meta.textContent='';
+  const out=$('[data-aio]',d),meta=$('[data-aim]',d),q=$('[data-aiq]',d),ok=$('[data-ok]',d),th=$('[data-aith]',d),cq=$('[data-aic]',d),cs=$('[data-aisend]',d);
+  const show=()=>{if(only)return;out.innerHTML=res?(o.show?o.show(res):`<div class="aitx">${aiFmt(res.text)}</div>`):'';meta.textContent=res?aiMeta(res):'';ok.disabled=!res};
+  const run=async fresh=>{if(busy||only)return;busy=true;nb.disabled=true;ok.disabled=true;out.innerHTML='<div class="mut aild">✨ Der AI-Assistent schreibt …</div>';meta.textContent='';
     try{res=await api('ai/ask'+(o.my?'&my=1':''),Object.assign({},o.req,fresh?{fresh:1}:{},q.value.trim()?{q:q.value.trim()}:{}))}
     catch(e){out.innerHTML=`<div class="aierr">${esc(e.message)}</div>`;res=res&&!fresh?res:null}
     busy=false;nb.disabled=false;if(res)show();else ok.disabled=true};
-  const nb=document.createElement('button');nb.textContent='↻ Neu';nb.title='Neuen Vorschlag erstellen (mit dem zusätzlichen Wunsch)';nb.onclick=()=>run(true);ok.parentNode.appendChild(nb);
-  q.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();run(true)}};
-  if(res)show();else run(false);return d}
+  // freie Fragen: Verlauf nur im Fenster, geht bei jeder Frage mit (der Server nimmt die letzten 10)
+  const drawTh=()=>{th.innerHTML=hist.map((h,i)=>`<div class="aiq">${esc(h.q)}</div>${h.a!=null?`<div class="aitx">${aiFmt(h.a)}</div><div class="row aia"><button class="sec" data-aicp="${i}">Kopieren</button><span class="mut aim">${esc(h.m||'')}</span></div>`:h.e?`<div class="aierr">${esc(h.e)}</div>`:'<div class="mut aild">✨ Der AI-Assistent schreibt …</div>'}`).join('');
+    th.querySelectorAll('[data-aicp]').forEach(b=>b.onclick=()=>aiCopy(hist[+b.dataset.aicp].a).catch(fail));th.scrollTop=th.scrollHeight};
+  const ask=async()=>{const t=cq.value.trim();if(!t||cs.disabled)return;cs.disabled=true;const h={q:t};hist.push(h);cq.value='';drawTh();
+    const prev=hist.filter(x=>x!==h&&x.a!=null).map(x=>({q:x.q,a:x.a}));
+    try{const r=await api('ai/ask'+(o.my?'&my=1':''),Object.assign(o.req?{about:o.req.fn,id:o.req.id}:{},{fn:'chat',q:t,msgs:prev}));h.a=r.text;h.m=aiMeta(r)}catch(e){h.e=e.message}
+    cs.disabled=false;drawTh();cq.focus()};
+  if(chat){cs.onclick=ask;cq.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask()}}}
+  const nb=document.createElement('button');
+  if(!only){nb.textContent='↻ Neu';nb.title='Neuen Vorschlag erstellen (mit dem zusätzlichen Wunsch)';nb.onclick=()=>run(true);ok.parentNode.appendChild(nb);
+    q.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();run(true)}};if(res)show();else run(false)}
+  else{ok.disabled=false;cq.focus()}
+  return d}
 // begleitender Modus: Vorschlag im Hintergrund holen (auto=1, der Server nimmt gespeicherte Vorschläge, solange sie gelten); Fehler still
 const aiAuto=(req,my)=>api('ai/ask'+(my?'&my=1':''),Object.assign({auto:1},req)).catch(()=>null);
