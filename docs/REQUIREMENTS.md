@@ -131,6 +131,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **MB-05** – Feste Standorte stehen auch ohne laufenden Einsatz auf der Karte der Einsatz-App (alle aktiven permanenten, ausblendbar im Fenster «Ansicht») (#96).
 - **MB-06** – Auswahl- und Vorschaukarten der Verwaltung sind gross genug zum Wählen und bieten alle Kartenanbieter zur Wahl (wie das Fenster «Ansicht») (#96).
 - **MB-07** – Kategorien fester Standorte (z. B. Bootseinwasserungen, Magazine): in der Verwaltung angelegt, je Standort zugeordnet, je Kategorie mit Standard «eingeblendet» oder «ausgeblendet». In der Einsatz-App (Fenster «Ansicht» und «Markierungen») einzeln ein- und ausblendbar; die eigene Wahl wird pro Person gespeichert (auf allen Geräten) und lässt sich auf den Standard zurücksetzen (#96).
+- **MB-09** – Reihenfolge fester Standorte: In der Verwaltung lassen sich die Kategorien und innerhalb jeder Kategorie die Standorte mit ↑/↓ sortieren; die Einsatz-App zeigt sie in dieser Reihenfolge (#96).
 - **MB-08** – Feste Bereiche: Ein fester Standort kann statt eines Punkts eine Fläche sein (3–200 Eckpunkte, in der Verwaltung auf der Karte eingezeichnet), z. B. Sperrzonen oder Sammelplätze. In der Einsatz-App gestrichelt in seiner Farbe mit Beschriftung, Navigation zur Mitte, «Zeigen» zeigt die ganze Fläche; gilt auch für Kategorien, vorbereitete Übungen und die Startansicht (#96).
 - PLS auf eine Markierung verschieben (**offen**).
 
