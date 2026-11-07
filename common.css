@@ -55,6 +55,7 @@ button.aib{border-color:#a78bfa88;font-size:.85rem;padding:.3rem .65rem;min-heig
 .aimc{display:grid;gap:.15rem;font-size:.82rem;color:var(--mut);min-width:0}.aimc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aimc select{width:100%;min-width:0}
 .aarlb{display:flex;align-items:center;gap:.4rem;min-height:1.7rem}.aarlb>button.aib{margin-left:auto}
 .aichat{border-top:1px solid var(--line);padding-top:.5rem;display:grid;gap:.4rem}.aith{display:grid;gap:.4rem;max-height:45dvh;overflow-y:auto}.aith:empty{display:none}
+.aiels{display:grid;gap:.4rem;margin:.3rem 0}.aiel{display:flex;gap:.5rem;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:.4rem .55rem}.aiel input{margin-top:.2rem;flex:0 0 auto}.aiel>span{display:grid;gap:.1rem;min-width:0}.aiel small{font-size:.8rem}.aiel:has(input:disabled){opacity:.65}
 .aiq{justify-self:end;max-width:85%;background:#a78bfa22;border:1px solid #a78bfa66;border-radius:10px 10px 2px 10px;padding:.4rem .6rem;white-space:pre-wrap}.aia{margin:0;align-items:center}.aia button{padding:.15rem .5rem;min-height:0;font-size:.8rem}
 .aichat textarea{width:100%;resize:vertical}
 .aisel{display:flex;flex-wrap:wrap;gap:.35rem;margin:.4rem 0}.aisel button[aria-pressed="true"]{border-color:#a78bfa;box-shadow:0 0 0 2px #a78bfa55}/* Einsatzgruppen (Issue #90): Farbpunkt, Chips, Personensuche im Aufgebot */

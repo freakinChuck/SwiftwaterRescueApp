@@ -708,7 +708,7 @@ async function loadEx(){const el=$('#sEx');let ps,us,ros,xt,gs,fp;try{[ps,us,ros
   el.querySelectorAll('[data-ja]').forEach(b=>b.onclick=()=>editJ(P(b.dataset.ja),{}));
   el.querySelectorAll('[data-ji]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p);editJ(p,p.injects.find(j=>j.id===+b.dataset.ji))});
   el.querySelectorAll('[data-jr]').forEach(b=>b.onclick=()=>confirm('Element entfernen?')&&api('ex/inject/remove',{id:+b.dataset.jr}).then(loadEx).catch(fail));
-  el.querySelectorAll('[data-pai]').forEach(b=>b.onclick=()=>{const p=ps.find(x=>x.id===+b.dataset.pai);aiPanel({title:'Vorschläge – '+(p?p.title:''),req:{fn:'plan',id:+b.dataset.pai},chat:!!p&&aiOn('chat',aiPk(p))})});
+  el.querySelectorAll('[data-pai]').forEach(b=>b.onclick=()=>{const p=ps.find(x=>x.id===+b.dataset.pai);if(p)aiPlan(p)});
   el.querySelectorAll('[data-pc]').forEach(b=>b.onclick=()=>api('ex/plan/copy',{id:+b.dataset.pc}).then(loadEx).catch(fail));
   el.querySelectorAll('[data-pz]').forEach(b=>b.onclick=()=>confirm('Übung «'+P(b.dataset.pz).title+'» zurücksetzen? Sie ist danach wieder vorbereitet und alle Elemente sind nicht freigegeben. Log und Replay der bisherigen Durchführung bleiben erhalten.'+(P(b.dataset.pz).public_token?' Der öffentliche Link zeigt wieder die Warteseite.':''))&&api('ex/plan/reset',{id:+b.dataset.pz}).then(loadEx).catch(fail));
   // Log und Replay der Durchführungen
@@ -872,6 +872,30 @@ async function aarEdit(id){let x;try{x=await api('aar/get&id='+id);await aarImgs
     await api('aar/save',{id,data:collect()});await api('aar/status',{id,status:1});toast('After Action Review freigegeben.','ok');loadStats()});
   if(x.status!==2)aarBtn(d,'Nicht relevant','sec',async()=>{if(!confirm('Als nicht relevant markieren?\n\nEs zählt dann nicht mehr als offen. Die Angaben im Formular werden gespeichert, das Review lässt sich jederzeit wieder erfassen.'))return false;
     await api('aar/save',{id,data:collect()});await api('aar/status',{id,status:2});toast('Als nicht relevant markiert.','ok');loadStats()})}
+// AI-Assistent (Issue #111) bei der Übungsvorbereitung: Hinweise und vorgeschlagene Elemente, die sich per Auswahl direkt erstellen lassen.
+// Der Server rechnet die Standorte aus Bezugspunkt und Versatz (aiPlanEls); Verweise auf andere Vorschläge (N…) ersetzt das Erstellen durch die neuen IDs, der Reihe nach.
+function aiPlan(p){const can=!p.ended_at;let cur=null,d=null;
+  const dist=e=>{const m=Math.round(Math.hypot(e.east_m,e.north_m));if(m<10)return'bei';const c=['N','NO','O','SO','S','SW','W','NW'][Math.round(((Math.atan2(e.east_m,e.north_m)*180/Math.PI+360)%360)/45)%8];
+    return`ca. ${m>=1000?(m/1000).toLocaleString('de-CH',{maximumFractionDigits:1})+' km':m+' m'} ${c} von`};
+  const ok=e=>!!e.ll&&!e.done;
+  const info=e=>[e.kind==='extdel'?`bei «${esc(e.at)}»`:e.ll?`${dist(e)} «${esc(e.at)}»`:'<span class="aierr">ohne Bezugspunkt, nicht übernehmbar</span>',
+    e.kind==='seen'?(e.of==='new'?`neuer Rettling «${esc(e.name)}»`:e.of==='unk'?'unbekannter Rettling':`Rettling «${esc(e.of_label)}»`):'',
+    e.kind==='ext'&&e.role?esc(e.role):'',e.auto!=null?`automatisch ${e.auto} min nach dem Start`:'Freigabe von Hand',e.ago?`PLS ${e.ago} min vor der Freigabe`:''].filter(Boolean).join(' · ');
+  const show=r=>{cur=r;const E=r.els||[];return`${r.text?`<div class="aitx">${aiFmt(r.text)}</div>`:''}${E.length?`<b>Vorgeschlagene Elemente</b><div class="aiels">${E.map((e,i)=>`<label class="aiel"><input type="checkbox" data-aie="${i}" ${ok(e)&&!e.off?'checked':''} ${ok(e)&&can?'':'disabled'}>
+      <span><b><span class="gdot" style="background:${EXC[e.kind]}"></span>${esc(EXK[e.kind])}: ${esc(e.label)}</b>${e.done?' <span style="color:#3fb950">✓ erstellt</span>':''}<small class="mut">${info(e)}</small>${e.msg?`<small>Meldung: ${esc(e.msg)}</small>`:''}</span></label>`).join('')}</div>
+      <div class="mut aih">${can?'Standorte sind Näherungen aus Bezugspunkt und Abstand: nach dem Erstellen auf der Karte prüfen und im Element verschieben.':'Die Übung ist beendet, es lassen sich keine Elemente mehr erstellen.'}</div>`:''}`};
+  const apply=async r=>{const A=r.els||[];if(!A.length)return aiCopy(r.text);const E=A.filter(e=>ok(e)&&!e.off);if(!E.length)throw new Error('Kein Element ausgewählt');
+    const id={};A.forEach(e=>{if(e.done)id[e.key]=e.done});const rf=v=>/^E\d+$/.test(v||'')?+v.slice(1):id[v];let n=0;
+    try{for(const e of E){const b={plan_id:p.id,kind:e.kind,label:e.label,msg:e.msg,auto:e.auto,ago:e.ago};
+        if(e.kind==='extdel'){b.ref_id=rf(e.of);if(!b.ref_id)throw new Error('die externe Einsatzkraft dazu ist nicht erstellt')}else{b.lat=e.ll[0];b.lon=e.ll[1]}
+        if(e.name!=null)b.name=e.name;if(e.descr!=null)b.descr=e.descr;if(e.kind==='ext'){b.role_id=e.role_id;b.abbr=e.abbr}
+        if(e.kind==='seen'){b.ref_id=e.of==='new'||e.of==='unk'?e.of:rf(e.of);if(!b.ref_id)throw new Error('der gesichtete Rettling ist nicht erstellt')}
+        try{const x=await api('ex/inject/save',b);e.done=x.id;id[e.key]=x.id;n++}catch(err){throw new Error(`«${e.label}»: ${err.message}`)}}}
+    catch(err){if(n){loadEx();A.forEach((e,j)=>{const c=$(`[data-aie="${j}"]`,d);if(c&&e.done){c.checked=false;c.disabled=true}})}
+      throw new Error(`${n?`${n} ${n===1?'Element':'Elemente'} erstellt, dann `:''}nicht erstellt: ${err.message}`)}
+    exMapOpen.add(p.id);loadEx();toast(`${n} ${n===1?'Element':'Elemente'} erstellt. Bitte die Standorte auf der Karte prüfen.`,'ok')};
+  d=aiPanel({title:'Vorschläge – '+p.title,req:{fn:'plan',id:p.id},show,apply:can?apply:null,applyText:'Ausgewählte Elemente erstellen',chat:aiOn('chat',aiPk(p))});
+  d.addEventListener('change',e=>{const i=e.target.dataset&&e.target.dataset.aie;if(i!=null&&cur&&cur.els[i])cur.els[i].off=!e.target.checked})}
 // AI-Assistent (Issue #111) im AAR-Formular: ✨ je Textfeld (überarbeitet vorhandenen Text) und «Entwurf für leere Felder»;
 // begleitend wird der Entwurf für die leeren Felder beim Öffnen vorbereitet. Übernehmen füllt nur das Formular, gespeichert wird wie immer.
 function aiAar(d,x,id,F){const m=aiMi('aar',x),ch=aiMi('chat',x)!=='off';if(m==='off')return;const T=F.filter(f=>f.type==='text'||f.type==='area'),L=k=>(F.find(f=>f.id===k)||{}).label||k;if(!T.length)return;

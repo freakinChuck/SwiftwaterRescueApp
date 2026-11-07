@@ -1379,6 +1379,33 @@ function aiDeanon($t, $c, $cv, $id) { global $db; if (!$c) return $t; $map = [];
   $ks = array_keys($map); usort($ks, fn($a, $b) => mb_strlen($b) <=> mb_strlen($a));
   return preg_replace_callback('/(?<![\p{L}\p{N}])(?:' . implode('|', array_map(fn($k) => preg_quote($k, '/'), $ks)) . ')(?![\p{L}\p{N}])/u', fn($m) => $map[$m[0]], $t) ?? $t; }
 function aiJson($t) { if (preg_match('/\{.*\}/s', $t, $m)) { $j = json_decode($m[0], true); if (is_array($j)) return $j; } return null; }
+// Übungsvorbereitung: vorgeschlagene Elemente prüfen und Standorte aus Bezugspunkt + Versatz (Meter Ost/Nord) berechnen.
+// Ergebnis je Element in den Feldern von ex/inject/save; ref/of = E<id> (bestehend) oder N… (anderer Vorschlag, wird beim Erstellen ersetzt); ll null = kein Bezugspunkt
+function aiPlanEls($L, $refs) { global $db; $R = [];
+  foreach ($db->query("SELECT id,name FROM roles WHERE active=1")->fetchAll() as $r) $R[mb_strtolower(trim($r['name']))] = (int)$r['id'];
+  $S = fn($v, $n) => mb_substr(trim(is_scalar($v) ? (string)$v : ''), 0, $n);
+  $M = fn($v) => is_numeric($v) && $v >= 0 && $v <= 1440 ? (int)round($v) : null;
+  $out = []; $own = [];
+  foreach (array_slice(is_array($L) ? array_values($L) : [], 0, 12) as $e) { if (!is_array($e)) continue;
+    $k = (string)($e['kind'] ?? ''); if (!isset(EX_KINDS[$k])) continue;
+    $label = $S($e['label'] ?? '', 120); if ($label === '') continue;
+    $key = preg_replace('/[^A-Za-z0-9]/', '', (string)($e['key'] ?? '')) ?: 'N' . (count($out) + 1); if (isset($refs[$key]) || isset($own[$key])) $key = 'N' . (count($out) + 1) . 'x';
+    $o = ['key' => $key, 'kind' => $k, 'label' => $label, 'msg' => $S($e['msg'] ?? '', 2000), 'auto' => $M($e['auto'] ?? null), 'ago' => in_array($k, ['pls', 'res', 'seen'], true) ? $M($e['ago'] ?? null) : 0, 'll' => null, 'at' => null, 'east_m' => 0, 'north_m' => 0];
+    $find = fn($r) => $refs[$r] ?? $own[$r] ?? null;
+    if ($k === 'extdel') { $of = (string)($e['of'] ?? ''); $t = $find($of); if (!$t || $t['k'] !== 'ext') continue; $o['of'] = $of; $o['ll'] = $t['ll']; $o['at'] = $t['label']; }
+    else { $at = (string)($e['at'] ?? ''); $t = $find($at);
+      if ($t && $t['ll']) { $ea = max(-30000, min(30000, (float)($e['east_m'] ?? 0))); $no = max(-30000, min(30000, (float)($e['north_m'] ?? 0)));
+        $la = $t['ll'][0] + $no / 111320; $o['ll'] = [round($la, 6), round($t['ll'][1] + $ea / (111320 * cos(deg2rad($la))), 6)]; $o['at'] = $t['label']; $o['east_m'] = (int)round($ea); $o['north_m'] = (int)round($no); } }
+    if ($k === 'res' || $k === 'ext') $o['name'] = $S($e['name'] ?? '', 80) ?: mb_substr($label, 0, 80);
+    if ($k === 'res' || $k === 'seen' || $k === 'ext') $o['descr'] = $S($e['descr'] ?? '', $k === 'ext' ? 500 : 1000);
+    if ($k === 'seen') { $of = (string)($e['of'] ?? 'unk'); $t = $find($of);
+      if ($of === 'new') $o['name'] = $S($e['name'] ?? '', 80) ?: mb_substr($label, 0, 80);
+      elseif ($t && $t['k'] === 'res') { $o['of'] = $of; $o['of_label'] = $t['label']; } else $of = 'unk';
+      if ($of === 'new' || $of === 'unk') $o['of'] = $of; }
+    if ($k === 'ext') { $rn = mb_strtolower($S($e['role'] ?? '', 80)); $o['role_id'] = $R[$rn] ?? null; $o['role'] = $o['role_id'] ? $S($e['role'], 80) : null; $o['abbr'] = $S($e['abbr'] ?? '', 4); }
+    $own[$key] = ['ll' => $o['ll'], 'label' => $label, 'k' => $k === 'ext' ? 'ext' : ($k === 'res' || $k === 'seen' && in_array($o['of'] ?? '', ['new', 'unk'], true) ? 'res' : null)];
+    $out[] = $o; }
+  return $out; }
 // Eingaben der Verwaltung prüfen (ai/cfg/save)
 function aiIn($in) { global $db; $o = aiCfg(); $c = [];
   $c['on'] = (int)!empty($in['on'] ?? $o['on']);
@@ -1435,10 +1462,25 @@ function aiTask($fn, $in) { global $db, $uid, $now; $q = trim(mb_substr((string)
   if ($fn === 'plan') { plannerOnly(); $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)($in['id'] ?? 0)]); $pl = $s->fetch(); $s->closeCursor(); if (!$pl) fail('Übung nicht gefunden', 404);
     $k = planKind($pl); if (!$k) fail('Kein Einsatztyp erlaubt vorbereitete Übungen', 409);
     $roles = $db->query("SELECT name FROM roles WHERE active=1 ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
-    $el = array_map(fn($j) => '- ' . (EX_KINDS[$j['kind']] ?? $j['kind']) . ': ' . $j['label'] . ($j['name'] ? ', Name ' . $j['name'] : '') . ($j['descr'] ? ', ' . $j['descr'] : '') . ($j['lat'] !== null ? sprintf(', Standort %.5F, %.5F', $j['lat'], $j['lon']) : '') . ($j['auto'] !== null ? ', automatisch ' . (int)$j['auto'] . ' min nach dem Start' : ', Freigabe von Hand') . ((int)$j['ago'] ? ', PLS ' . (int)$j['ago'] . ' min vor der Freigabe' : '') . ($j['msg'] ? ', Meldung: ' . $j['msg'] : ''), exInjects((int)$pl['id']));
-    $dt = "Übung (Einsatztyp «{$k['name']}»): {$pl['title']}\nAufgebotsmeldung: " . ($pl['message'] ?: '–') . "\nSpezialrollen: " . (implode(', ', $roles) ?: '–') . "\n\nBisherige Elemente (Arten: " . implode(', ', EX_KINDS) . "):\n" . ($el ? implode("\n", $el) : '– (noch keine)');
-    $p = "Hilf bei der Vorbereitung einer Übung. Mache konkrete Vorschläge für weitere Elemente, je mit Bezeichnung, ungefährem Ort relativ zu den bestehenden Elementen, Zeitpunkt (Minuten nach dem Start) und Meldung an die Teilnehmenden; dazu Hinweise zum Ablauf und zu Lernzielen. Keine erfundenen Ortsnamen, Koordinaten nur relativ (z. B. «ca. 500 m flussabwärts»). Höchstens 300 Wörter.\n\n$dt$wish";
-    return ['p' => $p, 'data' => $dt, 'ctx' => (string)$k['id'], 'inc' => null, 'c' => null, 'cv' => null, 'role' => null, 'x' => ['key' => 'p' . (int)$pl['id']]]; }
+    // Bezugspunkte für neue Elemente: bestehende Elemente (E<id>) und die festen Standorte der Übung (P<id>); Koordinaten rechnet aiPlanEls aus Versatz in Metern
+    $J = exInjects((int)$pl['id']); $refs = [];
+    foreach ($J as $j) if ($j['lat'] !== null) $refs['E' . $j['id']] = ['ll' => [(float)$j['lat'], (float)$j['lon']], 'k' => $j['kind'] === 'ext' ? 'ext' : ($j['kind'] === 'res' || $j['kind'] === 'seen' && $j['ref_id'] === null ? 'res' : null), 'label' => $j['label']];
+    $fp = array_values(array_filter(placesOf(null), fn($r) => $r['active'])); $sel = placeSel($pl); if ($sel !== null) $fp = array_values(array_filter($fp, fn($r) => in_array($r['id'], $sel, true)));
+    $fp = array_merge($fp, placesOf((int)$pl['id']));
+    foreach ($fp as $r) $refs['P' . $r['id']] = ['ll' => [(float)$r['lat'], (float)$r['lon']], 'k' => null, 'label' => $r['name']];
+    $pt = implode("\n", array_map(fn($r) => '- [P' . $r['id'] . '] ' . $r['name'] . ($r['descr'] ? ', ' . $r['descr'] : '') . sprintf(', Standort %.5F, %.5F', $r['lat'], $r['lon']), $fp));
+    $el = array_map(fn($j) => '- [E' . $j['id'] . '] ' . (EX_KINDS[$j['kind']] ?? $j['kind']) . ': ' . $j['label'] . ($j['name'] ? ', Name ' . $j['name'] : '') . ($j['descr'] ? ', ' . $j['descr'] : '') . ($j['lat'] !== null ? sprintf(', Standort %.5F, %.5F', $j['lat'], $j['lon']) : '') . ($j['auto'] !== null ? ', automatisch ' . (int)$j['auto'] . ' min nach dem Start' : ', Freigabe von Hand') . ((int)$j['ago'] ? ', PLS ' . (int)$j['ago'] . ' min vor der Freigabe' : '') . ($j['msg'] ? ', Meldung: ' . $j['msg'] : '') . ($j['released'] !== null ? ' (bereits freigegeben)' : ''), $J);
+    $dt = "Übung (Einsatztyp «{$k['name']}»): {$pl['title']}\nAufgebotsmeldung: " . ($pl['message'] ?: '–') . "\nSpezialrollen: " . (implode(', ', $roles) ?: '–') . "\n\nBisherige Elemente (Arten: " . implode(', ', EX_KINDS) . "):\n" . ($el ? implode("\n", $el) : '– (noch keine)') . "\n\nFeste Standorte:\n" . ($pt ?: '–');
+    if (!empty($in['chat'])) return ['p' => '', 'data' => $dt, 'ctx' => (string)$k['id'], 'inc' => null, 'c' => null, 'cv' => null, 'role' => null, 'x' => []];
+    $p = "Hilf bei der Vorbereitung einer Übung mit Vorschlägen für weitere Elemente. Antworte nur mit einem JSON-Objekt, ohne Text davor oder danach:\n"
+      . "{\"text\": \"Hinweise zum Ablauf und zu Lernzielen, höchstens 200 Wörter\", \"elements\": [höchstens 8 neue Elemente in der Reihenfolge des Ablaufs]}\n"
+      . "Jedes Element: {\"key\": \"N1\" (eigene Kennung N1, N2 …), \"kind\": \"pls|res|seen|ext|extdel\", \"label\": \"Bezeichnung\", \"name\": \"Name (bei res, ext und seen mit of new)\", \"descr\": \"Beschreibung (res, seen, ext)\", "
+      . "\"at\": \"Bezugspunkt: E… (bestehendes Element), P… (fester Standort) oder N… (früheres neues Element)\", \"east_m\": Meter nach Osten (negativ = Westen), \"north_m\": Meter nach Norden (negativ = Süden), "
+      . "\"of\": \"bei seen: gesichteter Rettling (E…/N… eines Elements res oder seen) oder new (neuer Rettling) oder unk (unbekannter Rettling); bei extdel: die externe Einsatzkraft (E…/N… eines Elements ext), dann ohne at\", "
+      . "\"role\": \"Spezialrolle aus der Liste (nur ext)\", \"abbr\": \"Kürzel bis 4 Zeichen (nur ext)\", \"auto\": Minuten nach dem Start für die automatische Freigabe oder null (von Hand), \"ago\": PLS-Zeitpunkt in Minuten vor der Freigabe oder null (nur pls, res, seen), \"msg\": \"Meldung an die Teilnehmenden bei der Freigabe\"}\n"
+      . "Arten: pls = PLS des Einsatzes setzen oder verschieben, res = neuer vermisster Rettling mit eigenem PLS, seen = Rettling gesichtet (neuer PLS), ext = externe Einsatzkraft (z. B. Posten einer anderen Organisation), extdel = externe Einsatzkraft abziehen. "
+      . "Standorte immer relativ zu einem Bezugspunkt mit Versatz in Metern, keine Koordinaten und keine erfundenen Ortsnamen. Die Fliessrichtung ist nicht bekannt: leite sie aus den bestehenden Elementen ab, sonst kleine Abstände (bis ca. 1 km). Ohne Bezugspunkt at weglassen.\n\n$dt$wish";
+    return ['p' => $p, 'data' => $dt, 'ctx' => (string)$k['id'], 'inc' => null, 'c' => null, 'cv' => null, 'role' => null, 'x' => ['key' => 'p' . (int)$pl['id'], 'refs' => $refs]]; }
   if ($fn === 'stats') { need('stats'); $rows = $db->query("SELECT i.id,i.kind_id,i.alarm_at,i.ended_at,(SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.mode<>'declined') acc,(SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='accept') fa,(SELECT MIN(ts) FROM incident_log l WHERE l.incident_id=i.id AND l.kind='area') far,(SELECT COUNT(*) FROM rescuees r WHERE r.incident_id=i.id AND r.removed IS NULL) res,(SELECT COUNT(*) FROM rescuees r WHERE r.incident_id=i.id AND r.removed IS NULL AND r.rescued_at IS NOT NULL) rsd FROM incidents i WHERE i.ended_at IS NOT NULL ORDER BY i.id DESC LIMIT 200")->fetchAll();
     if (!$rows) fail('Es gibt noch keine beendeten Einsätze');
     $L = array_map(fn($r) => '- ' . kindOf($r)['name'] . ' ' . aiT($r['alarm_at']) . ', Dauer ' . aiDur($r['ended_at'] - $r['alarm_at']) . ', ' . (int)$r['acc'] . ' Einsatzkräfte' . ($r['fa'] ? ', erste Annahme nach ' . aiDur($r['fa'] - $r['alarm_at']) : '') . ($r['far'] ? ', Suchgebiet nach ' . aiDur($r['far'] - $r['alarm_at']) : '') . ((int)$r['res'] ? ', Rettlinge ' . (int)$r['res'] . ' (gerettet ' . (int)$r['rsd'] . ')' : ''), $rows);
@@ -1533,6 +1575,8 @@ switch ($route) {
     $o = ['text' => $t, 'cached' => $cached ? 1 : 0, 'ts' => (int)$ts, 'tokens' => (int)$tok, 'fn' => $fn, 'anon' => $c ? 1 : 0];
     if ($fn === 'aar') { $j = aiJson($t); if (!$j) fail('Die Antwort des AI-Anbieters liess sich nicht auswerten', 502);
       $o['fields'] = (object)array_filter(array_map(fn($v) => is_scalar($v) ? trim((string)$v) : null, array_intersect_key($j, array_flip($x['fields']))), fn($v) => $v !== null && $v !== ''); unset($o['text']); }
+    if ($fn === 'plan') { $j = aiJson($t); // Text plus übernehmbare Elemente; ohne auswertbares JSON nur der Text
+      if ($j && (isset($j['text']) || isset($j['elements']))) { $o['text'] = is_scalar($j['text'] ?? null) ? trim((string)$j['text']) : ''; $o['els'] = aiPlanEls($j['elements'] ?? [], $x['refs'] ?? []); } else $o['els'] = []; }
     out($o); };
   if ($q === '' && empty($in['fresh'])) { $s = $db->prepare("SELECT * FROM ai_cache WHERE k=?"); $s->execute([$ck]); $r = $s->fetch(); $s->closeCursor();
     if ($r && ($r['ctx_hash'] === $hash || $auto && ($fn === 'aar' || $fn === 'sit' && $now - (int)$r['ts'] < AI_SIT_S))) $deliver($r['text'], true, $r['ts'], $r['tokens']); }
@@ -2149,7 +2193,7 @@ switch ($route) {
     out(['ok' => true]);
   }
   $db->prepare("INSERT INTO ex_injects(kind,label,name,descr,lat,lon,ago,auto,msg,ref_id,role_id,abbr,color,plan_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute([...$v, $p['id']]);
-  out(['ok' => true]);
+  out(['ok' => true, 'id' => (int)$db->lastInsertId()]); // id: Übernehmen von Vorschlägen des AI-Assistenten verweist darauf
  case 'ex/inject/remove': plannerOnly(); // nur nicht freigegebene
   $s = $db->prepare("SELECT * FROM ex_injects WHERE id=? AND removed=0"); $s->execute([(int)($in['id'] ?? 0)]); $j = $s->fetch() ?: fail('Element nicht gefunden', 404);
   if ($j['released'] !== null) fail('Freigegebene Elemente lassen sich nicht entfernen');
