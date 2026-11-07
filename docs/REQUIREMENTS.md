@@ -162,7 +162,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **HE-01** – Luftfahrzeuge aus offenen ADS-B-Daten auf der Karte, über den Server abgefragt (#73).
 - **HE-02** – Hauptschalter, Ein/Aus je Einsatz mit Vorauswahl je Art; die Einsatzleitung schaltet im Einsatz um (#73).
 - **HE-03** – Konfigurierbar: Quellen (nur gratis und ohne Schlüssel), Filter (Rettungshelikopter, Helikopter, alle), Sichtbarkeit in App, öffentlicher Ansicht und Replay, Umkreis, Flughöhe, Alter, Spur, Abfrageintervall, Liste der Rettungshelikopter (#73).
-- **HE-04** – Abfrage nur in der Relevanzzone um PLS, Einsatzkräfte, Rettlinge, Markierungen und Bereiche (#73).
+- **HE-04** – Abfrage nur in der Relevanzzone um PLS, Einsatzkräfte, Rettlinge, Markierungen und Bereiche (#73); weit auseinanderliegende Gebiete werden je einzeln abgefragt, damit alle abgedeckt sind (#107).
 - Tief fliegende Helikopter in Tälern fehlen oft (keine Empfänger in Sicht) (**Grenze**).
 
 ## 14. Funktionen ein-/ausschalten (FU)
@@ -193,7 +193,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 16. Aufzeichnung und Replay (AR)
 
-- **AR-01** – Aufzeichnung beim Start wählbar, Vorauswahl je Art in der Verwaltung (Standard: nur Übungen) (#27).
+- **AR-01** – Aufzeichnung beim Start wählbar, Vorauswahl je Einsatztyp im Dialog des Einsatztyps (Standard: nur Übungen) (#27, #136).
 - **AR-02** – Die Einsatzleitung startet, pausiert, setzt fort und beendet die Aufzeichnung jederzeit; der Zustand ist für alle sichtbar (AG).
 - **AR-03** – Aufgezeichnet werden Standortmeldungen, Rettling-Standorte und Helikopter (AG, #73).
 - **AR-04** – Replay in der Verwaltung: Karte mit Zeitregler, Abspielen 1–120×, Balken der aufgezeichneten Zeiträume, interpolierte Bewegungen mit wählbarer Spurlänge, Lage und Log zum Zeitpunkt, Zentrieren/Folgen, Fenster «Ansicht» mit Grösse der Positionen, Auto-Übersicht (AG, #53).
