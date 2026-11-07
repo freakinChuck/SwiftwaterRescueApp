@@ -250,21 +250,22 @@ const aiMeta=r=>`${r.cached?'Gespeicherter Vorschlag vom ':'Erstellt '}${new Dat
 const aiCopy=async t=>{try{await navigator.clipboard.writeText(t||'');toast('In die Zwischenablage kopiert.')}catch(e){throw new Error('Kopieren nicht möglich, bitte den Text markieren')}};
 // o: title, req (fn, id, field, all …), my (Meine Einsätze), pre (bereits geladener Vorschlag), show(r) → HTML, apply(r) (ohne: Kopieren), applyText
 // chat: freie Fragen zu den Daten von req (about = req.fn); chatOnly: nur freie Fragen, ohne Auftrag (req null = ohne Daten)
+// qLabel/qPh/qRows: Wunschfeld (steht zuoberst); side(el, d): breites Fenster mit Spalte rechts (z. B. Karte), einmal aufgerufen; after(res): nach jedem Anzeigen
 function aiPanel(o){let res=o.pre||null,busy=false;const hist=[],only=!!o.chatOnly,chat=only||!!o.chat;
-  const d=dlg('✨ '+o.title,`<div class="aiw">${only?'':`<div class="aio" data-aio></div><div class="mut aim" data-aim></div>`}
+  const d=dlg('✨ '+o.title,`<div class="aiw${o.side?' aiwide':''}"><div class="aimain">${only?'':`<label class="mut aiql">${esc(o.qLabel||'Zusätzlicher Wunsch (optional)')}<textarea data-aiq rows="${o.qRows||3}" maxlength="2000" placeholder="${esc(o.qPh||'z. B. kürzer, mehr zur Alarmierung')}"></textarea><span class="aim">Ctrl+Enter oder «↻ Neu» erstellt einen neuen Vorschlag mit diesem Wunsch.</span></label>`}
     <div class="mut aih">${only?'Antworten':'Vorschlag'} des AI-Assistenten: bitte prüfen, bevor du ${only?'sie verwendest':'ihn übernimmst'}. Es gehen nur die Daten dieser Ansicht an den Anbieter${o.req?'':' (hier keine Einsatzdaten)'}.</div>
-    ${only?'':'<label class="mut">Zusätzlicher Wunsch (optional)<input data-aiq maxlength="1000" placeholder="z. B. kürzer, mehr zur Alarmierung"></label>'}
-    ${chat?`<div class="aichat"><div class="aith" data-aith></div><label class="mut">${only?'Deine Frage':'Eigene Frage dazu (freie Eingabe)'}<textarea data-aic rows="2" maxlength="2000" placeholder="z. B. Wo gab es Verzögerungen?"></textarea></label><div class="row"><button data-aisend>Fragen</button>${only?'':'<span class="mut" style="font-size:.8rem">Fragen und Antworten werden nicht gespeichert.</span>'}</div></div>`:''}</div>`,
+    ${only?'':`<div class="aio" data-aio></div><div class="mut aim" data-aim></div>`}
+    ${chat?`<div class="aichat"><div class="aith" data-aith></div><label class="mut">${only?'Deine Frage':'Eigene Frage dazu (freie Eingabe)'}<textarea data-aic rows="2" maxlength="2000" placeholder="z. B. Wo gab es Verzögerungen?"></textarea></label><div class="row"><button data-aisend>Fragen</button>${only?'':'<span class="mut" style="font-size:.8rem">Fragen und Antworten werden nicht gespeichert.</span>'}</div></div>`:''}</div>${o.side?'<div class="aiside" data-aiside></div>':''}</div>`,
     async()=>{if(only){const l=hist.filter(h=>h.a).pop();if(!l)throw new Error('Es gibt noch keine Antwort');return aiCopy(l.a)}
       if(!res)throw new Error('Es gibt noch keinen Vorschlag');if(o.apply)return o.apply(res);return aiCopy(res.text)},
     only?'Letzte Antwort kopieren':o.apply?(o.applyText||'Übernehmen'):'Kopieren',only?'Schliessen':'Verwerfen');
-  d.firstElementChild.classList.add('aip');
+  d.firstElementChild.classList.add('aip');if(o.side)d.firstElementChild.classList.add('wide');
   const out=$('[data-aio]',d),meta=$('[data-aim]',d),q=$('[data-aiq]',d),ok=$('[data-ok]',d),th=$('[data-aith]',d),cq=$('[data-aic]',d),cs=$('[data-aisend]',d);
-  const show=()=>{if(only)return;out.innerHTML=res?(o.show?o.show(res):`<div class="aitx">${aiFmt(res.text)}</div>`):'';meta.textContent=res?aiMeta(res):'';ok.disabled=!res};
-  const run=async fresh=>{if(busy||only)return;busy=true;nb.disabled=true;ok.disabled=true;out.innerHTML='<div class="mut aild">✨ Der AI-Assistent schreibt …</div>';meta.textContent='';
+  const show=()=>{if(only)return;out.innerHTML=res?(o.show?o.show(res):`<div class="aitx">${aiFmt(res.text)}</div>`):'';meta.textContent=res?aiMeta(res):'';ok.disabled=!res;if(o.after)o.after(res)};
+  const run=async fresh=>{if(busy||only)return;busy=true;nb.disabled=true;ok.disabled=true;out.innerHTML='<div class="mut aild">✨ Der AI-Assistent schreibt …</div>';meta.textContent='';if(o.after)o.after(null);
     try{res=await api('ai/ask'+(o.my?'&my=1':''),Object.assign({},o.req,fresh?{fresh:1}:{},q.value.trim()?{q:q.value.trim()}:{}))}
     catch(e){out.innerHTML=`<div class="aierr">${esc(e.message)}</div>`;res=res&&!fresh?res:null}
-    busy=false;nb.disabled=false;if(res)show();else ok.disabled=true};
+    busy=false;nb.disabled=false;if(res)show();else{ok.disabled=true;if(o.after)o.after(null)}};
   // freie Fragen: Verlauf nur im Fenster, geht bei jeder Frage mit (der Server nimmt die letzten 10)
   const drawTh=()=>{th.innerHTML=hist.map((h,i)=>`<div class="aiq">${esc(h.q)}</div>${h.a!=null?`<div class="aitx">${aiFmt(h.a)}</div><div class="row aia"><button class="sec" data-aicp="${i}">Kopieren</button><span class="mut aim">${esc(h.m||'')}</span></div>`:h.e?`<div class="aierr">${esc(h.e)}</div>`:'<div class="mut aild">✨ Der AI-Assistent schreibt …</div>'}`).join('');
     th.querySelectorAll('[data-aicp]').forEach(b=>b.onclick=()=>aiCopy(hist[+b.dataset.aicp].a).catch(fail));th.scrollTop=th.scrollHeight};
@@ -275,7 +276,7 @@ function aiPanel(o){let res=o.pre||null,busy=false;const hist=[],only=!!o.chatOn
   if(chat){cs.onclick=ask;cq.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask()}}}
   const nb=document.createElement('button');
   if(!only){nb.textContent='↻ Neu';nb.title='Neuen Vorschlag erstellen (mit dem zusätzlichen Wunsch)';nb.onclick=()=>run(true);ok.parentNode.appendChild(nb);
-    q.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();run(true)}};if(res)show();else run(false)}
+    q.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();run(true)}};if(o.side)o.side($('[data-aiside]',d),d);if(res)show();else run(false)}
   else{ok.disabled=false;cq.focus()}
   return d}
 // begleitender Modus: Vorschlag im Hintergrund holen (auto=1, der Server nimmt gespeicherte Vorschläge, solange sie gelten); Fehler still

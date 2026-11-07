@@ -1428,7 +1428,7 @@ function aiIn($in) { global $db; $o = aiCfg(); $c = [];
 // Kontext und Auftrag je Funktion; prüft die Rechte wie die zugehörige Ansicht.
 // Rückgabe: p = Auftrag mit Daten, data = nur die Daten (freie Fragen), ctx = Einsatztyp-ID oder adm, inc = Einsatz-ID, c = anonCtx der Anfrage, cv = der Ansicht, role = Spezialrolle, x = Zusatz
 // chat = 1: nur die Daten (freie Fragen dazu), ohne die Prüfungen des Auftrags (z. B. AAR: alle Felder ausgefüllt)
-function aiTask($fn, $in) { global $db, $uid, $now; $q = trim(mb_substr((string)($in['q'] ?? ''), 0, 1000)); $chat = !empty($in['chat']);
+function aiTask($fn, $in) { global $db, $uid, $now; $q = trim(mb_substr((string)($in['q'] ?? ''), 0, 2000)); $chat = !empty($in['chat']);
   $wish = $q !== '' && !$chat ? "\n\nZusätzlicher Wunsch der Person: $q" : '';
   if ($fn === 'aar') { $inc = incById($in['id'] ?? 0); aarEditable($inc); $id = (int)$inc['id']; $ctx = (string)(int)$inc['kind_id'];
     $forced = (int)$inc['log_anon'] || $inc['rp_anon'] !== null || (int)$inc['view_anon']; $c = aiPriv($ctx, 'anon') || $forced ? anonCtx($id) : null; $cv = $forced ? anonCtx($id) : null;

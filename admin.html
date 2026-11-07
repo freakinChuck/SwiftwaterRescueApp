@@ -708,7 +708,7 @@ async function loadEx(){const el=$('#sEx');let ps,us,ros,xt,gs,fp;try{[ps,us,ros
   el.querySelectorAll('[data-ja]').forEach(b=>b.onclick=()=>editJ(P(b.dataset.ja),{}));
   el.querySelectorAll('[data-ji]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p);editJ(p,p.injects.find(j=>j.id===+b.dataset.ji))});
   el.querySelectorAll('[data-jr]').forEach(b=>b.onclick=()=>confirm('Element entfernen?')&&api('ex/inject/remove',{id:+b.dataset.jr}).then(loadEx).catch(fail));
-  el.querySelectorAll('[data-pai]').forEach(b=>b.onclick=()=>{const p=ps.find(x=>x.id===+b.dataset.pai);if(p)aiPlan(p)});
+  el.querySelectorAll('[data-pai]').forEach(b=>b.onclick=()=>{const p=ps.find(x=>x.id===+b.dataset.pai);if(p)aiPlan(p,fp)});
   el.querySelectorAll('[data-pc]').forEach(b=>b.onclick=()=>api('ex/plan/copy',{id:+b.dataset.pc}).then(loadEx).catch(fail));
   el.querySelectorAll('[data-pz]').forEach(b=>b.onclick=()=>confirm('Übung «'+P(b.dataset.pz).title+'» zurücksetzen? Sie ist danach wieder vorbereitet und alle Elemente sind nicht freigegeben. Log und Replay der bisherigen Durchführung bleiben erhalten.'+(P(b.dataset.pz).public_token?' Der öffentliche Link zeigt wieder die Warteseite.':''))&&api('ex/plan/reset',{id:+b.dataset.pz}).then(loadEx).catch(fail));
   // Log und Replay der Durchführungen
@@ -874,7 +874,8 @@ async function aarEdit(id){let x;try{x=await api('aar/get&id='+id);await aarImgs
     await api('aar/save',{id,data:collect()});await api('aar/status',{id,status:2});toast('Als nicht relevant markiert.','ok');loadStats()})}
 // AI-Assistent (Issue #111) bei der Übungsvorbereitung: Hinweise und vorgeschlagene Elemente, die sich per Auswahl direkt erstellen lassen.
 // Der Server rechnet die Standorte aus Bezugspunkt und Versatz (aiPlanEls); Verweise auf andere Vorschläge (N…) ersetzt das Erstellen durch die neuen IDs, der Reihe nach.
-function aiPlan(p){const can=!p.ended_at;let cur=null,d=null;
+// Fenster breit: Anforderungen zuoberst, rechts eine Vorschaukarte mit den bestehenden Elementen und festen Standorten (exMap) und den angehakten Vorschlägen (gestrichelt).
+function aiPlan(p,fp){const can=!p.ended_at;let cur=null,d=null,m=null,lay=null;
   const dist=e=>{const m=Math.round(Math.hypot(e.east_m,e.north_m));if(m<10)return'bei';const c=['N','NO','O','SO','S','SW','W','NW'][Math.round(((Math.atan2(e.east_m,e.north_m)*180/Math.PI+360)%360)/45)%8];
     return`ca. ${m>=1000?(m/1000).toLocaleString('de-CH',{maximumFractionDigits:1})+' km':m+' m'} ${c} von`};
   const ok=e=>!!e.ll&&!e.done;
@@ -893,9 +894,20 @@ function aiPlan(p){const can=!p.ended_at;let cur=null,d=null;
         try{const x=await api('ex/inject/save',b);e.done=x.id;id[e.key]=x.id;n++}catch(err){throw new Error(`«${e.label}»: ${err.message}`)}}}
     catch(err){if(n){loadEx();A.forEach((e,j)=>{const c=$(`[data-aie="${j}"]`,d);if(c&&e.done){c.checked=false;c.disabled=true}})}
       throw new Error(`${n?`${n} ${n===1?'Element':'Elemente'} erstellt, dann `:''}nicht erstellt: ${err.message}`)}
-    exMapOpen.add(p.id);loadEx();toast(`${n} ${n===1?'Element':'Elemente'} erstellt. Bitte die Standorte auf der Karte prüfen.`,'ok')};
-  d=aiPanel({title:'Vorschläge – '+p.title,req:{fn:'plan',id:p.id},show,apply:can?apply:null,applyText:'Ausgewählte Elemente erstellen',chat:aiOn('chat',aiPk(p))});
-  d.addEventListener('change',e=>{const i=e.target.dataset&&e.target.dataset.aie;if(i!=null&&cur&&cur.els[i])cur.els[i].off=!e.target.checked})}
+    draw(false);exMapOpen.add(p.id);loadEx();toast(`${n} ${n===1?'Element':'Elemente'} erstellt. Bitte die Standorte auf der Karte prüfen.`,'ok')};
+  const base=p.injects.filter(j=>j.lat!=null).map(j=>[j.lat,j.lon]).concat(...exPlaces(p,fp||[]).map(f=>f.pts||[[f.lat,f.lon]]));
+  const side=box=>{box.innerHTML='<div class="aimap"></div><div class="mut aim">Bestehende Elemente und Standorte der Übung; Vorschläge mit ✨ und gestricheltem Rand, nur die angehakten.</div>';
+    m=exMap(p,$('.aimap',box),fp||[]);lay=L.layerGroup().addTo(m);if(window.ResizeObserver)new ResizeObserver(()=>m.invalidateSize()).observe(box)};
+  const draw=fit=>{if(!m)return;lay.clearLayers();const A=cur&&cur.els||[],E=A.filter(e=>e.ll&&(e.done||!e.off));
+    const at=v=>{const j=/^E\d+$/.test(v||'')&&p.injects.find(x=>x.id===+v.slice(1));if(j)return[j.lat,j.lon];const e=E.find(x=>x.key===v);return e?e.ll:null};
+    E.filter(e=>e.kind==='seen').forEach(e=>{const r=at(e.of);if(r)L.polyline([r,e.ll],{color:EXC.seen,weight:2,dashArray:'6 6'}).addTo(lay)});
+    E.forEach(e=>L.circleMarker(e.ll,{radius:e.kind==='extdel'?12:9,color:EXC[e.kind],weight:3,dashArray:e.done?null:'4 3',fillColor:EXC[e.kind],fillOpacity:e.kind==='extdel'?0:.35})
+      .bindTooltip('✨ '+(e.kind==='extdel'?'entfernt: ':'')+esc(e.label)+(e.done?' (erstellt)':''),{permanent:true,direction:e.kind==='extdel'?'bottom':'top',offset:[0,e.kind==='extdel'?12:-8]}).addTo(lay));
+    const all=base.concat(E.map(e=>e.ll));if(fit&&all.length)m.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:16})};
+  d=aiPanel({title:'Vorschläge – '+p.title,req:{fn:'plan',id:p.id},show,apply:can?apply:null,applyText:'Ausgewählte Elemente erstellen',chat:aiOn('chat',aiPk(p)),
+    qLabel:'Anforderungen an die Übung (optional)',qRows:5,qPh:'z. B. zwei Rettlinge, einer erst nach 30 min gesichtet; Posten der Feuerwehr an der Brücke, der nach 45 min abzieht; Schwerpunkt Kommunikation',
+    side,after:r=>{if(!r)cur=null;draw(true)}});
+  d.addEventListener('change',e=>{const i=e.target.dataset&&e.target.dataset.aie;if(i!=null&&cur&&cur.els[i]){cur.els[i].off=!e.target.checked;draw(false)}})}
 // AI-Assistent (Issue #111) im AAR-Formular: ✨ je Textfeld (überarbeitet vorhandenen Text) und «Entwurf für leere Felder»;
 // begleitend wird der Entwurf für die leeren Felder beim Öffnen vorbereitet. Übernehmen füllt nur das Formular, gespeichert wird wie immer.
 function aiAar(d,x,id,F){const m=aiMi('aar',x),ch=aiMi('chat',x)!=='off';if(m==='off')return;const T=F.filter(f=>f.type==='text'||f.type==='area'),L=k=>(F.find(f=>f.id===k)||{}).label||k;if(!T.length)return;
