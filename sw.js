@@ -28,13 +28,13 @@ self.addEventListener('fetch',e=>{const q=e.request;if(q.method!=='GET')return;c
   if(TILE.test(q.url))return e.respondWith(tile(q))});
 
 /* ---------- Web-Push ---------- */
-// Payload vom Server: t (Titel), b (Text), tag (wie die Quittierschlüssel der App: i:<Einsatz>, m:<Nachricht>, e:<Einsatz>), crit (kritischer Alarm)
+// Payload vom Server: t (Titel), b (Text), tag (wie die Quittierschlüssel der App: i:<Einsatz>, m:<Nachricht>, e:<Einsatz>), crit (kritischer Alarm), stay (bleibt stehen), silent (ohne Ton und Vibration)
 // Ist die App sichtbar im Vordergrund, zeigt sie die Meldung selbst (Polling); sonst die Systembenachrichtigung.
 self.addEventListener('push',e=>{let m={};try{m=e.data?e.data.json():{}}catch(_){m={t:'Swiftwater Rescue',b:e.data?e.data.text():''}}
   e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{
     if(cs.some(c=>c.visibilityState==='visible'&&c.focused))return;
-    return self.registration.showNotification(m.t||'Swiftwater Rescue',{body:m.b||'',tag:m.tag||undefined,renotify:true,requireInteraction:!!m.crit,
-      vibrate:m.crit?[600,200,600,200,600,200,600]:[200],icon:'img/icon-192.png',badge:'img/badge-96.png',data:{url:'./'}})}))});
+    return self.registration.showNotification(m.t||'Swiftwater Rescue',{body:m.b||'',tag:m.tag||undefined,renotify:true,requireInteraction:!!(m.crit||m.stay),
+      ...(m.silent?{silent:true}:{vibrate:m.crit?[600,200,600,200,600,200,600]:[200]}),icon:'img/icon-192.png',badge:'img/badge-96.png',data:{url:'./'}})}))}); // silent und vibrate zusammen wirft einen Fehler
 // Klick: offene App in den Vordergrund holen, sonst öffnen
 self.addEventListener('notificationclick',e=>{e.notification.close();
   e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>new URL(c.url).pathname.endsWith('/')||c.url.includes('index.html'));
