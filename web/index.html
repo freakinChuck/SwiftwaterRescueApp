@@ -281,7 +281,7 @@ function hydroCard(){if(!feat('hydro'))return'';const inc=st&&st.incident,ir=hyI
   const hasPls=inc&&(inc.lat!=null||(st.rescuees||[]).some(r=>r.pls_lat!=null));
   return mcard('Pegel &amp; Abfluss',(inc?`<h5>Beim PLS</h5>${is.length?is.map(row).join(''):`<div class="mut">${hasPls?'Noch keine Werte erfasst (keine Messstation im Umkreis oder BAFU nicht erreichbar, siehe Log).':'Werden erfasst, sobald ein PLS bekannt ist. Am Einsatzende folgen die Werte derselben Stationen.'}</div>`}<h5>Meine Messstationen</h5>`:'')
     +(mine.length?mine.map(row).join(''):`<div class="mut">${hyMine().length?'Stehen schon oben.':'Keine gewählt. Im Profil kannst du Messstationen wählen, die du hier und auf der Karte siehst.'}</div>`)
-    +`<div class="mbtns"><button data-hyp>Messstationen wählen</button></div><div class="mut" style="font-size:.75rem">Quelle: BAFU, hydrodaten.admin.ch. Werte ungeprüft. Gefahrenstufen 1–5 gemäss BAFU.</div>`)}
+    +`<div class="mbtns"><button data-hyp>Messstationen wählen</button></div><div class="mut" style="font-size:.75rem">Quelle: BAFU (über api.existenz.ch bzw. hydrodaten.admin.ch). Werte ungeprüft. Gefahrenstufen 1–5 gemäss BAFU.</div>`)}
 function bindHydro(el){el.querySelectorAll('[data-hyz]').forEach(b=>b.onclick=()=>{const s=hyStation(b.dataset.hyz);if(!s)return;if(!vis('hydro'))setVis(['hydro'],true);if(innerWidth<760)toggleSheet(false);map.setView([s.lat,s.lon],Math.max(map.getZoom(),13))});
   el.querySelectorAll('[data-hyp]').forEach(b=>b.onclick=()=>prefs(true))}
 // Profil: persönliche Messstationen (höchstens 20), Suche in allen Stationen des BAFU (einmal geladen, hyAll)

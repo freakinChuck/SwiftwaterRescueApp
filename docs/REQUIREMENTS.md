@@ -279,10 +279,11 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 24. Pegel und Abfluss (PA)
 
-- **PA-01** – Abfluss, Pegel, Wassertemperatur und Gefahrenstufe der Messstationen des BAFU, direkt von hydrodaten.admin.ch (offene Daten), über den Server mit Zwischenspeicher abgefragt; Quellenangabe «BAFU» (#125).
+- **PA-01** – Abfluss, Pegel, Wassertemperatur und Gefahrenstufe der Messstationen des BAFU (offene Daten), über den Server mit Zwischenspeicher abgefragt; Quellenangabe «BAFU» (#125).
 - **PA-02** – Zu Beginn eines Einsatzes (sobald ein PLS bekannt ist) und am Einsatzende werden die Werte der nächsten Stationen um jeden PLS automatisch ermittelt und im Einsatzlog festgehalten; am Ende dieselben Stationen wie zu Beginn (#125).
 - **PA-03** – Die erfassten Werte sind danach sichtbar: im Einsatzlog (Verwaltung, «Meine Einsätze», After Action Review) und im Menü der Einsatz-App mit Beginn, Ende und aktuellem Wert (#125).
 - **PA-04** – Jede Person definiert im Profil persönliche Messstationen (Suche nach Ort, Gewässer oder Nummer, Reihenfolge, höchstens 20); sie erscheinen als Liste im Menü und als Markierung auf der Karte, auch ohne Einsatz (#125).
 - **PA-05** – In der Verwaltung einstellbar: Umkreis um jeden PLS, Anzahl Stationen je PLS, Seen ja/nein; Stand des Datenabrufs mit «Jetzt abrufen»; als Funktion je Einsatztyp ein- und ausschaltbar (#125).
 - **PA-06** – Je Station die Gefahrenstufe (1–5, aus den Schwellen des BAFU) und die Einordnung (sehr tief … sehr hoch); Marker auf der Karte ab Stufe 2 eingefärbt, Link zur Stationsseite des BAFU (Feedback zu #125).
+- **PA-07** – Zwei Datenquellen, je in der Verwaltung ein- und ausschaltbar, mit Lizenz, Hinweis, Stand und Test: die Schnittstelle api.existenz.ch mit Vorrang und die Webseite hydrodaten.admin.ch, die Fehlendes (Gefahrenstufe, Stationen) ergänzt und bei Ausfall der Schnittstelle einspringt; die Seite «Impressum, Lizenzen & Datenschutz» nennt die eingeschalteten (Feedback zu #125).
 

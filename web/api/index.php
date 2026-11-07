@@ -576,20 +576,32 @@ function airReplay($id) { global $db; $c = airCfg(); if (!$c['replay']) return [
 // in api/data/hydro/bafu.json: Stationen und Messwerte aller Stationen in einem Abruf alle HYDRO_TTL (hydroBafu, hydroLocs, hydroLatest). Funktion «hydro» je Einsatztyp.
 // Einsatz: zu Beginn (sobald ein PLS bekannt ist, Auslöser im Polling) und am Ende die Werte der nächsten Stationen um die PLS ins Log und in inc_hydro (hydroLog).
 // Persönliche Stationen: users.hydro (JSON-Liste der Stations-IDs), im Menü der Einsatz-App und auf der Karte. Steht vor legal.
-const HYDRO_API = 'https://www.hydrodaten.admin.ch/web-hydro-maps/'; // GeoJSON der Karte auf hydrodaten.admin.ch
+const HYDRO_API = 'https://api.existenz.ch/apiv1/hydro/'; // Schnittstelle (Quelle «api»)
+const HYDRO_Q = 'app=swiftwater.rescue&version=0.1';
+const HYDRO_WEB = 'https://www.hydrodaten.admin.ch/web-hydro-maps/'; // GeoJSON der Karte auf hydrodaten.admin.ch (Quelle «web»)
+// Quellen in der Reihenfolge des Vorrangs, Angaben für Verwaltung und legal.html
+const HYDRO_SOURCES = [
+  'api' => ['name' => 'api.existenz.ch (Schnittstelle)', 'site' => 'https://api.existenz.ch', 'lic' => 'Offene Daten des BAFU, Quellenangabe «BAFU»',
+            'note' => 'Gratis, ohne Schlüssel, privat betrieben (Existenz.ch), stellt die Daten des BAFU als Schnittstelle bereit: Abfluss, Pegel, Wassertemperatur, ohne Gefahrenstufe. Kein Anspruch auf Verfügbarkeit. Hat Vorrang.'],
+  'web' => ['name' => 'hydrodaten.admin.ch (Webseite des BAFU)', 'site' => 'https://www.hydrodaten.admin.ch', 'lic' => 'Offene Daten des BAFU, Quellenangabe «BAFU»',
+            'note' => 'Daten der Karte auf der Webseite des BAFU (keine dokumentierte Schnittstelle, der Aufbau kann sich ohne Ankündigung ändern), mit Gefahrenstufe und Einordnung. Ergänzt die Schnittstelle und springt ein, wenn sie nicht antwortet.'],
+];
 const HYDRO_OLD = 86400; // ältere Messwerte gelten als nicht aktuell
 const HYDRO_TTL = 300; // Messwerte zwischenspeichern (BAFU misst alle 10 Minuten)
 const HYDRO_MAX = 20;  // persönliche Messstationen je Person
 const HYDRO_NUM = ['radius_km' => [15, 1, 100], 'n' => [3, 1, 10]]; // [Standard, Minimum, Maximum]: Umkreis um jeden PLS, Stationen je PLS
-const HYDRO_DEFAULT = ['radius_km' => 15, 'n' => 3, 'lakes' => 0];
+const HYDRO_DEFAULT = ['radius_km' => 15, 'n' => 3, 'lakes' => 0, 'src' => ['api' => 1, 'web' => 1]];
 const HYDRO_ID = '/^[A-Za-z0-9_-]{1,12}$/';
 function hydroCfg() { $v = json_decode(setting('hydro', ''), true); $v = is_array($v) ? $v : []; $c = HYDRO_DEFAULT;
   foreach (HYDRO_NUM as $k => [$d, $lo, $hi]) if (is_numeric($v[$k] ?? null)) $c[$k] = (int)min(max((float)$v[$k], $lo), $hi);
   if (isset($v['lakes'])) $c['lakes'] = $v['lakes'] ? 1 : 0;
+  foreach (HYDRO_SOURCES as $k => $x) if (isset($v['src'][$k])) $c['src'][$k] = $v['src'][$k] ? 1 : 0;
   return $c; }
 function hydroIn($v) { if (!is_array($v)) fail('Ungültige Einstellung'); $o = [];
   foreach (HYDRO_NUM as $k => [$d, $lo, $hi]) { if (!is_numeric($v[$k] ?? null) || $v[$k] < $lo || $v[$k] > $hi) fail("Wert ausserhalb des Bereichs ($lo–$hi)"); $o[$k] = (int)$v[$k]; }
-  $o['lakes'] = empty($v['lakes']) ? 0 : 1; return $o; }
+  $o['lakes'] = empty($v['lakes']) ? 0 : 1; $o['src'] = [];
+  foreach (HYDRO_SOURCES as $k => $x) $o['src'][$k] = isset($v['src'][$k]) ? (empty($v['src'][$k]) ? 0 : 1) : hydroCfg()['src'][$k];
+  return $o; }
 // Datei-Cache mit Sperre: gültig ttl Sekunden, sonst neu holen (fetch liefert Daten oder null); bei Fehlschlag die bisherigen Daten und eine Minute Pause
 function hydroFile($name, $ttl, $fetch) { $dir = __DIR__ . '/data/hydro'; if (!is_dir($dir)) @mkdir($dir, 0775, true); $f = "$dir/$name.json";
   $rd = function () use ($f) { clearstatcache(true, $f); $d = is_file($f) ? json_decode((string)@file_get_contents($f), true) : null; return is_array($d) ? $d : null; };
@@ -603,12 +615,43 @@ function hydroFile($name, $ttl, $fetch) { $dir = __DIR__ . '/data/hydro'; if (!i
     if (file_put_contents("$f.tmp", json_encode($d, JSON_UNESCAPED_UNICODE)) !== false) rename("$f.tmp", $f); }
   if ($lk) flock($lk, LOCK_UN);
   return $d; }
-// Quelle (Feedback zu #125): direkt die Daten der Karte auf hydrodaten.admin.ch (GeoJSON des BAFU, LV95), eine Datei mit Abfluss und Pegel, eine mit der Wassertemperatur.
-// Beide in einem Abruf alle HYDRO_TTL, daraus Stationen und Messwerte; bei Fehlschlag gelten die bisherigen (Stationen bleiben so auch bei längerem Ausfall bekannt).
-function hydroBafu() { return hydroFile('bafu', HYDRO_TTL, function () { $locs = []; $vals = [];
+// Quellen (Feedback zu #125), je in der Verwaltung schaltbar: «api» = Schnittstelle api.existenz.ch (Vorrang), «web» = Daten der Karte auf hydrodaten.admin.ch.
+// Ein Abruf alle HYDRO_TTL: zuerst die API; die Webseite ergänzt, was der API fehlt (Gefahrenstufe, Einordnung, Stationen), und springt ganz ein, wenn die API nicht antwortet.
+// Werte der API gehen immer vor. Bei Fehlschlag aller Quellen gelten die bisherigen Daten. Stand je Quelle in api/data/hydro/status.json (hydroStat).
+function hydroBafu() { return hydroFile('bafu', HYDRO_TTL, function () { $on = hydroCfg()['src']; $locs = []; $vals = []; $ok = false;
+    foreach (array_keys(HYDRO_SOURCES) as $k) { if (empty($on[$k])) continue; $r = hydroSrc($k); if (!$r) continue; $ok = true;
+      foreach ($r['locs'] as $i => $s) $locs[$i] ??= $s;
+      foreach ($r['vals'] as $i => $v) $vals[$i] = ($vals[$i] ?? []) + $v; } // vorhandene Werte (aus der API) bleiben
+    return $ok && $locs ? ['locs' => $locs, 'vals' => $vals] : null; }); }
+// eine Quelle abfragen und den Stand festhalten: ['locs' => …, 'vals' => …] oder null
+function hydroSrc($k) { $t = microtime(true); $err = null;
+  try { $r = $k === 'api' ? hydroApi() : hydroWeb(); } catch (Throwable $e) { $r = null; $err = $e->getMessage(); }
+  if (!$r && !$err) $err = 'keine gültige Antwort';
+  hydroStat($k, ['ok' => $r ? 1 : 0, 'ms' => (int)((microtime(true) - $t) * 1000), 'err' => $err, 'stations' => $r ? count($r['locs']) : 0, 'values' => $r ? count($r['vals']) : 0]);
+  return $r; }
+function hydroStat($k = null, $v = null) { $f = __DIR__ . '/data/hydro/status.json'; $d = json_decode((string)@file_get_contents($f), true) ?: [];
+  if ($k === null) return $d; $v['at'] = time(); $v['ok_at'] = $v['ok'] ? time() : ($d[$k]['ok_at'] ?? null); $d[$k] = $v;
+  @file_put_contents($f, json_encode($d, JSON_UNESCAPED_UNICODE), LOCK_EX); return $d; }
+// API: Stationsliste 7 Tage zwischengespeichert, Messwerte aller Stationen in einer Abfrage
+function hydroApi() {
+  $d = hydroFile('api_locs', 7 * 86400, function () {
+    $j = json_decode((string)http_get(HYDRO_API . 'locations?' . HYDRO_Q), true); if (!is_array($j['payload'] ?? null)) return null; $o = [];
+    foreach ($j['payload'] as $k => $e) { $x = $e['details'] ?? null; if (!is_array($x) || !is_numeric($x['lat'] ?? null) || !is_numeric($x['lon'] ?? null)) continue;
+      $id = (string)($x['id'] ?? $k); if (!preg_match(HYDRO_ID, $id)) continue;
+      $o[$id] = ['id' => $id, 'name' => mb_substr((string)($x['name'] ?? $id), 0, 80), 'water' => mb_substr((string)($x['water-body-name'] ?? ''), 0, 80), 'type' => ($x['water-body-type'] ?? '') === 'lake' ? 'lake' : 'river', 'lat' => (float)$x['lat'], 'lon' => (float)$x['lon']]; }
+    return $o ?: null; });
+  $locs = is_array($d['data'] ?? null) ? $d['data'] : []; if (!$locs) return null;
+  $j = json_decode((string)http_get(HYDRO_API . 'latest?' . HYDRO_Q), true); if (!is_array($j['payload'] ?? null)) return null; $o = []; $old = time() - HYDRO_OLD;
+  foreach ($j['payload'] as $r) { $l = (string)($r['loc'] ?? ''); $p = (string)($r['par'] ?? ''); if ($l === '' || !is_numeric($r['val'] ?? null) || !is_numeric($r['timestamp'] ?? null) || $r['timestamp'] < $old) continue;
+    $k = ['flow' => 'flow', 'flow_ls' => 'flow', 'height' => 'height', 'height_abs' => 'level', 'temperature' => 'temp'][$p] ?? null; if (!$k) continue;
+    $v = (float)$r['val']; if ($p === 'flow_ls') { if (isset($o[$l]['flow'])) continue; $v /= 1000; }
+    $o[$l][$k] = round($v, 4); $o[$l]['at'] = max((int)($o[$l]['at'] ?? 0), (int)$r['timestamp']); }
+  return ['locs' => $locs, 'vals' => $o]; }
+// Webseite: GeoJSON der Karte auf hydrodaten.admin.ch (LV95), Abfluss/Pegel mit Schwellen der Gefahrenstufen und Einordnung, dazu die Wassertemperatur
+function hydroWeb() { $locs = []; $vals = [];
     $num = fn($x) => is_string($x) && preg_match('/^\s*(-?\d+(?:\.\d+)?)/', $x, $m) ? (float)$m[1] : (is_numeric($x) ? (float)$x : null);
     $ts = fn($x) => is_string($x) && ($t = strtotime($x)) ? $t : null; $old = time() - HYDRO_OLD;
-    foreach (['pq', 'temperature'] as $n) { $j = json_decode((string)http_get(HYDRO_API . "hydro_sensor_$n.geojson"), true); if (!is_array($j['features'] ?? null)) return null;
+    foreach (['pq', 'temperature'] as $n) { $j = json_decode((string)http_get(HYDRO_WEB . "hydro_sensor_$n.geojson"), true); if (!is_array($j['features'] ?? null)) return null;
       $leg = $j['meta']['de']['legend'] ?? [];
       foreach ($j['features'] as $f) { $p = $f['properties'] ?? []; $id = (string)($p['key'] ?? ''); $c = $f['geometry']['coordinates'] ?? null;
         if (!preg_match(HYDRO_ID, $id) || !is_array($c) || !is_numeric($c[0] ?? null) || !is_numeric($c[1] ?? null)) continue;
@@ -627,7 +670,7 @@ function hydroBafu() { return hydroFile('bafu', HYDRO_TTL, function () { $locs =
         if ($mv !== null) { $g = 1; $ok = false; foreach ([1, 2, 3, 4] as $i) { $w = $num($p["wl_$i"] ?? null); if ($w === null) continue; $ok = true; if (str_ends_with((string)$p["wl_$i"], 'l/s')) $w /= 1000; if ($mv >= $w) $g = $i + 1; } if ($ok) $v['danger'] = $g; }
         if (isset($v['at']) && preg_match('/level_(\d)$/', (string)($p['icon'] ?? ''), $m) && isset($leg["level_$m[1]"])) $v['cls'] = mb_substr((string)$leg["level_$m[1]"], 0, 30);
         if (!$v) unset($vals[$id]); unset($v); } }
-    return $locs ? ['locs' => $locs, 'vals' => $vals] : null; }); }
+    return $locs ? ['locs' => $locs, 'vals' => $vals] : null; }
 // Messstationen: {id: {id, name, water, type (river|lake), lat, lon}}
 function hydroLocs() { $d = hydroBafu(); return is_array($d['data']['locs'] ?? null) ? $d['data']['locs'] : []; }
 // aktuelle Werte je Station: flow (m³/s), height (Pegel m ü. M.), level (Pegel in m über dem Nullpunkt), temp (°C), danger (Gefahrenstufe 1–5), cls (Einordnung), at (Messzeit)
@@ -638,6 +681,7 @@ function lv95ll($e, $n) { $y = ($e - 2600000) / 1e6; $x = ($n - 1200000) / 1e6;
   $la = 16.9023892 + 3.238272 * $x - 0.270978 * $y * $y - 0.002528 * $x * $x - 0.0447 * $y * $y * $x - 0.0140 * $x ** 3;
   return [$la * 100 / 36, $lo * 100 / 36]; }
 function hydroRow($s, $L) { $v = $L[$s['id']] ?? []; return $s + ['flow' => $v['flow'] ?? null, 'height' => $v['height'] ?? null, 'level' => $v['level'] ?? null, 'temp' => $v['temp'] ?? null, 'danger' => $v['danger'] ?? null, 'cls' => $v['cls'] ?? null, 'at' => $v['at'] ?? null]; }
+function hydroName($r) { return ($r['water'] !== '' ? $r['water'] . ', ' : '') . $r['name']; }
 function hydroNum($x, $d) { return number_format($x, $d, '.', '’'); }
 function hydroText($r) { $p = [];
   if ($r['flow'] !== null) $p[] = 'Abfluss ' . hydroNum($r['flow'], $r['flow'] < 1 ? 3 : ($r['flow'] < 10 ? 2 : 1)) . ' m³/s';
@@ -764,6 +808,7 @@ if ($route === 'legal') {
     'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'on' => (object)array_map(fn($f) => $f[$k], $fk)], array_keys(FEATURES)),
     'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120'), 'postgis' => pgReady() ? 1 : 0],
     'hydro' => (object)array_map(fn($f) => $f['hydro'], $fk), // Pegel & Abfluss (Issue #125) je Einsatztyp
+    'hydro_src' => array_values(array_map(fn($k) => ['k' => $k] + HYDRO_SOURCES[$k], array_keys(array_filter(hydroCfg()['src'])))), // eingeschaltete Quellen in der Reihenfolge des Vorrangs
     'air_home' => (int)$air['home_km'],
     'air' => ['on' => (int)$air['on'], 'public' => (int)$air['public'], 'replay' => (int)$air['replay'], 'src' => array_map(fn($k) => ['name' => AIR_SOURCES[$k]['name'], 'site' => AIR_SOURCES[$k]['site']], $air['src'])],
     'push' => pushOk() ? 1 : 0, 'push_native' => fcmOk() ? 1 : 0, 'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'days' => (object)array_intersect_key($c['days'], $ks)], array_keys(anonCfg()), anonCfg())]);
@@ -1805,11 +1850,17 @@ switch ($route) {
   $inc = activeIncident(); if (!hydroOn() && !($inc && feature($inc, 'hydro'))) fail('Pegel & Abfluss ist ausgeschaltet', 403);
   $locs = hydroLocs(); [$L, $raw] = hydroLatest(); $ids = isset($in['ids']) ? array_slice(array_map('strval', (array)$in['ids']), 0, 60) : array_keys($locs); $o = [];
   foreach ($ids as $i) if (isset($locs[$i])) $o[] = hydroRow($locs[$i], $L);
-  out(['stations' => $o, 'at' => (int)($raw['at'] ?? 0) ?: null, 'err' => !$locs ? 'Messstationen des BAFU nicht abrufbar' : (!$L ? 'Messwerte des BAFU nicht abrufbar' : null)]);
+  out(['stations' => $o, 'at' => (int)($raw['at'] ?? 0) ?: null, 'err' => !array_filter(hydroCfg()['src']) ? 'Keine Datenquelle eingeschaltet (Verwaltung → Pegel & Abfluss)' : (!$locs ? 'Messstationen des BAFU nicht abrufbar' : (!$L ? 'Messwerte des BAFU nicht abrufbar' : null))]);
  case 'hydro/status': need('cfg_map'); // Verwaltung: Stand der Zwischenspeicher, «Jetzt abrufen» mit fresh=1 (verwirft die zwischengespeicherten Messwerte)
   if (!empty($in['fresh'])) @unlink(__DIR__ . '/data/hydro/bafu.json');
   $t = microtime(true); $locs = hydroLocs(); [$L, $raw] = hydroLatest(); $ms = (int)((microtime(true) - $t) * 1000);
-  out(['stations' => count($locs), 'rivers' => count(array_filter($locs, fn($s) => $s['type'] === 'river')), 'values' => count($L), 'at' => (int)($raw['at'] ?? 0) ?: null, 'fail_at' => (int)($raw['fail_at'] ?? 0) ?: null, 'ms' => $ms, 'src' => HYDRO_API]);
+  out(['stations' => count($locs), 'rivers' => count(array_filter($locs, fn($s) => $s['type'] === 'river')), 'values' => count($L), 'at' => (int)($raw['at'] ?? 0) ?: null, 'fail_at' => (int)($raw['fail_at'] ?? 0) ?: null, 'ms' => $ms, 'status' => (object)hydroStat()]);
+ case 'hydro/test': need('cfg_map'); // Verwaltung: eine Quelle direkt abfragen (ohne Zwischenspeicher der Messwerte), mit Beispiel Aare Brugg (2016)
+  $k = (string)($in['src'] ?? ''); if (!isset(HYDRO_SOURCES[$k])) fail('Unbekannte Datenquelle');
+  $t = microtime(true); $r = hydroSrc($k); $ms = (int)((microtime(true) - $t) * 1000);
+  if (!$r) out(['ok' => false, 'ms' => $ms, 'err' => hydroStat()[$k]['err'] ?? null]);
+  $ex = isset($r['locs']['2016']) ? hydroRow($r['locs']['2016'], $r['vals']) : null;
+  out(['ok' => true, 'ms' => $ms, 'stations' => count($r['locs']), 'values' => count($r['vals']), 'example' => $ex ? hydroName($ex) . ': ' . hydroText($ex) : null]);
  /* ---------- Gewässernetz aus PostGIS (Issue #131) ---------- */
  case 'postgis/test': need('cfg_map'); // Verbindung, Tabelle und eine Beispielabfrage (Umkreis 5 km um lat/lon, Standard Bern); cfg = noch nicht gespeicherte Einstellung, Passwort leer = gespeichertes
   $c = isset($in['cfg']) ? pgIn(['on' => 0] + (array)$in['cfg']) : pgCfg(); $pw = is_string($in['cfg']['pass'] ?? null) && $in['cfg']['pass'] !== '' ? $in['cfg']['pass'] : (string)setting('postgis_pass', '');
@@ -3007,7 +3058,7 @@ switch ($route) {
  case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
    'air' => airCfg(), 'air_default' => AIR_DEFAULT + array_map(fn($x) => $x[0], AIR_NUM), 'air_num' => AIR_NUM, 'air_filters' => AIR_FILTERS, 'air_app' => AIR_APP, 'air_sources' => array_map(fn($s) => ['name' => $s['name'], 'site' => $s['site'], 'note' => $s['note']], AIR_SOURCES),
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
-   'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM] // Pegel & Abfluss (Issue #125)
+   'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM, 'hydro_sources' => HYDRO_SOURCES] // Pegel & Abfluss (Issue #125)
    + (can('cfg_map') ? ['postgis' => pgCfg() + ['pass_set' => setting('postgis_pass', '') !== '' ? 1 : 0, 'ext' => extension_loaded('pdo_pgsql') ? 1 : 0, 'ready' => pgReady() ? 1 : 0], 'postgis_ssl' => PG_SSL, 'postgis_default' => PG_DEFAULT] : [])); // PostGIS (Issue #131), ohne Passwort
  case 'settings/save': // jede übergebene Einstellung braucht ihr Recht (SETTING_PERMS)
   foreach (SETTING_PERMS as $k => $p) if (isset($in[$k])) need($p);
@@ -3017,7 +3068,7 @@ switch ($route) {
     foreach (LEGAL_FIELDS as $k => [$n]) if (array_key_exists($k, $in['legal'])) $v[$k] = mb_substr(trim((string)$in['legal'][$k]), 0, $n);
     setSetting('legal', json_encode($v, JSON_UNESCAPED_UNICODE)); setSetting('legal_at', (string)time()); }
   if (isset($in['air'])) setSetting('air', json_encode(airIn($in['air']), JSON_UNESCAPED_UNICODE)); // Helikopter (Issue #73)
-  if (isset($in['hydro'])) setSetting('hydro', json_encode(hydroIn($in['hydro']))); // Pegel & Abfluss (Issue #125)
+  if (isset($in['hydro'])) { setSetting('hydro', json_encode(hydroIn($in['hydro']))); @unlink(__DIR__ . '/data/hydro/bafu.json'); } // Quellen geändert: neu abrufen // Pegel & Abfluss (Issue #125)
   if (isset($in['postgis'])) { // Gewässernetz aus PostGIS (Issue #131): Passwort nur, wenn angegeben (leer = behalten), pass_clear = entfernen
     $v = pgIn($in['postgis']); $pw = $in['postgis']['pass'] ?? '';
     if (is_string($pw) && $pw !== '') setSetting('postgis_pass', mb_substr($pw, 0, 200)); elseif (!empty($in['postgis']['pass_clear'])) setSetting('postgis_pass', '');
