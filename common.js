@@ -165,7 +165,7 @@ const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
 const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
 const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
-const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 function logout(){token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k))} // letzter Stand gehört der abgemeldeten Person
 /* ---------- Anmeldung ---------- */
@@ -238,3 +238,48 @@ function renderBigLog(){const o=$('#bigLog');if(!big||!o)return;const got=big.ge
   $('#bigT').textContent=`${big.title} · ${l.length} von ${all.length} Einträgen${big.live&&!got?' · Einsatz beendet':''}`;
   $('#bigS').textContent=big.desc?'Neueste zuerst':'Älteste zuerst';
   $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
+/* ---------- AI-Assistent (Issue #111): Fenster mit Vorschlag, Übernehmen / Verwerfen / Neu, zusätzlichem Wunsch und freien Fragen ---------- */
+// Modus der Person je Funktion und Bereich (Einsatztyp-ID oder 'adm'; me.ai vom Server: aiMe, schon begrenzt auf das Erlaubte und die eigene Wahl): off, cmd (auf Abruf), comp (begleitend)
+const aiM=(fn,ctx)=>(typeof me!=='undefined'&&me&&me.ai&&me.ai[fn]&&me.ai[fn].modes[String(ctx)])||'off';
+const aiOn=(fn,ctx)=>aiM(fn,ctx)!=='off';
+// je Einsatz: x.ai vom Server (mit der Spezialrolle der Person im Einsatz), sonst nach Einsatztyp
+const aiMi=(fn,x)=>x&&x.ai?(x.ai[fn]||'off'):aiM(fn,x&&x.kind_id);
+// Antworttext: Zeilenumbrüche bleiben, **fett** und Zwischentitel (#) werden hervorgehoben, sonst nur Text (kein HTML vom Anbieter)
+const aiFmt=t=>esc(t||'').replace(/^#{1,6}\s*(.+)$/gm,'<b>$1</b>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');
+const aiMeta=r=>`${r.cached?'Gespeicherter Vorschlag vom ':'Erstellt '}${new Date(r.ts*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'})}${r.tokens?` · ${r.tokens.toLocaleString('de-CH')} Tokens`:''}${r.anon?' · Namen ersetzt durch Bezeichnungen':''}`;
+const aiCopy=async t=>{try{await navigator.clipboard.writeText(t||'');toast('In die Zwischenablage kopiert.')}catch(e){throw new Error('Kopieren nicht möglich, bitte den Text markieren')}};
+// o: title, req (fn, id, field, all …), my (Meine Einsätze), pre (bereits geladener Vorschlag), show(r) → HTML, apply(r) (ohne: Kopieren), applyText
+// chat: freie Fragen zu den Daten von req (about = req.fn); chatOnly: nur freie Fragen, ohne Auftrag (req null = ohne Daten)
+// qLabel/qPh/qRows: Wunschfeld (steht zuoberst); side(el, d): breites Fenster mit Spalte rechts (z. B. Karte), einmal aufgerufen; after(res): nach jedem Anzeigen
+// breite Bildschirme: Vorschlag links, freie Fragen rechts (ohne side); schmale: alles untereinander (common.css .aiwide)
+function aiPanel(o){let res=o.pre||null,busy=false;const hist=[],only=!!o.chatOnly,chat=only||!!o.chat,sc=chat&&!only&&!o.side;
+  const ch=chat?`<div class="aichat"><div class="aith" data-aith></div><label class="mut">${only?'Deine Frage':'Eigene Frage dazu (freie Eingabe)'}<textarea data-aic rows="${sc?3:2}" maxlength="2000" placeholder="z. B. Wo gab es Verzögerungen?"></textarea></label><div class="row"><button data-aisend>Fragen</button>${only?'':'<span class="mut" style="font-size:.8rem">Fragen und Antworten werden nicht gespeichert.</span>'}</div></div>`:'';
+  const d=dlg('✨ '+o.title,`<div class="aiw${o.side||sc?' aiwide':''}"><div class="aimain">${only?'':`<label class="mut aiql">${esc(o.qLabel||'Zusätzlicher Wunsch (optional)')}<textarea data-aiq rows="${o.qRows||3}" maxlength="2000" placeholder="${esc(o.qPh||'z. B. kürzer, mehr zur Alarmierung')}"></textarea><span class="aim">Ctrl+Enter oder «↻ Neu» erstellt einen neuen Vorschlag mit diesem Wunsch.</span></label>`}
+    <div class="mut aih">${only?'Antworten':'Vorschlag'} des AI-Assistenten: bitte prüfen, bevor du ${only?'sie verwendest':'ihn übernimmst'}. Es gehen nur die Daten dieser Ansicht an den Anbieter${o.req?'':' (hier keine Einsatzdaten)'}.</div>
+    ${only?'':`<div class="aio" data-aio></div><div class="mut aim" data-aim></div>`}
+    ${sc?'':ch}</div>${o.side?'<div class="aiside" data-aiside></div>':sc?`<div class="aiside aisc">${ch}</div>`:''}</div>`,
+    async()=>{if(only){const l=hist.filter(h=>h.a).pop();if(!l)throw new Error('Es gibt noch keine Antwort');return aiCopy(l.a)}
+      if(!res)throw new Error('Es gibt noch keinen Vorschlag');if(o.apply)return o.apply(res);return aiCopy(res.text)},
+    only?'Letzte Antwort kopieren':o.apply?(o.applyText||'Übernehmen'):'Kopieren',only?'Schliessen':'Verwerfen');
+  d.firstElementChild.classList.add('aip');if(o.side||sc)d.firstElementChild.classList.add(o.side?'wide':'wide2');
+  const out=$('[data-aio]',d),meta=$('[data-aim]',d),q=$('[data-aiq]',d),ok=$('[data-ok]',d),th=$('[data-aith]',d),cq=$('[data-aic]',d),cs=$('[data-aisend]',d);
+  const show=()=>{if(only)return;out.innerHTML=res?(o.show?o.show(res):`<div class="aitx">${aiFmt(res.text)}</div>`):'';meta.textContent=res?aiMeta(res):'';ok.disabled=!res;if(o.after)o.after(res)};
+  const run=async fresh=>{if(busy||only)return;busy=true;nb.disabled=true;ok.disabled=true;out.innerHTML='<div class="mut aild">✨ Der AI-Assistent schreibt …</div>';meta.textContent='';if(o.after)o.after(null);
+    try{res=await api('ai/ask'+(o.my?'&my=1':''),Object.assign({},o.req,fresh?{fresh:1}:{},q.value.trim()?{q:q.value.trim()}:{}))}
+    catch(e){out.innerHTML=`<div class="aierr">${esc(e.message)}</div>`;res=res&&!fresh?res:null}
+    busy=false;nb.disabled=false;if(res)show();else{ok.disabled=true;if(o.after)o.after(null)}};
+  // freie Fragen: Verlauf nur im Fenster, geht bei jeder Frage mit (der Server nimmt die letzten 10)
+  const drawTh=()=>{th.innerHTML=hist.map((h,i)=>`<div class="aiq">${esc(h.q)}</div>${h.a!=null?`<div class="aitx">${aiFmt(h.a)}</div><div class="row aia"><button class="sec" data-aicp="${i}">Kopieren</button><span class="mut aim">${esc(h.m||'')}</span></div>`:h.e?`<div class="aierr">${esc(h.e)}</div>`:'<div class="mut aild">✨ Der AI-Assistent schreibt …</div>'}`).join('');
+    th.querySelectorAll('[data-aicp]').forEach(b=>b.onclick=()=>aiCopy(hist[+b.dataset.aicp].a).catch(fail));th.scrollTop=th.scrollHeight};
+  const ask=async()=>{const t=cq.value.trim();if(!t||cs.disabled)return;cs.disabled=true;const h={q:t};hist.push(h);cq.value='';drawTh();
+    const prev=hist.filter(x=>x!==h&&x.a!=null).map(x=>({q:x.q,a:x.a}));
+    try{const r=await api('ai/ask'+(o.my?'&my=1':''),Object.assign(o.req?{about:o.req.fn,id:o.req.id}:{},{fn:'chat',q:t,msgs:prev}));h.a=r.text;h.m=aiMeta(r)}catch(e){h.e=e.message}
+    cs.disabled=false;drawTh();cq.focus()};
+  if(chat){cs.onclick=ask;cq.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask()}}}
+  const nb=document.createElement('button');
+  if(!only){nb.textContent='↻ Neu';nb.title='Neuen Vorschlag erstellen (mit dem zusätzlichen Wunsch)';nb.onclick=()=>run(true);ok.parentNode.appendChild(nb);
+    q.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();run(true)}};if(o.side)o.side($('[data-aiside]',d),d);if(res)show();else run(false)}
+  else{ok.disabled=false;cq.focus()}
+  return d}
+// begleitender Modus: Vorschlag im Hintergrund holen (auto=1, der Server nimmt gespeicherte Vorschläge, solange sie gelten); Fehler still
+const aiAuto=(req,my)=>api('ai/ask'+(my?'&my=1':''),Object.assign({auto:1},req)).catch(()=>null);

@@ -39,6 +39,9 @@ const days=n=>n==null?'nie automatisch':n===0?'gleich nach dem Einsatzende':n===
 const lnk=(u,t)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t||u.replace(/^https?:\/\//,'').replace(/\/$/,''))}</a>`;
 const host=u=>{try{return new URL(u).host}catch(e){return u}};
 const lic=(t,w)=>`<span class="lic${w?' w':''}">${esc(t)}</span>`;
+// AI-Assistent (Issue #111): Datenschutz je Einsatztyp ({Typ-ID: 0|1}); gemischt mit den Typen in Klammern
+const aiPer=(D,p,on,off)=>{const v=(D.ai&&D.ai[p])||{},ks=(D.kinds||[]).filter(k=>k.id in v),a=ks.filter(k=>v[k.id]),b=ks.filter(k=>!v[k.id]),n=l=>l.map(k=>'«'+esc(k.name)+'»').join(', ');
+  return!b.length?on:!a.length?off:`${on} (${n(a)})${off?`${off} (${n(b)})`:''}`};
 const fOn=k=>{const f=D&&(D.features||[]).find(x=>x.k===k);return!f||Object.values(f.on||{}).some(Boolean)}; // an, wenn für einen Einsatztyp an
 
 function impressum(){const c=(D&&D.cfg)||{},F=[['org','Organisation'],['addr','Adresse'],['contact','Kontakt'],['resp','Verantwortlich'],['hosting','Hosting']];
@@ -121,6 +124,7 @@ function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],ks=(D&&D.kinds)||[]
    <tr><td>swisstopo, Nominatim (OSM Foundation)</td><td>Koordinaten von Anfang und Ende einer Fahrt, ohne Namen; der Server fragt.</td><td>Bei erkannten Fahrten im Einsatz.</td></tr>
    ${!air||air.on?`<tr><td>ADS-B-Dienste${air&&air.src.length?' ('+air.src.map(s=>esc(s.name)).join(', ')+')':''}</td><td>Ein Kreis um das Einsatzgebiet, ohne Personenbezug; der Server fragt.</td><td>Während Einsätzen mit eingeschalteten Helikoptern.</td></tr>`:''}
    <tr><td>Push-Dienst deines Browsers (Google, Apple, Mozilla)</td><td>Verschlüsselte Benachrichtigung (Alarm, Nachricht, Einsatzende); der Dienst sieht nur Zeitpunkt und Grösse.</td><td>Nur wenn du Push eingeschaltet hast.</td></tr>
+   ${D&&D.ai&&D.ai.on?`<tr><td>Anbieter des AI-Assistenten${D.ai.host?' ('+esc(D.ai.host)+')':''}</td><td>Daten der gewünschten Aufgabe (z. B. Einsatzlog, Lage, Felder des After Action Review)${aiPer(D,'anon',', Namen durch Bezeichnungen wie «Einsatzkraft 3» ersetzt',', mit Namen')}${aiPer(D,'round_loc',', Koordinaten gerundet','')}; Beschreibungen von Rettlingen nie. Freitexte können Namen enthalten. Der Server fragt.</td><td>Nur auf Abruf bzw. begleitend für Personen, denen der Assistent freigegeben ist.</td></tr>`:''}
    ${fOn('nav')?`<tr><td>Gewählte Navigations-App</td><td>Koordinaten des Ziels.</td><td>Nur beim Antippen von 🧭.</td></tr>`:''}
   </tbody></table>
   <p class="mut">Einige dieser Anbieter haben ihren Sitz oder Server ausserhalb der Schweiz (z. B. in der EU oder den USA).</p>

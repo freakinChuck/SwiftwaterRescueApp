@@ -228,7 +228,19 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **VW-02** – Neue Einstellungen erscheinen als Unterpunkt einer Kategorie mit eigenem Recht (#32, #63).
 - **VW-03** – Hinweise verschwinden von selbst; nur Rückfragen brauchen einen Klick (AG).
 
-## 21. Rechtliches (RC)
+## 21. AI-Assistent (AI)
+
+- **AI-01** – Optionaler AI-Assistent über einen externen Anbieter (OpenAI-kompatibel inkl. Mistral, oder Anthropic) oder einen selbst gehosteten Server (z. B. Ollama, ohne Schlüssel, auch über http im eigenen Netz); ohne Anbieter und Freigabe gibt es ihn nicht. Ein Schlüssel bleibt auf dem Server (#111).
+- **AI-02** – Funktionen: Entwürfe für leere Textfelder des After Action Review, Zusammenfassung des Einsatzlogs (Verwaltung und Meine Einsätze), Vorschläge zu vorbereiteten Übungen, Einsatzstatistik in Worten, Lagezusammenfassung im laufenden Einsatz (#111).
+- **AI-03** – Feste Aufgaben, optional mit einem zusätzlichen Wunsch, dazu freie Fragen (siehe AI-08); Vorschläge erscheinen in einem Fenster und gelten erst mit «Übernehmen» bzw. werden kopiert (#111, geändert: früher ohne freie Eingabe).
+- **AI-04** – Modi je Funktion: Aus, «Auf Abruf» (Knopf), «Begleitend» (Vorschlag beim Öffnen vorbereitet). Freigabe je Einsatztyp (bzw. Verwaltung ohne Einsatz), Funktion und Rolle: Benutzerrollen und Spezialrollen im Einsatz (nur mit Teilnahme), der höchste Modus gilt; jede Person kann im Profil weniger wählen. Standard: nur Systemadministratoren «Auf Abruf», Lagezusammenfassung bei Einsatztypen ohne vorbereitete Übungen aus (#111, AG).
+- **AI-05** – Datenschutz je Einsatztyp einstellbar: Namen vor dem Senden durch Bezeichnungen ersetzen (Standard ein), Koordinaten runden (Standard ein); Beschreibungen von Rettlingen gehen nie mit; die Daten folgen den Rechten und der Anonymisierung der jeweiligen Ansicht (#111, AG).
+- **AI-06** – Grenzen und Kontrolle: Wartezeit, Antwortlänge, Anfragen pro Tag gesamt und je Person, Verbindungstest und Verbrauchsübersicht in der Verwaltung (Recht «AI-Assistent einstellen») (#111).
+- **AI-07** – Die Datenschutzerklärung führt den Anbieter des AI-Assistenten als Empfänger auf, solange der Assistent eingerichtet ist, mit dem Datenschutz je Einsatztyp (#111, #102).
+- **AI-08** – Freie Fragen: Im Fenster jeder Funktion lassen sich eigene Fragen zu den Daten der Ansicht stellen (mit Verlauf im Fenster, nicht gespeichert); in der Einsatz-App zum laufenden Einsatz, in der Verwaltung auch ohne Einsatzdaten. Eigene Funktion in der Freigabe, nur «Auf Abruf»; Namen in den Fragen werden wie die Daten ersetzt (#111, AG).
+- **AI-09** – Übungsvorbereitung: Der AI-Assistent schlägt neben Hinweisen konkrete Elemente vor (Art, Bezeichnung, Standort relativ zu bestehenden Elementen oder festen Standorten, Zeitpunkt, Meldung). Die Übungsleitung wählt sie einzeln an und erstellt sie mit einem Klick; Verweise zwischen den Vorschlägen (Sichtung eines neuen Rettlings, Abzug einer neuen externen Einsatzkraft) werden aufgelöst. Anforderungen an die Übung lassen sich zuoberst als Freitext eingeben; eine Vorschaukarte zeigt die bestehenden Elemente und Standorte zusammen mit den angewählten Vorschlägen. Standorte sind Näherungen und bleiben bearbeitbar (#111).
+
+## 22. Rechtliches (RC)
 
 - **RC-01** – Eine Seite «Impressum, Lizenzen & Datenschutz» ist ohne Anmeldung erreichbar, verlinkt bei der Anmeldung, im Profil der Einsatz-App, in der öffentlichen Ansicht und in der Verwaltung (#102).
 - **RC-02** – Impressum mit den Angaben der betreibenden Organisation und den Verwendungseinschränkungen: kein Ersatz für Notrufnummern, Alarmierung ohne Gewähr, Standorte und Suchgebiet sind Schätzungen, Kartendaten und Luftfahrzeuge ohne Gewähr, nur nicht-kommerzielle Nutzung, keine Haftung (#102).
