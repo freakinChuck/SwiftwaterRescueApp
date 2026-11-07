@@ -17,7 +17,7 @@ val storeFilePath = keyVal("storeFile", "ANDROID_KEYSTORE_PATH")
 
 android {
     namespace = "ch.swiftwaterrescue.app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = maxOf(flutter.compileSdkVersion, 37) // androidx.core 1.19 (über die Plugins) verlangt 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
