@@ -69,6 +69,7 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .anum small{color:var(--mut);font-size:.75rem}.anum small b{color:var(--ex);font-weight:600}
 #sH .afld{display:flex;flex-direction:column;gap:.25rem;max-width:28rem;margin:.5rem 0}#sH .afld select{margin:0}#sH label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* Helikopter: je Eingabe eine Zeile */
 #sAi label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
+#sAi .aiflds{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:.6rem;margin:.4rem 0 .6rem}#sAi .aifld{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem;margin:.4rem 0}#sAi .aiflds .aifld{margin:0}#sAi .aifld>label:first-child,#sAi .aifld>b{font-weight:600}#sAi .aifld input,#sAi .aifld select{margin:0;width:100%}#sAi .aifld .h{color:var(--mut);font-size:.82rem}#sAi .aifld label.chk{margin:.1rem 0}
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
 .explc{width:20px;height:20px;border-radius:3px;border:2px solid #fff;color:#fff;display:grid;place-items:center;font-size:.6rem;font-weight:700;box-shadow:0 0 0 1px #0008;text-shadow:0 0 2px #000;overflow:hidden;white-space:nowrap}
 .exleg{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.3rem;font-size:.8rem}.exleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;border:1px solid #fff;margin-right:.3rem;vertical-align:-.05rem}
@@ -433,7 +434,7 @@ let aiS=null,aiC=null;
 const aiPk=p=>p.kind_id&&(me.kinds||[]).some(k=>k.id===p.kind_id&&k.plans)?p.kind_id:((me.kinds||[]).find(k=>k.plans)||{}).id;
 const AI_PRESET={openai:['OpenAI','openai','https://api.openai.com/v1','gpt-4.1-mini'],anthropic:['Anthropic (Claude)','anthropic','','claude-haiku-4-5'],
   mistral:['Mistral (EU)','openai','https://api.mistral.ai/v1','mistral-small-latest'],local:['Eigener Server (z. B. Ollama, LM Studio)','openai','http://localhost:11434/v1','llama3.1']};
-const AI_NUM={timeout:['Wartezeit je Anfrage','s',5,300],max_tokens:['Länge der Antwort höchstens','Tokens',100,8000],day_limit:['Anfragen pro Tag höchstens (alle zusammen)','0 = unbegrenzt',0,100000],user_limit:['Anfragen pro Person und Tag höchstens','0 = unbegrenzt',0,10000]};
+const AI_NUM={timeout:['Wartezeit je Anfrage','s',5,300,'So lange wartet der Server auf den Anbieter. Eigene Server ohne Grafikkarte brauchen oft länger.'],max_tokens:['Länge der Antwort','Tokens',100,8000,'Höchstens so viele Tokens je Antwort (ca. 0.75 Wörter je Token).'],day_limit:['Anfragen pro Tag, alle zusammen','Anfragen',0,100000,'In 24 Stunden über alle Personen. 0 = unbegrenzt.'],user_limit:['Anfragen pro Person und Tag','Anfragen',0,10000,'In 24 Stunden je Person. 0 = unbegrenzt.']};
 async function loadAi(){const el=$('#sAi');try{aiS=await api('ai/cfg')}catch(e){el.innerHTML='<h2>AI-Assistent</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   aiC=JSON.parse(JSON.stringify(aiS.cfg));['matrix','anon','round_loc'].forEach(k=>{if(!aiC[k]||Array.isArray(aiC[k]))aiC[k]={}});drawAi()}
 // Freigabe und Datenschutz je Bereich (Einsatztyp oder Verwaltung, Auswahl oben, gemerkt in aiCx): Zeilen = Funktionen, Spalten = Benutzerrollen und im Einsatz die Spezialrollen
@@ -452,16 +453,23 @@ function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000
     <div class="inc" style="padding:.6rem .8rem"><label class="chk"><input type="checkbox" id="aiOn" ${c.on?'checked':''}> <b>AI-Assistent einschalten</b></label>
       <div class="mut">${s.ready?'✓ Eingerichtet und eingeschaltet.':c.on?'Eingeschaltet, aber noch nicht gespeichert.':'Ausgeschaltet: niemand sieht den AI-Assistenten, es geht nichts an einen Anbieter.'}${s.curl?'':' ⚠ Auf dem Server fehlt curl, Anfragen sind nicht möglich.'}</div></div>
     <h3>Anbieter</h3>
-    <div class="row">${Object.entries(AI_PRESET).map(([k,v])=>`<button data-aip="${k}" class="sec">${esc(v[0])}</button>`).join('')}</div>
-    <div class="mut" style="font-size:.8rem">Vorlagen füllen Schnittstelle, Basis-URL und ein Beispielmodell aus; das Modell bitte gemäss Angebot des Anbieters bzw. eigenem Server prüfen. Selbst gehostet (z. B. Ollama): Schnittstelle «OpenAI-kompatibel», Basis-URL des eigenen Servers mit <code>/v1</code>, ohne Schlüssel.</div>
-    <div class="row"><label class="mut">Schnittstelle<select id="aiPv">${Object.entries(s.prov).map(([k,l])=>`<option value="${k}" ${k===c.provider?'selected':''}>${esc(l)}</option>`).join('')}</select></label>
-      <label class="mut">Basis-URL${c.provider==='anthropic'?' (leer = api.anthropic.com)':''}<input id="aiU" value="${esc(c.base_url)}" placeholder="https://…/v1" inputmode="url"></label>
-      <label class="mut">Modell<input id="aiMd" value="${esc(c.model)}" maxlength="120"></label></div>
-    <div class="row" style="align-items:end"><label class="mut">API-Schlüssel ${s.has_key?'(<b>hinterlegt</b>, leer lassen zum Behalten)':c.provider==='anthropic'?'(noch keiner)':'(optional, eigene Server brauchen meist keinen)'}<input id="aiK" type="password" autocomplete="off" placeholder="${s.has_key?'••••••••':'sk-…'}"></label>
-      ${s.has_key?'<label class="chk"><input type="checkbox" id="aiKc"> Schlüssel löschen</label>':''}</div>
-    <div class="mut" style="font-size:.8rem">Der Schlüssel wird nur auf dem Server gespeichert und nie an Geräte ausgeliefert. Basis-URL mit https; http nur für eigene Server im eigenen Netz (unverschlüsselt). Der Server der App muss den Anbieter erreichen können.</div>
+    <div class="aifld"><b>Vorlage</b><div class="row" style="margin:0">${Object.entries(AI_PRESET).map(([k,v])=>`<button data-aip="${k}" class="sec">${esc(v[0])}</button>`).join('')}</div>
+      <div class="h">Füllt Schnittstelle, Basis-URL und ein Beispielmodell aus. Das Modell bitte gemäss Angebot des Anbieters bzw. eigenem Server prüfen.</div></div>
+    <div class="aiflds">
+      <div class="aifld"><label for="aiPv">Schnittstelle</label><select id="aiPv">${Object.entries(s.prov).map(([k,l])=>`<option value="${k}" ${k===c.provider?'selected':''}>${esc(l)}</option>`).join('')}</select>
+        <div class="h">«OpenAI-kompatibel» passt für OpenAI, Mistral und selbst gehostete Server (Ollama, LM Studio).</div></div>
+      <div class="aifld"><label for="aiMd">Modell</label><input id="aiMd" value="${esc(c.model)}" maxlength="120" placeholder="z. B. llama3.1">
+        <div class="h">Bezeichnung des Modells beim Anbieter bzw. auf dem eigenen Server.</div></div>
+      <div class="aifld"><label for="aiU">Basis-URL</label><input id="aiU" value="${esc(c.base_url)}" placeholder="${c.provider==='anthropic'?'leer = https://api.anthropic.com':'https://…/v1'}" inputmode="url">
+        <div class="h">${c.provider==='anthropic'?'Leer lassen für api.anthropic.com. ':'Selbst gehostet mit <code>/v1</code>, z. B. <code>http://server:11434/v1</code>. '}Mit https; http nur für eigene Server im eigenen Netz (unverschlüsselt). Der Server der App muss die Adresse erreichen.</div></div>
+      <div class="aifld"><label for="aiK">API-Schlüssel</label><input id="aiK" type="password" autocomplete="off" placeholder="${s.has_key?'•••••••• (hinterlegt)':'sk-…'}">
+        ${s.has_key?'<label class="chk"><input type="checkbox" id="aiKc"> Hinterlegten Schlüssel löschen</label>':''}
+        <div class="h">${s.has_key?'<b>Hinterlegt.</b> Leer lassen zum Behalten. ':c.provider==='anthropic'?'Für Anthropic nötig. ':'Optional, eigene Server brauchen meist keinen. '}Wird nur auf dem Server gespeichert und nie an Geräte ausgeliefert.</div></div>
+    </div>
     <h3>Grenzen</h3>
-    <div class="row">${Object.entries(AI_NUM).map(([k,[l,u,a,b]])=>`<label class="mut">${esc(l)} (${esc(u)})<input type="number" data-ain="${k}" min="${a}" max="${b}" step="1" value="${esc(String(c[k]))}" inputmode="numeric"></label>`).join('')}</div>
+    <div class="anums">${Object.entries(AI_NUM).map(([k,[l,u,a,b,h]])=>`<div class="anum"><label for="ain_${k}">${esc(l)}</label><div class="h">${esc(h)}</div>
+      <div class="ai"><input type="number" id="ain_${k}" data-ain="${k}" min="${a}" max="${b}" step="1" value="${esc(String(c[k]))}" inputmode="numeric"><span>${esc(u)}</span></div>
+      <small>Bereich ${a.toLocaleString('de-CH')}–${b.toLocaleString('de-CH')}</small></div>`).join('')}</div>
     <h3>Freigabe und Datenschutz je Einsatztyp</h3>
     <div class="mut">Eine Person erhält den höchsten Modus ihrer Benutzerrollen und, im Einsatz, ihrer Spezialrolle (nur mit Teilnahme). «Auf Abruf» = Knopf ✨, «Begleitend» = der Vorschlag wird beim Öffnen schon vorbereitet (Knopf leuchtet). «Freie Fragen» erlaubt eigene Eingaben im Fenster des AI-Assistenten. Jede Person kann in ihrem Profil weniger wählen.</div>
     <div class="aisel">${CX.map(x=>`<button data-aicx="${x.id}" aria-pressed="${x.id===X}">${x.color?`<span class="gdot" style="background:${esc(x.color)}"></span>`:''}${esc(x.name)}</button>`).join('')}</div>
