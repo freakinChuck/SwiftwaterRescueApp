@@ -1,7 +1,28 @@
 # Swiftwater Rescue – Prototyp V0.1
 
+## Ordnerstruktur
+```
+web/              Web-App (PWA) und API – der Inhalt ist der Webroot auf dem Server
+  index.html        Einsatz-App mit Karte
+  admin.html        Verwaltung und «Meine Einsätze»
+  public.html       öffentliche Ansicht (ohne Anmeldung)
+  legal.html        Impressum, Lizenzen & Datenschutz
+  common.js/.css    gemeinsamer Code der Seiten
+  sw.js, manifest.webmanifest, .htaccess, img/   PWA, Zwischenspeicher, App-Icons
+  api/              JSON-API (index.php), config.php (Vorlage), data/ (Datenbank, Caches; nicht im Git)
+mobile/           künftige native Apps (Android, iOS), siehe mobile/README.md
+docs/             Anforderungen (REQUIREMENTS.md)
+scripts/          Deployment (deploy.ps1, deploy-dev.ps1, Vorlage deploy.example.json)
+```
+Pfade in dieser Anleitung ohne `web/` (z. B. `api/config.php`) meinen den Webroot, also auf dem Server den Zielordner bzw. im Repo `web/`.
+
+Lokal starten (PHP mit curl, mbstring, openssl, pdo_sqlite):
+```
+php -S localhost:8000 -t web
+```
+
 ## Installation (cyon Webhosting Single)
-1. Alles per FTP/Dateimanager in ein Verzeichnis hochladen (z. B. `/public_html/rescue/`). HTTPS aktivieren (Pflicht für GPS und Benachrichtigungen).
+1. Den Inhalt von `web/` per FTP/Dateimanager in ein Verzeichnis hochladen (z. B. `/public_html/rescue/`). HTTPS aktivieren (Pflicht für GPS und Benachrichtigungen).
 2. `api/config.php`: `admin_pass` ändern. Standard ist SQLite (keine Einrichtung nötig). Für MySQL im cyon-Panel eine Datenbank anlegen und DSN/Benutzer/Passwort eintragen.
 3. `rescue/admin.html` im Browser öffnen, mit `admin` anmelden, ein eigenes Passwort setzen und Benutzer und Rollen anlegen. Die Einsatz-App liegt unter `rescue/`.
 4. Das Admin-Passwort danach nicht mehr in `config.php` stehen lassen (Konto wird nur beim ersten Start angelegt).
@@ -10,14 +31,14 @@
 Liefert einen eingecheckten Git-Stand aus (nicht die Arbeitskopie): Dateien per `git archive`, Upload per `scp`, auf dem Server erst PHP-Syntaxprüfung (`php -l`), dann Übernahme. `api/config.php` und `api/data/` (Datenbank) werden nie überschrieben; der ausgelieferte Stand steht in `api/data/deployed.txt`.
 
 1. SSH-Schlüssel erzeugen (`ssh-keygen -t ed25519 -f %USERPROFILE%\.ssh\swiftwater-tst`) und den öffentlichen Teil im cyon-Panel beim Hosting-Benutzer eintragen (FTP-Unterkonten unterstützen keine Schlüssel).
-2. `deploy.example.json` nach `deploy.local.json` (Testsystem) bzw. `deploy.prod.json` (Produktivsystem) kopieren und Server, Benutzer, Schlüssel und Zielordner eintragen. Alle `deploy.*.json` ausser der Vorlage sind per `.gitignore` ausgeschlossen, Passwörter braucht es keine. `env` (`dev`, `test` oder `prod`) wählt die App-Icons: DEV grün umrandet (so liegen sie im Repo), Test orange (`img/test/`), Prod ohne Rand (`img/prod/`). Ohne `env` gilt `prod`, wenn der Dateiname «prod» enthält, sonst `test`.
+2. `scripts/deploy.example.json` nach `scripts/deploy.local.json` (Testsystem) bzw. `scripts/deploy.prod.json` (Produktivsystem) kopieren (Dateien im Repo-Hauptordner, wie vor Issue #109, findet das Skript weiterhin) und Server, Benutzer, Schlüssel und Zielordner eintragen. Alle `deploy.*.json` ausser der Vorlage sind per `.gitignore` ausgeschlossen, Passwörter braucht es keine. `env` (`dev`, `test` oder `prod`) wählt die App-Icons: DEV grün umrandet (so liegen sie im Repo), Test orange (`img/test/`), Prod ohne Rand (`img/prod/`). Ohne `env` gilt `prod`, wenn der Dateiname «prod» enthält, sonst `test`.
 3. Ausliefern:
 ```
 powershell -File scripts\deploy.ps1                                  # origin/main
 powershell -File scripts\deploy.ps1 -Ref origin/feature/irgendwas    # anderer Stand
-powershell -File scripts\deploy.ps1 -Config deploy.prod.json         # Produktivsystem (origin/main)
+powershell -File scripts\deploy.ps1 -Config deploy.prod.json         # Produktivsystem (origin/main), gesucht in scripts\ bzw. im Hauptordner
 ```
-Beim ersten Mal auf dem Server `api/config.php` von Hand anlegen (Vorlage im Repo), das Skript lädt sie nicht hoch.
+Ausgeliefert wird der Inhalt von `web/`, auf dem Server direkt im Zielordner (gleiche URLs wie vor der neuen Ordnerstruktur). Beim ersten Mal auf dem Server `api/config.php` von Hand anlegen (Vorlage im Repo unter `web/api/config.php`), das Skript lädt sie nicht hoch.
 
 ## Lokales DEV-Environment (`scripts/deploy-dev.ps1`)
 Jeder offene PR läuft im lokalen IIS in einem eigenen Unterordner mit seiner Nummer (`C:\inetpub\swiftwaterdev\<PR>`, http://localhost:8099/<PR>/). Das Skript liefert den gepushten Stand des PR aus, nicht die Arbeitskopie, mit der Dateiliste aus `scripts/deploy.ps1` dieses Stands. `api/config.php` und `api/data/` bleiben erhalten, jeder PR hat also seine eigene Datenbank. Der Ordner `testbase` (http://localhost:8099/testbase/) zeigt den Stand von `origin/main`; seine Datenbank ist die Basis für neue PRs: Ein PR-Ordner ohne Datenbank erhält beim ersten Deploy eine Kopie davon, ohne Push-Abonnements. DEV behält die grün umrandeten Icons, und der Seitentitel zeigt die PR-Nummer (`[PR 100] Swiftwater Rescue`).

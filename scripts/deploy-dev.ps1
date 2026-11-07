@@ -1,5 +1,5 @@
 # Deployt offene PRs ins lokale DEV-Environment (IIS): je PR ein Unterordner mit der PR-Nummer.
-# Ausgeliefert wird der gepushte Stand des PR, nicht die Arbeitskopie. Die Dateiliste kommt aus scripts/deploy.ps1 dieses Stands.
+# Ausgeliefert wird der gepushte Stand des PR, nicht die Arbeitskopie. Webroot ($web, seit Issue #109 web/) und Dateiliste kommen aus scripts/deploy.ps1 dieses Stands.
 # api/config.php und api/data/ im Unterordner bleiben erhalten (eigene Datenbank je PR).
 # IIS wertet .htaccess nicht aus: api/data/web.config sperrt darum die Datenbank.
 # Der Ordner testbase zeigt den Stand von origin/main. Seine Datenbank ist die Basis fuer neue PR-Ordner:
@@ -53,15 +53,20 @@ foreach ($n in $targets) {
   if ($isBase) { git fetch -q origin main; Check 'git fetch main' } else { git fetch -q origin "pull/$n/head"; Check "git fetch PR $n" }
   $full = (git rev-parse FETCH_HEAD); Check 'git rev-parse'
   $sha = $full.Substring(0, 7)
-  $m = [regex]::Match((git show "${full}:scripts/deploy.ps1" | Out-String), '\$files\s*=\s*([^\r\n]+)')
+  $script = git show "${full}:scripts/deploy.ps1" | Out-String
+  $m = [regex]::Match($script, '\$files\s*=\s*([^\r\n]+)')
   if (-not $m.Success) { throw "PR ${n}: Dateiliste nicht gefunden" }
   $files = [regex]::Matches($m.Groups[1].Value, "'([^']+)'") | ForEach-Object { $_.Groups[1].Value }
+  # Webroot im Repo (Issue #109: web/), aeltere Staende liegen im Hauptordner
+  $w = [regex]::Match($script, "(?m)^\`$web\s*=\s*'([^']+)'")
+  $tree = if ($w.Success) { "${full}:$($w.Groups[1].Value)" } else { $full }
+  $cfgSrc = if ($w.Success) { "${full}:$($w.Groups[1].Value)/api/config.php" } else { "${full}:api/config.php" }
 
   $stage = Join-Path $env:TEMP "swiftwater-dev-$n-$sha"
   if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
   New-Item -ItemType Directory $stage | Out-Null
   $tar = "$stage.tar"
-  git archive --format=tar -o $tar $full @files; Check 'git archive'
+  git archive --format=tar -o $tar $tree @files; Check 'git archive'
   tar -xf $tar -C $stage; Check 'tar'
   Remove-Item $tar
 
@@ -86,7 +91,7 @@ foreach ($n in $targets) {
   if (Test-Path $ht) { Copy-Item $ht (Join-Path $data '.htaccess') -Force }
   [IO.File]::WriteAllText((Join-Path $data 'web.config'), $deny, $enc)
   $cfg = Join-Path $dest 'api\config.php'
-  if (-not (Test-Path $cfg)) { git show "${full}:api/config.php" | Set-Content -Encoding Ascii $cfg }
+  if (-not (Test-Path $cfg)) { git show $cfgSrc | Set-Content -Encoding Ascii $cfg }
   [IO.File]::WriteAllText((Join-Path $data 'deployed.txt'), "$($label.Trim()) $sha`n", $enc)
   $db = Join-Path $data 'swiftwater.sqlite'
   $baseDb = Join-Path $Base 'api\data\swiftwater.sqlite'
