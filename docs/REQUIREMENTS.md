@@ -130,6 +130,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **MB-04** – Vorbereitete Übungen wählen, welche festen Standorte gelten (alle aktiven oder eine Auswahl), und können bis zum Start eigene Standorte ergänzen; sichtbar in der Vorschau auf der Karte (#96).
 - **MB-05** – Feste Standorte stehen auch ohne laufenden Einsatz auf der Karte der Einsatz-App (alle aktiven permanenten, ausblendbar im Fenster «Ansicht») (#96).
 - **MB-06** – Auswahl- und Vorschaukarten der Verwaltung sind gross genug zum Wählen und bieten alle Kartenanbieter zur Wahl (wie das Fenster «Ansicht») (#96).
+- **MB-07** – Kategorien fester Standorte (z. B. Bootseinwasserungen, Magazine): in der Verwaltung angelegt, je Standort zugeordnet, je Kategorie mit Standard «eingeblendet» oder «ausgeblendet». In der Einsatz-App (Fenster «Ansicht» und «Markierungen») einzeln ein- und ausblendbar; die eigene Wahl wird pro Person gespeichert (auf allen Geräten) und lässt sich auf den Standard zurücksetzen (#96).
 - PLS auf eine Markierung verschieben (**offen**).
 
 ## 12. Werkzeuge (WZ)
