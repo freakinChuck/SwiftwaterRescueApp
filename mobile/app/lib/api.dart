@@ -8,9 +8,12 @@ import 'package:http/http.dart' as http;
 const appUa = 'SwiftwaterRescueApp/1.0';
 
 class ApiError implements Exception {
-  ApiError(this.message, [this.status = 0]);
+  ApiError(this.message, [this.status = 0, this.data]);
   final String message;
   final int status;
+
+  /// ganze Antwort des Servers (z. B. query und servers bei 502 der Route overpass)
+  final Map<String, dynamic>? data;
   bool get unauth => status == 401;
   bool get offline => status == 0;
   @override
@@ -65,7 +68,7 @@ class Api {
     } catch (_) {
       throw ApiError(r.statusCode == 404 ? 'Unter dieser Adresse läuft kein Swiftwater-Rescue-Server' : 'Ungültige Antwort vom Server (${r.statusCode})', r.statusCode);
     }
-    if (j is Map && j['error'] != null) throw ApiError('${j['error']}', r.statusCode);
+    if (j is Map && j['error'] != null) throw ApiError('${j['error']}', r.statusCode, j is Map<String, dynamic> ? j : null);
     if (r.statusCode >= 400) throw ApiError('Fehler ${r.statusCode}', r.statusCode);
     return j is Map<String, dynamic> ? j : {'data': j};
   }

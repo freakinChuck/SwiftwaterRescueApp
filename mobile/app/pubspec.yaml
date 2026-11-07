@@ -46,6 +46,9 @@ dependencies:
   geolocator: ^14.0.1
   sw_sys:
     path: packages/sw_sys
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  image_picker: ^1.2.4
 
 dev_dependencies:
   flutter_test:
