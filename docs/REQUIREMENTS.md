@@ -45,7 +45,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **BE-06** – Benutzer entfernen = deaktivieren: abgemeldet, aus dem laufenden Einsatz ausgetragen, Daten bleiben, reaktivierbar (AG).
 - **BE-07** – Löschen nur für Konten, die sich nie angemeldet haben und in keinen Einsatz- oder Übungsdaten vorkommen (AG).
 - **BE-08** – Die Verwaltung zeigt jeder Person nur die Bereiche, für die sie ein Recht hat (#63).
-- **BE-09** – Die Benutzerkarten in der Verwaltung zeigen Status, letzte Anmeldung und Passwort (gesetzt bzw. Wechsel ausstehend), nicht den Übungsmodus, immer in denselben Spalten, egal wie viele Rollen und Gruppen jemand hat; die Benutzerrollen stehen je als Chip auf einer Zeile, die Einsatzgruppen darunter (#112, #127).
+- **BE-09** – Die Benutzerkarten in der Verwaltung zeigen Status, letzte Anmeldung und Passwort (gesetzt bzw. Wechsel ausstehend), nicht den Übungsmodus, immer in denselben Spalten, egal wie viele Rollen und Gruppen jemand hat; die Benutzerrollen stehen je als Chip auf einer Zeile, die Einsatzgruppen darunter; links vom Namen das Profilbild bzw. ein Platzhalter (#112, #127).
 - **BE-10** – Die Benutzerliste ist nach aktiven und deaktivierten Personen getrennt (deaktivierte eingeklappt) und ab sechs Personen durchsuchbar (Name, Benutzername, Rolle, Gruppe) (#127).
 
 ## 4. Alarmierung und Einsatz (EI)
