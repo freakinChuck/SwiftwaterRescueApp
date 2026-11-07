@@ -17,7 +17,10 @@ Native Apps für Android und iOS (Issue #108), gebaut mit Flutter in `mobile/app
   | leise | Meldung ohne Ton |
   | keine | nichts |
 
-  Die Meldungen nutzen dieselben Schlüssel wie die Web-App (`i:`, `m:`, `e:`), deshalb meldet nichts doppelt. Ist die Web-App eines Kontos offen, meldet sie selbst.
+  Die Meldungen nutzen dieselben Schlüssel wie die Web-App (`i:`, `m:`, `e:`), deshalb meldet nichts doppelt. Ist die Web-App eines Kontos offen, meldet sie Nachrichten und Einsatzende selbst. Alarme der Stufen kritisch und hoch meldet die App immer (in der WebView darf die Seite oft keinen Ton abspielen, und nur die Meldung der App umgeht «Nicht stören»); «OK» in der Web-App schliesst die Meldung (`swAck`).
+
+  Ob ein Alarm kritisch ist, bestimmt der Einsatztyp auf dem Server (Verwaltung → Einsatz → «Einsatztypen», Alarmstufe). Angelegt sind «Einsatz» kritisch und «Übung» normal; eine Übung ist nur im persönlichen Übungsmodus kritisch.
+- **Standort:** Die Web-App erhält den Standort von der App (`geo.dart` ersetzt `navigator.geolocation`), nicht von der WebView. Im Einsatz teilt die App ihn selbst weiter, sobald die Web-App nicht mehr im Vordergrund ist (`track.dart`, alle 5 s bei Bewegung, sonst alle 15 s), bis man austritt oder der Einsatz endet. Bei gesperrtem Bildschirm braucht es dafür «Immer zulassen»; die App fragt einmal danach und zeigt den Stand in ihren Einstellungen. Die App kennt dabei kein Gewässernetz: Positionen gelten nie als «auf dem Gewässer».
 
 | | Android | iOS |
 |---|---|---|
@@ -30,7 +33,7 @@ In den Einstellungen der App gibt es dazu Folgendes:
 - Benachrichtigungen
 - «Nicht stören» umgehen
 - Ausnahme von der Akku-Optimierung (sonst kann Android den Dienst anhalten)
-- Standort
+- Standort («Immer zulassen», Stand: immer, nur während der Nutzung, nicht erlaubt)
 
 ## Aufbau (`mobile/app/lib`)
 
@@ -38,13 +41,15 @@ In den Einstellungen der App gibt es dazu Folgendes:
 |---|---|
 | `main.dart` | Start, Navigation, Abfrage bei offener App (iOS) |
 | `home.dart` | Kontenliste, Anmeldung, Einstellungen |
-| `web.dart` | WebView: setzt `sw_token` und `sw_acked` vor dem ersten Skript, Handler `swLogout`/`swUnauth` |
+| `web.dart` | WebView: setzt `sw_token` und `sw_acked` vor dem ersten Skript, Handler `swLogout`/`swUnauth`/`swAck` |
+| `geo.dart` | Standort für die Web-App (Ersatz für `navigator.geolocation`, Handler `swGeo`, geolocator) |
+| `track.dart` | Standort im Einsatz teilen, solange die Web-App nicht im Vordergrund ist |
 | `accounts.dart` | Konten im sicheren Speicher (Keychain bzw. verschlüsselt) |
 | `monitor.dart` | Abfrage `incident/state` je Konto, meldet Neues |
 | `notify.dart` | Benachrichtigungen, Kanäle je Alarmstufe |
 | `service.dart` | Android-Vordergrunddienst |
 | `push.dart` | Firebase Cloud Messaging (optional) |
-| `sys.dart` | Akku-Optimierung, Standort, App-Einstellungen (Android, `MainActivity.kt`) |
+| `sys.dart` | Akku-Optimierung, Standortberechtigung (auch «Immer»), App-Einstellungen (Android, `MainActivity.kt`) |
 
 ## Bauen
 

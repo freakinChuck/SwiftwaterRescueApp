@@ -12,6 +12,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'accounts.dart';
 import 'monitor.dart';
 import 'notify.dart';
+import 'track.dart';
 
 final service = FlutterBackgroundService();
 
@@ -57,6 +58,7 @@ Future<void> serviceMain(ServiceInstance s) async {
     if (busy || stop) return;
     busy = true;
     try {
+      await refreshChannels(); // «Nicht stören» umgehen, sobald der Zugriff erteilt ist
       final n = await pollAll();
       if (n == 0) {
         stop = true;
@@ -64,7 +66,7 @@ Future<void> serviceMain(ServiceInstance s) async {
         return;
       }
       final hm = DateTime.now();
-      final txt = '$n ${n == 1 ? 'Konto' : 'Konten'} · zuletzt ${hm.hour.toString().padLeft(2, '0')}:${hm.minute.toString().padLeft(2, '0')}';
+      final txt = '$n ${n == 1 ? 'Konto' : 'Konten'} · zuletzt ${hm.hour.toString().padLeft(2, '0')}:${hm.minute.toString().padLeft(2, '0')}${Tracker.active ? ' · Standort wird geteilt' : ''}';
       if (s is AndroidServiceInstance) {
         await notes.show(
             id: serviceNoteId,
@@ -87,6 +89,7 @@ Future<void> serviceMain(ServiceInstance s) async {
 
   s.on('stop').listen((_) async {
     stop = true;
+    Tracker.stop();
     t?.cancel();
     await s.stopSelf();
   });

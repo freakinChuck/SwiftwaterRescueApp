@@ -2,6 +2,7 @@
 // und übernimmt die schon gemeldeten Alarme in sw_acked, damit die Web-App sie nicht noch einmal meldet. Mehrere Konten auf demselben
 // Server teilen sich den Speicher der WebView: wechselt das Konto (sw_native_acc), wird der gemerkte Stand (sw_last, sw_boot) gelöscht.
 // Fremde Adressen (Navigation, Karten, Telefon, Mail) öffnen sich ausserhalb, der Schlüssel bleibt beim Backend.
+// Den Standort liefert die App (geo.dart); quittiert die Web-App einen Alarm (swAck), schliesst die App ihre Meldung dazu.
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -13,8 +14,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'accounts.dart';
 import 'api.dart';
+import 'geo.dart';
 import 'home.dart';
 import 'monitor.dart';
+import 'notify.dart';
 import 'push.dart';
 import 'service.dart';
 import 'sys.dart';
@@ -32,6 +35,7 @@ class WebPage extends StatefulWidget {
 
 class _WebState extends State<WebPage> with WidgetsBindingObserver {
   InAppWebViewController? _c;
+  GeoBridge? _geo;
   Timer? _hb;
   double _prog = 0;
   bool _closing = false;
@@ -45,7 +49,28 @@ class _WebState extends State<WebPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _beat();
     _hb = Timer.periodic(const Duration(seconds: 5), (_) => _beat());
-    if (Platform.isAndroid) requestLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _askLocation());
+  }
+
+  /// Standort gleich beim Öffnen erlauben lassen; danach einmalig um «Immer zulassen» bitten (Teilen bei gesperrtem Bildschirm, track.dart).
+  Future<void> _askLocation() async {
+    if (await requestLocation() != locInUse || !mounted) return;
+    if (await prefs.getBool('bgAsked') == true || !mounted) return;
+    await prefs.setBool('bgAsked', true);
+    if (!mounted) return;
+    final go = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+              title: const Text('Standort «Immer zulassen»?'),
+              content: Text('Damit die Einsatzleitung deinen Standort im Einsatz auch bei gesperrtem Bildschirm oder geschlossener App sieht, '
+                  'braucht die App den Standort «Immer». Geteilt wird nur, solange du an einem Einsatz teilnimmst und deine Einrückoption den Standort teilt.\n\n'
+                  '${Platform.isAndroid ? 'Wähle auf der nächsten Seite «Immer zulassen».' : 'Wähle «Immer erlauben» bzw. in den Einstellungen «Immer».'} Ändern kannst du es jederzeit in den Einstellungen der App.'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Später')),
+                FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Weiter')),
+              ],
+            ));
+    if (go == true) await requestBackgroundLocation();
   }
 
   /// Herzschlag: solange die Web-App sichtbar ist, meldet sie selbst, die App bleibt für dieses Konto still (monitor.dart).
@@ -54,12 +79,14 @@ class _WebState extends State<WebPage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState s) {
     if (s == AppLifecycleState.resumed) {
+      _geo?.resume();
       _hb?.cancel();
       _beat();
       _hb = Timer.periodic(const Duration(seconds: 5), (_) => _beat());
     } else if (s == AppLifecycleState.paused || s == AppLifecycleState.inactive) {
       _hb?.cancel();
       setForeground(null);
+      if (s == AppLifecycleState.paused) _geo?.pause();
     }
   }
 
@@ -67,6 +94,7 @@ class _WebState extends State<WebPage> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _hb?.cancel();
+    _geo?.dispose();
     setForeground(null);
     if (WebPage.openId == widget.account.id) WebPage.openId = null;
     super.dispose();
@@ -86,7 +114,8 @@ L.setItem('sw_token',${jsonEncode(a.token)});
 var k=[];try{k=JSON.parse(L.getItem('sw_acked')||'[]')}catch(e){}
 ${jsonEncode(tags)}.forEach(function(t){if(k.indexOf(t)<0)k.push(t)});
 L.setItem('sw_acked',JSON.stringify(k.slice(-300)));
-}catch(e){}})();''';
+}catch(e){}
+$geoJs})();''';
   }
 
   Future<void> _logout({required bool byServer}) async {
@@ -153,6 +182,16 @@ L.setItem('sw_acked',JSON.stringify(k.slice(-300)));
                   _c = c;
                   c.addJavaScriptHandler(handlerName: 'swLogout', callback: (_) => _logout(byServer: false));
                   c.addJavaScriptHandler(handlerName: 'swUnauth', callback: (_) => _logout(byServer: true));
+                  // Web-App hat einen Alarm, eine Nachricht oder das Einsatzende quittiert: Meldung der App schliessen (stoppt den Dauerton)
+                  c.addJavaScriptHandler(
+                      handlerName: 'swAck',
+                      callback: (a) async {
+                        final t = a.isEmpty ? null : a.first;
+                        if (t is! String || t.isEmpty) return;
+                        await markTag(widget.account.id, t);
+                        await cancelNote(widget.account.id, t);
+                      });
+                  _geo = GeoBridge(c)..attach();
                 },
                 onProgressChanged: (_, p) => setState(() => _prog = p / 100),
                 shouldOverrideUrlLoading: (c, nav) async {
@@ -169,9 +208,10 @@ L.setItem('sw_acked',JSON.stringify(k.slice(-300)));
                   if (u != null) await _external(u);
                   return false;
                 },
+                // nur noch für fremde Seiten ohne Ersatzskript: die App-Berechtigung entscheidet, nichts merken
                 onGeolocationPermissionsShowPrompt: (c, origin) async {
-                  final ok = await requestLocation();
-                  return GeolocationPermissionShowPromptResponse(origin: origin, allow: ok, retain: true);
+                  final ok = await requestLocation() != locNone;
+                  return GeolocationPermissionShowPromptResponse(origin: origin, allow: ok, retain: false);
                 },
                 onPermissionRequest: (c, req) async => PermissionResponse(resources: req.resources, action: PermissionResponseAction.GRANT),
               ),

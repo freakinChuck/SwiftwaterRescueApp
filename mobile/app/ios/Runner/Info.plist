@@ -18,6 +18,8 @@
 	<string>Swiftwater Rescue</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Im Einsatz teilst du deinen Standort mit der Einsatzleitung und siehst dich auf der Karte.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Damit die Einsatzleitung deinen Standort im Einsatz auch bei gesperrtem Bildschirm sieht. Geteilt wird nur, solange du an einem Einsatz teilnimmst.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Für Profilbilder und Bilder im After Action Review.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -27,6 +29,7 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
+		<string>location</string>
 		<string>remote-notification</string>
 	</array>
 	<key>FirebaseAppDelegateProxyEnabled</key>

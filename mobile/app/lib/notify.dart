@@ -23,14 +23,19 @@ int noteId(String acc, String tag) {
   return h < 10 ? h + 10 : h;
 }
 
-Future<void> initNotes({void Function(NotificationResponse)? onTap}) async {
-  if (_ready && onTap == null) return;
-  await notes.initialize(
-      settings: const InitializationSettings(
-          android: AndroidInitializationSettings('ic_stat_sw'),
-          iOS: DarwinInitializationSettings(requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false, requestCriticalPermission: false)),
-      onDidReceiveNotificationResponse: onTap);
-  _ready = true;
+/// force: Kanäle neu anlegen. Android übernimmt «Nicht stören umgehen» (bypassDnd) nur, wenn die App beim Anlegen Zugriff auf
+/// «Nicht stören» hat; erneutes Anlegen mit Zugriff holt das nach (solange man den Kanal nicht selbst geändert hat).
+Future<void> initNotes({void Function(NotificationResponse)? onTap, bool force = false}) async {
+  if (_ready && onTap == null && !force) return;
+  if (!_ready || onTap != null) {
+    // nicht ohne onTap neu initialisieren, sonst ginge das Öffnen beim Antippen verloren
+    await notes.initialize(
+        settings: const InitializationSettings(
+            android: AndroidInitializationSettings('ic_stat_sw'),
+            iOS: DarwinInitializationSettings(requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false, requestCriticalPermission: false)),
+        onDidReceiveNotificationResponse: onTap);
+    _ready = true;
+  }
   final an = notes.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
   if (an != null) {
     // Kanäle: Ton und Wichtigkeit lassen sich nach dem Anlegen nur noch in den Systemeinstellungen ändern
@@ -62,6 +67,9 @@ Future<void> requestDndAccess() async {
   if (an == null) return;
   if (await an.hasNotificationPolicyAccess() != true) await an.requestNotificationPolicyAccess();
 }
+
+/// Kanäle auffrischen (nach dem Erteilen von «Nicht stören», bei jedem Zurückkehren in die App und im Dienst).
+Future<void> refreshChannels() => initNotes(force: true);
 
 Future<bool?> hasDndAccess() async => notes.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.hasNotificationPolicyAccess();
 

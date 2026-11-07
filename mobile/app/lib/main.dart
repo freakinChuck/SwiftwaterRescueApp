@@ -98,6 +98,7 @@ class _AppState extends State<SwiftwaterApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState s) {
     if (s == AppLifecycleState.resumed) {
+      refreshChannels();
       _iosPoll();
       syncService();
       syncPush();

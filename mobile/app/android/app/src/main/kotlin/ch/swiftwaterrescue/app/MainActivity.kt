@@ -13,9 +13,11 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-// Systemfunktionen für lib/sys.dart: Akku-Optimierung, Standortberechtigung, App-Einstellungen.
+// Systemfunktionen für lib/sys.dart: Akku-Optimierung, Standortberechtigung (auch «Immer zulassen»), App-Einstellungen.
+// Gleichzeitige Anfragen zum Standort (WebView, Einstellungen) warten gemeinsam auf dieselbe Systemabfrage, statt sich gegenseitig abzubrechen.
 class MainActivity : FlutterActivity() {
-    private var locResult: MethodChannel.Result? = null
+    private val locResults = mutableListOf<MethodChannel.Result>()
+    private var locAsking = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,6 +30,19 @@ class MainActivity : FlutterActivity() {
 
     private fun hasLoc() = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
         checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    private fun hasBg() = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+        checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    /// 0 = kein Standort, 1 = nur während der Nutzung, 2 = immer
+    private fun locLevel() = if (!hasLoc()) 0 else if (hasBg()) 2 else 1
+
+    private fun askLoc(result: MethodChannel.Result, perms: Array<String>, code: Int) {
+        locResults.add(result)
+        if (locAsking) return
+        locAsking = true
+        requestPermissions(perms, code)
+    }
 
     @SuppressLint("BatteryLife")
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -44,13 +59,20 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "hasLocation" -> result.success(hasLoc())
+                "locationLevel" -> result.success(locLevel())
                 "requestLocation" -> {
                     if (hasLoc()) {
-                        result.success(true)
+                        result.success(locLevel())
                     } else {
-                        locResult?.success(false)
-                        locResult = result
-                        requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 4711)
+                        askLoc(result, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 4711)
+                    }
+                }
+                // «Immer zulassen»: erst nach der Freigabe während der Nutzung möglich; ab Android 11 öffnet das System dafür die Einstellungsseite
+                "requestBackgroundLocation" -> {
+                    if (!hasLoc() || hasBg()) {
+                        result.success(locLevel())
+                    } else {
+                        askLoc(result, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 4712)
                     }
                 }
                 "appSettings" -> {
@@ -64,9 +86,12 @@ class MainActivity : FlutterActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 4711) {
-            locResult?.success(hasLoc())
-            locResult = null
+        if (requestCode == 4711 || requestCode == 4712) {
+            locAsking = false
+            val l = locLevel()
+            val r = locResults.toList()
+            locResults.clear()
+            r.forEach { it.success(l) }
         }
     }
 }

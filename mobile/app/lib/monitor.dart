@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'accounts.dart';
 import 'api.dart';
 import 'notify.dart';
+import 'track.dart';
 
 final prefs = SharedPreferencesAsync();
 
@@ -64,18 +65,21 @@ Future<void> setForeground(String? id) async {
   }
 }
 
-Future<bool> _isForeground(String id) async {
+Future<bool> isForeground(String id) async {
   final s = await prefs.getString('fg');
   if (s == null) return false;
   final p = s.split('|');
   return p.length == 2 && p[0] == id && DateTime.now().millisecondsSinceEpoch - (int.tryParse(p[1]) ?? 0) < 15000;
 }
 
-/// Meldung zeigen, ausser schon gemeldet oder die Web-App des Kontos ist offen (dann nur merken).
+/// Meldung zeigen, ausser schon gemeldet oder die Web-App des Kontos ist offen (dann nur merken). Alarme der Stufen crit und high
+/// zeigt die App immer: Nur ihre Meldung umgeht «Nicht stören» und klingelt sicher (in der WebView darf die Seite oft keinen Ton abspielen).
+/// Quittiert man den Alarm in der Web-App, schliesst sie die Meldung (swAck, web.dart).
 Future<void> report(Account a, String tag, String title, String body, String lvl) async {
   if (lvl == 'none') return;
   if (!await markTag(a.id, tag)) return;
-  if (await _isForeground(a.id)) return;
+  final alarm = tag.startsWith('i:') && (lvl == 'crit' || lvl == 'high');
+  if (!alarm && await isForeground(a.id)) return;
   await showNote(a.id, tag, title, body, lvl, sub: a.label);
 }
 
@@ -152,5 +156,8 @@ Future<AccState> pollOne(Account a) async {
 Future<int> pollAll() async {
   final l = (await Accounts.load()).where((a) => a.active && !a.loggedOut).toList();
   await Future.wait(l.map(pollOne));
+  try {
+    await Tracker.sync(); // Standort im Einsatz teilen (track.dart)
+  } catch (_) {}
   return l.length;
 }

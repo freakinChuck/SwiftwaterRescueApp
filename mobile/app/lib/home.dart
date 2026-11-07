@@ -342,7 +342,8 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   int _iv = 15;
-  bool? _bat, _dnd, _loc;
+  bool? _bat, _dnd;
+  int? _loc;
 
   @override
   void initState() {
@@ -363,7 +364,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   }
 
   Future<void> _load() async {
-    final iv = await pollInterval(), bat = await batteryExempt(), dnd = await hasDndAccess(), loc = await hasLocation();
+    final iv = await pollInterval(), bat = await batteryExempt(), dnd = await hasDndAccess(), loc = await locLevel();
     if (mounted) {
       setState(() {
         _iv = iv;
@@ -414,6 +415,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               trailing: _state(_dnd),
               onTap: () async {
                 await requestDndAccess();
+                await refreshChannels();
                 _load();
               }),
           ListTile(
@@ -425,17 +427,29 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 await requestBatteryExempt();
                 _load();
               }),
-          ListTile(
-              leading: const Icon(Icons.location_on),
-              title: const Text('Standort erlauben'),
-              subtitle: const Text('Für die Standortfreigabe im Einsatz'),
-              trailing: _state(_loc),
-              onTap: () async {
-                await requestLocation();
-                _load();
-              }),
         ],
-        ListTile(leading: const Icon(Icons.app_settings_alt), title: const Text('Systemeinstellungen der App'), onTap: openAppSettings, enabled: Platform.isAndroid),
+        ListTile(
+            leading: const Icon(Icons.location_on),
+            title: const Text('Standort «Immer zulassen»'),
+            subtitle: Text(_loc == null
+                ? 'Für die Standortfreigabe im Einsatz'
+                : _loc == locAlways
+                    ? 'Immer: Im Einsatz wird der Standort auch bei gesperrtem Bildschirm geteilt'
+                    : _loc == locInUse
+                        ? 'Nur während der Nutzung: Bei gesperrtem Bildschirm sieht die Einsatzleitung deinen Standort nicht. Antippen und «Immer zulassen» wählen.'
+                        : 'Nicht erlaubt: Die Standortfreigabe im Einsatz funktioniert nicht. Antippen zum Erlauben.'),
+            isThreeLine: _loc != null && _loc != locAlways,
+            trailing: _loc == null ? null : Icon(_loc == locAlways ? Icons.check_circle : Icons.warning_amber, color: _loc == locAlways ? Colors.green : Colors.orange),
+            onTap: () async {
+              final l = await requestLocation();
+              if (l == locInUse) {
+                await requestBackgroundLocation();
+              } else if (l == locNone) {
+                await openAppSettings(); // schon abgelehnt: nur noch über die Einstellungen
+              }
+              _load();
+            }),
+        ListTile(leading: const Icon(Icons.app_settings_alt), title: const Text('Systemeinstellungen der App'), onTap: openAppSettings),
         const Divider(),
         Padding(
           padding: const EdgeInsets.all(16),

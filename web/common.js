@@ -5,7 +5,7 @@ let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt di
 // Native App (Issue #108): Die Flutter-Hülle zeigt die Web-App in einer WebView und hängt «SwiftwaterRescueApp/<Version>» an den User-Agent an.
 // Dann kein Web-Push und kein «App installieren» (Benachrichtigungen kommen über die App); swNative ruft einen Handler der App auf, falls vorhanden.
 const NATIVE=/SwiftwaterRescueApp\//.test(navigator.userAgent);
-const swNative=h=>{try{const w=window.flutter_inappwebview;if(w&&w.callHandler)w.callHandler(h)}catch(e){}};
+const swNative=(h,...a)=>{try{const w=window.flutter_inappwebview;if(w&&w.callHandler)w.callHandler(h,...a)}catch(e){}};
 async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
   const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}

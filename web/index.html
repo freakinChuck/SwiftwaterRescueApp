@@ -148,7 +148,7 @@ function notify(t,b,key,lvl){if(lvl==='none')return false;if(lvl==='crit'||lvl==
   const d=document.createElement('div');d.className='toast';d.innerHTML=`<b>${esc(t)}</b><div>${esc(b)}</div>`;d.onclick=()=>d.remove();$('#toasts').appendChild(d);setTimeout(()=>d.remove(),20000);if(lvl!=='low')ping();
   sysNote(t,b,key,false,lvl==='low');return true}
 const ackGet=()=>{try{return JSON.parse(localStorage.getItem('sw_acked')||'[]')}catch(e){return[]}};
-function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}}
+function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}swNative('swAck',k)} // native App: ihre Meldung dazu schliessen
 let curKey=null;
 function alarm(t,b,key,lvl){if(key&&(ackGet().includes(key)||key===curKey||alarmQ.some(q=>q[2]===key)))return false;alarmQ.push([t,b,key,lvl]);showAlarm();return true}
 function showAlarm(){if($('#alarm').style.display==='flex'||!alarmQ.length)return;const[t,b,k,lvl]=alarmQ.shift();curKey=k||null;$('#aT').textContent=t;$('#aB').textContent=b;$('#alarm').style.display='flex';if(lvl==='high')ping();else beep(true);
