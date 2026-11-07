@@ -10,3 +10,8 @@ deploy.*.json
 !deploy.example.json
 # Lokale Werkzeuge
 node_modules/
+
+# Native Apps (Issue #108): Firebase-Dienstkonto und Zugriffstoken nie einchecken
+web/api/data/fcm_token.json
+web/api/data/firebase-service-account.json
+*service-account*.json

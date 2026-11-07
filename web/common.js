@@ -2,9 +2,13 @@
 const API='api/index.php';
 const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt die jeweilige Seite
+// Native App (Issue #108): Die Flutter-Hülle zeigt die Web-App in einer WebView und hängt «SwiftwaterRescueApp/<Version>» an den User-Agent an.
+// Dann kein Web-Push und kein «App installieren» (Benachrichtigungen kommen über die App); swNative ruft einen Handler der App auf, falls vorhanden.
+const NATIVE=/SwiftwaterRescueApp\//.test(navigator.userAgent);
+const swNative=h=>{try{const w=window.flutter_inappwebview;if(w&&w.callHandler)w.callHandler(h)}catch(e){}};
 async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
   const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
-  if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth()}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
+  if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
 // Kurze Hinweise statt alert(): ohne Klick, verschwinden von selbst (Dauer nach Textlänge), Antippen schliesst sofort.
 // kind: 'ok' (grün, Standard), 'info' (blau), 'err' (rot, länger sichtbar). Rückfragen (confirm) bleiben Dialoge.
 function toast(t,kind='ok'){t=String(t==null?'':t);let c=document.getElementById('tsts');
@@ -167,7 +171,9 @@ const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
 const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
-function logout(){token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k))} // letzter Stand gehört der abgemeldeten Person
+// Abmelden: Server meldet die Sitzung ab (Gerätesitzung der App bzw. Browser-Token, Route logout), danach die App benachrichtigen (beendet das Konto, Issue #108)
+function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});
+  token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k));swNative('swLogout')} // letzter Stand gehört der abgemeldeten Person
 /* ---------- Anmeldung ---------- */
 function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a></div>`;
   const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};

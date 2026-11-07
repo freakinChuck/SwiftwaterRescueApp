@@ -33,6 +33,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KO-04** – Persönliche Einstellungen auf einer eigenen Seite «Profil»: Profilbild, Passwort, Abmelden, Einsatzfähigkeit/Abwesenheiten, Übungsmodus, Push, App installieren, Koordinatensystem, Navigations-App, AI-Assistent (#58, #91, #111).
 - **KO-05** – Abmelden löscht den auf dem Gerät gemerkten Stand (#67).
 - **KO-06** – Das Profil ist in Karten gegliedert (Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches), je Thema mit eigenem Titel; Knöpfe stehen als gleich breite Spalten. Unter «Alarmierung» stehen der Stand der Einsatzfähigkeit und die eigenen Abwesenheiten mit Erfassen, Ändern und Beenden (#126).
+- **KO-07** – Abmelden meldet auch auf dem Server ab: Der Anmeldeschlüssel des Browsers bzw. die Sitzung der App ist danach ungültig (#108).
+- **KO-08** – Die nativen Apps erhalten je Gerät eine eigene Anmeldung: Eine Anmeldung in der App meldet weder den Browser noch andere Geräte ab und umgekehrt. Im Profil stehen die angemeldeten Apps, entfernen meldet sie ab. Passwort zurücksetzen und Deaktivieren melden auch alle Apps ab, das eigene Passwort ändern nicht (#108).
 - Zugriffsschutz bzw. Rate-Limit für den Login (**offen**).
 
 ## 3. Benutzer und Berechtigungen (BE)
@@ -225,6 +227,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **PW-05** – Updates gelten sofort (eigene Dateien zuerst übers Netz) (#67).
 - Kritischer Alarm trotz «Nicht stören»/Lautlos (braucht native App) (**Grenze**).
 - Push auf iPhone/iPad nur als installierte App ab iOS 16.4 (**Grenze**).
+- **PW-04** – In der nativen App zeigt die Web-App keinen Web-Push und kein «App installieren»; Benachrichtigungen kommen über die App (#108).
 
 ## 20. Verwaltung (VW)
 
@@ -254,3 +257,14 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen, Speicher im Gerät, Rechte der betroffenen Personen (#102).
 - **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
 
+
+## 23. Native Apps (NT)
+
+- **NT-01** – Native Apps für Android und iOS (Flutter), die die Web-App des gewählten Backends zeigen und Alarme selbst melden (#108).
+- **NT-02** – In der App lassen sich mehrere Backends (Server der Organisationen) hinzufügen, je mit eigener Anmeldung; auf jedem ist die App einzeln «aktiv» schaltbar, und auf allen aktiven gleichzeitig kommen Alarme, Nachrichten an einen selbst und das Einsatzende an. Die Kontenliste zeigt je Backend den Stand (kein Einsatz, Alarm, angenommen, Fehler, abgemeldet) (#108).
+- **NT-03** – Alarmstufen wie in der Web-App (EI-03): kritisch mit Vollbild und Dauerton, auch bei «Nicht stören» sofern erlaubt, hoch mit Vollbild, normal, leise, keine. Was schon gemeldet ist, meldet weder die App noch die Web-App ein zweites Mal; ist die Web-App eines Kontos offen, meldet sie selbst (#108).
+- **NT-04** – Android: Die App fragt alle aktiven Backends in einem Vordergrunddienst im eingestellten Abstand ab (10–60 s), auch bei geschlossener App und nach einem Neustart («Bereit für Alarme») (#108).
+- **NT-05** – Optional Push über Firebase Cloud Messaging (Android und iOS), sobald der Server ein Firebase-Dienstkonto hat und die App mit den Firebase-Angaben gebaut ist; ohne Push meldet iOS Alarme nur bei offener App (**Grenze** von iOS) (#108).
+- **NT-06** – Anmeldeschlüssel nur im sicheren Speicher des Geräts; die Web-App erhält nur den Schlüssel ihres Backends, fremde Adressen (Navigation, Telefon, Mail) öffnen sich ausserhalb der App (#108).
+- **NT-07** – Eine GitHub-Actions-Pipeline baut die fertigen Pakete (Android APK und AAB, iOS IPA), signiert, sofern die Schlüssel als Geheimnisse hinterlegt sind; ein Tag «mobile-v<Version>» erstellt ein Release (#108).
+- Kritische Hinweise unter iOS (umgehen «Nicht stören» und Lautlos) verlangen eine Freigabe von Apple (**offen**).

@@ -55,6 +55,11 @@ foreach ([
  // Vorlagen dafür aus der Verwaltung; lat/lon NULL = Standort beim Erfassen auf der Karte wählen; deaktiviert statt gelöscht
  // Web-Push-Abonnements je Gerät (Issue #67): endpoint des Push-Dienstes, Schlüssel des Browsers (p256dh, auth, base64url)
  "CREATE TABLE IF NOT EXISTS push_subs(id $ai, user_id INT, endpoint TEXT, p256dh $tx, auth $tx, created BIGINT)",
+ // Gerätesitzungen der nativen Apps (Issue #108): je Anmeldung mit device ein eigener Token, damit eine Anmeldung im Browser die App nicht abmeldet (users.token bleibt für den Browser);
+ // platform android|ios|'', last_seen höchstens alle 10 min nachgeführt
+ "CREATE TABLE IF NOT EXISTS sessions(id $ai, user_id INT, token $tx UNIQUE, device $tx, platform $tx, created BIGINT, last_seen BIGINT)",
+ // Nativer Push über Firebase Cloud Messaging (Issue #108): FCM-Token je App-Installation, session_id = Gerätesitzung (NULL = Anmeldung ohne device)
+ "CREATE TABLE IF NOT EXISTS push_native(id $ai, user_id INT, session_id INT NULL, token TEXT, platform $tx, created BIGINT)",
  // Benutzerrollen (Issue #63): perms = JSON-Liste der Rechte (PERMS), sys 'admin' = Administrator (alle Rechte, auch künftige, nicht bearbeitbar), def = bei neuen Benutzern vorausgewählt.
  // Eine Person kann mehrere Rollen haben (user_uroles) und erhält alle Rechte all ihrer Rollen
  "CREATE TABLE IF NOT EXISTS uroles(id $ai, name $tx, perms TEXT, sys $tx NULL, def INT DEFAULT 0)",
@@ -538,6 +543,14 @@ if ($route === 'login') {
   $u = $st->fetch();
   if (!$u || !password_verify($in['password'] ?? '', $u['pass_hash'])) fail('Benutzername oder Passwort falsch', 401);
   $t = bin2hex(random_bytes(24));
+  // Native App (Issue #108): mit device eine eigene Gerätesitzung, andere Geräte bleiben angemeldet; höchstens 20 je Person (die ältesten fallen weg)
+  $dev = mb_substr(trim(preg_replace('/[\x00-\x1f]/u', ' ', (string)($in['device'] ?? ''))), 0, 80);
+  if ($dev !== '') { $pf = in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : '';
+    $db->prepare("INSERT INTO sessions(user_id,token,device,platform,created,last_seen) VALUES(?,?,?,?,?,?)")->execute([$u['id'], $t, $dev, $pf, time(), time()]);
+    $db->prepare("UPDATE users SET last_login=? WHERE id=?")->execute([time(), $u['id']]);
+    $s = $db->prepare("SELECT id FROM sessions WHERE user_id=? ORDER BY last_seen DESC, id DESC"); $s->execute([$u['id']]);
+    foreach (array_slice($s->fetchAll(PDO::FETCH_COLUMN), 20) as $x) { $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$x]); $db->prepare("DELETE FROM sessions WHERE id=?")->execute([$x]); }
+    out(['token' => $t, 'session' => 1]); }
   $db->prepare("UPDATE users SET token=?, last_login=? WHERE id=?")->execute([$t, time(), $u['id']]);
   out(['token' => $t]);
 }
@@ -563,7 +576,7 @@ if ($route === 'legal') {
     'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'on' => (object)array_map(fn($f) => $f[$k], $fk)], array_keys(FEATURES)),
     'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120')],
     'air' => ['on' => (int)$air['on'], 'public' => (int)$air['public'], 'replay' => (int)$air['replay'], 'src' => array_map(fn($k) => ['name' => AIR_SOURCES[$k]['name'], 'site' => AIR_SOURCES[$k]['site']], $air['src'])],
-    'push' => pushOk() ? 1 : 0, 'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'days' => (object)array_intersect_key($c['days'], $ks)], array_keys(anonCfg()), anonCfg())]);
+    'push' => pushOk() ? 1 : 0, 'push_native' => fcmOk() ? 1 : 0, 'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'days' => (object)array_intersect_key($c['days'], $ks)], array_keys(anonCfg()), anonCfg())]);
 }
 
 // Öffentliche Ansicht (Public Mode): ohne Anmeldung, nur lesend, nur mit dem geheimen Link der Einsatzleitung (k = public_token).
@@ -615,16 +628,18 @@ if ($route === 'public/state') {
   out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'features' => features($inc['kind_id']), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0, 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
 }
 
-$tok = $_SERVER['HTTP_X_TOKEN'] ?? '';
-$st = $db->prepare("SELECT id,username,name,photo,exercise_mode,must_change,coord_sys,nav_app,place_view,ai_modes FROM users WHERE token=? AND active=1"); $st->execute([$tok]);
-$me = $tok ? $st->fetch() : null; $st->closeCursor(); // Lesezugriff sofort beenden, nicht erst am Ende des Requests
+$tok = (string)($_SERVER['HTTP_X_TOKEN'] ?? ''); $sid = null; // $sid = Gerätesitzung der nativen App (Issue #108), null = Anmeldung über users.token (Browser)
+$ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.nav_app,u.place_view,u.ai_modes';
+$me = null; if ($tok !== '') { $st = $db->prepare("SELECT $ucols FROM users u WHERE u.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor(); } // Lesezugriff sofort beenden, nicht erst am Ende des Requests
+if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_seen FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor();
+  if ($me) { $sid = (int)$me['sid']; if ((int)$me['last_seen'] < $now - 600) $db->prepare("UPDATE sessions SET last_seen=? WHERE id=?")->execute([$now, $sid]); unset($me['sid'], $me['last_seen']); } }
 if (!$me) fail('Nicht angemeldet', 401);
 $me = ints($me, ['id', 'exercise_mode', 'must_change']); $me['place_view'] = (object)placeView($me['place_view'] ?? null); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
 $me['ai_modes'] = json_decode((string)$me['ai_modes'], true) ?: []; // AI-Assistent (Issue #111): gewählter Modus je Funktion
 // Benutzerrollen und Rechte (Issue #63): Vereinigung aller Rollen; is_admin = hat die Rolle Systemadministrator (alle Rechte)
 $me['uroles'] = userRoles($uid); $me['is_admin'] = (int)array_reduce($me['uroles'], fn($c, $r) => $c || $r['sys'] === 'admin', false); $me['perms'] = permsOf($me['uroles']);
 // Nach einem Zurücksetzen durch die Verwaltung ist nur der Passwortwechsel erlaubt
-if ($me['must_change'] && !in_array($route, ['me', 'me/password'])) fail('Bitte zuerst ein eigenes Passwort setzen', 403);
+if ($me['must_change'] && !in_array($route, ['me', 'me/password', 'logout'])) fail('Bitte zuerst ein eigenes Passwort setzen', 403);
 
 /* ---------- Hilfsfunktionen ---------- */
 function ints($r, $ks) { foreach ($ks as $k) if (isset($r[$k])) $r[$k] = (int)$r[$k]; return $r; }
@@ -948,11 +963,12 @@ function pushEncrypt($payload, $p256dh, $auth) { // RFC 8291: ein Datensatz, aes
   $ct = openssl_encrypt($payload . "\x02", 'aes-128-gcm', $cek, OPENSSL_RAW_DATA, $nonce, $tag);
   return $salt . pack('N', 4096) . chr(65) . $ep . $ct . $tag; }
 // Benachrichtigung für Personen vormerken; gesendet wird in out() nach der Antwort. $msg: t (Titel), b (Text), tag (wie die Quittierschlüssel der App), crit
-function pushTo($userIds, $msg) { global $pushQ; if (!pushOk() || !$userIds) return; foreach (array_unique(array_map('intval', $userIds)) as $u) $pushQ[] = [$u, $msg]; }
+function pushTo($userIds, $msg) { global $pushQ; if ((!pushOk() && !fcmOk()) || !$userIds) return; foreach (array_unique(array_map('intval', $userIds)) as $u) $pushQ[] = [$u, $msg]; }
 function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) return;
   $ids = array_values(array_unique(array_column($q, 0))); $in = implode(',', array_fill(0, count($ids), '?'));
-  $s = $db->prepare("SELECT s.* FROM push_subs s JOIN users u ON u.id=s.user_id WHERE u.active=1 AND s.user_id IN ($in)"); $s->execute($ids); $subs = $s->fetchAll();
+  $subs = []; if (pushOk()) { $s = $db->prepare("SELECT s.* FROM push_subs s JOIN users u ON u.id=s.user_id WHERE u.active=1 AND s.user_id IN ($in)"); $s->execute($ids); $subs = $s->fetchAll(); }
   $mh = curl_multi_init(); $hs = []; $jwt = [];
+  $hn = fcmQueue($mh, $q, $ids); // native Apps (Issue #108), im selben curl_multi
   foreach ($q as [$u, $m]) foreach ($subs as $sub) { if ((int)$sub['user_id'] !== $u) continue;
     $pu = parse_url($sub['endpoint']); if (!$pu || !in_array($pu['scheme'] ?? '', ['https', 'http'], true)) continue;
     $aud = $pu['scheme'] . '://' . $pu['host'] . (isset($pu['port']) ? ':' . $pu['port'] : ''); $jwt[$aud] = $jwt[$aud] ?? vapidJwt($aud);
@@ -964,9 +980,66 @@ function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) re
   do { $st = curl_multi_exec($mh, $run); if ($run) curl_multi_select($mh, 1); } while ($run && $st === CURLM_OK);
   foreach ($hs as [$h, $id]) { $c = curl_getinfo($h, CURLINFO_HTTP_CODE); if ($c === 404 || $c === 410) $db->prepare("DELETE FROM push_subs WHERE id=?")->execute([$id]); // abgelaufen
     curl_multi_remove_handle($mh, $h); curl_close($h); }
+  fcmDone($mh, $hn);
   curl_multi_close($mh); }
+/* ---------- Nativer Push über Firebase Cloud Messaging, HTTP v1 (Issue #108) ---------- */
+// Optional: config.php 'fcm' = Pfad zur JSON-Datei des Firebase-Dienstkontos des App-Projekts. iOS läuft über FCM zu Apple (APNs).
+// Zugriffstoken per JWT (RS256, Dienstkonto) bei Google, zwischengespeichert in api/data/fcm_token.json bis kurz vor Ablauf. Fehler nur ins error_log.
+function fcmCfg() { global $cfg; static $c = false; if ($c !== false) return $c; $c = null; $f = $cfg['fcm'] ?? null;
+  if (!is_string($f) || $f === '' || !is_readable($f) || !function_exists('openssl_sign') || !function_exists('curl_multi_init')) return null;
+  $j = json_decode((string)@file_get_contents($f), true);
+  if (is_array($j) && !empty($j['project_id']) && !empty($j['client_email']) && !empty($j['private_key'])) $c = $j;
+  return $c; }
+function fcmOk() { return fcmCfg() !== null; }
+function fcmToken($renew = false) { $c = fcmCfg(); $f = __DIR__ . '/data/fcm_token.json'; if (!is_dir(dirname($f))) @mkdir(dirname($f), 0775, true);
+  $t = json_decode((string)@file_get_contents($f), true);
+  if (!$renew && is_array($t) && ($t['email'] ?? '') === $c['client_email'] && (int)($t['exp'] ?? 0) > time() + 300 && !empty($t['token'])) return $t['token'];
+  $now = time(); $h = b64u(json_encode(['alg' => 'RS256', 'typ' => 'JWT'])) . '.' . b64u(json_encode(['iss' => $c['client_email'], 'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
+    'aud' => 'https://oauth2.googleapis.com/token', 'iat' => $now, 'exp' => $now + 3600], JSON_UNESCAPED_SLASHES));
+  $k = openssl_pkey_get_private($c['private_key']); if (!$k || !openssl_sign($h, $sig, $k, OPENSSL_ALGO_SHA256)) { error_log('FCM: privater Schlüssel des Dienstkontos ungültig'); return null; }
+  $ch = curl_init('https://oauth2.googleapis.com/token');
+  curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_CONNECTTIMEOUT => 4,
+    CURLOPT_POSTFIELDS => http_build_query(['grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer', 'assertion' => $h . '.' . b64u($sig)])]);
+  $raw = curl_exec($ch); $r = json_decode((string)$raw, true);
+  if (empty($r['access_token'])) { error_log('FCM: kein Zugriffstoken (' . curl_getinfo($ch, CURLINFO_HTTP_CODE) . ') ' . mb_substr((string)$raw, 0, 300)); return null; }
+  @file_put_contents($f, json_encode(['token' => $r['access_token'], 'exp' => $now + (int)($r['expires_in'] ?? 3600), 'email' => $c['client_email']]), LOCK_EX);
+  return $r['access_token']; }
+// Basis der Web-App ohne api/ (Host und Pfad, z. B. example.ch/swiftwater/), damit die App weiss, von welchem Backend die Nachricht kommt
+function appBase() { $d = str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/api/index.php'))); return ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim($d === '.' ? '' : $d, '/') . '/'; }
+// Nachricht für ein Gerät: Android nur data (die App zeigt selbst an, auch Vollbild-Alarm), iOS mit alert und Stufe über APNs
+function fcmMsg($tok, $pf, $u, $m) { $tag = (string)($m['tag'] ?? 'sw'); $cr = !empty($m['crit']); $sy = !empty($m['stay']); $si = !empty($m['silent']);
+  $d = ['t' => (string)($m['t'] ?? ''), 'b' => mb_substr((string)($m['b'] ?? ''), 0, 1000), 'tag' => $tag, 'crit' => $cr ? '1' : '0', 'stay' => $sy ? '1' : '0', 'silent' => $si ? '1' : '0', 'srv' => appBase(), 'uid' => (string)$u];
+  $o = ['token' => $tok, 'data' => $d];
+  if ($pf !== 'ios') $o['android'] = ['priority' => 'HIGH', 'ttl' => $cr ? '3600s' : '600s', 'collapse_key' => $tag];
+  if ($pf !== 'android') { $aps = ['alert' => ['title' => $d['t'], 'body' => $d['b']], 'thread-id' => $tag];
+    if ($cr) $aps += ['sound' => ['critical' => 1, 'name' => 'default', 'volume' => 1.0], 'interruption-level' => 'critical'];
+    elseif ($sy) $aps += ['sound' => 'default', 'interruption-level' => 'time-sensitive'];
+    elseif ($si) $aps += ['interruption-level' => 'passive'];
+    else $aps['sound'] = 'default';
+    $o['apns'] = ['headers' => ['apns-priority' => $si ? '5' : '10', 'apns-push-type' => 'alert', 'apns-collapse-id' => substr($tag, 0, 64)], 'payload' => ['aps' => $aps]]; }
+  return ['message' => $o]; }
+// Anfragen an FCM in $mh einreihen; Rückgabe [[handle, push_native.id], …]
+function fcmQueue($mh, $q, $ids) { global $db; if (!fcmOk()) return [];
+  $in = implode(',', array_fill(0, count($ids), '?'));
+  $s = $db->prepare("SELECT n.* FROM push_native n JOIN users u ON u.id=n.user_id LEFT JOIN sessions se ON se.id=n.session_id WHERE u.active=1 AND (n.session_id IS NULL OR se.id IS NOT NULL) AND n.user_id IN ($in)");
+  $s->execute($ids); $ns = $s->fetchAll(); if (!$ns || !($at = fcmToken())) return [];
+  $url = 'https://fcm.googleapis.com/v1/projects/' . rawurlencode(fcmCfg()['project_id']) . '/messages:send'; $hn = [];
+  foreach ($q as [$u, $m]) foreach ($ns as $n) { if ((int)$n['user_id'] !== $u) continue;
+    $h = curl_init($url);
+    curl_setopt_array($h, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode(fcmMsg($n['token'], (string)$n['platform'], $u, $m), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION),
+      CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_HTTPHEADER => ['Content-Type: application/json; charset=utf-8', 'Authorization: Bearer ' . $at]]);
+    curl_multi_add_handle($mh, $h); $hn[] = [$h, (int)$n['id']]; }
+  return $hn; }
+// Antworten auswerten: ungültige oder abgemeldete Tokens löschen, abgelehnter Zugriffstoken verwirft den Zwischenspeicher
+function fcmDone($mh, $hn) { global $db;
+  foreach ($hn as [$h, $id]) { $c = curl_getinfo($h, CURLINFO_HTTP_CODE);
+    if ($c !== 200) { $e = json_decode((string)curl_multi_getcontent($h), true)['error'] ?? []; $st = (string)($e['status'] ?? ''); $msg = (string)($e['message'] ?? '');
+      foreach ((array)($e['details'] ?? []) as $x) if (is_array($x) && !empty($x['errorCode'])) $st = (string)$x['errorCode']; // FcmError: UNREGISTERED, SENDER_ID_MISMATCH, …
+      if ($c === 404 || $st === 'UNREGISTERED' || $st === 'SENDER_ID_MISMATCH' || ($st === 'INVALID_ARGUMENT' && stripos($msg, 'token') !== false)) $db->prepare("DELETE FROM push_native WHERE id=?")->execute([$id]);
+      else { if ($c === 401) @unlink(__DIR__ . '/data/fcm_token.json'); error_log("FCM $c $st: " . mb_substr($msg, 0, 200)); } }
+    curl_multi_remove_handle($mh, $h); } }
 // alle aktiven Benutzer ausser $skip (IDs), bei Aufgebot nur die aufgebotenen ($only, NULL = alle); Stufe wie alarmLvl je Person, «Keine» sendet nichts
-function pushAlarm($inc, $skip, $only = null) { global $db; if (!pushOk()) return;
+function pushAlarm($inc, $skip, $only = null) { global $db; if (!pushOk() && !fcmOk()) return;
   foreach ($db->query("SELECT id,exercise_mode FROM users WHERE active=1")->fetchAll() as $u) { $id = (int)$u['id']; if (in_array($id, $skip, true) || ($only !== null && !in_array($id, $only, true))) continue;
     $l = alarmLvl($inc, (int)$u['exercise_mode']); if ($l === 'none') continue;
     pushTo([$id], ['t' => mb_strtoupper(kindOf($inc)['name']), 'b' => $inc['message'], 'tag' => 'i:' . $inc['id'], 'crit' => $l === 'crit' ? 1 : 0, 'stay' => $l === 'high' ? 1 : 0, 'silent' => $l === 'low' ? 1 : 0]); } }
@@ -1501,7 +1574,7 @@ if (array_key_exists($route, FEATURE_ROUTES) && ($inc = activeIncident()) && !fe
 
 try { anonAuto(); } catch (Throwable $e) { error_log('anonAuto: ' . $e->getMessage()); } // fällige automatische Anonymisierung (Issue #87)
 switch ($route) {
- case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe()]]); // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts FROM modes ORDER BY id")->fetchAll()));
@@ -2431,7 +2504,7 @@ switch ($route) {
   out(['ok' => true]);
 
  /* ---------- Web-Push (Issue #67): Abonnement des Geräts ---------- */
- case 'push/key': out(['enabled' => pushOk(), 'key' => pushOk() ? vapid()['pub'] : null]); // öffentlicher VAPID-Schlüssel für pushManager.subscribe
+ case 'push/key': out(['enabled' => pushOk(), 'key' => pushOk() ? vapid()['pub'] : null, 'native' => fcmOk() ? 1 : 0]); // öffentlicher VAPID-Schlüssel für pushManager.subscribe; native = FCM eingerichtet (Issue #108)
  case 'push/subscribe': // endpoint, keys: {p256dh, auth}; ein Gerät gehört immer der zuletzt angemeldeten Person
   if (!pushOk()) fail('Push ist auf diesem Server nicht verfügbar (PHP ohne openssl/curl)');
   $ep = (string)($in['endpoint'] ?? ''); $k = $in['keys'] ?? [];
@@ -2440,6 +2513,26 @@ switch ($route) {
   $db->prepare("INSERT INTO push_subs(user_id,endpoint,p256dh,auth,created) VALUES(?,?,?,?,?)")->execute([$uid, $ep, $k['p256dh'], $k['auth'], $now]);
   out(['ok' => true]);
  case 'push/unsubscribe': $db->prepare("DELETE FROM push_subs WHERE endpoint=? AND user_id=?")->execute([(string)($in['endpoint'] ?? ''), $uid]); out(['ok' => true]);
+ /* ---------- Native Apps (Issue #108): Push über Firebase Cloud Messaging, Gerätesitzungen ---------- */
+ case 'push/native/subscribe': // token (FCM-Registrierungstoken), platform android|ios; ein Token gehört immer der zuletzt angemeldeten Person bzw. Sitzung
+  if (!fcmOk()) fail('Push für die App ist auf diesem Server nicht eingerichtet');
+  $t = trim((string)($in['token'] ?? '')); if ($t === '' || strlen($t) > 4096 || !preg_match('/^[\x21-\x7e]+$/', $t)) fail('Ungültiger Token');
+  $pf = in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : '';
+  $db->prepare("DELETE FROM push_native WHERE token=?")->execute([$t]);
+  $db->prepare("INSERT INTO push_native(user_id,session_id,token,platform,created) VALUES(?,?,?,?,?)")->execute([$uid, $sid, $t, $pf, $now]);
+  out(['ok' => true]);
+ case 'push/native/unsubscribe': $db->prepare("DELETE FROM push_native WHERE token=? AND user_id=?")->execute([trim((string)($in['token'] ?? '')), $uid]); out(['ok' => true]);
+ case 'logout': // eigene Gerätesitzung samt ihren App-Abos löschen, sonst den Browser-Token
+  if ($sid) { $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$sid]); $db->prepare("DELETE FROM sessions WHERE id=?")->execute([$sid]); }
+  else { $db->prepare("UPDATE users SET token=NULL WHERE id=?")->execute([$uid]); $db->prepare("DELETE FROM push_native WHERE user_id=? AND session_id IS NULL")->execute([$uid]); }
+  out(['ok' => true]);
+ case 'me/sessions': // eigene Gerätesitzungen ohne Token; cur 1 = diese Sitzung
+  $s = $db->prepare("SELECT id,device,platform,created,last_seen FROM sessions WHERE user_id=? ORDER BY last_seen DESC, id DESC"); $s->execute([$uid]);
+  out(array_map(fn($r) => ints($r, ['id', 'created', 'last_seen']) + ['cur' => (int)$r['id'] === $sid ? 1 : 0], $s->fetchAll()));
+ case 'me/session/remove': // id; meldet die App auf diesem Gerät ab (sie erhält beim nächsten Aufruf 401)
+  $x = (int)($in['id'] ?? 0); $s = $db->prepare("DELETE FROM sessions WHERE id=? AND user_id=?"); $s->execute([$x, $uid]);
+  if (!$s->rowCount()) fail('Sitzung nicht gefunden', 404);
+  $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$x]); out(['ok' => true]);
  /* ---------- Abwesenheiten (Issue #91): eigene immer, die anderer Personen mit dem Recht avail ---------- */
  case 'absences': // laufende und künftige Einträge: eigene, user=<id> oder all=1 (beides mit avail)
   $all = !empty($_GET['all']); $u = (int)($_GET['user'] ?? 0) ?: $uid; if ($all || $u !== $uid) need('avail');
@@ -2469,6 +2562,8 @@ switch ($route) {
   if (!password_verify($in['old'] ?? '', $s->fetch()['pass_hash'])) fail('Das aktuelle Passwort ist falsch', 403);
   pwCheck($in['new'] ?? '');
   $db->prepare("UPDATE users SET pass_hash=?, must_change=0 WHERE id=?")->execute([password_hash($in['new'], PASSWORD_DEFAULT), $uid]);
+  // Gerätesitzungen (Issue #108) bleiben bewusst bestehen: Wer das eigene Passwort ändert, soll die Alarmierung über die App nicht verlieren.
+  // Abmelden einzelner Apps über «Angemeldete Apps» im Profil (me/session/remove); Zurücksetzen durch die Verwaltung löscht alle.
   out(['ok' => true]);
  case 'me/settings': // nur übergebene Werte ändern. exercise_mode: Übungen wie scharfe Einsätze kritisch alarmieren; coord_sys: '' = Standard der Verwaltung, none = ausblenden
   if (isset($in['exercise_mode'])) $db->prepare("UPDATE users SET exercise_mode=? WHERE id=?")->execute([empty($in['exercise_mode']) ? 0 : 1, $uid]);
@@ -2532,6 +2627,7 @@ switch ($route) {
   pwCheck($in['password'] ?? '');
   $s = $db->prepare("UPDATE users SET pass_hash=?, must_change=1, token=NULL WHERE id=?"); $s->execute([password_hash($in['password'], PASSWORD_DEFAULT), $id]);
   $db->prepare("DELETE FROM push_subs WHERE user_id=?")->execute([$id]); // abgemeldet: Geräte erhalten keine Push-Nachrichten mehr
+  foreach (['sessions', 'push_native'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]); // auch die Apps abmelden (Issue #108)
   if (!$s->rowCount()) fail('Benutzer nicht gefunden', 404);
   out(['ok' => true]);
  case 'user/delete': need('users'); // nur Personen, die sich nie angemeldet haben und in keinen Daten vorkommen; sonst deaktivieren
@@ -2542,7 +2638,7 @@ switch ($route) {
   if (!$u) fail('Benutzer nicht gefunden', 404);
   if ($u['last_login'] !== null || isset(usersUsed()[$id])) fail('Diese Person hat sich schon angemeldet oder kommt in Einsatzdaten vor; bitte deaktivieren');
   $db->beginTransaction();
-  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
+  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'sessions', 'push_native'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
   $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
   foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
     $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));
@@ -2558,7 +2654,7 @@ switch ($route) {
   $s = $db->prepare("SELECT name FROM users WHERE id=?"); $s->execute([$id]); $u = $s->fetch();
   if (!$u) fail('Benutzer nicht gefunden', 404);
   $db->prepare("UPDATE users SET active=?" . ($a ? '' : ', token=NULL') . " WHERE id=?")->execute([$a, $id]);
-  if (!$a) $db->prepare("DELETE FROM push_subs WHERE user_id=?")->execute([$id]); // keine Push-Nachrichten mehr an deaktivierte Personen
+  if (!$a) foreach (['push_subs', 'sessions', 'push_native'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]); // keine Push-Nachrichten mehr an deaktivierte Personen, Apps abgemeldet (Issue #108)
   if (!$a && ($inc = activeIncident())) { // aus laufendem Einsatz austragen
     $p = part($inc['id'], $id);
     if ($p && $p['left_at'] === null && $p['mode'] !== 'declined') {
