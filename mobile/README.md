@@ -5,7 +5,7 @@ Native Apps für Android und iOS (Issue #108), gebaut mit Flutter in `mobile/app
 ## Was die App kann
 
 - **Mehrere Backends:** Mit «Backend hinzufügen» meldet man sich mit Server-Adresse (wie die der Web-App, z. B. `https://example.ch/swiftwater/`), Benutzername und Passwort an. Jedes Backend ist einzeln **aktiv** schaltbar. Auf allen aktiven Backends kommen gleichzeitig Alarme, Nachrichten an einen selbst und das Einsatzende an.
-- **Web-App in der App:** Ein Antippen öffnet die Web-App des Backends in einer WebView, schon angemeldet. Karte, Einsatz und Verwaltung sind dieselben wie im Browser. Fremde Adressen öffnen sich ausserhalb: Navigations-Apps, Telefon, Mail.
+- **Einsatz-App nativ (ohne WebView):** Ein Antippen öffnet die Einsatz-App des Backends, schon angemeldet, ganz in Flutter (`lib/inc/`). Karte (flutter_map mit denselben Anbietern wie die Web-App, drehbar), Kartenknöpfe und Seitenfenster (Einsatzkräfte, Nachrichten, Rettlinge, Markierungen & Bereiche, Flussdistanz), Suchgebiet entlang des Gewässers, Fenster «Ansicht», Kamerafokus und Auto-Übersicht, ☰-Menü mit den Registern Einsatz/Leitung/Übung/Log/Info, Einsatz starten und vorbereitete Übungen, Profil. Die Abläufe, Routen und Texte entsprechen der Web-App. Die Verwaltung, «Meine Einsätze» und das Rechtliche öffnen sich im Browser. Noch nicht nativ: Gross-Modus des Logs, freie Fragen an den AI-Assistenten und dessen Modus «Begleitend».
 - **Eigene Anmeldung je Gerät:** Die App erhält eine Gerätesitzung (`sessions` auf dem Server). Sie meldet weder den Browser noch andere Geräte ab. Im Profil der Web-App stehen die angemeldeten Apps unter «Angemeldete Apps».
 - **Alarme wie in der Web-App:**
 
@@ -17,10 +17,10 @@ Native Apps für Android und iOS (Issue #108), gebaut mit Flutter in `mobile/app
   | leise | Meldung ohne Ton |
   | keine | nichts |
 
-  Die Meldungen nutzen dieselben Schlüssel wie die Web-App (`i:`, `m:`, `e:`), deshalb meldet nichts doppelt. Ist die Web-App eines Kontos offen, meldet sie Nachrichten und Einsatzende selbst. Alarme der Stufen kritisch und hoch meldet die App immer (in der WebView darf die Seite oft keinen Ton abspielen, und nur die Meldung der App umgeht «Nicht stören»); «OK» in der Web-App schliesst die Meldung (`swAck`).
+  Die Meldungen nutzen dieselben Schlüssel wie die Web-App (`i:`, `m:`, `e:`), deshalb meldet nichts doppelt. Ist die Einsatz-App eines Kontos offen, zeigt sie Alarme als Vollbild in der Karte (kritisch mit Weckton über dieselbe Meldung, die «Nicht stören» umgeht); «Quittieren» schliesst die Meldung. Die Überwachung bleibt dann für dieses Konto still.
 
   Ob ein Alarm kritisch ist, bestimmt der Einsatztyp auf dem Server (Verwaltung → Einsatz → «Einsatztypen», Alarmstufe). Angelegt sind «Einsatz» kritisch und «Übung» normal; eine Übung ist nur im persönlichen Übungsmodus kritisch.
-- **Standort:** Die Web-App erhält den Standort von der App (`geo.dart` ersetzt `navigator.geolocation`), nicht von der WebView. Im Einsatz teilt die App ihn selbst weiter, sobald die Web-App nicht mehr im Vordergrund ist (`track.dart`, alle 5 s bei Bewegung, sonst alle 15 s), bis man austritt oder der Einsatz endet. Bei gesperrtem Bildschirm braucht es dafür «Immer zulassen» (Android: der Dienst läuft dann zusätzlich als Standort-Dienst, sonst erhält er ab Android 14 keine Positionen); die App fragt einmal danach und zeigt den Stand in ihren Einstellungen. Die App kennt dabei kein Gewässernetz: Positionen gelten nie als «auf dem Gewässer».
+- **Standort:** Ist die Einsatz-App offen, teilt sie den Standort selbst (`inc/store.dart`, mit «auf dem Gewässer» aus dem geladenen Gewässernetz). Sonst teilt ihn im Einsatz der Hintergrund (`track.dart`, alle 5 s bei Bewegung, sonst alle 15 s), bis man austritt oder der Einsatz endet. Bei gesperrtem Bildschirm braucht es dafür «Immer zulassen» (Android: der Dienst läuft dann zusätzlich als Standort-Dienst, sonst erhält er ab Android 14 keine Positionen); die App fragt einmal danach und zeigt den Stand in ihren Einstellungen. Im Hintergrund kennt die App kein Gewässernetz: Positionen gelten dort nie als «auf dem Gewässer».
 
 | | Android | iOS |
 |---|---|---|
@@ -41,9 +41,14 @@ In den Einstellungen der App gibt es dazu Folgendes:
 |---|---|
 | `main.dart` | Start, Navigation, Abfrage bei offener App (iOS) |
 | `home.dart` | Kontenliste, Anmeldung, Einstellungen |
-| `web.dart` | WebView: setzt `sw_token` und `sw_acked` vor dem ersten Skript, Handler `swLogout`/`swUnauth`/`swAck` |
-| `geo.dart` | Standort für die Web-App (Ersatz für `navigator.geolocation`, Handler `swGeo`, geolocator) |
-| `track.dart` | Standort im Einsatz teilen, solange die Web-App nicht im Vordergrund ist |
+| `inc/store.dart` | Einsatz-App: Zustand, Polling `incident/state` (4 s), Aktionen, Ansicht, Standort teilen, Alarm |
+| `inc/map_page.dart` | Kartenseite: Ebenen, Kartenknöpfe, Seitenfenster, Punktwahl/Bereich zeichnen, Alarm-Vollbild, Startansicht |
+| `inc/menu.dart` | ☰-Menü mit Registern, Einsatz starten, vorbereitete Übungen |
+| `inc/people.dart`, `msgs.dart`, `res.dart`, `pois.dart`, `rd.dart` | Seitenfenster Einsatzkräfte, Nachrichten, Rettlinge (mit «PLS setzen»), Markierungen & Bereiche (mit festen Standorten), Flussdistanz |
+| `inc/prefs.dart` | Profil (Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches) |
+| `inc/area.dart` | Suchgebiet entlang des Gewässers, Gewässernetz über `overpass` (mit Rückfall im Gerät) |
+| `inc/ctx.dart`, `inc/util.dart` | gemeinsame Bausteine (Karten, Dialoge, Navigation, Koordinaten) |
+| `track.dart` | Standort im Einsatz teilen, solange die Einsatz-App nicht im Vordergrund ist |
 | `accounts.dart` | Konten im sicheren Speicher (Keychain bzw. verschlüsselt) |
 | `monitor.dart` | Abfrage `incident/state` je Konto, meldet Neues |
 | `notify.dart` | Benachrichtigungen, Kanäle je Alarmstufe |
@@ -110,4 +115,3 @@ Nach der Freigabe den Eintrag in `ios/Runner/Runner.entitlements` einkommentiere
 
 - Was nur für die App gilt, kommt in `mobile/app/.gitignore`: Build-Dateien, `local.properties`, Schlüssel. Schlüssel, Zertifikate, Profile und Firebase-Dateien nie einchecken.
 - Neue Bibliotheken der App in `web/legal.html` unter «Native Apps» nachführen.
-- `android/gradle.properties` erlaubt mit `android.r8.proguardAndroidTxt.disallowed=false` vorübergehend `proguard-android.txt`: `flutter_inappwebview_android` 1.1.3 nutzt die Datei noch, und das Android-Gradle-Plugin 9 bricht dann den Build ab. Version 8 ist keine Lösung, weil `androidx.core` 1.19 (über die Plugins) AGP 9.1 verlangt. Den Schalter entfernen, sobald das Plugin `proguard-android-optimize.txt` nutzt (ab 1.2.0).

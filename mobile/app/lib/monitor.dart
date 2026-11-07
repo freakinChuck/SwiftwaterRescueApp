@@ -31,7 +31,7 @@ class AccState {
   String? get color => j['color'] as String?;
   String? get err => j['err'] as String?;
   int get at => (j['at'] as num?)?.toInt() ?? 0; // letzte erfolgreiche Abfrage (ms)
-  List<String> get tags => ((j['tags'] as List?) ?? []).map((e) => '$e').toList(); // gemeldete Schlüssel (für sw_acked der WebView)
+  List<String> get tags => ((j['tags'] as List?) ?? []).map((e) => '$e').toList(); // gemeldete Schlüssel (quittierte Alarme)
 }
 
 Future<AccState> accState(String id) async {
@@ -73,8 +73,8 @@ Future<bool> isForeground(String id) async {
 }
 
 /// Meldung zeigen, ausser schon gemeldet oder die Web-App des Kontos ist offen (dann nur merken). Alarme der Stufen crit und high
-/// zeigt die App immer: Nur ihre Meldung umgeht «Nicht stören» und klingelt sicher (in der WebView darf die Seite oft keinen Ton abspielen).
-/// Quittiert man den Alarm in der Web-App, schliesst sie die Meldung (swAck, web.dart).
+/// zeigt die App immer: Nur ihre Meldung umgeht «Nicht stören» und klingelt sicher (sicherer als ein Ton in der Seite).
+/// Quittiert man den Alarm in der App (inc/store.dart), schliesst sie die Meldung.
 Future<void> report(Account a, String tag, String title, String body, String lvl) async {
   if (lvl == 'none') return;
   if (!await markTag(a.id, tag)) return;

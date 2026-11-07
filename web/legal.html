@@ -82,9 +82,12 @@ function lizenzen(){const op=D?D.overpass.servers:[],air=D?D.air:null;
   const svc=[['Push-Dienste der Browser-Hersteller (Google Firebase Cloud Messaging, Apple Push Notification service, Mozilla Push Service)','Benachrichtigungen bei geschlossener App','—',lic('Bedingungen der Hersteller'),'Nur verschlüsselte Nachrichten (RFC 8291), der Dienst kann den Inhalt nicht lesen.'],
     ['cdnjs (Cloudflare) und jsDelivr','Auslieferung der Bibliotheken oben','https://cdnjs.com',lic('Gratis-CDN'),'Der Browser lädt die Bibliotheken von dort.'],
     ['Navigations-Apps (Google Maps, Apple Karten, Waze, andere)','Knopf 🧭: Ziel an die App übergeben','—',lic('Bedingungen der Anbieter'),'Nur auf Knopfdruck, es gelten die Bedingungen der gewählten App.']];
-  // Native Apps (Issue #108, Flutter): Bibliotheken der App-Hülle für Android und iOS
+  // Native Apps (Issue #108, Flutter): Bibliotheken der nativen Apps für Android und iOS
   const nat=[['Flutter','Grundlage der nativen Apps (Android, iOS)','https://flutter.dev',lic('BSD-3-Clause'),'Copyright-Hinweis und Lizenztext erhalten (in der App unter den Lizenzen).'],
-    ['flutter_inappwebview','Anzeige der Web-App in der App','https://pub.dev/packages/flutter_inappwebview',lic('Apache-2.0'),'Lizenztext und Hinweise (NOTICE) erhalten, Änderungen kennzeichnen.'],
+    ['flutter_map','Karte der Einsatz-App (Kacheln der Anbieter wie in der Web-App)','https://pub.dev/packages/flutter_map',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.'],
+    ['latlong2','Koordinaten und Distanzen in der Einsatz-App','https://pub.dev/packages/latlong2',lic('Apache-2.0'),'Lizenztext und Hinweise erhalten, Änderungen kennzeichnen.'],
+    ['image_picker','Profilbild aus Galerie oder Kamera','https://pub.dev/packages/image_picker',lic('Apache-2.0'),'Lizenztext und Hinweise erhalten.'],
+    ['url_launcher','Navigations-Apps, Verwaltung und Rechtliches im Browser öffnen','https://pub.dev/packages/url_launcher',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.'],
     ['flutter_local_notifications','Alarme und Hinweise auf dem Gerät','https://pub.dev/packages/flutter_local_notifications',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.'],
     ['flutter_background_service','Überwachung der Server im Hintergrund (Android)','https://pub.dev/packages/flutter_background_service',lic('MIT'),'Copyright-Hinweis erhalten.'],
     ['geolocator','Standort auf dem Gerät (Standortfreigabe im Einsatz, auch bei gesperrtem Bildschirm)','https://pub.dev/packages/geolocator',lic('MIT'),'Copyright-Hinweis erhalten.'],
@@ -130,7 +133,7 @@ function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],ks=(D&&D.kinds)||[]
    <li>Nach dem Einsatz: Personen mit den entsprechenden Rechten in der Verwaltung (Statistik, Log, Replay, After Action Review). Teilnehmende sehen unter «Meine Einsätze» ihre eigenen Einsätze, je nach Einstellung mit anonymisierten Namen der anderen.</li></ul>
   <h3>Übermittlung an Dritte</h3>
   <table class="lgt"><thead><tr><th>Empfänger</th><th>Was</th><th>Wann</th></tr></thead><tbody>
-   <tr><td>swisstopo (Bund) bzw. OpenStreetMap Foundation</td><td>Kartenausschnitte; dein Browser ruft die Kacheln direkt ab, dabei sieht der Anbieter deine IP-Adresse und den Kartenausschnitt.</td><td>Beim Anzeigen der Karte.</td></tr>
+   <tr><td>swisstopo (Bund) bzw. OpenStreetMap Foundation</td><td>Kartenausschnitte; dein Browser bzw. die App ruft die Kacheln direkt ab, dabei sieht der Anbieter deine IP-Adresse und den Kartenausschnitt.</td><td>Beim Anzeigen der Karte.</td></tr>
    <tr><td>cdnjs (Cloudflare), jsDelivr</td><td>IP-Adresse beim Laden der Bibliotheken.</td><td>Beim Öffnen der App (danach meist aus dem Zwischenspeicher).</td></tr>
    ${fOn('area')||fOn('rd')?`<tr><td>Overpass-Server${op&&op.servers.length?' ('+op.servers.map(host).map(esc).join(', ')+')':''}</td><td>Ausschnitt um den PLS bzw. die gewählten Punkte, ohne Personenbezug. Normalerweise fragt der Server; lehnt Overpass ihn ab, fragt dein Gerät direkt (IP-Adresse sichtbar).</td><td>Suchgebiet und Flussdistanz.</td></tr>`:''}
    <tr><td>swisstopo, Nominatim (OSM Foundation)</td><td>Koordinaten von Anfang und Ende einer Fahrt, ohne Namen; der Server fragt.</td><td>Bei erkannten Fahrten im Einsatz.</td></tr>

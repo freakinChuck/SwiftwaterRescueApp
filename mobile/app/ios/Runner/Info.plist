@@ -21,11 +21,9 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Damit die Einsatzleitung deinen Standort im Einsatz auch bei gesperrtem Bildschirm sieht. Geteilt wird nur, solange du an einem Einsatz teilnimmst.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Für Profilbilder und Bilder im After Action Review.</string>
+	<string>Für dein Profilbild.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Für Profilbilder und Bilder im After Action Review.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Nur falls die Web-App eine Aufnahme anfragt.</string>
+	<string>Für dein Profilbild.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

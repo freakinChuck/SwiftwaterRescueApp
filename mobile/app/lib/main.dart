@@ -1,5 +1,5 @@
-// Swiftwater Rescue – native App (Issue #108). Hülle um die Web-App mehrerer Backends:
-// Kontenliste (home.dart), Anmeldung, Web-App in der WebView (web.dart), Einstellungen; Alarme über monitor.dart, service.dart und push.dart.
+// Swiftwater Rescue – native App (Issue #108) für mehrere Backends:
+// Kontenliste (home.dart), Anmeldung, native Einsatz-App (inc/map_page.dart, ohne WebView), Einstellungen; Alarme über monitor.dart, service.dart und push.dart.
 import 'dart:async';
 import 'dart:io';
 
@@ -11,12 +11,12 @@ import 'notify.dart';
 import 'push.dart';
 import 'service.dart';
 import 'sys.dart';
-import 'web.dart';
+import 'inc/map_page.dart';
 import 'accounts.dart';
 
 final navKey = GlobalKey<NavigatorState>();
 
-/// Konto in der WebView öffnen (aus der Liste, nach dem Antippen einer Meldung oder einer Push-Nachricht).
+/// Einsatz-App eines Kontos öffnen (aus der Liste, nach dem Antippen einer Meldung oder einer Push-Nachricht).
 Future<void> openAccount(String id) async {
   final l = await Accounts.load();
   final a = l.where((x) => x.id == id).firstOrNull;
@@ -27,9 +27,9 @@ Future<void> openAccount(String id) async {
     return;
   }
   // bereits offen: nicht doppelt öffnen
-  if (WebPage.openId == id) return;
+  if (IncPage.openId == id) return;
   nav.popUntil((r) => r.isFirst);
-  nav.push(MaterialPageRoute(builder: (_) => WebPage(account: a)));
+  nav.push(MaterialPageRoute(builder: (_) => IncPage(account: a)));
 }
 
 String? _pendingOpen;
