@@ -155,12 +155,23 @@ function selfSync(){if(!map)return;if(selfHidden()){if(selfWatch!=null&&navigato
   if(selfWatch==null&&navigator.geolocation)selfWatch=navigator.geolocation.watchPosition(p=>{selfPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy};herePos={lat:selfPos.lat,lon:selfPos.lon};hereErr='';selfDraw()},
     e=>{if(e.code===1){hereErr='nicht freigegeben (Standortzugriff im Browser erlauben)';navigator.geolocation.clearWatch(selfWatch)}},{enableHighAccuracy:true,maximumAge:10000,timeout:30000});
   selfDraw()}
-function selfDraw(){const p=selfHidden()?null:(manual&&lastPos?lastPos:selfPos); // manuell gesetzter Standort (Test) hat Vorrang
+// Im Einsatz ist man selbst nur der blaue Punkt (kein eigenes Personen-Icon, drawMap): ohne Standort des Geräts gilt der zuletzt gemeldete aus dem Einsatz
+function selfPart(){const m=st&&st.incident&&(st.participants||[]).find(p=>p.user_id==me.id&&p.lat!=null&&!p.left_at&&p.mode!=='declined');return m?{lat:m.lat,lon:m.lon}:null}
+function selfAt(){return selfHidden()?null:(manual&&lastPos?lastPos:selfPos||selfPart())}
+function selfDraw(){const p=selfAt();homeView(); // manuell gesetzter Standort (Test) hat Vorrang
   if(selfMk&&selfMk._map!==map)selfMk=selfAcc=null; // Karte neu aufgebaut (shell)
   if(!p||!map){selfMk&&map.removeLayer(selfMk);selfAcc&&map.removeLayer(selfAcc);selfMk=selfAcc=null;return}
   const ll=[p.lat,p.lon],r=p===selfPos&&p.acc>15&&p.acc<2000?p.acc:0;
   if(!selfMk)selfMk=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="self"></div>',iconSize:[24,24],iconAnchor:[12,12]}),interactive:false,keyboard:false,zIndexOffset:3000}).addTo(map);else selfMk.setLatLng(ll);
   if(r){if(!selfAcc)selfAcc=L.circle(ll,{radius:r,color:'#1a73e8',weight:1,opacity:.5,fillOpacity:.1,interactive:false,className:'selfacc'}).addTo(map);else selfAcc.setLatLng(ll).setRadius(r)}else if(selfAcc){map.removeLayer(selfAcc);selfAcc=null}}
+// Startansicht ohne Einsatz (Änderungswunsch #96): beim Öffnen der App eigener Standort und alle eingeblendeten festen Standorte im Bild.
+// Der Standort kommt oft erst nach Sekunden: bis HOME_WAIT_MS wird nachgeführt, sobald er da ist. Endet beim Verschieben/Zoomen von Hand und bei einem Einsatz (dort startView).
+const HOME_WAIT_MS=20000;let homeDone=false,homeT0=0,homeKey='',homeBusy=0;
+function homeView(){if(homeDone||!map||!st||!me)return;if(st.incident){homeDone=true;return}poiHideLoad();
+  const s=selfAt(),fs=feat('place')&&vis('place')?(st.places||[]).filter(f=>!poiHide.has('f'+f.id)):[],pts=[...(s?[[s.lat,s.lon]]:[]),...fs.map(f=>[f.lat,f.lon])];
+  const wait=!s&&!hereErr&&Date.now()-homeT0<HOME_WAIT_MS;if(!wait)homeDone=true;if(!pts.length)return;
+  const k=JSON.stringify(pts.map(p=>p.map(x=>x.toFixed(4))));if(k===homeKey)return;homeKey=k;homeBusy=Date.now();
+  if(pts.length===1)map.setView(pts[0],15);else map.fitBounds(L.latLngBounds(pts),FITPAD)}
 function toggleSheet(f){const w=$('#sheetWrap');if(!w)return;const was=w.classList.contains('open'),o=f===undefined?!was:f;if(o&&!was){secReset=true;hereLoc();draw()}w.classList.toggle('open',o);document.body.classList.toggle('so',o);if(o&&panel)togglePanel(panel,false)}
 function updateChip(){const c=$('#chip');if(!c)return;$('#fitBtns').hidden=!(st&&st.incident);
   [['bRes','res'],['bMsg','msg'],['bPoi','poi'],['bRd','rd']].forEach(([b,k])=>$('#'+b).hidden=!feat(k)&&!(k==='poi'&&poiPlaces()));if(panel&&PANEL_FEAT[panel]&&!feat(PANEL_FEAT[panel])&&!(panel==='pois'&&poiPlaces()))togglePanel(panel,false); // ausgeschaltete Funktionen (Issue #35)
@@ -189,8 +200,9 @@ const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOp
   airLayer=L.layerGroup().addTo(map);airLayer._air=new Map();airData=null;map.on('rotate',()=>airRot(map,airLayer)); // Helikopter (Issue #73)
   $('#mmShow').checked=mmVisible();$('#mmShow').onchange=e=>setMmVisible(e.target.checked,true);
   $('#msgList').onclick=e=>{const b=e.target.closest('[data-goto]');if(!b)return;const[a,o]=b.dataset.goto.split(',').map(Number);stopFollow();map.panTo([a,o]);if(narrow())togglePanel('msgs',false)};
-  layers={};fitted=null;map.on('zoomend',drawMap);map.on('dragstart',()=>{if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen und die Auto-Übersicht
-  map.on('zoomstart',()=>{if(autoView&&Date.now()-autoBusy>1500)stopFollow()}); // Zoomen von Hand beendet die Auto-Übersicht (nicht deren eigenes Zoomen)
+  layers={};fitted=null;map.on('zoomend',drawMap);map.on('dragstart',()=>{homeDone=true;if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen, die Auto-Übersicht und die Startansicht
+  map.on('zoomstart',()=>{if(Date.now()-homeBusy>1500)homeDone=true;if(autoView&&Date.now()-autoBusy>1500)stopFollow()}); // Zoomen von Hand beendet die Auto-Übersicht (nicht deren eigenes Zoomen)
+  homeDone=false;homeT0=Date.now();homeKey='';
   if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}
 // Karte drehen (leaflet-rotate): zwei Finger am Handy, Shift + Mausrad oder Ziehen am Kompass am Computer; Klick auf den Kompass richtet nach Norden aus
 function addCompass(){const C=L.Control.extend({options:{position:'bottomright'},onAdd(){
@@ -269,7 +281,7 @@ function drawMap(){const n=$('#areaNote');selfSync();drawMsgMarks();drawPois();d
   layers.pls=L.layerGroup(plsList().map(p=>navOn(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))),p.lat,p.lon,p.label)));if(vis('pls'))layers.pls.addTo(map);
   try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
-  const act=[...(vis('app')?st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'):[]),...(vis('ext')?extList():[])],groups=[];
+  const act=[...(vis('app')?st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'&&p.user_id!=me.id):[]), /* man selbst = blauer Punkt (selfDraw) */...(vis('ext')?extList():[])],groups=[];
   act.forEach(p=>{const pt=map.latLngToLayerPoint([p.lat,p.lon]);const g=groups.find(g=>g.pt.distanceTo(pt)<40);g?g.items.push(p):groups.push({pt,items:[p]})});
   layers.pp=L.layerGroup(groups.map(g=>{const a=g.items[0];const ll=[a.lat,a.lon];
     if(g.items.length===1)return navOn(L.marker(ll,{icon:L.divIcon({className:'',html:mk(a),iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(esc(a.name)+(roleName(a)?' – '+esc(roleName(a)):'')+(a.ext?' · extern':'')),a.lat,a.lon,a.name);

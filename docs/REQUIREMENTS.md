@@ -71,6 +71,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KA-07** – Kartenknöpfe rechts unten einklappbar; eingeklappt zeigen sie die Summe der roten Zähler (#42).
 - **KA-08** – Die Seite selbst scrollt und zoomt nie, nur die Karte (#84).
 - **KA-09** – Am Handy decken Seitenfenster die Kartenknöpfe ab (AG).
+- **KA-10** – Startansicht beim Öffnen der App ohne laufenden Einsatz: eigener Standort und alle eingeblendeten festen Standorte im Bild; trifft der eigene Standort erst später ein, wird die Ansicht in den ersten 20 s nachgeführt, solange man die Karte nicht selbst verschoben oder gezoomt hat (#96).
 
 ## 6. Einsatzkräfte und Standort (EK)
 
@@ -81,6 +82,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EK-05** – Fahrten mit Fahrzeug werden erkannt und im Log festgehalten («fährt von A nach B, ca. X km Luftlinie, Ø Y km/h»); Bewegungen auf dem Gewässer und manuell gesetzte Positionen zählen nicht (AG).
 - **EK-06** – «Suchgebiet erreicht» wird geloggt (AG).
 - **EK-07** – Der eigene Standort ist immer gesondert auf der Karte sichtbar (blauer Punkt mit Genauigkeitskreis), auch ohne laufenden Einsatz; ausgeblendet nur, solange man an einem laufenden Einsatz bzw. einer Übung mit einer Einrückoption ohne Standortfreigabe teilnimmt (#118).
+- **EK-08** – Im Einsatz erscheint man selbst nur als blauer Punkt, nicht zusätzlich mit dem eigenen Personen-Icon; ohne Standort des Geräts steht der Punkt am zuletzt gemeldeten Standort (#96).
 
 ## 7. Externe Einsatzkräfte (EX)
 
