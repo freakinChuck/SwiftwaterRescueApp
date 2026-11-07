@@ -12,9 +12,15 @@ header{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1r
 #wrap{max-width:1300px;margin:0 auto;padding:1rem;display:grid;grid-template-columns:13rem minmax(0,1fr);gap:1.2rem;align-items:start} /* minmax: breite Tabellen scrollen in .tw statt die Seite zu verbreitern */
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:1.2rem}main>section[hidden]{display:none}
 /* Navigation nach Kategorien (Issue #32); am Handy als Auswahlliste */
-#nav{position:sticky;top:4.2rem}#navSel{display:none;width:100%}
-.ng{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin:.9rem 0 .25rem .6rem}.ng:first-child{margin-top:0}
-#nav a{display:block;padding:.4rem .6rem;border-radius:6px;color:inherit;text-decoration:none;border-left:3px solid transparent}#nav a:hover{background:var(--panel)}#nav a[aria-current=page]{background:var(--panel);border-left-color:var(--ex);font-weight:600}
+/* Issue #128: Kategorien mit Symbol einklappbar (aktuelle offen), Suche, eigene Bildlaufleiste */
+#nav{position:sticky;top:4.2rem;max-height:calc(100dvh - 5.2rem);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}#navSel{display:none;width:100%}
+#navQ{width:100%;box-sizing:border-box;margin:0 0 .5rem;padding:.45rem .6rem;font-size:.9rem}
+.ngw{margin:.1rem 0}.ngw[hidden],#nav a[hidden]{display:none}
+.ng{display:flex;width:100%;align-items:center;gap:.5rem;background:none;border:0;border-radius:6px;padding:.45rem .6rem;font-weight:600;text-align:left}.ng:hover{background:var(--panel)}
+.ni{flex:0 0 1.3rem;text-align:center}.ng .nl{flex:1 1 auto;min-width:0}.ng .nc{font-size:.72rem;color:var(--mut);font-weight:400}.ng .chev{color:var(--mut);transition:transform .15s;font-size:1.1rem;line-height:1}.ngw.open .chev,.ngw.q .chev{transform:rotate(90deg)}
+.ngi{display:none;margin:.1rem 0 .35rem 1.25rem;padding-left:.35rem;border-left:1px solid var(--line)}.ngw.open .ngi,.ngw.q .ngi{display:block}.ngw.cur>.ng{color:#8cc4f2}
+#nav a{display:flex;gap:.5rem;align-items:center;padding:.35rem .6rem;border-radius:6px;color:inherit;text-decoration:none;border-left:3px solid transparent;font-size:.93rem}.ngw.one>a{font-weight:600;font-size:1rem;padding:.45rem .6rem}#nav a:hover{background:var(--panel)}#nav a[aria-current=page]{background:var(--panel);border-left-color:var(--ex);font-weight:600}
+.um{position:relative}#umL{position:absolute;right:0;top:calc(100% + .3rem);z-index:20;min-width:13rem;display:grid;gap:.35rem;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.5rem;box-shadow:0 4px 16px #000a}#umL[hidden]{display:none}#umL a{text-align:center;font-size:.85rem;padding:.2rem}#umL>.mut{font-size:.8rem;padding:0 .2rem}#bUm span{max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
 @media(max-width:760px){#wrap{grid-template-columns:minmax(0,1fr)}#nav{position:static}#navSel{display:block}.navl{display:none}}
 main>section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:1rem} /* nur die Abschnitte: Leaflet baut die Kartenauswahl ebenfalls als section (Issue #26) */
 h2{margin:0 0 .6rem;font-size:1.1rem}h3{margin:1rem 0 .3rem;font-size:1rem}
@@ -28,7 +34,11 @@ tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:1
 .inc{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1.2rem;border:1px solid var(--line);border-left:4px solid var(--k,var(--alarm));border-radius:8px;padding:.6rem .8rem;margin:.5rem 0}.inc.ex{border-left-color:var(--ex)}
 .inc .ih{flex:1 1 15rem;min-width:0}.inc .ih b{display:block;overflow-wrap:anywhere;margin:.15rem 0}.inc .ih .mut{font-size:.85rem}
 .inc .fl,.dlg .fl{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.3rem}.inc .fl span,.dlg .fl span{font-size:.75rem;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:0 .45rem}.inc .fl .on{color:#e05cb0;border-color:#e05cb0}
-.inc.usr{border-left-color:var(--ok)}.inc.usr.off{border-left-color:var(--line);opacity:.6}.inc.usr .ih b{display:inline;margin-right:.4rem}.inc.usr .ih .abschip{margin-left:.45rem}.inc .fl .adm{color:#f0b429;border-color:#f0b429}.inc .fl span,.dlg .fl span{white-space:nowrap}.inc.usr .kv span{white-space:nowrap}@media(min-width:900px){.inc.usr .kv{grid-template-columns:repeat(3,max-content);justify-content:end;column-gap:1.4rem}} /* Benutzerrollen nie mitten im Chip umbrechen (Issue #112) */.inc.url{border-left-color:var(--ex)}.inc.url.adm{border-left-color:#f0b429}.inc.url .ih b{display:inline;margin-right:.4rem}
+.inc.usr{border-left-color:var(--ok)}.inc.usr.off{border-left-color:var(--line);opacity:.6}.inc.usr .ih b{display:inline;margin-right:.4rem}.inc.usr .ih .abschip{margin-left:.45rem}.inc .fl .adm{color:#f0b429;border-color:#f0b429}.inc .fl span,.dlg .fl span{white-space:nowrap}.inc.usr .kv span{white-space:nowrap}@media(min-width:900px){.inc.usr{grid-template-columns:minmax(0,1fr) 25rem}.inc.usr .kv{grid-template-columns:4.5rem 10rem minmax(0,1fr);justify-content:start;column-gap:1rem}} /* Kennzahlen immer in denselben Spalten (Issue #127) */
+.inc.grp{display:block}.gh{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .9rem}.gh .ia{margin-left:auto}.gm{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.6rem}.gm .abschip{margin-left:.15rem}.gmo{margin-top:.45rem;font-size:.82rem}
+.ugr{display:flex;flex-wrap:wrap;gap:.25rem .9rem;margin-top:.35rem;font-size:.85rem}.inc[hidden]{display:none}
+.lbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.4rem 0}.lbar>input{flex:1 1 16rem;max-width:26rem;margin:0}.lbar>button{flex:0 0 auto}
+h3.lgh{margin:1rem 0 .2rem;font-size:.95rem}details.lgd{margin-top:1rem;border-top:1px solid var(--line);padding-top:.3rem}details.lgd>summary{font-weight:600;cursor:pointer;padding:.4rem 0} /* Benutzerrollen nie mitten im Chip umbrechen (Issue #112) */.inc.url{border-left-color:var(--ex)}.inc.url.adm{border-left-color:#f0b429}.inc.url .ih b{display:inline;margin-right:.4rem}
 .inc .ia{display:flex;flex-wrap:wrap;gap:.5rem;margin-left:auto}.inc .bg{display:inline-flex}.inc .bg>*{border-radius:0;margin:0}.inc .bg>*+*{margin-left:-1px}.inc .bg>:first-child{border-radius:6px 0 0 6px}.inc .bg>:last-child{border-radius:0 6px 6px 0}.inc .bg>:only-child{border-radius:6px}.inc .bg .bl{display:flex;align-items:center;padding:0 .5rem;font-size:.75rem;font-weight:600;color:var(--mut);border:1px solid var(--line)}.inc .ia button{padding:.35rem .6rem}.inc .ia .sec{background:none;color:var(--mut)}
 @media(max-width:760px){.inc .ia{margin-left:0;width:100%}.inc .bg{flex:1 1 auto}.inc .ia button{flex:1 1 auto}}
 @media(min-width:900px){.inc{display:grid;grid-template-columns:minmax(0,1fr) 24rem;grid-template-areas:"ih kv" "ia ia"}.inc .ih{grid-area:ih}.inc .kv{grid-area:kv;display:grid;grid-template-columns:repeat(4,1fr)}.inc .ia{grid-area:ia;justify-content:flex-end}.inc.url .kv{grid-template-columns:repeat(3,1fr)}} /* Kennzahlen in fester Spalte, bündig untereinander; Knöpfe darunter rechts */
@@ -113,16 +123,17 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   if(!nav().length&&me.my_runs==='off'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Deine Benutzerrollen geben dir keinen Zugriff auf die Verwaltung.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   MY=myMode();const adm=nav().length>0;
-  if(MY){a.innerHTML=`<header><h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}<button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button><a class="mut lglk" href="legal.html" target="_blank" rel="noopener">Impressum · Datenschutz</a></header>
+  if(MY){a.innerHTML=`<header><h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}${userMenu()}</header>
     <div id="wrap" class="my"><main><section id="sMy"><h2>Meine Einsätze</h2><div class="mut">Wird geladen …</div></section></main></div>`;
-    $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
+    userMenuWire();
     if(adm)$('#bVw').onclick=e=>{e.preventDefault();location.hash='einsatzlog'};
     document.title='Swiftwater Rescue – Meine Einsätze';return loadMy()}
-  a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine" title="Log und Replay deiner eigenen Einsätze, wie für Einsatzkräfte ohne Verwaltungsrechte">📋 Meine Einsätze</a>':''}<button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button><a class="mut lglk" href="legal.html" target="_blank" rel="noopener">Impressum · Datenschutz</a></header>
+  a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine" title="Log und Replay deiner eigenen Einsätze, wie für Einsatzkräfte ohne Verwaltungsrechte">📋 Meine Einsätze</a>':''}${userMenu()}</header>
     <div id="wrap"><nav id="nav" aria-label="Bereiche der Verwaltung"><select id="navSel" aria-label="Bereich wählen">${nav().map(([g,its])=>`<optgroup label="${esc(g)}">${its.map(([k,,l])=>`<option value="${k}">${esc(l)}</option>`).join('')}</optgroup>`).join('')}</select>
-    <div class="navl">${nav().map(([g,its])=>`<div class="ng">${esc(g)}</div>${its.map(([k,,l])=>`<a href="#${k}" data-k="${k}">${esc(l)}</a>`).join('')}`).join('')}</div></nav>
+    <div class="navl">${navItems().length>8?'<input type="search" id="navQ" placeholder="Bereich suchen …" aria-label="Bereich der Verwaltung suchen" autocomplete="off">':''}${nav().map(([g,its])=>its.length===1?`<div class="ngw one" data-g="${esc(g)}">${navLink(its[0],g)}</div>`
+      :`<div class="ngw" data-g="${esc(g)}"><button type="button" class="ng" aria-expanded="false"><span class="ni" aria-hidden="true">${NAV_ICON[g]||'•'}</span><span class="nl">${esc(g)}</span><span class="nc">${its.length}</span><span class="chev" aria-hidden="true">›</span></button><div class="ngi">${its.map(it=>navLink(it)).join('')}</div></div>`).join('')}<div class="mut nq0" hidden>Kein Bereich gefunden.</div></div></nav>
     <main>${navItems().map(([k,id,l])=>`<section id="${id}" hidden><h2>${esc(l)}</h2><div class="mut">Wird geladen …</div></section>`).join('')}</main></div>`;
-  $('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=()=>{logout();start()};
+  userMenuWire();navWire();
   $('#navSel').onchange=e=>{location.hash=e.target.value};showNav()}
 /* ---------- Navigation (Issue #32) ---------- */
 // Kategorien mit Unterpunkten: [Kategorie, [[Hash, Abschnitt-ID, Bezeichnung, Laden]]]. Neue Einstellungen hier als Unterpunkt aufnehmen.
@@ -143,9 +154,29 @@ const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).som
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
 let MY=false;const myMode=()=>me.my_runs!=='off'&&(!nav().length||location.hash==='#meine');const myQ=()=>MY?'&my=1':'';
 const navItems=()=>nav().flatMap(([,its])=>its);
+// Navigation (Issue #128): Kategorien mit Symbol einklappbar, die aktuelle wird beim Öffnen eines Bereichs aufgeklappt; offene pro Gerät gemerkt (sw_navopen).
+// Kategorien mit nur einem Bereich als direkter Link. Die Suche filtert die Bereiche, Enter öffnet den ersten Treffer.
+const NAV_ICON={'Personen':'👥','Einsatz':'🚨','Übungen':'🎯','Funktionen':'🧩','Karte & Daten':'🗺️','Auswertung':'📊','Rechtliches':'⚖️'};
+const navLink=([k,,l],g)=>`<a href="#${k}" data-k="${k}">${g?`<span class="ni" aria-hidden="true">${NAV_ICON[g]||'•'}</span>`:''}${esc(l)}</a>`;
+let navO=null;const navOGet=()=>{if(!navO){try{navO=new Set(JSON.parse(localStorage.getItem('sw_navopen')||'[]'))}catch(e){navO=new Set()}}return navO};
+function navOpen(w,o,save=true){if(w.classList.contains('one'))return;w.classList.toggle('open',o);w.querySelector('.ng').setAttribute('aria-expanded',o);
+  if(save){const s=navOGet();o?s.add(w.dataset.g):s.delete(w.dataset.g);try{localStorage.setItem('sw_navopen',JSON.stringify([...s]))}catch(e){}}}
+function navWire(){const n=$('#nav'),s=navOGet();n.querySelectorAll('.ngw:not(.one)').forEach(w=>{navOpen(w,s.has(w.dataset.g),false);w.querySelector('.ng').onclick=()=>navOpen(w,!w.classList.contains('open'))});
+  const q=$('#navQ');if(!q)return;
+  q.oninput=()=>{const t=q.value.trim().toLowerCase();let any=0;n.querySelectorAll('.ngw').forEach(w=>{let hit=0;const gm=w.dataset.g.toLowerCase().includes(t);
+    w.querySelectorAll('a').forEach(a=>{const h=!t||gm||a.textContent.toLowerCase().includes(t);a.hidden=!h;if(h)hit++});w.hidden=!!t&&!hit;w.classList.toggle('q',!!t&&!!hit);any+=hit});n.querySelector('.nq0').hidden=!t||any>0};
+  q.onkeydown=e=>{if(e.key==='Enter'){const a=[...n.querySelectorAll('.navl a')].find(a=>!a.hidden&&!a.closest('.ngw').hidden);if(a){location.hash=a.dataset.k;q.value='';q.oninput();q.blur()}}else if(e.key==='Escape'){q.value='';q.oninput()}}}
+// Konto-Menü in der Kopfzeile (Issue #128): Name, Passwort ändern, Abmelden, Impressum
+const userMenu=()=>`<div class="um"><button id="bUm" aria-expanded="false" aria-haspopup="menu" aria-controls="umL" title="Konto">👤 <span>${esc(me.name)}</span> ▾</button><div id="umL" role="menu" hidden><div class="mut">${esc(me.username)}</div><button id="bPw" role="menuitem">Passwort ändern</button><button id="bOut" role="menuitem">Abmelden</button><a class="mut" href="legal.html" target="_blank" rel="noopener" role="menuitem">Impressum · Datenschutz</a></div></div>`;
+let umDoc=false;
+function userMenuWire(){const b=$('#bUm'),l=$('#umL'),set=o=>{l.hidden=!o;b.setAttribute('aria-expanded',o)};b.onclick=e=>{e.stopPropagation();set(l.hidden)};
+  if(!umDoc){umDoc=true;document.addEventListener('click',e=>{const m=$('#umL');if(m&&!e.target.closest('.um')){m.hidden=true;$('#bUm').setAttribute('aria-expanded',false)}})}
+  l.onkeydown=e=>{if(e.key==='Escape'){set(false);b.focus()}};
+  $('#bPw').onclick=()=>{set(false);pwDialog(false)};$('#bOut').onclick=()=>{logout();start()}}
 function showNav(){if(!$('#nav'))return;const its=navItems(),it=its.find(x=>x[0]===location.hash.slice(1))||its[0],[k,id,l,load]=it;
   its.forEach(([,i])=>{$('#'+i).hidden=i!==id});
   document.querySelectorAll('#nav a').forEach(a=>{if(a.dataset.k===k)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  const g=(nav().find(([,its])=>its.some(x=>x[0]===k))||[])[0];document.querySelectorAll('#nav .ngw').forEach(w=>{const c=w.dataset.g===g;w.classList.toggle('cur',c);navOpen(w,c||navOGet().has(w.dataset.g),false)}); // von Hand geöffnete bleiben offen
   $('#navSel').value=k;document.title='Swiftwater Rescue – Verwaltung – '+l;load()}
 window.addEventListener('hashchange',()=>{if(me&&myMode()!==MY)start();else showNav();window.scrollTo(0,0)}); // Wechsel zwischen Verwaltung und Meine Einsätze baut die Seite neu auf
 /* ---------- Benutzer ---------- */
@@ -154,13 +185,16 @@ function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ234567
 async function loadUsers(){const el=$('#sU');let gs;try{[users,uroles,gs]=await Promise.all([api('users'),api('uroles'),api('groups').catch(()=>[])])}catch(e){el.innerHTML='<h2>Benutzer</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   // eine Karte pro Person wie in der Einsatzstatistik: Kopf (Name, Benutzername, Rollen), Kennzahlen, Knöpfe
   const dt=t=>t?new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'vor der Erfassung';
+  const ugs=u=>(u.groups||[]).map(id=>gs.find(g=>g.id===id)).filter(Boolean);
   const card=u=>{const self=u.id===me.id;
     return`<div class="inc usr${u.active?'':' off'}"><div class="ih"><b>${esc(u.name)}${self?' <span class="mut">(du)</span>':''}</b><span class="mut">${esc(u.username)}</span>${absChip(u.absent)}
-      <div class="fl">${u.uroles.length?u.uroles.map(id=>`<span${UR(id).sys==='admin'?' class="adm"':''}>${esc(UR(id).name)}</span>`).join(''):'<span>keine Benutzerrolle</span>'}</div></div>
-      <div class="kv"><span><small>Status</small>${u.active?'aktiv':'deaktiviert'}</span><span><small>Letzte Anmeldung</small>${u.last_login==null?'noch nie':dt(u.last_login)}</span>${u.must_change?'<span><small>Passwort</small>Wechsel ausstehend</span>':''}${gs.length?`<span class="kvw"><small>Einsatzgruppen</small>${(u.groups||[]).map(id=>gs.find(g=>g.id===id)).filter(Boolean).map(grpChip).join(' ')||'keine'}</span>`:''}</div>
+      <div class="fl">${u.uroles.length?u.uroles.map(id=>`<span${UR(id).sys==='admin'?' class="adm"':''}>${esc(UR(id).name)}</span>`).join(''):'<span>keine Benutzerrolle</span>'}</div>${gs.length?`<div class="ugr">${ugs(u).map(grpChip).join('')||'<span class="mut">in keiner Einsatzgruppe</span>'}</div>`:''}</div>
+      <div class="kv"><span><small>Status</small>${u.active?'aktiv':'deaktiviert'}</span><span><small>Letzte Anmeldung</small>${u.last_login==null?'noch nie':dt(u.last_login)}</span><span><small>Passwort</small>${u.must_change?'Wechsel ausstehend':'gesetzt'}</span></div>
       <div class="ia">${can('avail')&&u.active?`<button data-ab="${u.id}">Abwesenheit</button>`:''}${!u.editable?'<span class="mut" title="Hat Rechte, die du selbst nicht hast">nur mit mehr Rechten bearbeitbar</span>':`<button data-e="${u.id}">Bearbeiten</button>${self?'':`<button data-p="${u.id}">Passwort zurücksetzen</button>${u.deletable?`<button class="sec" data-x="${u.id}" title="Hat sich noch nie angemeldet und kommt in keinen Einsatzdaten vor">Löschen</button>`:u.active?`<button class="sec" data-d="${u.id}">Deaktivieren</button>`:`<button data-a="${u.id}">Reaktivieren</button>`}`}`}</div></div>`};
-  el.innerHTML=`<h2>Benutzer (${users.filter(u=>u.active).length} aktiv)</h2><div class="row"><button class="pri" id="uA">+ Neuer Benutzer</button></div>
-    ${users.map(card).join('')}
+  const ua=users.filter(u=>u.active),ud=users.filter(u=>!u.active),key=u=>[u.name,u.username,...u.uroles.map(id=>UR(id).name),...ugs(u).map(g=>g.name)].join(' ').toLowerCase();
+  el.innerHTML=`<h2>Benutzer</h2><div class="lbar"><button class="pri" id="uA">+ Neuer Benutzer</button>${users.length>5?'<input type="search" id="uQ" placeholder="Suchen: Name, Benutzername, Rolle, Gruppe" aria-label="Benutzer suchen">':''}</div>
+    <h3 class="lgh">Aktiv <span class="mut">(${ua.length})</span></h3><div class="lgl">${ua.map(card).join('')||'<div class="mut">Niemand.</div>'}</div>
+    ${ud.length?`<details class="lgd"><summary>Deaktiviert <span class="mut">(${ud.length})</span></summary><div class="lgl">${ud.map(card).join('')}</div></details>`:''}<div class="mut" id="uQn" hidden>Keine Treffer.</div>
     <div class="mut">Wer sich noch nie angemeldet hat, kann gelöscht werden; alle anderen werden deaktiviert: Sie können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
   // Startpasswort nach dem Speichern nicht in einer Meldung anzeigen (Issue #59): es steht vorher im Feld und kann dort kopiert werden
   $('#uA').onclick=()=>{const d=dlg('Neuer Benutzer',`<div class="jtwo"><label class="mut">Name<input id="uf" autocomplete="off"></label><label class="mut">Benutzername<input id="un" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>
@@ -171,6 +205,9 @@ async function loadUsers(){const el=$('#sU');let gs;try{[users,uroles,gs]=await 
     d.firstElementChild.classList.add('mid');roleWire(d);pwWire(d)};
   const U=id=>users.find(x=>x.id==id);
   el.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>absDialog(null,[U(b.dataset.ab)],loadUsers));
+  // Suche blendet Karten aus; Treffer unter «Deaktiviert» klappen die Gruppe auf
+  const uq=$('#uQ');if(uq){const cs=[...el.querySelectorAll('.inc.usr')],ks=[...ua,...ud].map(key);uq.oninput=()=>{const q=uq.value.trim().toLowerCase();let n=0;
+    cs.forEach((c,i)=>{c.hidden=!!q&&!ks[i].includes(q);if(!c.hidden)n++});const d=el.querySelector('.lgd');if(d&&q&&d.querySelector('.inc.usr:not([hidden])'))d.open=true;$('#uQn').hidden=n>0}}
   el.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.e),self=u.id===me.id;
     const d=dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label>${roleChecks(u)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Systemadministrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
       async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,uroles:roleVal(d)});toast('Gespeichert.');if(self)me=(await api('me')).me;loadUsers()});d.firstElementChild.classList.add('mid');roleWire(d)});
@@ -228,15 +265,18 @@ const freeColor=used=>{const u=used.map(c=>(c||'').toLowerCase()),f=GRP_COLS.fil
 const grpChip=g=>`<span class="gchip"><i style="background:${esc(g.color)}"></i>${esc(g.name)}</span>`;
 const moveIds=(list,id,dir)=>{const ids=list.map(x=>x.id),i=ids.indexOf(id),j=i+dir;if(i<0||j<0||j>=ids.length)return null;[ids[i],ids[j]]=[ids[j],ids[i]];return ids};
 async function loadGroups(){const el=$('#sG');let gs,us;try{[gs,us]=await Promise.all([api('groups'),api('users')])}catch(e){el.innerHTML='<h2>Einsatzgruppen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  const un=id=>(us.find(u=>u.id===id)||{}).name||'?',act=gs.filter(g=>g.active),nAct=g=>g.members.filter(id=>(us.find(u=>u.id===id)||{}).active).length;
+  const un=id=>(us.find(u=>u.id===id)||{}).name||'?',act=gs.filter(g=>g.active);
   // Abwesenheiten (Issue #91): abwesende Mitglieder werden nicht aufgeboten
   const ua=id=>{const u=us.find(u=>u.id===id);return u&&u.active?u.absent:null},nAbs=g=>g.members.filter(ua).length,
-    mem=g=>g.members.slice().sort((a,b)=>un(a).localeCompare(un(b),'de')).map((id,i,l)=>`<span class="mbr">${esc(un(id))}${ua(id)?' '+absChip(ua(id)):''}${i<l.length-1?',':''}</span>`).join(' ');
+    srt=ids=>ids.slice().sort((a,b)=>un(a).localeCompare(un(b),'de')),uAct=id=>(us.find(u=>u.id===id)||{}).active;
+  const gcard=g=>{const ai=act.indexOf(g),on=srt(g.members.filter(uAct)),off=srt(g.members.filter(id=>!uAct(id))),n=on.length;
+    return`<div class="inc grp${g.active?'':' off'}"><div class="gh">${grpChip(g)}<span class="mut">${n} ${n===1?'Person':'Personen'}${nAbs(g)?`, davon ${nAbs(g)} abwesend`:''}</span>
+      <div class="ia"><button data-ge="${g.id}">Bearbeiten</button>${g.active?`<button data-gu="${g.id}" ${ai<1?'disabled':''} aria-label="Nach oben" title="Nach oben">↑</button><button data-gd="${g.id}" ${ai<0||ai>=act.length-1?'disabled':''} aria-label="Nach unten" title="Nach unten">↓</button>`:''}<button class="sec" data-gx="${g.id}">Löschen</button></div></div>
+      <div class="gm">${n?on.map(id=>`<span class="lchip ro">${esc(un(id))}${ua(id)?absChip(ua(id)):''}</span>`).join(''):'<span class="mut">noch niemand</span>'}</div>${off.length?`<div class="mut gmo">Deaktivierte Konten (werden nicht alarmiert): ${off.map(id=>esc(un(id))).join(', ')}</div>`:''}</div>`};
   el.innerHTML=`<h2>Einsatzgruppen</h2><div class="mut">Beim Start wählt man die aufzubietenden Gruppen; nur ihre Mitglieder werden alarmiert. Ohne aktive Gruppe werden wie bisher alle alarmiert. Welche Gruppen jemand aufbieten darf, steht bei den <a href="#benutzerrollen">Benutzerrollen</a>. Welche Gruppen je Einsatztyp aufbietbar und vorausgewählt sind und ob Nicht-Aufgebotene den Einsatz sehen, steht bei den <a href="#einsatztypen">Einsatztypen</a>.</div>
-    <div class="row"><button class="pri" id="gA">+ Neue Einsatzgruppe</button></div>
-    ${gs.map(g=>{const ai=act.indexOf(g);return`<div class="inc grp${g.active?'':' off'}"><div class="ih">${grpChip(g)}${g.active?'':'<span class="mut">deaktiviert</span>'}</div>
-      <div class="kv"><span><small>Mitglieder</small>${nAct(g)} aktiv${nAbs(g)?`, davon ${nAbs(g)} abwesend`:''}</span><span style="flex:3 1 18rem"><small>Personen</small>${g.members.length?`<div>${mem(g)}</div>`:'<span class="mut">noch niemand</span>'}</span></div>
-      <div class="ia"><button data-ge="${g.id}">Bearbeiten</button>${g.active?`<button data-gu="${g.id}" ${ai<1?'disabled':''} aria-label="Nach oben" title="Nach oben">↑</button><button data-gd="${g.id}" ${ai<0||ai>=act.length-1?'disabled':''} aria-label="Nach unten" title="Nach unten">↓</button>`:''}<button class="sec" data-gx="${g.id}">Löschen</button></div></div>`}).join('')||'<div class="mut">Noch keine Einsatzgruppen. Ohne Gruppen werden bei jedem Einsatz alle aktiven Personen alarmiert.</div>'}`;
+    <div class="lbar"><button class="pri" id="gA">+ Neue Einsatzgruppe</button></div>
+    ${gs.length?`<h3 class="lgh">Aktiv <span class="mut">(${act.length})</span></h3>${act.map(gcard).join('')||'<div class="mut">Keine aktive Einsatzgruppe: Bei jedem Einsatz werden alle aktiven Personen alarmiert.</div>'}
+      ${gs.length>act.length?`<details class="lgd"><summary>Deaktiviert <span class="mut">(${gs.length-act.length})</span></summary>${gs.filter(g=>!g.active).map(gcard).join('')}</details>`:''}`:'<div class="mut">Noch keine Einsatzgruppen. Ohne Gruppen werden bei jedem Einsatz alle aktiven Personen alarmiert.</div>'}`;
   const edit=g=>{let M;const d=dlg(g.id?'Einsatzgruppe bearbeiten':'Neue Einsatzgruppe',`<div class="jtwo" style="grid-template-columns:minmax(0,1fr) 4.5rem"><label class="mut">Name<input id="gN" maxlength="80" value="${esc(g.name||'')}" placeholder="z. B. Pikett Aare"></label><label class="mut">Farbe<input id="gC" type="color" style="box-sizing:border-box;height:2.75rem;padding:.2rem" value="${esc(g.color||freeColor(gs.map(x=>x.color)))}"></label></div>
       ${g.id?`<label class="chk"><input type="checkbox" id="gAc" ${g.active?'checked':''}> Aktiv (beim Start wählbar)</label>`:''}
       <div class="mut">Mitglieder</div><div id="gMs" class="lsel"></div><input id="gMq" type="search" autocomplete="off" placeholder="Liste filtern: Name oder Benutzername" aria-label="Mitglied hinzufügen"><div id="gMr" class="lres"></div>`,
