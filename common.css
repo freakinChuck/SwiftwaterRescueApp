@@ -42,7 +42,6 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 .tst.info{border-left-color:var(--ex)}.tst.err{border-left-color:var(--alarm)}.tst.out{opacity:0}
 @keyframes tstIn{from{opacity:0;transform:translateY(.6rem)}}
 /* AI-Assistent (Issue #111) */
-.dlg .card.aip{max-width:680px}
 .aiw{display:grid;gap:.6rem}
 .aio{min-height:3rem}.aitx{white-space:pre-wrap;line-height:1.45;background:var(--bg);border:1px solid var(--line);border-left:4px solid #a78bfa;border-radius:6px;padding:.7rem .8rem;max-height:55dvh;overflow-y:auto}
 .aild{animation:aiPulse 1.2s ease-in-out infinite alternate}@keyframes aiPulse{from{opacity:.45}to{opacity:1}}
@@ -75,3 +74,7 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .aimap{height:min(68dvh,680px);border:1px solid var(--line);border-radius:6px}
 .aiql textarea{width:100%;resize:vertical;min-height:3.5rem}
 @media(max-width:900px){.aiwide{grid-template-columns:1fr}.aiside{position:static}.aimap{height:45dvh}}
+/* AI-Dialoge nutzen die Breite: einspaltig bis 960px breit, mit freien Fragen rechts bis 1300px; der Vorschlag scrollt mit dem Fenster statt in sich */
+.dlg .card.aip{max-width:min(960px,100%)}.dlg .card.aip.wide2{max-width:min(1300px,100%)}.aio .aitx{max-height:none}
+.aisc .aith{max-height:min(58dvh,640px)}
+@media(min-width:901px){.aisc>.aichat{border-top:0;padding-top:0}.aisc{border-left:1px solid var(--line);padding-left:1rem}.aiwide:has(.aisc){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
