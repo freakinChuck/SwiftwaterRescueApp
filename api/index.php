@@ -547,12 +547,14 @@ function legalCfg() { $v = json_decode(setting('legal', ''), true); $v = is_arra
   foreach (LEGAL_FIELDS as $k => [$n]) $r[$k] = is_string($v[$k] ?? null) ? mb_substr(trim($v[$k]), 0, $n) : '';
   return $r; }
 if ($route === 'legal') {
-  $air = airCfg(); $f0 = features(0); $f1 = features(1);
+  // Funktionen und Anonymisierungsfristen je aktivem Einsatztyp (Issue #90): kinds = Spalten, on/days = {Typ-ID: Wert}
+  $air = airCfg(); $ks = kindsActive(); $fk = array_map(fn($k) => features($k['id']), $ks);
   out(['cfg' => legalCfg(), 'updated' => (int)setting('legal_at', '0'),
-    'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'real' => $f0[$k], 'ex' => $f1[$k]], array_keys(FEATURES)),
+    'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color']], $ks)),
+    'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'on' => (object)array_map(fn($f) => $f[$k], $fk)], array_keys(FEATURES)),
     'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120')],
     'air' => ['on' => (int)$air['on'], 'public' => (int)$air['public'], 'replay' => (int)$air['replay'], 'src' => array_map(fn($k) => ['name' => AIR_SOURCES[$k]['name'], 'site' => AIR_SOURCES[$k]['site']], $air['src'])],
-    'push' => pushOk() ? 1 : 0, 'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'real' => $c['real'], 'ex' => $c['ex']], array_keys(anonCfg()), anonCfg())]);
+    'push' => pushOk() ? 1 : 0, 'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'days' => (object)array_intersect_key($c['days'], $ks)], array_keys(anonCfg()), anonCfg())]);
 }
 
 // Öffentliche Ansicht (Public Mode): ohne Anmeldung, nur lesend, nur mit dem geheimen Link der Einsatzleitung (k = public_token).
