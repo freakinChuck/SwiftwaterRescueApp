@@ -10,6 +10,7 @@ import 'monitor.dart';
 import 'notify.dart';
 import 'push.dart';
 import 'service.dart';
+import 'sys.dart';
 import 'web.dart';
 import 'accounts.dart';
 
@@ -36,6 +37,7 @@ String? _pendingOpen;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initNotes(onTap: (r) {
+    alarmStop(); // Meldung angetippt: Weckton aus
     final p = r.payload;
     if (p != null && p.isNotEmpty) openAccount(p);
   });

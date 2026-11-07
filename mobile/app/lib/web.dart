@@ -70,7 +70,10 @@ class _WebState extends State<WebPage> with WidgetsBindingObserver {
                 FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Weiter')),
               ],
             ));
-    if (go == true) await requestBackgroundLocation();
+    if (go == true) {
+      await requestBackgroundLocation();
+      await syncService();
+    }
   }
 
   /// Herzschlag: solange die Web-App sichtbar ist, meldet sie selbst, die App bleibt für dieses Konto still (monitor.dart).

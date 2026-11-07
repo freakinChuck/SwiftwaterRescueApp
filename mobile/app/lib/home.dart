@@ -447,6 +447,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               } else if (l == locNone) {
                 await openAppSettings(); // schon abgelehnt: nur noch über die Einstellungen
               }
+              await syncService(); // Dienst mit Typ location neu starten, sobald «Immer» erlaubt ist
               _load();
             }),
         ListTile(leading: const Icon(Icons.app_settings_alt), title: const Text('Systemeinstellungen der App'), onTap: openAppSettings),

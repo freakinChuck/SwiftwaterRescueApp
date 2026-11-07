@@ -1,16 +1,14 @@
-// Systemfunktionen. Android über den Kanal ch.swiftwaterrescue/sys (MainActivity.kt): Akku-Optimierung, Standortberechtigung, App-Einstellungen.
-// iOS: Standortberechtigung über geolocator, die übrigen Funktionen gibt es dort nicht.
+// Systemfunktionen. Android über das Plugin packages/sw_sys (Kanal ch.swiftwaterrescue/sys, auch im Vordergrunddienst): Akku-Optimierung,
+// Standortberechtigung, App-Einstellungen, Weckton kritischer Alarme. iOS: Standortberechtigung über geolocator, die übrigen Funktionen gibt es dort nicht.
 import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-
-const _ch = MethodChannel('ch.swiftwaterrescue/sys');
+import 'package:sw_sys/sw_sys.dart';
 
 Future<T?> _call<T>(String m) async {
   if (!Platform.isAndroid) return null;
   try {
-    return await _ch.invokeMethod<T>(m);
+    return await swSys.invokeMethod<T>(m);
   } catch (_) {
     return null;
   }
@@ -19,6 +17,11 @@ Future<T?> _call<T>(String m) async {
 /// Ist die App von der Akku-Optimierung ausgenommen? (sonst kann Android den Dienst anhalten)
 Future<bool?> batteryExempt() => _call<bool>('batteryExempt');
 Future<void> requestBatteryExempt() => _call<void>('requestBatteryExempt');
+
+/// Weckton kritischer Alarme (Android): Alarm-Lautstärke, Wiedergabe als Wecker. Wecker kommen bei «Nicht stören» standardmässig
+/// durch und klingeln auch im Lautlos-Modus, anders als der Ton einer Benachrichtigung. Endet nach 5 min von selbst.
+Future<bool> alarmStart() async => (await _call<bool>('alarmStart')) ?? false;
+Future<void> alarmStop() => _call<void>('alarmStop');
 
 /// Stufe der Standortberechtigung: 0 = keine, 1 = nur während der Nutzung, 2 = immer (auch bei gesperrtem Bildschirm).
 const locNone = 0, locInUse = 1, locAlways = 2;

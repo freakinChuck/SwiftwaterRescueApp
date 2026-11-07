@@ -11,7 +11,7 @@ Native Apps für Android und iOS (Issue #108), gebaut mit Flutter in `mobile/app
 
   | Alarmstufe | Verhalten |
   |---|---|
-  | kritisch | Vollbild und Dauerton, Android auch bei «Nicht stören», sobald der Zugriff erlaubt ist |
+  | kritisch | Vollbild und Weckton (Android: als Wecker mit mind. 80 % Lautstärke, auch lautlos und bei «Nicht stören», bis man die Meldung antippt oder quittiert, höchstens 5 min) |
   | hoch | Vollbild und einmaliger Ton |
   | normal | gewöhnliche Meldung |
   | leise | Meldung ohne Ton |
@@ -20,7 +20,7 @@ Native Apps für Android und iOS (Issue #108), gebaut mit Flutter in `mobile/app
   Die Meldungen nutzen dieselben Schlüssel wie die Web-App (`i:`, `m:`, `e:`), deshalb meldet nichts doppelt. Ist die Web-App eines Kontos offen, meldet sie Nachrichten und Einsatzende selbst. Alarme der Stufen kritisch und hoch meldet die App immer (in der WebView darf die Seite oft keinen Ton abspielen, und nur die Meldung der App umgeht «Nicht stören»); «OK» in der Web-App schliesst die Meldung (`swAck`).
 
   Ob ein Alarm kritisch ist, bestimmt der Einsatztyp auf dem Server (Verwaltung → Einsatz → «Einsatztypen», Alarmstufe). Angelegt sind «Einsatz» kritisch und «Übung» normal; eine Übung ist nur im persönlichen Übungsmodus kritisch.
-- **Standort:** Die Web-App erhält den Standort von der App (`geo.dart` ersetzt `navigator.geolocation`), nicht von der WebView. Im Einsatz teilt die App ihn selbst weiter, sobald die Web-App nicht mehr im Vordergrund ist (`track.dart`, alle 5 s bei Bewegung, sonst alle 15 s), bis man austritt oder der Einsatz endet. Bei gesperrtem Bildschirm braucht es dafür «Immer zulassen»; die App fragt einmal danach und zeigt den Stand in ihren Einstellungen. Die App kennt dabei kein Gewässernetz: Positionen gelten nie als «auf dem Gewässer».
+- **Standort:** Die Web-App erhält den Standort von der App (`geo.dart` ersetzt `navigator.geolocation`), nicht von der WebView. Im Einsatz teilt die App ihn selbst weiter, sobald die Web-App nicht mehr im Vordergrund ist (`track.dart`, alle 5 s bei Bewegung, sonst alle 15 s), bis man austritt oder der Einsatz endet. Bei gesperrtem Bildschirm braucht es dafür «Immer zulassen» (Android: der Dienst läuft dann zusätzlich als Standort-Dienst, sonst erhält er ab Android 14 keine Positionen); die App fragt einmal danach und zeigt den Stand in ihren Einstellungen. Die App kennt dabei kein Gewässernetz: Positionen gelten nie als «auf dem Gewässer».
 
 | | Android | iOS |
 |---|---|---|
@@ -49,7 +49,7 @@ In den Einstellungen der App gibt es dazu Folgendes:
 | `notify.dart` | Benachrichtigungen, Kanäle je Alarmstufe |
 | `service.dart` | Android-Vordergrunddienst |
 | `push.dart` | Firebase Cloud Messaging (optional) |
-| `sys.dart` | Akku-Optimierung, Standortberechtigung (auch «Immer»), App-Einstellungen (Android, `MainActivity.kt`) |
+| `sys.dart` | Akku-Optimierung, Standortberechtigung (auch «Immer»), App-Einstellungen, Weckton (Android über das Plugin `packages/sw_sys`, auch im Dienst) |
 
 ## Bauen
 

@@ -7,12 +7,15 @@ import 'dart:typed_data';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'sys.dart';
+
 final notes = FlutterLocalNotificationsPlugin();
 
-const chCrit = 'alarm_crit', chHigh = 'alarm_high', chNormal = 'info', chLow = 'silent', chService = 'service';
+const chCrit = 'alarm_crit', chCritDnd = 'alarm_crit_dnd', chHigh = 'alarm_high', chNormal = 'info', chLow = 'silent', chService = 'service';
 const serviceNoteId = 1;
 
 bool _ready = false;
+bool _dnd = false; // Zugriff auf «Nicht stören» beim letzten Anlegen der Kanäle
 
 /// Kennung je Konto und Schlüssel (positiv, 31 Bit), stabil über Isolate und Neustarts.
 int noteId(String acc, String tag) {
@@ -23,8 +26,9 @@ int noteId(String acc, String tag) {
   return h < 10 ? h + 10 : h;
 }
 
-/// force: Kanäle neu anlegen. Android übernimmt «Nicht stören umgehen» (bypassDnd) nur, wenn die App beim Anlegen Zugriff auf
-/// «Nicht stören» hat; erneutes Anlegen mit Zugriff holt das nach (solange man den Kanal nicht selbst geändert hat).
+/// force: Kanäle prüfen. Android übernimmt «Nicht stören umgehen» (bypassDnd) nur beim ersten Anlegen eines Kanals und nur mit Zugriff
+/// auf «Nicht stören»; ein bestehender Kanal ändert sich nie mehr (auch nicht nach Löschen und Neuanlegen mit derselben ID). Deshalb
+/// gibt es dafür den eigenen Kanal chCritDnd, angelegt, sobald der Zugriff besteht.
 Future<void> initNotes({void Function(NotificationResponse)? onTap, bool force = false}) async {
   if (_ready && onTap == null && !force) return;
   if (!_ready || onTap != null) {
@@ -38,6 +42,12 @@ Future<void> initNotes({void Function(NotificationResponse)? onTap, bool force =
   }
   final an = notes.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
   if (an != null) {
+    _dnd = await an.hasNotificationPolicyAccess() == true;
+    if (_dnd) {
+      await an.createNotificationChannel(AndroidNotificationChannel(chCritDnd, 'Alarm (kritisch, auch bei «Nicht stören»)',
+          description: 'Alarmierung mit Dauerton, umgeht «Nicht stören»', importance: Importance.max, bypassDnd: true, audioAttributesUsage: AudioAttributesUsage.alarm,
+          vibrationPattern: Int64List.fromList([0, 800, 400, 800, 400, 800])));
+    }
     // Kanäle: Ton und Wichtigkeit lassen sich nach dem Anlegen nur noch in den Systemeinstellungen ändern
     await an.createNotificationChannel(AndroidNotificationChannel(chCrit, 'Alarm (kritisch)',
         description: 'Alarmierung mit Dauerton, auch bei «Nicht stören», sofern erlaubt', importance: Importance.max, bypassDnd: true, audioAttributesUsage: AudioAttributesUsage.alarm,
@@ -77,14 +87,17 @@ Future<bool?> hasDndAccess() async => notes.resolvePlatformSpecificImplementatio
 Future<void> showNote(String acc, String tag, String title, String body, String lvl, {String? sub}) async {
   await initNotes();
   final crit = lvl == 'crit', high = lvl == 'high', low = lvl == 'low' || lvl == 'none';
-  final ch = crit ? chCrit : (high ? chHigh : (low ? chLow : chNormal));
+  final ch = crit ? (_dnd ? chCritDnd : chCrit) : (high ? chHigh : (low ? chLow : chNormal));
+  // kritisch: Weckton über den Wecker (sys.dart), klingelt auch lautlos und bei «Nicht stören»; die Meldung selbst wiederholt
+  // ihren Ton nur, wenn der Weckton nicht startet
+  final ring = crit && Platform.isAndroid && await alarmStart();
   final android = AndroidNotificationDetails(ch, ch,
       importance: low ? Importance.low : Importance.max,
       priority: low ? Priority.low : Priority.max,
       category: crit || high ? AndroidNotificationCategory.alarm : AndroidNotificationCategory.message,
       fullScreenIntent: crit || high,
       audioAttributesUsage: crit ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
-      additionalFlags: crit ? Int32List.fromList([4]) : null, // FLAG_INSISTENT: Ton wiederholen, bis man die Meldung antippt
+      additionalFlags: crit && !ring ? Int32List.fromList([4]) : null, // FLAG_INSISTENT: Ton wiederholen, bis man die Meldung antippt
       autoCancel: true,
       ongoing: crit,
       silent: low,
@@ -104,4 +117,7 @@ Future<void> showNote(String acc, String tag, String title, String body, String 
   await notes.show(id: noteId(acc, tag), title: title, body: body, notificationDetails: NotificationDetails(android: android, iOS: ios), payload: acc);
 }
 
-Future<void> cancelNote(String acc, String tag) => notes.cancel(id: noteId(acc, tag), tag: tag);
+Future<void> cancelNote(String acc, String tag) async {
+  if (tag.startsWith('i:')) await alarmStop(); // Alarm quittiert: Weckton aus
+  await notes.cancel(id: noteId(acc, tag), tag: tag);
+}

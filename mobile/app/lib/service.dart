@@ -12,13 +12,20 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'accounts.dart';
 import 'monitor.dart';
 import 'notify.dart';
+import 'sys.dart';
 import 'track.dart';
 
 final service = FlutterBackgroundService();
 
+/// Mit «Immer zulassen» läuft der Dienst zusätzlich als Typ location: Ab Android 14 erhält er nur so Positionen bei gesperrtem
+/// Bildschirm. Ohne diese Berechtigung darf er den Typ nicht tragen (sonst bricht der Start, z. B. nach einem Neustart, ab).
+bool? _cfgLoc;
+
 Future<void> configureService() async {
   if (!Platform.isAndroid) return;
   await initNotes();
+  final loc = await locLevel() == locAlways;
+  _cfgLoc = loc;
   await service.configure(
       androidConfiguration: AndroidConfiguration(
           onStart: serviceMain,
@@ -29,7 +36,7 @@ Future<void> configureService() async {
           initialNotificationTitle: 'Swiftwater Rescue',
           initialNotificationContent: 'Bereit für Alarme',
           foregroundServiceNotificationId: serviceNoteId,
-          foregroundServiceTypes: [AndroidForegroundType.specialUse]),
+          foregroundServiceTypes: [AndroidForegroundType.specialUse, if (loc) AndroidForegroundType.location]),
       iosConfiguration: IosConfiguration(autoStart: false));
 }
 
@@ -37,7 +44,18 @@ Future<void> configureService() async {
 Future<void> syncService() async {
   if (!Platform.isAndroid) return;
   final on = (await Accounts.load()).any((a) => a.active && !a.loggedOut);
-  final run = await service.isRunning();
+  var run = await service.isRunning();
+  if (_cfgLoc != (await locLevel() == locAlways)) {
+    // Standortberechtigung geändert: neu einrichten und, falls er läuft, den Dienst mit den neuen Typen neu starten
+    await configureService();
+    if (run) {
+      service.invoke('stop');
+      for (var i = 0; i < 30 && await service.isRunning(); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+      run = await service.isRunning();
+    }
+  }
   if (on && !run) {
     await service.startService();
   } else if (!on && run) {

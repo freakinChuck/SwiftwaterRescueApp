@@ -44,6 +44,8 @@ dependencies:
   firebase_messaging: ^17.0.1
   url_launcher: ^6.3.3
   geolocator: ^14.0.1
+  sw_sys:
+    path: packages/sw_sys
 
 dev_dependencies:
   flutter_test:
