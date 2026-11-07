@@ -30,8 +30,9 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KO-01** – Anmeldung mit Benutzername und Passwort (Spec).
 - **KO-02** – Jede Person kann ihr eigenes Passwort ändern (aktuelles Passwort nötig) (AG).
 - **KO-03** – Administratoren setzen Passwörter zurück; die Person wird abgemeldet und muss beim nächsten Login ein eigenes Passwort setzen. Gilt auch für neue Benutzer und das erste Admin-Konto (AG).
-- **KO-04** – Persönliche Einstellungen auf einer eigenen Seite «Profil»: Profilbild, Passwort, Abmelden, Übungsmodus, Push, App installieren, Koordinatensystem, Navigations-App (#58).
+- **KO-04** – Persönliche Einstellungen auf einer eigenen Seite «Profil»: Profilbild, Passwort, Abmelden, Einsatzfähigkeit/Abwesenheiten, Übungsmodus, Push, App installieren, Koordinatensystem, Navigations-App, AI-Assistent (#58, #91, #111).
 - **KO-05** – Abmelden löscht den auf dem Gerät gemerkten Stand (#67).
+- **KO-06** – Das Profil ist in Karten gegliedert (Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches), je Thema mit eigenem Titel; Knöpfe stehen als gleich breite Spalten. Unter «Alarmierung» stehen der Stand der Einsatzfähigkeit und die eigenen Abwesenheiten mit Erfassen, Ändern und Beenden (#126).
 - Zugriffsschutz bzw. Rate-Limit für den Login (**offen**).
 
 ## 3. Benutzer und Berechtigungen (BE)
@@ -44,7 +45,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **BE-06** – Benutzer entfernen = deaktivieren: abgemeldet, aus dem laufenden Einsatz ausgetragen, Daten bleiben, reaktivierbar (AG).
 - **BE-07** – Löschen nur für Konten, die sich nie angemeldet haben und in keinen Einsatz- oder Übungsdaten vorkommen (AG).
 - **BE-08** – Die Verwaltung zeigt jeder Person nur die Bereiche, für die sie ein Recht hat (#63).
-- **BE-09** – Die Benutzerkarten in der Verwaltung zeigen Status, letzte Anmeldung und nur einen ausstehenden Passwortwechsel, nicht den Übungsmodus; die Benutzerrollen stehen je als Chip auf einer Zeile (#112).
+- **BE-09** – Die Benutzerkarten in der Verwaltung zeigen Status, letzte Anmeldung und Passwort (gesetzt bzw. Wechsel ausstehend), nicht den Übungsmodus, immer in denselben Spalten, egal wie viele Rollen und Gruppen jemand hat; die Benutzerrollen stehen je als Chip auf einer Zeile, die Einsatzgruppen darunter (#112, #127).
+- **BE-10** – Die Benutzerliste ist nach aktiven und deaktivierten Personen getrennt (deaktivierte eingeklappt) und ab sechs Personen durchsuchbar (Name, Benutzername, Rolle, Gruppe) (#127).
 
 ## 4. Alarmierung und Einsatz (EI)
 
@@ -60,7 +62,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EI-10** – Einsatzleitung = Rolle Einsatzleitung, Einrückoption mit Leitungsrechten, Recht «Jeden Einsatz leiten» oder Ersteller des Einsatzes, jeweils nur, solange die Person teilnimmt (Ausnahme Übungsleitung) (AG, #82).
 - **EI-11** – Die Einsatzleitung kann den Einsatz beenden, Einsatzkräfte entfernen und deren Spezialrollen ändern (AG).
 - **EI-12** – Einsatztyp überall sichtbar und unterscheidbar, in seiner Farbe; angelegt «Einsatz» rot, «Übung» blau (AG, #90).
-- **EI-13** – Einsatzgruppen in der Verwaltung: Name, Farbe, Mitglieder; deaktivieren oder löschen (bisherige Einsätze behalten den Namen); neue Gruppen erhalten eine noch nicht verwendete Farbe; Mitglieder aus einer filterbaren Liste aller Personen; jede Person sieht ihre Gruppen im Profil (#90).
+- **EI-13** – Einsatzgruppen in der Verwaltung: Name, Farbe, Mitglieder; deaktivieren oder löschen (bisherige Einsätze behalten den Namen); neue Gruppen erhalten eine noch nicht verwendete Farbe; Mitglieder aus einer filterbaren Liste aller Personen; jede Person sieht ihre Gruppen im Profil (#90). Die Liste trennt aktive und deaktivierte Gruppen; je Gruppe stehen die Mitglieder über die ganze Breite, Abwesende markiert, deaktivierte Konten getrennt (#127).
 - **EI-14** – Beim Start werden Einsatzgruppen aufgeboten; nur ihre Mitglieder werden alarmiert. Bei Einsatztypen, die das erlauben, zusätzlich einzelne Personen. Starten und aufgeboten werden (auch als Einzelperson, über «Alle aufbietbaren Personen» und in vorbereiteten Übungen) kann nur, wer einer beim Einsatztyp aufbietbaren Einsatzgruppe angehört; das gilt auch für den Systemadministrator. Die Übungsleitung startet ihre vorbereitete Übung ohne diese Bedingung. Ohne Einsatzgruppen werden alle alarmiert (#90).
 - **EI-15** – Welche Einsatzgruppen eine Person aufbieten darf, legen ihre Benutzerrollen fest; «Alle aufbietbaren Personen» nur, wer alle Gruppen aufbieten darf (#90).
 - **EI-16** – Einsatztypen sind frei konfigurierbar und erweiterbar (Name, Farbe, Reihenfolge, aktiv); angelegt «Einsatz» und «Übung» mit den bisherigen Einstellungen. Je Typ einstellbar: Alarmstufe, Startrecht je Benutzerrolle, aufbietbare und vorausgewählte Einsatzgruppen, Einzelpersonen, Sichtbarkeit für Nicht-Aufgebotene, vorbereitete Übungen, Funktionen, Vorauswahl von Aufzeichnung und Helikopter, Fristen der Anonymisierung. Ein neuer Typ übernimmt die Einstellungen von einem bestehenden. Löschen ist möglich, bisherige Einsätze behalten Name, Farbe und Fristen; mindestens ein Typ bleibt aktiv (#90).
@@ -84,6 +86,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KA-08** – Die Seite selbst scrollt und zoomt nie, nur die Karte (#84).
 - **KA-09** – Am Handy decken Seitenfenster die Kartenknöpfe ab (AG).
 - **KA-10** – Startansicht beim Öffnen der App ohne laufenden Einsatz: eigener Standort und alle eingeblendeten festen Standorte im Bild; trifft der eigene Standort erst später ein, wird die Ansicht in den ersten 20 s nachgeführt, solange man die Karte nicht selbst verschoben oder gezoomt hat (#96).
+- **KA-11** – Das Menü (☰) zeigt im Einsatz oben den Einsatz mit Alarmzeit, Alarmstufe, PLS, Fliessgeschwindigkeit, Aufzeichnung und öffentlicher Ansicht, darunter Register: «Einsatz» (AI-Assistent, Teilnahme bzw. Mein Einsatz, Fliessgeschwindigkeit, Werkzeuge), «Leitung» (nur Einsatzleitung: Aufgebot, PLS, Aufzeichnung, Helikopter, öffentliche Ansicht, Einsatzkräfte, Einsatz beenden), «Übung» (Übungsleitung, mit Anzahl offener Elemente), «Log» und «Info» (eigene Rechte). Jedes Thema steht in einer eigenen Karte. Beim Öffnen gilt «Einsatz», für die Übungsleitung «Übung» (#129).
 
 ## 6. Einsatzkräfte und Standort (EK)
 
@@ -228,6 +231,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen, Rechtliches), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
 - **VW-02** – Neue Einstellungen erscheinen als Unterpunkt einer Kategorie mit eigenem Recht (#32, #63).
 - **VW-03** – Hinweise verschwinden von selbst; nur Rückfragen brauchen einen Klick (AG).
+- **VW-04** – Navigation der Verwaltung: Kategorien mit Symbol und Anzahl einklappbar, die Kategorie des geöffneten Bereichs ist aufgeklappt, von Hand aufgeklappte pro Gerät gemerkt; Kategorien mit nur einem Bereich als direkter Link; Suchfeld über der Navigation (Enter öffnet den ersten Treffer); die Navigation scrollt bei Bedarf selbst (#128).
+- **VW-05** – Passwort ändern, Abmelden und Impressum stehen in der Kopfzeile der Verwaltung in einem Konto-Menü mit dem Namen der Person (#128).
 
 ## 21. AI-Assistent (AI)
 
