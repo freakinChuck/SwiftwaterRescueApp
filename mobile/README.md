@@ -105,4 +105,4 @@ Nach der Freigabe den Eintrag in `ios/Runner/Runner.entitlements` einkommentiere
 
 - Was nur für die App gilt, kommt in `mobile/app/.gitignore`: Build-Dateien, `local.properties`, Schlüssel. Schlüssel, Zertifikate, Profile und Firebase-Dateien nie einchecken.
 - Neue Bibliotheken der App in `web/legal.html` unter «Native Apps» nachführen.
-- Android baut mit dem Android-Gradle-Plugin 8.13 und Gradle 8.14, nicht mit den Versionen 9 aus der Flutter-Vorlage: `flutter_inappwebview_android` 1.1.3 nutzt `proguard-android.txt`, und AGP 9 bricht dann den Build ab. Erst wechseln, wenn das Plugin AGP 9 unterstützt.
+- `android/gradle.properties` erlaubt mit `android.r8.proguardAndroidTxt.disallowed=false` vorübergehend `proguard-android.txt`: `flutter_inappwebview_android` 1.1.3 nutzt die Datei noch, und das Android-Gradle-Plugin 9 bricht dann den Build ab. Version 8 ist keine Lösung, weil `androidx.core` 1.19 (über die Plugins) AGP 9.1 verlangt. Den Schalter entfernen, sobald das Plugin `proguard-android-optimize.txt` nutzt (ab 1.2.0).
