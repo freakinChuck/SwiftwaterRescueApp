@@ -247,7 +247,7 @@ const plCatName=id=>(plCats.find(c=>c.id===id)||{}).name||'Ohne Kategorie';
 const plGroups=fs=>plCats.map(c=>({name:c.name,items:fs.filter(f=>f.cat_id===c.id)})).concat({name:'Ohne Kategorie',items:fs.filter(f=>!plCats.some(c=>c.id===f.cat_id))}).filter(g=>g.items.length);
 // Knöpfe ↑/↓ (data-<k>=id, data-d=-1|1), erster bzw. letzter Eintrag gesperrt
 const mvBtns=(k,id,i,n)=>`<button data-${k}="${id}" data-d="-1" ${i?'':'disabled'} title="Nach oben" aria-label="Nach oben">↑</button><button data-${k}="${id}" data-d="1" ${i<n-1?'':'disabled'} title="Nach unten" aria-label="Nach unten">↓</button>`;
-const PLACE_COL='#1d7fd1',plSw=f=>`<span style="display:inline-block;width:.9em;height:.9em;border-radius:3px;vertical-align:-.1em;background:${esc(f.color||PLACE_COL)}"></span> ${esc(f.abbr||'')}`;
+const PLACE_COL='#1d7fd1',plSw=f=>`<span style="display:inline-block;width:.9em;height:.9em;border-radius:3px;vertical-align:-.1em;background:${esc(f.color||PLACE_COL)}"></span> ${f.pts?'':esc(f.abbr||'')}`;
 // Dialog: Name, Beschreibung, Kürzel/Farbe, Standort (Eingabe oder Klick auf die Karte, übrige Standorte grau); done nach dem Speichern
 function placeDlg(f,planId,others,done){const perm=planId==null;let pts=(f.pts||[]).map(q=>q.slice()),area=!!f.pts;
   const d=dlg(f.id?(area?'Bereich bearbeiten':'Standort bearbeiten'):'Neuer fester Standort',`<div class="jgrid"><div class="jcol"><div class="row" role="radiogroup" aria-label="Art"><label class="chk"><input type="radio" name="fK" value="point" ${area?'':'checked'}> Punkt</label><label class="chk"><input type="radio" name="fK" value="area" ${area?'checked':''}> Bereich (Fläche)</label></div>
@@ -269,7 +269,7 @@ function placeDlg(f,planId,others,done){const perm=planId==null;let pts=(f.pts||
   const col=()=>{const c=$('#xFc',d);return c&&c.checked?$('#xF',d).value:PLACE_COL},poly=L.polygon([],{weight:2,fillOpacity:.2}),vx=L.layerGroup();
   const drawA=()=>{poly.setLatLngs(pts).setStyle({color:col()});vx.clearLayers();pts.forEach(q=>L.circleMarker(q,{radius:4,color:'#fff',weight:2,fillColor:col(),fillOpacity:1}).addTo(vx));
     $('#fAi',d).textContent=(pts.length?pts.length+' Eckpunkt'+(pts.length>1?'e':''):'Noch keine Eckpunkte')+' · Eckpunkte der Reihe nach auf der Karte antippen (mindestens 3).';$('#fAu',d).disabled=$('#fAx',d).disabled=!pts.length};
-  const mode=()=>{area=$('[name=fK]:checked',d).value==='area';$('#fPt',d).hidden=area;$('#fAr',d).hidden=!area;if(area){poly.addTo(m);vx.addTo(m);if(mk)m.removeLayer(mk);drawA()}else{m.removeLayer(poly);m.removeLayer(vx);if(mk)mk.addTo(m)}};
+  const mode=()=>{area=$('[name=fK]:checked',d).value==='area';$('#fPt',d).hidden=area;$('#fAr',d).hidden=!area;$('#xK',d).closest('label').hidden=area;$('#xK',d).closest('.row').nextElementSibling.textContent=area?'Die Farbe gilt für Rand und Fläche.':'Die Farbe füllt den Marker, das Kürzel steht darauf.';if(area){poly.addTo(m);vx.addTo(m);if(mk)m.removeLayer(mk);drawA()}else{m.removeLayer(poly);m.removeLayer(vx);if(mk)mk.addTo(m)}};
   d.querySelectorAll('[name=fK]').forEach(r=>r.onchange=mode);d.addEventListener('input',e=>{if(area&&e.target.id[0]==='x')drawA()});d.addEventListener('change',e=>{if(area&&e.target.id[0]==='x')drawA()});
   $('#fAu',d).onclick=()=>{pts.pop();drawA()};$('#fAx',d).onclick=()=>{pts=[];drawA()};
   setTimeout(()=>m.invalidateSize(),0);

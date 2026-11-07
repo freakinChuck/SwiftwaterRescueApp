@@ -2162,7 +2162,7 @@ switch ($route) {
   $de = mb_substr(trim((string)($in['descr'] ?? '')), 0, 500); [$ab, $co] = extStyle($in);
   $pts = null; if (!empty($in['pts'])) { $pts = placePts($in['pts']); $ll = [round(array_sum(array_column($pts, 0)) / count($pts), 7), round(array_sum(array_column($pts, 1)) / count($pts), 7)]; } // Bereich: Mitte = Schwerpunkt der Eckpunkte
   elseif (!isset($in['lat'], $in['lon']) || $in['lat'] === '' || $in['lon'] === '') fail('Standort fehlt'); else $ll = llIn($in['lat'], $in['lon']);
-  $pj = $pts ? json_encode($pts) : null;
+  $pj = $pts ? json_encode($pts) : null; if ($pts) $ab = null; // Bereiche haben kein Kürzel (nur Marker zeigen es)
   $ac = $pid !== null || !array_key_exists('active', $in) || !empty($in['active']) ? 1 : 0;
   $cid = null; if (!empty($in['cat_id'])) { $s = $db->prepare("SELECT id FROM place_cats WHERE id=?"); $s->execute([(int)$in['cat_id']]); $cid = $s->fetchColumn() ? (int)$in['cat_id'] : fail('Kategorie nicht gefunden', 404); }
   if ($old) $db->prepare("UPDATE places SET name=?,descr=?,abbr=?,color=?,lat=?,lon=?,active=?,cat_id=?,pts=?,sort=? WHERE id=?")->execute([$nm, $de, $ab, $co, $ll[0], $ll[1], $ac, $cid, $pj, ($old['cat_id'] === null ? null : (int)$old['cat_id']) === $cid ? $old['sort'] : null, (int)$old['id']]); // andere Kategorie: dort ans Ende
