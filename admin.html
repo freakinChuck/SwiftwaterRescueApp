@@ -445,9 +445,11 @@ function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000
   const F=Object.entries(s.fn).filter(([f])=>(s.ctx[f]||[]).includes(X)),mv=(r,f,k)=>((c.matrix[r]||{})[f]||{})[k]||'off';
   const cols=[...s.uroles.map(r=>({k:'u'+r.id,name:r.name,t:'u'})),...(isK?s.roles.map(r=>({k:'r'+r.id,name:r.name,t:'r'})):[])];
   const sel=(col,f,x)=>col.t==='r'&&x.scope!=='inc'&&x.scope!=='any'?'<span class="mut">–</span>':`<select data-mx="${col.k}|${f}" aria-label="${esc(x.name+', '+col.name)}">${Object.entries(s.modes).filter(([m])=>m!=='comp'||x.comp).map(([m,l])=>`<option value="${m}" ${mv(col.k,f,X)===m?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
-  const nu=s.uroles.length,nr=isK?s.roles.length:0;
-  const mx=F.length?`<div class="aimxw"><table class="aimx"><thead>${nr?`<tr><th></th><th colspan="${nu}">Benutzerrollen</th><th colspan="${nr}" class="rg">Spezialrollen im Einsatz</th></tr>`:''}<tr><th>Funktion</th>${cols.map((r,i)=>`<th${r.t==='r'&&cols[i-1]&&cols[i-1].t==='u'?' class="rg"':''}>${esc(r.name)}</th>`).join('')}</tr></thead><tbody>
-    ${F.map(([f,x])=>`<tr><td><b>${esc(x.name)}</b><div class="mut" style="font-size:.78rem;max-width:18rem">${esc(x.descr)}</div></td>${cols.map(col=>`<td>${sel(col,f,x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="mut">Für diesen Bereich gibt es keine Funktionen.</div>';
+  // je Funktion eine Karte, die Rollen als umbrechendes Raster (kein Querscrollen, auch nicht bei vielen Rollen)
+  const grp=(t,lb,f,x)=>{const C=cols.filter(c=>c.t===t);if(!C.length)return'';if(t==='r'&&x.scope!=='inc'&&x.scope!=='any')return`<div class="aimg"><h4>${lb}</h4><div class="mut">Nur im Einsatz, gilt hier nicht.</div></div>`;
+    return`<div class="aimg"><h4>${lb}</h4><div class="aimr">${C.map(col=>`<label class="aimc"><span title="${esc(col.name)}">${esc(col.name)}</span>${sel(col,f,x)}</label>`).join('')}</div></div>`};
+  const mx=F.length?`<div class="aimx">${F.map(([f,x])=>`<div class="aimf"><div><b>${esc(x.name)}</b><div class="mut" style="font-size:.8rem">${esc(x.descr)}</div></div>
+    ${grp('u','Benutzerrollen',f,x)}${isK?grp('r','Spezialrollen im Einsatz (nur mit Teilnahme)',f,x):''}</div>`).join('')}</div>`:'<div class="mut">Für diesen Bereich gibt es keine Funktionen.</div>';
   el.innerHTML=`<h2>AI-Assistent</h2>
     <div class="mut">Ein Sprachmodell erstellt auf Wunsch Texte: Entwürfe fürs After Action Review, Zusammenfassungen des Einsatzlogs, Vorschläge für Übungen, die Statistik in Worten und eine Lagezusammenfassung im Einsatz; dazu freie Fragen zu den Daten der jeweiligen Ansicht. Die App übernimmt nie etwas selbst: Vorschläge erscheinen in einem Fenster und gelten erst mit «Übernehmen». Ohne Anbieter und Freigabe gibt es den AI-Assistenten nicht.</div>
     <div class="inc" style="padding:.6rem .8rem"><label class="chk"><input type="checkbox" id="aiOn" ${c.on?'checked':''}> <b>AI-Assistent einschalten</b></label>
@@ -847,7 +849,7 @@ function aarBtns(x){if(x.aar_seal||x.aar_lock)return'';const s=aarSt(x);
   const b=`${s!=='rel'&&can('aar')?`<button data-ae="${x.id}" title="After Action Review ${s==='wip'?'bearbeiten':'erfassen'}">${s==='wip'?'Bearbeiten':'Erfassen'}</button>`:''}${s!=='nr'?`<button data-av="${x.id}" title="Ansehen${can('aar_rel')?(s==='rel'?', Freigabe zurücknehmen':', freigeben'):''}">Ansehen</button>`:''}${aarDlBtns(x.id,'a',s)}`;return b?`<span class="bg"><span class="bl">AAR</span>${b}</span>`:''}
 // Formular mit allen Feldern der Einstellungen; leere Felder werden nicht gespeichert
 async function aarEdit(id){let x;try{x=await api('aar/get&id='+id);await aarImgs(x)}catch(e){return fail(e)}const i=x.inc,F=aarC.cfg.fields;let chg=false;
-  const inp=f=>{const v=x.data[f.id]??'',a=`data-af="${f.id}"`;
+  const inp=f=>{const v=x.data[f.id]??'',a=`data-af="${f.id}" id="af${f.id}"`;
     switch(f.type){case'area':return`<textarea ${a} rows="3">${esc(v)}</textarea>`;
       case'date':return`<input type="date" ${a} value="${esc(v)}">`;case'time':return`<input type="time" ${a} value="${esc(v)}">`;
       case'number':return`<input type="number" step="any" ${a} value="${esc(v)}">`;
@@ -856,8 +858,8 @@ async function aarEdit(id){let x;try{x=await api('aar/get&id='+id);await aarImgs
       default:return`<input ${a} value="${esc(v)}" maxlength="2000">`}};
   // kurze Angaben nebeneinander, Texte über die ganze Breite: Hinweis und Knopf für Bilder teilen sich die Zeile unter dem Feld
   const hint=f=>f.hint?`<small>${esc(f.hint)}</small>`:'';let form='',sh='';const flush=()=>{if(sh)form+=`<div class="aarsh">${sh}</div>`;sh=''};
-  for(const f of F){if(f.type!=='head'&&f.type!=='img'&&f.type!=='area'){sh+=`<label class="mut">${esc(f.label)}${inp(f)}${hint(f)}</label>`;continue}flush();
-    form+=f.type==='head'?`<h3 class="aarq">${esc(f.label)}</h3>`:f.type==='img'?`<div class="mut">${esc(f.label)}<div class="aarimgs" data-aimg="${f.id}"></div>${hint(f)}</div>`:`<div class="aara"><label class="mut">${esc(f.label)}${inp(f)}</label><div class="aarft mut">${hint(f)}<div class="aarimgs" data-aimg="${f.id}"></div></div></div>`}flush();
+  for(const f of F){if(f.type!=='head'&&f.type!=='img'&&f.type!=='area'){sh+=`<label class="mut" for="af${f.id}"><span class="aarlb">${esc(f.label)}</span>${inp(f)}${hint(f)}</label>`;continue}flush();
+    form+=f.type==='head'?`<h3 class="aarq">${esc(f.label)}</h3>`:f.type==='img'?`<div class="mut">${esc(f.label)}<div class="aarimgs" data-aimg="${f.id}"></div>${hint(f)}</div>`:`<div class="aara"><label class="mut" for="af${f.id}"><span class="aarlb">${esc(f.label)}</span>${inp(f)}</label><div class="aarft mut">${hint(f)}<div class="aarimgs" data-aimg="${f.id}"></div></div></div>`}flush();
   const d=dlg('After Action Review – '+i.message,`<div class="mut">${esc(kindOf(i).name)} vom ${aarDt(i.alarm_at)}, Dauer ${aarMin(i.ended_at-i.alarm_at)}, ${x.people.length} Einsatzkräfte${x.updated?` · zuletzt bearbeitet ${aarDt(x.updated)} von ${esc(x.updated_by||'?')}`:''}</div>
     ${x.status===2?'<div class="mut"><b>Als nicht relevant markiert.</b> Speichern macht es wieder zu einem Review in Arbeit.</div>':''}
     ${form||'<div class="mut">Es sind noch keine Felder eingerichtet (Auswertung → After Action Review einrichten).</div>'}`,
@@ -879,9 +881,9 @@ function aiAar(d,x,id,F){const m=aiMi('aar',x),ch=aiMi('chat',x)!=='off';if(m===
   const bar=document.createElement('div');bar.className='aibar';bar.innerHTML='<button class="aib" data-aia>✨ Entwurf für leere Felder</button><span class="mut" style="font-size:.82rem">Der AI-Assistent schlägt Texte aus Einsatzdaten und Einsatzlog vor. Übernommenes wird erst mit «Speichern» gespeichert.</span>';
   const card=d.firstElementChild;card.insertBefore(bar,card.children[2]||null);let pre=null;const ba=$('[data-aia]',bar);
   ba.onclick=()=>aiPanel({title:'Entwurf für leere Felder',req:{fn:'aar',id},pre,show,apply:r=>{put(r,false);return false},applyText:'In leere Felder übernehmen',chat:ch});
-  for(const f of T){const e=el(f.id);if(!e)continue;const b=document.createElement('button');b.type='button';b.className='aib';b.textContent='✨';b.title='Vorschlag des AI-Assistenten für «'+f.label+'»'+(f.type==='area'?' (vorhandener Text wird überarbeitet)':'');
+  for(const f of T){const e=el(f.id);if(!e)continue;const b=document.createElement('button');b.type='button';b.className='aib ico';b.textContent='✨';b.title='Vorschlag des AI-Assistenten für «'+f.label+'»'+(f.type==='area'?' (vorhandener Text wird überarbeitet)':'');
     b.onclick=ev=>{ev.preventDefault();aiPanel({title:f.label,req:{fn:'aar',id,field:f.id},show,apply:r=>{put(r,true);return false},chat:ch})};
-    const ft=e.closest('.aara');if(ft)$('.aarft',ft).prepend(b);else e.after(b)}
+    const lb=e.closest('label');(lb&&$('.aarlb',lb)||e.parentNode).append(b)}
   if(m==='comp')aiAuto({fn:'aar',id}).then(r=>{if(r&&ba.isConnected&&Object.keys(r.fields||{}).length){pre=r;ba.classList.add('rdy');ba.textContent=`✨ Entwurf für ${Object.keys(r.fields).length} leere Felder bereit`}})}
 // Bilder (Feldart img): werden sofort gespeichert (nicht erst mit «Speichern»), Inhalt einzeln über aar/img geladen und hier zwischengespeichert
 const aarIC={};
