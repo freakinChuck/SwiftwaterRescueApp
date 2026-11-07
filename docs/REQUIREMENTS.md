@@ -75,13 +75,14 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **KA-01** – Karte im Vollbild; alle Bedienelemente in einem versteckten Menü (☰) (AG).
 - **KA-02** – Grundkarte swisstopo Luftbild (Standard), umschaltbar auf Landeskarte und OpenStreetMap; Anbieter leicht austauschbar; Wahl pro Gerät gemerkt (AG, #34).
-- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Nachrichten-Markierungen, Helikopter), «Alle ein-/ausblenden», pro Gerät gemerkt (#34).
+- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Nachrichten-Markierungen, Helikopter, Feste Standorte), «Alle ein-/ausblenden», pro Gerät gemerkt (#34).
 - **KA-04** – Karte drehbar (zwei Finger, Shift + Mausrad, Kompass); Klick auf den Kompass richtet nach Norden aus (AG).
 - **KA-05** – Startansicht beim Öffnen eines Einsatzes: Übersicht über alle aktiven Positionen (AG).
 - **KA-06** – Kamerafokus: Suchgebiet (ganz und je Teilgebiet), Einsatzkräfte, Auto-Übersicht (hält alle sichtbaren aktiven Positionen im Bild) (AG, #51).
 - **KA-07** – Kartenknöpfe rechts unten einklappbar; eingeklappt zeigen sie die Summe der roten Zähler (#42).
 - **KA-08** – Die Seite selbst scrollt und zoomt nie, nur die Karte (#84).
 - **KA-09** – Am Handy decken Seitenfenster die Kartenknöpfe ab (AG).
+- **KA-10** – Startansicht beim Öffnen der App ohne laufenden Einsatz: eigener Standort und alle eingeblendeten festen Standorte im Bild; trifft der eigene Standort erst später ein, wird die Ansicht in den ersten 20 s nachgeführt, solange man die Karte nicht selbst verschoben oder gezoomt hat (#96).
 
 ## 6. Einsatzkräfte und Standort (EK)
 
@@ -92,6 +93,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EK-05** – Fahrten mit Fahrzeug werden erkannt und im Log festgehalten («fährt von A nach B, ca. X km Luftlinie, Ø Y km/h»); Bewegungen auf dem Gewässer und manuell gesetzte Positionen zählen nicht (AG).
 - **EK-06** – «Suchgebiet erreicht» wird geloggt (AG).
 - **EK-07** – Der eigene Standort ist immer gesondert auf der Karte sichtbar (blauer Punkt mit Genauigkeitskreis), auch ohne laufenden Einsatz; ausgeblendet nur, solange man an einem laufenden Einsatz bzw. einer Übung mit einer Einrückoption ohne Standortfreigabe teilnimmt (#118).
+- **EK-08** – Im Einsatz erscheint man selbst nur als blauer Punkt, nicht zusätzlich mit dem eigenen Personen-Icon; ohne Standort des Geräts steht der Punkt am zuletzt gemeldeten Standort (#96).
 
 ## 7. Externe Einsatzkräfte (EX)
 
@@ -134,7 +136,15 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 ## 11. Markierungen und Bereiche (MB)
 
 - **MB-01** – Die Einsatzleitung setzt Markierungen (Punkt) und Bereiche (Polygon, 3–200 Eckpunkte) mit Bezeichnung und Farbe; für alle sichtbar (AG).
-- **MB-02** – Fenster «Markierungen»: PLS zuoberst, danach Markierungen und Bereiche, je Eintrag und Gruppe ein-/ausblendbar, «Zeigen» (AG).
+- **MB-02** – Fenster «Markierungen»: PLS zuoberst, danach feste Standorte, Markierungen und Bereiche, je Eintrag und Gruppe ein-/ausblendbar, «Zeigen» (AG, #96).
+- **MB-03** – Feste Standorte: in der Verwaltung gepflegte Orte (Name, Beschreibung, Kürzel, Farbe, Standort, aktiv/deaktiviert), z. B. Bootseinwasserungen, Magazine oder Treffpunkte; erscheinen in jedem Einsatz und jeder Übung (und ohne Einsatz) auf der Karte und im Fenster «Markierungen», mit Navigation (#96).
+- **MB-04** – Vorbereitete Übungen wählen, welche festen Standorte gelten (alle aktiven oder eine Auswahl), und können bis zum Start eigene Standorte ergänzen; sichtbar in der Vorschau auf der Karte (#96).
+- **MB-05** – Feste Standorte stehen auch ohne laufenden Einsatz auf der Karte der Einsatz-App (alle aktiven permanenten, ausblendbar im Fenster «Ansicht»). Ohne Einsatz öffnet der Kartenknopf «Feste Standorte» eine Übersichtsliste wie im Fenster «Markierungen» (nach Kategorie, je Standort ein-/ausblendbar, «Zeigen», Navigation) (#96).
+- **MB-06** – Auswahl- und Vorschaukarten der Verwaltung sind gross genug zum Wählen und bieten alle Kartenanbieter zur Wahl (wie das Fenster «Ansicht») (#96).
+- **MB-07** – Kategorien fester Standorte (z. B. Bootseinwasserungen, Magazine): in der Verwaltung angelegt, je Standort zugeordnet, je Kategorie mit Standard «eingeblendet» oder «ausgeblendet». In der Einsatz-App (Fenster «Ansicht» und «Markierungen») einzeln ein- und ausblendbar; die eigene Wahl wird pro Person gespeichert (auf allen Geräten) und lässt sich auf den Standard zurücksetzen (#96).
+- **MB-10** – Namen fester Standorte: Im Fenster «Ansicht» lässt sich unter «Feste Standorte» einstellen, ob die Namen auf der Karte stehen («Namen auf der Karte», Standard an). Ausgeschaltet erscheint der Name nur beim Darüberfahren und im Popup. Gespeichert pro Person, «Standard der Verwaltung» lässt die Wahl stehen (#96).
+- **MB-09** – Reihenfolge fester Standorte: In der Verwaltung lassen sich die Kategorien und innerhalb jeder Kategorie die Standorte mit ↑/↓ sortieren; die Einsatz-App zeigt sie in dieser Reihenfolge (#96).
+- **MB-08** – Feste Bereiche: Ein fester Standort kann statt eines Punkts eine Fläche sein (3–200 Eckpunkte, in der Verwaltung auf der Karte eingezeichnet), z. B. Sperrzonen oder Sammelplätze. In der Einsatz-App gestrichelt in seiner Farbe mit Beschriftung, Navigation zur Mitte, «Zeigen» zeigt die ganze Fläche; gilt auch für Kategorien, vorbereitete Übungen und die Startansicht. Bereiche haben kein Kürzel (#96).
 - PLS auf eine Markierung verschieben (**offen**).
 
 ## 12. Werkzeuge (WZ)
@@ -153,7 +163,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation (#35, #79).
+- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte (#35, #79, #96).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
 
