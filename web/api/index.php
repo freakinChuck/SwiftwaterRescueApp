@@ -210,7 +210,7 @@ const PERMS = [
 // Alarmstufen der Einsatztypen (Issue #90), von stark nach schwach: Schlüssel => [Bezeichnung, Erklärung]; Einsatz-App und Service Worker setzen sie um
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
-const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'rec_kinds' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func',
+const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func',
   'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
@@ -451,7 +451,7 @@ function airGet($url) {
   if (!function_exists('curl_init')) { $r = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true, 'header' => "User-Agent: SwiftwaterRescue/0.1\r\n"]]));
     return [preg_match('/^HTTP\/\S+ (\d{3})/', $http_response_header[0] ?? '', $m) ? (int)$m[1] : 0, $r === false ? null : $r, $r === false ? 'Keine Antwort' : '']; }
   $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 6, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_ENCODING => '', CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
-  $r = curl_exec($c); $code = curl_getinfo($c, CURLINFO_HTTP_CODE); $err = $r === false ? (curl_errno($c) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($c)) : ''; curl_close($c);
+  $r = curl_exec($c); $code = curl_getinfo($c, CURLINFO_HTTP_CODE); $err = $r === false ? (curl_errno($c) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($c)) : ''; 
   return [$code, $r === false ? null : $r, $err]; }
 // Abruf je Quelle für die Anzeige in der Verwaltung (api/data/air/status.json); darf die Abfrage nie stören
 function airStat($k, $ok, $ms, $err, $n) { try { $f = __DIR__ . '/data/air/status.json'; if (!is_dir(dirname($f))) @mkdir(dirname($f), 0775, true); $s = json_decode((string)@file_get_contents($f), true) ?: []; $x = $s[$k] ?? ['uses' => 0, 'fails' => 0];
@@ -478,11 +478,21 @@ function airZone($inc) { global $db, $now; $c = airCfg(); $R = $c['radius_km'] *
   if (feature($inc, 'res')) foreach (incRescuees($id) as $r) if ($r['lat'] !== null && $r['rescued_at'] === null) $z[] = [$r['lat'], $r['lon'], $R, 'pos'];
   if (feature($inc, 'poi')) foreach ($q("SELECT pts FROM pois WHERE incident_id=? AND removed IS NULL") as $p) foreach (json_decode($p['pts'], true) ?: [] as $pt) if (is_array($pt) && count($pt) >= 2) $z[] = [(float)$pt[0], (float)$pt[1], $R, 'pos'];
   return $z; }
-// Kreis um die ganze Zone (Mitte des umschliessenden Rechtecks), für eine einzige Abfrage bei der Quelle
-function airCircle($z) { $s = 90; $n = -90; $w = 180; $e = -180;
-  foreach ($z as [$la, $lo, $r]) { $dla = $r / 111320; $dlo = $r / (111320 * max(.1, cos(deg2rad($la)))); $s = min($s, $la - $dla); $n = max($n, $la + $dla); $w = min($w, $lo - $dlo); $e = max($e, $lo + $dlo); }
-  $la = ($s + $n) / 2; $lo = ($w + $e) / 2; $rm = 0; foreach ($z as [$a, $b, $r]) $rm = max($rm, hav($la, $lo, $a, $b) + $r);
-  return [$la, $lo, $rm]; }
+// Abfragekreise (Issue #107): Die Dienste liefern höchstens AIR_MAX_M um einen Punkt. Nahe Kreise der Zone werden zu einem zusammengefasst
+// (umschliessender Kreis nicht grösser als beide zusammen), weit auseinanderliegende Gebiete einzeln abgefragt, höchstens AIR_MAX_Q Abfragen.
+const AIR_MAX_Q = 6;
+function airGroups($z) { $g = [];
+  $join = function ($a, $b) { $d = hav($a[0], $a[1], $b[0], $b[1]); if ($d + $b[2] <= $a[2]) return $a; if ($d + $a[2] <= $b[2]) return $b;
+    $t = (($d + $a[2] + $b[2]) / 2 - $a[2]) / $d; $la = $a[0] + ($b[0] - $a[0]) * $t; $lo = $a[1] + ($b[1] - $a[1]) * $t; // Mitte auf der Verbindungslinie
+    return [$la, $lo, max(hav($la, $lo, $a[0], $a[1]) + $a[2], hav($la, $lo, $b[0], $b[1]) + $b[2])]; };
+  foreach ($z as [$la, $lo, $r]) { foreach ($g as $x) if (hav($x[0], $x[1], $la, $lo) + $r <= $x[2]) continue 2; $g[] = [$la, $lo, $r]; } // gleiche bzw. enthaltene weglassen
+  while (count($g) > 1) { $bi = $bj = $bm = null; $fi = $fj = $fm = null; $n = count($g);
+    for ($i = 0; $i < $n; $i++) for ($j = $i + 1; $j < $n; $j++) { $m = $join($g[$i], $g[$j]);
+      if ($fm === null || $m[2] < $fm[2]) [$fi, $fj, $fm] = [$i, $j, $m]; // kleinster gemeinsamer Kreis, falls es zu viele Abfragen wären
+      if ($m[2] <= min(AIR_MAX_M, $g[$i][2] + $g[$j][2]) && ($bm === null || $m[2] < $bm[2])) [$bi, $bj, $bm] = [$i, $j, $m]; }
+    if ($bm === null) { if ($n <= AIR_MAX_Q) break; [$bi, $bj, $bm] = [$fi, $fj, $fm]; }
+    $g[$bi] = $bm; array_splice($g, $bj, 1); }
+  return $g; }
 function airInZone($a, $z) { foreach ($z as [$la, $lo, $r]) if (hav($la, $lo, $a['lat'], $a['lon']) <= $r) return true; return false; }
 // sichtbar: Filter, Höhe, Alter und Relevanzzone
 function airShow($a, $c, $z) { global $now; return airKind($a, $c) && ($a['gnd'] || $a['alt'] === null || $a['alt'] <= $c['max_alt_ft']) && $now - $a['at'] <= $c['max_age_s'] && airInZone($a, $z); }
@@ -492,17 +502,22 @@ function airServe($inc) { global $now, $db; $c = airCfg(); $id = (int)$inc['id']
   $base = ['air' => [], 'radius_km' => $c['radius_km'], 'now' => $now];
   if (!$c['src']) return $base + ['err' => 'Keine Datenquelle eingeschaltet (Verwaltung → Helikopter)'];
   $z = airZone($inc); if (!$z) return $base + ['info' => 'Noch kein Bezugspunkt: Helikopter erscheinen, sobald ein PLS oder Standorte bekannt sind.'];
-  [$la, $lo, $rm] = airCircle($z);
+  $qs = airGroups($z);
   $dir = __DIR__ . '/data/air'; if (!is_dir($dir)) @mkdir($dir, 0775, true); $file = "$dir/inc$id.json";
   $read = function () use ($file) { clearstatcache(true, $file); $d = is_file($file) ? json_decode((string)@file_get_contents($file), true) : null; return is_array($d) ? $d : null; };
-  $ok = fn($d) => $d && isset($d['at']) && $now - (int)$d['at'] < $c['cache_s'] && hav($d['la'], $d['lo'], $la, $lo) + min($rm, AIR_MAX_M * .9) <= $d['rm']; // grösser als die Grenze der Dienste: deckt der Cache das Abfragbare ab, gilt er
+  // gültig, solange jeder Abfragekreis in einem abgefragten liegt (cov); grösser als die Grenze der Dienste: deckt der Cache das Abfragbare ab, gilt er
+  $ok = fn($d) => $d && isset($d['at'], $d['cov']) && $now - (int)$d['at'] < $c['cache_s'] && !array_filter($qs, function ($q) use ($d) { foreach ($d['cov'] as $v) if (hav($v[0], $v[1], $q[0], $q[1]) + min($q[2], AIR_MAX_M * .9) <= $v[2]) return false; return true; });
   $wait = fn($d) => $d && !empty($d['fail_at']) && $now - (int)$d['fail_at'] < AIR_BACKOFF_S;
   $d = $read();
   if (!$ok($d) && !$wait($d) && ($lk = @fopen("$file.lock", 'c')) && flock($lk, LOCK_EX | LOCK_NB)) {
     $d = $read();
     if (!$ok($d) && !$wait($d)) { set_time_limit(60);
-      $r = airFetch($c['src'], $la, $lo, $rm * 1.1); // etwas grösser, damit kleine Verschiebungen der Zone den Cache nicht ungültig machen
-      if ($r) { [$k, $list, $cov] = $r; $hist = $d['hist'] ?? []; $keep = max(120, $c['trail_min'] * 60); $ac = [];
+      // je Abfragekreis etwas grösser, damit kleine Verschiebungen der Zone den Cache nicht ungültig machen; Abstand ≥ 1 s (Limit von adsb.fi)
+      $all = []; $cov = []; $k = null; $miss = 0; $t0 = 0;
+      foreach ($qs as [$la, $lo, $rm]) { if ($t0 && ($w = 1.05 - (microtime(true) - $t0)) > 0) usleep((int)($w * 1e6)); $t0 = microtime(true);
+        $r = airFetch($c['src'], $la, $lo, $rm * 1.1); if (!$r) { $miss++; continue; }
+        $k = $k ?? $r[0]; $cov[] = [$la, $lo, $r[2]]; foreach ($r[1] as $a) if (!isset($all[$a['hex']]) || $a['at'] > $all[$a['hex']]['at']) $all[$a['hex']] = $a; }
+      if ($k !== null) { $list = array_values($all); $hist = $d['hist'] ?? []; $keep = max(120, $c['trail_min'] * 60); $ac = [];
         $rec = (int)$inc['record'] === 1 && $c['replay'] && feature($inc, 'rec');
         $ins = $rec ? $db->prepare("INSERT INTO air_track(incident_id,hex,ts,lat,lon,alt,trk,cs,reg,type,cat) VALUES(?,?,?,?,?,?,?,?,?,?,?)") : null;
         foreach ($list as $a) { if (!airKind($a, $c) || !preg_match('/^[0-9a-f]{6}$/', $a['hex'])) continue; $ac[$a['hex']] = $a;
@@ -510,8 +525,9 @@ function airServe($inc) { global $now, $db; $c = airCfg(); $id = (int)$inc['id']
           if (!$last || $a['at'] > $last[0]) { $h[] = [$a['at'], round($a['lat'], 6), round($a['lon'], 6), $a['alt']]; $hist[$a['hex']] = $h;
             if ($ins && airShow($a, $c, $z) && (!$last || $a['at'] - ($d['rec'][$a['hex']] ?? 0) >= AIR_REPLAY_S)) { $ins->execute([$id, $a['hex'], $a['at'], $a['lat'], $a['lon'], $a['gnd'] ? 0 : $a['alt'], $a['trk'], $a['cs'], $a['reg'], $a['type'], $a['cat']]); $d['rec'][$a['hex']] = $a['at']; } } }
         foreach ($hist as $hx => $h) { $h = array_values(array_filter($h, fn($p) => $now - $p[0] <= $keep)); if ($h) $hist[$hx] = $h; else unset($hist[$hx], $d['rec'][$hx]); }
-        $d = ['at' => $now, 'la' => $la, 'lo' => $lo, 'rm' => $cov, 'src' => $k, 'ac' => array_values($ac), 'hist' => $hist, 'rec' => $d['rec'] ?? []];
-      } else { $d = $d ?: ['ac' => [], 'hist' => []]; $d['fail_at'] = $now; } // alle Quellen fehlgeschlagen: bisherige Daten behalten, Pause AIR_BACKOFF_S
+        $d = ['at' => $now, 'cov' => $cov, 'src' => $k, 'ac' => array_values($ac), 'hist' => $hist, 'rec' => $d['rec'] ?? []];
+        if ($miss) { $d['fail_at'] = $now; $d['part'] = 1; } // nicht alle Gebiete erhalten: Pause wie bei einem Fehlschlag, Daten der übrigen bleiben
+      } else { $d = $d ?: ['ac' => [], 'hist' => []]; $d['fail_at'] = $now; unset($d['part']); } // alle Quellen fehlgeschlagen: bisherige Daten behalten, Pause AIR_BACKOFF_S
       if (file_put_contents("$file.tmp", json_encode($d)) !== false) rename("$file.tmp", $file); }
     flock($lk, LOCK_UN); }
   if (!$d) return $base + ['info' => 'Luftlage wird geladen …'];
@@ -522,7 +538,7 @@ function airServe($inc) { global $now, $db; $c = airCfg(); $id = (int)$inc['id']
     $out[] = $a + ['rescue' => airRescue($a, $c), 'pls_m' => $dist === null ? null : (int)round($dist), 'trail' => $tr]; }
   usort($out, fn($x, $y) => [$x['rescue'] === null, $x['pls_m'] ?? PHP_INT_MAX] <=> [$y['rescue'] === null, $y['pls_m'] ?? PHP_INT_MAX]); // Rettungshelikopter zuerst, dann nach Distanz
   $S = AIR_SOURCES[$d['src'] ?? ''] ?? null;
-  return ['air' => $out, 'at' => isset($d['at']) ? (int)$d['at'] : null, 'src' => $S ? ['name' => $S['name'], 'site' => $S['site']] : null, 'err' => !empty($d['fail_at']) && $now - (int)$d['fail_at'] < 60 ? 'Keine Datenquelle erreichbar, neuer Versuch folgt' : null, 'radius_km' => $c['radius_km'], 'now' => $now]; }
+  return ['air' => $out, 'at' => isset($d['at']) ? (int)$d['at'] : null, 'src' => $S ? ['name' => $S['name'], 'site' => $S['site']] : null, 'err' => !empty($d['fail_at']) && $now - (int)$d['fail_at'] < 60 ? (empty($d['part']) ? 'Keine Datenquelle erreichbar, neuer Versuch folgt' : 'Nicht für alle Einsatzgebiete erreichbar, neuer Versuch folgt') : null, 'radius_km' => $c['radius_km'], 'now' => $now]; }
 // Helikopter für diesen Einsatz an? Hauptschalter (on) und Schalter je Einsatz (incidents.air, beim Start gesetzt; NULL = Vorauswahl des Einsatztyps)
 function airDef($kid) { $c = airCfg(); return $c['on'] ? (int)(kinds()[(int)$kid]['air'] ?? 0) : 0; }
 function airInc($inc) { $c = airCfg(); if (!$c['on']) return false; $v = $inc['air'] ?? null; return $v === null || $v === '' ? (bool)airDef($inc['kind_id'] ?? 0) : (bool)(int)$v; }
@@ -979,7 +995,7 @@ function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) re
     curl_multi_add_handle($mh, $h); $hs[] = [$h, (int)$sub['id']]; }
   do { $st = curl_multi_exec($mh, $run); if ($run) curl_multi_select($mh, 1); } while ($run && $st === CURLM_OK);
   foreach ($hs as [$h, $id]) { $c = curl_getinfo($h, CURLINFO_HTTP_CODE); if ($c === 404 || $c === 410) $db->prepare("DELETE FROM push_subs WHERE id=?")->execute([$id]); // abgelaufen
-    curl_multi_remove_handle($mh, $h); curl_close($h); }
+    curl_multi_remove_handle($mh, $h); }
   fcmDone($mh, $hn);
   curl_multi_close($mh); }
 /* ---------- Nativer Push über Firebase Cloud Messaging, HTTP v1 (Issue #108) ---------- */
@@ -1047,7 +1063,7 @@ function logev($incId, $userId, $kind, $text) { global $db, $now; $db->prepare("
 function hav($a, $b, $c, $d) { $p1 = deg2rad($a); $p2 = deg2rad($c); $dp = $p2 - $p1; $dl = deg2rad($d - $b); $x = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 12742000 * asin(min(1, sqrt($x))); }
 function avg($a) { $a = array_values(array_filter($a, fn($x) => $x !== null)); return $a ? round(array_sum($a) / count($a), 1) : null; }
 function http_get($url) {
-  if (function_exists('curl_init')) { $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']); $r = curl_exec($c); curl_close($c); return $r; }
+  if (function_exists('curl_init')) { $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']); $r = curl_exec($c); return $r; }
   return @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 10, 'header' => "User-Agent: SwiftwaterRescue/0.1\r\n"]]));
 }
 // Gewässernetz über den Server mit Datei-Cache, damit gleiche Abfragen (z. B. Suchgebiet aller Geräte eines Einsatzes) nur einmal
@@ -1119,7 +1135,6 @@ function overpassFetch($q) { // erste Antwort mit elements, sonst null; jeder Ve
       $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 15, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
       $r = curl_exec($c); $code = curl_getinfo($c, CURLINFO_HTTP_CODE);
       if ($r === false) $err = curl_errno($c) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($c);
-      curl_close($c);
     } else {
       $r = @file_get_contents($url, false, stream_context_create(['http' => ['method' => 'POST', 'timeout' => 15, 'ignore_errors' => true, 'header' => "Content-Type: application/x-www-form-urlencoded\r\nUser-Agent: SwiftwaterRescue/0.1\r\n", 'content' => http_build_query(['data' => $q])]]));
       $code = preg_match('/^HTTP\/\S+ (\d{3})/', $http_response_header[0] ?? '', $m) ? (int)$m[1] : 0;
@@ -2727,7 +2742,7 @@ switch ($route) {
  case 'kinds': need('cfg_inc'); // Einsatztypen (Issue #90), auch deaktivierte, ohne gelöschte; dazu Alarmstufen und Einsatzgruppen fürs Formular
   $uc = []; foreach ($db->query("SELECT kind_id,COUNT(*) c FROM incidents GROUP BY kind_id")->fetchAll() as $x) $uc[(int)$x['kind_id']] = (int)$x['c'];
   out(['kinds' => array_values(array_map(fn($k) => $k + ['used' => $uc[$k['id']] ?? 0], array_filter(kinds(), fn($k) => !$k['deleted']))), 'levels' => array_map(fn($k, $v) => ['k' => $k, 'name' => $v[0], 'hint' => $v[1]], array_keys(ALARM_LEVELS), ALARM_LEVELS), 'groups' => grpRows()]);
- case 'kind/save': need('cfg_inc'); // anlegen oder ändern: id, name, color, alarm, mode_up, persons, open_all, plans, grp_off, grp_def, active; neu zusätzlich copy_from (Funktionen, Vorauswahl, Fristen und Startrecht der Rollen übernehmen)
+ case 'kind/save': need('cfg_inc'); // anlegen oder ändern: id, name, color, alarm, mode_up, persons, open_all, plans, rec (Vorauswahl «Aufzeichnen», Issue #136), grp_off, grp_def, active; neu zusätzlich copy_from (Funktionen, Vorauswahl, Fristen und Startrecht der Rollen übernehmen)
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
   $col = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($in['color'] ?? '')) ? $in['color'] : '#2563eb'; if (!isset(ALARM_LEVELS[$in['alarm'] ?? ''])) fail('Unbekannte Alarmstufe');
   $goff = idsIn($in['grp_off'] ?? []); $gdef = array_values(array_diff(idsIn($in['grp_def'] ?? []), $goff));
@@ -2738,10 +2753,12 @@ switch ($route) {
   if ($id && !$ac && ($r = activeIncident()) && (int)$r['kind_id'] === $id) fail('Es läuft gerade ein Einsatz dieses Typs');
   $s = $db->prepare("SELECT COUNT(*) c FROM inc_kinds WHERE name=? AND id<>? AND deleted=0"); $s->execute([$nm, $id]); if ($s->fetch()['c']) fail('Einen Einsatztyp mit diesem Namen gibt es schon');
   $vals = [$nm, $col, $in['alarm'], empty($in['mode_up']) ? 0 : 1, empty($in['persons']) ? 0 : 1, empty($in['open_all']) ? 0 : 1, empty($in['plans']) ? 0 : 1, json_encode($goff), json_encode($gdef), $ac];
-  if ($id) $db->prepare("UPDATE inc_kinds SET name=?,color=?,alarm=?,mode_up=?,persons=?,open_all=?,plans=?,grp_off=?,grp_def=?,active=? WHERE id=?")->execute(array_merge($vals, [$id]));
+  $rec = array_key_exists('rec', $in) ? (empty($in['rec']) ? 0 : 1) : null; // fehlt = unverändert bzw. von der Vorlage
+  if ($id) { $db->prepare("UPDATE inc_kinds SET name=?,color=?,alarm=?,mode_up=?,persons=?,open_all=?,plans=?,grp_off=?,grp_def=?,active=? WHERE id=?")->execute(array_merge($vals, [$id]));
+    if ($rec !== null) $db->prepare("UPDATE inc_kinds SET rec=? WHERE id=?")->execute([$rec, $id]); }
   else { $from = kinds()[(int)($in['copy_from'] ?? 0)] ?? null; if (!$from || $from['deleted']) fail('Bitte wählen, von welchem Einsatztyp die Einstellungen übernommen werden');
     $db->beginTransaction();
-    $db->prepare("INSERT INTO inc_kinds(name,color,alarm,mode_up,persons,open_all,plans,grp_off,grp_def,active,pos,perm,rec,air,feat_off) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute(array_merge($vals, [(int)$db->query("SELECT COALESCE(MAX(pos),0)+1 m FROM inc_kinds")->fetch()['m'], '', $from['rec'], $from['air'], json_encode($from['feat_off'])])); $id = (int)$db->lastInsertId();
+    $db->prepare("INSERT INTO inc_kinds(name,color,alarm,mode_up,persons,open_all,plans,grp_off,grp_def,active,pos,perm,rec,air,feat_off) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute(array_merge($vals, [(int)$db->query("SELECT COALESCE(MAX(pos),0)+1 m FROM inc_kinds")->fetch()['m'], '', $rec ?? $from['rec'], $from['air'], json_encode($from['feat_off'])])); $id = (int)$db->lastInsertId();
     $db->prepare("UPDATE inc_kinds SET perm=? WHERE id=?")->execute(['start_' . $id, $id]);
     // Fristen der Anonymisierung übernehmen, damit Personendaten eines neuen Typs nicht unbemerkt nie anonymisiert werden
     $ac0 = anonCfg(); foreach ($ac0 as $st0 => &$x0) $x0['days'][$id] = $x0['days'][$from['id']] ?? null; unset($x0); setSetting('anon_cfg', json_encode($ac0));
@@ -2797,7 +2814,7 @@ switch ($route) {
     foreach ($v as $x) if ($x < 1 || $x > 200) fail('Geschwindigkeiten müssen zwischen 1 und 200 km/h liegen');
     sort($v); setSetting('rd_speeds', implode(',', $v));
   }
-  foreach (['rec_kinds' => 'rec', 'air_kinds' => 'air'] as $k => $col) if (isset($in[$k]) && is_array($in[$k])) { foreach ($in[$k] as $id => $v) $db->prepare("UPDATE inc_kinds SET $col=? WHERE id=?")->execute([empty($v) ? 0 : 1, (int)$id]); $KINDS = null; } // Vorauswahl je Einsatztyp
+  foreach (['air_kinds' => 'air'] as $k => $col) if (isset($in[$k]) && is_array($in[$k])) { foreach ($in[$k] as $id => $v) $db->prepare("UPDATE inc_kinds SET $col=? WHERE id=?")->execute([empty($v) ? 0 : 1, (int)$id]); $KINDS = null; } // Vorauswahl je Einsatztyp
   foreach (['msg_no_role', 'msg_read_all', 'overpass_on'] as $k) if (isset($in[$k])) setSetting($k, empty($in[$k]) ? '0' : '1');
   if (isset($in['nav_off'])) { // ausgeschaltete Navigations-Apps, mindestens eine bleibt
     $v = array_values(array_intersect(array_keys(NAV_APPS), array_filter((array)$in['nav_off'], 'is_string')));
