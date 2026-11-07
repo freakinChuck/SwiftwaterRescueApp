@@ -104,6 +104,10 @@ table.crew small{display:block;color:var(--mut)}table.crew select{width:100%;pad
 .rdt{width:100%}.rdt td{padding:.25rem .3rem}.rdt td:last-child{text-align:right;font-weight:600;white-space:nowrap}.rdt input{width:4.5rem;padding:.25rem .4rem}
 body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: Klicks auf Marker/Bereiche gehen an die Karte, keine Popups */
 .rdpt{width:26px;height:26px;border-radius:50%;background:#2ee6d6;color:#0f2430;font-weight:700;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px #0008}
+.hyk{width:26px;height:26px;border-radius:6px;background:#0b4f8a;border:2px solid #fff;display:grid;place-items:center;font-size:14px;box-shadow:0 1px 4px #0008}.hyk.inc{border-color:#ffd166}
+.hyli{display:flex;gap:.5rem;align-items:flex-start;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--line)}.hyli:last-of-type{border-bottom:0}.hyli>div:first-child{min-width:0;overflow-wrap:anywhere}.hyli .hyb{display:flex;gap:.3rem;flex:0 0 auto}.hyli button{padding:.3rem .5rem;font-size:.8rem}
+.hyph{font-size:.8rem;color:var(--mut)}.hypop{min-width:12rem}.hypop .t{display:block;color:#666;font-size:.8rem;margin-bottom:.2rem}
+#hyRes button{display:block;width:100%;text-align:left;margin:.2rem 0;padding:.35rem .5rem;font-size:.85rem}
 #followChip button{background:transparent;border:0;color:#fff;padding:.2rem .4rem}
 @media(min-width:760px){body.so #followChip{left:calc(400px + 1rem)}}
 .mk{width:38px;height:38px;border-radius:50%;border:4px solid #888;background:#0c1c25 center/cover;display:grid;place-items:center;font-weight:700;font-size:.8rem;box-shadow:0 0 0 2px #0008}
@@ -216,6 +220,7 @@ const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOp
   // Nachrichten-Markierungen als eigene, ausblendbare Ebene (Fenster «Ansicht» oder Häkchen im Nachrichten-Fenster, pro Gerät gemerkt)
   msgLayer=L.layerGroup();msgLayerKey='';if(mmVisible())msgLayer.addTo(map);poiLayer=L.layerGroup().addTo(map);poiKey='';resLayer=L.layerGroup().addTo(map);resKey='';
   airLayer=L.layerGroup().addTo(map);airLayer._air=new Map();airData=null;map.on('rotate',()=>airRot(map,airLayer)); // Helikopter (Issue #73)
+  hyLayer=L.layerGroup().addTo(map);hyLayerKey=''; // Messstationen Pegel & Abfluss (Issue #125)
   $('#mmShow').checked=mmVisible();$('#mmShow').onchange=e=>setMmVisible(e.target.checked,true);
   $('#msgList').onclick=e=>{const b=e.target.closest('[data-goto]');if(!b)return;const[a,o]=b.dataset.goto.split(',').map(Number);stopFollow();map.panTo([a,o]);if(narrow())togglePanel('msgs',false)};
   layers={};fitted=null;map.on('zoomend',drawMap);map.on('dragstart',()=>{homeDone=true;if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen, die Auto-Übersicht und die Startansicht
@@ -243,12 +248,60 @@ function mk(p){const r=roles.find(x=>x.id==p.role_id),fc=p.ext&&p.color,col=r?r.
 // Daten über incident/air (Server mit Cache und Relevanzzone), höchstens alle 3.5 s und nur, wenn die Kategorie eingeblendet ist; Anzeige mit airSync (common.js).
 // st.air: für diese Person freigegeben (Verwaltung → Helikopter); nicht in Kamerafokus und Auto-Übersicht (sie bewegen sich zu schnell)
 let airLayer=null,airData=null,airBusy=false,airLast=0;
-const airOn=()=>!!(st&&st.incident&&st.air); // st.air: Hauptschalter, Schalter des Einsatzes und Sichtbarkeit für diese Person (Server)
-function airPoll(){if(!airOn()||!vis('air')){if(airData){airData=null;drawAir()}return}if(airBusy||Date.now()-airLast<3500)return;airBusy=true;airLast=Date.now();
-  api('incident/air').then(d=>{airData=d}).catch(e=>{airData={air:[],err:e instanceof TypeError?'Keine Verbindung zum Server':e.message}}).finally(()=>{airBusy=false;drawAir()})}
+// Ohne Einsatz (Issue #130): st.air_home = Umkreis um die festen Standorte eingestellt (Verwaltung → Helikopter), Daten über air/home
+const airOn=()=>!!(st&&(st.incident?st.air:st.air_home)); // st.air: Hauptschalter, Schalter des Einsatzes und Sichtbarkeit für diese Person (Server)
+let airMode='';
+function airPoll(){const md=st&&st.incident?'inc':'home';if(md!==airMode){airMode=md;airData=null;airLast=0;drawAir()} // Einsatz beginnt oder endet: alte Lage verwerfen
+  if(!airOn()||!vis('air')){if(airData){airData=null;drawAir()}return}if(airBusy||Date.now()-airLast<3500)return;airBusy=true;airLast=Date.now();
+  api(md==='inc'?'incident/air':'air/home').then(d=>{if(airMode===md)airData=d}).catch(e=>{if(airMode===md)airData={air:[],err:e instanceof TypeError?'Keine Verbindung zum Server':e.message}}).finally(()=>{airBusy=false;drawAir()})}
 function drawAir(){if(!airLayer)return;const on=airOn()&&vis('air')&&airData;airSync(map,airLayer,on?airData.air||[]:[],on?airData.now:0,fc);airAttr(map,on?airData:null);const i=$('#airInfo');if(i)i.innerHTML=airInfo()}
 function airInfo(){if(!vis('air'))return'Helikopter ausgeblendet.';const d=airData;if(!d)return'Luftlage wird geladen …';if(d.err)return'⚠ '+esc(d.err);if(d.info)return esc(d.info);
-  const n=(d.air||[]).length;return`Helikopter: ${n?n+' im Umkreis':'keine im Umkreis'} von ${d.radius_km} km um Einsatz und Suchgebiet${d.src?' · Quelle '+esc(d.src.name):''}${d.at?' · Stand '+fmtT(d.at):''}. Tief fliegende Helikopter können fehlen.`}
+  const n=(d.air||[]).length;return`Helikopter: ${n?n+' im Umkreis':'keine im Umkreis'} von ${d.radius_km} km um ${st&&st.incident?'Einsatz und Suchgebiet':'die festen Standorte'}${d.src?' · Quelle '+esc(d.src.name):''}${d.at?' · Stand '+fmtT(d.at):''}. Tief fliegende Helikopter können fehlen.`}
+/* ---------- Pegel & Abfluss (Issue #125) ---------- */
+// Messstationen des BAFU: die des Einsatzes (st.hydro, zu Beginn und am Ende erfasst) und die persönlichen (me.hydro, im Profil gewählt).
+// Aktuelle Werte über hydro (Server mit Cache), höchstens alle 5 Minuten und sofort, wenn sich die Stationen ändern. Karte: Kategorie hydro in VIEW.
+let hyData={},hyAt=0,hyErr=null,hyKey='',hyBusy=false,hyLayer=null,hyLayerKey='',hyAll=null;
+const hyMine=()=>(me&&me.hydro)||[],hyInc=()=>(st&&st.incident&&st.hydro)||[];
+const hyIds=()=>[...new Set([...hyInc().map(r=>r.station),...hyMine()])];
+const hyName=s=>(s.water?s.water+', ':'')+s.name;
+const hyN=(x,d)=>x.toLocaleString('de-CH',{minimumFractionDigits:d,maximumFractionDigits:d});
+const hyVals=v=>[v.flow!=null&&hyN(v.flow,v.flow<1?3:v.flow<10?2:1)+' m³/s',v.height!=null&&hyN(v.height,2)+' m ü. M.',v.level!=null&&hyN(v.level,2)+' m',v.temp!=null&&hyN(v.temp,1)+' °C'].filter(Boolean).join(' · ')||'keine Messwerte';
+const hyStation=i=>hyData[i]||hyInc().find(r=>r.station===i)||(hyAll||[]).find(s=>s.id===i);
+const hyDist=i=>{const r=hyInc().find(x=>x.station===i&&x.dist!=null);return r?' · '+hyN(r.dist/1000,1)+' km vom PLS':''}; // Distanz zum nächsten PLS (bei der Erfassung)
+function hyPoll(force){if(!feat('hydro'))return;const ids=hyIds(),k=ids.join();if(!ids.length){if(hyKey){hyKey='';hyData={};drawHydro()}return}
+  if(hyBusy||(!force&&k===hyKey&&Date.now()-hyAt<3e5))return;hyBusy=true;
+  api('hydro',{ids}).then(d=>{hyData={};d.stations.forEach(s=>hyData[s.id]=s);hyErr=d.err}).catch(e=>{hyErr=e instanceof TypeError?'Keine Verbindung zum Server':e.message})
+    .finally(()=>{hyBusy=false;hyKey=k;hyAt=Date.now();drawHydro();if(!document.activeElement.matches('input,textarea,select'))draw()})}
+// erfasste Werte des Einsatzes zu einer Station: «Beginn …», «Ende …»
+const hyPh=i=>hyInc().filter(r=>r.station===i).map(r=>`<div class="hyph">${r.phase==='start'?'Beginn':'Ende'} (${fmtT(r.ts)}): ${esc(hyVals(r.v))}</div>`).join('');
+const hyNow=i=>{const c=hyData[i];return c?esc(hyVals(c))+(c.at?' · Messung '+fmtT(c.at):''):hyErr?esc(hyErr):'Messwerte werden geladen …'};
+function hyPop(i){const s=hyStation(i);return`<div class="hypop"><b>${esc(hyName(s))}</b><span class="t">Messstation BAFU ${esc(i)}${hyDist(i)}</span>Aktuell: ${hyNow(i)}${hyPh(i)}${navBtn(s.lat,s.lon,hyName(s),'Navigieren')}</div>`}
+function drawHydro(){if(!hyLayer)return;const ids=feat('hydro')&&vis('hydro')?hyIds():[],mine=new Set(hyMine());
+  const k=ids.map(i=>i+':'+(hyData[i]?hyData[i].at:'')).join()+'|'+hyInc().length+feat('nav');if(k===hyLayerKey)return;hyLayerKey=k;hyLayer.clearLayers();
+  ids.forEach(i=>{const s=hyStation(i);if(!s)return;L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:`<div class="hyk${mine.has(i)?'':' inc'}" aria-hidden="true">💧</div>`,iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:400})
+    .bindTooltip(esc(hyName(s))+(hyData[i]&&hyData[i].flow!=null?' · '+hyN(hyData[i].flow,hyData[i].flow<10?2:1)+' m³/s':'')).bindPopup(()=>hyPop(i)).addTo(hyLayer)})}
+// Karte im Menü: im Einsatz die Stationen beim PLS (Beginn/Ende/aktuell), dazu die persönlichen; ohne Einsatz nur die persönlichen
+function hydroCard(){if(!feat('hydro'))return'';const inc=st&&st.incident,ir=hyInc(),is=[...new Set(ir.map(r=>r.station))],mine=hyMine().filter(i=>!is.includes(i));
+  const row=i=>{const s=hyStation(i);if(!s)return'';return`<div class="hyli"><div><b>${esc(hyName(s))}</b>${hyDist(i)?` <span class="mut">${hyDist(i).slice(3)}</span>`:''}<div class="mut">${hyNow(i)}</div>${hyPh(i)}</div><div class="hyb"><button data-hyz="${esc(i)}">Zeigen</button>${navBtn(s.lat,s.lon,hyName(s))}</div></div>`};
+  const hasPls=inc&&(inc.lat!=null||(st.rescuees||[]).some(r=>r.pls_lat!=null));
+  return mcard('Pegel &amp; Abfluss',(inc?`<h5>Beim PLS</h5>${is.length?is.map(row).join(''):`<div class="mut">${hasPls?'Noch keine Werte erfasst (keine Messstation im Umkreis oder BAFU nicht erreichbar, siehe Log).':'Werden erfasst, sobald ein PLS bekannt ist. Am Einsatzende folgen die Werte derselben Stationen.'}</div>`}<h5>Meine Messstationen</h5>`:'')
+    +(mine.length?mine.map(row).join(''):`<div class="mut">${hyMine().length?'Stehen schon oben.':'Keine gewählt. Im Profil kannst du Messstationen wählen, die du hier und auf der Karte siehst.'}</div>`)
+    +`<div class="mbtns"><button data-hyp>Messstationen wählen</button></div><div class="mut" style="font-size:.75rem">Quelle: BAFU, Hydrologische Daten (über api.existenz.ch). Werte ungeprüft.</div>`)}
+function bindHydro(el){el.querySelectorAll('[data-hyz]').forEach(b=>b.onclick=()=>{const s=hyStation(b.dataset.hyz);if(!s)return;if(!vis('hydro'))setVis(['hydro'],true);if(innerWidth<760)toggleSheet(false);map.setView([s.lat,s.lon],Math.max(map.getZoom(),13))});
+  el.querySelectorAll('[data-hyp]').forEach(b=>b.onclick=()=>prefs(true))}
+// Profil: persönliche Messstationen (höchstens 20), Suche in allen Stationen des BAFU (einmal geladen, hyAll)
+function hyPrefs(){if(!feat('hydro'))return'';const m=hyMine();
+  return`<div class="pcard"><h4>Pegel &amp; Abfluss</h4><div class="mut">Messstationen des BAFU, die du im Menü und auf der Karte siehst (Kategorie «Messstationen» im Fenster «Ansicht»).</div>${m.map((i,k)=>{const s=hyStation(i);return`<div class="hyli"><div><b>${esc(s?hyName(s):'Station '+i)}</b><div class="mut">${hyNow(i)}</div></div><div class="hyb"><button data-hyu="${k}" ${k?'':'disabled'} aria-label="Nach oben">↑</button><button data-hyx="${esc(i)}" aria-label="Entfernen">✕</button></div></div>`}).join('')||'<div class="mut">Noch keine gewählt.</div>'}
+    ${m.length<20?'<label class="mut">Messstation hinzufügen<input id="hyQ" placeholder="Ort, Gewässer oder Nummer" autocomplete="off"></label><div id="hyRes"></div>':''}</div>`}
+function hySave(l){const old=hyMine();me.hydro=l;prefsHtml='';prefsDraw();api('me/settings',{hydro:l}).then(()=>hyPoll(true)).catch(x=>{me.hydro=old;prefsHtml='';prefsDraw();fail(x)})}
+function hyBindPrefs(p){p.querySelectorAll('[data-hyx]').forEach(b=>b.onclick=()=>hySave(hyMine().filter(i=>i!==b.dataset.hyx)));
+  p.querySelectorAll('[data-hyu]').forEach(b=>b.onclick=()=>{const l=[...hyMine()],k=+b.dataset.hyu;[l[k-1],l[k]]=[l[k],l[k-1]];hySave(l)});
+  const q=$('#hyQ'),res=$('#hyRes');if(!q)return;
+  const show=()=>{const t=q.value.trim().toLowerCase();if(!t){res.innerHTML='';return}if(!hyAll){res.innerHTML='<div class="mut">Stationen werden geladen …</div>';return}
+    const m=new Set(hyMine()),l=hyAll.filter(s=>!m.has(s.id)&&(s.name+' '+s.water+' '+s.id).toLowerCase().includes(t)).slice(0,8);
+    res.innerHTML=l.length?l.map(s=>`<button data-hya="${esc(s.id)}">+ ${esc(hyName(s))} <span class="mut">(${s.type==='lake'?'See':'Fluss'}${s.flow!=null?', '+hyN(s.flow,s.flow<10?2:1)+' m³/s':''})</span></button>`).join(''):'<div class="mut">Keine passende Station.</div>';
+    res.querySelectorAll('[data-hya]').forEach(b=>b.onclick=()=>{q.value='';q.blur();hySave([...hyMine(),b.dataset.hya])})};
+  q.oninput=show;q.onfocus=()=>{if(!hyAll)api('hydro',{}).then(d=>{hyAll=d.stations;show()}).catch(e=>{res.innerHTML='<div class="mut">'+esc(e.message)+'</div>'})}}
 let msgLayer=null,msgLayerKey='';
 const mmVisible=()=>{try{return localStorage.getItem('sw_msgmarks')!=='0'}catch(e){return true}};
 function setMmVisible(v,apply){try{localStorage.setItem('sw_msgmarks',v?'1':'0')}catch(e){}const c=$('#mmShow');if(c)c.checked=v;const c2=$('#viewBox [data-vk="mm"]');if(c2)c2.checked=v;if(apply&&msgLayer)v?msgLayer.addTo(map):map.removeLayer(msgLayer)}
@@ -281,11 +334,13 @@ let baseLayers={},baseKey=null;
 const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_view')||'[]'))}catch(e){return new Set()}})();
 const vis=k=>k==='mm'?mmVisible():!viewHide.has(k);
 const viewCats=()=>VIEW.filter(v=>v[0]==='air'?!!(st&&st.air):(!v[2]||feat(v[2]))); // Helikopter nur, wenn für diese Person freigegeben
+// ohne Einsatz: feste Standorte, Helikopter um die festen Standorte (Issue #130) und persönliche Messstationen (Issue #125), soweit vorhanden
+const homeCats=()=>{const c=VIEW.filter(([k])=>k==='place'?feat('place')&&(st.places||[]).length:k==='air'?!!st.air_home:k==='hydro'?feat('hydro')&&hyMine().length:false);return c.length?c:null};
 function setVis(keys,on){keys.forEach(k=>{if(k==='mm')setMmVisible(on,true);else on?viewHide.delete(k):viewHide.add(k)});try{localStorage.setItem('sw_view',JSON.stringify([...viewHide]))}catch(e){}
   drawMap();autoFit();airPoll();const b=$('#viewBox');if(b)b.querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk));const i=$('#airInfo');if(i)i.innerHTML=airInfo()}
 function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(baseLayers[baseKey]);baseKey=k;baseLayers[k].addTo(map);try{localStorage.setItem('sw_base',k)}catch(e){}}
 function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#bView').setAttribute('aria-expanded',on);if(!on)return;
-  b.innerHTML=viewHtml(baseKey,st&&st.incident?viewCats():st&&feat('place')&&(st.places||[]).length?VIEW.filter(v=>v[0]==='place'):null,vis)+(airOn()?`<div class="mut" id="airInfo" style="margin-top:.5rem;font-size:.8rem">${airInfo()}</div>`:'');viewPlaceCats()}
+  b.innerHTML=viewHtml(baseKey,st&&st.incident?viewCats():st?homeCats():null,vis)+(airOn()?`<div class="mut" id="airInfo" style="margin-top:.5rem;font-size:.8rem">${airInfo()}</div>`:'');viewPlaceCats()}
 // Kategorien fester Standorte im Fenster «Ansicht» unter «Feste Standorte» (nur wenn es welche mit Kategorie gibt)
 // unter «Feste Standorte»: Kategorien (nur wenn es welche gibt) und «Namen auf der Karte» (pcLbl)
 function viewPlaceCats(){const l=$('#viewBox [data-vk="place"]'),old=$('#vpCats');if(old)old.remove();if(!l)return;const cs=placeCatsUsed();if(!cs.length)return;
@@ -300,7 +355,7 @@ function drawNote(){const n=$('#areaNote');if(!n)return;const pick=window.markPi
   if(more){n.setAttribute('role','button');n.setAttribute('aria-expanded',areaOpen);n.tabIndex=0}else{n.removeAttribute('role');n.removeAttribute('aria-expanded');n.removeAttribute('tabindex')}
   n.innerHTML=pick?esc(pick):!more?esc(areaInfo):areaOpen?areaLines.map(l=>`<div class="ln">${esc(l)}</div>`).join('')+'<div class="tg">▴ weniger</div>':`${esc(areaShort)} <span class="tg">▸ Details</span>`;
   n.hidden=!(areaInfo||pick)}
-function drawMap(){const n=$('#areaNote');selfSync();drawMsgMarks();drawPois();drawRes();drawAir();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
+function drawMap(){const n=$('#areaNote');selfSync();drawMsgMarks();drawPois();drawRes();drawAir();drawHydro();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.layerGroup(plsList().map(p=>navOn(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))),p.lat,p.lon,p.label)));if(vis('pls'))layers.pls.addTo(map);
   try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
@@ -383,8 +438,8 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   const absH=st&&st.my_abs?`<div class="absnote">${absChip(st.my_abs)}<button data-absp>Ändern</button><div class="mut">Du erhältst keine Aufgebote und keine Alarme.</div></div>`:'',bindAbs=()=>s.querySelectorAll('[data-absp]').forEach(b=>b.onclick=()=>prefs(true));
   if(st&&st.blocked){s.innerHTML=pushNag()+absH+mcard('Einsatz läuft','<div class="mut">Es läuft ein Einsatz, für den du nicht aufgeboten bist. Die Einsatzleitung kann allen den Beitritt erlauben oder dich nachbieten, wenn du einer dafür zugelassenen Einsatzgruppe angehörst.</div>')+tools+footInfo();bindTools();bindPush();bindAbs();return}
   if(!st||!st.incident){const nk=kindsNow().filter(k=>k.can),ng=kindsNow().filter(k=>k.no_grp);
-    s.innerHTML=pushNag()+absH+mcard('Kein aktiver Einsatz',(nk.length?`<div class="mbtns">${nk.map((k,i)=>`<button ${i?'':'class="pri"'} data-nk="${k.id}">${esc(k.name)} starten</button>`).join('')}</div>`:`<div class="mut">Du darfst keine Einsätze starten${ng.length?'':' (Benutzerrolle)'}. Bei einem Alarm erscheint er hier.</div>`)+(ng.length?`<div class="mut">${esc(ng.map(k=>'«'+k.name+'»').join(', '))}: Du bist in keiner Einsatzgruppe, die dafür aufbietbar ist.</div>`:''))+xsec+tools+footInfo();
-    s.querySelectorAll('[data-nk]').forEach(b=>b.onclick=()=>newView(+b.dataset.nk));bindTools();bindPush();bindAbs();
+    s.innerHTML=pushNag()+absH+mcard('Kein aktiver Einsatz',(nk.length?`<div class="mbtns">${nk.map((k,i)=>`<button ${i?'':'class="pri"'} data-nk="${k.id}">${esc(k.name)} starten</button>`).join('')}</div>`:`<div class="mut">Du darfst keine Einsätze starten${ng.length?'':' (Benutzerrolle)'}. Bei einem Alarm erscheint er hier.</div>`)+(ng.length?`<div class="mut">${esc(ng.map(k=>'«'+k.name+'»').join(', '))}: Du bist in keiner Einsatzgruppe, die dafür aufbietbar ist.</div>`:''))+xsec+hydroCard()+tools+footInfo();
+    s.querySelectorAll('[data-nk]').forEach(b=>b.onclick=()=>newView(+b.dataset.nk));bindTools();bindPush();bindAbs();bindHydro(s);
     s.querySelectorAll('[data-xs]').forEach(b=>b.onclick=()=>{const p=xps.find(x=>x.id===+b.dataset.xs);if(confirm(`Übung «${p.title}» jetzt starten? ${p.invited?'Die aufgebotenen Personen werden':'Alle werden'} alarmiert.`))api('ex/start',{id:p.id}).then(()=>{secReset=true;return poll()}).catch(fail)});return}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at,xOpen=(st.ex_injects||[]).filter(j=>!j.released).length;
   const tabs=[['main','Einsatz'],st.can_manage&&['lead','Leitung'],(st.ex_lead||(st.ex_injects||[]).length)&&['ex','Übung'+(xOpen?` <span class="cnt n">${xOpen}</span>`:'')],st.log&&['log','Log'],['info','Info']].filter(Boolean);
@@ -409,7 +464,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   if(st.can_flow)h+=mcard(feat('area')?'Fliessgeschwindigkeit &amp; Suchgebiet':'Fliessgeschwindigkeit',`<div class="mrow"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label><button id="bFl">${feat('area')?'Setzen &amp; berechnen':'Setzen'}</button></div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`);
   // ältere Einzelmarkierungen des Rettlings (vor der Rettlingsverwaltung) nur noch anzeigen und entfernen
   if(joined&&(st.marks||[]).length)h+=mcard('Frühere Rettling-Markierungen',(st.marks||[]).map(x=>`<div class="mli"><span>${x.manual?'Einsatzleitung (manuell)':esc(x.name)} · ${fmtT(x.ts)}${esc(fcs(x.lat,x.lon))}</span>${(st.can_manage||x.user_id==me.id)?`<button data-mr="${x.id}">Entfernen</button>`:''}</div>`).join('')+'<div class="mut">Neue Markierungen über den Kartenknopf «Rettlinge».</div>');
-  P.main=h+tools;
+  P.main=h+hydroCard()+tools;
   // Register «Leitung» (nur can_manage): Aufgebot, PLS, Aufzeichnung, Helikopter, öffentliche Ansicht, Einsatzkräfte, Einsatz beenden
   // Aufzeichnung fürs Replay: record 0 aus/beendet, 1 läuft, 2 pausiert; nach «Beenden» jederzeit wieder aufnehmbar
   const REC={0:[i.recorded?'Beendet. Bisherige Aufzeichnung bleibt für das Replay erhalten.':'Aus',[['start',i.recorded?'Wieder aufnehmen':'Aufzeichnung starten']]],1:['● Läuft',[['pause','Pausieren'],['stop','Beenden']]],2:['❚❚ Pausiert',[['resume','Fortsetzen'],['stop','Beenden']]]}[i.record]||['?',[]];
@@ -427,7 +482,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   s.innerHTML=head+`<div class="mtabs" role="tablist" aria-label="Bereiche des Menüs">${tabs.map(([k,l])=>`<button role="tab" data-mt="${k}" aria-selected="${k===menuTab}" aria-controls="mtp-${k}">${l}</button>`).join('')}</div>`
     +tabs.map(([k])=>`<div class="mtab" id="mtp-${k}" role="tabpanel" ${k===menuTab?'':'hidden'}>${P[k]||''}</div>`).join('')+footInfo();
   s.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{menuTab=b.dataset.mt;s.querySelectorAll('[data-mt]').forEach(x=>x.setAttribute('aria-selected',x===b));s.querySelectorAll('.mtab').forEach(p=>p.hidden=p.id!=='mtp-'+menuTab);s.scrollTop=0});
-  bindPush();bindTools();bindMarks();if($('#bAiSit'))$('#bAiSit').onclick=()=>{const r=aiSitR.id===i.id?aiSitR.r:null;aiSitR.r=null;toggleSheet(false);aiPanel({title:'Lagezusammenfassung',req:{fn:'sit',id:i.id},pre:r,chat:aiCh})};if($('#bAiQ'))$('#bAiQ').onclick=()=>{toggleSheet(false);aiPanel({title:'Frage zum Einsatz',req:{fn:'sit',id:i.id},chatOnly:true})};if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
+  bindPush();bindTools();bindMarks();bindHydro(s);if($('#bAiSit'))$('#bAiSit').onclick=()=>{const r=aiSitR.id===i.id?aiSitR.r:null;aiSitR.r=null;toggleSheet(false);aiPanel({title:'Lagezusammenfassung',req:{fn:'sit',id:i.id},pre:r,chat:aiCh})};if($('#bAiQ'))$('#bAiQ').onclick=()=>{toggleSheet(false);aiPanel({title:'Frage zum Einsatz',req:{fn:'sit',id:i.id},chatOnly:true})};if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
   s.querySelectorAll('[data-xr]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xr);
     if(j.ago==null){exRelAt(j);return} // kein vorbereiteter Zeitpunkt: die Übungsleitung gibt ihn jetzt an
@@ -893,7 +948,7 @@ let timer;async function poll(){try{const nx=await api(`incident/state&since=${l
     else{if(st&&st.incident){const k=kindOf(st.incident).name,lv=st.level||'crit';if((st.alarm!==false||st.me)&&notify(k.toUpperCase()+' BEENDET',k+' beendet.','e:'+st.incident.id,lv==='none'?'low':lv))toggleSheet(true)}st=nx;lastIncId=null;stop()}
     saveLast();setOffline(false);if(bootOff){bootOff=false;return render()} // offline gestartet: jetzt alles frisch laden
     paint()}catch(e){if(e instanceof TypeError)setOffline(true);console.error('Poll',e)}} // TypeError = keine Verbindung (fetch)
-function paint(){if(st&&st.incident)creating=false;updateChip();drawMap();airPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
+function paint(){if(st&&st.incident)creating=false;updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
 /* ---------- Offline (Issue #67) ---------- */
 // Letzter Stand pro Gerät in localStorage: sw_last = {at, uid, st (mit allen Nachrichten)}, sw_boot = {uid, me, roles, modes}. Ohne Verbindung zeigt die App
 // diesen Stand mit einem Hinweis oben (Zeitpunkt der letzten Verbindung) und versucht es bei jedem Polling weiter. Aktionen schlagen offline fehl (Meldung in fail).
@@ -957,10 +1012,10 @@ function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.ac
     +`<div class="pcard"><h4>Alarmierung</h4><div class="phd"><h5>Einsatzfähigkeit</h5>${me.absent?absChip(me.absent):'<span class="okchip">✓ einsatzfähig</span>'}</div><div class="mut">Abwesend oder Einsatzfähigkeit ausgesetzt: kein Aufgebot und kein Alarm. Laufende Einsätze bleiben sichtbar.</div><div id="absMine" class="pabs"><div class="mut">Wird geladen …</div></div>`
     +`<h5>Übungsmodus</h5><label class="row" style="align-items:center;margin:0"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Einsatztypen, die das vorsehen (z. B. Übungen), kritisch alarmieren</span></label>${pushHtml()}</div>`
     +`<div class="pcard"><h4>Anzeige</h4><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label>${feat('nav')?`<label class="mut">Navigations-App (Knopf 🧭)<select id="navA"><option value="">Standard: ${esc(NAV_APPS[me.nav_default]||NAV_APPS.google)}</option>${(me.nav_apps||[]).filter(navOk).map(k=>`<option value="${k}" ${k===me.nav_app?'selected':''}>${esc(NAV_APPS[k])}</option>`).join('')}</select></label>`:''}</div>`
-    +aiPrefs()
+    +hyPrefs()+aiPrefs()
     +`<div class="pcard"><h4>Rechtliches</h4><div class="mut">Wer die App betreibt, welche Daten sie speichert und welche Lizenzen gelten.</div><div class="pbtns"><a class="btn" href="legal.html#impressum" target="_blank" rel="noopener">Impressum</a><a class="btn" href="legal.html#lizenzen" target="_blank" rel="noopener">Lizenzen</a><a class="btn" href="legal.html#datenschutz" target="_blank" rel="noopener">Datenschutz</a></div></div>`;
   // Issue #126: früher stand diese Prüfung doppelt; die zweite brach immer ab, Knöpfe und Abwesenheiten blieben ohne Funktion
-  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();
+  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();hyBindPrefs(p);
   p.querySelectorAll('[data-aisel]').forEach(x=>x.onchange=e=>{e.target.blur();const v={};p.querySelectorAll('[data-aisel]').forEach(y=>{if(y.value)v[y.dataset.aisel]=y.value});
     api('me/settings',{ai_modes:v}).then(()=>api('me')).then(r=>{me=r.me;prefsHtml='';prefsDraw();draw()}).catch(fail)});
   $('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=async()=>{await pushOff(true);prefsHash();logout();stop();render()};bindPush();

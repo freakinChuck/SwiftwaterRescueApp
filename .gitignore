@@ -1,7 +1,7 @@
 # Laufzeitdaten der API (Datenbank, Caches) nie einchecken
 web/api/data/*.sqlite
 web/api/data/*.sqlite-*
-web/api/data/hydro_locations.json
+web/api/data/hydro/
 web/api/data/overpass/
 web/api/data/air/
 web/api/data/deployed.txt

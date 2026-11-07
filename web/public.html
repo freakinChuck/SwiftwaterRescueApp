@@ -54,7 +54,7 @@ function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.
 // Kategorien ausgeschalteter Funktionen (features aus public/state) fehlen, Nachrichten gibt es hier nicht.
 const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pview')||'[]'))}catch(e){return new Set()}})();
 const vis=k=>!viewHide.has(k);
-const viewCats=()=>VIEW.filter(([k,,f])=>k!=='mm'&&(k!=='air'||!!(ps&&ps.air))&&(!f||!ps||!ps.features||ps.features[f]!==0)); // Helikopter nur, wenn die Verwaltung sie hier freigibt (air)
+const viewCats=()=>VIEW.filter(([k,,f])=>k!=='mm'&&k!=='hydro'&&(k!=='air'||!!(ps&&ps.air))&&(!f||!ps||!ps.features||ps.features[f]!==0)); // Helikopter nur, wenn die Verwaltung sie hier freigibt (air)
 /* ---------- Helikopter (Issue #73): über public/air, mit jeder Aktualisierung ---------- */
 let airLay=null,airD=null;
 function loadAir(){if(!ps||!ps.air||!vis('air')){airD=null;return drawAirP()}api('public/air&k='+encodeURIComponent(K)).then(a=>{airD=a}).catch(()=>{airD=null}).finally(drawAirP)}
