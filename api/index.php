@@ -651,7 +651,8 @@ function sortMove($tbl, $sql, $args, $id, $dir) { global $db; $s = $db->prepare(
   $i = array_search($id, $ids, true); if ($i === false) fail('Nicht gefunden', 404); $j = $i + ($dir < 0 ? -1 : 1);
   if ($j >= 0 && $j < count($ids)) { [$ids[$i], $ids[$j]] = [$ids[$j], $ids[$i]]; }
   $u = $db->prepare("UPDATE $tbl SET sort=? WHERE id=?"); $db->beginTransaction(); foreach ($ids as $n => $x) $u->execute([$n + 1, $x]); $db->commit(); }
-function placeView($v) { $o = []; foreach ((array)(is_string($v) ? json_decode($v, true) : $v) as $k => $x) if (preg_match('/^\d{1,9}$/', (string)$k)) $o[(string)(int)$k] = empty($x) ? 0 : 1; return $o; }
+// zusätzlich lbl = Namen auf der Karte (0 = nur beim Darüberfahren/im Popup)
+function placeView($v) { $o = []; foreach ((array)(is_string($v) ? json_decode($v, true) : $v) as $k => $x) if (preg_match('/^\d{1,9}$/', (string)$k)) $o[(string)(int)$k] = empty($x) ? 0 : 1; elseif ($k === 'lbl') $o['lbl'] = empty($x) ? 0 : 1; return $o; }
 function placesOf($planId) { global $db; $s = $db->prepare("SELECT id,plan_id,cat_id,name,descr,abbr,color,lat,lon,pts,active,sort FROM places WHERE plan_id" . ($planId === null ? ' IS NULL' : '=?') . " ORDER BY " . SORT_ORDER); $s->execute($planId === null ? [] : [(int)$planId]); return array_map('placeRow', $s->fetchAll()); }
 function placeSel($p) { $v = $p['places'] ?? null; return $v === null ? null : array_values(array_map('intval', (array)json_decode($v, true))); }
 function incPlaces($inc) { if (!feature($inc, 'place')) return [];

@@ -180,7 +180,7 @@ function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" cla
   $('#bMenu').onclick=()=>toggleSheet();$('#bView').onclick=()=>viewBox();
   $('#viewBox').onclick=e=>{const a=e.target.closest('[data-va]');if(a){const cats=(st&&st.incident?viewCats():[['place']]).map(v=>v[0]);if(cats.includes('place'))setPlaceCat(placeCatsUsed().map(c=>c.id),a.dataset.va==='1');setVis(cats,a.dataset.va==='1')}
     if(e.target.closest('[data-vpr]'))setPlaceCat(null);if(e.target.closest('#bViewX'))viewBox(false)};
-  $('#viewBox').onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked);else if(t.dataset.vpc){setPlaceCat([+t.dataset.vpc],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}};
+  $('#viewBox').onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked);else if(t.dataset.vpc){setPlaceCat([+t.dataset.vpc],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.vpl)setPlaceCat(['lbl'],t.checked)};
 const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOpen=!areaOpen;drawNote()}};an.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&an.classList.contains('more')){e.preventDefault();an.onclick()}};$('#bCam').onclick=()=>camMenu();$('#camMenu').onclick=e=>{const b=e.target.closest('[data-cam]');if(!b)return;camMenu(false);const k=b.dataset.cam;k==='f'?fitForces():k==='auto'?(toggleSheet(false),setAuto(!autoView)):fitArea(k||null)};$('#bClose').onclick=()=>toggleSheet(false);$('#bAdm').onclick=()=>{location.href='admin.html'};$('#bMy').onclick=()=>{location.href='admin.html#meine'};$('#bPrefs').onclick=()=>prefs(true);$('#bPrefsX').onclick=()=>prefs(false);$('#prefs').onkeydown=e=>{if(e.key==='Escape')prefs(false)};$('#chip').onclick=()=>toggleSheet(true);
   followId=null;panel=null;msgSeen=0;msgFormKey='';$('#bPeople').onclick=()=>togglePanel('people');$('#bPeopleX').onclick=()=>togglePanel('people',false);$('#bUnfollow').onclick=stopFollow;
   $('#bMsg').onclick=()=>togglePanel('msgs');$('#bMsgX').onclick=()=>togglePanel('msgs',false);
@@ -270,9 +270,10 @@ function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(bas
 function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#bView').setAttribute('aria-expanded',on);if(!on)return;
   b.innerHTML=viewHtml(baseKey,st&&st.incident?viewCats():st&&feat('place')&&(st.places||[]).length?VIEW.filter(v=>v[0]==='place'):null,vis)+(airOn()?`<div class="mut" id="airInfo" style="margin-top:.5rem;font-size:.8rem">${airInfo()}</div>`:'');viewPlaceCats()}
 // Kategorien fester Standorte im Fenster «Ansicht» unter «Feste Standorte» (nur wenn es welche mit Kategorie gibt)
-function viewPlaceCats(){const l=$('#viewBox [data-vk="place"]'),old=$('#vpCats');if(old)old.remove();if(!l)return;const cs=placeCatsUsed();if(!cs.some(c=>c.id))return;
-  const own=me&&me.place_view&&Object.keys(me.place_view).length;
-  l.closest('label').insertAdjacentHTML('afterend',`<div id="vpCats" style="margin-left:1.5rem">${cs.map(c=>`<label><input type="checkbox" data-vpc="${c.id}" ${pcOn(c.id)?'checked':''}> ${esc(c.name)} (${c.n})</label>`).join('')}${own?'<button data-vpr="1" style="font-size:.75rem;padding:.2rem .5rem;margin:.2rem 0">Standard der Verwaltung</button>':''}</div>`)}
+// unter «Feste Standorte»: Kategorien (nur wenn es welche gibt) und «Namen auf der Karte» (pcLbl)
+function viewPlaceCats(){const l=$('#viewBox [data-vk="place"]'),old=$('#vpCats');if(old)old.remove();if(!l)return;const cs=placeCatsUsed();if(!cs.length)return;
+  const own=me&&me.place_view&&Object.keys(me.place_view).some(k=>k!=='lbl');
+  l.closest('label').insertAdjacentHTML('afterend',`<div id="vpCats" style="margin-left:1.5rem">${cs.some(c=>c.id)?cs.map(c=>`<label><input type="checkbox" data-vpc="${c.id}" ${pcOn(c.id)?'checked':''}> ${esc(c.name)} (${c.n})</label>`).join(''):''}<label class="mut"><input type="checkbox" data-vpl="1" ${pcLbl()?'checked':''}> Namen auf der Karte</label>${own?'<button data-vpr="1" style="font-size:.75rem;padding:.2rem .5rem;margin:.2rem 0">Standard der Verwaltung</button>':''}</div>`)}
 document.addEventListener('click',e=>{const b=$('#viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#bView'))viewBox(false)});
 document.addEventListener('keydown',e=>{const b=$('#viewBox');if(e.key==='Escape'&&b&&!b.hidden){viewBox(false);$('#bView').focus()}});
 const pickMode=on=>{document.body.classList.toggle('picking',on);if(on)map.closePopup()};
@@ -614,11 +615,13 @@ function navTo(lat,lon,name){lat=(+lat).toFixed(6);lon=(+lon).toFixed(6);
   dlg('Navigieren',`<div><b>${esc(name)}</b><div class="mut">${esc(fc(lat,lon)||'')}${fc(lat,lon)?' · ':''}WGS84 ${lat},${lon}</div></div>`,()=>navGo(lat,lon,name),'🧭 Mit '+NAV_APPS[navApp()]+' navigieren','Abbrechen')}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;const [la,lo]=b.dataset.nav.split(',').map(Number);map.closePopup();navGo(la,lo,b.dataset.nn)});
 // Karte: nur neu zeichnen, wenn sich Inhalt, Sichtbarkeit oder Berechtigung ändern (ein offenes Popup bleibt offen)
-function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],fs=(st&&feat('place')&&st.places)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color]))+JSON.stringify(fs)+[...poiHide]+vis('pt')+vis('ar')+vis('place')+JSON.stringify(fs.map(f=>pcOn(f.cat_id)))+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
+function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],fs=(st&&feat('place')&&st.places)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color]))+JSON.stringify(fs)+[...poiHide]+vis('pt')+vis('ar')+vis('place')+JSON.stringify(fs.map(f=>pcOn(f.cat_id)))+pcLbl()+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
   // Feste Standorte (Issue #96): eckige Marker in der Farbe mit Kürzel, ausblendbar je Eintrag ('f'+id in poiHide) und als Kategorie
   // feste Bereiche (pts): Fläche in der Farbe, gestrichelt (Unterschied zu den Bereichen der Einsatzleitung), Beschriftung in der Mitte, Navigation zur Mitte
-  fs.filter(placeShown).forEach(f=>(f.pts?L.polygon(f.pts,{color:f.color||PLACE_COL,weight:2,dashArray:'6 4',fillOpacity:.12}).bindTooltip(esc(f.name),{permanent:true,direction:'center',className:'poilbl'})
-      :L.marker([f.lat,f.lon],{icon:L.divIcon({className:'',html:`<div class="plc" style="background:${f.color||PLACE_COL}">${esc(f.abbr||'◆')}</div>`,iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:700}).bindTooltip(esc(f.name),{permanent:true,direction:'right',className:'poilbl',offset:[12,0]}))
+  // Namen ausgeschaltet (pcLbl): Name nur beim Darüberfahren und im Popup
+  const lb=pcLbl();
+  fs.filter(placeShown).forEach(f=>(f.pts?L.polygon(f.pts,{color:f.color||PLACE_COL,weight:2,dashArray:'6 4',fillOpacity:.12}).bindTooltip(esc(f.name),{permanent:lb,sticky:!lb,direction:'center',className:'poilbl'})
+      :L.marker([f.lat,f.lon],{icon:L.divIcon({className:'',html:`<div class="plc" style="background:${f.color||PLACE_COL}">${esc(f.abbr||'◆')}</div>`,iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:700}).bindTooltip(esc(f.name),{permanent:lb,direction:'right',className:'poilbl',offset:[12,0]}))
     .bindPopup(`<div class="mmpop"><b>${esc(f.name)}</b><span class="t">${esc(placeInfo(f))}</span>${navBtn(f.lat,f.lon,f.name,f.pts?'Navigieren (Mitte)':'Navigieren')}</div>`).addTo(poiLayer));
   ps.filter(p=>!poiHide.has(p.id)&&vis(p.kind==='area'?'ar':'pt')).forEach(p=>{const area=p.kind==='area';
     const l=area?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.marker(p.pts[0],{icon:L.divIcon({className:'',html:`<div class="poi" style="background:${p.color}">⚑</div>`,iconSize:[28,28],iconAnchor:[2,30]}),zIndexOffset:800});
@@ -641,11 +644,13 @@ const PLACE_COL='#1d7fd1';
 function poiPlaces(){return feat('place')&&!!(st&&st.incident&&(st.places||[]).length)} // Fenster «Markierungen» auch ohne Funktion «Markierungen & Bereiche», wenn es feste Standorte gibt
 // Kategorien fester Standorte: Standard der Verwaltung (place_cats.def_on, ohne Kategorie = an), pro Person übersteuert in me.place_view (gespeichert über me/settings)
 function pcOn(cid){const k=String(cid||0),v=me&&me.place_view;if(v&&Object.prototype.hasOwnProperty.call(v,k))return!!v[k];const c=((st&&st.place_cats)||[]).find(x=>x.id===cid);return c?!!c.def_on:true}
+const pcLbl=()=>!(me&&me.place_view&&me.place_view.lbl===0); // Namen fester Standorte auf der Karte, pro Person (place_view.lbl, Standard an)
 const placeShown=f=>vis('place')&&pcOn(f.cat_id)&&!poiHide.has('f'+f.id);
 // vorkommende Kategorien {id, name, n} nach Name, «Ohne Kategorie» (id 0) zuletzt
 function placeCatsUsed(){const fs=(st&&feat('place')&&st.places)||[],cs=((st&&st.place_cats)||[]).map(c=>({id:c.id,name:c.name,n:fs.filter(f=>f.cat_id===c.id).length})).filter(c=>c.n),o=fs.filter(f=>!cs.some(c=>c.id===f.cat_id)).length;return o?cs.concat({id:0,name:'Ohne Kategorie',n:o}):cs}
 let pcSave=null;
-function setPlaceCat(ids,on){if(!me)return;const old=me.place_view;const v=ids===null?{}:Object.assign({},me.place_view||{});(ids||[]).forEach(id=>v[String(id)]=on?1:0);me.place_view=v;
+// ids null = «Standard der Verwaltung» (lässt die Namen-Wahl lbl stehen)
+function setPlaceCat(ids,on){if(!me)return;const old=me.place_view;const v=ids===null?(old&&'lbl' in old?{lbl:old.lbl}:{}):Object.assign({},me.place_view||{});(ids||[]).forEach(id=>v[String(id)]=on?1:0);me.place_view=v;
   clearTimeout(pcSave);pcSave=setTimeout(()=>api('me/settings',{place_view:me.place_view}).then(()=>lsSet('sw_boot',Object.assign(lsGet('sw_boot')||{},{me}))).catch(e=>{me.place_view=old;fail(e);drawPois();renderPois();viewPlaceCats()}),400);
   drawPois();renderPois();viewPlaceCats()}
 function showPlace(id){const f=(st.places||[]).find(x=>x.id===id);if(!f)return;stopFollow();if(poiHide.has('f'+id))setPoiHidden(['f'+id],false);if(!pcOn(f.cat_id))setPlaceCat([f.cat_id||0],true);if(!vis('place'))setVis(['place'],true);if(f.pts)map.fitBounds(L.latLngBounds(f.pts),FITPAD);else map.panTo([f.lat,f.lon]);if(narrow())togglePanel('pois',false)}
