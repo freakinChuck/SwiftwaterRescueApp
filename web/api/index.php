@@ -4,6 +4,8 @@ $cfg = require __DIR__ . '/config.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 ini_set('serialize_precision', '-1'); // Zahlen im JSON kurz ausgeben (47.481 statt 47.48100000000000164…), Hosting-Einstellung übersteuern
+// HTTPS-Abrufe unter Windows (lokales DEV mit IIS): Zertifikate aus dem Windows-Speicher, PHP bringt dort keine Liste mit (sonst schlägt jeder Abruf fehl, Feedback zu #125)
+define('CURL_CA', PHP_OS_FAMILY === 'Windows' && defined('CURLSSLOPT_NATIVE_CA') ? [CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA] : []);
 function out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE);
   if (!empty($GLOBALS['pushQ']) || !empty($GLOBALS['AFTER'])) { // Web-Push erst nach der Antwort senden (Issue #67), damit z. B. «Alarm auslösen» nicht auf die Push-Dienste wartet
     ignore_user_abort(true); if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); elseif (function_exists('litespeed_finish_request')) litespeed_finish_request(); else flush(); // cyon läuft mit LiteSpeed
@@ -104,7 +106,7 @@ foreach ([
   "CREATE TABLE IF NOT EXISTS ai_cache(k VARCHAR(64) PRIMARY KEY, ts BIGINT, ctx_hash VARCHAR(64), text MEDIUMTEXT, tokens INT DEFAULT 0, model $tx NULL)",
   // Pegel und Abfluss (Issue #125): Werte der Messstationen des BAFU zu Beginn (phase start, sobald ein PLS bekannt ist) und am Ende (end) des Einsatzes;
   // dist = Distanz zum nächsten PLS in Metern, at = Zeitpunkt der Messung. incidents.hydro_s: NULL = Beginn noch nicht erfasst, > 0 erfasst, < 0 = -Zeitpunkt des letzten Fehlschlags
-  "CREATE TABLE IF NOT EXISTS inc_hydro(id $ai, incident_id INT, phase $tx, ts BIGINT, station $tx, name $tx, water $tx, lat DOUBLE, lon DOUBLE, dist INT NULL, flow DOUBLE NULL, height DOUBLE NULL, level DOUBLE NULL, temp DOUBLE NULL, at BIGINT NULL)",
+  "CREATE TABLE IF NOT EXISTS inc_hydro(id $ai, incident_id INT, phase $tx, ts BIGINT, station $tx, name $tx, water $tx, lat DOUBLE, lon DOUBLE, dist INT NULL, flow DOUBLE NULL, height DOUBLE NULL, level DOUBLE NULL, temp DOUBLE NULL, danger INT NULL, at BIGINT NULL)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
 // Aufgebot (Issue #90): incidents.invite = beim Start aufgelöste User-IDs (NULL = alle), inv_groups = aufgebotene Gruppen (JSON, gn = Namen gelöschter Gruppen), kind_id = Einsatztyp (is_exercise wird nicht mehr gelesen),
@@ -113,7 +115,7 @@ foreach ([
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL'], 'place_cats' => ['sort INT NULL'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
+foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL'], 'place_cats' => ['sort INT NULL'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_hydro' => ['danger INT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
 try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
@@ -456,7 +458,7 @@ function airNorm($src, $j) { $out = []; $str = fn($x, $n = 40) => is_string($x) 
 function airGet($url) {
   if (!function_exists('curl_init')) { $r = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true, 'header' => "User-Agent: SwiftwaterRescue/0.1\r\n"]]));
     return [preg_match('/^HTTP\/\S+ (\d{3})/', $http_response_header[0] ?? '', $m) ? (int)$m[1] : 0, $r === false ? null : $r, $r === false ? 'Keine Antwort' : '']; }
-  $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 6, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_ENCODING => '', CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
+  $c = curl_init($url); curl_setopt_array($c, CURL_CA + [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 6, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_ENCODING => '', CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
   $r = curl_exec($c); $code = curl_getinfo($c, CURLINFO_HTTP_CODE); $err = $r === false ? (curl_errno($c) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($c)) : ''; 
   return [$code, $r === false ? null : $r, $err]; }
 // Abruf je Quelle für die Anzeige in der Verwaltung (api/data/air/status.json); darf die Abfrage nie stören
@@ -570,12 +572,12 @@ function airReplay($id) { global $db; $c = airCfg(); if (!$c['replay']) return [
   return array_values($o); }
 
 /* ---------- Pegel und Abfluss (Issue #125) ---------- */
-// Messstationen und aktuelle Werte der Hydrologie des BAFU über api.existenz.ch (offene Daten, Quellenangabe «BAFU»), immer über den Server mit Datei-Cache
-// in api/data/hydro/: Stationen 7 Tage (hydroLocs), Messwerte HYDRO_TTL für alle Stationen in einer Abfrage (hydroLatest). Funktion «hydro» je Einsatztyp.
+// Messstationen und aktuelle Werte der Hydrologie des BAFU direkt von hydrodaten.admin.ch (offene Daten, Quellenangabe «BAFU»), immer über den Server mit Datei-Cache
+// in api/data/hydro/bafu.json: Stationen und Messwerte aller Stationen in einem Abruf alle HYDRO_TTL (hydroBafu, hydroLocs, hydroLatest). Funktion «hydro» je Einsatztyp.
 // Einsatz: zu Beginn (sobald ein PLS bekannt ist, Auslöser im Polling) und am Ende die Werte der nächsten Stationen um die PLS ins Log und in inc_hydro (hydroLog).
 // Persönliche Stationen: users.hydro (JSON-Liste der Stations-IDs), im Menü der Einsatz-App und auf der Karte. Steht vor legal.
-const HYDRO_API = 'https://api.existenz.ch/apiv1/hydro/';
-const HYDRO_Q = 'app=swiftwater.rescue&version=0.1';
+const HYDRO_API = 'https://www.hydrodaten.admin.ch/web-hydro-maps/'; // GeoJSON der Karte auf hydrodaten.admin.ch
+const HYDRO_OLD = 86400; // ältere Messwerte gelten als nicht aktuell
 const HYDRO_TTL = 300; // Messwerte zwischenspeichern (BAFU misst alle 10 Minuten)
 const HYDRO_MAX = 20;  // persönliche Messstationen je Person
 const HYDRO_NUM = ['radius_km' => [15, 1, 100], 'n' => [3, 1, 10]]; // [Standard, Minimum, Maximum]: Umkreis um jeden PLS, Stationen je PLS
@@ -601,30 +603,49 @@ function hydroFile($name, $ttl, $fetch) { $dir = __DIR__ . '/data/hydro'; if (!i
     if (file_put_contents("$f.tmp", json_encode($d, JSON_UNESCAPED_UNICODE)) !== false) rename("$f.tmp", $f); }
   if ($lk) flock($lk, LOCK_UN);
   return $d; }
+// Quelle (Feedback zu #125): direkt die Daten der Karte auf hydrodaten.admin.ch (GeoJSON des BAFU, LV95), eine Datei mit Abfluss und Pegel, eine mit der Wassertemperatur.
+// Beide in einem Abruf alle HYDRO_TTL, daraus Stationen und Messwerte; bei Fehlschlag gelten die bisherigen (Stationen bleiben so auch bei längerem Ausfall bekannt).
+function hydroBafu() { return hydroFile('bafu', HYDRO_TTL, function () { $locs = []; $vals = [];
+    $num = fn($x) => is_string($x) && preg_match('/^\s*(-?\d+(?:\.\d+)?)/', $x, $m) ? (float)$m[1] : (is_numeric($x) ? (float)$x : null);
+    $ts = fn($x) => is_string($x) && ($t = strtotime($x)) ? $t : null; $old = time() - HYDRO_OLD;
+    foreach (['pq', 'temperature'] as $n) { $j = json_decode((string)http_get(HYDRO_API . "hydro_sensor_$n.geojson"), true); if (!is_array($j['features'] ?? null)) return null;
+      $leg = $j['meta']['de']['legend'] ?? [];
+      foreach ($j['features'] as $f) { $p = $f['properties'] ?? []; $id = (string)($p['key'] ?? ''); $c = $f['geometry']['coordinates'] ?? null;
+        if (!preg_match(HYDRO_ID, $id) || !is_array($c) || !is_numeric($c[0] ?? null) || !is_numeric($c[1] ?? null)) continue;
+        if (!isset($locs[$id])) { [$la, $lo] = lv95ll((float)$c[0], (float)$c[1]); $w = trim((string)($p['hydro_body_name'] ?? '')); $lb = trim((string)($p['label'] ?? $p['name'] ?? $id));
+          $nm = $w !== '' && str_starts_with($lb, "$w - ") ? substr($lb, strlen($w) + 3) : $lb;
+          $locs[$id] = ['id' => $id, 'name' => mb_substr($nm, 0, 80), 'water' => mb_substr($w, 0, 80), 'type' => ($p['kind'] ?? '') === 'lake' || str_starts_with((string)($p['icon'] ?? ''), 'lake') ? 'lake' : 'river', 'lat' => round($la, 6), 'lon' => round($lo, 6)]; }
+        if (!empty($p['failure_text'])) continue; $v = &$vals[$id]; $v = (array)$v;
+        $put = function ($k, $x, $t) use (&$v, $old) { if ($x === null || !$t || $t < $old) return; $v[$k] = round($x, 4); $v['at'] = max((int)($v['at'] ?? 0), $t); };
+        if ($n === 'temperature') { $put('temp', $num($p['last_value'] ?? null), $ts($p['last_measured_at'] ?? null)); unset($v); continue; }
+        $q = $num($p['sensor_discharge_last_value'] ?? null); $qu = (string)($p['sensor_discharge_last_value'] ?? '');
+        if ($q !== null && str_ends_with($qu, 'l/s')) $q /= 1000; $put('flow', $q, $ts($p['sensor_discharge_measured_at'] ?? null));
+        $h = $num($p['sensor_waterlevel_last_value'] ?? null); $hu = (string)($p['sensor_waterlevel_last_value'] ?? '');
+        $put(str_contains($hu, 'ü.M') ? 'height' : 'level', $h, $ts($p['sensor_waterlevel_measured_at'] ?? null));
+        // Gefahrenstufe 1–5 aus den Schwellen wl_1 … wl_4 (gleiche Grösse wie der Hauptwert), Einordnung des BAFU (sehr tief … sehr hoch)
+        $mv = ($p['metric'] ?? '') === 'masl' ? ($v['height'] ?? null) : ($v['flow'] ?? null);
+        if ($mv !== null) { $g = 1; $ok = false; foreach ([1, 2, 3, 4] as $i) { $w = $num($p["wl_$i"] ?? null); if ($w === null) continue; $ok = true; if (str_ends_with((string)$p["wl_$i"], 'l/s')) $w /= 1000; if ($mv >= $w) $g = $i + 1; } if ($ok) $v['danger'] = $g; }
+        if (isset($v['at']) && preg_match('/level_(\d)$/', (string)($p['icon'] ?? ''), $m) && isset($leg["level_$m[1]"])) $v['cls'] = mb_substr((string)$leg["level_$m[1]"], 0, 30);
+        if (!$v) unset($vals[$id]); unset($v); } }
+    return $locs ? ['locs' => $locs, 'vals' => $vals] : null; }); }
 // Messstationen: {id: {id, name, water, type (river|lake), lat, lon}}
-function hydroLocs() { $d = hydroFile('locations', 7 * 86400, function () {
-    $j = json_decode((string)http_get(HYDRO_API . 'locations?' . HYDRO_Q), true); if (!is_array($j['payload'] ?? null)) return null; $o = [];
-    foreach ($j['payload'] as $k => $e) { $x = $e['details'] ?? null; if (!is_array($x) || !is_numeric($x['lat'] ?? null) || !is_numeric($x['lon'] ?? null)) continue;
-      $id = (string)($x['id'] ?? $k); if (!preg_match(HYDRO_ID, $id)) continue;
-      $o[$id] = ['id' => $id, 'name' => mb_substr((string)($x['name'] ?? $id), 0, 80), 'water' => mb_substr((string)($x['water-body-name'] ?? ''), 0, 80), 'type' => ($x['water-body-type'] ?? '') === 'lake' ? 'lake' : 'river', 'lat' => (float)$x['lat'], 'lon' => (float)$x['lon']]; }
-    return $o ?: null; });
-  return is_array($d['data'] ?? null) ? $d['data'] : []; }
-// aktuelle Werte je Station: flow (m³/s, aus l/s umgerechnet, wo nur das gemessen wird), height (Pegel m ü. M.), level (Pegel in m über dem Nullpunkt), temp (°C), at (Messzeit)
-function hydroLatest() { $d = hydroFile('latest', HYDRO_TTL, function () {
-    $j = json_decode((string)http_get(HYDRO_API . 'latest?' . HYDRO_Q), true); if (!is_array($j['payload'] ?? null)) return null; $o = [];
-    foreach ($j['payload'] as $r) { $l = (string)($r['loc'] ?? ''); $p = (string)($r['par'] ?? ''); if ($l === '' || !is_numeric($r['val'] ?? null) || !is_numeric($r['timestamp'] ?? null)) continue;
-      $k = ['flow' => 'flow', 'flow_ls' => 'flow', 'height' => 'height', 'height_abs' => 'level', 'temperature' => 'temp'][$p] ?? null; if (!$k) continue;
-      $v = (float)$r['val']; if ($p === 'flow_ls') { if (isset($o[$l]['flow'])) continue; $v /= 1000; }
-      $o[$l][$k] = round($v, 4); $o[$l]['at'] = max((int)($o[$l]['at'] ?? 0), (int)$r['timestamp']); }
-    return $o; });
-  return [is_array($d['data'] ?? null) ? $d['data'] : [], $d]; }
-function hydroRow($s, $L) { $v = $L[$s['id']] ?? []; return $s + ['flow' => $v['flow'] ?? null, 'height' => $v['height'] ?? null, 'level' => $v['level'] ?? null, 'temp' => $v['temp'] ?? null, 'at' => $v['at'] ?? null]; }
+function hydroLocs() { $d = hydroBafu(); return is_array($d['data']['locs'] ?? null) ? $d['data']['locs'] : []; }
+// aktuelle Werte je Station: flow (m³/s), height (Pegel m ü. M.), level (Pegel in m über dem Nullpunkt), temp (°C), danger (Gefahrenstufe 1–5), cls (Einordnung), at (Messzeit)
+function hydroLatest() { $d = hydroBafu(); return [is_array($d['data']['vals'] ?? null) ? $d['data']['vals'] : [], $d]; }
+// LV95 → WGS84 (Näherungsformeln von swisstopo, ca. 1 m)
+function lv95ll($e, $n) { $y = ($e - 2600000) / 1e6; $x = ($n - 1200000) / 1e6;
+  $lo = 2.6779094 + 4.728982 * $y + 0.791484 * $y * $x + 0.1306 * $y * $x * $x - 0.0436 * $y ** 3;
+  $la = 16.9023892 + 3.238272 * $x - 0.270978 * $y * $y - 0.002528 * $x * $x - 0.0447 * $y * $y * $x - 0.0140 * $x ** 3;
+  return [$la * 100 / 36, $lo * 100 / 36]; }
+function hydroRow($s, $L) { $v = $L[$s['id']] ?? []; return $s + ['flow' => $v['flow'] ?? null, 'height' => $v['height'] ?? null, 'level' => $v['level'] ?? null, 'temp' => $v['temp'] ?? null, 'danger' => $v['danger'] ?? null, 'cls' => $v['cls'] ?? null, 'at' => $v['at'] ?? null]; }
 function hydroNum($x, $d) { return number_format($x, $d, '.', '’'); }
 function hydroText($r) { $p = [];
   if ($r['flow'] !== null) $p[] = 'Abfluss ' . hydroNum($r['flow'], $r['flow'] < 1 ? 3 : ($r['flow'] < 10 ? 2 : 1)) . ' m³/s';
   if ($r['height'] !== null) $p[] = 'Pegel ' . hydroNum($r['height'], 2) . ' m ü. M.';
   if ($r['level'] !== null) $p[] = 'Pegel ' . hydroNum($r['level'], 2) . ' m';
   if ($r['temp'] !== null) $p[] = 'Wassertemperatur ' . hydroNum($r['temp'], 1) . ' °C';
+  if (($r['danger'] ?? null) !== null) $p[] = 'Gefahrenstufe ' . $r['danger'];
+  if (!empty($r['cls'])) $p[] = (($r['type'] ?? '') === 'lake' ? 'Wasserstand ' : 'Abfluss ') . mb_strtolower($r['cls']);
   return $p ? implode(', ', $p) . ($r['at'] ? ', Messung ' . hm($r['at']) : '') : 'keine aktuellen Messwerte'; }
 // Bezugspunkte des Einsatzes: PLS des Einsatzes und aller Rettlinge (auch gefundene: auch dort war das Wasser relevant)
 function hydroRefs($inc) { $o = []; if ($inc['lat'] !== null) $o[] = [(float)$inc['lat'], (float)$inc['lon']];
@@ -648,14 +669,14 @@ function hydroLog($id, $phase) { global $db, $now;
     $q = $db->prepare("SELECT DISTINCT station FROM inc_hydro WHERE incident_id=? AND phase='start'"); $q->execute([(int)$id]);
     foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $sid) if (!isset($sel[$sid]) && isset($locs[$sid])) { $d = null; foreach ($refs as [$la, $lo]) { $x = hav($la, $lo, $locs[$sid]['lat'], $locs[$sid]['lon']); $d = $d === null ? $x : min($d, $x); } $sel[$sid] = $locs[$sid] + ['dist' => $d === null ? null : (int)round($d)]; } }
   if (!$sel) { if ($refs) logev($id, null, 'hydro', "Pegel und Abfluss $W: keine Messstation des BAFU im Umkreis von {$c['radius_km']} km um den PLS"); return true; }
-  $ins = $db->prepare("INSERT INTO inc_hydro(incident_id,phase,ts,station,name,water,lat,lon,dist,flow,height,level,temp,at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  $ins = $db->prepare("INSERT INTO inc_hydro(incident_id,phase,ts,station,name,water,lat,lon,dist,flow,height,level,temp,danger,at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
   foreach ($sel as $st) { $r = hydroRow($st, $L);
-    $ins->execute([(int)$id, $phase, $now, $r['id'], $r['name'], $r['water'], $r['lat'], $r['lon'], $r['dist'], $r['flow'], $r['height'], $r['level'], $r['temp'], $r['at']]);
+    $ins->execute([(int)$id, $phase, $now, $r['id'], $r['name'], $r['water'], $r['lat'], $r['lon'], $r['dist'], $r['flow'], $r['height'], $r['level'], $r['temp'], $r['danger'], $r['at']]);
     logev($id, null, 'hydro', "Pegel und Abfluss $W – " . ($r['water'] !== '' ? $r['water'] . ', ' : '') . $r['name'] . ($r['dist'] !== null ? ' (' . hydroNum($r['dist'] / 1000, 1) . ' km vom PLS)' : '') . ': ' . hydroText($r)); }
   return true; }
 // erfasste Werte eines Einsatzes für incident/state und die Verwaltung
-function hydroInc($id) { global $db; $s = $db->prepare("SELECT phase,ts,station,name,water,lat,lon,dist,flow,height,level,temp,at FROM inc_hydro WHERE incident_id=? ORDER BY id"); $s->execute([(int)$id]);
-  return array_map(fn($r) => floats(ints($r, ['ts', 'dist', 'at']), ['lat', 'lon']) + ['v' => array_map(fn($x) => $x === null ? null : (float)$x, ['flow' => $r['flow'], 'height' => $r['height'], 'level' => $r['level'], 'temp' => $r['temp']])], $s->fetchAll()); }
+function hydroInc($id) { global $db; $s = $db->prepare("SELECT phase,ts,station,name,water,lat,lon,dist,flow,height,level,temp,danger,at FROM inc_hydro WHERE incident_id=? ORDER BY id"); $s->execute([(int)$id]);
+  return array_map(fn($r) => floats(ints($r, ['ts', 'dist', 'at', 'danger']), ['lat', 'lon']) + ['v' => array_map(fn($x) => $x === null ? null : (float)$x, ['flow' => $r['flow'], 'height' => $r['height'], 'level' => $r['level'], 'temp' => $r['temp']]) + ['danger' => $r['danger']]], $s->fetchAll()); }
 function hydroOn() { return (bool)array_filter(featuresAll(), fn($f) => $f['hydro']); } // ohne Einsatz: für einen der Einsatztypen an
 
 /* ---------- Gewässernetz aus PostGIS (Issue #131) ---------- */
@@ -1144,7 +1165,7 @@ function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) re
     $aud = $pu['scheme'] . '://' . $pu['host'] . (isset($pu['port']) ? ':' . $pu['port'] : ''); $jwt[$aud] = $jwt[$aud] ?? vapidJwt($aud);
     $body = pushEncrypt(json_encode($m, JSON_UNESCAPED_UNICODE), $sub['p256dh'], $sub['auth']); if ($body === null) continue;
     $h = curl_init($sub['endpoint']);
-    curl_setopt_array($h, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4,
+    curl_setopt_array($h, CURL_CA + [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4,
       CURLOPT_HTTPHEADER => ['Content-Type: application/octet-stream', 'Content-Encoding: aes128gcm', 'TTL: ' . (!empty($m['crit']) ? 3600 : 600), 'Urgency: high', 'Topic: ' . substr(preg_replace('/[^A-Za-z0-9_-]/', '_', (string)($m['tag'] ?? 'sw')), 0, 32), 'Authorization: vapid t=' . $jwt[$aud] . ', k=' . vapid()['pub']]]);
     curl_multi_add_handle($mh, $h); $hs[] = [$h, (int)$sub['id']]; }
   do { $st = curl_multi_exec($mh, $run); if ($run) curl_multi_select($mh, 1); } while ($run && $st === CURLM_OK);
@@ -1168,7 +1189,7 @@ function fcmToken($renew = false) { $c = fcmCfg(); $f = __DIR__ . '/data/fcm_tok
     'aud' => 'https://oauth2.googleapis.com/token', 'iat' => $now, 'exp' => $now + 3600], JSON_UNESCAPED_SLASHES));
   $k = openssl_pkey_get_private($c['private_key']); if (!$k || !openssl_sign($h, $sig, $k, OPENSSL_ALGO_SHA256)) { error_log('FCM: privater Schlüssel des Dienstkontos ungültig'); return null; }
   $ch = curl_init('https://oauth2.googleapis.com/token');
-  curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_CONNECTTIMEOUT => 4,
+  curl_setopt_array($ch, CURL_CA + [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_CONNECTTIMEOUT => 4,
     CURLOPT_POSTFIELDS => http_build_query(['grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer', 'assertion' => $h . '.' . b64u($sig)])]);
   $raw = curl_exec($ch); $r = json_decode((string)$raw, true);
   if (empty($r['access_token'])) { error_log('FCM: kein Zugriffstoken (' . curl_getinfo($ch, CURLINFO_HTTP_CODE) . ') ' . mb_substr((string)$raw, 0, 300)); return null; }
@@ -1196,7 +1217,7 @@ function fcmQueue($mh, $q, $ids) { global $db; if (!fcmOk()) return [];
   $url = 'https://fcm.googleapis.com/v1/projects/' . rawurlencode(fcmCfg()['project_id']) . '/messages:send'; $hn = [];
   foreach ($q as [$u, $m]) foreach ($ns as $n) { if ((int)$n['user_id'] !== $u) continue;
     $h = curl_init($url);
-    curl_setopt_array($h, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode(fcmMsg($n['token'], (string)$n['platform'], $u, $m), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION),
+    curl_setopt_array($h, CURL_CA + [CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode(fcmMsg($n['token'], (string)$n['platform'], $u, $m), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION),
       CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_HTTPHEADER => ['Content-Type: application/json; charset=utf-8', 'Authorization: Bearer ' . $at]]);
     curl_multi_add_handle($mh, $h); $hn[] = [$h, (int)$n['id']]; }
   return $hn; }
@@ -1217,7 +1238,7 @@ function logev($incId, $userId, $kind, $text) { global $db, $now; $db->prepare("
 function hav($a, $b, $c, $d) { $p1 = deg2rad($a); $p2 = deg2rad($c); $dp = $p2 - $p1; $dl = deg2rad($d - $b); $x = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 12742000 * asin(min(1, sqrt($x))); }
 function avg($a) { $a = array_values(array_filter($a, fn($x) => $x !== null)); return $a ? round(array_sum($a) / count($a), 1) : null; }
 function http_get($url) {
-  if (function_exists('curl_init')) { $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']); $r = curl_exec($c); return $r; }
+  if (function_exists('curl_init')) { $c = curl_init($url); curl_setopt_array($c, CURL_CA + [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']); $r = curl_exec($c); return $r; }
   return @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 10, 'header' => "User-Agent: SwiftwaterRescue/0.1\r\n"]]));
 }
 // Gewässernetz über den Server mit Datei-Cache, damit gleiche Abfragen (z. B. Suchgebiet aller Geräte eines Einsatzes) nur einmal
@@ -1295,7 +1316,7 @@ function overpassFetch($q) { // erste Antwort mit elements, sonst null; jeder Ve
   foreach (overpassActive() as $url) {
     $t = microtime(true); $err = '';
     if (function_exists('curl_init')) {
-      $c = curl_init($url); curl_setopt_array($c, [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 15, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
+      $c = curl_init($url); curl_setopt_array($c, CURL_CA + [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 15, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
       $r = curl_exec($c); $code = curl_getinfo($c, CURLINFO_HTTP_CODE);
       if ($r === false) $err = curl_errno($c) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($c);
     } else {
@@ -1603,7 +1624,7 @@ function aiCall($sys, $msgs, $maxTok = null) { $c = aiCfg(); $key = aiKey();
     $body = ['model' => $model, 'max_tokens' => $mt, 'system' => $sys, 'messages' => $msgs]; }
   else { $url = rtrim(trim((string)$c['base_url']), '/') . '/chat/completions'; $h = ['Content-Type: application/json']; if ($key !== '') $h[] = 'Authorization: Bearer ' . $key;
     $body = ['model' => $model, 'max_tokens' => $mt, 'temperature' => 0.3, 'messages' => array_merge([['role' => 'system', 'content' => $sys]], $msgs)]; }
-  $k = curl_init($url); curl_setopt_array($k, [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => json_encode($body, JSON_UNESCAPED_UNICODE), CURLOPT_HTTPHEADER => $h, CURLOPT_RETURNTRANSFER => 1,
+  $k = curl_init($url); curl_setopt_array($k, CURL_CA + [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => json_encode($body, JSON_UNESCAPED_UNICODE), CURLOPT_HTTPHEADER => $h, CURLOPT_RETURNTRANSFER => 1,
     CURLOPT_TIMEOUT => (int)$c['timeout'], CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
   $r = curl_exec($k); $code = curl_getinfo($k, CURLINFO_HTTP_CODE); $err = $r === false ? (curl_errno($k) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($k)) : ''; // ohne curl_close: wirkungslos seit PHP 8.0, veraltet ab 8.5
   if ($r === false) throw new AiErr('Keine Antwort vom AI-Anbieter: ' . $err);
@@ -1786,10 +1807,9 @@ switch ($route) {
   foreach ($ids as $i) if (isset($locs[$i])) $o[] = hydroRow($locs[$i], $L);
   out(['stations' => $o, 'at' => (int)($raw['at'] ?? 0) ?: null, 'err' => !$locs ? 'Messstationen des BAFU nicht abrufbar' : (!$L ? 'Messwerte des BAFU nicht abrufbar' : null)]);
  case 'hydro/status': need('cfg_map'); // Verwaltung: Stand der Zwischenspeicher, «Jetzt abrufen» mit fresh=1 (verwirft die zwischengespeicherten Messwerte)
-  if (!empty($in['fresh'])) @unlink(__DIR__ . '/data/hydro/latest.json');
+  if (!empty($in['fresh'])) @unlink(__DIR__ . '/data/hydro/bafu.json');
   $t = microtime(true); $locs = hydroLocs(); [$L, $raw] = hydroLatest(); $ms = (int)((microtime(true) - $t) * 1000);
-  $lf = json_decode((string)@file_get_contents(__DIR__ . '/data/hydro/locations.json'), true) ?: [];
-  out(['stations' => count($locs), 'rivers' => count(array_filter($locs, fn($s) => $s['type'] === 'river')), 'values' => count($L), 'at' => (int)($raw['at'] ?? 0) ?: null, 'fail_at' => (int)($raw['fail_at'] ?? 0) ?: null, 'ms' => $ms, 'locs_at' => (int)($lf['at'] ?? 0) ?: null]);
+  out(['stations' => count($locs), 'rivers' => count(array_filter($locs, fn($s) => $s['type'] === 'river')), 'values' => count($L), 'at' => (int)($raw['at'] ?? 0) ?: null, 'fail_at' => (int)($raw['fail_at'] ?? 0) ?: null, 'ms' => $ms, 'src' => HYDRO_API]);
  /* ---------- Gewässernetz aus PostGIS (Issue #131) ---------- */
  case 'postgis/test': need('cfg_map'); // Verbindung, Tabelle und eine Beispielabfrage (Umkreis 5 km um lat/lon, Standard Bern); cfg = noch nicht gespeicherte Einstellung, Passwort leer = gespeichertes
   $c = isset($in['cfg']) ? pgIn(['on' => 0] + (array)$in['cfg']) : pgCfg(); $pw = is_string($in['cfg']['pass'] ?? null) && $in['cfg']['pass'] !== '' ? $in['cfg']['pass'] : (string)setting('postgis_pass', '');

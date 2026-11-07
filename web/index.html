@@ -105,7 +105,7 @@ table.crew small{display:block;color:var(--mut)}table.crew select{width:100%;pad
 .rdt{width:100%}.rdt td{padding:.25rem .3rem}.rdt td:last-child{text-align:right;font-weight:600;white-space:nowrap}.rdt input{width:4.5rem;padding:.25rem .4rem}
 body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: Klicks auf Marker/Bereiche gehen an die Karte, keine Popups */
 .rdpt{width:26px;height:26px;border-radius:50%;background:#2ee6d6;color:#0f2430;font-weight:700;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px #0008}
-.hyk{width:26px;height:26px;border-radius:6px;background:#0b4f8a;border:2px solid #fff;display:grid;place-items:center;font-size:14px;box-shadow:0 1px 4px #0008}.hyk.inc{border-color:#ffd166}
+.hyk{width:26px;height:26px;border-radius:6px;background:#0b4f8a;border:2px solid #fff;display:grid;place-items:center;font-size:14px;box-shadow:0 1px 4px #0008}.hyk.inc{border-color:#ffd166}.hyk.g2{background:#c9a800}.hyk.g3{background:#e07b00}.hyk.g4{background:#d0021b}.hyk.g5{background:#7a0010}
 .hyli{display:flex;gap:.5rem;align-items:flex-start;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--line)}.hyli:last-of-type{border-bottom:0}.hyli>div:first-child{min-width:0;overflow-wrap:anywhere}.hyli .hyb{display:flex;gap:.3rem;flex:0 0 auto}.hyli button{padding:.3rem .5rem;font-size:.8rem}
 .hyph{font-size:.8rem;color:var(--mut)}.hypop{min-width:12rem}.hypop .t{display:block;color:#666;font-size:.8rem;margin-bottom:.2rem}
 #hyRes button{display:block;width:100%;text-align:left;margin:.2rem 0;padding:.35rem .5rem;font-size:.85rem}
@@ -260,7 +260,7 @@ const hyMine=()=>(me&&me.hydro)||[],hyInc=()=>(st&&st.incident&&st.hydro)||[];
 const hyIds=()=>[...new Set([...hyInc().map(r=>r.station),...hyMine()])];
 const hyName=s=>(s.water?s.water+', ':'')+s.name;
 const hyN=(x,d)=>x.toLocaleString('de-CH',{minimumFractionDigits:d,maximumFractionDigits:d});
-const hyVals=v=>[v.flow!=null&&hyN(v.flow,v.flow<1?3:v.flow<10?2:1)+' m³/s',v.height!=null&&hyN(v.height,2)+' m ü. M.',v.level!=null&&hyN(v.level,2)+' m',v.temp!=null&&hyN(v.temp,1)+' °C'].filter(Boolean).join(' · ')||'keine Messwerte';
+const hyVals=v=>[v.flow!=null&&hyN(v.flow,v.flow<1?3:v.flow<10?2:1)+' m³/s',v.height!=null&&hyN(v.height,2)+' m ü. M.',v.level!=null&&hyN(v.level,2)+' m',v.temp!=null&&hyN(v.temp,1)+' °C',v.danger!=null&&'Gefahrenstufe '+v.danger,v.cls&&v.cls].filter(Boolean).join(' · ')||'keine Messwerte';
 const hyStation=i=>hyData[i]||hyInc().find(r=>r.station===i)||(hyAll||[]).find(s=>s.id===i);
 const hyDist=i=>{const r=hyInc().find(x=>x.station===i&&x.dist!=null);return r?' · '+hyN(r.dist/1000,1)+' km vom PLS':''}; // Distanz zum nächsten PLS (bei der Erfassung)
 function hyPoll(force){if(!feat('hydro'))return;const ids=hyIds(),k=ids.join();if(!ids.length){if(hyKey){hyKey='';hyData={};drawHydro()}return}
@@ -270,10 +270,10 @@ function hyPoll(force){if(!feat('hydro'))return;const ids=hyIds(),k=ids.join();i
 // erfasste Werte des Einsatzes zu einer Station: «Beginn …», «Ende …»
 const hyPh=i=>hyInc().filter(r=>r.station===i).map(r=>`<div class="hyph">${r.phase==='start'?'Beginn':'Ende'} (${fmtT(r.ts)}): ${esc(hyVals(r.v))}</div>`).join('');
 const hyNow=i=>{const c=hyData[i];return c?esc(hyVals(c))+(c.at?' · Messung '+fmtT(c.at):''):hyErr?esc(hyErr):'Messwerte werden geladen …'};
-function hyPop(i){const s=hyStation(i);return`<div class="hypop"><b>${esc(hyName(s))}</b><span class="t">Messstation BAFU ${esc(i)}${hyDist(i)}</span>Aktuell: ${hyNow(i)}${hyPh(i)}${navBtn(s.lat,s.lon,hyName(s),'Navigieren')}</div>`}
+function hyPop(i){const s=hyStation(i);return`<div class="hypop"><b>${esc(hyName(s))}</b><span class="t"><a href="https://www.hydrodaten.admin.ch/de/seen-und-fluesse/stationen-und-daten/${encodeURIComponent(i)}" target="_blank" rel="noopener">Messstation BAFU ${esc(i)}</a>${hyDist(i)}</span>Aktuell: ${hyNow(i)}${hyPh(i)}${navBtn(s.lat,s.lon,hyName(s),'Navigieren')}</div>`}
 function drawHydro(){if(!hyLayer)return;const ids=feat('hydro')&&vis('hydro')?hyIds():[],mine=new Set(hyMine());
-  const k=ids.map(i=>i+':'+(hyData[i]?hyData[i].at:'')).join()+'|'+hyInc().length+feat('nav');if(k===hyLayerKey)return;hyLayerKey=k;hyLayer.clearLayers();
-  ids.forEach(i=>{const s=hyStation(i);if(!s)return;L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:`<div class="hyk${mine.has(i)?'':' inc'}" aria-hidden="true">💧</div>`,iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:400})
+  const k=ids.map(i=>i+':'+(hyData[i]?hyData[i].at+'/'+hyData[i].danger:'')).join()+'|'+hyInc().length+feat('nav');if(k===hyLayerKey)return;hyLayerKey=k;hyLayer.clearLayers();
+  ids.forEach(i=>{const s=hyStation(i);if(!s)return;L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:`<div class="hyk${mine.has(i)?'':' inc'}${hyData[i]&&hyData[i].danger>1?' g'+Math.min(hyData[i].danger,5):''}" aria-hidden="true">💧</div>`,iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:400})
     .bindTooltip(esc(hyName(s))+(hyData[i]&&hyData[i].flow!=null?' · '+hyN(hyData[i].flow,hyData[i].flow<10?2:1)+' m³/s':'')).bindPopup(()=>hyPop(i)).addTo(hyLayer)})}
 // Karte im Menü: im Einsatz die Stationen beim PLS (Beginn/Ende/aktuell), dazu die persönlichen; ohne Einsatz nur die persönlichen
 function hydroCard(){if(!feat('hydro'))return'';const inc=st&&st.incident,ir=hyInc(),is=[...new Set(ir.map(r=>r.station))],mine=hyMine().filter(i=>!is.includes(i));
@@ -281,7 +281,7 @@ function hydroCard(){if(!feat('hydro'))return'';const inc=st&&st.incident,ir=hyI
   const hasPls=inc&&(inc.lat!=null||(st.rescuees||[]).some(r=>r.pls_lat!=null));
   return mcard('Pegel &amp; Abfluss',(inc?`<h5>Beim PLS</h5>${is.length?is.map(row).join(''):`<div class="mut">${hasPls?'Noch keine Werte erfasst (keine Messstation im Umkreis oder BAFU nicht erreichbar, siehe Log).':'Werden erfasst, sobald ein PLS bekannt ist. Am Einsatzende folgen die Werte derselben Stationen.'}</div>`}<h5>Meine Messstationen</h5>`:'')
     +(mine.length?mine.map(row).join(''):`<div class="mut">${hyMine().length?'Stehen schon oben.':'Keine gewählt. Im Profil kannst du Messstationen wählen, die du hier und auf der Karte siehst.'}</div>`)
-    +`<div class="mbtns"><button data-hyp>Messstationen wählen</button></div><div class="mut" style="font-size:.75rem">Quelle: BAFU, Hydrologische Daten (über api.existenz.ch). Werte ungeprüft.</div>`)}
+    +`<div class="mbtns"><button data-hyp>Messstationen wählen</button></div><div class="mut" style="font-size:.75rem">Quelle: BAFU, hydrodaten.admin.ch. Werte ungeprüft. Gefahrenstufen 1–5 gemäss BAFU.</div>`)}
 function bindHydro(el){el.querySelectorAll('[data-hyz]').forEach(b=>b.onclick=()=>{const s=hyStation(b.dataset.hyz);if(!s)return;if(!vis('hydro'))setVis(['hydro'],true);if(innerWidth<760)toggleSheet(false);map.setView([s.lat,s.lon],Math.max(map.getZoom(),13))});
   el.querySelectorAll('[data-hyp]').forEach(b=>b.onclick=()=>prefs(true))}
 // Profil: persönliche Messstationen (höchstens 20), Suche in allen Stationen des BAFU (einmal geladen, hyAll)
