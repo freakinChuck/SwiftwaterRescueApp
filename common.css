@@ -78,3 +78,4 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .dlg .card.aip{max-width:min(960px,100%)}.dlg .card.aip.wide2{max-width:min(1300px,100%)}.aio .aitx{max-height:none}
 .aisc .aith{max-height:min(58dvh,640px)}
 @media(min-width:901px){.aisc>.aichat{border-top:0;padding-top:0}.aisc{border-left:1px solid var(--line);padding-left:1rem}.aiwide:has(.aisc){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
+.aidp{display:grid;gap:.35rem}.aidp label.chk{align-items:flex-start}.aidp label.chk input{margin-top:.15rem}

@@ -475,9 +475,9 @@ function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000
     <h3>Freigabe und Datenschutz je Einsatztyp</h3>
     <div class="mut">Eine Person erhält den höchsten Modus ihrer Benutzerrollen und, im Einsatz, ihrer Spezialrolle (nur mit Teilnahme). «Auf Abruf» = Knopf ✨, «Begleitend» = der Vorschlag wird beim Öffnen schon vorbereitet (Knopf leuchtet). «Freie Fragen» erlaubt eigene Eingaben im Fenster des AI-Assistenten. Jede Person kann in ihrem Profil weniger wählen.</div>
     <div class="aisel">${CX.map(x=>`<button data-aicx="${x.id}" aria-pressed="${x.id===X}">${x.color?`<span class="gdot" style="background:${esc(x.color)}"></span>`:''}${esc(x.name)}</button>`).join('')}</div>
-    ${isK?`<div class="inc" style="padding:.5rem .8rem"><b>Datenschutz bei «${esc(kx?kx.name:'')}»</b>
-      <label class="chk"><input type="checkbox" id="aiAn" ${(c.anon||{})[X]!==0?'checked':''}> Namen vor dem Senden durch Bezeichnungen ersetzen (Einsatzkraft N, Rettling N …), auch in freien Fragen; die Antwort zeigt wieder die Namen</label>
-      <label class="chk"><input type="checkbox" id="aiRl" ${(c.round_loc||{})[X]!==0?'checked':''}> Koordinaten auf ca. 100 m runden</label></div>`
+    ${isK?`<div class="aimf"><div><b>${kx&&kx.color?`<span class="gdot" style="background:${esc(kx.color)}"></span>`:''}Datenschutz bei «${esc(kx?kx.name:'')}»</b><div class="mut" style="font-size:.8rem">Gilt für alle Funktionen des AI-Assistenten bei diesem Einsatztyp.</div></div>
+      <div class="aidp"><label class="chk"><input type="checkbox" id="aiAn" ${(c.anon||{})[X]!==0?'checked':''}> Namen vor dem Senden durch Bezeichnungen ersetzen (Einsatzkraft N, Rettling N …), auch in freien Fragen; die Antwort zeigt wieder die Namen</label>
+      <label class="chk"><input type="checkbox" id="aiRl" ${(c.round_loc||{})[X]!==0?'checked':''}> Koordinaten auf ca. 100 m runden</label></div></div>`
       :'<div class="mut" style="font-size:.85rem">Verwaltung: Die Statistik geht ohne Namen an den Anbieter, freie Fragen ohne Einsatzdaten.</div>'}
     ${mx}
     ${isK&&s.kinds.length>1?'<div class="row"><button class="sec" id="aiAll">Für alle Einsatztypen übernehmen</button></div>':''}
