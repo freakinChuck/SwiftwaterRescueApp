@@ -85,12 +85,28 @@ function lizenzen(){const op=D?D.overpass.servers:[],air=D?D.air:null;
   const svc=[['Push-Dienste der Browser-Hersteller (Google Firebase Cloud Messaging, Apple Push Notification service, Mozilla Push Service)','Benachrichtigungen bei geschlossener App','—',lic('Bedingungen der Hersteller'),'Nur verschlüsselte Nachrichten (RFC 8291), der Dienst kann den Inhalt nicht lesen.'],
     ['cdnjs (Cloudflare) und jsDelivr','Auslieferung der Bibliotheken oben','https://cdnjs.com',lic('Gratis-CDN'),'Der Browser lädt die Bibliotheken von dort.'],
     ['Navigations-Apps (Google Maps, Apple Karten, Waze, andere)','Knopf 🧭: Ziel an die App übergeben','—',lic('Bedingungen der Anbieter'),'Nur auf Knopfdruck, es gelten die Bedingungen der gewählten App.']];
+  // Native Apps (Issue #108, Flutter): Bibliotheken der nativen Apps für Android und iOS
+  const nat=[['Flutter','Grundlage der nativen Apps (Android, iOS)','https://flutter.dev',lic('BSD-3-Clause'),'Copyright-Hinweis und Lizenztext erhalten (in der App unter den Lizenzen).'],
+    ['flutter_map','Karte der Einsatz-App (Kacheln der Anbieter wie in der Web-App)','https://pub.dev/packages/flutter_map',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.'],
+    ['latlong2','Koordinaten und Distanzen in der Einsatz-App','https://pub.dev/packages/latlong2',lic('Apache-2.0'),'Lizenztext und Hinweise erhalten, Änderungen kennzeichnen.'],
+    ['image_picker','Profilbild aus Galerie oder Kamera','https://pub.dev/packages/image_picker',lic('Apache-2.0'),'Lizenztext und Hinweise erhalten.'],
+    ['flutter_inappwebview','Verwaltung, «Meine Einsätze» und Rechtliches in der App anzeigen','https://pub.dev/packages/flutter_inappwebview',lic('Apache-2.0'),'Lizenztext erhalten.'],
+    ['share_plus und path_provider','Dateien aus der Verwaltung (After Action Review, CSV) teilen bzw. speichern','https://pub.dev/packages/share_plus',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.'],
+    ['url_launcher','Navigations-Apps und fremde Adressen ausserhalb der App öffnen','https://pub.dev/packages/url_launcher',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.'],
+    ['flutter_local_notifications','Alarme und Hinweise auf dem Gerät','https://pub.dev/packages/flutter_local_notifications',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.'],
+    ['flutter_background_service','Überwachung der Server im Hintergrund (Android)','https://pub.dev/packages/flutter_background_service',lic('MIT'),'Copyright-Hinweis erhalten.'],
+    ['geolocator','Standort auf dem Gerät (Standortfreigabe im Einsatz, auch bei gesperrtem Bildschirm)','https://pub.dev/packages/geolocator',lic('MIT'),'Copyright-Hinweis erhalten.'],
+    ['flutter_secure_storage','Anmeldeschlüssel sicher auf dem Gerät speichern','https://pub.dev/packages/flutter_secure_storage',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.'],
+    ['firebase_core, firebase_messaging','Push über Firebase Cloud Messaging','https://pub.dev/packages/firebase_messaging',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten; für den Dienst gelten die Bedingungen von Google Firebase.'],
+    ['http','Abfragen der Server','https://pub.dev/packages/http',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.'],
+    ['shared_preferences','Einstellungen der App','https://pub.dev/packages/shared_preferences',lic('BSD-3-Clause'),'Copyright-Hinweis erhalten.']];
   const tbl=(rows,h)=>`<table class="lgt"><thead><tr><th>${h}</th><th>Verwendung</th><th>Lizenz</th><th>Bedingungen und Einschränkungen</th></tr></thead><tbody>${rows.map(([n,u,l,b,t])=>`<tr><td>${esc(n)}${l!=='—'?'<br><small>'+(l.startsWith('<')?l:lnk(l))+'</small>':''}</td><td>${esc(u)}</td><td>${b}</td><td>${esc(t)}</td></tr>`).join('')}</tbody></table>`;
   return`<h2>Lizenzen & Nutzungsbedingungen</h2>
   <p>Die App verwendet die folgenden Programmbibliotheken, Daten und Dienste. Es gelten jeweils deren Lizenzen und Nutzungsbedingungen.</p>
   <h3>Programmbibliotheken und Server</h3>${tbl(sw,'Komponente')}
   <h3>Karten und Daten</h3>${tbl(data,'Quelle')}
   <h3>Weitere Dienste</h3>${tbl(svc,'Dienst')}
+  <h3>Native Apps</h3><p>Die Apps für Android und iOS zeigen die Web-App in einer eigenen Hülle an und verwenden zusätzlich diese Bibliotheken:</p>${tbl(nat,'Komponente')}
   <h3>Eigener Programmcode und Logo</h3><p>Programmcode, Gestaltung und Logo der Swiftwater Rescue App: alle Rechte bei den Urheberinnen und Urhebern bzw. der betreibenden Organisation. Eine Open-Source-Lizenz ist für den eigenen Code nicht festgelegt.</p>`}
 
 function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],ks=(D&&D.kinds)||[],op=D?D.overpass:null,air=D?D.air:null;
@@ -111,6 +127,7 @@ function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],ks=(D&&D.kinds)||[]
    <tr><td>Rettlinge und externe Einsatzkräfte</td><td>Name und Beschreibung (z. B. Aussehen, Kleidung), Fundort, PLS, Zeitpunkte. Diese können besonders schützenswerte Angaben enthalten (Gesundheit); bitte nur das Nötige erfassen.</td><td>Mit dem Einsatz; Namen und Beschreibungen gemäss den Fristen unten entfernt.</td></tr>
    <tr><td>After Action Review</td><td>Erfasste Angaben und Bilder, wer es erfasst und freigegeben hat.</td><td>Bis zur Löschung durch die Verwaltung. Wird beim Anonymisieren nicht verändert; ein freigegebenes Review wird vorher als PDF gesichert.</td></tr>
    <tr><td>Push-Abonnement</td><td>${D&&!D.push?'Zurzeit nicht eingerichtet. ':''}Je Gerät die Adresse beim Push-Dienst des Browsers und die Schlüssel zum Verschlüsseln, verbunden mit deinem Konto.</td><td>Bis du Push ausschaltest, dich auf dem Gerät eine andere Person anmeldet, das Konto deaktiviert oder das Passwort zurückgesetzt wird.</td></tr>
+   <tr><td>Angemeldete Apps</td><td>Je Anmeldung in einer nativen App: Gerätebezeichnung, System (Android/iOS), Zeitpunkt der Anmeldung und der letzten Nutzung, Anmeldeschlüssel${D&&D.push_native?'; falls Push in der App aktiv, die Push-Adresse (Token) bei Firebase Cloud Messaging':''}.</td><td>Bis du dich in der App abmeldest oder sie im Profil entfernst, das Konto deaktiviert oder das Passwort zurückgesetzt wird.</td></tr>
    <tr><td>Zwischenspeicher auf dem Server</td><td>Gewässernetz aus OpenStreetMap${air&&air.on?', Luftfahrzeuge je Einsatz'+(D&&D.air_home?' und um die festen Standorte':''):''}${fOn('hydro')?', Messwerte des BAFU':''} (keine Personendaten).</td><td>Gewässernetz ${op?op.ttl+' min':'gemäss Einstellung'} (bei Ausfall der Quellen bis 7 Tage)${air&&air.on?', Luftfahrzeuge nur kurz':''}${fOn('hydro')?', Messwerte 5 min':''}.</td></tr>
    ${fOn('hydro')?'<tr><td>Pegel und Abfluss im Einsatz</td><td>Werte der Messstationen um den PLS zu Beginn und am Ende des Einsatzes, im Einsatzlog (keine Personendaten).</td><td>Mit dem Einsatz.</td></tr>':''}
   </tbody></table>
@@ -122,19 +139,21 @@ function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],ks=(D&&D.kinds)||[]
    <li>Nach dem Einsatz: Personen mit den entsprechenden Rechten in der Verwaltung (Statistik, Log, Replay, After Action Review). Teilnehmende sehen unter «Meine Einsätze» ihre eigenen Einsätze, je nach Einstellung mit anonymisierten Namen der anderen.</li></ul>
   <h3>Übermittlung an Dritte</h3>
   <table class="lgt"><thead><tr><th>Empfänger</th><th>Was</th><th>Wann</th></tr></thead><tbody>
-   <tr><td>swisstopo (Bund) bzw. OpenStreetMap Foundation</td><td>Kartenausschnitte; dein Browser ruft die Kacheln direkt ab, dabei sieht der Anbieter deine IP-Adresse und den Kartenausschnitt.</td><td>Beim Anzeigen der Karte.</td></tr>
+   <tr><td>swisstopo (Bund) bzw. OpenStreetMap Foundation</td><td>Kartenausschnitte; dein Browser bzw. die App ruft die Kacheln direkt ab, dabei sieht der Anbieter deine IP-Adresse und den Kartenausschnitt.</td><td>Beim Anzeigen der Karte.</td></tr>
    <tr><td>cdnjs (Cloudflare), jsDelivr</td><td>IP-Adresse beim Laden der Bibliotheken.</td><td>Beim Öffnen der App (danach meist aus dem Zwischenspeicher).</td></tr>
    ${fOn('area')||fOn('rd')?`<tr><td>Overpass-Server${op&&op.servers.length?' ('+op.servers.map(host).map(esc).join(', ')+')':''}</td><td>Ausschnitt um den PLS bzw. die gewählten Punkte, ohne Personenbezug. Normalerweise fragt der Server${op&&op.postgis?' (zuerst die eigene PostGIS-Datenbank)':''}; lehnt Overpass ihn ab, fragt dein Gerät direkt (IP-Adresse sichtbar).</td><td>Suchgebiet und Flussdistanz.</td></tr>`:''}
    ${fOn('hydro')?'<tr><td>api.existenz.ch (Daten des BAFU)</td><td>Abfrage aller Messstationen und Messwerte, ohne Ort und ohne Personenbezug; der Server fragt.</td><td>Höchstens alle 5 Minuten, wenn jemand Messwerte braucht.</td></tr>':''}
    <tr><td>swisstopo, Nominatim (OSM Foundation)</td><td>Koordinaten von Anfang und Ende einer Fahrt, ohne Namen; der Server fragt.</td><td>Bei erkannten Fahrten im Einsatz.</td></tr>
    ${!air||air.on?`<tr><td>ADS-B-Dienste${air&&air.src.length?' ('+air.src.map(s=>esc(s.name)).join(', ')+')':''}</td><td>Ein Kreis um das Einsatzgebiet${D&&D.air_home?' bzw. um die festen Standorte':''}, ohne Personenbezug; der Server fragt.</td><td>Während Einsätzen mit eingeschalteten Helikoptern${D&&D.air_home?', ohne Einsatz im Umkreis von '+D.air_home+' km um die festen Standorte, solange jemand die Karte offen hat':''}.</td></tr>`:''}
    <tr><td>Push-Dienst deines Browsers (Google, Apple, Mozilla)</td><td>Verschlüsselte Benachrichtigung (Alarm, Nachricht, Einsatzende); der Dienst sieht nur Zeitpunkt und Grösse.</td><td>Nur wenn du Push eingeschaltet hast.</td></tr>
+   ${D&&D.push_native?`<tr><td>Google Firebase Cloud Messaging (für iOS weiter an den Apple Push Notification Service)</td><td>Benachrichtigungen an die nativen Apps: Titel, Text, Kennung des Einsatzes bzw. der Nachricht, Adresse (Host) dieses Servers und die interne Nummer deines Kontos. Der Dienst kann den Inhalt lesen.</td><td>Nur wenn du in der App angemeldet bist und Benachrichtigungen erlaubt hast.</td></tr>`:''}
    ${D&&D.ai&&D.ai.on?`<tr><td>Anbieter des AI-Assistenten${D.ai.host?' ('+esc(D.ai.host)+')':''}</td><td>Daten der gewünschten Aufgabe (z. B. Einsatzlog, Lage, Felder des After Action Review)${aiPer(D,'anon',', Namen durch Bezeichnungen wie «Einsatzkraft 3» ersetzt',', mit Namen')}${aiPer(D,'round_loc',', Koordinaten gerundet','')}; Beschreibungen von Rettlingen nie. Freitexte können Namen enthalten. Der Server fragt.</td><td>Nur auf Abruf bzw. begleitend für Personen, denen der Assistent freigegeben ist.</td></tr>`:''}
    ${fOn('nav')?`<tr><td>Gewählte Navigations-App</td><td>Koordinaten des Ziels.</td><td>Nur beim Antippen von 🧭.</td></tr>`:''}
   </tbody></table>
   <p class="mut">Einige dieser Anbieter haben ihren Sitz oder Server ausserhalb der Schweiz (z. B. in der EU oder den USA).</p>
   <h3>Daten auf deinem Gerät</h3>
   <p>Die App speichert im Browser (localStorage): den Anmeldeschlüssel, den letzten Stand des laufenden Einsatzes samt Nachrichten (damit sie offline startet), quittierte Alarme, gelesene Nachrichten und Anzeige-Einstellungen (Grundkarte, ausgeblendete Kategorien, Filter). Der Service Worker speichert die App-Dateien und zuletzt gesehene Kartenkacheln. Abmelden löscht den Anmeldeschlüssel und den gemerkten Einsatzstand; den Rest löscht das Entfernen der Website-Daten im Browser.</p>
+  <p>Die nativen Apps für Android und iOS speichern Server-Adresse, Benutzername und Anmeldeschlüssel nur auf dem Gerät. Abmelden oder Entfernen des Kontos in der App löscht sie.</p>
   <h3>Berechtigungen des Geräts</h3>
   <ul><li><b>Standort:</b> nur während eines Einsatzes und nur bei Einrückoptionen mit Standortfreigabe. Ohne Einsatz wird der Standort höchstens im Menü angezeigt, aber nicht gesendet.</li>
    <li><b>Benachrichtigungen:</b> nur wenn du Push in den Einstellungen einschaltest.</li>

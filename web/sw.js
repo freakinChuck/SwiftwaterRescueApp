@@ -35,8 +35,10 @@ self.addEventListener('push',e=>{let m={};try{m=e.data?e.data.json():{}}catch(_)
     if(cs.some(c=>c.visibilityState==='visible'&&c.focused))return;
     return self.registration.showNotification(m.t||'Swiftwater Rescue',{body:m.b||'',tag:m.tag||undefined,renotify:true,requireInteraction:!!(m.crit||m.stay),
       ...(m.silent?{silent:true}:{vibrate:m.crit?[600,200,600,200,600,200,600]:[200]}),icon:'img/icon-192.png',badge:'img/badge-96.png',data:{url:'./'}})}))}); // silent und vibrate zusammen wirft einen Fehler
-// Klick: offene App in den Vordergrund holen, sonst öffnen
-self.addEventListener('notificationclick',e=>{e.notification.close();
+// Klick: offene App in den Vordergrund holen, sonst öffnen. Alarm (i:), Nachricht (m:) und Entfernen (k:) gehören zum laufenden Einsatz:
+// die App zeigt dann das Einsatzgebiet (Feedback zu #108; offene App über postMessage, neue über ?fokus=1)
+self.addEventListener('notificationclick',e=>{e.notification.close();const inc=/^[imk]:/.test(e.notification.tag||'');
   e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>new URL(c.url).pathname.endsWith('/')||c.url.includes('index.html'));
-    return c?c.focus():self.clients.openWindow((e.notification.data&&e.notification.data.url)||'./')}))});
+    if(c){if(inc)c.postMessage({sw:'focus'});return c.focus()}
+    return self.clients.openWindow(((e.notification.data&&e.notification.data.url)||'./')+(inc?'?fokus=1':''))}))});
 // Push-Dienst hat das Abonnement erneuert: neu beim Server anmelden geht hier nicht (kein Token); die App meldet es beim nächsten Start neu an (pushSync)
