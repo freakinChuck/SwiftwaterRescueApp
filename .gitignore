@@ -1,6 +1,12 @@
-api/data/*.sqlite
-api/data/hydro_locations.json
-# Deploy-Konfigurationen (Test, Prod, …) nur lokal, Vorlage bleibt im Repo
+# Laufzeitdaten der API (Datenbank, Caches) nie einchecken
+web/api/data/*.sqlite
+web/api/data/*.sqlite-*
+web/api/data/hydro_locations.json
+web/api/data/overpass/
+web/api/data/air/
+web/api/data/deployed.txt
+# Deploy-Konfigurationen (Test, Prod, …) nur lokal, Vorlage scripts/deploy.example.json bleibt im Repo
 deploy.*.json
 !deploy.example.json
-api/data/overpass/
+# Lokale Werkzeuge
+node_modules/

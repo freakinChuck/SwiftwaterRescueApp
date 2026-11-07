@@ -23,6 +23,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **RB-09** – Zugangsdaten werden nie ins Repository eingecheckt (AG).
 - **RB-10** – Auslieferung per Skript aus einem eingecheckten Git-Stand, mit Syntaxprüfung auf dem Server; Konfiguration und Datenbank werden nie überschrieben (AG).
 - **RB-11** – Test-, Entwicklungs- und Produktivsystem sind an unterschiedlich umrandeten App-Symbolen erkennbar (#56).
+- **RB-12** – Übersichtliche Ordnerstruktur im Repository: Web-App und API in einem eigenen Ordner, der dem Webroot auf dem Server entspricht (Adressen bleiben gleich), daneben Platz für künftige native Apps, Dokumentation und Skripte (#109).
 
 ## 2. Anmeldung und Konto (KO)
 
