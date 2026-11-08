@@ -1258,6 +1258,7 @@ function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) re
   $ids = array_values(array_unique(array_column($q, 0))); $in = implode(',', array_fill(0, count($ids), '?'));
   $subs = []; if (pushOk()) { $s = $db->prepare("SELECT s.* FROM push_subs s JOIN users u ON u.id=s.user_id WHERE u.active=1 AND s.user_id IN ($in)"); $s->execute($ids); $subs = $s->fetchAll(); }
   $mh = curl_multi_init(); $hs = []; $jwt = [];
+  alog('info', 'push', 'Push ausgelöst', ['msgs' => count($q), 'users' => count($ids), 'web_subs' => count($subs), 'app' => fcmOk() ? 1 : 0]); // zeigt, dass überhaupt gesendet wird
   $hn = fcmQueue($mh, $q, $ids); // native Apps (Issue #108), im selben curl_multi
   foreach ($q as [$u, $m]) foreach ($subs as $sub) { if ((int)$sub['user_id'] !== $u) continue;
     $pu = parse_url($sub['endpoint']); if (!$pu || !in_array($pu['scheme'] ?? '', ['https', 'http'], true)) continue;
@@ -1288,6 +1289,8 @@ function fcmWhy() { global $cfg; $f = $cfg['fcm'] ?? null; if (fcmOk()) return n
   if (!function_exists('openssl_sign') || !function_exists('curl_multi_init')) return 'PHP ohne openssl oder curl';
   return 'Datei des Firebase-Dienstkontos ungültig (project_id, client_email oder private_key fehlt): ' . basename($f); }
 function fcmOk() { return fcmCfg() !== null; }
+// Gibt es Apps, die sich je für Push angemeldet haben oder als App angemeldet sind? Dann ist fehlendes FCM eine Warnung wert, sonst nicht (reine Web-Installation)
+function pushNativeAny() { global $db; static $r = null; if ($r === null) { try { $r = (bool)$db->query("SELECT 1 FROM sessions LIMIT 1")->fetchColumn() || (bool)$db->query("SELECT 1 FROM push_native LIMIT 1")->fetchColumn(); } catch (Throwable $e) { $r = false; } } return $r; }
 function fcmToken($renew = false) { $c = fcmCfg(); $f = __DIR__ . '/data/fcm_token.json'; if (!is_dir(dirname($f))) @mkdir(dirname($f), 0775, true);
   $t = json_decode((string)@file_get_contents($f), true);
   if (!$renew && is_array($t) && ($t['email'] ?? '') === $c['client_email'] && (int)($t['exp'] ?? 0) > time() + 300 && !empty($t['token'])) return $t['token'];
@@ -1317,7 +1320,7 @@ function fcmMsg($tok, $pf, $u, $m) { $tag = (string)($m['tag'] ?? 'sw'); $cr = !
   return ['message' => $o]; }
 // Anfragen an FCM in $mh einreihen; Rückgabe [[handle, push_native.id], …]
 function fcmQueue($mh, $q, $ids) { global $db, $cfg;
-  if (!fcmOk()) { if (!empty($cfg['fcm'])) alog('warn', 'push', 'App-Push nicht gesendet', ['why' => fcmWhy()]); return []; }
+  if (!fcmOk()) { if (!empty($cfg['fcm']) || pushNativeAny()) alog('warn', 'push', 'App-Push nicht gesendet', ['why' => fcmWhy()]); return []; }
   $in = implode(',', array_fill(0, count($ids), '?'));
   $s = $db->prepare("SELECT n.* FROM push_native n JOIN users u ON u.id=n.user_id LEFT JOIN sessions se ON se.id=n.session_id WHERE u.active=1 AND (n.session_id IS NULL OR se.id IS NOT NULL) AND n.user_id IN ($in)");
   $s->execute($ids); $ns = $s->fetchAll();
@@ -2862,7 +2865,8 @@ switch ($route) {
   out(['ok' => true]);
 
  /* ---------- Web-Push (Issue #67): Abonnement des Geräts ---------- */
- case 'push/key': out(['enabled' => pushOk(), 'key' => pushOk() ? vapid()['pub'] : null, 'native' => fcmOk() ? 1 : 0]); // öffentlicher VAPID-Schlüssel für pushManager.subscribe; native = FCM eingerichtet (Issue #108)
+ case 'push/key': if ($sid && !fcmOk()) alog('warn', 'push', 'App fragt nach Push, App-Push ist nicht eingerichtet', ['why' => fcmWhy()]); // App-Sitzung ($sid): sonst bliebe das Log stumm
+  out(['enabled' => pushOk(), 'key' => pushOk() ? vapid()['pub'] : null, 'native' => fcmOk() ? 1 : 0]); // öffentlicher VAPID-Schlüssel für pushManager.subscribe; native = FCM eingerichtet (Issue #108)
  case 'push/subscribe': // endpoint, keys: {p256dh, auth}; ein Gerät gehört immer der zuletzt angemeldeten Person
   if (!pushOk()) fail('Push ist auf diesem Server nicht verfügbar (PHP ohne openssl/curl)');
   $ep = (string)($in['endpoint'] ?? ''); $k = $in['keys'] ?? [];
