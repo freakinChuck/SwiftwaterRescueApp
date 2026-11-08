@@ -102,7 +102,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
         context: context,
         builder: (d) => SimpleDialog(title: Text('Spezialrolle von ${js(p['name'])}'), children: [
               _roleOpt(d, null, 'Keine Spezialrolle', null, cur == null),
-              for (final r in s.roles) _roleOpt(d, ji(r['id']), js(r['name']), hexColor(r['color']), cur == ji(r['id'])),
+              for (final r in s.rolesFor(cur)) _roleOpt(d, ji(r['id']), js(r['name']), hexColor(r['color']), cur == ji(r['id'])),
             ]));
     if (r == null || r.$1 == cur) return;
     await s.act('incident/role/set', {'user_id': uid, 'role_id': r.$1});
@@ -190,6 +190,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
     final n = TextEditingController(text: js(e?['name'])), de = TextEditingController(text: js(e?['descr'])), ab = TextEditingController(text: js(e?['abbr']));
     int? role = ji(e?['role_id']);
     if (role != null && s.roleOf(role) == null) role = null;
+    final role0 = role; // bisherige Rolle bleibt wählbar (rolesFor)
     var color = js(e?['color']).toLowerCase(), colOn = color.isNotEmpty, pick = id == null, err = '';
     if (color.isEmpty) color = '#e53935';
     final cols = [..._extColors, if (!_extColors.any((c) => c.$1 == color)) (color, 'Aktuelle Farbe')];
@@ -205,7 +206,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
             decoration: const InputDecoration(labelText: 'Spezialrolle'),
             items: [
               const DropdownMenuItem<int?>(value: null, child: Text('Keine Spezialrolle')),
-              for (final r in s.roles)
+              for (final r in s.rolesFor(role0))
                 DropdownMenuItem<int?>(
                     value: ji(r['id']),
                     child: Row(children: [Icon(Icons.circle, size: 12, color: hexColor(r['color'])), const SizedBox(width: 6), Flexible(child: Text(js(r['name']), overflow: TextOverflow.ellipsis))])),

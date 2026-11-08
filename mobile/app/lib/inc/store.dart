@@ -130,6 +130,13 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   bool shares(String? k) => jb(modeOf(k)['share_location']);
   bool leadMode(String? k) => jb(modeOf(k)['lead_rights']);
   J? roleOf(dynamic id) => id == null ? null : roles.where((r) => '${r['id']}' == '$id').firstOrNull;
+  /// Spezialrolle bzw. Einrückoption beim Typ des laufenden Einsatzes wählbar (kind_off, Issue #148, kindOk in index.html)
+  bool kindOk(J x) {
+    final k = ji(jm(inc?['kind'])['id']);
+    return k == null || !(x['kind_off'] is List && (x['kind_off'] as List).any((v) => ji(v) == k));
+  }
+  /// wählbare Spezialrollen; die aktuelle bleibt, auch wenn sie beim Typ nicht wählbar ist
+  List<J> rolesFor(int? cur) => roles.where((r) => kindOk(r) || ji(r['id']) == cur).toList();
   bool can(String p) => (me?['perms'] is List) && (me!['perms'] as List).contains(p);
   bool get isAdmin => jb(me?['is_admin']);
 

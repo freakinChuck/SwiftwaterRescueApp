@@ -77,6 +77,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EI-23** – Einzelpersonen fürs Aufgebot werden aus einer filterbaren Liste aller Personen gewählt, ohne Texteingabe (#90).
 - **EI-24** – In der Verwaltung steht beim Namen einer Person ein Farbpunkt je Einsatzgruppe (Benutzer, Einsatzgruppen, Personenauswahl, Abwesenheiten, Statistik pro Person, Übungen, Replay ausser anonym). Ob eine Gruppe dafür zählt, stellt man an der Gruppe ein («Farbe beim Namen anzeigen», Standard an); das Infofenster der Einsatz-App (EK-09) zeigt immer alle Gruppen (#105).
 - **EI-25** – Läuft ein Einsatz, den man sehen darf, aber nicht angenommen hat (auch nach dem Verlassen), steht oben auf der Karte unter dem Einsatz ein gelber Hinweis «Einsatz noch nicht angenommen»; Antippen öffnet das Menü mit der Auswahl der Einrückoption. Nicht für die Übungsleitung. Web-App und native App (#155).
+- **EI-26** – Neue Einsatztypen können von einer Vorlage ausgehen: «Suche & Rettung» (alle Funktionen), «Hochwasser» (ohne Suchgebiet, Fliessgeschwindigkeit, Flussdistanz), «Freie Übung» (zusätzlich ohne Rettlinge, öffentliche Ansicht, Pegel & Abfluss, Fahrten); die übrigen Einstellungen kommen vom gewählten Einsatztyp (#148).
+- **EI-27** – Spezialrollen und Einrückoptionen sind je Einsatztyp wählbar oder nicht; jeder aktive Typ behält mindestens eine Einrückoption. Wer eine Rolle schon hat, behält sie; ein neuer Typ übernimmt die Auswahl vom Vorlagen-Typ (#148).
 
 ## 5. Karte (KA)
 
@@ -181,9 +183,10 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo (#35, #79, #96, #125, #105).
+- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo, Fliessgeschwindigkeit, Fahrten im Einsatzlog (#35, #79, #96, #125, #105, #148).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
+- **FU-04** – Das Suchgebiet braucht die Fliessgeschwindigkeit; ohne Fliessgeschwindigkeit fehlen Eingabe und Treibzeit des Einsatzes, ohne «Fahrten im Einsatzlog» erkennt der Server keine Fahrten (#148).
 
 ## 15. Einsatzlog und Auswertung (LO)
 

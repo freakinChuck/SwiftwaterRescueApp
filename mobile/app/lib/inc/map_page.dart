@@ -1195,7 +1195,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   /// nicht für die Übungsleitung, sie wird nicht alarmiert). Antippen öffnet das Menü mit der Auswahl der Einrückoption.
   Widget? _joinBan() {
     final st = s.st, m = s.myPart;
-    if (s.inc == null || st == null || jb(st['blocked']) || s.exLead || s.joined || !s.modes.any((x) => jb(x['active']))) return null;
+    if (s.inc == null || st == null || jb(st['blocked']) || s.exLead || s.joined || !s.modes.any((x) => jb(x['active']) && s.kindOk(x))) return null;
     final t = m != null && m['left_at'] != null ? 'Du nimmst nicht mehr an diesem Einsatz teil.' : 'Einsatz noch nicht angenommen.';
     return Padding(
         padding: const EdgeInsets.only(top: 6),

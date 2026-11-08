@@ -366,7 +366,7 @@ class _IncMenuState extends State<IncMenu> {
                 child: const Text('✨ Lagezusammenfassung')),
           ])));
     }
-    final act = s.modes.where((x) => jb(x['active'])).toList();
+    final act = s.modes.where((x) => jb(x['active']) && s.kindOk(x)).toList();
     String mLabel(J x) => '${js(x['name'])}${jb(x['share_location']) ? '' : ' (ohne Standort)'}';
     if (s.exLead) {
       out.add(MCard(title: 'Übungsleitung', children: [
@@ -488,7 +488,7 @@ class _IncMenuState extends State<IncMenu> {
 
   /// Auswahl der Spezialrolle (roleSel), null = keine
   Widget _roleSel(int? cur, void Function(int?) onChanged, {String? label}) {
-    final ids = s.roles.map((r) => ji(r['id'])).toSet();
+    final rl = s.rolesFor(cur), ids = rl.map((r) => ji(r['id'])).toSet();
     return DropdownButtonFormField<int?>(
       key: ValueKey('rs$cur'),
       initialValue: ids.contains(cur) ? cur : null,
@@ -496,7 +496,7 @@ class _IncMenuState extends State<IncMenu> {
       decoration: InputDecoration(labelText: label, isDense: true),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('Keine Spezialrolle')),
-        ...s.roles.map((r) => DropdownMenuItem<int?>(value: ji(r['id']), child: Text(js(r['name']), overflow: TextOverflow.ellipsis))),
+        ...rl.map((r) => DropdownMenuItem<int?>(value: ji(r['id']), child: Text(js(r['name']), overflow: TextOverflow.ellipsis))),
       ],
       onChanged: (v) {
         if (v != cur) onChanged(v);
