@@ -106,6 +106,11 @@ class _IncMenuState extends State<IncMenu> {
             }),
         if (my) IconButton(tooltip: 'Meine Einsätze', icon: const Text('📋', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html#meine')),
         if (adm) IconButton(tooltip: 'Verwaltung', icon: const Text('⚙', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html')),
+        // Zur Kontenliste (Auswahl der Backends): am iPhone gibt es keine Zurück-Taste
+        IconButton(
+            tooltip: 'Konten / Server wechseln',
+            icon: const Icon(Icons.swap_horiz),
+            onPressed: () => Navigator.of(c, rootNavigator: true).popUntil((r) => r.isFirst)),
         IconButton(tooltip: 'Menü schliessen', icon: const Icon(Icons.close), onPressed: map.closeMenu),
       ]),
     );

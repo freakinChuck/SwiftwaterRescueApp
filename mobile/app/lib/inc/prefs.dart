@@ -351,6 +351,8 @@ class _PrefsPageState extends State<PrefsPage> {
             OutlinedButton(onPressed: _photo, child: const Text('Profilbild ändern')),
             OutlinedButton(onPressed: _pw, child: const Text('Passwort ändern')),
             OutlinedButton(onPressed: _busy ? null : _logout, child: const Text('Abmelden')),
+            OutlinedButton(
+                onPressed: () => Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst), child: const Text('Konten / Server wechseln')),
           ])),
       if (_sess.isNotEmpty) ...[
         _h5('Angemeldete Apps'),
