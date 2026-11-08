@@ -110,6 +110,25 @@ class _HomeState extends State<HomePage> {
     await _changed();
   }
 
+  Future<void> _rename(Account a) async {
+    final c = TextEditingController(text: a.alias);
+    final v = await showDialog<String>(
+        context: context,
+        builder: (d) => AlertDialog(
+              title: const Text('Bezeichnung'),
+              content: TextField(
+                  controller: c,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(labelText: 'Name in der Kontenliste', hintText: a.org.isNotEmpty ? a.org : hostPath(a.base), helperText: 'Leer = ${a.org.isNotEmpty ? 'Organisation' : 'Server-Adresse'}', border: const OutlineInputBorder()),
+                  onSubmitted: (t) => Navigator.pop(d, t)),
+              actions: [TextButton(onPressed: () => Navigator.pop(d), child: const Text('Abbrechen')), FilledButton(onPressed: () => Navigator.pop(d, c.text), child: const Text('Speichern'))],
+            ));
+    if (v == null) return;
+    await Accounts.update(a.id, (x) => x.alias = v.trim());
+    await _changed();
+  }
+
   Future<void> _setActive(Account a, bool on) async {
     await Accounts.update(a.id, (x) => x.active = on);
     if (on) await pollOne(a..active = true);
@@ -166,7 +185,7 @@ class _HomeState extends State<HomePage> {
               Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(a.label, style: th.textTheme.titleMedium),
-                Text('${a.name.isNotEmpty ? a.name : a.username} · ${hostPath(a.base)}', style: TextStyle(fontSize: 12, color: th.hintColor), overflow: TextOverflow.ellipsis),
+                Text('${a.name.isNotEmpty ? a.name : a.username} · ${a.alias.isNotEmpty && a.org.isNotEmpty ? '${a.org} · ' : ''}${hostPath(a.base)}', style: TextStyle(fontSize: 12, color: th.hintColor), overflow: TextOverflow.ellipsis),
               ])),
               Switch(value: a.active, onChanged: a.loggedOut ? null : (v) => _setActive(a, v)),
               PopupMenuButton<String>(
@@ -176,10 +195,12 @@ class _HomeState extends State<HomePage> {
                     await Navigator.push(context, MaterialPageRoute(builder: (_) => LoginPage(relogin: a)));
                     await _changed();
                   }
+                  if (v == 'rename') _rename(a);
                   if (v == 'remove') _remove(a);
                 },
                 itemBuilder: (_) => [
                   const PopupMenuItem(value: 'open', child: Text('Öffnen')),
+                  const PopupMenuItem(value: 'rename', child: Text('Umbenennen')),
                   const PopupMenuItem(value: 'login', child: Text('Neu anmelden')),
                   const PopupMenuItem(value: 'remove', child: Text('Entfernen')),
                 ],
@@ -245,7 +266,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginState extends State<LoginPage> {
-  final _srv = TextEditingController(), _u = TextEditingController(), _p = TextEditingController();
+  final _srv = TextEditingController(), _alias = TextEditingController(), _u = TextEditingController(), _p = TextEditingController();
   bool _busy = false;
   String? _err;
 
@@ -256,6 +277,7 @@ class _LoginState extends State<LoginPage> {
     if (r != null) {
       _srv.text = r.base;
       _u.text = r.username;
+      _alias.text = r.alias;
     }
   }
 
@@ -284,6 +306,7 @@ class _LoginState extends State<LoginPage> {
           token: api.token!,
           name: '${me['name'] ?? ''}',
           org: org,
+          alias: _alias.text.trim(),
           active: old?.active ?? true,
           added: old?.added ?? DateTime.now().millisecondsSinceEpoch,
           uid: (me['id'] as num?)?.toInt() ?? 0);
@@ -318,6 +341,11 @@ class _LoginState extends State<LoginPage> {
               keyboardType: TextInputType.url,
               autocorrect: false,
               decoration: const InputDecoration(labelText: 'Server-Adresse', hintText: 'z. B. https://example.ch/swiftwater/', border: OutlineInputBorder())),
+          const SizedBox(height: 12),
+          TextField(
+              controller: _alias,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(labelText: 'Bezeichnung (optional)', hintText: 'z. B. SLRG Bern', helperText: 'Name in der Kontenliste, leer = Organisation des Servers', border: OutlineInputBorder())),
           const SizedBox(height: 12),
           TextField(controller: _u, autocorrect: false, decoration: const InputDecoration(labelText: 'Benutzername', border: OutlineInputBorder()), autofillHints: const [AutofillHints.username]),
           const SizedBox(height: 12),
