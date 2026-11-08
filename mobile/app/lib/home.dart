@@ -146,7 +146,13 @@ class _HomeState extends State<HomePage> {
           child: Text(s.err != null ? 'Fehler: ${s.err} · zuletzt erreicht ${_ago(s.at)}' : 'Abgefragt ${_ago(s.at)}',
               style: TextStyle(fontSize: 12, color: s.err != null ? th.colorScheme.error : th.hintColor))));
       final p = _push[a.id];
-      if (p == 'server') rows.add(Text('Push: auf diesem Server nicht eingerichtet${Platform.isIOS ? ' – Alarme nur bei offener App' : ''}', style: TextStyle(fontSize: 12, color: th.hintColor)));
+      final pt = switch (p) {
+        'server' => 'Push: auf diesem Server nicht eingerichtet${Platform.isIOS ? ' – Alarme nur bei offener App' : ''}',
+        'off' => Platform.isIOS ? 'Push: in dieser App nicht eingebaut (Firebase-Angaben fehlten beim Bauen) – Alarme nur bei offener App' : null,
+        'pending' => 'Push: noch nicht angemeldet${pushIssue != null ? ' – $pushIssue' : ''}',
+        _ => pushIssue != null ? 'Push: $pushIssue' : null,
+      };
+      if (pt != null) rows.add(Text(pt, style: TextStyle(fontSize: 12, color: p == 'server' ? th.hintColor : th.colorScheme.error)));
     }
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),

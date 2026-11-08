@@ -107,6 +107,8 @@ Lokal liest Android den Signierschlüssel aus `android/key.properties` (`storeFi
 3. Die Werte API-Schlüssel, Projekt-ID, Sender-ID und App-ID je Plattform als Geheimnisse `FCM_*` hinterlegen, oder lokal mit `--dart-define=FCM_API_KEY=…` usw. bauen. Es braucht weder `google-services.json` noch `GoogleService-Info.plist`.
 4. Server: Unter Projekteinstellungen → Dienstkonten einen privaten Schlüssel erzeugen. Die JSON-Datei ausserhalb des Webroots oder in `web/api/data/` ablegen und in `api/config.php` eintragen: `'fcm' => __DIR__ . '/data/firebase-service-account.json'`. Die Datei nie einchecken.
 
+Die Startseite der App nennt je Konto, woran Push scheitert (nicht eingebaut, Mitteilungen ausgeschaltet, kein APNs-Token, kein Firebase-Token, Anmeldung beim Server). Die Pipeline warnt bei fehlenden `FCM_*`-Geheimnissen und meldet `aps-environment` des signierten IPA.
+
 Ein Server ohne Dienstkonto meldet `push/key` mit `native: 0`. Die App zeigt dann «Push auf diesem Server nicht eingerichtet» und überwacht nur per Abfrage. Mehrere Backends können dasselbe Firebase-Projekt nutzen; die Nachricht nennt Server und Person (`srv`, `uid`), damit die App sie dem richtigen Konto zuordnet.
 
 ### Kritische Hinweise unter iOS

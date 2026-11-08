@@ -22,6 +22,9 @@ bool get pushBuilt => _apiKey.isNotEmpty && _project.isNotEmpty && _sender.isNot
 
 bool pushReady = false;
 
+/// Letztes Hindernis bei der Anmeldung für Push (für die Anzeige auf der Startseite), null = keines.
+String? pushIssue;
+
 Future<bool> _initFirebase() async {
   if (!pushBuilt) return false;
   if (Firebase.apps.isNotEmpty) return true;
@@ -31,6 +34,7 @@ Future<bool> _initFirebase() async {
     return true;
   } catch (e) {
     debugPrint('Firebase: $e');
+    pushIssue = 'Firebase nicht startbar ($e)';
     return false;
   }
 }
@@ -92,15 +96,24 @@ Future<void> syncPush({bool force = false}) async {
   String? tok;
   try {
     if (Platform.isIOS) {
-      await FirebaseMessaging.instance.requestPermission(alert: true, sound: true, badge: true, criticalAlert: true);
-      if (await FirebaseMessaging.instance.getAPNSToken() == null) return; // noch nicht von Apple erhalten, später erneut
+      final ns = await FirebaseMessaging.instance.requestPermission(alert: true, sound: true, badge: true, criticalAlert: true);
+      if (ns.authorizationStatus == AuthorizationStatus.denied) {
+        pushIssue = 'Mitteilungen sind in den iOS-Einstellungen für die App ausgeschaltet';
+        return;
+      }
+      if (await FirebaseMessaging.instance.getAPNSToken() == null) {
+        pushIssue = 'noch kein Geräte-Token von Apple (APNs) erhalten';
+        return; // später erneut
+      }
     }
     // ignore: deprecated_member_use
     tok = await FirebaseMessaging.instance.getToken();
   } catch (e) {
     debugPrint('FCM-Token: $e');
+    pushIssue = 'kein Firebase-Token ($e)';
   }
   if (tok == null) return;
+  pushIssue = null;
   for (final a in await Accounts.load()) {
     final k = 'push_${a.id}', had = await prefs.getString(k);
     final want = a.active && !a.loggedOut;
@@ -119,6 +132,7 @@ Future<void> syncPush({bool force = false}) async {
       }
     } catch (e) {
       debugPrint('Push ${a.label}: $e');
+      pushIssue = 'Anmeldung beim Server fehlgeschlagen ($e)';
     }
   }
 }
