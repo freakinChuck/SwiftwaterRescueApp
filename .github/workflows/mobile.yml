@@ -3,6 +3,7 @@
 # Geheimnisse (Repository → Settings → Secrets and variables → Actions), alle optional, siehe mobile/README.md:
 #   Android: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 #   iOS:     IOS_CERT_P12_BASE64, IOS_CERT_PASSWORD, IOS_PROFILE_BASE64, IOS_TEAM_ID, IOS_EXPORT_METHOD (app-store-connect | ad-hoc | enterprise)
+#   Upload:  ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (App-Store-Connect-API-Schlüssel; lädt signierte IPAs von main nach TestFlight)
 #   Push:    FCM_API_KEY, FCM_PROJECT_ID, FCM_SENDER_ID, FCM_APP_ID_ANDROID, FCM_APP_ID_IOS
 # Ein Tag «mobile-v<Version>» (z. B. mobile-v1.2.0) setzt die Version und hängt die Pakete an ein GitHub-Release.
 name: Native Apps
@@ -191,6 +192,33 @@ jobs:
           name: ios
           path: mobile/app/out/*
           if-no-files-found: error
+      # Nur auf main (Push oder von Hand), nur signiert für den App Store: IPA nach App Store Connect (TestFlight)
+      - name: Nach App Store Connect hochladen
+        if: github.ref == 'refs/heads/main' && steps.sign.outputs.signed == '1'
+        env:
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          KEY: ${{ secrets.ASC_KEY_P8 }}
+          METHOD: ${{ secrets.IOS_EXPORT_METHOD }}
+        shell: bash
+        run: |
+          if [ "${METHOD:-app-store-connect}" != "app-store-connect" ]; then
+            echo "::notice::IOS_EXPORT_METHOD ist $METHOD: kein Upload nach App Store Connect"; exit 0
+          fi
+          if [ -z "$KEY_ID" ] || [ -z "$ISSUER" ] || [ -z "$KEY" ]; then
+            echo "::warning::ASC_KEY_ID, ASC_ISSUER_ID oder ASC_KEY_P8 fehlt: kein Upload nach App Store Connect"; exit 0
+          fi
+          mkdir -p ~/.appstoreconnect/private_keys
+          f=~/.appstoreconnect/private_keys/AuthKey_"$KEY_ID".p8
+          # Inhalt der .p8-Datei direkt oder base64-kodiert
+          if printf '%s' "$KEY" | grep -q 'BEGIN PRIVATE KEY'; then printf '%s\n' "$KEY" > "$f"; else printf '%s' "$KEY" | base64 -D > "$f"; fi
+          ipa=$(ls out/*.ipa | head -1)
+          xcrun altool --upload-app -t ios -f "$ipa" --apiKey "$KEY_ID" --apiIssuer "$ISSUER"
+          echo "::notice::$(basename "$ipa") (Build ${{ github.run_number }}) an App Store Connect übergeben, erscheint nach der Verarbeitung in TestFlight"
+      - name: API-Schlüssel aufräumen
+        if: always()
+        shell: bash
+        run: rm -rf ~/.appstoreconnect/private_keys
       - name: Release
         if: startsWith(github.ref, 'refs/tags/mobile-v')
         uses: softprops/action-gh-release@v2
