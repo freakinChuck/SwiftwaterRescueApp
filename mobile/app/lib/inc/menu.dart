@@ -94,9 +94,22 @@ class _IncMenuState extends State<IncMenu> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 6, 4, 4),
       child: Row(children: [
+        // Servername antippen = zur Kontenliste (Auswahl der Backends); am iPhone gibt es keine Zurück-Taste
         Expanded(
-            child: Text(s.acc.label.isEmpty ? 'Swiftwater Rescue' : s.acc.label,
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(c).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
+            child: Tooltip(
+                message: 'Konten / Server wechseln',
+                child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => Navigator.of(c, rootNavigator: true).popUntil((r) => r.isFirst),
+                    child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(children: [
+                          Flexible(
+                              child: Text(s.acc.label.isEmpty ? 'Swiftwater Rescue' : s.acc.label,
+                                  maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(c).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.swap_horiz, size: 18),
+                        ]))))),
         IconButton(
             tooltip: 'Profil${me != null ? ' (${js(me['name'])})' : ''}',
             icon: const Text('👤', style: TextStyle(fontSize: 20)),
@@ -106,11 +119,6 @@ class _IncMenuState extends State<IncMenu> {
             }),
         if (my) IconButton(tooltip: 'Meine Einsätze', icon: const Text('📋', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html#meine')),
         if (adm) IconButton(tooltip: 'Verwaltung', icon: const Text('⚙', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html')),
-        // Zur Kontenliste (Auswahl der Backends): am iPhone gibt es keine Zurück-Taste
-        IconButton(
-            tooltip: 'Konten / Server wechseln',
-            icon: const Icon(Icons.swap_horiz),
-            onPressed: () => Navigator.of(c, rootNavigator: true).popUntil((r) => r.isFirst)),
         IconButton(tooltip: 'Menü schliessen', icon: const Icon(Icons.close), onPressed: map.closeMenu),
       ]),
     );
