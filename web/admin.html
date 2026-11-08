@@ -672,8 +672,10 @@ function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?n
 let opUrls=[],opDef=[],opOff=[];
 async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all([api('settings'),api('overpass/stats')])}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   opUrls=[...s.overpass_urls];opDef=s.overpass_default;opOff=[...(s.overpass_off||[])];
-  el.innerHTML=`<h2>Gewässerdaten</h2><div class="mut">Das Gewässernetz für Suchgebiet und Flussdistanz (OpenStreetMap) holt der Server und speichert es zwischen: zuerst aus der eigenen PostGIS-Datenbank, sofern eingerichtet, sonst über Overpass. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal hinaus. Antwortet keine Quelle, verwendet der Server ältere Daten (bis 7 Tage).</div>
-    ${pgHtml(s)}
+  wOrd=[...(s.water_order||[])];
+  el.innerHTML=`<h2>Gewässerdaten</h2><div class="mut">Das Gewässernetz für Suchgebiet und Flussdistanz (OpenStreetMap) holt der Server und speichert es zwischen. Er fragt die eingerichteten Quellen in der Reihenfolge unten ab, bis eine antwortet: die eigene PostGIS-Datenbank direkt, die PostGIS-API oder die Overpass-Server. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal hinaus. Antwortet keine Quelle, verwendet der Server ältere Daten (bis 7 Tage).</div>
+    ${s.water_order?'<h3>Reihenfolge der Quellen</h3><div id="wOrd"></div>':''}
+    ${pgHtml(s)}${pgaHtml(s)}
     <h3>Overpass</h3>
     <label class="chk"><input type="checkbox" id="opOn" ${s.overpass_on?'checked':''}> Zugriff auf Overpass</label>
     <div class="mut">Ausgeschaltet fragen weder der Server noch die Geräte Overpass ab. Suchgebiet und Flussdistanz erhalten dann nur noch Daten aus dem Zwischenspeicher (auch ältere); ohne solche erscheint das Suchgebiet als Kreis um den PLS, und die Flussdistanz ist nicht verfügbar. Gilt sofort.</div>
@@ -685,6 +687,8 @@ async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all(
     <h3>Verwendung und Verfügbarkeit</h3>${opStats(os,s.overpass_urls)}`;
   $('#opOn').onchange=e=>{const c=e.target;c.disabled=true;api('settings/save',{overpass_on:c.checked?1:0}).catch(x=>{c.checked=!c.checked;fail(x)}).finally(()=>{c.disabled=false})};
   if(s.postgis)pgBind();
+  if(s.pgapi)pgaBind();
+  if(s.water_order)drawWOrd(s);
   $('#opSr').onclick=()=>{if(confirm('Statistik der Overpass-Server zurücksetzen?'))api('overpass/stats/reset',{}).then(loadOp).catch(fail)};
   $('#opSv').onclick=()=>api('settings/save',{overpass_ttl:$('#opT').value}).then(()=>{toast('Gespeichert.');loadOp()}).catch(fail);
   $('#opA').onclick=()=>{const u=$('#opN').value.trim();if(!/^https:\/\/[^/?#@]+\//i.test(u))return toast('Bitte eine vollständige https-Adresse angeben, z. B. https://overpass-api.de/api/interpreter','err');
@@ -695,11 +699,33 @@ async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all(
     api('settings/save',{overpass_urls:opUrls,overpass_off:opOff.filter(u=>opUrls.includes(u))}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.');loadOp()}).catch(fail)};
   $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[],overpass_off:[]}).then(()=>{toast('Gespeichert.');loadOp()}).catch(fail)};
   drawOpList()}
+// Reihenfolge der Quellen fürs Gewässernetz (water_order): ↑/↓, sofort gespeichert; nicht eingerichtete überspringt der Server
+let wOrd=[];
+function drawWOrd(s){const el=$('#wOrd'),rd=s.water_ready||{},n=wOrd.length,act=wOrd.filter(k=>rd[k]);
+  el.innerHTML=`<div class="mut">Der Server fragt die Quellen in dieser Reihenfolge ab und nimmt die erste Antwort. Nicht eingerichtete oder ausgeschaltete Quellen überspringt er. Antwortet keine, fragt das Gerät die Overpass-Server direkt (sofern Overpass eingeschaltet ist).</div>
+    <div class="tw"><table><tbody>${wOrd.map((k,i)=>`<tr><td style="width:2rem">${i+1}.</td><td${rd[k]?'':' style="opacity:.55"'}>${esc(s.water_src[k]||k)} ${rd[k]?'<b>✓ aktiv</b>':'<span class="mut">(nicht eingerichtet oder ausgeschaltet)</span>'}</td><td class="act"><button data-wo="${i}" data-d="-1" ${i?'':'disabled'} aria-label="Nach oben" title="Früher abfragen">↑</button><button data-wo="${i}" data-d="1" ${i<n-1?'':'disabled'} aria-label="Nach unten" title="Später abfragen">↓</button></td></tr>`).join('')}</tbody></table></div>
+    ${act.length?'':'<div class="mut">⚠ Keine Quelle aktiv: Suchgebiet und Flussdistanz erhalten nur noch Daten aus dem Zwischenspeicher.</div>'}`;
+  el.querySelectorAll('[data-wo]').forEach(b=>b.onclick=()=>{const i=+b.dataset.wo,j=i+ +b.dataset.d,o=[...wOrd];[o[i],o[j]]=[o[j],o[i]];
+    el.querySelectorAll('button').forEach(x=>x.disabled=true);api('settings/save',{water_order:o}).then(()=>{wOrd=o;toast('Reihenfolge gespeichert. Gilt ab der nächsten Abfrage.','ok');drawWOrd(s)}).catch(x=>{fail(x);drawWOrd(s)})})}
+// PostGIS-API (github.com/ELSSwift/PostGISApi): Adresse, Layer, API-Key (nie angezeigt, leer = behalten), Test mit Beispielabfrage um Bern
+function pgaHtml(s){const p=s.pgapi;if(!p)return'';
+  return`<h3>PostGIS-API</h3><div class="mut">REST-Dienst <a href="https://github.com/ELSSwift/PostGISApi" target="_blank" rel="noopener">PostGISApi</a> vor einer PostGIS-Datenbank, z. B. als Docker-Container auf einem eigenen Server. Für Hostings ohne PostgreSQL-Treiber. Der Layer muss die Eigenschaften <code>waterway</code> und <code>name</code> freigeben (Tabelle wie bei PostGIS) und als ID den OSM-Weg haben. Der API-Key braucht die Rolle <code>read</code>; bei einem öffentlichen Layer geht es ohne.</div>
+    ${p.curl?'':'<div class="mut">⚠ Auf diesem Webserver fehlt die PHP-Erweiterung <b>curl</b>. Ohne sie bleibt die PostGIS-API unbenutzt.</div>'}
+    <label class="chk"><input type="checkbox" id="paOn" ${p.on?'checked':''}> PostGIS-API verwenden${p.on?(p.ready?' <b>✓ aktiv</b>':' <span class="mut">(nicht aktiv)</span>'):''}</label>
+    <div class="pgf"><label class="mut">Adresse<input id="paU" value="${esc(p.url)}" placeholder="z. B. https://gis.example.ch" autocomplete="off" inputmode="url"></label><label class="mut">Layer<input id="paL" value="${esc(p.layer)}" placeholder="${esc(s.pgapi_default.layer)}" autocomplete="off"></label>
+    <label class="mut">API-Key (Header X-API-Key)<input id="paK" type="password" autocomplete="new-password" placeholder="${p.key_set?'gespeichert, leer lassen zum Behalten':'kein Key gespeichert'}"></label></div>
+    <div class="row"><button id="paSv" class="pri">PostGIS-API speichern</button><button id="paTs">Verbindung testen</button>${p.key_set?'<button id="paKx">API-Key entfernen</button>':''}</div><div class="mut" id="paR"></div>`}
+function pgaBind(){const v=()=>({on:$('#paOn').checked?1:0,url:$('#paU').value.trim(),layer:$('#paL').value.trim(),key:$('#paK').value});
+  $('#paSv').onclick=()=>api('settings/save',{pgapi:v()}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.','ok');loadOp()}).catch(fail);
+  $('#paTs').onclick=async e=>{const b=e.target,o=$('#paR');b.disabled=true;o.textContent='Wird getestet …';
+    try{const r=await api('pgapi/test',{cfg:v()});o.innerHTML=r.ok?`✓ Erreichbar in ${r.health_ms} ms${r.version?' (Version '+esc(r.version)+')':''}, Layer ${esc(r.geom)} mit SRID ${r.srid}${r.max?', höchstens '+r.max.toLocaleString('de-CH')+' je Antwort':''}. Beispiel 5 km um Bern: ${r.ways} Wege in ${r.query_ms} ms${r.names.length?' ('+esc(r.names.join(', '))+')':''}.${r.warn?' ⚠ '+esc(r.warn)+'.':''} Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}
+    catch(x){o.textContent='✗ '+x.message}b.disabled=false};
+  if($('#paKx'))$('#paKx').onclick=()=>{if(confirm('Gespeicherten API-Key der PostGIS-API entfernen?'))api('settings/save',{pgapi:{...v(),key:'',key_clear:1}}).then(loadOp).catch(fail)}}
 // PostGIS als Hauptquelle (Issue #131): Verbindung (Passwort nie angezeigt, leer = behalten), Test mit Beispielabfrage um Bern
 function pgHtml(s){const p=s.postgis;if(!p)return'';
-  return`<h3>PostGIS (Hauptquelle)</h3><div class="mut">Eigene PostgreSQL-Datenbank mit PostGIS und dem Gewässernetz aus OpenStreetMap (Auszug der Schweiz von Geofabrik; Einrichtung und wöchentliche Aktualisierung mit den Skripten in <code>scripts/postgis/</code>). Eingeschaltet fragt der Server zuerst sie ab. Antwortet sie nicht, gelten Zwischenspeicher und Overpass wie unten.</div>
+  return`<h3>PostGIS-Datenbank (direkt)</h3><div class="mut">Eigene PostgreSQL-Datenbank mit PostGIS und dem Gewässernetz aus OpenStreetMap (Auszug der Schweiz von Geofabrik; Einrichtung und wöchentliche Aktualisierung mit den Skripten in <code>scripts/postgis/</code>). Der Webserver verbindet sich direkt mit ihr. Wann sie gefragt wird, bestimmt die Reihenfolge oben.</div>
     ${p.ext?'':'<div class="mut">⚠ Auf diesem Webserver fehlt die PHP-Erweiterung <b>pdo_pgsql</b>. Ohne sie bleibt PostGIS unbenutzt, es gilt Overpass.</div>'}
-    <label class="chk"><input type="checkbox" id="pgOn" ${p.on?'checked':''}> PostGIS als Hauptquelle verwenden${p.on?(p.ready?' <b>✓ aktiv</b>':' <span class="mut">(nicht aktiv)</span>'):''}</label>
+    <label class="chk"><input type="checkbox" id="pgOn" ${p.on?'checked':''}> PostGIS-Datenbank verwenden${p.on?(p.ready?' <b>✓ aktiv</b>':' <span class="mut">(nicht aktiv)</span>'):''}</label>
     <div class="pgf"><label class="mut">Host<input id="pgH" value="${esc(p.host)}" placeholder="z. B. db.example.ch" autocomplete="off" inputmode="url"></label><label class="mut">Port<input id="pgP" type="number" min="1" max="65535" value="${p.port}"></label>
     <label class="mut">Datenbank<input id="pgD" value="${esc(p.db)}" autocomplete="off"></label><label class="mut">Benutzer (nur Leserechte)<input id="pgU" value="${esc(p.user)}" autocomplete="off"></label>
     <label class="mut">Passwort<input id="pgW" type="password" autocomplete="new-password" placeholder="${p.pass_set?'gespeichert, leer lassen zum Behalten':'kein Passwort gespeichert'}"></label><label class="mut">Tabelle<input id="pgT" value="${esc(p.table)}" placeholder="${esc(s.postgis_default.table)}"></label>
@@ -712,9 +738,9 @@ function pgBind(){const v=()=>({on:$('#pgOn').checked?1:0,host:$('#pgH').value.t
     catch(x){o.textContent='✗ '+x.message}b.disabled=false};
   if($('#pgWx'))$('#pgWx').onclick=()=>{if(confirm('Gespeichertes Passwort für PostGIS entfernen?'))api('settings/save',{postgis:{...v(),pass:'',pass_clear:1}}).then(loadOp).catch(fail)}}
 // Statistik je Server (Issue #45): Versuche vom Server (Hosting) und direkt vom Gerät (Rückfall), Abfragen aus dem Zwischenspeicher zählen nicht; PostGIS (Issue #131) als eigene Zeile «postgis»
-function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',PG='postgis',
-    us=[...(os.rows.some(r=>r.url===PG)?[PG]:[]),...urls,...[...new Set(os.rows.map(r=>r.url))].filter(u=>u!==PG&&!urls.includes(u))];
-  const rows=us.flatMap(u=>{const rs=os.rows.filter(r=>r.url===u);return(rs.length?rs:[{url:u,src:'',uses:0,ok:0,fails:0}]).map((r,k)=>`<tr>${k?'':`<td rowspan="${rs.length||1}" style="overflow-wrap:anywhere">${u===PG?'<b>PostGIS</b> (eigene Datenbank)':esc(u)+(urls.includes(u)?'':' <span class="mut">(nicht mehr hinterlegt)</span>')}</td>`}
+function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',SP={postgis:'<b>PostGIS</b> (eigene Datenbank)',pgapi:'<b>PostGIS-API</b>'},
+    us=[...Object.keys(SP).filter(k=>os.rows.some(r=>r.url===k)),...urls,...[...new Set(os.rows.map(r=>r.url))].filter(u=>!SP[u]&&!urls.includes(u))];
+  const rows=us.flatMap(u=>{const rs=os.rows.filter(r=>r.url===u);return(rs.length?rs:[{url:u,src:'',uses:0,ok:0,fails:0}]).map((r,k)=>`<tr>${k?'':`<td rowspan="${rs.length||1}" style="overflow-wrap:anywhere">${SP[u]||esc(u)+(urls.includes(u)?'':' <span class="mut">(nicht mehr hinterlegt)</span>')}</td>`}
     <td>${SRC[r.src]||'–'}</td><td>${r.uses}</td><td>${r.ok}</td><td>${r.fails}</td><td>${r.uses?Math.round(r.ok/r.uses*100)+' %':'–'}</td><td>${r.ok?(r.ok_ms/r.ok/1000).toFixed(1)+' s':'–'}</td>
     <td>${dt(r.last_ok)}</td><td>${dt(r.last_fail)}${r.last_err?`<br><span class="mut">${esc(r.last_err)}</span>`:''}</td></tr>`)}).join('');
   return `<div class="mut">Jeder Versuch zählt: «Server» = Abfrage vom Hosting, «Gerät» = direkte Abfrage eines Geräts, wenn der Server keine Antwort erhielt. Der nächste Server wird nur gefragt, wenn der vorherige nicht antwortet. Abfragen aus dem Zwischenspeicher zählen nicht.${os.since?' Erfasst seit '+dt(os.since)+'.':''}</div>
