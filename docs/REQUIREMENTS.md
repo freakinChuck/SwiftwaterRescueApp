@@ -75,6 +75,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EI-21** – Abwesenheiten sind bei der Zuteilung der Einsatzgruppen und beim Aufbieten ersichtlich (je Person und Anzahl je Gruppe) (#91).
 - **EI-22** – entfallen: Die Vorauswahl der Einsatzgruppen steht beim Einsatztyp (EI-16) (#90).
 - **EI-23** – Einzelpersonen fürs Aufgebot werden aus einer filterbaren Liste aller Personen gewählt, ohne Texteingabe (#90).
+- **EI-24** – In der Verwaltung steht beim Namen einer Person ein Farbpunkt je Einsatzgruppe (Benutzer, Einsatzgruppen, Personenauswahl, Abwesenheiten, Statistik pro Person, Übungen, Replay ausser anonym). Ob eine Gruppe dafür zählt, stellt man an der Gruppe ein («Farbe beim Namen anzeigen», Standard an); das Infofenster der Einsatz-App (EK-09) zeigt immer alle Gruppen (#105).
 
 ## 5. Karte (KA)
 
@@ -101,6 +102,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EK-06** – «Suchgebiet erreicht» wird geloggt (AG).
 - **EK-07** – Der eigene Standort ist immer gesondert auf der Karte sichtbar (blauer Punkt mit Genauigkeitskreis), auch ohne laufenden Einsatz; ausgeblendet nur, solange man an einem laufenden Einsatz bzw. einer Übung mit einer Einrückoption ohne Standortfreigabe teilnimmt (#118).
 - **EK-08** – Im Einsatz erscheint man selbst nur als blauer Punkt, nicht zusätzlich mit dem eigenen Personen-Icon; ohne Standort des Geräts steht der Punkt am zuletzt gemeldeten Standort (#96).
+- **EK-09** – Personeninfo: Antippen einer Einsatzkraft (auch Externe) auf der Karte öffnet ein Infofenster mit Profilbild, Name, Spezialrolle, Einrückoption, allen Einsatzgruppen, Standort, «Folgen» und Navigation; ebenso «Info» im Fenster «Einsatzkräfte». Es blockiert nichts, fährt mit der Position der Person mit und schliesst über ✕, Antippen der leeren Karte oder wenn die Person den Einsatz verlässt. Als Funktion je Einsatztyp ausschaltbar; ausgeschaltet fragt das Antippen wie bisher nach der Navigation (#105).
 
 ## 7. Externe Einsatzkräfte (EX)
 
@@ -173,7 +175,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss (#35, #79, #96, #125).
+- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo (#35, #79, #96, #125, #105).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
 

@@ -104,6 +104,13 @@ table.crew small{display:block;color:var(--mut)}table.crew select{width:100%;pad
 #rdBox{position:fixed;top:calc(4.3rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:1200;background:var(--panel);border:2px solid #2ee6d6;border-radius:8px;padding:.5rem .7rem;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;width:max-content;max-width:min(30rem,calc(100vw - 1.4rem));box-shadow:0 2px 10px #000a}#rdBox[hidden]{display:none}#rdBox>div{width:100%}
 .rdt{width:100%}.rdt td{padding:.25rem .3rem}.rdt td:last-child{text-align:right;font-weight:600;white-space:nowrap}.rdt input{width:4.5rem;padding:.25rem .4rem}
 body.picking .leaflet-interactive{pointer-events:none!important} /* Punktwahl: Klicks auf Marker/Bereiche gehen an die Karte, keine Popups */
+/* Personeninfo (Issue #105): hängt über dem Marker der Person und fährt mit, blockiert nichts ausser sich selbst */
+.pinfo-w{background:none;border:0}.pinfo{position:absolute;left:0;bottom:24px;transform:translateX(-50%);width:max-content;min-width:12rem;max-width:min(17rem,calc(100vw - 2rem));max-height:45vh;overflow:auto;background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:.5rem .6rem;box-shadow:0 2px 10px #000a;font-size:.85rem;cursor:auto;text-align:left}
+.pinfo .pix{position:absolute;top:.25rem;right:.25rem;padding:.1rem .4rem;font-size:.8rem;line-height:1.2}
+.pinfo .pih{display:flex;gap:.5rem;align-items:center;padding-right:1.6rem}.pinfo .pih img,.pinfo .pih .mk{width:46px;height:46px;border-radius:50%;object-fit:cover;flex:0 0 auto;box-shadow:none}.pinfo .pih .mk{border-width:3px}
+.pinfo .pih b{display:block;overflow-wrap:anywhere}.pinfo .pih small,.pinfo>small{display:block;color:var(--mut)}.pinfo .pig{margin:.35rem 0 .2rem}.pinfo .pid{margin:.25rem 0;overflow-wrap:anywhere}.pinfo small.mut{display:block;margin-top:.15rem}
+.pinfo .pib{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.4rem}.pinfo .pib:empty{display:none}.pinfo .pib button{padding:.3rem .5rem;font-size:.8rem}.pinfo .pib button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}.pinfo hr{border:0;border-top:1px solid var(--line);margin:.5rem 0}
+body.picking .pinfo{pointer-events:none;opacity:.6}
 .rdpt{width:26px;height:26px;border-radius:50%;background:#2ee6d6;color:#0f2430;font-weight:700;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px #0008}
 .hyk{width:26px;height:26px;border-radius:6px;background:#0b4f8a;border:2px solid #fff;display:grid;place-items:center;font-size:14px;box-shadow:0 1px 4px #0008}.hyk.inc{border-color:#ffd166}.hyk.g2{background:#c9a800}.hyk.g3{background:#e07b00}.hyk.g4{background:#d0021b}.hyk.g5{background:#7a0010}
 .hyli{display:flex;gap:.5rem;align-items:flex-start;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--line)}.hyli:last-of-type{border-bottom:0}.hyli>div:first-child{min-width:0;overflow-wrap:anywhere}.hyli .hyb{display:flex;gap:.3rem;flex:0 0 auto}.hyli button{padding:.3rem .5rem;font-size:.8rem}
@@ -207,7 +214,7 @@ const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOp
   rd=null;$('#bRd').onclick=rdOpen; // Flussdistanz (zusätzlich im ☰-Menü, auch ohne Einsatz)
   $('#poiList').onclick=e=>{const b=e.target.closest('[data-pg],[data-pls],[data-pf]');if(!b)return;if(b.dataset.pg)return showPoi(+b.dataset.pg);if(b.dataset.pf)return showPlace(+b.dataset.pf);stopFollow();map.panTo(b.dataset.pls.split(',').map(Number));if(narrow())togglePanel('pois',false)};
   $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pfcat){setPlaceCat([+t.dataset.pfcat],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.pfv)setPoiHidden(['f'+t.dataset.pfv],!t.checked);else if(t.dataset.pfgrp)setPoiHidden((st.places||[]).map(f=>'f'+f.id),!t.checked);else if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
-  $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.pf)setPplFold(b.dataset.pf);else if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f)};
+  $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.pf)setPplFold(b.dataset.pf);else if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f);else if(b.dataset.pi)pinfoShow(b.dataset.pi)};
   map=L.map('map',{zoomControl:false,rotate:true,touchRotate:true,rotateControl:false}).setView([46.8,8.2],8);L.control.zoom({position:'bottomright'}).addTo(map);addCompass();
   // Grundkarte: Auswahl im Fenster «Ansicht» (setBase), pro Gerät gemerkt (sw_base)
   baseLayers={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>baseLayers[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
@@ -218,7 +225,8 @@ const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOp
   hyLayer=L.layerGroup().addTo(map);hyLayerKey=''; // Messstationen Pegel & Abfluss (Issue #125)
   $('#mmShow').checked=mmVisible();$('#mmShow').onchange=e=>setMmVisible(e.target.checked,true);
   $('#msgList').onclick=e=>{const b=e.target.closest('[data-goto]');if(!b)return;const[a,o]=b.dataset.goto.split(',').map(Number);stopFollow();map.panTo([a,o]);if(narrow())togglePanel('msgs',false)};
-  layers={};fitted=null;map.on('zoomend',drawMap);map.on('dragstart',()=>{homeDone=true;areaFocus=0;if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen, die Auto-Übersicht und die Startansicht
+  layers={};fitted=null;map.on('zoomend',drawMap);map.on('click',()=>pinfoClose()); // Antippen der leeren Karte schliesst die Personeninfo (Issue #105)
+map.on('dragstart',()=>{homeDone=true;areaFocus=0;if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen, die Auto-Übersicht und die Startansicht
   map.on('zoomstart',()=>{if(Date.now()-homeBusy>1500)homeDone=true;if(autoView&&Date.now()-autoBusy>1500)stopFollow()}); // Zoomen von Hand beendet die Auto-Übersicht (nicht deren eigenes Zoomen)
   homeDone=false;homeT0=Date.now();homeKey='';
   if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}
@@ -350,17 +358,17 @@ function drawNote(){const n=$('#areaNote');if(!n)return;const pick=window.markPi
   if(more){n.setAttribute('role','button');n.setAttribute('aria-expanded',areaOpen);n.tabIndex=0}else{n.removeAttribute('role');n.removeAttribute('aria-expanded');n.removeAttribute('tabindex')}
   n.innerHTML=pick?esc(pick):!more?esc(areaInfo):areaOpen?areaLines.map(l=>`<div class="ln">${esc(l)}</div>`).join('')+'<div class="tg">▴ weniger</div>':`${esc(areaShort)} <span class="tg">▸ Details</span>`;
   n.hidden=!(areaInfo||pick)}
-function drawMap(){const n=$('#areaNote');selfSync();drawMsgMarks();drawPois();drawRes();drawAir();drawHydro();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
+function drawMap(){const n=$('#areaNote');selfSync();pinfoDraw();drawMsgMarks();drawPois();drawRes();drawAir();drawHydro();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.layerGroup(plsList().map(p=>navOn(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))),p.lat,p.lon,p.label)));if(vis('pls'))layers.pls.addTo(map);
   try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
   const act=[...(vis('app')?st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'&&p.user_id!=me.id):[]), /* man selbst = blauer Punkt (selfDraw) */...(vis('ext')?extList():[])],groups=[];
   act.forEach(p=>{const pt=map.latLngToLayerPoint([p.lat,p.lon]);const g=groups.find(g=>g.pt.distanceTo(pt)<40);g?g.items.push(p):groups.push({pt,items:[p]})});
   layers.pp=L.layerGroup(groups.map(g=>{const a=g.items[0];const ll=[a.lat,a.lon];
-    if(g.items.length===1)return navOn(L.marker(ll,{icon:L.divIcon({className:'',html:mk(a),iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(esc(a.name)+(roleName(a)?' – '+esc(roleName(a)):'')+(a.ext?' · extern':'')),a.lat,a.lon,a.name);
-    // Gruppe: am selben Ort (≤ 30 m) direkt navigieren, sonst hineinzoomen, damit man die einzelne Person antippen kann
+    if(g.items.length===1)return pplOn(L.marker(ll,{icon:L.divIcon({className:'',html:mk(a),iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(esc(a.name)+(roleName(a)?' – '+esc(roleName(a)):'')+(a.ext?' · extern':'')),[a]);
+    // Gruppe: am selben Ort (≤ 30 m) Personeninfo bzw. direkt navigieren, sonst hineinzoomen, damit man die einzelne Person antippen kann
     const m=L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="mk cl">${g.items.length}</div>`,iconSize:[38,38],iconAnchor:[19,19]})}).bindTooltip(g.items.map(x=>esc(x.name)).join(', '));
-    return g.items.every(x=>geoDist(x,a)<=30)?navOn(m,a.lat,a.lon,g.items.map(x=>x.name).join(', ')):m.on('click',()=>{stopFollow();map.fitBounds(L.latLngBounds(g.items.map(x=>[x.lat,x.lon])),{padding:[60,60],maxZoom:19})})})).addTo(map);
+    return g.items.every(x=>geoDist(x,a)<=30)?pplOn(m,g.items):m.on('click',()=>{stopFollow();map.fitBounds(L.latLngBounds(g.items.map(x=>[x.lat,x.lon])),{padding:[60,60],maxZoom:19})})})).addTo(map);
   layers.rm=L.layerGroup((vis('res')&&st.marks||[]).map(x=>navOn(L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="rm">R</div>',iconSize:[34,34],iconAnchor:[17,17]}),zIndexOffset:1000}).bindTooltip('Rettling – '+(x.manual?'manuell (Einsatzleitung)':esc(x.name))+' · '+fmtT(x.ts)),x.lat,x.lon,'Rettling'))).addTo(map);
   if(areaFocus)areaFocusNow();if(fitted!==i.id)startView(i)}
 // Startansicht beim Öffnen des Einsatzes: Übersicht über alle aktiven Positionen (Einsatzkräfte mit Standort inkl. Externe, nicht gerettete Rettlinge mit Standort, PLS fürs Suchgebiet).
@@ -634,9 +642,9 @@ function renderPeople(){const o=$('#people');if(!o)return;const on=panel==='peop
   const ap=activePeople(),n=ap.filter(p=>modeOf(p.mode).counts).length,c=$('#peopleCnt');c.hidden=!n;c.textContent=n; // Zähler am Knopf: alle im Einsatz mit zählender Einrückoption (Verwaltung, z. B. ohne Koordinator KP Rück)
   if(!on)return;
   const row=p=>{const has=p.lat!=null,f=followId===p.user_id;
-    return `<div class="pp">${mk(p)}<div class="nm">${esc(p.name)}${p.user_id==me.id?' (du)':''}<small>${esc(modeOf(p.mode).name)} · ${has?'Standort '+ago(p.loc_at):'kein Standort'}</small>${has&&fc(p.lat,p.lon)?`<small>${esc(fc(p.lat,p.lon))}</small>`:''}</div>${has?`<div class="pa"><button data-c="${p.user_id}" title="Auf der Karte zentrieren">Zentrieren</button><button data-f="${p.user_id}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>${navBtn(p.lat,p.lon,p.name)}</div>`:''}</div>`};
+    return `<div class="pp">${mk(p)}<div class="nm">${esc(p.name)}${p.user_id==me.id?' (du)':''}<small>${esc(modeOf(p.mode).name)} · ${has?'Standort '+ago(p.loc_at):'kein Standort'}</small>${has&&fc(p.lat,p.lon)?`<small>${esc(fc(p.lat,p.lon))}</small>`:''}</div>${has?`<div class="pa"><button data-c="${p.user_id}" title="Auf der Karte zentrieren">Zentrieren</button><button data-f="${p.user_id}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>${pinfoBtn(p)}${navBtn(p.lat,p.lon,p.name)}</div>`:''}</div>`};
   // externe Einsatzkräfte: fester Standort, kein Folgen; bearbeiten und entfernen nur die Einsatzleitung
-  const xrow=e=>`<div class="pp">${mk(e)}<div class="nm">${esc(e.name)}<small>Extern${e.descr?' · '+esc(e.descr):''}</small>${fc(e.lat,e.lon)?`<small>${esc(fc(e.lat,e.lon))}</small>`:''}</div><div class="pa"><button data-xc="${e.id}" title="Auf der Karte zentrieren">Zentrieren</button>${navBtn(e.lat,e.lon,e.name)}${st.can_manage?`<button data-xe="${e.id}" aria-label="${esc(e.name)} bearbeiten" title="Name, Beschreibung, Spezialrolle, Kürzel, Farbe und Standort ändern">✎</button><button data-xd="${e.id}" aria-label="${esc(e.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div></div>`;
+  const xrow=e=>`<div class="pp">${mk(e)}<div class="nm">${esc(e.name)}<small>Extern${e.descr?' · '+esc(e.descr):''}</small>${fc(e.lat,e.lon)?`<small>${esc(fc(e.lat,e.lon))}</small>`:''}</div><div class="pa"><button data-xc="${e.id}" title="Auf der Karte zentrieren">Zentrieren</button>${pinfoBtn(e)}${navBtn(e.lat,e.lon,e.name)}${st.can_manage?`<button data-xe="${e.id}" aria-label="${esc(e.name)} bearbeiten" title="Name, Beschreibung, Spezialrolle, Kürzel, Farbe und Standort ändern">✎</button><button data-xd="${e.id}" aria-label="${esc(e.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div></div>`;
   // zwei Gruppen (mit App / extern), je zusammenklappbar, darin nach Spezialrolle
   const roleGrp=list=>byRole(list).map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.map(p=>p.ext?xrow(p):row(p)).join('')).join('');
   const xl=extList(),fold=(k,t,list,empty)=>{const c=pplFold.has(k);return `<button class="pfold" data-pf="${k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button>`+(c?'':roleGrp(list)||`<div class="mut" style="padding:.4rem 0">${empty}</div>`)};
@@ -740,6 +748,37 @@ function navGo(lat,lon,name){const ll=(+lat).toFixed(6)+','+(+lon).toFixed(6),u=
 const navOn=(m,lat,lon,name)=>m.on('click',()=>{if(feat('nav')&&!document.body.classList.contains('picking'))navTo(lat,lon,name)});
 function navTo(lat,lon,name){lat=(+lat).toFixed(6);lon=(+lon).toFixed(6);
   dlg('Navigieren',`<div><b>${esc(name)}</b><div class="mut">${esc(fc(lat,lon)||'')}${fc(lat,lon)?' · ':''}WGS84 ${lat},${lon}</div></div>`,()=>navGo(lat,lon,name),'🧭 Mit '+NAV_APPS[navApp()]+' navigieren','Abbrechen')}
+/* ---------- Personeninfo (Issue #105, Funktion «pinfo»): Infofenster beim Antippen einer Einsatzkraft ----------
+   Nicht blockierend: hängt als eigener Marker über der Person und fährt bei jeder Aktualisierung mit, Karte und übrige Elemente bleiben bedienbar.
+   Inhalt: Profilbild, Name, Spezialrolle, Einrückoption, alle Einsatzgruppen (st.groups, unabhängig von «Farbe beim Namen»), Standort; Folgen und 🧭.
+   Schliesst über ✕, Escape, Antippen der leeren Karte, wenn die Person den Einsatz verlässt, ausgeblendet wird oder keinen Standort mehr hat. Ohne die Funktion fragt das Antippen wie bisher nach der Navigation. */
+let pinfo=null,pinfoMk=null,pinfoKey=''; // pinfo: Schlüssel 'u<user_id>' bzw. 'x<id der Externen>'
+const pinfoK=p=>p.ext?'x'+p.id:'u'+p.user_id;
+const pplOn=(m,items)=>m.on('click',()=>{if(document.body.classList.contains('picking'))return;const a=items[0];
+  if(feat('pinfo'))pinfoOpen(items);else if(feat('nav'))navTo(a.lat,a.lon,items.map(x=>x.name).join(', '))});
+const pinfoItems=()=>(pinfo||[]).map(k=>k[0]==='x'?vis('ext')&&extList().find(e=>pinfoK(e)===k):vis('app')&&activePeople().find(p=>pinfoK(p)===k)).filter(p=>p&&p.lat!=null);
+function pinfoOpen(list){pinfo=list.map(pinfoK);pinfoKey='';pinfoDraw()}
+// Knopf «Info» im Fenster «Einsatzkräfte»: Infofenster öffnen und die Person zentrieren (Zoom bleibt)
+const pinfoBtn=p=>feat('pinfo')&&p.lat!=null&&(p.ext?vis('ext'):vis('app'))&&!(!p.ext&&p.user_id==me.id)?`<button data-pi="${pinfoK(p)}" title="Infofenster auf der Karte zeigen">ℹ Info</button>`:'';
+function pinfoShow(k){const p=k[0]==='x'?extList().find(e=>pinfoK(e)===k):activePeople().find(x=>pinfoK(x)===k);if(!p||p.lat==null)return;
+  if(followId!=null||autoView)stopFollow();map.panTo([p.lat,p.lon]);pinfoOpen([p]);if(narrow())togglePanel('people',false)}
+function pinfoClose(){if(!pinfo)return;pinfo=null;pinfoDraw()}
+function pinfoHtml(it){const gs=(st&&st.groups)||[];
+  const one=p=>{const r=roles.find(x=>x.id==p.role_id),g=p.ext?[]:(p.groups||[]).map(id=>gs.find(x=>x.id===id)).filter(Boolean),f=!p.ext&&followId===p.user_id;
+    const sub=[r?`<span style="color:${esc(r.color)}">●</span> ${esc(r.name)}`:'Ohne Spezialrolle',p.ext?'Externe Einsatzkraft':esc(modeOf(p.mode).name)].join(' · ');
+    return `<div class="pih">${/^data:image\//.test(p.photo||'')?`<img src="${esc(p.photo)}" alt="">`:mk(p)}<div><b>${esc(p.name)}</b><small>${sub}</small></div></div>`+
+      (g.length?`<div class="pig">${g.map(x=>`<span class="gchip"><i style="background:${esc(x.color)}"></i>${esc(x.name)}</span>`).join('')}</div>`:'')+
+      (p.ext&&p.descr?`<div class="pid">${esc(p.descr)}</div>`:'')+
+      `<small class="mut">${p.ext?'Fester Standort':'Standort '+esc(ago(p.loc_at))}${esc(fcs(p.lat,p.lon))}</small>`+
+      `<div class="pib">${p.ext?'':`<button data-pif="${p.user_id}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>`}${navBtn(p.lat,p.lon,p.name)}</div>`};
+  return `<div class="pinfo" role="dialog" aria-label="Personeninfo"><button class="pix" data-pix="1" aria-label="Infofenster schliessen" title="Schliessen">✕</button>${it.map(one).join('<hr>')}</div>`}
+function pinfoDraw(){const it=pinfo&&feat('pinfo')&&st&&st.incident?pinfoItems():[];
+  if(!it.length){pinfo=null;pinfoKey='';if(pinfoMk){map.removeLayer(pinfoMk);pinfoMk=null}return}
+  const ll=[it[0].lat,it[0].lon],k=JSON.stringify([it.map(p=>[pinfoK(p),p.name,p.role_id,p.mode,p.groups,p.lat,p.lon,p.loc_at,p.descr,(p.photo||'').length]),followId,feat('nav'),st.groups,roles.map(r=>[r.id,r.name,r.color]),Math.floor(st.now/60)]);
+  if(!pinfoMk)pinfoMk=L.marker(ll,{icon:L.divIcon({className:'pinfo-w',html:'',iconSize:[0,0],iconAnchor:[0,0]}),zIndexOffset:5000,keyboard:false}).on('click',()=>{}).addTo(map);else pinfoMk.setLatLng(ll); // eigener Klick-Listener: sonst reicht Leaflet Klicks im Fenster als Kartenklick weiter (schliesst es)
+  if(k!==pinfoKey){pinfoKey=k;const el=pinfoMk.getElement();if(el)el.innerHTML=pinfoHtml(it)}}
+document.addEventListener('click',e=>{if(e.target.closest('[data-pix]'))return pinfoClose();const f=e.target.closest('[data-pif]');if(f){toggleFollow(+f.dataset.pif);pinfoKey='';pinfoDraw()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pinfo&&!document.querySelector('.dlg'))pinfoClose()});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;const [la,lo]=b.dataset.nav.split(',').map(Number);map.closePopup();navGo(la,lo,b.dataset.nn)});
 // Karte: nur neu zeichnen, wenn sich Inhalt, Sichtbarkeit oder Berechtigung ändern (ein offenes Popup bleibt offen)
 function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],fs=(st&&feat('place')&&st.places)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color]))+JSON.stringify(fs)+[...poiHide]+vis('pt')+vis('ar')+vis('place')+JSON.stringify(fs.map(f=>pcOn(f.cat_id)))+pcLbl()+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();

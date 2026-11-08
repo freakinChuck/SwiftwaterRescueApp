@@ -42,6 +42,9 @@ abstract class MapCtl {
 
   /// Werkzeug Flussdistanz öffnen
   void openRd();
+
+  /// Personeninfo (Issue #105) auf der Karte zeigen: 'u<user_id>' bzw. 'x<id der Externen>', zentriert die Person
+  void personInfo(String key);
 }
 
 const appBlue = Color(0xFF0B3A5B), accRed = Color(0xFFFF4D2E), accOrange = Color(0xFFFF9F1C), okGreen = Color(0xFF35C27A);

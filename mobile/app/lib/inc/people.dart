@@ -70,6 +70,15 @@ class _PeoplePanelState extends State<PeoplePanel> {
     if (_narrow()) map.openPanel(null);
   }
 
+  // Personeninfo (Issue #105): Knopf «Info» bei Personen mit Standort, wenn die Funktion an und die Kategorie eingeblendet ist
+  Widget? _infoBtn(J p, {bool ext = false}) {
+    if (!s.feat('pinfo') || llOf(p) == null || !s.vis(ext ? 'ext' : 'app') || (!ext && ji(p['user_id']) == s.uid)) return null;
+    return smallBtn('ℹ Info', () {
+      map.personInfo(ext ? 'x${ji(p['id'])}' : 'u${ji(p['user_id'])}');
+      if (_narrow()) map.openPanel(null);
+    });
+  }
+
   void _follow(int id) {
     if (map.followId == id) {
       map.follow(null);
@@ -293,6 +302,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
       buttons: [
         if (has) smallBtn('Zentrieren', () => _center(p)),
         if (has && uid != null) smallBtn(f ? 'Folgt' : 'Folgen', () => _follow(uid), primary: f),
+        ?_infoBtn(p),
         ?nav,
       ],
       trailing: mgr,
@@ -308,6 +318,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
       lines: ['Extern${js(e['descr']).isNotEmpty ? ' · ${js(e['descr'])}' : ''}', if (cs.isNotEmpty) cs],
       buttons: [
         if (llOf(e) != null) smallBtn('Zentrieren', () => _center(e)),
+        ?_infoBtn(e, ext: true),
         ?nav,
         if (s.canManage) ...[
           IconButton(
