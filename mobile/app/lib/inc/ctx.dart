@@ -34,6 +34,9 @@ abstract class MapCtl {
   /// Seitenmenü (☰) schliessen
   void closeMenu();
 
+  /// Kontext der Kartenseite: bleibt bestehen, wenn Menü oder Seitenfenster für die Punktwahl schliessen (Dialoge danach)
+  BuildContext get ctx;
+
   /// Kamerafokus auf ein Teilgebiet des Suchgebiets (AreaPart.key), null = ganzes Gebiet
   void fitArea([String? key]);
 

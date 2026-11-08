@@ -82,6 +82,8 @@ Future<void> plsPick(BuildContext c, IncStore s, MapCtl map, {J? res, bool clear
       : (jd(res['pls_lat']) != null ? jn(res['pls_at']) : jn(i['pls_at']));
   map.closeMenu();
   final q = await map.pickPoint('Tippe auf die Karte, um den $what zu setzen.');
+  // Menü bzw. Fenster «Rettlinge» sind für die Punktwahl geschlossen, ihr Kontext besteht nicht mehr (Issue #151)
+  c = map.ctx;
   if (q == null || !c.mounted) return;
   var t = tsDate(at ?? s.now);
   final ok = await formDlg(
@@ -158,6 +160,7 @@ Future<void> _editRes(BuildContext c, IncStore s, MapCtl map, int id) async {
   final res = await s.act('incident/rescuee/save', body);
   if (res == null) return;
   map.openPanel('res');
+  c = map.ctx;
   if (!own && pick && c.mounted) {
     final nid = ji(res['id']) ?? id;
     final x = _resOf(s, nid) ?? {'id': nid, 'name': name, 'descr': descr};
