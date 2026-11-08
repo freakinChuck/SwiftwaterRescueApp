@@ -43,7 +43,7 @@ abstract class MapCtl {
   /// Werkzeug Flussdistanz öffnen
   void openRd();
 
-  /// Personeninfo (Issue #105) auf der Karte zeigen: 'u<user_id>' bzw. 'x<id der Externen>', zentriert die Person
+  /// Personeninfo (Issue #105) auf der Karte zeigen: `u<user_id>` bzw. `x<id der Externen>`, zentriert die Person
   void personInfo(String key);
 }
 
