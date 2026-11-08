@@ -726,7 +726,15 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     if (s.vis('place')) {
       final pl = s.places.where((p) => placeShown(s, p) && !s.poiHide.contains('f${p['id']}')).toList();
       final lbl = s.me?['place_view'] is! Map || jm(s.me!['place_view'])['lbl'] != 0;
-      final areas = pl.where((p) => placePts(p).length >= 3).toList();
+      final areas = pl.where(placeArea).toList(), lines = pl.where(placeLine).toList();
+      // feste Linien (Issue #134, z. B. Fahrrinnen): breiter gestrichelter Strich, Marker und Navigation auf halber Länge
+      if (lines.isNotEmpty) {
+        out.add(PolylineLayer(
+            polylines: lines
+                .map((p) =>
+                    Polyline(points: placePts(p), color: hexColor(p['color']), strokeWidth: 4, pattern: StrokePattern.dashed(segments: const [14, 7])))
+                .toList()));
+      }
       if (areas.isNotEmpty) {
         out.add(PolygonLayer(
             polygons: areas
@@ -740,11 +748,11 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       }
       out.add(MarkerLayer(
           markers: pl.map((p) {
-        final ll = llOf(p)!, col = hexColor(p['color']), area = placePts(p).length >= 3;
+        final ll = llOf(p)!, col = hexColor(p['color']), area = placeArea(p), line = placeLine(p);
         return _dotMk(
             ll,
-            area
-                ? Icon(Icons.crop_square, size: 18, color: col)
+            area || line
+                ? Icon(line ? Icons.timeline : Icons.crop_square, size: 18, color: col)
                 : Container(
                     width: 28,
                     height: 22,

@@ -75,6 +75,10 @@ const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
 // Radius des Gewässernetzes für eine Driftdistanz D, auf 1 km aufgerundet, damit alle Geräte dieselbe Abfrage stellen (Server-Cache)
 const netRadius=D=>Math.ceil(Math.min(Math.max(5000,D*1.3),30000)/1000)*1000;
 const geoDist=(a,b)=>L.latLng(a.lat,a.lon).distanceTo([b.lat,b.lon]);
+// feste Standorte mit pts (Issue #96, #134): line 1 = Linie (z. B. Fahrrinne, 2–200 Punkte, breiter Strich), sonst Bereich (Fläche); o = Stil der Fläche
+const placeGeo=(f,o)=>f.line?L.polyline(f.pts,{...o,weight:Math.max(4,(o.weight||0)+2),opacity:.95,fill:false}):L.polygon(f.pts,o);
+const lineKm=pts=>pts.reduce((s,p,i)=>i?s+L.latLng(pts[i-1]).distanceTo(p):0,0)/1000;
+const placeShape=f=>!f.pts?'':f.line?'Linie, ca. '+lineKm(f.pts).toFixed(lineKm(f.pts)<10?2:1)+' km':'Bereich';
 // Overpass-Antwort → Wege und Verknüpfungen über gemeinsame Knoten
 function riverNet(j){if(!j||!j.elements)throw new Error('ungültige Antwort');
   const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();

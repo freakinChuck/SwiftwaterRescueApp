@@ -30,15 +30,35 @@ LatLng? poiPt(J p) {
   return LatLng((la.reduce(math.min) + la.reduce(math.max)) / 2, (lo.reduce(math.min) + lo.reduce(math.max)) / 2);
 }
 
-/// feste Standorte: Eckpunkte eines Bereichs (places.pts, NULL = Punkt) bzw. [Punkt]
+/// feste Standorte: Eckpunkte eines Bereichs bzw. Punkte einer Linie (places.pts, NULL = Punkt) bzw. [Punkt]
 List<LatLng> placePts(J p) {
   final l = _ptsOf(p['pts']);
-  if (l.length >= 3) return l;
+  if (l.length >= (placeLine(p) ? 2 : 3)) return l;
   final c = llOf(p);
   return c == null ? [] : [c];
 }
 
-bool _placeArea(J f) => _ptsOf(f['pts']).length >= 3;
+/// feste Linie (Issue #134, z. B. Fahrrinne): places.line = 1, pts mit mindestens 2 Punkten
+bool placeLine(J f) => jb(f['line']) && _ptsOf(f['pts']).length >= 2;
+
+/// fester Bereich (Fläche, mindestens 3 Eckpunkte)
+bool placeArea(J f) => !placeLine(f) && _ptsOf(f['pts']).length >= 3;
+
+/// Länge einer Linie in km (lineKm)
+double _lineKm(List<LatLng> pts) {
+  var m = 0.0;
+  for (var j = 1; j < pts.length; j++) {
+    m += geoDist(pts[j - 1], pts[j]);
+  }
+  return m / 1000;
+}
+
+/// Art eines festen Standorts mit pts (placeShape): «Linie, ca. X km» bzw. «Bereich»
+String _placeShape(J f) {
+  if (!placeLine(f)) return 'Bereich';
+  final km = _lineKm(placePts(f));
+  return 'Linie, ca. ${km.toStringAsFixed(km < 10 ? 2 : 1)} km';
+}
 
 /// Fläche in Hektaren (haOf)
 double _ha(List<LatLng> pts) {
@@ -60,7 +80,7 @@ String _poiInfo(IncStore s, J p) {
 
 /// Angaben zu einem festen Standort (placeInfo)
 String placeInfo(IncStore s, J f) =>
-    [js(f['descr']), _placeArea(f) ? 'Bereich${s.fcs(f['lat'], f['lon'], ', Mitte ', '')}' : s.fc(f['lat'], f['lon'])].where((x) => x.isNotEmpty).join(' · ');
+    [js(f['descr']), placeArea(f) || placeLine(f) ? '${_placeShape(f)}${s.fcs(f['lat'], f['lon'], ', Mitte ', '')}' : s.fc(f['lat'], f['lon'])].where((x) => x.isNotEmpty).join(' · ');
 
 /// Kategorie fester Standorte eingeblendet? Pro Person (me.place_view), sonst Standard der Verwaltung (def_on), ohne Kategorie an (pcOn)
 bool pcOn(IncStore s, dynamic cid) {
