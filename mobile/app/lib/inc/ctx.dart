@@ -26,7 +26,7 @@ abstract class MapCtl {
   Future<LatLng?> pickPoint(String hint);
 
   /// Bereich zeichnen (Eckpunkte antippen, Rückgängig/Fertig/Abbrechen), null = abgebrochen
-  Future<List<LatLng>?> drawArea(String hint, {Color color});
+  Future<List<LatLng>?> drawArea(String hint, {Color color, bool line});
 
   /// Seitenfenster öffnen bzw. schliessen: people | msgs | res | pois | rd | null
   void openPanel(String? p);

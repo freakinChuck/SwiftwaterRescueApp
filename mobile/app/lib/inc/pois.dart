@@ -21,10 +21,33 @@ List<LatLng> _ptsOf(dynamic v) => v is List
 /// Eckpunkte eines Bereichs bzw. [Punkt] einer Markierung (pois.pts = [[lat, lon], …])
 List<LatLng> poiPts(J p) => _ptsOf(p['pts']);
 
-/// Mittelpunkt einer Markierung bzw. eines Bereichs (poiPt: Bereich = Mitte des umschliessenden Rechtecks)
+/// Bezeichnung der Art einer Markierung der Einsatzleitung
+String poiKindName(J p) => switch (p['kind']) { 'area' => 'Bereich', 'line' => 'Linie', _ => 'Markierung' };
+
+/// Kategorie im Fenster «Ansicht» (poiVk in common.js; Linien: Issue #150)
+String poiVk(J p) => switch (p['kind']) { 'area' => 'ar', 'line' => 'ln', _ => 'pt' };
+
+/// Punkt auf halber Länge einer Linie (lineMidLL in common.js)
+LatLng _lineMid(List<LatLng> l) {
+  final d = <double>[0];
+  for (var i = 1; i < l.length; i++) {
+    d.add(d[i - 1] + geoDist(l[i - 1], l[i]));
+  }
+  final h = d.last / 2;
+  for (var i = 1; i < l.length; i++) {
+    if (d[i] >= h) {
+      final f = d[i] > d[i - 1] ? (h - d[i - 1]) / (d[i] - d[i - 1]) : 0.0;
+      return LatLng(l[i - 1].latitude + (l[i].latitude - l[i - 1].latitude) * f, l[i - 1].longitude + (l[i].longitude - l[i - 1].longitude) * f);
+    }
+  }
+  return l.first;
+}
+
+/// Mittelpunkt einer Markierung bzw. eines Bereichs (poiPt: Bereich = Mitte des umschliessenden Rechtecks, Linie = halbe Länge)
 LatLng? poiPt(J p) {
   final l = poiPts(p);
   if (l.isEmpty) return null;
+  if (p['kind'] == 'line') return _lineMid(l);
   if (p['kind'] != 'area') return l.first;
   final la = l.map((x) => x.latitude), lo = l.map((x) => x.longitude);
   return LatLng((la.reduce(math.min) + la.reduce(math.max)) / 2, (lo.reduce(math.min) + lo.reduce(math.max)) / 2);
@@ -74,8 +97,14 @@ double _ha(List<LatLng> pts) {
 
 String _poiInfo(IncStore s, J p) {
   final c = poiPt(p);
-  final pos = c == null ? '' : (p['kind'] == 'area' ? s.fcs(c.latitude, c.longitude, ' · Mitte ') : s.fcs(c.latitude, c.longitude));
-  return '${p['kind'] == 'area' ? 'Bereich, ca. ${_ha(poiPts(p)).toStringAsFixed(1)} ha' : 'Markierung'}$pos · ${js(p['by_name'])} · ${fmtT(jn(p['created']))}';
+  final pos = c == null ? '' : (p['kind'] != 'point' ? s.fcs(c.latitude, c.longitude, ' · Mitte ') : s.fcs(c.latitude, c.longitude));
+  final km = p['kind'] == 'line' ? _lineKm(poiPts(p)) : 0.0;
+  final what = switch (p['kind']) {
+    'area' => 'Bereich, ca. ${_ha(poiPts(p)).toStringAsFixed(1)} ha',
+    'line' => 'Linie, ca. ${km.toStringAsFixed(km < 10 ? 2 : 1)} km',
+    _ => 'Markierung'
+  };
+  return '$what$pos · ${js(p['by_name'])} · ${fmtT(jn(p['created']))}';
 }
 
 /// Angaben zu einem festen Standort (placeInfo)
@@ -149,12 +178,12 @@ class _PoisPanelState extends State<PoisPanel> {
 
   void _showPoi(J p) {
     map.follow(null);
-    final id = '${p['id']}', vk = p['kind'] == 'area' ? 'ar' : 'pt';
+    final id = '${p['id']}', vk = poiVk(p);
     if (s.poiHide.contains(id)) s.setPoiHidden([id], false);
     if (!s.vis(vk)) s.setVis([vk], true);
     final pts = poiPts(p);
     if (pts.isEmpty) return;
-    p['kind'] == 'area' ? map.fitPts(pts) : map.centerOn(pts.first);
+    p['kind'] != 'point' ? map.fitPts(pts) : map.centerOn(pts.first);
     _afterShow();
   }
 
@@ -171,30 +200,33 @@ class _PoisPanelState extends State<PoisPanel> {
   }
 
   Future<void> _remove(J p) async {
-    final a = p['kind'] == 'area';
-    if (!await confirmDlg(context, '${a ? 'Bereich' : 'Markierung'} «${js(p['name'])}» für alle entfernen?', ok: 'Entfernen', danger: true)) return;
+    if (!await confirmDlg(context, '${poiKindName(p)} «${js(p['name'])}» für alle entfernen?', ok: 'Entfernen', danger: true)) return;
     await s.act('incident/poi/remove', {'id': p['id']});
   }
 
-  /// Neu (nur Einsatzleitung): Bezeichnung und Farbe, danach Punkt antippen bzw. Eckpunkte zeichnen (newPoi, startDraw)
+  /// Neu (nur Einsatzleitung): Bezeichnung und Farbe, danach Punkt antippen bzw. Eckpunkte/Punkte der Linie zeichnen (newPoi, startDraw)
   Future<void> _newPoi(String kind) async {
-    final area = kind == 'area';
+    final area = kind == 'area', line = kind == 'line';
     final n = TextEditingController();
     var color = poiColors.first.$1;
     final ok = await formDlg(
         context,
-        area ? 'Bereich markieren' : 'Markierung setzen',
+        area ? 'Bereich markieren' : line ? 'Linie zeichnen' : 'Markierung setzen',
         (d, ss) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
               TextField(
                   controller: n,
                   autofocus: true,
                   maxLength: 80,
-                  decoration: InputDecoration(labelText: 'Bezeichnung', hintText: area ? 'z. B. Suchsektor Nord' : 'z. B. Treffpunkt Boote')),
+                  decoration: InputDecoration(labelText: 'Bezeichnung', hintText: area ? 'z. B. Suchsektor Nord' : line ? 'z. B. Absperrung Uferweg' : 'z. B. Treffpunkt Boote')),
               const Padding(padding: EdgeInsets.only(top: 6, bottom: 6), child: Mut('Farbe')),
               ColorPick(value: color, onChanged: (c) => ss(() => color = c)),
               Padding(
                   padding: const EdgeInsets.only(top: 10),
-                  child: Mut(area ? 'Danach die Eckpunkte des Bereichs auf der Karte antippen.' : 'Danach den Punkt auf der Karte antippen.')),
+                  child: Mut(area
+                      ? 'Danach die Eckpunkte des Bereichs auf der Karte antippen.'
+                      : line
+                          ? 'Danach die Punkte der Linie der Reihe nach auf der Karte antippen.'
+                          : 'Danach den Punkt auf der Karte antippen.')),
             ]),
         ok: 'Weiter', valid: () {
       if (n.text.trim().isNotEmpty) return true;
@@ -205,9 +237,9 @@ class _PoisPanelState extends State<PoisPanel> {
     n.dispose();
     if (!ok || name.isEmpty) return;
     List<List<double>>? pts;
-    if (area) {
-      final l = await map.drawArea('Bereich «$name»: Eckpunkte antippen', color: hexColor(color));
-      if (l == null || l.length < 3) return;
+    if (area || line) {
+      final l = await map.drawArea(line ? 'Linie «$name»: Punkte antippen' : 'Bereich «$name»: Eckpunkte antippen', color: hexColor(color), line: line);
+      if (l == null || l.length < (line ? 2 : 3)) return;
       pts = l.map((q) => [q.latitude, q.longitude]).toList();
     } else {
       final q = await map.pickPoint('Tippe auf die Karte, um «$name» zu setzen.');
@@ -324,8 +356,8 @@ class _PoisPanelState extends State<PoisPanel> {
 
   List<Widget> _poiGroups() {
     final ps = s.pois, out = <Widget>[];
-    for (final (k, t) in [('point', 'Markierungen'), ('area', 'Bereiche')]) {
-      final items = ps.where((p) => (p['kind'] == 'area' ? 'area' : 'point') == k).toList();
+    for (final (k, t) in [('point', 'Markierungen'), ('area', 'Bereiche'), ('line', 'Linien')]) {
+      final items = ps.where((p) => (p['kind'] == 'area' || p['kind'] == 'line' ? p['kind'] : 'point') == k).toList();
       out.add(_groupHead('$t (${items.length})', items.isNotEmpty && items.every((p) => !s.poiHide.contains('${p['id']}')),
           items.isEmpty ? null : (v) => s.setPoiHidden(items.map((p) => '${p['id']}'), !v)));
       if (items.isEmpty) out.add(const Padding(padding: EdgeInsets.only(left: 40), child: Mut('Keine')));
@@ -357,6 +389,7 @@ class _PoisPanelState extends State<PoisPanel> {
                 child: Wrap(spacing: 8, children: [
                   FilledButton(onPressed: () => _newPoi('point'), child: const Text('+ Markierung')),
                   FilledButton(onPressed: () => _newPoi('area'), child: const Text('+ Bereich')),
+                  FilledButton(onPressed: () => _newPoi('line'), child: const Text('+ Linie')),
                 ])),
         ]);
       });

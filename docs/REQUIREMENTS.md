@@ -81,7 +81,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **KA-01** – Karte im Vollbild; alle Bedienelemente in einem versteckten Menü (☰) (AG).
 - **KA-02** – Grundkarte swisstopo Luftbild (Standard), umschaltbar auf Landeskarte und OpenStreetMap; Anbieter leicht austauschbar; Wahl pro Gerät gemerkt (AG, #34).
-- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Nachrichten-Markierungen, Helikopter, Feste Standorte, Messstationen), «Alle ein-/ausblenden», pro Gerät gemerkt (#34); ohne Einsatz feste Standorte, Helikopter und eigene Messstationen (#96, #125, #130).
+- **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Linien, Nachrichten-Markierungen, Helikopter, Feste Standorte, Messstationen), «Alle ein-/ausblenden», pro Gerät gemerkt (#34); ohne Einsatz feste Standorte, Helikopter und eigene Messstationen (#96, #125, #130).
 - **KA-04** – Karte drehbar (zwei Finger, Shift + Mausrad, Kompass); Klick auf den Kompass richtet nach Norden aus (AG).
 - **KA-05** – Startansicht beim Öffnen eines Einsatzes: Übersicht über alle aktiven Positionen (AG).
 - **KA-06** – Kamerafokus: Suchgebiet (ganz und je Teilgebiet), Einsatzkräfte, Auto-Übersicht (hält alle sichtbaren aktiven Positionen im Bild) (AG, #51).
@@ -157,6 +157,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **MB-09** – Reihenfolge fester Standorte: In der Verwaltung lassen sich die Kategorien und innerhalb jeder Kategorie die Standorte mit ↑/↓ sortieren; die Einsatz-App zeigt sie in dieser Reihenfolge (#96).
 - **MB-08** – Feste Bereiche: Ein fester Standort kann statt eines Punkts eine Fläche sein (3–200 Eckpunkte, in der Verwaltung auf der Karte eingezeichnet), z. B. Sperrzonen oder Sammelplätze. In der Einsatz-App gestrichelt in seiner Farbe mit Beschriftung, Navigation zur Mitte, «Zeigen» zeigt die ganze Fläche; gilt auch für Kategorien, vorbereitete Übungen und die Startansicht. Bereiche haben kein Kürzel (#96).
 - **MB-11** – Feste Linien, z. B. Fahrrinnen: Ein fester Standort kann statt eines Punkts oder einer Fläche eine Linie sein (2–200 Punkte, in der Verwaltung der Reihe nach auf der Karte eingezeichnet, mit Länge). In der Einsatz-App als breiter gestrichelter Strich in seiner Farbe mit Beschriftung, Navigation zur Mitte der Linie (halbe Länge), «Zeigen» zeigt die ganze Linie; gilt auch für Kategorien, vorbereitete Übungen, die Startansicht und die native App. Linien haben kein Kürzel (#134).
+- **MB-12** – Linien im Einsatz: Die Einsatzleitung zeichnet neben Markierungen und Bereichen auch Linien (2–200 Punkte der Reihe nach, mit Bezeichnung und Farbe), z. B. Absperrungen oder Fahrwege. Für alle sichtbar als durchgezogener Strich mit Beschriftung, Länge in der Liste, Navigation zur Mitte der Linie (halbe Länge), «Zeigen» zeigt die ganze Linie; eigene Gruppe «Linien» im Fenster «Markierungen» und eigene Kategorie im Fenster «Ansicht»; mit Log-Eintrag, im Replay, in der öffentlichen Ansicht und in der nativen App (#150).
 - PLS auf eine Markierung verschieben (**offen**).
 
 ## 12. Werkzeuge (WZ)

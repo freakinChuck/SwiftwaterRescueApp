@@ -64,6 +64,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   Completer<List<LatLng>?>? _draw;
   final _drawPts = <LatLng>[];
   Color _drawCol = accOrange;
+  bool _drawLine = false; // Linie (Issue #150): mindestens 2 Punkte, nicht geschlossen
 
   // Startansicht ohne Einsatz (homeView)
   bool _homeDone = false, _homeBusy = false;
@@ -293,7 +294,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   }
 
   @override
-  Future<List<LatLng>?> drawArea(String hint, {Color color = accOrange}) {
+  Future<List<LatLng>?> drawArea(String hint, {Color color = accOrange, bool line = false}) {
     _draw?.complete(null);
     final c = Completer<List<LatLng>?>();
     _closeOverlays();
@@ -301,6 +302,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       _draw = c;
       _drawPts.clear();
       _drawCol = color;
+      _drawLine = line;
       _pickHint = hint;
     });
     return c.future;
@@ -462,8 +464,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   }
 
   void _finishDraw() {
-    if (_drawPts.length < 3) {
-      s.toast('Mindestens drei Eckpunkte antippen', 'info');
+    if (_drawPts.length < (_drawLine ? 2 : 3)) {
+      s.toast(_drawLine ? 'Mindestens zwei Punkte antippen' : 'Mindestens drei Eckpunkte antippen', 'info');
       return;
     }
     final d = _draw!;
@@ -782,7 +784,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     }
     // Bereiche und Markierungen
     final ps = s.pois.where((p) => p['removed'] != 1 && p['removed'] != true && !s.poiHide.contains('${p['id']}')).toList();
-    final ars = ps.where((p) => js(p['kind']) == 'area' && s.vis('ar')).toList(), pts = ps.where((p) => js(p['kind']) != 'area' && s.vis('pt')).toList();
+    final ars = ps.where((p) => js(p['kind']) == 'area' && s.vis('ar')).toList(), pts = ps.where((p) => js(p['kind']) == 'point' && s.vis('pt')).toList();
+    // Linien der Einsatzleitung (Issue #150): durchgezogen (feste Linien gestrichelt), Marker und Navigation auf halber Länge
+    final lns = ps.where((p) => js(p['kind']) == 'line' && s.vis('ln')).toList();
+    if (lns.isNotEmpty) {
+      out.add(PolylineLayer(polylines: lns.map((p) => Polyline(points: poiPts(p), color: hexColor(p['color']), strokeWidth: 4)).toList()));
+    }
     if (ars.isNotEmpty) {
       out.add(PolygonLayer(
           polygons: ars
@@ -794,6 +801,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         final ll = poiPt(p)!;
         return _dotMk(ll, Icon(Icons.pentagon_outlined, size: 18, color: hexColor(p['color'])), js(p['label']).isEmpty ? js(p['name']) : js(p['label']),
             () => _poiSheet(p, ll));
+      }),
+      ...lns.map((p) {
+        final ll = poiPt(p)!;
+        return _dotMk(ll, Icon(Icons.timeline, size: 18, color: hexColor(p['color'])), js(p['label']).isEmpty ? js(p['name']) : js(p['label']), () => _poiSheet(p, ll));
       }),
       ...pts.map((p) {
         final ll = poiPt(p)!, col = hexColor(p['color']);
@@ -929,7 +940,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     if (_panel == 'rd' || rd.a != null) out.addAll(rdLayers(rd));
     // Bereich zeichnen
     if (_draw != null && _drawPts.isNotEmpty) {
-      out.add(PolylineLayer(polylines: [Polyline(points: [..._drawPts, if (_drawPts.length > 2) _drawPts.first], color: _drawCol, strokeWidth: 3)]));
+      out.add(PolylineLayer(polylines: [Polyline(points: [..._drawPts, if (_drawPts.length > 2 && !_drawLine) _drawPts.first], color: _drawCol, strokeWidth: 3)]));
       out.add(CircleLayer(circles: _drawPts.map((p) => CircleMarker(point: p, radius: 6, color: _drawCol, borderColor: Colors.white, borderStrokeWidth: 2)).toList()));
     }
     // eigener Standort (blauer Punkt)
@@ -946,8 +957,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   }
 
   void _poiSheet(J p, LatLng ll) {
-    final area = js(p['kind']) == 'area';
-    _sheet(js(p['label']).isEmpty ? js(p['name']) : js(p['label']), [area ? 'Bereich' : 'Markierung', js(p['by_name']).isNotEmpty ? 'von ${js(p['by_name'])}' : ''],
+    final what = poiKindName(p);
+    _sheet(js(p['label']).isEmpty ? js(p['name']) : js(p['label']), [what, js(p['by_name']).isNotEmpty ? 'von ${js(p['by_name'])}' : ''],
         lat: ll.latitude,
         lon: ll.longitude,
         actions: (c) => [
@@ -955,7 +966,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                 OutlinedButton(
                     onPressed: () async {
                       Navigator.pop(c);
-                      if (await confirmDlg(context, '${area ? 'Bereich' : 'Markierung'} entfernen?', danger: true, ok: 'Entfernen')) {
+                      if (await confirmDlg(context, '$what entfernen?', danger: true, ok: 'Entfernen')) {
                         await s.act('incident/poi/remove', {'id': p['id']});
                       }
                     },
@@ -1135,7 +1146,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
           child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
               child: Row(children: [
-                Expanded(child: Text(_draw != null ? '$_pickHint (${_drawPts.length} Eckpunkte)' : _pickHint!, style: const TextStyle(color: Colors.white))),
+                Expanded(child: Text(_draw != null ? '$_pickHint (${_drawPts.length} ${_drawLine ? 'Punkte' : 'Eckpunkte'})' : _pickHint!, style: const TextStyle(color: Colors.white))),
                 if (_draw != null) ...[
                   IconButton(tooltip: 'Rückgängig', color: Colors.white, onPressed: _drawPts.isEmpty ? null : () => setState(() => _drawPts.removeLast()), icon: const Icon(Icons.undo)),
                   IconButton(tooltip: 'Fertig', color: Colors.white, onPressed: _finishDraw, icon: const Icon(Icons.check)),

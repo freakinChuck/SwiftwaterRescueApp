@@ -31,6 +31,7 @@ const viewCatsAll = [
   ('area', 'Suchgebiet', 'area'),
   ('pt', 'Markierungen', 'poi'),
   ('ar', 'Bereiche', 'poi'),
+  ('ln', 'Linien', 'poi'),
   ('mm', 'Nachrichten-Markierungen', 'msg'),
   ('air', 'Helikopter', ''),
 ];

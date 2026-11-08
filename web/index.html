@@ -730,9 +730,9 @@ let poiLayer=null,poiKey='',poiHide=new Set(),poiHideInc=null;
 function poiHideLoad(){const id=st&&st.incident?st.incident.id:0;if(poiHideInc===id)return;poiHideInc=id;try{poiHide=new Set(JSON.parse(localStorage.getItem('sw_poihide_'+id)||'[]'))}catch(e){poiHide=new Set()}}
 function setPoiHidden(ids,hide){poiHideLoad();ids.forEach(id=>hide?poiHide.add(id):poiHide.delete(id));try{localStorage.setItem('sw_poihide_'+poiHideInc,JSON.stringify([...poiHide]))}catch(e){}drawPois();renderPois()}
 const haOf=pts=>{const k=111320*Math.cos(pts[0][0]*Math.PI/180);let a=0;pts.forEach((p,j)=>{const q=pts[(j+1)%pts.length];a+=p[1]*k*q[0]*111320-q[1]*k*p[0]*111320});return Math.abs(a)/2/1e4};
-const poiPt=p=>p.kind==='area'?L.latLngBounds(p.pts).getCenter():{lat:p.pts[0][0],lng:p.pts[0][1]}; // Bereich: Mitte
+const poiPt=p=>p.kind==='area'?L.latLngBounds(p.pts).getCenter():p.kind==='line'?lineMidLL(p.pts):{lat:p.pts[0][0],lng:p.pts[0][1]}; // Bereich: Mitte, Linie: halbe Länge
 const poiInfo=p=>{const a=p.kind==='area',c=poiPt(p);
-  return (a?'Bereich, ca. '+haOf(p.pts).toFixed(1)+' ha'+fcs(c.lat,c.lng,' · Mitte '):'Markierung'+fcs(c.lat,c.lng))+' · '+(p.by_name||'')+' · '+fmtT(p.created)};
+  return (a?'Bereich, ca. '+haOf(p.pts).toFixed(1)+' ha'+fcs(c.lat,c.lng,' · Mitte '):p.kind==='line'?'Linie, ca. '+kmTxt(lineKm(p.pts))+' km'+fcs(c.lat,c.lng,' · Mitte '):'Markierung'+fcs(c.lat,c.lng))+' · '+(p.by_name||'')+' · '+fmtT(p.created)};
 // Navigation (Issue #79, Funktion «nav»): Ziel an eine Navigations-App übergeben. Ohne label nur das Symbol (für enge Listen).
 const navBtn=(lat,lon,name,label)=>feat('nav')&&lat!=null&&lon!=null?`<button class="nav" data-nav="${(+lat).toFixed(6)},${(+lon).toFixed(6)}" data-nn="${esc(name)}" title="Mit einer Navigations-App hinfahren"${label?'':` aria-label="Zu ${esc(name)} navigieren"`}>🧭${label?' '+esc(label):''}</button>`:'';
 // Apps: in der Verwaltung ein-/ausschaltbar mit Standard (me.nav_apps, me.nav_default), pro Person in den Einstellungen (me.nav_app)
@@ -781,7 +781,7 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-pix]'))return p
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pinfo&&!document.querySelector('.dlg'))pinfoClose()});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;const [la,lo]=b.dataset.nav.split(',').map(Number);map.closePopup();navGo(la,lo,b.dataset.nn)});
 // Karte: nur neu zeichnen, wenn sich Inhalt, Sichtbarkeit oder Berechtigung ändern (ein offenes Popup bleibt offen)
-function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],fs=(st&&feat('place')&&st.places)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color]))+JSON.stringify(fs)+[...poiHide]+vis('pt')+vis('ar')+vis('place')+JSON.stringify(fs.map(f=>pcOn(f.cat_id)))+pcLbl()+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
+function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],fs=(st&&feat('place')&&st.places)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color]))+JSON.stringify(fs)+[...poiHide]+vis('pt')+vis('ar')+vis('ln')+vis('place')+JSON.stringify(fs.map(f=>pcOn(f.cat_id)))+pcLbl()+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
   // Feste Standorte (Issue #96): eckige Marker in der Farbe mit Kürzel, ausblendbar je Eintrag ('f'+id in poiHide) und als Kategorie
   // feste Bereiche (pts): Fläche in der Farbe, gestrichelt (Unterschied zu den Bereichen der Einsatzleitung), Beschriftung in der Mitte, Navigation zur Mitte
   // feste Linien (line, Issue #134, z. B. Fahrrinnen): breiter gestrichelter Strich, Beschriftung und Navigation auf halber Länge
@@ -790,12 +790,13 @@ function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&
   fs.filter(placeShown).forEach(f=>(f.pts?placeGeo(f,{color:f.color||PLACE_COL,weight:2,dashArray:f.line?'12 6':'6 4',fillOpacity:.12}).bindTooltip(esc(f.name),{permanent:lb,sticky:!lb,direction:'center',className:'poilbl'})
       :L.marker([f.lat,f.lon],{icon:L.divIcon({className:'',html:`<div class="plc" style="background:${f.color||PLACE_COL}">${esc(f.abbr||'◆')}</div>`,iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:700}).bindTooltip(esc(f.name),{permanent:lb,direction:'right',className:'poilbl',offset:[12,0]}))
     .bindPopup(`<div class="mmpop"><b>${esc(f.name)}</b><span class="t">${esc(placeInfo(f))}</span>${navBtn(f.lat,f.lon,f.name,f.pts?'Navigieren (Mitte)':'Navigieren')}</div>`).addTo(poiLayer));
-  ps.filter(p=>!poiHide.has(p.id)&&vis(p.kind==='area'?'ar':'pt')).forEach(p=>{const area=p.kind==='area';
-    const l=area?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.marker(p.pts[0],{icon:L.divIcon({className:'',html:`<div class="poi" style="background:${p.color}">⚑</div>`,iconSize:[28,28],iconAnchor:[2,30]}),zIndexOffset:800});
+  // Linien der Einsatzleitung (Issue #150): durchgezogen (feste Linien gestrichelt), Beschriftung und Navigation auf halber Länge
+  ps.filter(p=>!poiHide.has(p.id)&&vis(poiVk(p))).forEach(p=>{const area=p.kind!=='point';
+    const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):p.kind==='line'?L.polyline(p.pts,{color:p.color,weight:4,opacity:.95}):L.marker(p.pts[0],{icon:L.divIcon({className:'',html:`<div class="poi" style="background:${p.color}">⚑</div>`,iconSize:[28,28],iconAnchor:[2,30]}),zIndexOffset:800});
     l.bindTooltip(esc(p.name),{permanent:true,direction:area?'center':'right',className:'poilbl',offset:area?[0,0]:[14,-16]})
      .bindPopup(`<div class="mmpop"><b>${esc(p.name)}</b><span class="t">${esc(poiInfo(p))}</span>${navBtn(poiPt(p).lat,poiPt(p).lng,p.name,area?'Navigieren (Mitte)':'Navigieren')}${st.can_manage?`<button data-pdel="${p.id}">Entfernen</button>`:''}</div>`).addTo(poiLayer)})}
 function renderPois(){const o=$('#pois');if(!o)return;const inc=!!(st&&st.incident),on=panel==='pois'&&(inc||poiPlaces());o.hidden=!on;$('#bPoi').setAttribute('aria-expanded',on);if(!on)return;poiHideLoad();
-  const ps=st.pois||[],grp=[['point','Markierungen'],['area','Bereiche']].map(([k,t])=>({k,t,items:ps.filter(p=>p.kind===k)}));
+  const ps=st.pois||[],grp=[['point','Markierungen'],['area','Bereiche'],['line','Linien']].map(([k,t])=>({k,t,items:ps.filter(p=>p.kind===k)}));
   const row=p=>`<div class="pi"><input type="checkbox" data-pv="${p.id}" ${poiHide.has(p.id)?'':'checked'} aria-label="${esc(p.name)} auf der Karte anzeigen"><span class="sw" style="background:${p.color}"></span><div class="nm">${esc(p.name)}<small>${esc(poiInfo(p))}</small></div><div class="pa"><button data-pg="${p.id}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(poiPt(p).lat,poiPt(p).lng,p.name)}${st.can_manage?`<button data-pdel="${p.id}" aria-label="${esc(p.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div></div>`;
   // PLS (Point last seen) als eigene Kategorie zuoberst, nicht ausblendbar
   const pl=inc?plsList():[],pls=!inc?'':`<div class="pg">Point last seen (PLS) · immer sichtbar</div>`+(pl.map(p=>`<div class="pi"><span class="nochk"></span><span class="plsw${p.on?'':' off'}"></span><div class="nm">${esc(p.label)}<small>${esc(fcs(p.lat,p.lon,'',' · '))}Drift ab ${fmtDT(p.at)}${p.on?'':' · zählt nicht fürs Suchgebiet'}</small></div><div class="pa"><button data-pls="${p.lat},${p.lon}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(p.lat,p.lon,p.label)}</div></div>`).join('')||'<div class="mut">Kein PLS gesetzt</div>');
@@ -806,7 +807,7 @@ function renderPois(){const o=$('#pois');if(!o)return;const inc=!!(st&&st.incide
   const fl=fs.length?`<label class="pg"><input type="checkbox" data-pfgrp="1" ${fs.every(f=>!poiHide.has('f'+f.id))?'checked':''} aria-label="Alle festen Standorte anzeigen"> Feste Standorte (${fs.length})</label>`
     +(withCat?cs.map(c=>`<label class="pi" style="font-weight:600"><input type="checkbox" data-pfcat="${c.id}" ${pcOn(c.id)?'checked':''} aria-label="Kategorie ${esc(c.name)} anzeigen"> ${esc(c.name)} (${c.n})</label>`+fs.filter(f=>(f.cat_id||0)===c.id).map(frow).join('')).join(''):fs.map(frow).join('')):'';
   $('#poiList').innerHTML=pls+fl+(inc&&feat('poi')?grp:[]).map(g=>`<label class="pg"><input type="checkbox" data-pgrp="${g.k}" ${g.items.length&&g.items.every(p=>!poiHide.has(p.id))?'checked':''} ${g.items.length?'':'disabled'} aria-label="Alle ${g.t} anzeigen"> ${g.t} (${g.items.length})</label>`+(g.items.map(row).join('')||'<div class="mut">Keine</div>')).join('');
-  const f=$('#poiForm'),ok=inc&&!!st.can_manage&&feat('poi');f.hidden=!ok;if(ok&&!$('#bPoiP')){f.innerHTML='<div class="row" style="margin:0"><button class="pri" id="bPoiP">+ Markierung</button><button class="pri" id="bPoiA">+ Bereich</button></div>';$('#bPoiP').onclick=()=>newPoi('point');$('#bPoiA').onclick=()=>newPoi('area')}}
+  const f=$('#poiForm'),ok=inc&&!!st.can_manage&&feat('poi');f.hidden=!ok;if(ok&&!$('#bPoiP')){f.innerHTML='<div class="row" style="margin:0"><button class="pri" id="bPoiP">+ Markierung</button><button class="pri" id="bPoiA">+ Bereich</button><button class="pri" id="bPoiL">+ Linie</button></div>';$('#bPoiP').onclick=()=>newPoi('point');$('#bPoiA').onclick=()=>newPoi('area');$('#bPoiL').onclick=()=>newPoi('line')}}
 const PLACE_COL='#1d7fd1';
 function poiPlaces(){return feat('place')&&!!(st&&(st.places||[]).length)} // Fenster «Markierungen» auch ohne Funktion «Markierungen & Bereiche» bzw. ohne Einsatz («Feste Standorte»), wenn es feste Standorte gibt
 // Kategorien fester Standorte: Standard der Verwaltung (place_cats.def_on, ohne Kategorie = an), pro Person übersteuert in me.place_view (gespeichert über me/settings)
@@ -822,24 +823,24 @@ function setPlaceCat(ids,on){if(!me)return;const old=me.place_view;const v=ids==
   drawPois();renderPois();viewPlaceCats()}
 function showPlace(id){const f=(st.places||[]).find(x=>x.id===id);if(!f)return;stopFollow();if(poiHide.has('f'+id))setPoiHidden(['f'+id],false);if(!pcOn(f.cat_id))setPlaceCat([f.cat_id||0],true);if(!vis('place'))setVis(['place'],true);if(f.pts)map.fitBounds(L.latLngBounds(f.pts),FITPAD);else map.panTo([f.lat,f.lon]);if(narrow())togglePanel('pois',false)}
 const placeInfo=f=>[f.descr,f.pts?placeShape(f)+fcs(f.lat,f.lon,', Mitte ',''):fcs(f.lat,f.lon,'','')].filter(Boolean).join(' · ');
-function showPoi(id){const p=(st.pois||[]).find(x=>x.id===id);if(!p)return;stopFollow();if(poiHide.has(id))setPoiHidden([id],false);const vk=p.kind==='area'?'ar':'pt';if(!vis(vk))setVis([vk],true);
-  if(p.kind==='area')map.fitBounds(L.latLngBounds(p.pts),FITPAD);else map.panTo(p.pts[0]);if(narrow())togglePanel('pois',false)}
+function showPoi(id){const p=(st.pois||[]).find(x=>x.id===id);if(!p)return;stopFollow();if(poiHide.has(id))setPoiHidden([id],false);const vk=poiVk(p);if(!vis(vk))setVis([vk],true);
+  if(p.kind!=='point')map.fitBounds(L.latLngBounds(p.pts),FITPAD);else map.panTo(p.pts[0]);if(narrow())togglePanel('pois',false)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pdel]');if(!b)return;const p=((st&&st.pois)||[]).find(x=>x.id==b.dataset.pdel);
-  if(!p||!confirm(`${p.kind==='area'?'Bereich':'Markierung'} «${p.name}» für alle entfernen?`))return;api('incident/poi/remove',{id:p.id}).then(()=>{map.closePopup();poll()}).catch(fail)});
-// Neu (nur Einsatzleitung): Bezeichnung und Farbe, danach Punkt antippen bzw. Eckpunkte zeichnen
-function newPoi(kind){const area=kind==='area';
-  dlg(area?'Bereich markieren':'Markierung setzen',`<label class="mut">Bezeichnung<input id="poiN" maxlength="80" placeholder="${area?'z. B. Suchsektor Nord':'z. B. Treffpunkt Boote'}"></label><label class="mut">Farbe<select id="poiC">${POI_COLORS.map(([c,n])=>`<option value="${c}">${n}</option>`).join('')}</select></label><div class="mut">${area?'Danach die Eckpunkte des Bereichs auf der Karte antippen.':'Danach den Punkt auf der Karte antippen.'}</div>`,
+  if(!p||!confirm(`${({area:'Bereich',line:'Linie'})[p.kind]||'Markierung'} «${p.name}» für alle entfernen?`))return;api('incident/poi/remove',{id:p.id}).then(()=>{map.closePopup();poll()}).catch(fail)});
+// Neu (nur Einsatzleitung): Bezeichnung und Farbe, danach Punkt antippen bzw. Eckpunkte/Punkte der Linie zeichnen
+function newPoi(kind){const area=kind==='area',line=kind==='line';
+  dlg(area?'Bereich markieren':line?'Linie zeichnen':'Markierung setzen',`<label class="mut">Bezeichnung<input id="poiN" maxlength="80" placeholder="${area?'z. B. Suchsektor Nord':line?'z. B. Absperrung Uferweg':'z. B. Treffpunkt Boote'}"></label><label class="mut">Farbe<select id="poiC">${POI_COLORS.map(([c,n])=>`<option value="${c}">${n}</option>`).join('')}</select></label><div class="mut">${area?'Danach die Eckpunkte des Bereichs auf der Karte antippen.':line?'Danach die Punkte der Linie der Reihe nach auf der Karte antippen.':'Danach den Punkt auf der Karte antippen.'}</div>`,
     async d=>{const name=$('#poiN',d).value.trim(),color=$('#poiC',d).value;if(!name)throw new Error('Bitte eine Bezeichnung eingeben.');
-      if(area)return startDraw(name,color);
+      if(area||line)return startDraw(name,color,kind);
       pickPoint(`Tippe auf die Karte, um «${name}» zu setzen.`).then(q=>api('incident/poi',{kind,name,color,pts:[[q.lat,q.lng]]})).then(()=>{togglePanel('pois',true);poll()}).catch(fail)},'Weiter')}
-function startDraw(name,color){if(panel)togglePanel(panel,false);toggleSheet(false);stopFollow();const pts=[],tmp=L.layerGroup().addTo(map),bar=$('#drawBar');
+function startDraw(name,color,kind='area'){const line=kind==='line',min=line?2:3;if(panel)togglePanel(panel,false);toggleSheet(false);stopFollow();const pts=[],tmp=L.layerGroup().addTo(map),bar=$('#drawBar');
   const add=e=>{pts.push(e.latlng);upd()},end=()=>{map.off('click',add);map.removeLayer(tmp);bar.hidden=true;map.doubleClickZoom.enable();pickMode(false)};
   const upd=()=>{tmp.clearLayers();
-    if(pts.length>2)L.polygon(pts,{color,weight:2,dashArray:'5',fillOpacity:.15,interactive:false}).addTo(tmp);else if(pts.length)L.polyline(pts,{color,weight:2,dashArray:'5',interactive:false}).addTo(tmp);
+    if(pts.length>2&&!line)L.polygon(pts,{color,weight:2,dashArray:'5',fillOpacity:.15,interactive:false}).addTo(tmp);else if(pts.length)L.polyline(pts,{color,weight:2,dashArray:'5',interactive:false}).addTo(tmp);
     pts.forEach(p=>L.circleMarker(p,{radius:5,color:'#fff',weight:2,fillColor:color,fillOpacity:1,interactive:false}).addTo(tmp));
-    bar.innerHTML=`<span>Bereich «${esc(name)}»: Eckpunkte antippen (${pts.length})</span><button id="dU" ${pts.length?'':'disabled'}>Rückgängig</button><button class="pri" id="dOk" ${pts.length>2?'':'disabled'}>Fertig</button><button id="dX">Abbrechen</button>`;
+    bar.innerHTML=`<span>${line?'Linie':'Bereich'} «${esc(name)}»: ${line?'Punkte':'Eckpunkte'} antippen (${pts.length})</span><button id="dU" ${pts.length?'':'disabled'}>Rückgängig</button><button class="pri" id="dOk" ${pts.length>=min?'':'disabled'}>Fertig</button><button id="dX">Abbrechen</button>`;
     $('#dU').onclick=()=>{pts.pop();upd()};$('#dX').onclick=end;
-    $('#dOk').onclick=()=>{const body={kind:'area',name,color,pts:pts.map(p=>[p.lat,p.lng])};end();api('incident/poi',body).then(()=>{togglePanel('pois',true);poll()}).catch(fail)}};
+    $('#dOk').onclick=()=>{const body={kind,name,color,pts:pts.map(p=>[p.lat,p.lng])};end();api('incident/poi',body).then(()=>{togglePanel('pois',true);poll()}).catch(fail)}};
   map.doubleClickZoom.disable();map.on('click',add);pickMode(true);bar.hidden=false;upd()}
 /* ---------- Flussdistanz: Distanz zwischen zwei Punkten entlang des Gewässers mit Zeitangaben ---------- */
 // Eigenes Gewässernetz (Overpass, Rechteck um beide Punkte), unabhängig vom Suchgebiet und auch ohne Einsatz nutzbar. OSM-Wege zeigen in Fliessrichtung.
