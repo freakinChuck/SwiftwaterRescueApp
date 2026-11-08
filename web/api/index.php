@@ -1269,9 +1269,12 @@ function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) re
       CURLOPT_HTTPHEADER => ['Content-Type: application/octet-stream', 'Content-Encoding: aes128gcm', 'TTL: ' . (!empty($m['crit']) ? 3600 : 600), 'Urgency: high', 'Topic: ' . substr(preg_replace('/[^A-Za-z0-9_-]/', '_', (string)($m['tag'] ?? 'sw')), 0, 32), 'Authorization: vapid t=' . $jwt[$aud] . ', k=' . vapid()['pub']]]);
     curl_multi_add_handle($mh, $h); $hs[] = [$h, (int)$sub['id']]; }
   do { $st = curl_multi_exec($mh, $run); if ($run) curl_multi_select($mh, 1); } while ($run && $st === CURLM_OK);
-  foreach ($hs as [$h, $id]) { $c = curl_getinfo($h, CURLINFO_HTTP_CODE); if ($c === 404 || $c === 410) $db->prepare("DELETE FROM push_subs WHERE id=?")->execute([$id]); // abgelaufen
-    elseif ($c < 200 || $c >= 300) alog('warn', 'push', 'Web-Push abgelehnt', ['http' => $c, 'host' => parse_url((string)curl_getinfo($h, CURLINFO_EFFECTIVE_URL), PHP_URL_HOST), 'sub' => $id, 'err' => curl_error($h) ?: null]);
+  $wok = 0; $wgone = 0;
+  foreach ($hs as [$h, $id]) { $c = curl_getinfo($h, CURLINFO_HTTP_CODE); if ($c >= 200 && $c < 300) $wok++;
+    elseif ($c === 404 || $c === 410) { $wgone++; $db->prepare("DELETE FROM push_subs WHERE id=?")->execute([$id]); } // abgelaufen
+    else alog('warn', 'push', 'Web-Push abgelehnt', ['http' => $c, 'host' => parse_url((string)curl_getinfo($h, CURLINFO_EFFECTIVE_URL), PHP_URL_HOST), 'sub' => $id, 'err' => curl_error($h) ?: null]);
     curl_multi_remove_handle($mh, $h); }
+  if ($hs) alog($wgone ? 'warn' : 'info', 'push', 'Web-Push an Push-Dienste übergeben', ['ok' => $wok, 'expired' => $wgone, 'failed' => count($hs) - $wok - $wgone]); // abgelaufene Abos werden gelöscht, das Gerät muss Push neu einschalten
   fcmDone($mh, $hn);
   curl_multi_close($mh); }
 /* ---------- Nativer Push über Firebase Cloud Messaging, HTTP v1 (Issue #108) ---------- */
@@ -2866,7 +2869,11 @@ switch ($route) {
 
  /* ---------- Web-Push (Issue #67): Abonnement des Geräts ---------- */
  case 'push/key': if ($sid && !fcmOk()) alog('warn', 'push', 'App fragt nach Push, App-Push ist nicht eingerichtet', ['why' => fcmWhy()]); // App-Sitzung ($sid): sonst bliebe das Log stumm
-  out(['enabled' => pushOk(), 'key' => pushOk() ? vapid()['pub'] : null, 'native' => fcmOk() ? 1 : 0]); // öffentlicher VAPID-Schlüssel für pushManager.subscribe; native = FCM eingerichtet (Issue #108)
+  $r = ['enabled' => pushOk(), 'key' => pushOk() ? vapid()['pub'] : null, 'native' => fcmOk() ? 1 : 0]; // öffentlicher VAPID-Schlüssel für pushManager.subscribe; native = FCM eingerichtet (Issue #108)
+  // Mit token (FCM, im Body): ist dieses Gerät für mich gültig angemeldet? Die App meldet sich sonst neu an (Abo gelöscht, Sitzung entfernt, FCM erst später eingerichtet)
+  $t = trim((string)($in['token'] ?? ''));
+  if ($t !== '') { $s = $db->prepare("SELECT 1 FROM push_native n LEFT JOIN sessions se ON se.id=n.session_id WHERE n.token=? AND n.user_id=? AND (n.session_id IS NULL OR se.id IS NOT NULL)"); $s->execute([$t, $uid]); $r['registered'] = $s->fetchColumn() ? 1 : 0; $s->closeCursor(); }
+  out($r);
  case 'push/subscribe': // endpoint, keys: {p256dh, auth}; ein Gerät gehört immer der zuletzt angemeldeten Person
   if (!pushOk()) fail('Push ist auf diesem Server nicht verfügbar (PHP ohne openssl/curl)');
   $ep = (string)($in['endpoint'] ?? ''); $k = $in['keys'] ?? [];

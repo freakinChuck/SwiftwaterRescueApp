@@ -111,7 +111,7 @@ Lokal liest Android den Signierschlüssel aus `android/key.properties` (`storeFi
 
 Die Startseite der App nennt je Konto, woran Push scheitert (nicht eingebaut, Mitteilungen ausgeschaltet, kein APNs-Token, kein Firebase-Token, Anmeldung beim Server). Die Pipeline warnt bei fehlenden `FCM_*`-Geheimnissen und meldet `aps-environment` des signierten IPA.
 
-Ein Server ohne Dienstkonto meldet `push/key` mit `native: 0`. Die App zeigt dann «Push auf diesem Server nicht eingerichtet» und überwacht nur per Abfrage. Mehrere Backends können dasselbe Firebase-Projekt nutzen; die Nachricht nennt Server und Person (`srv`, `uid`), damit die App sie dem richtigen Konto zuordnet.
+Ein Server ohne Dienstkonto meldet `push/key` mit `native: 0`. Die App zeigt dann «Push auf diesem Server nicht eingerichtet» und überwacht nur per Abfrage. Sie fragt höchstens alle 6 Stunden erneut nach und meldet sich an, sobald der Server FCM hat. Ist das Gerät auf dem Server nicht mehr angemeldet (`push/key` mit Token liefert `registered: 0`, z. B. nach dem Entfernen der Sitzung), meldet sie sich beim nächsten Start oder bei der nächsten Rückkehr in die App neu an. Mehrere Backends können dasselbe Firebase-Projekt nutzen; die Nachricht nennt Server und Person (`srv`, `uid`), damit die App sie dem richtigen Konto zuordnet.
 
 ### Kritische Hinweise unter iOS
 
