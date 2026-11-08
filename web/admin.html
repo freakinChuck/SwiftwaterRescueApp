@@ -97,6 +97,15 @@ h3.lgh{margin:1rem 0 .2rem;font-size:.95rem}details.lgd{margin-top:1rem;border-t
 .leaflet-tooltip.rplbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px;font-size:calc(12px*var(--rpsz,1))} /* --rpsz: Regler «Grösse der Positionen» */
 #rpSzL{display:flex;gap:.5rem;align-items:center}#rpSzL input{flex:1;padding:0}#rpSzL span{min-width:3.2rem;text-align:right;font-variant-numeric:tabular-nums}.leaflet-tooltip.rplbl::before{display:none}
 @media(max-width:760px){#rpBody{flex-direction:column}#rpSide{width:auto;height:40%;border-left:0;border-top:1px solid var(--line)}}
+/* Applikationslog (Issue #139): Zeile mit Stufe als Farbe links, Angaben aufklappbar */
+.alf{align-items:center}.alf>select,.alf>input{flex:1 1 11rem;min-width:0}.alf>button{flex:0 0 auto}.alau{display:flex;gap:.4rem;align-items:center;flex:0 0 auto;white-space:nowrap}
+.alc{flex:0 0 auto;padding:.15rem .55rem;border-radius:999px;font-size:.82rem;border:1px solid var(--line)}.alc.e{border-color:#ff6b6b;color:#ff9a8a}.alc.w{border-color:#e8b545;color:#f2cf7a}.alc.i{color:var(--mut)}#alDay{align-items:center}
+.all{border-top:1px solid var(--line)}
+.alr{display:grid;grid-template-columns:10.5rem 5.5rem 9rem minmax(0,1fr) minmax(0,14rem);gap:.25rem .7rem;padding:.4rem .6rem;border-left:4px solid var(--line);border-bottom:1px solid var(--line);font-size:.88rem;cursor:default}
+.alr.warn{border-left-color:#e8b545}.alr.err{border-left-color:#ff6b6b}.alr.warn .alv{color:#f2cf7a}.alr.err .alv{color:#ff9a8a}.alr[data-al]:has(.mut):hover{background:#ffffff08}
+.alt{color:var(--mut);white-space:nowrap}.alm{overflow-wrap:anywhere}.alu{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.alx{grid-column:1/-1;margin:.2rem 0 0;padding:.5rem;background:var(--bg);border-radius:6px;font-size:.78rem;white-space:pre-wrap;overflow-wrap:anywhere;max-height:20rem;overflow:auto}
+@media(max-width:900px){.alr{grid-template-columns:auto auto minmax(0,1fr)}.alm{grid-column:1/-1}.alu{grid-column:1/-1}}
 </style></head><body>
 <div id="app"></div>
 <script src="common.js?v=0"></script>
@@ -149,9 +158,10 @@ const NAV=[
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
+  ['System',[['applog','sAL','Applikationslog',loadAppLog]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',applog:'applog'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -159,7 +169,7 @@ let MY=false;const myMode=()=>me.my_runs!=='off'&&(!nav().length||location.hash=
 const navItems=()=>nav().flatMap(([,its])=>its);
 // Navigation (Issue #128): Kategorien mit Symbol einklappbar, die aktuelle wird beim Öffnen eines Bereichs aufgeklappt; offene pro Gerät gemerkt (sw_navopen).
 // Kategorien mit nur einem Bereich als direkter Link. Die Suche filtert die Bereiche, Enter öffnet den ersten Treffer.
-const NAV_ICON={'Personen':'👥','Einsatz':'🚨','Übungen':'🎯','Funktionen':'🧩','Karte & Daten':'🗺️','Auswertung':'📊','Rechtliches':'⚖️'};
+const NAV_ICON={'Personen':'👥','Einsatz':'🚨','Übungen':'🎯','Funktionen':'🧩','Karte & Daten':'🗺️','Auswertung':'📊','Rechtliches':'⚖️','System':'🛠️'};
 const navLink=([k,,l],g)=>`<a href="#${k}" data-k="${k}">${g?`<span class="ni" aria-hidden="true">${NAV_ICON[g]||'•'}</span>`:''}${esc(l)}</a>`;
 let navO=null;const navOGet=()=>{if(!navO){try{navO=new Set(JSON.parse(localStorage.getItem('sw_navopen')||'[]'))}catch(e){navO=new Set()}}return navO};
 function navOpen(w,o,save=true){if(w.classList.contains('one'))return;w.classList.toggle('open',o);w.querySelector('.ng').setAttribute('aria-expanded',o);
@@ -309,6 +319,46 @@ async function loadAbs(){const el=$('#sAb');let rs,us;try{[rs,us]=await Promise.
     <div class="row"><button class="pri" id="abA">+ Abwesenheit erfassen</button></div>
     <h3>Laufend (${now.length})</h3><div id="abNow">${absRows(now,true)}</div><h3>Geplant (${fut.length})</h3><div id="abFut">${absRows(fut,true)}</div>`;
   $('#abA').onclick=()=>absDialog(null,us.filter(u=>u.active),loadAbs);absBind(el,rs,loadAbs)}
+/* ---------- Technisches Applikationslog (Issue #139) ---------- */
+// Neueste zuerst, Filter Stufe/Bereich/Text pro Gerät gemerkt (sw_alf), «Automatisch aktualisieren» holt alle 10 s nur die neuen (after), «Ältere laden» blättert (before).
+let alF=(()=>{try{return JSON.parse(localStorage.getItem('sw_alf')||'{}')||{}}catch(e){return{}}})(),alD=null,alT=null,alOpen=new Set();
+const alSave=()=>{try{localStorage.setItem('sw_alf',JSON.stringify(alF))}catch(e){}};
+const alQ=(x={})=>({lvl:alF.lvl||'',cat:alF.cat||'',q:alF.q||'',...x});
+const alDt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+async function loadAppLog(){const el=$('#sAL');clearInterval(alT);alT=null;
+  try{alD=await api('applog',alQ())}catch(e){el.innerHTML='<h2>Applikationslog</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  alOpen=new Set();renderAL();alAuto()}
+function alAuto(){clearInterval(alT);alT=null;if(!alF.auto)return;
+  alT=setInterval(async()=>{const el=$('#sAL');if(!el||el.hidden||!alD){clearInterval(alT);alT=null;return}
+    try{const r=await api('applog',alQ({after:alD.rows.length?alD.rows[0].id:0}));alD.day=r.day;if(r.rows.length){alD.rows=r.rows.concat(alD.rows);renderAL(true)}else alDay()}catch(e){}},10000)}
+const alDay=()=>{const d=$('#alDay');if(d)d.innerHTML=`<span class="alc e">${alD.day.err} Fehler</span><span class="alc w">${alD.day.warn} Warnungen</span><span class="alc i">${alD.day.info} Ereignisse</span><span class="mut">in den letzten 24 Stunden</span>`};
+const alCtx=c=>c==null?'':esc(JSON.stringify(c,null,2));
+function alRow(r){const o=alOpen.has(r.id),has=r.ctx!=null;
+  return `<div class="alr ${r.lvl}${o?' open':''}" data-al="${r.id}"><span class="alt">${alDt(r.at)}</span><span class="alv">${esc(alD.lvls[r.lvl]||r.lvl)}</span><span class="alk">${esc(alD.cats[r.cat]||r.cat)}</span>
+    <span class="alm">${esc(r.msg)}${has?' <span class="mut">▾</span>':''}</span><span class="alu mut">${r.user_id?esc(r.uname||'Person '+r.user_id):'–'}${r.route?' · '+esc(r.route):''}</span>${o&&has?`<pre class="alx">${alCtx(r.ctx)}</pre>`:''}</div>`}
+function alCsv(){const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const l=[['Zeit','Stufe','Bereich','Meldung','Person','Route','Angaben']].concat(alD.rows.map(r=>[alDt(r.at),alD.lvls[r.lvl]||r.lvl,alD.cats[r.cat]||r.cat,r.msg,r.uname||(r.user_id||''),r.route||'',r.ctx==null?'':JSON.stringify(r.ctx)]));
+  saveBlob(new Blob(['﻿'+l.map(x=>x.map(q).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),'applikationslog.csv')}
+function renderAL(keep){const el=$('#sAL'),D=alD;
+  if(keep&&$('#alL')){$('#alL').innerHTML=D.rows.map(alRow).join('')||'<div class="mut">Keine Einträge.</div>';alDay();return}
+  el.innerHTML=`<h2>Applikationslog</h2><div class="mut">Technisches Protokoll des Servers und der Geräte: Ereignisse (Anmeldungen, Einsätze starten und beenden, geänderte Benutzer und Einstellungen), Warnungen (z. B. Datenquellen ohne Antwort, abgelehnte Push-Nachrichten, fehlgeschlagene Anmeldungen) und Fehler (Serverfehler, Skriptfehler im Browser). Für die Fehlersuche, nicht fürs Einsatzlog; ohne Passwörter, Schlüssel und Einsatzinhalte. Einträge werden nach ${D.days} Tagen gelöscht.</div>
+    <div class="row" id="alDay"></div>
+    <div class="row alf"><select id="alLv" aria-label="Stufe"><option value="">Alle Stufen</option><option value="warn">Warnungen und Fehler</option><option value="err">Nur Fehler</option><option value="info">Nur Ereignisse</option></select>
+      <select id="alCa" aria-label="Bereich"><option value="">Alle Bereiche</option>${Object.entries(D.cats).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select>
+      <input id="alQ" type="search" placeholder="Suchen (Meldung, Angaben, Route, Person)" value="${esc(alF.q||'')}">
+      <label class="alau"><input type="checkbox" id="alAu"${alF.auto?' checked':''}> Automatisch aktualisieren</label><button id="alRe">Aktualisieren</button><button id="alEx" title="Angezeigte Einträge als CSV">CSV</button></div>
+    <div id="alL" class="all">${D.rows.map(alRow).join('')||'<div class="mut">Keine Einträge.</div>'}</div>
+    <div class="row"${D.more?'':' hidden'} id="alMoW"><button id="alMo">Ältere laden</button></div>
+    <h3>Aufbewahrung</h3><div class="row alf"><label>Einträge löschen nach <input id="alDays" type="number" min="1" max="365" value="${D.days}" style="width:5.5rem"> Tagen</label><button id="alDs">Speichern</button></div>`;
+  alDay();$('#alLv').value=alF.lvl||'';$('#alCa').value=alF.cat||'';
+  const set=(k,v)=>{alF[k]=v;alSave();loadAppLog()};
+  $('#alLv').onchange=e=>set('lvl',e.target.value);$('#alCa').onchange=e=>set('cat',e.target.value);
+  let qt;$('#alQ').oninput=e=>{clearTimeout(qt);qt=setTimeout(()=>set('q',e.target.value.trim()),400)};
+  $('#alAu').onchange=e=>{alF.auto=e.target.checked?1:0;alSave();alAuto()};$('#alRe').onclick=loadAppLog;$('#alEx').onclick=alCsv;
+  $('#alL').onclick=e=>{const r=e.target.closest('[data-al]');if(!r||getSelection().toString())return;const id=+r.dataset.al,x=D.rows.find(y=>y.id===id);if(!x||x.ctx==null)return;
+    alOpen.has(id)?alOpen.delete(id):alOpen.add(id);r.outerHTML=alRow(x)};
+  $('#alMo').onclick=async()=>{const b=$('#alMo');b.disabled=true;try{const r=await api('applog',alQ({before:D.rows[D.rows.length-1].id}));D.rows=D.rows.concat(r.rows);D.more=r.more;renderAL(true);$('#alMoW').hidden=!r.more}catch(e){fail(e)}b.disabled=false};
+  $('#alDs').onclick=()=>api('settings/save',{applog_days:+$('#alDays').value}).then(()=>{toast('Gespeichert','ok');loadAppLog()}).catch(fail)}
 /* ---------- Einsatztypen (Issue #90) ---------- */
 // Frei konfigurierbar statt der festen Unterscheidung scharf/Übung: alle Unterschiede sind Einstellungen je Typ. Funktionen, Aufzeichnung, Helikopter und Anonymisierung stehen in ihren eigenen Abschnitten (eigene Rechte).
 async function loadTypes(){const el=$('#sT');let D;try{D=await api('kinds')}catch(e){el.innerHTML='<h2>Einsatztypen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}

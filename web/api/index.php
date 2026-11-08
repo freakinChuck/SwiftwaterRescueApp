@@ -6,19 +6,61 @@ header('Cache-Control: no-store');
 ini_set('serialize_precision', '-1'); // Zahlen im JSON kurz ausgeben (47.481 statt 47.48100000000000164…), Hosting-Einstellung übersteuern
 // HTTPS-Abrufe unter Windows (lokales DEV mit IIS): Zertifikate aus dem Windows-Speicher, PHP bringt dort keine Liste mit (sonst schlägt jeder Abruf fehl, Feedback zu #125)
 define('CURL_CA', PHP_OS_FAMILY === 'Windows' && defined('CURLSSLOPT_NATIVE_CA') ? [CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA] : []);
-function out($d, $c = 200) { http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE);
+function out($d, $c = 200) { if ($c < 400 && isset(APPLOG_ROUTES[$GLOBALS['route'] ?? ''])) alogRoute($d); // Ereignis fürs Applikationslog (Issue #139)
+  http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE);
   if (!empty($GLOBALS['pushQ']) || !empty($GLOBALS['AFTER'])) { // Web-Push erst nach der Antwort senden (Issue #67), damit z. B. «Alarm auslösen» nicht auf die Push-Dienste wartet
     ignore_user_abort(true); if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); elseif (function_exists('litespeed_finish_request')) litespeed_finish_request(); else flush(); // cyon läuft mit LiteSpeed
-    try { if (!empty($GLOBALS['pushQ'])) pushFlush(); } catch (Throwable $e) { error_log('Push: ' . $e->getMessage()); }
+    try { if (!empty($GLOBALS['pushQ'])) pushFlush(); } catch (Throwable $e) { alog('err', 'push', 'Senden fehlgeschlagen: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); }
     // Nachlauf (after): Arbeiten, auf die niemand warten soll, z. B. Pegel und Abfluss beim BAFU abfragen (Issue #125)
-    foreach ($GLOBALS['AFTER'] ?? [] as $f) { try { set_time_limit(60); $f(); } catch (Throwable $e) { error_log('Nachlauf: ' . $e->getMessage()); } } }
+    foreach ($GLOBALS['AFTER'] ?? [] as $f) { try { set_time_limit(60); $f(); } catch (Throwable $e) { alog('err', 'api', 'Nachlauf fehlgeschlagen: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } } }
   exit; }
 function after($f) { $GLOBALS['AFTER'][] = $f; }
 function fail($m, $c = 400) { out(['error' => $m], $c); }
 // Unerwartete Fehler (z. B. Datenbank gesperrt) als JSON melden statt leerer 500-Antwort; offene Transaktion zurückrollen, Details ins Fehlerprotokoll
-set_exception_handler(function ($e) { global $db; error_log('API ' . ($_GET['r'] ?? '') . ': ' . $e->getMessage());
-  try { if ($db && $db->inTransaction()) $db->rollBack(); } catch (Throwable $x) {}
+set_exception_handler(function ($e) { global $db;
+  try { if ($db && $db->inTransaction()) $db->rollBack(); } catch (Throwable $x) {} // zuerst zurückrollen, sonst ginge der Log-Eintrag mit verloren
+  alog('err', 'api', 'Serverfehler: ' . $e->getMessage(), ['type' => get_class($e), 'file' => basename($e->getFile()), 'line' => $e->getLine()]);
   fail('Serverfehler, bitte nochmals versuchen', 500); });
+
+/* ---------- Technisches Applikationslog (Issue #139) ---------- */
+// Ereignisse, Warnungen und Fehler in der Tabelle app_log (Verwaltung → System → «Applikationslog», Recht applog), gelöscht nach applog_days Tagen.
+// alog schreibt nie einen Fehler weiter (der Log-Eintrag darf eine Anfrage nicht scheitern lassen); Warnungen und Fehler gehen zusätzlich ins error_log des Servers.
+// Nie Passwörter, Schlüssel oder Inhalte von Einsätzen ins Log, nur Kennungen und technische Angaben.
+const APPLOG_LVL = ['info' => 'Ereignis', 'warn' => 'Warnung', 'err' => 'Fehler'];
+const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
+  'push' => 'Push', 'overpass' => 'Gewässerdaten', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'client' => 'Browser & App'];
+const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
+const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
+// Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
+const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
+  'user/save' => ['user', 'Benutzer gespeichert'], 'user/password' => ['user', 'Passwort zurückgesetzt'], 'user/active' => ['user', 'Benutzer aktiviert bzw. deaktiviert'], 'user/delete' => ['user', 'Benutzer gelöscht'],
+  'urole/save' => ['user', 'Benutzerrolle gespeichert'], 'urole/remove' => ['user', 'Benutzerrolle entfernt'], 'group/save' => ['user', 'Einsatzgruppe gespeichert'], 'group/delete' => ['user', 'Einsatzgruppe gelöscht'],
+  'settings/save' => ['cfg', 'Einstellungen gespeichert'], 'ai/cfg/save' => ['cfg', 'AI-Assistent eingestellt'], 'anon/cfg/save' => ['cfg', 'Anonymisierung eingestellt'], 'aar/cfg/save' => ['cfg', 'After Action Review eingerichtet'],
+  'kind/save' => ['cfg', 'Einsatztyp gespeichert'], 'kind/delete' => ['cfg', 'Einsatztyp gelöscht'], 'mode/save' => ['cfg', 'Einrückoption gespeichert'], 'role/save' => ['cfg', 'Spezialrolle gespeichert'],
+  'incident/start' => ['inc', 'Einsatz gestartet'], 'ex/start' => ['inc', 'Vorbereitete Übung gestartet'], 'incident/end' => ['inc', 'Einsatz beendet'],
+  'incident/replay/delete' => ['anon', 'Aufzeichnung gelöscht'], 'anon/apply' => ['anon', 'Anonymisierung angewendet'], 'anon/undo' => ['anon', 'Anonymisierung zurückgenommen'],
+  'overpass/stats/reset' => ['overpass', 'Statistik der Gewässerdaten zurückgesetzt']];
+$ALOG_N = 0;
+function alog($lvl, $cat, $msg, $ctx = null) { global $db, $ALOG_N;
+  $msg = mb_substr(trim((string)$msg), 0, 1000);
+  if ($lvl !== 'info') error_log("[$lvl] $cat: $msg");
+  if (!($db instanceof PDO) || ++$ALOG_N > APPLOG_MAX) return;
+  $c = $ctx === null ? null : mb_substr((string)json_encode($ctx, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR), 0, 4000);
+  try { $db->prepare("INSERT INTO app_log(at,lvl,cat,msg,ctx,user_id,route) VALUES(?,?,?,?,?,?,?)")->execute([time(), $lvl, $cat, $msg, $c, $GLOBALS['uid'] ?? null, mb_substr((string)($_GET['r'] ?? ''), 0, 60)]); }
+  catch (Throwable $e) {} }
+function applogDays() { $d = (int)setting('applog_days', APPLOG_DAYS); return $d >= 1 && $d <= 365 ? $d : APPLOG_DAYS; }
+// Ereignis einer Route aus APPLOG_ROUTES: Kennung (id) und die Namen der übergebenen Felder, nie ihre Werte
+function alogRoute($d) { global $in, $route; [$cat, $t] = APPLOG_ROUTES[$route];
+  $x = []; if (isset($in['id']) && is_scalar($in['id'])) $x['id'] = (int)$in['id']; elseif (is_array($d) && isset($d['id']) && is_scalar($d['id'])) $x['id'] = (int)$d['id'];
+  if ($route === 'user/active') $t = empty($in['active']) ? 'Benutzer deaktiviert' : 'Benutzer aktiviert';
+  $k = array_values(array_diff(array_keys((array)$in), ['id', 'password', 'pass', 'old', 'new', 'key', 'token'])); if ($k) $x['fields'] = array_slice($k, 0, 30);
+  alog('info', $cat, $t, $x ?: null); }
+// PHP-Warnungen und Hinweise (mit @ unterdrückte nicht), danach wie bisher; fatale Fehler beim Beenden
+set_error_handler(function ($no, $str, $file, $line) { if (!(error_reporting() & $no)) return false;
+  alog(in_array($no, [E_WARNING, E_USER_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_RECOVERABLE_ERROR, E_USER_ERROR], true) ? 'warn' : 'info', 'php', $str, ['file' => basename($file), 'line' => $line]);
+  return false; });
+register_shutdown_function(function () { $e = error_get_last();
+  if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) alog('err', 'php', 'Abbruch: ' . $e['message'], ['file' => basename($e['file']), 'line' => $e['line']]); });
 
 $db = new PDO($cfg['dsn'], $cfg['db_user'], $cfg['db_pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 $my = str_starts_with($cfg['dsn'], 'mysql');
@@ -102,7 +144,9 @@ foreach ([
   "CREATE TABLE IF NOT EXISTS aar_arch_img(incident_id INT, img_id INT, field_id $tx, caption TEXT, data MEDIUMTEXT, w INT, h INT, PRIMARY KEY(incident_id,img_id))",
   "CREATE TABLE IF NOT EXISTS aar_arch_part(incident_id INT, n INT, data MEDIUMTEXT, PRIMARY KEY(incident_id,n))",
   // AI-Assistent (Issue #111): jede Abfrage beim Anbieter (Kostenbremse, Statistik) und die letzte Antwort je Funktion und Objekt (Companion, keine doppelten Kosten)
-  "CREATE TABLE IF NOT EXISTS ai_usage(id $ai, ts BIGINT, user_id INT, fn $tx, incident_id INT NULL, tokens INT DEFAULT 0, ok INT DEFAULT 1, err TEXT NULL)",
+  // Technisches Applikationslog (Issue #139): lvl info|warn|err, cat = Bereich (APPLOG_CATS), ctx = JSON mit technischen Angaben, user_id/route der Anfrage
+ "CREATE TABLE IF NOT EXISTS app_log(id $ai, at BIGINT, lvl $tx, cat $tx, msg TEXT, ctx TEXT NULL, user_id INT NULL, route $tx NULL)",
+ "CREATE TABLE IF NOT EXISTS ai_usage(id $ai, ts BIGINT, user_id INT, fn $tx, incident_id INT NULL, tokens INT DEFAULT 0, ok INT DEFAULT 1, err TEXT NULL)",
   "CREATE TABLE IF NOT EXISTS ai_cache(k VARCHAR(64) PRIMARY KEY, ts BIGINT, ctx_hash VARCHAR(64), text MEDIUMTEXT, tokens INT DEFAULT 0, model $tx NULL)",
   // Pegel und Abfluss (Issue #125): Werte der Messstationen des BAFU zu Beginn (phase start, sobald ein PLS bekannt ist) und am Ende (end) des Einsatzes;
   // dist = Distanz zum nächsten PLS in Metern, at = Zeitpunkt der Messung. incidents.hydro_s: NULL = Beginn noch nicht erfasst, > 0 erfasst, < 0 = -Zeitpunkt des letzten Fehlschlags
@@ -126,6 +170,7 @@ if (setting('aar_img_mig', '') === '') { $c = json_decode((string)setting('aar_c
     $c['seq'] = (int)($c['seq'] ?? 12) + 1; $c['fields'][] = ['id' => 'f' . $c['seq'], 'type' => 'img', 'label' => 'Bilder', 'hint' => 'Fotos, Skizzen, Kartenausschnitte'];
     setSetting('aar_cfg', json_encode($c, JSON_UNESCAPED_UNICODE)); }
   setSetting('aar_img_mig', '1'); }
+try { $db->exec("CREATE INDEX app_log_at ON app_log(at)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO roles(name,color,is_lead,is_post) VALUES(?,?,?,?)");
@@ -214,12 +259,13 @@ const PERMS = [
   'aar_cfg' => ['Auswertung', 'After Action Review einrichten', 'Felder, Dokumenttitel, Organisation, Logo, mitgelieferte Abschnitte und erlaubte Formate'],
   'legal' => ['Verwaltung', 'Impressum & Datenschutz einstellen', 'Angaben zur betreibenden Organisation, Kontakt und Zusatztexte der Seite «Impressum, Lizenzen & Datenschutz»'],
   'aar_arch' => ['Auswertung', 'Gesicherte After Action Reviews abrufen', 'Das vor dem Anonymisieren gesicherte, vollständige PDF eines freigegebenen Reviews abrufen, mit allen Namen'],
+  'applog' => ['System', 'Applikationslog einsehen', 'Technisches Applikationslog mit Ereignissen, Warnungen und Fehlern des Servers und der Geräte; Aufbewahrung einstellen'],
 ];
 // Alarmstufen der Einsatztypen (Issue #90), von stark nach schwach: Schlüssel => [Bezeichnung, Erklärung]; Einsatz-App und Service Worker setzen sie um
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func',
-  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
+  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'applog_days' => 'applog']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
@@ -462,7 +508,7 @@ function airGet($url) {
   $r = curl_exec($c); $code = curl_getinfo($c, CURLINFO_HTTP_CODE); $err = $r === false ? (curl_errno($c) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($c)) : ''; 
   return [$code, $r === false ? null : $r, $err]; }
 // Abruf je Quelle für die Anzeige in der Verwaltung (api/data/air/status.json); darf die Abfrage nie stören
-function airStat($k, $ok, $ms, $err, $n) { try { $f = __DIR__ . '/data/air/status.json'; if (!is_dir(dirname($f))) @mkdir(dirname($f), 0775, true); $s = json_decode((string)@file_get_contents($f), true) ?: []; $x = $s[$k] ?? ['uses' => 0, 'fails' => 0];
+function airStat($k, $ok, $ms, $err, $n) { if (!$ok) alog('warn', 'air', 'Quelle ohne Antwort: ' . (AIR_SOURCES[$k]['name'] ?? $k), ['err' => $err === null ? null : mb_substr((string)$err, 0, 200), 'ms' => (int)$ms]); try { $f = __DIR__ . '/data/air/status.json'; if (!is_dir(dirname($f))) @mkdir(dirname($f), 0775, true); $s = json_decode((string)@file_get_contents($f), true) ?: []; $x = $s[$k] ?? ['uses' => 0, 'fails' => 0];
   $x['uses']++; if ($ok) { $x['last_ok'] = time(); $x['ms'] = (int)$ms; $x['n'] = $n; } else { $x['fails']++; $x['last_fail'] = time(); $x['err'] = mb_substr((string)$err, 0, 150); }
   $s[$k] = $x; @file_put_contents("$f.tmp", json_encode($s)); @rename("$f.tmp", $f); } catch (Throwable $e) {} }
 // erste Quelle mit gültiger Antwort für den Kreis (la, lo, rm Meter): [Quelle, Liste, abgedeckter Radius] oder null
@@ -627,6 +673,7 @@ function hydroBafu() { return hydroFile('bafu', HYDRO_TTL, function () { $on = h
 function hydroSrc($k) { $t = microtime(true); $err = null;
   try { $r = $k === 'api' ? hydroApi() : hydroWeb(); } catch (Throwable $e) { $r = null; $err = $e->getMessage(); }
   if (!$r && !$err) $err = 'keine gültige Antwort';
+  if (!$r) alog('warn', 'hydro', 'Quelle ohne Antwort: ' . (HYDRO_SOURCES[$k]['name'] ?? $k), ['err' => mb_substr((string)$err, 0, 200)]); // Applikationslog (Issue #139)
   hydroStat($k, ['ok' => $r ? 1 : 0, 'ms' => (int)((microtime(true) - $t) * 1000), 'err' => $err, 'stations' => $r ? count($r['locs']) : 0, 'values' => $r ? count($r['vals']) : 0]);
   return $r; }
 function hydroStat($k = null, $v = null) { $f = __DIR__ . '/data/hydro/status.json'; $d = json_decode((string)@file_get_contents($f), true) ?: [];
@@ -773,7 +820,8 @@ function pgErr($e) { $m = preg_replace('/\s+/', ' ', $e->getMessage()); $m = pre
 if ($route === 'login') {
   $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
   $u = $st->fetch();
-  if (!$u || !password_verify($in['password'] ?? '', $u['pass_hash'])) fail('Benutzername oder Passwort falsch', 401);
+  if (!$u || !password_verify($in['password'] ?? '', $u['pass_hash'])) { alog('warn', 'auth', 'Anmeldung fehlgeschlagen', ['username' => mb_substr((string)($in['username'] ?? ''), 0, 60), 'known' => $u ? 1 : 0]); fail('Benutzername oder Passwort falsch', 401); }
+  $uid = (int)$u['id']; alog('info', 'auth', 'Angemeldet', ['app' => trim((string)($in['device'] ?? '')) !== '' ? 1 : 0, 'platform' => in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : null]); // Applikationslog (Issue #139)
   $t = bin2hex(random_bytes(24));
   // Native App (Issue #108): mit device eine eigene Gerätesitzung, andere Geräte bleiben angemeldet; höchstens 20 je Person (die ältesten fallen weg)
   $dev = mb_substr(trim(preg_replace('/[\x00-\x1f]/u', ' ', (string)($in['device'] ?? ''))), 0, 80);
@@ -811,7 +859,7 @@ if ($route === 'legal') {
     'hydro_src' => array_values(array_map(fn($k) => ['k' => $k] + HYDRO_SOURCES[$k], array_keys(array_filter(hydroCfg()['src'])))), // eingeschaltete Quellen in der Reihenfolge des Vorrangs
     'air_home' => (int)$air['home_km'],
     'air' => ['on' => (int)$air['on'], 'public' => (int)$air['public'], 'replay' => (int)$air['replay'], 'src' => array_map(fn($k) => ['name' => AIR_SOURCES[$k]['name'], 'site' => AIR_SOURCES[$k]['site']], $air['src'])],
-    'push' => pushOk() ? 1 : 0, 'push_native' => fcmOk() ? 1 : 0, 'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'days' => (object)array_intersect_key($c['days'], $ks)], array_keys(anonCfg()), anonCfg())]);
+    'push' => pushOk() ? 1 : 0, 'push_native' => fcmOk() ? 1 : 0, 'applog_days' => applogDays(), 'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'days' => (object)array_intersect_key($c['days'], $ks)], array_keys(anonCfg()), anonCfg())]);
 }
 
 // Öffentliche Ansicht (Public Mode): ohne Anmeldung, nur lesend, nur mit dem geheimen Link der Einsatzleitung (k = public_token).
@@ -1215,6 +1263,7 @@ function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) re
     curl_multi_add_handle($mh, $h); $hs[] = [$h, (int)$sub['id']]; }
   do { $st = curl_multi_exec($mh, $run); if ($run) curl_multi_select($mh, 1); } while ($run && $st === CURLM_OK);
   foreach ($hs as [$h, $id]) { $c = curl_getinfo($h, CURLINFO_HTTP_CODE); if ($c === 404 || $c === 410) $db->prepare("DELETE FROM push_subs WHERE id=?")->execute([$id]); // abgelaufen
+    elseif ($c < 200 || $c >= 300) alog('warn', 'push', 'Web-Push abgelehnt', ['http' => $c, 'host' => parse_url((string)curl_getinfo($h, CURLINFO_EFFECTIVE_URL), PHP_URL_HOST), 'sub' => $id, 'err' => curl_error($h) ?: null]);
     curl_multi_remove_handle($mh, $h); }
   fcmDone($mh, $hn);
   curl_multi_close($mh); }
@@ -1232,12 +1281,12 @@ function fcmToken($renew = false) { $c = fcmCfg(); $f = __DIR__ . '/data/fcm_tok
   if (!$renew && is_array($t) && ($t['email'] ?? '') === $c['client_email'] && (int)($t['exp'] ?? 0) > time() + 300 && !empty($t['token'])) return $t['token'];
   $now = time(); $h = b64u(json_encode(['alg' => 'RS256', 'typ' => 'JWT'])) . '.' . b64u(json_encode(['iss' => $c['client_email'], 'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
     'aud' => 'https://oauth2.googleapis.com/token', 'iat' => $now, 'exp' => $now + 3600], JSON_UNESCAPED_SLASHES));
-  $k = openssl_pkey_get_private($c['private_key']); if (!$k || !openssl_sign($h, $sig, $k, OPENSSL_ALGO_SHA256)) { error_log('FCM: privater Schlüssel des Dienstkontos ungültig'); return null; }
+  $k = openssl_pkey_get_private($c['private_key']); if (!$k || !openssl_sign($h, $sig, $k, OPENSSL_ALGO_SHA256)) { alog('err', 'push', 'FCM: privater Schlüssel des Dienstkontos ungültig'); return null; }
   $ch = curl_init('https://oauth2.googleapis.com/token');
   curl_setopt_array($ch, CURL_CA + [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_CONNECTTIMEOUT => 4,
     CURLOPT_POSTFIELDS => http_build_query(['grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer', 'assertion' => $h . '.' . b64u($sig)])]);
   $raw = curl_exec($ch); $r = json_decode((string)$raw, true);
-  if (empty($r['access_token'])) { error_log('FCM: kein Zugriffstoken (' . curl_getinfo($ch, CURLINFO_HTTP_CODE) . ') ' . mb_substr((string)$raw, 0, 300)); return null; }
+  if (empty($r['access_token'])) { alog('err', 'push', 'FCM: kein Zugriffstoken', ['http' => curl_getinfo($ch, CURLINFO_HTTP_CODE), 'resp' => mb_substr((string)$raw, 0, 300)]); return null; }
   @file_put_contents($f, json_encode(['token' => $r['access_token'], 'exp' => $now + (int)($r['expires_in'] ?? 3600), 'email' => $c['client_email']]), LOCK_EX);
   return $r['access_token']; }
 // Basis der Web-App ohne api/ (Host und Pfad, z. B. example.ch/swiftwater/), damit die App weiss, von welchem Backend die Nachricht kommt
@@ -1272,7 +1321,7 @@ function fcmDone($mh, $hn) { global $db;
     if ($c !== 200) { $e = json_decode((string)curl_multi_getcontent($h), true)['error'] ?? []; $st = (string)($e['status'] ?? ''); $msg = (string)($e['message'] ?? '');
       foreach ((array)($e['details'] ?? []) as $x) if (is_array($x) && !empty($x['errorCode'])) $st = (string)$x['errorCode']; // FcmError: UNREGISTERED, SENDER_ID_MISMATCH, …
       if ($c === 404 || $st === 'UNREGISTERED' || $st === 'SENDER_ID_MISMATCH' || ($st === 'INVALID_ARGUMENT' && stripos($msg, 'token') !== false)) $db->prepare("DELETE FROM push_native WHERE id=?")->execute([$id]);
-      else { if ($c === 401) @unlink(__DIR__ . '/data/fcm_token.json'); error_log("FCM $c $st: " . mb_substr($msg, 0, 200)); } }
+      else { if ($c === 401) @unlink(__DIR__ . '/data/fcm_token.json'); alog('warn', 'push', 'App-Push (FCM) abgelehnt', ['http' => $c, 'status' => $st ?: null, 'msg' => mb_substr($msg, 0, 200) ?: null, 'sub' => $id]); } }
     curl_multi_remove_handle($mh, $h); } }
 // alle aktiven Benutzer ausser $skip (IDs), bei Aufgebot nur die aufgebotenen ($only, NULL = alle); Stufe wie alarmLvl je Person, «Keine» sendet nichts
 function pushAlarm($inc, $skip, $only = null) { global $db; if (!pushOk() && !fcmOk()) return;
@@ -1377,6 +1426,7 @@ function overpassFetch($q) { // erste Antwort mit elements, sonst null; jeder Ve
 }
 // Verwendungsstatistik je Overpass-Server und Quelle (Issue #45, Tabelle overpass_stats); darf die Abfrage nie stören
 function opStat($url, $src, $ok, $ms, $err = null) { global $db;
+  if (!$ok) alog('warn', 'overpass', ($url === PG_STAT ? 'PostGIS' : 'Overpass') . ($src === 'device' ? ' (vom Gerät gemeldet)' : '') . ' ohne Antwort', ['url' => $url, 'err' => $err === null ? null : mb_substr($err, 0, 200), 'ms' => (int)$ms]); // Applikationslog (Issue #139)
   try {
     $now = time(); $err = $err === null ? null : mb_substr($err, 0, 150);
     $u = $db->prepare($ok ? "UPDATE overpass_stats SET uses=uses+1, ok=ok+1, ok_ms=ok_ms+?, last_ok=? WHERE url=? AND src=?" : "UPDATE overpass_stats SET uses=uses+1, fails=fails+1, last_fail=?, last_err=? WHERE url=? AND src=?");
@@ -1556,7 +1606,7 @@ function anonAuto() { global $db, $now;
     foreach ($c['days'] as $kid => $dd) { if ($dd === null) continue;
       $s = $db->prepare("SELECT * FROM incidents WHERE ended_at IS NOT NULL AND ended_at<=? AND kind_id=? ORDER BY ended_at"); $s->execute([$now - $dd * 86400, $kid]);
       foreach ($s->fetchAll() as $inc) { if (!anonTodo($inc, $k)) continue;
-        if (anonDo((int)$inc['id'], $k, '(automatisch, ' . ($dd ? $dd . ($dd === 1 ? ' Tag' : ' Tage') . ' nach dem Einsatzende' : 'beim Einsatzende') . ')')) $n++;
+        if (anonDo((int)$inc['id'], $k, '(automatisch, ' . ($dd ? $dd . ($dd === 1 ? ' Tag' : ' Tage') . ' nach dem Einsatzende' : 'beim Einsatzende') . ')')) { $n++; alog('info', 'anon', 'Automatisch anonymisiert: ' . ANON_STEPS[$k][0], ['incident' => (int)$inc['id'], 'step' => $k, 'days' => $dd]); }
         if ($n >= 20) { setSetting('anon_auto_at', (string)($now - 540)); return; } } } } }
 // Einsatzkräfte fürs Replay: Spezialrolle mit Stand am Ende (Rollenwechsel stehen im Log); joined = erste Annahme (nach dem Anonymisieren des Protokolls: erste Standortmeldung)
 function replayParts($id) { global $db;
@@ -1680,7 +1730,8 @@ function aiCall($sys, $msgs, $maxTok = null) { $c = aiCfg(); $key = aiKey();
   if (trim($t) === '') throw new AiErr('Der AI-Anbieter lieferte keine Antwort');
   return [trim($t), $tok, (string)($j['model'] ?? $model)]; }
 class AiErr extends Exception {}
-function aiUse($fn, $incId, $tok, $ok, $err = null) { global $db, $now, $uid; $db->prepare("INSERT INTO ai_usage(ts,user_id,fn,incident_id,tokens,ok,err) VALUES(?,?,?,?,?,?,?)")->execute([$now, $uid, $fn, $incId, (int)$tok, $ok ? 1 : 0, $err === null ? null : mb_substr($err, 0, 300)]); }
+function aiUse($fn, $incId, $tok, $ok, $err = null) { global $db, $now, $uid; if (!$ok) alog('warn', 'ai', 'Anfrage fehlgeschlagen', ['fn' => $fn, 'incident' => $incId, 'err' => $err === null ? null : mb_substr((string)$err, 0, 200)]);
+$db->prepare("INSERT INTO ai_usage(ts,user_id,fn,incident_id,tokens,ok,err) VALUES(?,?,?,?,?,?,?)")->execute([$now, $uid, $fn, $incId, (int)$tok, $ok ? 1 : 0, $err === null ? null : mb_substr($err, 0, 300)]); }
 // Kostenbremse: Abfragen der letzten 24 Stunden gesamt und je Person (0 = unbegrenzt)
 function aiLimit() { global $db, $now, $uid; $c = aiCfg();
   $q = fn($w, $a) => (int)(function () use ($db, $w, $a) { $s = $db->prepare("SELECT COUNT(*) FROM ai_usage WHERE ts>? $w"); $s->execute($a); $v = $s->fetchColumn(); $s->closeCursor(); return $v; })();
@@ -1816,7 +1867,9 @@ if ($route === 'incident/location' && ($inc = activeIncident()) && ($p = part($i
 if (array_key_exists($route, FEATURE_ROUTES) && ($inc = activeIncident()) && !feature($inc, FEATURE_ROUTES[$route]))
   fail('Die Funktion «' . FEATURES[FEATURE_ROUTES[$route]] . '» ist für «' . kindOf($inc)['name'] . '» ausgeschaltet', 403);
 
-try { anonAuto(); } catch (Throwable $e) { error_log('anonAuto: ' . $e->getMessage()); } // fällige automatische Anonymisierung (Issue #87)
+try { anonAuto(); } catch (Throwable $e) { alog('err', 'anon', 'Automatische Anonymisierung fehlgeschlagen: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // fällige automatische Anonymisierung (Issue #87)
+// Applikationslog (Issue #139): Einträge älter als applog_days löschen, höchstens einmal pro Stunde
+try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog_purge_at', (string)$now); $db->prepare("DELETE FROM app_log WHERE at<?")->execute([$now - applogDays() * 86400]); } } catch (Throwable $e) {}
 switch ($route) {
  case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
@@ -3067,6 +3120,30 @@ switch ($route) {
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
    'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM, 'hydro_sources' => HYDRO_SOURCES] // Pegel & Abfluss (Issue #125)
    + (can('cfg_map') ? ['postgis' => pgCfg() + ['pass_set' => setting('postgis_pass', '') !== '' ? 1 : 0, 'ext' => extension_loaded('pdo_pgsql') ? 1 : 0, 'ready' => pgReady() ? 1 : 0], 'postgis_ssl' => PG_SSL, 'postgis_default' => PG_DEFAULT] : [])); // PostGIS (Issue #131), ohne Passwort
+ /* ---------- Technisches Applikationslog (Issue #139) ---------- */
+ case 'applog': need('applog'); // neueste zuerst; lvl = mindestens diese Stufe (warn = Warnungen und Fehler), cat, q (Text, Route, Angaben), before = ältere als diese ID, after = neuere (Aktualisieren)
+  $w = []; $p = [];
+  $lv = (string)($in['lvl'] ?? ''); if ($lv === 'warn') $w[] = "l.lvl IN ('warn','err')"; elseif ($lv === 'err') $w[] = "l.lvl='err'"; elseif ($lv === 'info') $w[] = "l.lvl='info'";
+  $ca = (string)($in['cat'] ?? ''); if ($ca !== '' && isset(APPLOG_CATS[$ca])) { $w[] = 'l.cat=?'; $p[] = $ca; }
+  $q = trim(mb_substr((string)($in['q'] ?? ''), 0, 100));
+  if ($q !== '') { $w[] = '(l.msg LIKE ? OR l.ctx LIKE ? OR l.route LIKE ? OR u.name LIKE ? OR u.username LIKE ?)'; array_push($p, ...array_fill(0, 5, '%' . $q . '%')); }
+  if (!empty($in['before'])) { $w[] = 'l.id<?'; $p[] = (int)$in['before']; }
+  if (!empty($in['after'])) { $w[] = 'l.id>?'; $p[] = (int)$in['after']; }
+  $n = max(20, min(500, (int)($in['limit'] ?? 200)));
+  $s = $db->prepare("SELECT l.*, u.name uname FROM app_log l LEFT JOIN users u ON u.id=l.user_id" . ($w ? ' WHERE ' . implode(' AND ', $w) : '') . " ORDER BY l.id DESC LIMIT " . ($n + 1)); $s->execute($p);
+  $rs = $s->fetchAll(); $more = count($rs) > $n; $rs = array_slice($rs, 0, $n);
+  $rows = array_map(fn($r) => ['ctx' => $r['ctx'] === null ? null : json_decode($r['ctx'], true)] + ints($r, ['id', 'at', 'user_id']), $rs);
+  $c = $db->prepare("SELECT lvl, COUNT(*) n FROM app_log WHERE at>=? GROUP BY lvl"); $c->execute([$now - 86400]);
+  $day = ['info' => 0, 'warn' => 0, 'err' => 0]; foreach ($c->fetchAll() as $x) $day[$x['lvl']] = (int)$x['n'];
+  out(['rows' => $rows, 'more' => $more ? 1 : 0, 'day' => $day, 'cats' => APPLOG_CATS, 'lvls' => APPLOG_LVL, 'days' => applogDays()]);
+ case 'applog/client': // Fehler aus Browser und App (common.js), alle Angemeldeten; höchstens 10 je Person in 10 Minuten
+  $c = $db->prepare("SELECT COUNT(*) n FROM app_log WHERE cat='client' AND user_id=? AND at>=?"); $c->execute([$uid, $now - 600]);
+  if ((int)$c->fetch()['n'] >= 10) out(['ok' => false]);
+  $t = fn($k, $n) => isset($in[$k]) && is_scalar($in[$k]) ? mb_substr(preg_replace('/[\x00-\x08\x0b-\x1f]/u', ' ', (string)$in[$k]), 0, $n) : null;
+  $m = $t('msg', 500); if ($m === null || trim($m) === '') fail('Meldung fehlt');
+  alog(($in['lvl'] ?? '') === 'warn' ? 'warn' : 'err', 'client', $m, array_filter(['page' => $t('page', 200), 'src' => $t('src', 200), 'line' => isset($in['line']) ? (int)$in['line'] : null,
+    'col' => isset($in['col']) ? (int)$in['col'] : null, 'stack' => $t('stack', 1500), 'ver' => $t('ver', 40), 'ua' => mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200)], fn($v) => $v !== null && $v !== ''));
+  out(['ok' => true]);
  case 'settings/save': // jede übergebene Einstellung braucht ihr Recht (SETTING_PERMS)
   foreach (SETTING_PERMS as $k => $p) if (isset($in[$k])) need($p);
   if (isset($in['ai'])) fail('Den AI-Assistenten über ai/cfg/save einstellen');
@@ -3086,6 +3163,9 @@ switch ($route) {
     if (!is_numeric($in['overpass_ttl']) || (int)$in['overpass_ttl'] < 0 || (int)$in['overpass_ttl'] > 10080) fail('Haltedauer: 0 bis 10080 Minuten');
     setSetting('overpass_ttl', (string)(int)$in['overpass_ttl']);
   }
+  if (isset($in['applog_days'])) { // Aufbewahrung des Applikationslogs in Tagen (Issue #139)
+    if (!is_numeric($in['applog_days']) || (int)$in['applog_days'] < 1 || (int)$in['applog_days'] > 365) fail('Aufbewahrung: 1 bis 365 Tage');
+    setSetting('applog_days', (string)(int)$in['applog_days']); setSetting('applog_purge_at', '0'); }
   if (isset($in['overpass_urls'])) { // Overpass-Server in der Reihenfolge der Abfrage, 1–8 https-Adressen; leere Liste = Standard (OVERPASS)
     $v = [];
     foreach ((array)$in['overpass_urls'] as $u) {

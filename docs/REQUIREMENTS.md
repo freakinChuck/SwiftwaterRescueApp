@@ -237,11 +237,13 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 20. Verwaltung (VW)
 
-- **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen, Rechtliches), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
+- **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen, Rechtliches, System), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
 - **VW-02** – Neue Einstellungen erscheinen als Unterpunkt einer Kategorie mit eigenem Recht (#32, #63).
 - **VW-03** – Hinweise verschwinden von selbst; nur Rückfragen brauchen einen Klick (AG).
 - **VW-04** – Navigation der Verwaltung: Kategorien mit Symbol und Anzahl einklappbar, die Kategorie des geöffneten Bereichs ist aufgeklappt, von Hand aufgeklappte pro Gerät gemerkt; Kategorien mit nur einem Bereich als direkter Link; Suchfeld über der Navigation (Enter öffnet den ersten Treffer); die Navigation scrollt bei Bedarf selbst (#128).
 - **VW-05** – Passwort ändern, Abmelden und Impressum stehen in der Kopfzeile der Verwaltung in einem Konto-Menü mit dem Namen der Person (#128).
+- **VW-06** – Technisches Applikationslog in der Verwaltung (Kategorie «System», eigenes Recht): Ereignisse (Anmeldungen, Einsätze starten und beenden, geänderte Benutzer, Rollen, Gruppen und Einstellungen, automatische Anonymisierung), Warnungen (fehlgeschlagene Anmeldungen, Datenquellen ohne Antwort, abgelehnte Push-Nachrichten, fehlgeschlagene AI-Anfragen, PHP-Warnungen) und Fehler (Serverfehler, Abbrüche, Skriptfehler im Browser und in der App-WebView); filterbar nach Stufe, Bereich und Text, neueste zuerst, automatisch aktualisierbar, Export als CSV; ohne Passwörter, Schlüssel und Einsatzinhalte (#139).
+- **VW-07** – Das Applikationslog wird nach einer einstellbaren Frist gelöscht (1–365 Tage, Standard 30); die Datenschutzerklärung nennt sie (#139).
 
 ## 21. AI-Assistent (AI)
 
