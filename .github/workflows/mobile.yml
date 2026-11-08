@@ -175,13 +175,20 @@ jobs:
             --dart-define=FCM_PROJECT_ID=${{ secrets.FCM_PROJECT_ID }}
             --dart-define=FCM_SENDER_ID=${{ secrets.FCM_SENDER_ID }}
             --dart-define=FCM_APP_ID_IOS=${{ secrets.FCM_APP_ID_IOS }}
+          HAS_FCM: ${{ secrets.FCM_API_KEY != '' && secrets.FCM_PROJECT_ID != '' && secrets.FCM_SENDER_ID != '' && secrets.FCM_APP_ID_IOS != '' }}
         shell: bash
         run: |
+          [ "$HAS_FCM" = "true" ] || echo "::warning::FCM_API_KEY, FCM_PROJECT_ID, FCM_SENDER_ID oder FCM_APP_ID_IOS fehlt: iOS-App ohne Push"
           args="--release --build-name=${{ steps.ver.outputs.name }} --build-number=${{ github.run_number }} $DEFINES"
           mkdir -p out
           if [ "${{ steps.sign.outputs.signed }}" = "1" ]; then
             flutter build ipa $args --export-options-plist="$RUNNER_TEMP/export.plist"
             cp build/ios/ipa/*.ipa "out/swiftwater-rescue-${{ steps.ver.outputs.name }}.ipa"
+            # Push-Berechtigung im signierten IPA prüfen (für TestFlight/App Store muss sie «production» sein)
+            t=$(mktemp -d); unzip -q build/ios/ipa/*.ipa -d "$t"
+            aps=$(codesign -d --entitlements :- "$t"/Payload/*.app 2>/dev/null | plutil -extract aps-environment raw -o - - 2>/dev/null || true)
+            if [ -n "$aps" ]; then echo "::notice::aps-environment im IPA: $aps"; else echo "::warning::IPA ohne aps-environment: kein Push (Profil ohne Push Notifications?)"; fi
+            rm -rf "$t"
           else
             flutter build ios $args --no-codesign
             mkdir -p "$RUNNER_TEMP/ipa/Payload"
