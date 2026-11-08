@@ -535,7 +535,7 @@ async function loadSym(){const el=$('#sSy');let s;try{s=await api('settings')}ca
       <label class="row" style="align-items:center;margin:0"><input type="checkbox" data-sys="${esc(k)}" ${on?'checked':''}> <b>${esc(v.name)}</b> <span class="mut">${l.filter(x=>!c.off.includes(x.k)).length} von ${l.length} eingeschaltet</span></label>
       <div class="mut">${esc(v.note)}</div>
       ${[...new Set(l.map(x=>x.cat))].map(ct=>`<h4 style="margin:.6rem 0 .3rem">${esc(ct)}</h4><div class="sylist">${l.filter(x=>x.cat===ct).map(x=>`<label class="syi${on?'':' off'}"><input type="checkbox" data-sy="${esc(x.k)}" ${c.off.includes(x.k)?'':'checked'} ${on?'':'disabled'}>${symImg(x.k,30)}<span>${esc(x.name)}</span></label>`).join('')}</div>`).join('')}</div>`}).join('')}
-    <div class="mut">Quelle Schadenplatz: «Behelf Einsatzführung Feuerwehr, Sanität und Polizei», Kanton Schwyz (S. 6–7). Linien (Rettungsachse, Zonen) sind keine Markierungen und fehlen hier.</div>`;
+    <div class="mut">Quelle der taktischen Symbole: «Behelf Einsatzführung Feuerwehr, Sanität und Polizei», Kanton Schwyz (S. 6–7). Linien (Rettungsachse, Zonen) sind keine Markierungen und fehlen hier.</div>`;
   el.onchange=()=>{const v={free:$('#syFree').checked?1:0,sets:[...el.querySelectorAll('[data-sys]')].filter(x=>x.checked).map(x=>x.dataset.sys),off:[...el.querySelectorAll('[data-sy]')].filter(x=>!x.checked).map(x=>x.dataset.sy)};
     el.querySelectorAll('input').forEach(x=>x.disabled=true);api('settings/save',{sym:v}).then(()=>toast('Gespeichert','ok')).catch(fail).finally(loadSym)}}
 /* ---------- AI-Assistent (Issue #111): Anbieter, Schlüssel, Grenzen, Freigabe und Datenschutz je Einsatztyp (Benutzerrollen und Spezialrollen × Funktion), Test, Verbrauch ---------- */

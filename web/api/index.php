@@ -418,7 +418,7 @@ function navApps() { $off = json_decode(setting('nav_off', '[]'), true) ?: []; $
 // Sets: sz = Signaturen aus dem «Behelf Einsatzführung Feuerwehr, Sanität und Polizei» des Kantons Schwyz (S. 6–7), sw = eigene Symbole der App.
 // SYMBOLS: Schlüssel => [Kategorie, Name, Anker] (Anker 'b' = Standort am unteren Rand, z. B. Einsatzleitung auf dem Stab, sonst Mitte).
 // Einstellung sym (JSON, symCfg): sets = eingeschaltete Sets, off = einzeln ausgeschaltete Symbole, free = Markierungen ohne Symbol (⚑ mit Farbe) erlaubt.
-const SYM_SETS = ['sz' => ['Schadenplatz (Behelf Kanton Schwyz)', 'Signaturen aus dem «Behelf Einsatzführung Feuerwehr, Sanität und Polizei» des Kantons Schwyz'], 'sw' => ['Swiftwater', 'Eigene Symbole der App für die Wasserrettung']];
+const SYM_SETS = ['sz' => ['Taktische Symbole', 'Taktische Symbole für den Schadenplatz (Feuerwehr, Sanität, Polizei)'], 'sw' => ['Swiftwater', 'Eigene Symbole der App für die Wasserrettung']];
 const SYMBOLS = [
   'sz-el' => ['Führung', 'Einsatzleitung (Ei Ltg)', 'b'], 'sz-warterm' => ['Führung', 'Warteraum Rettungsmittel (Warterm)', 'c'], 'sz-helipl' => ['Führung', 'Helikopterlandeplatz (Helipl)', 'c'],
   'sz-patsst' => ['Sanität', 'Patientensammelstelle (Pat Sst)', 'c'], 'sz-sanhist' => ['Sanität', 'Sanitätshilfsstelle (San Hist)', 'c'], 'sz-tsst' => ['Sanität', 'Totensammelstelle (TSst)', 'c'],
