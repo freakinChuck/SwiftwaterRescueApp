@@ -12,6 +12,14 @@ function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHan
 async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
   const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
+// Applikationslog (Issue #139): Skriptfehler an den Server melden (nur angemeldet, höchstens 5 je Seitenaufruf, gleiche Meldung einmal; der Server begrenzt zusätzlich).
+// Nicht gemeldet: Fehler fremder Skripte ohne Angaben («Script error.»), Verbindungsabbrüche (offline) und abgelehnte API-Antworten (stehen schon im Log bzw. sind Eingabefehler).
+const CERR={n:0,seen:new Set()};
+function clientErr(msg,x={}){try{msg=String(msg==null?'':msg).slice(0,500);if(!token||!msg||CERR.n>=5||CERR.seen.has(msg)||/^Script error\.?$/i.test(msg))return;CERR.seen.add(msg);CERR.n++;
+  fetch(`${API}?r=applog/client`,{method:'POST',keepalive:true,headers:{'X-Token':token},body:JSON.stringify({msg,page:location.pathname.split('/').pop()||'index.html',...x})}).catch(()=>{})}catch(e){}}
+const cErrSkip=r=>!r||r.data||(r instanceof TypeError&&/fetch|network|load failed/i.test(r.message||''))||r.name==='AbortError';
+window.addEventListener('error',e=>{if(!e.message||cErrSkip(e.error))return;clientErr(e.message,{src:String(e.filename||'').split('/').pop().split('?')[0],line:e.lineno,col:e.colno,stack:e.error&&e.error.stack?String(e.error.stack).slice(0,1500):undefined})});
+window.addEventListener('unhandledrejection',e=>{const r=e.reason;if(cErrSkip(r))return;clientErr('Unbehandelt: '+(r&&r.message||r),{stack:r&&r.stack?String(r.stack).slice(0,1500):undefined})});
 // Kurze Hinweise statt alert(): ohne Klick, verschwinden von selbst (Dauer nach Textlänge), Antippen schliesst sofort.
 // kind: 'ok' (grün, Standard), 'info' (blau), 'err' (rot, länger sichtbar). Rückfragen (confirm) bleiben Dialoge.
 function toast(t,kind='ok'){t=String(t==null?'':t);let c=document.getElementById('tsts');
@@ -176,7 +184,7 @@ const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
 const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
 const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
-const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon','applog']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 // Abmelden: Server meldet die Sitzung ab (Gerätesitzung der App bzw. Browser-Token, Route logout), danach die App benachrichtigen (beendet das Konto, Issue #108)
 function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});
