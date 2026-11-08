@@ -54,6 +54,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   bool _mapReady = false, _closing = false, _fold = false, _camOpen = false, _noteOpen = false;
   String? _panel;
   int? _follow, _fitted;
+  List<String>? _pinfo; // Personeninfo (Issue #105): 'u<user_id>' bzw. 'x<id der Externen>'
   int? _areaFocus; // seit wann das Einsatzgebiet gezeigt werden soll (focusArea)
   double _rot = 0;
 
@@ -403,6 +404,15 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   @override
   void openRd() => openPanel('rd');
 
+  @override
+  void personInfo(String key) {
+    final p = _pinfoItems([key]).firstOrNull;
+    if (p == null) return;
+    _stopFollow();
+    centerOn(llOf(p.$1)!);
+    setState(() => _pinfo = [key]);
+  }
+
   // ---------- Helikopter ----------
   bool get _airOn => s.inc != null && jb(s.st?['air']);
 
@@ -437,6 +447,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       return;
     }
     if (_camOpen) setState(() => _camOpen = false);
+    if (_pinfo != null) setState(() => _pinfo = null); // Antippen der leeren Karte schliesst die Personeninfo
   }
 
   void _cancelPick() {
@@ -497,6 +508,120 @@ class _IncPageState extends State<IncPage> implements MapCtl {
 
   void _navAsk(double lat, double lon, String name, [List<String> lines = const []]) => _sheet(name, lines, lat: lat, lon: lon);
 
+  // ---------- Personeninfo (Issue #105, Funktion «pinfo», wie pinfo in index.html) ----------
+  // Nicht blockierend: Karte als Marker über der Person, fährt bei jeder Aktualisierung mit, Karte und übrige Elemente bleiben bedienbar.
+  // Schliesst über ✕, Antippen der leeren Karte und wenn die Person den Einsatz verlässt, ausgeblendet wird oder keinen Standort mehr hat.
+  String _pinfoK(J p, bool ext) => ext ? 'x${ji(p['id'])}' : 'u${ji(p['user_id'])}';
+
+  void _pinfoOpen(List<(J, bool)> items) {
+    if (_picking) return;
+    setState(() => _pinfo = items.map((x) => _pinfoK(x.$1, x.$2)).toList());
+  }
+
+  List<(J, bool)> _pinfoItems(List<String> keys) {
+    final out = <(J, bool)>[];
+    if (!s.feat('pinfo') || s.inc == null) return out;
+    for (final k in keys) {
+      final ext = k.startsWith('x');
+      final p = ext
+          ? (s.vis('ext') ? _exts.where((e) => _pinfoK(e, true) == k).firstOrNull : null)
+          : (s.vis('app') ? _actParts.where((e) => _pinfoK(e, false) == k).firstOrNull : null);
+      if (p != null) out.add((p, ext));
+    }
+    return out;
+  }
+
+  Widget _pinfoOne(J p, bool ext) {
+    final r = s.roleOf(p['role_id']), uid = ji(p['user_id']), f = !ext && uid != null && _follow == uid;
+    final gs = jl(s.st?['groups']), gids = p['groups'] is List ? (p['groups'] as List).map(ji).toList() : const <int?>[];
+    final g = ext ? <J>[] : gids.map((id) => gs.where((x) => ji(x['id']) == id).firstOrNull).whereType<J>().toList(); // alle Gruppen, unabhängig von «Farbe beim Namen»
+    final sub = [r != null ? js(r['name']) : 'Ohne Spezialrolle', ext ? 'Externe Einsatzkraft' : js(s.modeOf(js(p['mode']))['name'])].where((x) => x.isNotEmpty).join(' · ');
+    final loc = [ext ? 'Fester Standort' : 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}', s.fc(p['lat'], p['lon'])].where((x) => x.isNotEmpty).join(' · ');
+    final nav = navBtn(s, p['lat'], p['lon'], js(p['name']));
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Row(children: [
+        ext ? _personMk(p, ext: true) : avatar(p, r: 22, border: _roleCol(p)),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(js(p['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+          Row(children: [
+            if (r != null) Padding(padding: const EdgeInsets.only(right: 4), child: Icon(Icons.circle, size: 10, color: hexColor(r['color']))),
+            Expanded(child: Mut(sub)),
+          ]),
+        ])),
+      ]),
+      if (g.isNotEmpty)
+        Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: g
+                    .map((x) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(999), border: Border.all(color: Colors.white24)),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Container(width: 10, height: 10, decoration: BoxDecoration(color: hexColor(x['color']), shape: BoxShape.circle, border: Border.all(color: Colors.black38))),
+                          const SizedBox(width: 4),
+                          Text(js(x['name']), style: const TextStyle(fontSize: 12)),
+                        ])))
+                    .toList())),
+      if (ext && js(p['descr']).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(js(p['descr']))),
+      Padding(padding: const EdgeInsets.only(top: 4), child: Mut(loc)),
+      if (!ext || nav != null)
+        Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(spacing: 6, runSpacing: 4, children: [
+              if (!ext && uid != null) smallBtn(f ? 'Folgt' : 'Folgen', () => follow(f ? null : uid), primary: f),
+              ?nav,
+            ])),
+    ]);
+  }
+
+  Widget? _pinfoLayer() {
+    final it = _pinfo == null ? <(J, bool)>[] : _pinfoItems(_pinfo!);
+    if (it.isEmpty) {
+      _pinfo = null;
+      return null;
+    }
+    final parts = <Widget>[];
+    for (final x in it) {
+      if (parts.isNotEmpty) parts.add(const Divider(height: 16));
+      parts.add(_pinfoOne(x.$1, x.$2));
+    }
+    return MarkerLayer(rotate: true, markers: [
+      Marker(
+          point: llOf(it.first.$1)!,
+          width: 290,
+          height: 380,
+          alignment: Alignment.topCenter,
+          child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                  padding: const EdgeInsets.only(bottom: 22),
+                  child: GestureDetector(
+                      onTap: () {}, // Tipps im Fenster gehen nicht an die Karte (würde es schliessen)
+                      child: Material(
+                          elevation: 6,
+                          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(10),
+                          child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 340, maxWidth: 280, minWidth: 200),
+                              child: Stack(children: [
+                                SingleChildScrollView(padding: const EdgeInsets.fromLTRB(10, 8, 34, 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: parts)),
+                                Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: IconButton(
+                                        tooltip: 'Infofenster schliessen',
+                                        icon: const Icon(Icons.close, size: 18),
+                                        visualDensity: VisualDensity.compact,
+                                        onPressed: () => setState(() => _pinfo = null))),
+                              ])))))))
+    ]);
+  }
+
   // ---------- Ebenen ----------
   Color _roleCol(J p) {
     final r = s.roleOf(p['role_id']);
@@ -552,10 +677,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
             width: 40,
             height: 40,
             child: GestureDetector(
-                onTap: () => _navAsk(ll.latitude, ll.longitude, js(a['name']), [
-                      [_roleName(a), if (ext) 'Externe Einsatzkraft' else js(s.modeOf(js(a['mode']))['name'])].where((x) => x.isNotEmpty).join(' · '),
-                      if (!ext && a['loc_at'] != null) 'Standort ${agoS(s.now, jn(a['loc_at'])!)}',
-                    ]),
+                onTap: () => s.feat('pinfo')
+                    ? _pinfoOpen(g.$2)
+                    : _navAsk(ll.latitude, ll.longitude, js(a['name']), [
+                        [_roleName(a), if (ext) 'Externe Einsatzkraft' else js(s.modeOf(js(a['mode']))['name'])].where((x) => x.isNotEmpty).join(' · '),
+                        if (!ext && a['loc_at'] != null) 'Standort ${agoS(s.now, jn(a['loc_at'])!)}',
+                      ]),
                 child: Tooltip(message: js(a['name']), child: _personMk(a, ext: ext))));
       }
       final same = g.$2.every((x) => geoDist(llOf(x.$1)!, ll) <= 30);
@@ -565,7 +692,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
           width: 40,
           height: 40,
           child: GestureDetector(
-              onTap: () => same ? _navAsk(ll.latitude, ll.longitude, names) : fitPts(g.$2.map((x) => llOf(x.$1)!).toList()),
+              onTap: () => same ? (s.feat('pinfo') ? _pinfoOpen(g.$2) : _navAsk(ll.latitude, ll.longitude, names)) : fitPts(g.$2.map((x) => llOf(x.$1)!).toList()),
               child: Container(
                   alignment: Alignment.center,
                   decoration: BoxDecoration(color: appBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
@@ -756,6 +883,9 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     }
     // Einsatzkräfte und Externe (gruppiert)
     out.add(Builder(builder: _peopleLayer));
+    // Personeninfo (Issue #105) über der Person
+    final pi = _pinfoLayer();
+    if (pi != null) out.add(pi);
     // Helikopter
     if (_airOn && s.vis('air') && _air != null) {
       final now = jn(_air!['now']) ?? s.now;
