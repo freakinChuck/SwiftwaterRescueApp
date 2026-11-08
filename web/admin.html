@@ -80,6 +80,7 @@ h3.lgh{margin:1rem 0 .2rem;font-size:.95rem}details.lgd{margin-top:1rem;border-t
 .anum small{color:var(--mut);font-size:.75rem}.anum small b{color:var(--ex);font-weight:600}
 #sH .afld{display:flex;flex-direction:column;gap:.25rem;max-width:28rem;margin:.5rem 0}#sH .afld select{margin:0}#sH label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* Helikopter: je Eingabe eine Zeile */
 #sAi label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0}
+#sMail label.chk{display:flex;flex-direction:row;align-items:center;gap:.4rem}#sMail .mut>label.chk{display:inline-flex}#sMail label.chk input{margin:0;flex:none}#sMail label.chk .gdot{margin:0;flex:none} /* E-Mail-Alarm: Farbpunkt auf der Zeile des Häkchens */
 .pgf{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.4rem 1rem;max-width:46rem;margin:.5rem 0}.pgf label{display:flex;flex-direction:column;gap:.25rem;margin:0}.pgf input,.pgf select{margin:0;width:100%;box-sizing:border-box}
 #sO label.chk,#sHy label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
 #sAi .aiflds{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:.6rem;margin:.4rem 0 .6rem}#sAi .aifld{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem;margin:.4rem 0}#sAi .aiflds .aifld{margin:0}#sAi .aifld>label:first-child,#sAi .aifld>b{font-weight:600}#sAi .aifld input,#sAi .aifld select{margin:0;width:100%}#sAi .aifld .h{color:var(--mut);font-size:.82rem}#sAi .aifld label.chk{margin:.1rem 0}
@@ -158,10 +159,11 @@ const NAV=[
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
+  ['Konnektivität',[['emailalarm','sMail','E-Mail-Alarm',loadMail]]],
   ['System',[['applog','sAL','Applikationslog',loadAppLog]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',applog:'applog'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -169,7 +171,7 @@ let MY=false;const myMode=()=>me.my_runs!=='off'&&(!nav().length||location.hash=
 const navItems=()=>nav().flatMap(([,its])=>its);
 // Navigation (Issue #128): Kategorien mit Symbol einklappbar, die aktuelle wird beim Öffnen eines Bereichs aufgeklappt; offene pro Gerät gemerkt (sw_navopen).
 // Kategorien mit nur einem Bereich als direkter Link. Die Suche filtert die Bereiche, Enter öffnet den ersten Treffer.
-const NAV_ICON={'Personen':'👥','Einsatz':'🚨','Übungen':'🎯','Funktionen':'🧩','Karte & Daten':'🗺️','Auswertung':'📊','Rechtliches':'⚖️','System':'🛠️'};
+const NAV_ICON={'Personen':'👥','Einsatz':'🚨','Übungen':'🎯','Funktionen':'🧩','Karte & Daten':'🗺️','Auswertung':'📊','Rechtliches':'⚖️','Konnektivität':'🔌','System':'🛠️'};
 const navLink=([k,,l],g)=>`<a href="#${k}" data-k="${k}">${g?`<span class="ni" aria-hidden="true">${NAV_ICON[g]||'•'}</span>`:''}${esc(l)}</a>`;
 let navO=null;const navOGet=()=>{if(!navO){try{navO=new Set(JSON.parse(localStorage.getItem('sw_navopen')||'[]'))}catch(e){navO=new Set()}}return navO};
 function navOpen(w,o,save=true){if(w.classList.contains('one'))return;w.classList.toggle('open',o);w.querySelector('.ng').setAttribute('aria-expanded',o);
@@ -484,6 +486,68 @@ async function loadPlaces(){const el=$('#sPl');let fs;try{[fs,plCats]=await Prom
   el.querySelectorAll('[data-fm]').forEach(b=>b.onclick=()=>api('place/move',{id:+b.dataset.fm,dir:+b.dataset.d}).then(loadPlaces).catch(fail));
   el.querySelectorAll('[data-fe]').forEach(b=>b.onclick=()=>placeDlg(fs.find(f=>f.id==b.dataset.fe),null,fs,loadPlaces));
   el.querySelectorAll('[data-fr]').forEach(b=>b.onclick=()=>{const f=fs.find(x=>x.id==b.dataset.fr);if(confirm(`Standort «${f.name}» endgültig entfernen? Deaktivieren (Bearbeiten) blendet ihn nur aus.`))api('place/remove',{id:f.id}).then(loadPlaces).catch(fail)})}
+/* ---------- E-Mail-Alarm (Issue #65, Konnektivität): Postfach, Regeln je Einsatztyp, Cron-Job und Webhook, Prüfen, Verlauf ---------- */
+// Schlüsselwörter und Absender je Zeile; Absender als Adresse (alarm@beispiel.ch) oder Domain (beispiel.ch, gilt auch für Subdomains). Passwort nie angezeigt, leer = behalten.
+let mailD=null;
+async function loadMail(){const el=$('#sMail');try{mailD=await api('mail/cfg')}catch(e){el.innerHTML='<h2>E-Mail-Alarm</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const s=mailD,c=s.cfg,dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',lines=a=>esc((a||[]).join('\n'));
+  const base=location.origin+location.pathname.replace(/[^/]*$/,'')+'api/index.php',cron=`${base}?r=mail/poll&key=${s.key}`,hook=`${base}?r=mail/hook&key=${s.key}`;
+  const st=s.st?`Letzter Abruf ${dt(s.st.at)}${s.st.manual?' (von Hand)':''}: ${s.st.ok?`✓ ${s.st.n===1?'1 neue E-Mail':s.st.n+' neue E-Mails'} in ${s.st.ms} ms`:'✗ '+esc(s.st.err||'Fehler')}`:'Noch nie abgerufen';
+  const kcard=k=>{const r=c.kinds[k.id]||{on:0,words:[],from:[],groups:null},gs=s.groups.filter(g=>!k.grp_off.includes(g.id));
+    return`<div class="inc" style="display:block;padding:.6rem .8rem" data-mk="${k.id}"><label class="chk" style="margin:0 0 .3rem"><input type="checkbox" data-mo ${r.on?'checked':''}> <i class="gdot" style="background:${esc(k.color)}"></i> <b>${esc(k.name)}</b> per E-Mail starten</label>
+      <div class="pgf" style="max-width:none"><label class="mut">Schlüsselwörter (eines je Zeile)<textarea data-mw rows="3" placeholder="z. B. Wasserrettung&#10;Person im Wasser">${lines(r.words)}</textarea></label>
+      <label class="mut">Erlaubte Absender (Adresse oder Domain, eine je Zeile)<textarea data-mf rows="3" placeholder="z. B. alarm@kapo.example.ch&#10;leitstelle.example.ch">${lines(r.from)}</textarea></label></div>
+      ${s.groups.length?`<div class="mut">Aufbieten: ${gs.length?gs.map(g=>`<label class="chk" style="margin:.1rem .6rem .1rem 0"><input type="checkbox" data-mg="${g.id}" ${r.groups&&r.groups.includes(g.id)?'checked':''}> <i class="gdot" style="background:${esc(g.color)}"></i> ${esc(g.name)}</label>`).join(''):'keine aufbietbare Einsatzgruppe'} <span>Keine gewählt = alle bei «${esc(k.name)}» aufbietbaren Gruppen.</span></div>`:'<div class="mut">Aufgeboten werden alle Personen (es gibt keine aktive Einsatzgruppe).</div>'}</div>`};
+  el.innerHTML=`<h2>E-Mail-Alarm</h2><div class="mut">Eine eingehende E-Mail startet einen Einsatz: wenn sie ein Schlüsselwort eines Einsatztyps enthält und von einem für diesen Typ erlaubten Absender kommt. Es gilt der erste passende Typ in der Reihenfolge der Einsatztypen. Gestartet wird ohne Person (im Log «System») mit der Alarmstufe, Aufzeichnung und den Helikoptern gemäss Einsatztyp; Meldung = Betreff (und Text), Alarmeingang = Datum der E-Mail. Koordinaten im Text (LV95, LV03, WGS84 dezimal, auch in Kartenlinks) werden zum PLS. Läuft schon ein Einsatz, steht die E-Mail nur in dessen Log. Den Einsatz leitet, wer ihn annimmt und die Rechte der Einsatzleitung hat (z. B. «Jeden Einsatz leiten»).</div>
+    ${s.ssl?'':'<div class="mut">⚠ Auf diesem Webserver fehlt die PHP-Erweiterung <b>openssl</b>: verschlüsselte Postfächer gehen nicht.</div>'}
+    <h3>Regeln je Einsatztyp</h3>${s.kinds.map(kcard).join('')}
+    <h3>Erkennung</h3><div class="pgf"><label class="mut">Schlüsselwörter suchen<select id="mWh">${Object.entries(s.where).map(([k,v])=>`<option value="${k}" ${k===c.where?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+      <label class="mut">Höchstes Alter der E-Mail in Minuten (1–1440)<input id="mAge" type="number" min="1" max="1440" value="${c.age}"></label></div>
+    <label class="chk"><input type="checkbox" id="mBody" ${c.body?'checked':''}> Text der E-Mail in die Meldung übernehmen (sonst nur der Betreff)</label>
+    <label class="chk"><input type="checkbox" id="mPls" ${c.pls?'checked':''}> Koordinaten aus der E-Mail als PLS übernehmen</label>
+    <label class="chk"><input type="checkbox" id="mAuth" ${c.auth?'checked':''}> <span>Nur bestätigte Absender (der eigene Mailserver meldet SPF, DKIM oder DMARC «pass» im Kopf <code>Authentication-Results</code>)</span></label>
+    <div class="mut">Der Absender einer E-Mail lässt sich fälschen. Wo der Mailserver das Ergebnis der Prüfung einträgt (z. B. cyon), schützt das Häkchen davor; zuerst mit einer echten Alarm-E-Mail testen, sonst kommt kein Alarm an. Ein eigenes Postfach nur für Alarme verwenden.</div>
+    <h3>Postfach (IMAP)</h3><div class="mut">Der Server holt neue E-Mails aus diesem Postfach und markiert sie als gelesen. E-Mails, die schon vor dem Einrichten im Postfach lagen, lösen nie aus. Abgerufen wird bei Anfragen offener Apps höchstens im eingestellten Abstand; damit ein Alarm auch ankommt, wenn niemand die App offen hat, braucht es den Cron-Job unten.</div>
+    <label class="chk"><input type="checkbox" id="mOn" ${c.on?'checked':''}> Postfach abrufen${c.on?(s.ready?' <b>✓ aktiv</b>':' <span class="mut">(nicht aktiv: Postfach unvollständig oder kein Einsatztyp eingeschaltet)</span>'):''}</label>
+    <div class="pgf"><label class="mut">Host<input id="mH" value="${esc(c.host)}" placeholder="z. B. mail.cyon.ch" autocomplete="off" inputmode="url"></label>
+      <label class="mut">Verschlüsselung<select id="mSec">${Object.entries(s.sec).map(([k,v])=>`<option value="${k}" ${k===c.sec?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+      <label class="mut">Port<input id="mP" type="number" min="1" max="65535" value="${c.port}"></label>
+      <label class="mut">Benutzername<input id="mU" value="${esc(c.user)}" autocomplete="off"></label>
+      <label class="mut">Passwort<input id="mPw" type="password" autocomplete="new-password" placeholder="${s.pass_set?'gespeichert, leer lassen zum Behalten':'kein Passwort gespeichert'}"></label>
+      <label class="mut">Ordner<input id="mF" value="${esc(c.folder)}" placeholder="INBOX"></label>
+      <label class="mut">Abstand der Abrufe in Sekunden (30–3600)<input id="mEv" type="number" min="30" max="3600" value="${c.every}"></label></div>
+    <div class="row"><button id="mSv" class="pri">Speichern</button><button id="mTs">Verbindung testen</button><button id="mPo" ${s.ready?'':'disabled'}>Jetzt abrufen</button>${s.pass_set?'<button id="mPx">Passwort entfernen</button>':''}</div>
+    <div class="mut" id="mR"></div><div class="mut" id="mSt">${st}</div>
+    <h3>Cron-Job und Webhook</h3><div class="mut">Cron-Job (z. B. bei cyon unter «Cron-Jobs», jede Minute): ruft das Postfach ab, auch wenn keine App offen ist.</div>
+    <div class="row" style="align-items:center"><input id="mCu" readonly value="${esc(cron)}" style="flex:1 1 12rem;min-width:0;font-family:monospace;font-size:.85rem"><button data-cp="mCu">Kopieren</button></div>
+    <div class="mut" style="overflow-wrap:anywhere">Beispiel: <code>curl -s "${esc(cron)}" &gt;/dev/null</code></div>
+    <div class="mut">Webhook statt Postfach: die rohe E-Mail (RFC 822, z. B. eine Weiterleitung des Mailservers an ein Skript oder ein E-Mail-Dienst) per POST an diese Adresse. Die Regeln gelten gleich; das Postfach kann dann ausgeschaltet bleiben.</div>
+    <div class="row" style="align-items:center"><input id="mHu" readonly value="${esc(hook)}" style="flex:1 1 12rem;min-width:0;font-family:monospace;font-size:.85rem"><button data-cp="mHu">Kopieren</button></div>
+    <div class="row"><button id="mKey">Neuer Schlüssel</button></div><div class="mut">Wer den Schlüssel kennt, kann über den Webhook E-Mails einliefern (es gelten trotzdem die Regeln). Ein neuer Schlüssel macht beide Adressen ungültig.</div>
+    <h3>Regeln prüfen</h3><div class="mut">Prüft eine Beispiel-E-Mail mit den Angaben oben (auch ungespeichert), ohne einen Einsatz zu starten.</div>
+    <div class="pgf" style="max-width:none"><label class="mut">Absender<input id="mxF" placeholder="alarm@kapo.example.ch"></label><label class="mut">Betreff<input id="mxS" placeholder="Wasserrettung Aare Olten"></label></div>
+    <label class="mut" style="display:grid;gap:.25rem">Text<textarea id="mxT" rows="3" placeholder="z. B. Koordinaten 2'635'000 / 1'244'500"></textarea></label>
+    <div class="row"><button id="mxGo">Prüfen</button></div><div class="mut" id="mxR"></div>
+    <h3>Verlauf</h3><div class="mut">Die zuletzt eingegangenen E-Mails mit Absender, Betreff und Ergebnis (höchstens 30).</div>
+    ${s.hist.length?`<div class="tw"><table><thead><tr><th>Zeit</th><th>Weg</th><th>Absender</th><th>Betreff</th><th>Ergebnis</th></tr></thead><tbody>${s.hist.map(h=>{const k=s.kinds.find(x=>x.id===h.kind);
+      return`<tr><td>${dt(h.at)}</td><td>${h.src==='hook'?'Webhook':'Postfach'}</td><td>${esc(h.from||'–')}</td><td>${esc(h.subj||'–')}</td><td>${h.res==='start'?'<b>':''}${esc(s.res[h.res]||h.res)}${h.res==='start'?'</b>':''}${k?' · '+esc(k.name):''}${h.word?' («'+esc(h.word)+'»)':''}${h.inc?` · Nr. ${h.inc}`:''}</td></tr>`}).join('')}</tbody></table></div><div class="row"><button id="mHx">Verlauf leeren</button></div>`:'<div class="mut">Noch keine E-Mails.</div>'}`;
+  const words=t=>t.value.split('\n').map(x=>x.trim()).filter(Boolean);
+  const val=()=>({on:$('#mOn').checked?1:0,host:$('#mH').value.trim(),port:+$('#mP').value,sec:$('#mSec').value,user:$('#mU').value.trim(),folder:$('#mF').value.trim(),every:+$('#mEv').value,
+    age:+$('#mAge').value,where:$('#mWh').value,body:$('#mBody').checked?1:0,pls:$('#mPls').checked?1:0,auth:$('#mAuth').checked?1:0,
+    kinds:Object.fromEntries([...el.querySelectorAll('[data-mk]')].map(d=>{const g=[...d.querySelectorAll('[data-mg]:checked')].map(x=>+x.dataset.mg);
+      return[d.dataset.mk,{on:d.querySelector('[data-mo]').checked?1:0,words:words(d.querySelector('[data-mw]')),from:words(d.querySelector('[data-mf]')),groups:g.length?g:null}]}))});
+  $('#mSec').onchange=e=>{const p=$('#mP');if(['993','143',''].includes(p.value))p.value=e.target.value==='ssl'?993:143};
+  $('#mSv').onclick=e=>{const b=e.target;b.disabled=true;api('mail/cfg/save',{cfg:val(),pass:$('#mPw').value}).then(()=>{toast('Gespeichert','ok');loadMail()}).catch(x=>{b.disabled=false;fail(x)})};
+  $('#mTs').onclick=async e=>{const b=e.target,o=$('#mR');b.disabled=true;o.textContent='Wird getestet …';
+    try{const r=await api('mail/test',{cfg:val(),pass:$('#mPw').value});o.innerHTML=r.ok?`✓ Angemeldet in ${r.ms} ms, Ordner «${esc(r.folder)}» mit ${r.exists} E-Mails. Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}catch(x){o.textContent='✗ '+x.message}b.disabled=false};
+  $('#mPo').onclick=async e=>{const b=e.target;b.disabled=true;$('#mR').textContent='Wird abgerufen …';
+    try{const r=await api('mail/poll',{});$('#mR').innerHTML=r.ok?(r.init?'✓ Stand des Postfachs gemerkt; ab jetzt eingehende E-Mails werden verarbeitet.':`✓ ${r.n===1?'1 neue E-Mail':r.n+' neue E-Mails'}${r.res.length?': '+esc(r.res.map(x=>s.res[x]||x).join(', ')):''}`):'✗ '+esc(r.err||'Fehler');if(r.n)loadMail()}catch(x){$('#mR').textContent='✗ '+x.message}b.disabled=false};
+  if($('#mPx'))$('#mPx').onclick=()=>{if(confirm('Gespeichertes Passwort des Postfachs entfernen?'))api('mail/cfg/save',{cfg:val(),pass_clear:1}).then(loadMail).catch(fail)};
+  el.querySelectorAll('[data-cp]').forEach(b=>b.onclick=()=>{const i=$('#'+b.dataset.cp);i.select();(navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).then(()=>toast('Kopiert','ok')).catch(()=>{document.execCommand('copy');toast('Kopiert','ok')})});
+  $('#mKey').onclick=()=>{if(confirm('Neuen Schlüssel erzeugen? Cron-Job und Webhook müssen danach die neue Adresse verwenden.'))api('mail/key/new',{}).then(()=>{toast('Neuer Schlüssel erzeugt','ok');loadMail()}).catch(fail)};
+  $('#mxGo').onclick=async()=>{const o=$('#mxR');try{const r=await api('mail/check',{cfg:val(),from:$('#mxF').value,subject:$('#mxS').value,text:$('#mxT').value});
+    o.innerHTML=r.kind?`✓ Würde «${esc(r.kind.name)}» starten (Schlüsselwort «${esc(r.word)}»)${r.pls?', PLS '+esc(fmtC(r.pls[0],r.pls[1],'lv95')):', ohne PLS'}.${r.auth?' Dazu muss der Mailserver den Absender bestätigen.':''}<br>Meldung: ${esc(r.message)}`:'✗ '+esc(r.text)}catch(x){o.textContent='✗ '+x.message}};
+  if($('#mHx'))$('#mHx').onclick=()=>{if(confirm('Verlauf der E-Mails leeren?'))api('mail/hist/clear',{}).then(loadMail).catch(fail)}}
 /* ---------- Impressum & Datenschutz (Issue #102): Angaben der betreibenden Organisation für legal.html ---------- */
 async function loadLegal(){const el=$('#sLg');let s;try{s=await api('legal')}catch(e){el.innerHTML='<h2>Impressum & Datenschutz</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const F=[['org','Organisation (Betreiberin der App)',0,'z. B. Wasserrettung Musterstadt'],['addr','Adresse',1,'Strasse, PLZ Ort'],['contact','Kontakt',1,'E-Mail, Telefon'],['resp','Verantwortliche Person',0,''],['privacy','Kontakt für Datenschutzfragen',1,'leer = wie Kontakt'],['hosting','Hosting',1,'z. B. cyon AG, Basel (Schweiz)'],['note','Zusatztext Impressum',2,'erscheint unter den Angaben im Impressum'],['privacy_note','Zusatztext Datenschutz',2,'erscheint am Ende der Datenschutzerklärung']],c=s.cfg||{};
