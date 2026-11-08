@@ -859,7 +859,7 @@ function newPoi(kind){const area=kind==='area',syms=!area&&(me.symbols||[]).leng
       if(area)return startDraw(name,color);
       if(sym)try{localStorage.setItem('sw_symrecent',JSON.stringify([sym,...symRecent().filter(k=>k!==sym)].slice(0,8)))}catch(e){}
       pickPoint(`Tippe auf die Karte, um «${name}» zu setzen.`).then(q=>api('incident/poi',{kind,name,color,sym,pts:[[q.lat,q.lng]]})).then(()=>{togglePanel('pois',true);poll()}).catch(fail)},'Weiter');
-  if(!syms)return;const d=$('#symG').closest('.dlg'),g=$('#symG',d),cl=$('#poiCl',d),sync=()=>{cl.hidden=!!sym;$('#poiN',d).placeholder=sym?(me.symbols.find(s=>s.k===sym)||{}).name:'z. B. Treffpunkt Boote'};
+  if(!syms)return;const d=[...document.querySelectorAll('.dlg')].pop(),g=$('#symG',d),cl=$('#poiCl',d),sync=()=>{cl.hidden=!!sym;$('#poiN',d).placeholder=sym?(me.symbols.find(s=>s.k===sym)||{}).name:'z. B. Treffpunkt Boote'};
   if(!me.sym_free)sym=null;sync();$('#symQ',d).focus();
   g.onclick=e=>{const b=e.target.closest('[data-sym]');if(!b)return;sym=b.dataset.sym||null;g.querySelectorAll('[data-sym]').forEach(x=>x.setAttribute('aria-pressed',(x.dataset.sym||null)===sym));sync()};
   $('#symQ',d).oninput=e=>{g.innerHTML=symGrid(sym,e.target.value)}}
