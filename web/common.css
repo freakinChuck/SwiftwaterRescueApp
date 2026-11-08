@@ -12,6 +12,13 @@ details{border-top:1px solid var(--line);padding:.3rem 0;margin-top:.5rem}summar
 .card{max-width:420px;margin:12vh auto;padding:1.2rem;display:grid;gap:.7rem}
 .badge{display:inline-block;padding:.1rem .45rem;border-radius:4px;font-size:.8rem;font-weight:700;background:var(--ex);color:#fff;vertical-align:middle}
 .msg{padding:.4rem 0;border-bottom:1px solid var(--line)}table{width:100%;border-collapse:collapse}td{padding:.3rem;border-bottom:1px solid var(--line)}
+/* Einsatzsymbole (Issue #146): Marker ohne Rahmen, Schatten für Luftbilder; Auswahl im Dialog «Markierung setzen» */
+.symk img,.symi{display:block;filter:drop-shadow(0 0 1px #000) drop-shadow(0 1px 2px #0009)}.symk{background:none;border:0}
+.symgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(5.6rem,1fr));gap:.35rem;max-height:40vh;overflow-y:auto;overscroll-behavior:contain;padding:.1rem}
+.symgrid h5{grid-column:1/-1;margin:.4rem 0 0;font-size:.82rem;color:var(--mut)}
+.symgrid button{display:grid;justify-items:center;gap:.2rem;padding:.35rem .2rem;font-size:.72rem;line-height:1.15;overflow-wrap:anywhere;background:#0c1c25}
+.symgrid button[aria-pressed=true]{border-color:#fff;box-shadow:0 0 0 2px var(--ex)}.symgrid button .ns{font-size:1.5rem;line-height:34px}
+.sylist{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:.35rem}.syi{display:flex;align-items:center;gap:.5rem;border:1px solid var(--line);border-radius:6px;padding:.3rem .5rem;background:#0c1c25;cursor:pointer}.syi.off{opacity:.45}
 /* Dialoge (Passwort, Bearbeiten) */
 .dlg{position:fixed;inset:0;z-index:6000;background:#000b;display:grid;place-items:center;padding:1rem}
 .dlg .card{margin:0;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;max-height:calc(100dvh - 2rem);overflow-y:auto;overscroll-behavior:contain}

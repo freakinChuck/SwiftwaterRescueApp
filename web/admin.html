@@ -152,7 +152,7 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
 // Es ist immer nur ein Abschnitt sichtbar (Hash in der Adresse, Neuladen und Zurück funktionieren); er wird bei jedem Öffnen frisch geladen.
 const NAV=[
   ['Personen',[['benutzer','sU','Benutzer',loadUsers],['benutzerrollen','sUR','Benutzerrollen',loadURoles],['einsatzgruppen','sG','Einsatzgruppen',loadGroups],['abwesenheiten','sAb','Abwesenheiten',loadAbs]]],
-  ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt]]],
+  ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt],['symbole','sSy','Einsatzsymbole',loadSym]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['ai','sAi','AI-Assistent',loadAi]]],
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces]]],
@@ -161,7 +161,7 @@ const NAV=[
   ['System',[['applog','sAL','Applikationslog',loadAppLog]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',applog:'applog'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',applog:'applog'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -525,6 +525,19 @@ async function loadNav(){const el=$('#sNv');let s;try{s=await api('settings')}ca
     if(c.dataset.na)p={nav_off:[...el.querySelectorAll('[data-na]')].filter(x=>!x.checked).map(x=>x.dataset.na)};
     else if(c.id==='nvD')p={nav_default:c.value};else return;
     el.querySelectorAll('input,select').forEach(x=>x.disabled=true);api('settings/save',p).catch(fail).finally(loadNav)}}
+/* ---------- Einsatzsymbole (Issue #146): Sets und einzelne Symbole für Markierungen ein-/ausschalten, Markierungen ohne Symbol erlauben ---------- */
+// Einstellung sym (settings/save, Recht cfg_inc): sets, off, free; gilt sofort für neue Markierungen, bestehende behalten ihr Symbol
+async function loadSym(){const el=$('#sSy');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Einsatzsymbole</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const c=s.sym,all=s.sym_all||[],sets=Object.entries(s.sym_sets||{});
+  el.innerHTML=`<h2>Einsatzsymbole</h2><div class="mut">Symbole, die die Einsatzleitung beim Setzen einer Markierung wählen kann. Ausgeschaltete stehen nicht mehr zur Wahl; bestehende Markierungen behalten ihr Symbol, auch in Replay und öffentlicher Ansicht.</div>
+    <label class="row" style="align-items:center"><input type="checkbox" id="syFree" ${c.free?'checked':''}> <span>Markierungen ohne Symbol erlauben (Fahne ⚑ in einer Farbe)</span></label>
+    ${sets.map(([k,v])=>{const l=all.filter(x=>x.set===k),on=c.sets.includes(k);return `<div class="card sycat" style="max-width:none;margin:.8rem 0;padding:.7rem .9rem">
+      <label class="row" style="align-items:center;margin:0"><input type="checkbox" data-sys="${esc(k)}" ${on?'checked':''}> <b>${esc(v.name)}</b> <span class="mut">${l.filter(x=>!c.off.includes(x.k)).length} von ${l.length} eingeschaltet</span></label>
+      <div class="mut">${esc(v.note)}</div>
+      ${[...new Set(l.map(x=>x.cat))].map(ct=>`<h4 style="margin:.6rem 0 .3rem">${esc(ct)}</h4><div class="sylist">${l.filter(x=>x.cat===ct).map(x=>`<label class="syi${on?'':' off'}"><input type="checkbox" data-sy="${esc(x.k)}" ${c.off.includes(x.k)?'':'checked'} ${on?'':'disabled'}>${symImg(x.k,30)}<span>${esc(x.name)}</span></label>`).join('')}</div>`).join('')}</div>`}).join('')}
+    <div class="mut">Quelle der taktischen Symbole: «Behelf Einsatzführung Feuerwehr, Sanität und Polizei», Kanton Schwyz (S. 6–7). Linien (Rettungsachse, Zonen) sind keine Markierungen und fehlen hier.</div>`;
+  el.onchange=()=>{const v={free:$('#syFree').checked?1:0,sets:[...el.querySelectorAll('[data-sys]')].filter(x=>x.checked).map(x=>x.dataset.sys),off:[...el.querySelectorAll('[data-sy]')].filter(x=>!x.checked).map(x=>x.dataset.sy)};
+    el.querySelectorAll('input').forEach(x=>x.disabled=true);api('settings/save',{sym:v}).then(()=>toast('Gespeichert','ok')).catch(fail).finally(loadSym)}}
 /* ---------- AI-Assistent (Issue #111): Anbieter, Schlüssel, Grenzen, Freigabe und Datenschutz je Einsatztyp (Benutzerrollen und Spezialrollen × Funktion), Test, Verbrauch ---------- */
 // Einstellung ai (JSON, aiIn im Server), Schlüssel getrennt (ai_key, wird nie ausgeliefert); gespeichert erst mit «Speichern»
 let aiS=null,aiC=null;
@@ -1541,7 +1554,7 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
   const pls=rp.pls.filter(p=>p[3](t));
   const key=JSON.stringify([pois.map(p=>p.id),marks.map(m=>m.id),res.map(r=>[r.id,r.pos,r.ok]),ext.map(e=>e.id),pls.map(p=>p[2])]);
   if(key!==rp.poiKey){rp.poiKey=key;rp.poiL.clearLayers();pls.filter(()=>rpVis('pls')).forEach(p=>rp.poiL.addLayer(p.mk));
-    pois.filter(p=>rpVis(poiVk(p))).forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):p.kind==='line'?L.polyline(p.pts,{color:p.color,weight:4,opacity:.95}):L.circleMarker(p.pts[0],{radius:rz(7),color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind!=='point'?'center':'right',className:'rplbl'}).addTo(rp.poiL)});
+    pois.filter(p=>rpVis(poiVk(p))).forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):p.kind==='line'?L.polyline(p.pts,{color:p.color,weight:4,opacity:.95}):p.sym?L.marker(p.pts[0],{icon:symIcon(p,rz(30))}):L.circleMarker(p.pts[0],{radius:rz(7),color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind!=='point'?'center':'right',className:'rplbl',offset:p.sym?symTip(p,rz(30)):[0,0]}).addTo(rp.poiL)});
     marks.filter(()=>rpVis('mm')).forEach(m=>L.circleMarker([m.mark_lat,m.mark_lon],{radius:rz(6),color:'#0f2430',weight:2,fillColor:'#2ee6d6',fillOpacity:1}).bindTooltip(esc((m.name||'')+': '+m.text.slice(0,60))).addTo(rp.poiL));
     ext.filter(()=>rpVis('ext')).forEach(e=>{const rc=(roles.find(r=>r.id===e.role_id)||{}).color;return L.circleMarker([e.lat,e.lon],{radius:rz(8),color:e.color&&rc?rc:'#fff',weight:e.color&&rc?3:2,dashArray:'3',fillColor:e.color||rc||'#cfd8dc',fillOpacity:1}).bindTooltip(esc(e.name)+' (extern)',{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'}).addTo(rp.poiL)});
     res.filter(r=>r.pos&&rpVis('res')).forEach(r=>L.circleMarker(r.pos,{radius:rz(9),color:'#fff',weight:2,fillColor:r.ok?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.ok?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'}).addTo(rp.poiL))}

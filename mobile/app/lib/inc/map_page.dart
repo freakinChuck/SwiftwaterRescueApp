@@ -729,6 +729,25 @@ class _IncPageState extends State<IncPage> implements MapCtl {
             if (label != null && label.isNotEmpty) _label(label),
           ])));
 
+  /// Markierung mit Einsatzsymbol (Issue #146): Symbol mit der Mitte bzw. dem unteren Rand (sym_foot, z. B. Einsatzleitung) auf dem Punkt, Name darunter
+  Marker _symMk(LatLng p, J m, VoidCallback onTap) {
+    const sz = 32.0, h = 96.0;
+    final foot = m['sym_foot'] == 1, label = js(m['label']).isEmpty ? js(m['name']) : js(m['label']);
+    return Marker(
+        point: p,
+        width: 130,
+        height: h,
+        alignment: Alignment.center,
+        child: GestureDetector(
+            onTap: onTap,
+            behavior: HitTestBehavior.translucent,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              SizedBox(height: foot ? h / 2 - sz : h / 2 - sz / 2),
+              symPic(s, js(m['sym']), size: sz),
+              if (label.isNotEmpty) _label(label),
+            ])));
+  }
+
   List<Widget> _layers(BuildContext c) {
     final i = s.inc, out = <Widget>[];
     final cs = s.csys;
@@ -814,7 +833,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         final ll = poiPt(p)!;
         return _dotMk(ll, Icon(Icons.timeline, size: 18, color: hexColor(p['color'])), js(p['label']).isEmpty ? js(p['name']) : js(p['label']), () => _poiSheet(p, ll));
       }),
-      ...pts.map((p) {
+      ...pts.where((p) => p['sym'] != null).map((p) => _symMk(poiPt(p)!, p, () => _poiSheet(p, poiPt(p)!))),
+      ...pts.where((p) => p['sym'] == null).map((p) {
         final ll = poiPt(p)!, col = hexColor(p['color']);
         return _dotMk(
             ll,
@@ -965,7 +985,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   }
 
   void _poiSheet(J p, LatLng ll) {
-    final what = poiKindName(p);
+    final what = p['sym'] != null ? js(p['sym_name']) : poiKindName(p); // Einsatzsymbol (Issue #146): Name des Symbols
     _sheet(js(p['label']).isEmpty ? js(p['name']) : js(p['label']), [what, js(p['by_name']).isNotEmpty ? 'von ${js(p['by_name'])}' : ''],
         lat: ll.latitude,
         lon: ll.longitude,

@@ -159,7 +159,7 @@ foreach ([
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL', 'line INT DEFAULT 0'], 'place_cats' => ['sort INT NULL'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_groups' => ['show_name INT DEFAULT 1'], 'inc_hydro' => ['danger INT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
+foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'pois' => ["sym $tx NULL"], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL', 'line INT DEFAULT 0'], 'place_cats' => ['sort INT NULL'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_groups' => ['show_name INT DEFAULT 1'], 'inc_hydro' => ['danger INT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
 try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
@@ -264,7 +264,7 @@ const PERMS = [
 // Alarmstufen der Einsatztypen (Issue #90), von stark nach schwach: Schlüssel => [Bezeichnung, Erklärung]; Einsatz-App und Service Worker setzen sie um
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
-const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func',
+const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func', 'sym' => 'cfg_inc',
   'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'applog_days' => 'applog']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
@@ -414,6 +414,29 @@ const FEATURES = ['area' => 'Suchgebiet', 'res' => 'Rettlinge', 'msg' => 'Nachri
 // Navigations-Apps (Funktion «nav»): in der Verwaltung einzeln ausschaltbar (nav_off), Standard nav_default, pro Person users.nav_app
 const NAV_APPS = ['google' => 'Google Maps', 'apple' => 'Apple Karten', 'waze' => 'Waze', 'geo' => 'Andere App (nur Android: Auswahl der Karten-Apps)'];
 function navApps() { $off = json_decode(setting('nav_off', '[]'), true) ?: []; $a = array_values(array_diff(array_keys(NAV_APPS), $off)); return $a ?: ['google']; } // eingeschaltete, mindestens eine
+// Einsatzsymbole für Markierungen (Issue #146): Dateien img/sym/<Schlüssel>.svg; Schlüssel = <Set>-<Name>, Set = Teil vor dem Bindestrich.
+// Sets: sz = Signaturen aus dem «Behelf Einsatzführung Feuerwehr, Sanität und Polizei» des Kantons Schwyz (S. 6–7), sw = eigene Symbole der App.
+// SYMBOLS: Schlüssel => [Kategorie, Name, Anker] (Anker 'b' = Standort am unteren Rand, z. B. Einsatzleitung auf dem Stab, sonst Mitte).
+// Einstellung sym (JSON, symCfg): sets = eingeschaltete Sets, off = einzeln ausgeschaltete Symbole, free = Markierungen ohne Symbol (⚑ mit Farbe) erlaubt.
+const SYM_SETS = ['sz' => ['Taktische Symbole', 'Taktische Symbole für den Schadenplatz (Feuerwehr, Sanität, Polizei)'], 'sw' => ['Swiftwater', 'Eigene Symbole der App für die Wasserrettung']];
+const SYMBOLS = [
+  'sz-el' => ['Führung', 'Einsatzleitung (Ei Ltg)', 'b'], 'sz-warterm' => ['Führung', 'Warteraum Rettungsmittel (Warterm)', 'c'], 'sz-helipl' => ['Führung', 'Helikopterlandeplatz (Helipl)', 'c'],
+  'sz-patsst' => ['Sanität', 'Patientensammelstelle (Pat Sst)', 'c'], 'sz-sanhist' => ['Sanität', 'Sanitätshilfsstelle (San Hist)', 'c'], 'sz-tsst' => ['Sanität', 'Totensammelstelle (TSst)', 'c'],
+  'sz-sstunv' => ['Betreuung', 'Sammelstelle Unverletzte (Sst Unv)', 'c'], 'sz-betreu' => ['Betreuung', 'Betreuungsstelle (Betreu Stel)', 'c'], 'sz-medien' => ['Betreuung', 'Medientreffpunkt (Medien Tpt)', 'c'], 'sz-streugut' => ['Betreuung', 'Streugut-Sammelstelle (Streugut Sst)', 'c'],
+  'sw-ew' => ['Wasserrettung', 'Bootseinwasserung', 'c'], 'sw-bo' => ['Wasserrettung', 'Boot im Einsatz', 'c'], 'sw-sp' => ['Wasserrettung', 'Sicherungsposten', 'c'], 'sw-bp' => ['Wasserrettung', 'Beobachtungsposten', 'c'],
+  'sw-tr' => ['Wasserrettung', 'Seilsicherung / Traverse', 'c'], 'sw-st' => ['Wasserrettung', 'Rettungsstelle Ufer', 'c'],
+  'sw-kp' => ['Führung', 'Kommandoposten', 'c'], 'sw-tp' => ['Führung', 'Treffpunkt / Sammelplatz', 'c'], 'sw-br' => ['Führung', 'Bereitstellungsraum', 'c'],
+  'sw-sh' => ['Sanität', 'Sanitätshilfsstelle', 'c'], 'sw-ps' => ['Sanität', 'Patientensammelstelle', 'c'], 'sw-hl' => ['Sanität', 'Helikopter-Landeplatz', 'c'], 'sw-am' => ['Sanität', 'Ambulanz', 'c'],
+  'sw-fw' => ['Partner', 'Feuerwehr', 'c'], 'sw-po' => ['Partner', 'Polizei', 'c'], 'sw-zs' => ['Partner', 'Zivilschutz', 'c'],
+  'sw-we' => ['Gefahren', 'Gefahrenstelle (Wehr, Schwelle)', 'c'], 'sw-wa' => ['Gefahren', 'Walze / Rücklauf', 'c'],
+  'sw-ab' => ['Allgemein', 'Absperrung', 'c'], 'sw-md' => ['Allgemein', 'Materialdepot', 'c'], 'sw-pk' => ['Allgemein', 'Parkplatz Fahrzeuge', 'c'], 'sw-fo' => ['Allgemein', 'Fundort Gegenstand', 'c'],
+];
+function symCfg() { $v = json_decode(setting('sym', ''), true); return symNorm(is_array($v) ? $v : []); }
+function symNorm($v) { return ['sets' => array_values(array_intersect(array_keys(SYM_SETS), array_filter((array)($v['sets'] ?? array_keys(SYM_SETS)), 'is_string'))),
+  'off' => array_values(array_intersect(array_keys(SYMBOLS), array_filter((array)($v['off'] ?? []), 'is_string'))), 'free' => !array_key_exists('free', $v) || !empty($v['free']) ? 1 : 0]; }
+function symPub($k) { [$c, $n, $a] = SYMBOLS[$k]; return ['k' => $k, 'set' => explode('-', $k)[0], 'cat' => $c, 'name' => $n, 'foot' => $a === 'b' ? 1 : 0]; }
+function symActive($c = null) { $c = $c ?? symCfg(); $r = []; foreach (SYMBOLS as $k => $_) if (in_array(explode('-', $k)[0], $c['sets'], true) && !in_array($k, $c['off'], true)) $r[] = symPub($k); return $r; } // zur Wahl beim Setzen, in dieser Reihenfolge
+function symRow($p) { $k = $p['sym'] ?? null; unset($p['sym']); return $p + ($k !== null && isset(SYMBOLS[$k]) ? ['sym' => $k, 'sym_name' => SYMBOLS[$k][1], 'sym_foot' => SYMBOLS[$k][2] === 'b' ? 1 : 0] : ['sym' => null]); } // mit Name und Anker, auch wenn das Symbol inzwischen ausgeschaltet ist
 function navDefault() { $a = navApps(); $d = setting('nav_default', 'google'); return in_array($d, $a, true) ? $d : $a[0]; }
 const FEATURE_ROUTES = ['incident/mark' => 'res', 'incident/mark/remove' => 'res', 'incident/rescuee/save' => 'res', 'incident/rescuee/locate' => 'res', 'incident/rescuee/rescued' => 'res', 'incident/rescuee/remove' => 'res',
                         'incident/message' => 'msg', 'incident/message/unmark' => 'msg', 'incident/poi' => 'poi', 'incident/poi/remove' => 'poi',
@@ -904,8 +927,8 @@ if ($route === 'public/state') {
   }
   foreach (feature($inc, 'ext') ? incExternals($id) : [] as $e) // externe Einsatzkräfte (Issue #39): id negativ, damit sie sich nicht mit Teilnahmen überschneidet; ohne Beschreibung
     $parts[] = ['id' => -$e['id'], 'name' => $anon ? ($e['role_id'] !== null && isset($rn[$e['role_id']]) ? $rn[$e['role_id']] : 'Externe Einsatzkraft') : $e['name'], 'mode_name' => 'Extern', 'role_id' => $e['role_id'], 'lat' => $e['lat'], 'lon' => $e['lon'], 'loc_at' => $e['moved'] ?? $e['created'], 'ext' => 1, 'color' => $e['color']];
-  $po = $db->prepare("SELECT id,kind,name,color,pts FROM pois WHERE incident_id=? AND removed IS NULL ORDER BY id"); $po->execute([$id]);
-  $pois = !feature($inc, 'poi') ? [] : array_map(fn($p) => ['pts' => json_decode($p['pts'], true) ?: []] + ints($p, ['id']), $po->fetchAll());
+  $po = $db->prepare("SELECT id,kind,name,color,pts,sym FROM pois WHERE incident_id=? AND removed IS NULL ORDER BY id"); $po->execute([$id]);
+  $pois = !feature($inc, 'poi') ? [] : array_map(fn($p) => symRow(['pts' => json_decode($p['pts'], true) ?: []] + ints($p, ['id'])), $po->fetchAll());
   $res = [];
   foreach (incRes($inc) as $n => $r) $res[] = ['name' => $anon ? ($c['r'][$r['id']] ?? 'Rettling ' . ($n + 1)) : $r['name'], 'descr' => $anon ? null : $r['descr']] + array_intersect_key($r, array_flip(['id', 'lat', 'lon', 'loc_at', 'rescued_at', 'pls_lat', 'pls_lon', 'pls_at']));
   out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'features' => features($inc['kind_id']), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0, 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
@@ -1893,7 +1916,7 @@ try { anonAuto(); } catch (Throwable $e) { alog('err', 'anon', 'Automatische Ano
 // Applikationslog (Issue #139): Einträge älter als applog_days löschen, höchstens einmal pro Stunde
 try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog_purge_at', (string)$now); $db->prepare("DELETE FROM app_log WHERE at<?")->execute([$now - applogDays() * 86400]); } } catch (Throwable $e) {}
 switch ($route) {
- case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts FROM modes ORDER BY id")->fetchAll()));
@@ -2092,9 +2115,9 @@ switch ($route) {
   $mk->execute([$id]);
   $marks = !$F['res'] ? [] : array_map(fn($m) => ints(array_merge($m, ['lat' => (float)$m['lat'], 'lon' => (float)$m['lon']]), ['id', 'user_id', 'ts', 'manual']), $mk->fetchAll());
   // Positionen und Bereiche der Einsatzleitung: für alle sichtbar, immer vollständig (Entfernen kommt bei allen an)
-  $po = $db->prepare("SELECT p.id,p.kind,p.name,p.color,p.pts,p.created_by,p.created,u.name by_name FROM pois p LEFT JOIN users u ON u.id=p.created_by WHERE p.incident_id=? AND p.removed IS NULL ORDER BY p.id");
+  $po = $db->prepare("SELECT p.id,p.kind,p.name,p.color,p.pts,p.sym,p.created_by,p.created,u.name by_name FROM pois p LEFT JOIN users u ON u.id=p.created_by WHERE p.incident_id=? AND p.removed IS NULL ORDER BY p.id");
   $po->execute([$id]);
-  $pois = !$F['poi'] ? [] : array_map(fn($p) => array_merge(ints($p, ['id', 'created_by', 'created']), ['pts' => json_decode($p['pts'], true) ?: []]), $po->fetchAll());
+  $pois = !$F['poi'] ? [] : array_map(fn($p) => symRow(array_merge(ints($p, ['id', 'created_by', 'created']), ['pts' => json_decode($p['pts'], true) ?: []])), $po->fetchAll());
   // Rettlinge: für alle sichtbar, immer vollständig
   $rescuees = incRes($inc);
   $cf = canFlow($inc);
@@ -2267,7 +2290,12 @@ switch ($route) {
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
   if (!canManage($inc)) fail('Nur die Einsatzleitung kann Markierungen und Bereiche setzen', 403);
   $kind = in_array($in['kind'] ?? '', ['area', 'line'], true) ? $in['kind'] : 'point';
+  $sym = null; // Einsatzsymbol (Issue #146): nur bei Markierungen, nur eingeschaltete; ohne Symbol nur, solange die Verwaltung das erlaubt
+  if ($kind === 'point') { $sym = trim((string)($in['sym'] ?? '')) ?: null; $sa = symActive();
+    if ($sym !== null && !in_array($sym, array_column($sa, 'k'), true)) fail('Dieses Symbol steht nicht zur Wahl');
+    if ($sym === null && !symCfg()['free'] && $sa) fail('Bitte ein Symbol wählen'); }
   $name = trim((string)($in['name'] ?? ''));
+  if ($name === '' && $sym !== null) $name = SYMBOLS[$sym][1];
   if ($name === '') fail('Bezeichnung fehlt');
   $name = mb_substr($name, 0, 80);
   $col = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($in['color'] ?? '')) ? $in['color'] : '#ff9f1c';
@@ -2278,9 +2306,9 @@ switch ($route) {
   }
   $min = ['point' => 1, 'line' => 2, 'area' => 3][$kind];
   if ($kind === 'point' ? count($pts) !== 1 : count($pts) < $min || count($pts) > 200) fail(['point' => 'Für eine Markierung ist genau ein Punkt nötig', 'line' => 'Eine Linie braucht 2 bis 200 Punkte', 'area' => 'Ein Bereich braucht 3 bis 200 Punkte'][$kind]);
-  $db->prepare("INSERT INTO pois(incident_id,kind,name,color,pts,created_by,created) VALUES(?,?,?,?,?,?,?)")->execute([$inc['id'], $kind, $name, $col, json_encode($pts), $uid, $now]);
+  $db->prepare("INSERT INTO pois(incident_id,kind,name,color,pts,sym,created_by,created) VALUES(?,?,?,?,?,?,?,?)")->execute([$inc['id'], $kind, $name, $col, json_encode($pts), $sym, $uid, $now]);
   $pid = (int)$db->lastInsertId();
-  if ($kind === 'point') $txt = sprintf('setzt die Markierung «%s» (%.5F, %.5F)', $name, $pts[0][0], $pts[0][1]);
+  if ($kind === 'point') $txt = sprintf('setzt die Markierung «%s»%s (%.5F, %.5F)', $name, $sym !== null && $name !== SYMBOLS[$sym][1] ? ' (Symbol ' . SYMBOLS[$sym][1] . ')' : '', $pts[0][0], $pts[0][1]);
   elseif ($kind === 'line') { $m = 0; for ($j = 1; $j < count($pts); $j++) $m += hav($pts[$j - 1][0], $pts[$j - 1][1], $pts[$j][0], $pts[$j][1]);
     $txt = sprintf('zeichnet die Linie «%s» (%d Punkte, ca. %s km)', $name, count($pts), number_format($m / 1000, $m < 10000 ? 2 : 1, '.', "'")); }
   else { // Fläche grob über lokale Projektion (Shoelace), reicht für die Angabe im Log
@@ -2661,7 +2689,7 @@ switch ($route) {
   $tr = ['u' => [], 'r' => []];
   foreach ($q("SELECT user_id,rescuee_id,ts,lat,lon FROM track WHERE incident_id=? ORDER BY ts,id") as $r)
     $r['user_id'] !== null ? $tr['u'][] = [$uidMap[(int)$r['user_id']] ?? (int)$r['user_id'], (int)$r['ts'], (float)$r['lat'], (float)$r['lon']] : $tr['r'][] = [(int)$r['rescuee_id'], (int)$r['ts'], $r['lat'] === null ? null : (float)$r['lat'], $r['lon'] === null ? null : (float)$r['lon']]; // ohne lat/lon = Fundort zurückgesetzt
-  $pois = array_map(fn($r) => ['pts' => json_decode($r['pts'], true)] + ints($r, ['id', 'created', 'removed']), $q("SELECT id,kind,name,color,pts,created,removed FROM pois WHERE incident_id=? ORDER BY id"));
+  $pois = array_map(fn($r) => symRow(['pts' => json_decode($r['pts'], true)] + ints($r, ['id', 'created', 'removed'])), $q("SELECT id,kind,name,color,pts,sym,created,removed FROM pois WHERE incident_id=? ORDER BY id"));
   $res = array_map(fn($r) => floats(ints($r, ['id', 'created', 'removed', 'loc_at', 'rescued_at', 'pls_at']), ['lat', 'lon', 'pls_lat', 'pls_lon']), $q("SELECT id,name,descr,lat,lon,loc_at,rescued_at,created,removed,pls_lat,pls_lon,pls_at FROM rescuees WHERE incident_id=? ORDER BY id"));
   $marks = array_map(fn($r) => floats(ints($r, ['id', 'created', 'unmarked', 'mark', 'uid']), ['mark_lat', 'mark_lon']), $q("SELECT m.id,m.text,m.created,m.mark,m.unmarked,m.mark_lat,m.mark_lon,m.from_user uid,COALESCE(u.name,m.from_label) name FROM messages m LEFT JOIN users u ON u.id=m.from_user WHERE m.incident_id=? AND m.mark_lat IS NOT NULL ORDER BY m.id"));
   $flow = array_map(fn($r) => ints($r, ['ts']), $q("SELECT ts,text FROM incident_log WHERE incident_id=? AND kind='flow' ORDER BY ts,id"));
@@ -3149,7 +3177,8 @@ switch ($route) {
  case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
    'air' => airCfg(), 'air_default' => AIR_DEFAULT + array_map(fn($x) => $x[0], AIR_NUM), 'air_num' => AIR_NUM, 'air_filters' => AIR_FILTERS, 'air_app' => AIR_APP, 'air_sources' => array_map(fn($s) => ['name' => $s['name'], 'site' => $s['site'], 'note' => $s['note']], AIR_SOURCES),
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
-   'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM, 'hydro_sources' => HYDRO_SOURCES] // Pegel & Abfluss (Issue #125)
+   'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM, 'hydro_sources' => HYDRO_SOURCES, // Pegel & Abfluss (Issue #125)
+   'sym' => symCfg(), 'sym_sets' => array_map(fn($x) => ['name' => $x[0], 'note' => $x[1]], SYM_SETS), 'sym_all' => array_map('symPub', array_keys(SYMBOLS))] // Einsatzsymbole (Issue #146)
    + (can('cfg_map') ? ['postgis' => pgCfg() + ['pass_set' => setting('postgis_pass', '') !== '' ? 1 : 0, 'ext' => extension_loaded('pdo_pgsql') ? 1 : 0, 'ready' => pgReady() ? 1 : 0], 'postgis_ssl' => PG_SSL, 'postgis_default' => PG_DEFAULT] : [])); // PostGIS (Issue #131), ohne Passwort
  /* ---------- Technisches Applikationslog (Issue #139) ---------- */
  case 'applog': need('applog'); // neueste zuerst; lvl = mindestens diese Stufe (warn = Warnungen und Fehler), cat, q (Text, Route, Angaben), before = ältere als diese ID, after = neuere (Aktualisieren)
@@ -3222,6 +3251,12 @@ switch ($route) {
     $v = array_values(array_intersect(array_keys(NAV_APPS), array_filter((array)$in['nav_off'], 'is_string')));
     if (count($v) >= count(NAV_APPS)) fail('Mindestens eine Navigations-App muss eingeschaltet bleiben');
     setSetting('nav_off', json_encode($v));
+  }
+  if (isset($in['sym'])) { // Einsatzsymbole (Issue #146): Sets, ausgeschaltete Symbole, Markierungen ohne Symbol
+    if (!is_array($in['sym'])) fail('Ungültige Einstellung');
+    $c = symNorm($in['sym'] + ['sets' => []]);
+    if (!$c['free'] && !symActive($c)) fail('Ohne eingeschaltetes Symbol müssen Markierungen ohne Symbol erlaubt bleiben');
+    setSetting('sym', json_encode($c));
   }
   if (isset($in['nav_default'])) { if (!in_array($in['nav_default'], navApps(), true)) fail('Der Standard muss eine eingeschaltete App sein'); setSetting('nav_default', $in['nav_default']); }
   if (isset($in['coord_sys'])) { if (!in_array($in['coord_sys'], COORDS, true)) fail('Unbekanntes Koordinatensystem'); setSetting('coord_sys', $in['coord_sys']); }
