@@ -1281,6 +1281,12 @@ function fcmCfg() { global $cfg; static $c = false; if ($c !== false) return $c;
   $j = json_decode((string)@file_get_contents($f), true);
   if (is_array($j) && !empty($j['project_id']) && !empty($j['client_email']) && !empty($j['private_key'])) $c = $j;
   return $c; }
+// Warum App-Push nicht eingerichtet ist (für das Applikationslog), null = eingerichtet bzw. nicht vorgesehen ('fcm' fehlt in config.php)
+function fcmWhy() { global $cfg; $f = $cfg['fcm'] ?? null; if (fcmOk()) return null;
+  if (!is_string($f) || $f === '') return 'In config.php fehlt der Eintrag fcm (Pfad zur JSON-Datei des Firebase-Dienstkontos)';
+  if (!is_readable($f)) return 'Datei des Firebase-Dienstkontos nicht lesbar: ' . basename($f);
+  if (!function_exists('openssl_sign') || !function_exists('curl_multi_init')) return 'PHP ohne openssl oder curl';
+  return 'Datei des Firebase-Dienstkontos ungültig (project_id, client_email oder private_key fehlt): ' . basename($f); }
 function fcmOk() { return fcmCfg() !== null; }
 function fcmToken($renew = false) { $c = fcmCfg(); $f = __DIR__ . '/data/fcm_token.json'; if (!is_dir(dirname($f))) @mkdir(dirname($f), 0775, true);
   $t = json_decode((string)@file_get_contents($f), true);
@@ -1310,10 +1316,13 @@ function fcmMsg($tok, $pf, $u, $m) { $tag = (string)($m['tag'] ?? 'sw'); $cr = !
     $o['apns'] = ['headers' => ['apns-priority' => $si ? '5' : '10', 'apns-push-type' => 'alert', 'apns-collapse-id' => substr($tag, 0, 64)], 'payload' => ['aps' => $aps]]; }
   return ['message' => $o]; }
 // Anfragen an FCM in $mh einreihen; Rückgabe [[handle, push_native.id], …]
-function fcmQueue($mh, $q, $ids) { global $db; if (!fcmOk()) return [];
+function fcmQueue($mh, $q, $ids) { global $db, $cfg;
+  if (!fcmOk()) { if (!empty($cfg['fcm'])) alog('warn', 'push', 'App-Push nicht gesendet', ['why' => fcmWhy()]); return []; }
   $in = implode(',', array_fill(0, count($ids), '?'));
   $s = $db->prepare("SELECT n.* FROM push_native n JOIN users u ON u.id=n.user_id LEFT JOIN sessions se ON se.id=n.session_id WHERE u.active=1 AND (n.session_id IS NULL OR se.id IS NOT NULL) AND n.user_id IN ($in)");
-  $s->execute($ids); $ns = $s->fetchAll(); if (!$ns || !($at = fcmToken())) return [];
+  $s->execute($ids); $ns = $s->fetchAll();
+  if (!$ns) { alog('info', 'push', 'App-Push: kein Gerät der Empfänger für Push angemeldet', ['users' => count($ids)]); return []; }
+  if (!($at = fcmToken())) return [];
   $url = 'https://fcm.googleapis.com/v1/projects/' . rawurlencode(fcmCfg()['project_id']) . '/messages:send'; $hn = [];
   foreach ($q as [$u, $m]) foreach ($ns as $n) { if ((int)$n['user_id'] !== $u) continue;
     $h = curl_init($url);
@@ -1322,13 +1331,14 @@ function fcmQueue($mh, $q, $ids) { global $db; if (!fcmOk()) return [];
     curl_multi_add_handle($mh, $h); $hn[] = [$h, (int)$n['id']]; }
   return $hn; }
 // Antworten auswerten: ungültige oder abgemeldete Tokens löschen, abgelehnter Zugriffstoken verwirft den Zwischenspeicher
-function fcmDone($mh, $hn) { global $db;
-  foreach ($hn as [$h, $id]) { $c = curl_getinfo($h, CURLINFO_HTTP_CODE);
+function fcmDone($mh, $hn) { global $db; $ok = 0;
+  foreach ($hn as [$h, $id]) { $c = curl_getinfo($h, CURLINFO_HTTP_CODE); if ($c === 200) $ok++;
     if ($c !== 200) { $e = json_decode((string)curl_multi_getcontent($h), true)['error'] ?? []; $st = (string)($e['status'] ?? ''); $msg = (string)($e['message'] ?? '');
       foreach ((array)($e['details'] ?? []) as $x) if (is_array($x) && !empty($x['errorCode'])) $st = (string)$x['errorCode']; // FcmError: UNREGISTERED, SENDER_ID_MISMATCH, …
       if ($c === 404 || $st === 'UNREGISTERED' || $st === 'SENDER_ID_MISMATCH' || ($st === 'INVALID_ARGUMENT' && stripos($msg, 'token') !== false)) $db->prepare("DELETE FROM push_native WHERE id=?")->execute([$id]);
       else { if ($c === 401) @unlink(__DIR__ . '/data/fcm_token.json'); alog('warn', 'push', 'App-Push (FCM) abgelehnt', ['http' => $c, 'status' => $st ?: null, 'msg' => mb_substr($msg, 0, 200) ?: null, 'sub' => $id]); } }
-    curl_multi_remove_handle($mh, $h); } }
+    curl_multi_remove_handle($mh, $h); }
+  if ($hn) alog('info', 'push', 'App-Push an FCM übergeben', ['ok' => $ok, 'failed' => count($hn) - $ok]); }
 // alle aktiven Benutzer ausser $skip (IDs), bei Aufgebot nur die aufgebotenen ($only, NULL = alle); Stufe wie alarmLvl je Person, «Keine» sendet nichts
 function pushAlarm($inc, $skip, $only = null) { global $db; if (!pushOk() && !fcmOk()) return;
   foreach ($db->query("SELECT id,exercise_mode FROM users WHERE active=1")->fetchAll() as $u) { $id = (int)$u['id']; if (in_array($id, $skip, true) || ($only !== null && !in_array($id, $only, true))) continue;
@@ -2863,11 +2873,12 @@ switch ($route) {
  case 'push/unsubscribe': $db->prepare("DELETE FROM push_subs WHERE endpoint=? AND user_id=?")->execute([(string)($in['endpoint'] ?? ''), $uid]); out(['ok' => true]);
  /* ---------- Native Apps (Issue #108): Push über Firebase Cloud Messaging, Gerätesitzungen ---------- */
  case 'push/native/subscribe': // token (FCM-Registrierungstoken), platform android|ios; ein Token gehört immer der zuletzt angemeldeten Person bzw. Sitzung
-  if (!fcmOk()) fail('Push für die App ist auf diesem Server nicht eingerichtet');
+  if (!fcmOk()) { alog('warn', 'push', 'App wollte sich für Push anmelden, Push ist nicht eingerichtet', ['why' => fcmWhy()]); fail('Push für die App ist auf diesem Server nicht eingerichtet'); }
   $t = trim((string)($in['token'] ?? '')); if ($t === '' || strlen($t) > 4096 || !preg_match('/^[\x21-\x7e]+$/', $t)) fail('Ungültiger Token');
   $pf = in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : '';
   $db->prepare("DELETE FROM push_native WHERE token=?")->execute([$t]);
   $db->prepare("INSERT INTO push_native(user_id,session_id,token,platform,created) VALUES(?,?,?,?,?)")->execute([$uid, $sid, $t, $pf, $now]);
+  alog('info', 'push', 'App für Push angemeldet', ['platform' => $pf ?: null]);
   out(['ok' => true]);
  case 'push/native/unsubscribe': $db->prepare("DELETE FROM push_native WHERE token=? AND user_id=?")->execute([trim((string)($in['token'] ?? '')), $uid]); out(['ok' => true]);
  case 'logout': // eigene Gerätesitzung samt ihren App-Abos löschen, sonst den Browser-Token
