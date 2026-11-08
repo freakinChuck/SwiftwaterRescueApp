@@ -1,0 +1,17 @@
+# Nur iOS bauen und nach TestFlight hochladen, von Hand: Actions → «TestFlight» → «Run workflow», Branch wählen.
+# Ohne Prüfung (flutter analyze/test) und ohne Android; lädt vom gewählten Branch hoch, auch ausserhalb von main.
+# Geheimnisse wie in mobile.yml (IOS_*, ASC_*, FCM_*).
+name: TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    uses: ./.github/workflows/ios.yml
+    with:
+      upload: true
+    secrets: inherit

@@ -78,7 +78,7 @@ flutter build ipa --release      # iOS (Signatur in Xcode einrichten)
 - **Android:** `swiftwater-rescue-<Version>.apk` (direkt installierbar) und `.aab` (für Google Play)
 - **iOS:** `swiftwater-rescue-<Version>.ipa`
 
-Die Pakete stehen als Artefakte beim Lauf. Bei einem Tag `mobile-v1.2.0` übernimmt die Pipeline die Version 1.2.0, hängt die Pakete an ein GitHub-Release an und nimmt die Laufnummer als Build-Nummer.
+Die Pakete stehen als Artefakte beim Lauf. Bei einem Tag `mobile-v1.2.0` übernimmt die Pipeline die Version 1.2.0, hängt die Pakete an ein GitHub-Release an und nimmt die Laufnummer als Build-Nummer (Android; iOS siehe unten).
 
 Geheimnisse (Repository → Settings → Secrets and variables → Actions) sind alle optional:
 
@@ -96,7 +96,9 @@ Geheimnisse (Repository → Settings → Secrets and variables → Actions) sind
 
 Ohne iOS-Signatur entsteht ein unsigniertes `…-unsigned.ipa`. Installieren lässt es sich erst nach dem Nachsignieren.
 
-Upload nach TestFlight: Läuft die Pipeline auf `main` (Push oder «Run workflow» auf `main`), ist das IPA signiert, gilt `IOS_EXPORT_METHOD` `app-store-connect` und sind die drei `ASC_*`-Geheimnisse gesetzt, lädt sie das IPA mit `xcrun altool` nach App Store Connect. Den Schlüssel erzeugt man in App Store Connect unter Benutzer und Zugriff → Integrationen → App Store Connect API (Team-Schlüssel, Rolle «App Manager»); die `.p8`-Datei lässt sich nur einmal herunterladen. Die App muss in App Store Connect angelegt sein (Bundle-ID `ch.swiftwaterrescue.app`). Die Build-Nummer ist die Laufnummer der Pipeline und steigt deshalb immer. Pull Requests und Tags laden nichts hoch. `ITSAppUsesNonExemptEncryption` = `false` in `Info.plist` (nur HTTPS), damit App Store Connect nicht bei jedem Build nach der Verschlüsselung fragt.
+Upload nach TestFlight: Läuft die Pipeline auf `main` (Push oder «Run workflow» auf `main`), ist das IPA signiert, gilt `IOS_EXPORT_METHOD` `app-store-connect` und sind die drei `ASC_*`-Geheimnisse gesetzt, lädt sie das IPA mit `xcrun altool` nach App Store Connect. Den Schlüssel erzeugt man in App Store Connect unter Benutzer und Zugriff → Integrationen → App Store Connect API (Team-Schlüssel, Rolle «App Manager»); die `.p8`-Datei lässt sich nur einmal herunterladen. Die App muss in App Store Connect angelegt sein (Bundle-ID `ch.swiftwaterrescue.app`). Die iOS-Build-Nummer ist Datum und Zeit des Builds (UTC, `JJMMTThhmm`, z. B. 2611081530) und steigt deshalb über beide Workflows hinweg. Pull Requests und Tags laden nichts hoch. Der iOS-Teil steht in `.github/workflows/ios.yml` (wiederverwendbar).
+
+Nur iOS nach TestFlight, von Hand: Actions → «TestFlight» → «Run workflow», Branch wählen (`.github/workflows/testflight.yml`). Baut und lädt hoch ohne Prüfung und ohne Android, auch von anderen Branches als `main`. `ITSAppUsesNonExemptEncryption` = `false` in `Info.plist` (nur HTTPS), damit App Store Connect nicht bei jedem Build nach der Verschlüsselung fragt.
 
 Lokal liest Android den Signierschlüssel aus `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Die Datei steht in der `.gitignore`.
 
