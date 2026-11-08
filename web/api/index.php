@@ -265,7 +265,7 @@ const PERMS = [
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func', 'sym' => 'cfg_inc',
-  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'applog_days' => 'applog']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
+  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'applog_days' => 'applog']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
@@ -828,17 +828,74 @@ function pgWays($p, $c, $area) { $t = pgTable($c);
     $s = $p->prepare("SELECT id, waterway, name, ST_AsGeoJSON(geom, 7) g FROM $t WHERE waterway IN ('river','stream','canal') AND geom && ST_MakeEnvelope(?, ?, ?, ?, 4326) AND ST_Intersects(geom, ST_MakeEnvelope(?, ?, ?, ?, 4326)) LIMIT 50001");
     $s->execute([$w, $so, $e, $n, $w, $so, $e, $n]); }
   $rows = $s->fetchAll(); if (count($rows) > 50000) throw new RuntimeException('Zu viele Gewässer im Ausschnitt');
-  $nid = []; $out = []; $neg = 0;
-  foreach ($rows as $r) { $g = json_decode((string)$r['g'], true); $ty = $g['type'] ?? '';
-    foreach ($ty === 'LineString' ? [$g['coordinates']] : ($ty === 'MultiLineString' ? $g['coordinates'] : []) as $i => $cs) { if (!is_array($cs) || count($cs) < 2) continue; $nodes = []; $geo = [];
-      foreach ($cs as $pt) { $k = sprintf('%.7F,%.7F', $pt[1], $pt[0]); $nodes[] = $nid[$k] ??= count($nid) + 1; $geo[] = ['lat' => (float)$pt[1], 'lon' => (float)$pt[0]]; }
-      $out[] = ['type' => 'way', 'id' => $i ? --$neg : (int)$r['id'], 'nodes' => $nodes, 'geometry' => $geo, 'tags' => ['waterway' => (string)$r['waterway']] + (is_string($r['name']) && $r['name'] !== '' ? ['name' => mb_substr($r['name'], 0, 200)] : [])]; } }
+  return pgRows(array_map(fn($r) => ['id' => $r['id'], 'waterway' => $r['waterway'], 'name' => $r['name'], 'g' => json_decode((string)$r['g'], true)], $rows)); }
+// Zeilen (id, waterway, name, g = GeoJSON-Geometrie) in Wege wie bei Overpass; gemeinsam für PostGIS und die PostGIS-API. Ohne ganzzahlige id negative IDs.
+function pgRows($rows) { $nid = []; $out = []; $neg = 0;
+  foreach ($rows as $r) { $g = is_array($r['g'] ?? null) ? $r['g'] : []; $ty = $g['type'] ?? ''; $wid = is_numeric($r['id'] ?? null) && (int)$r['id'] > 0 ? (int)$r['id'] : null;
+    if (!preg_match('/^(river|stream|canal)$/', (string)($r['waterway'] ?? ''))) continue;
+    foreach ($ty === 'LineString' ? [$g['coordinates'] ?? null] : ($ty === 'MultiLineString' ? (array)($g['coordinates'] ?? []) : []) as $i => $cs) { if (!is_array($cs) || count($cs) < 2) continue; $nodes = []; $geo = [];
+      foreach ($cs as $pt) { if (!is_array($pt) || !is_numeric($pt[0] ?? null) || !is_numeric($pt[1] ?? null)) continue 2;
+        $k = sprintf('%.7F,%.7F', $pt[1], $pt[0]); $nodes[] = $nid[$k] ??= count($nid) + 1; $geo[] = ['lat' => (float)$pt[1], 'lon' => (float)$pt[0]]; }
+      $out[] = ['type' => 'way', 'id' => $i || $wid === null ? --$neg : $wid, 'nodes' => $nodes, 'geometry' => $geo, 'tags' => ['waterway' => (string)$r['waterway']] + (is_string($r['name'] ?? null) && $r['name'] !== '' ? ['name' => mb_substr($r['name'], 0, 200)] : [])]; } }
   return $out; }
 // Antwort als JSON wie Overpass oder null (Fehler zählt in der Statistik)
 function pgFetch($area) { $t = microtime(true);
   try { $c = pgCfg(); $j = json_encode(['elements' => pgWays(pgConnect($c, (string)setting('postgis_pass', '')), $c, $area)], JSON_UNESCAPED_UNICODE); opStat(PG_STAT, 'server', true, (microtime(true) - $t) * 1000); return $j; }
   catch (Throwable $e) { opStat(PG_STAT, 'server', false, (microtime(true) - $t) * 1000, pgErr($e)); return null; } }
 function pgErr($e) { $m = preg_replace('/\s+/', ' ', $e->getMessage()); $m = preg_replace('/^SQLSTATE\[[^\]]*\]\s*(\[\d+\]\s*)?/', '', $m); return mb_substr($m, 0, 150) ?: 'Fehler'; }
+
+/* ---------- Gewässernetz über die PostGIS-API (github.com/ELSSwift/PostGISApi) ---------- */
+// REST/GeoJSON-Dienst vor einer PostGIS-Datenbank (z. B. als Docker-Container auf einem Raspberry Pi), für Hostings ohne pdo_pgsql wie cyon.
+// Abfrage: POST {url}/api/v1/layers/{layer}/query mit bbox (bei around zusätzlich dwithin in Metern), Filter waterway in river/stream/canal, Eigenschaften waterway und name,
+// Seiten über offset bis numberMatched (der Layer begrenzt je Antwort auf maxFeatures). Der Layer braucht die Eigenschaften waterway und name, als id den OSM-Weg.
+// Einstellung pgapi (JSON), API-Key getrennt in pgapi_key (Header X-API-Key, nie an Geräte, leer = behalten; ohne Key nur bei öffentlichen Layern). Statistik als «pgapi».
+const PGA_DEFAULT = ['on' => 0, 'url' => '', 'layer' => 'sw_waterways'];
+const PGA_STAT = 'pgapi'; // Schlüssel in overpass_stats
+function pgaCfg() { $v = json_decode(setting('pgapi', ''), true); $v = is_array($v) ? $v : []; $c = PGA_DEFAULT;
+  foreach (['url', 'layer'] as $k) if (is_string($v[$k] ?? null) && $v[$k] !== '') $c[$k] = $v[$k];
+  $c['on'] = empty($v['on']) ? 0 : 1; return $c; }
+function pgaIn($v) { if (!is_array($v)) fail('Ungültige Einstellung');
+  $o = ['on' => empty($v['on']) ? 0 : 1, 'url' => rtrim(trim((string)($v['url'] ?? '')), '/'), 'layer' => trim((string)($v['layer'] ?? '')) ?: PGA_DEFAULT['layer']];
+  if ($o['url'] !== '' && (!preg_match('~^https?://[^/?#@\s]{1,200}(/[^?#\s]{0,200})?$~i', $o['url']))) fail('Ungültige Adresse (http:// oder https://, ohne Parameter)');
+  if (!preg_match('/^[A-Za-z0-9_.-]{1,100}$/', $o['layer'])) fail('Ungültiger Layer (Buchstaben, Ziffern, «_», «-», «.»)');
+  if ($o['on'] && $o['url'] === '') fail('Zum Einschalten braucht es die Adresse');
+  return $o; }
+function pgaReady() { $c = pgaCfg(); return $c['on'] && $c['url'] !== '' && function_exists('curl_init'); }
+// Eine Anfrage an die API, Antwort als Array; Fehler mit Titel/Detail der Problem-Antwort (RFC 7807) bzw. HTTP-Code
+function pgaReq($c, $key, $path, $body = null) { if (!function_exists('curl_init')) throw new RuntimeException('PHP-Erweiterung curl fehlt auf dem Server');
+  $h = ['Accept: application/json, application/geo+json']; if ($key !== '') $h[] = 'X-API-Key: ' . $key; if ($body !== null) $h[] = 'Content-Type: application/json';
+  $ch = curl_init($c['url'] . $path); curl_setopt_array($ch, CURL_CA + [CURLOPT_RETURNTRANSFER => 1, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 15, CURLOPT_HTTPHEADER => $h, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']
+    + ($body !== null ? [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => json_encode($body)] : []));
+  $r = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  if ($r === false) throw new RuntimeException(curl_errno($ch) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : (curl_error($ch) ?: 'Keine Antwort'));
+  $j = json_decode((string)$r, true);
+  if ($code !== 200) { $m = is_array($j) ? trim(($j['title'] ?? '') . (isset($j['detail']) ? ': ' . $j['detail'] : '')) : '';
+    throw new RuntimeException("HTTP $code" . ($code === 401 ? ' (API-Key fehlt oder ist ungültig)' : ($code === 403 ? ' (keine Berechtigung für den Layer)' : ($code === 404 ? ' (Layer oder Adresse nicht gefunden)' : ''))) . ($m !== '' ? " – $m" : '')); }
+  if (!is_array($j)) throw new RuntimeException('Ungültige Antwort (kein JSON)');
+  return $j; }
+function pgaWays($c, $key, $area) {
+  $q = ['filters' => [['column' => 'waterway', 'op' => 'in', 'value' => 'river,stream,canal']], 'properties' => ['waterway', 'name'], 'srid' => 4326, 'precision' => 7, 'limit' => 50000];
+  if ($area[0] === 'around') { [, $r, $la, $lo] = $area; $dy = $r / 111320; $dx = $dy / max(.05, cos(deg2rad($la)));
+    $q['bbox'] = [$lo - $dx, $la - $dy, $lo + $dx, $la + $dy]; $q['spatial'] = ['geometry' => ['type' => 'Point', 'coordinates' => [$lo, $la]], 'srid' => 4326, 'relation' => 'dwithin', 'distance' => $r, 'geography' => true]; }
+  else { [, $so, $w, $n, $e] = $area; $q['bbox'] = [$w, $so, $e, $n]; }
+  $path = '/api/v1/layers/' . rawurlencode($c['layer']) . '/query'; $rows = []; $off = 0; $all = null;
+  for ($pg = 0; $pg < 50; $pg++) { $j = pgaReq($c, $key, $path, $q + ['offset' => $off, 'count' => $all === null]);
+    if (!is_array($j['features'] ?? null)) throw new RuntimeException('Ungültige Antwort (keine FeatureCollection)');
+    if ($all === null) { $all = (int)($j['numberMatched'] ?? count($j['features'])); if ($all > 50000) throw new RuntimeException('Zu viele Gewässer im Ausschnitt'); }
+    foreach ($j['features'] as $f) $rows[] = ['id' => $f['id'] ?? null, 'waterway' => $f['properties']['waterway'] ?? null, 'name' => $f['properties']['name'] ?? null, 'g' => $f['geometry'] ?? null];
+    $off += count($j['features']); if (!$j['features'] || $off >= $all) break; }
+  if ($off < $all) throw new RuntimeException("Unvollständige Antwort ($off von $all Gewässern)");
+  return pgRows($rows); }
+function pgaFetch($area) { $t = microtime(true);
+  try { $j = json_encode(['elements' => pgaWays(pgaCfg(), (string)setting('pgapi_key', ''), $area)], JSON_UNESCAPED_UNICODE); opStat(PGA_STAT, 'server', true, (microtime(true) - $t) * 1000); return $j; }
+  catch (Throwable $e) { opStat(PGA_STAT, 'server', false, (microtime(true) - $t) * 1000, mb_substr(preg_replace('/\s+/', ' ', $e->getMessage()), 0, 150) ?: 'Fehler'); return null; } }
+
+// Reihenfolge der Quellen fürs Gewässernetz: Einstellung water_order (JSON-Liste der Schlüssel aus WATER_SRC), fehlende in der Standardreihenfolge angehängt.
+// Abgefragt werden nur eingerichtete (waterReady); der Rückfall im Gerät (Overpass direkt) kommt immer erst, wenn keine Quelle des Servers geantwortet hat.
+const WATER_SRC = ['postgis' => 'PostGIS-Datenbank (direkt)', 'pgapi' => 'PostGIS-API', 'overpass' => 'Overpass-Server'];
+function waterOrder() { $v = json_decode(setting('water_order', ''), true); $v = is_array($v) ? array_values(array_unique(array_filter($v, fn($k) => is_string($k) && isset(WATER_SRC[$k])))) : [];
+  return array_merge($v, array_values(array_diff(array_keys(WATER_SRC), $v))); }
+function waterReady() { return ['postgis' => pgReady(), 'pgapi' => pgaReady(), 'overpass' => (bool)overpassActive()]; }
 
 if ($route === 'login') {
   $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
@@ -877,7 +934,7 @@ if ($route === 'legal') {
     'cfg' => legalCfg(), 'updated' => (int)setting('legal_at', '0'),
     'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color']], $ks)),
     'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'on' => (object)array_map(fn($f) => $f[$k], $fk)], array_keys(FEATURES)),
-    'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120'), 'postgis' => pgReady() ? 1 : 0],
+    'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120'), 'postgis' => pgReady() ? 1 : 0, 'pgapi' => pgaReady() ? 1 : 0, 'order' => array_values(array_filter(waterOrder(), fn($k) => waterReady()[$k]))],
     'hydro' => (object)array_map(fn($f) => $f['hydro'], $fk), // Pegel & Abfluss (Issue #125) je Einsatztyp
     'hydro_src' => array_values(array_map(fn($k) => ['k' => $k] + HYDRO_SOURCES[$k], array_keys(array_filter(hydroCfg()['src'])))), // eingeschaltete Quellen in der Reihenfolge des Vorrangs
     'air_home' => (int)$air['home_km'],
@@ -1382,15 +1439,17 @@ function http_get($url) {
 }
 // Gewässernetz über den Server mit Datei-Cache, damit gleiche Abfragen (z. B. Suchgebiet aller Geräte eines Einsatzes) nur einmal
 // zu Overpass gehen. Haltedauer: Einstellung overpass_ttl in Minuten (Standard 120, 0 = kein Cache).
-// Quellen in dieser Reihenfolge (Issue #131): PostGIS (pgReady, area = Ausschnitt aus overpassArea), dann die Overpass-Server; Header X-Source postgis|overpass.
+// Quellen in der eingestellten Reihenfolge (waterOrder): PostGIS direkt (Issue #131), PostGIS-API, Overpass-Server; nur eingerichtete, PostGIS und API nur mit area
+// (Ausschnitt aus overpassArea). Header X-Source postgis|pgapi|overpass.
 function overpassServe($q, $area = null) { global $now;
   $ttl = max(0, (int)setting('overpass_ttl', '120')) * 60;
   $dir = __DIR__ . '/data/overpass'; if (!is_dir($dir)) @mkdir($dir, 0775, true);
   $file = "$dir/" . sha1($q) . '.json';
   $hit = function () use ($ttl, $file) { clearstatcache(true, $file); if (!$ttl || !is_file($file) || time() - filemtime($file) >= $ttl) return false; header('X-Cache: HIT'); readfile($file); exit; };
   $hit();
-  $pg = $area !== null && pgReady(); $op = (bool)overpassActive();
-  if (!$pg && !$op) { // Zugriff auf Overpass in der Verwaltung ausgeschaltet (Issue #75) und kein PostGIS: nur noch Daten aus dem Cache, auch abgelaufene, ohne Rückfall im Gerät
+  $rd = waterReady(); if ($area === null) $rd['postgis'] = $rd['pgapi'] = false; $op = $rd['overpass'];
+  $srcs = array_values(array_filter(waterOrder(), fn($k) => $rd[$k]));
+  if (!$srcs) { // Zugriff auf Overpass in der Verwaltung ausgeschaltet (Issue #75) und weder PostGIS noch API: nur noch Daten aus dem Cache, auch abgelaufene, ohne Rückfall im Gerät
     clearstatcache(true, $file); if (is_file($file)) { header('X-Cache: STALE'); readfile($file); exit; }
     fail('Overpass ist in der Verwaltung ausgeschaltet', 503);
   }
@@ -1399,12 +1458,11 @@ function overpassServe($q, $area = null) { global $now;
   $hit();
   foreach (array_merge(glob("$dir/*.json") ?: [], glob("$dir/*.lock") ?: []) as $x) if ($now - filemtime($x) > max($ttl, OVERPASS_KEEP_S)) @unlink($x); // aufräumen, auch als Rückfall zu alt
   set_time_limit(90);
-  $r = $pg ? pgFetch($area) : null; $src = 'postgis';
-  if ($r === null && $op) { $r = overpassFetch($q); $src = 'overpass'; }
+  $r = null; foreach ($srcs as $src) { $r = $src === 'postgis' ? pgFetch($area) : ($src === 'pgapi' ? pgaFetch($area) : overpassFetch($q)); if ($r !== null) break; }
   if ($r !== null) { if ($ttl && file_put_contents("$file.tmp", $r) !== false) rename("$file.tmp", $file); header('X-Cache: MISS'); header("X-Source: $src"); echo $r; }
   elseif (is_file($file)) { header('X-Cache: STALE'); readfile($file); } // nicht erreichbar: abgelaufene Daten sind besser als keine
   elseif ($op) out(['error' => 'Overpass antwortet nicht', 'query' => $q, 'servers' => overpassActive()], 502); // mit Abfrage und Servern: das Gerät fragt Overpass dann selbst (overpassNet in common.js)
-  else fail('PostGIS antwortet nicht, und Overpass ist in der Verwaltung ausgeschaltet', 503);
+  else fail('PostGIS bzw. die PostGIS-API antwortet nicht, und Overpass ist in der Verwaltung ausgeschaltet', 503);
   exit;
 }
 // Rückfall (Issue #28): Vom Hosting aus lehnt Overpass oft ab, vom Gerät aus nicht. Das Gerät liefert sein Ergebnis hier für den Cache
@@ -1471,7 +1529,7 @@ function overpassFetch($q) { // erste Antwort mit elements, sonst null; jeder Ve
 }
 // Verwendungsstatistik je Overpass-Server und Quelle (Issue #45, Tabelle overpass_stats); darf die Abfrage nie stören
 function opStat($url, $src, $ok, $ms, $err = null) { global $db;
-  if (!$ok) alog('warn', 'overpass', ($url === PG_STAT ? 'PostGIS' : 'Overpass') . ($src === 'device' ? ' (vom Gerät gemeldet)' : '') . ' ohne Antwort', ['url' => $url, 'err' => $err === null ? null : mb_substr($err, 0, 200), 'ms' => (int)$ms]); // Applikationslog (Issue #139)
+  if (!$ok) alog('warn', 'overpass', ($url === PG_STAT ? 'PostGIS' : ($url === PGA_STAT ? 'PostGIS-API' : 'Overpass')) . ($src === 'device' ? ' (vom Gerät gemeldet)' : '') . ' ohne Antwort', ['url' => $url, 'err' => $err === null ? null : mb_substr($err, 0, 200), 'ms' => (int)$ms]); // Applikationslog (Issue #139)
   try {
     $now = time(); $err = $err === null ? null : mb_substr($err, 0, 150);
     $u = $db->prepare($ok ? "UPDATE overpass_stats SET uses=uses+1, ok=ok+1, ok_ms=ok_ms+?, last_ok=? WHERE url=? AND src=?" : "UPDATE overpass_stats SET uses=uses+1, fails=fails+1, last_fail=?, last_err=? WHERE url=? AND src=?");
@@ -1974,6 +2032,21 @@ switch ($route) {
     $t2 = microtime(true); $w = pgWays($p, $c, ['around', 5000, $la, $lo]); $r['query_ms'] = (int)((microtime(true) - $t2) * 1000);
     $r['ways'] = count($w); $r['names'] = array_slice(array_values(array_unique(array_filter(array_map(fn($x) => $x['tags']['name'] ?? null, $w)))), 0, 8); $r['ok'] = true; }
   catch (Throwable $e) { $r['err'] = pgErr($e); }
+  $r['ms'] = (int)((microtime(true) - $t) * 1000); out($r);
+ case 'pgapi/test': need('cfg_map'); // PostGIS-API: Erreichbarkeit (/health), Layer (SRID, Geometrie, Eigenschaften) und Beispielabfrage 5 km um lat/lon (Standard Bern); cfg = ungespeichert, Key leer = gespeicherter
+  $c = isset($in['cfg']) ? pgaIn(['on' => 0] + (array)$in['cfg']) : pgaCfg(); $key = is_string($in['cfg']['key'] ?? null) && trim($in['cfg']['key']) !== '' ? trim($in['cfg']['key']) : (string)setting('pgapi_key', '');
+  if ($c['url'] === '') out(['ok' => false, 'err' => 'Adresse angeben']);
+  $t = microtime(true); $r = ['ok' => false];
+  try { $h = pgaReq($c, '', '/health'); $r['health_ms'] = (int)((microtime(true) - $t) * 1000); $r['version'] = mb_substr((string)($h['version'] ?? ''), 0, 40);
+    $m = pgaReq($c, $key, '/api/v1/layers/' . rawurlencode($c['layer']));
+    $r['srid'] = (int)($m['srid'] ?? 0); $r['geom'] = mb_substr((string)($m['geometryType'] ?? ''), 0, 40); $r['max'] = (int)($m['maxFeatures'] ?? 0);
+    $props = array_map(fn($p) => (string)($p['name'] ?? ''), (array)($m['properties'] ?? []));
+    $miss = array_values(array_diff(['waterway', 'name'], $props)); if ($miss) throw new RuntimeException('Layer ohne Eigenschaft ' . implode(', ', $miss));
+    if (empty($m['idColumn'])) $r['warn'] = 'Layer ohne idColumn: die Wege erhalten eigene IDs';
+    $la = is_numeric($in['lat'] ?? null) ? (float)$in['lat'] : 46.948; $lo = is_numeric($in['lon'] ?? null) ? (float)$in['lon'] : 7.4474;
+    $t2 = microtime(true); $w = pgaWays($c, $key, ['around', 5000, $la, $lo]); $r['query_ms'] = (int)((microtime(true) - $t2) * 1000);
+    $r['ways'] = count($w); $r['names'] = array_slice(array_values(array_unique(array_filter(array_map(fn($x) => $x['tags']['name'] ?? null, $w)))), 0, 8); $r['ok'] = true; }
+  catch (Throwable $e) { $r['err'] = mb_substr(preg_replace('/\s+/', ' ', $e->getMessage()), 0, 200); }
   $r['ms'] = (int)((microtime(true) - $t) * 1000); out($r);
  /* ---------- AI-Assistent (Issue #111) ---------- */
  case 'ai/cfg': need('cfg_ai'); $c = aiCfg();
@@ -3179,7 +3252,9 @@ switch ($route) {
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
    'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM, 'hydro_sources' => HYDRO_SOURCES, // Pegel & Abfluss (Issue #125)
    'sym' => symCfg(), 'sym_sets' => array_map(fn($x) => ['name' => $x[0], 'note' => $x[1]], SYM_SETS), 'sym_all' => array_map('symPub', array_keys(SYMBOLS))] // Einsatzsymbole (Issue #146)
-   + (can('cfg_map') ? ['postgis' => pgCfg() + ['pass_set' => setting('postgis_pass', '') !== '' ? 1 : 0, 'ext' => extension_loaded('pdo_pgsql') ? 1 : 0, 'ready' => pgReady() ? 1 : 0], 'postgis_ssl' => PG_SSL, 'postgis_default' => PG_DEFAULT] : [])); // PostGIS (Issue #131), ohne Passwort
+   + (can('cfg_map') ? ['postgis' => pgCfg() + ['pass_set' => setting('postgis_pass', '') !== '' ? 1 : 0, 'ext' => extension_loaded('pdo_pgsql') ? 1 : 0, 'ready' => pgReady() ? 1 : 0], 'postgis_ssl' => PG_SSL, 'postgis_default' => PG_DEFAULT,
+     'pgapi' => pgaCfg() + ['key_set' => setting('pgapi_key', '') !== '' ? 1 : 0, 'curl' => function_exists('curl_init') ? 1 : 0, 'ready' => pgaReady() ? 1 : 0], 'pgapi_default' => PGA_DEFAULT, // PostGIS-API, ohne Key
+     'water_order' => waterOrder(), 'water_src' => WATER_SRC, 'water_ready' => waterReady()] : [])); // Reihenfolge der Quellen fürs Gewässernetz // PostGIS (Issue #131), ohne Passwort
  /* ---------- Technisches Applikationslog (Issue #139) ---------- */
  case 'applog': need('applog'); // neueste zuerst; lvl = mindestens diese Stufe (warn = Warnungen und Fehler), cat, q (Text, Route, Angaben), before = ältere als diese ID, after = neuere (Aktualisieren)
   $w = []; $p = [];
@@ -3217,6 +3292,13 @@ switch ($route) {
     $v = pgIn($in['postgis']); $pw = $in['postgis']['pass'] ?? '';
     if (is_string($pw) && $pw !== '') setSetting('postgis_pass', mb_substr($pw, 0, 200)); elseif (!empty($in['postgis']['pass_clear'])) setSetting('postgis_pass', '');
     setSetting('postgis', json_encode($v)); }
+  if (isset($in['pgapi'])) { // Gewässernetz über die PostGIS-API: API-Key nur, wenn angegeben (leer = behalten), key_clear = entfernen
+    $v = pgaIn($in['pgapi']); $k = $in['pgapi']['key'] ?? '';
+    if (is_string($k) && trim($k) !== '') { if (!preg_match('/^[!-~]{1,300}$/', trim($k))) fail('Ungültiger API-Key'); setSetting('pgapi_key', trim($k)); } elseif (!empty($in['pgapi']['key_clear'])) setSetting('pgapi_key', '');
+    setSetting('pgapi', json_encode($v, JSON_UNESCAPED_SLASHES)); }
+  if (isset($in['water_order'])) { $v = $in['water_order']; // Reihenfolge der Quellen fürs Gewässernetz
+    if (!is_array($v) || count($v) !== count(WATER_SRC) || count(array_unique($v)) !== count(WATER_SRC) || array_diff($v, array_keys(WATER_SRC))) fail('Ungültige Reihenfolge');
+    setSetting('water_order', json_encode(array_values($v))); }
   if (isset($in['my_runs'])) { if (!is_string($in['my_runs']) || !isset(MY_RUNS[$in['my_runs']])) fail('Ungültige Einstellung'); setSetting('my_runs', (string)$in['my_runs']); } // Meine Einsätze (Issue #61)
   if (isset($in['my_btns'])) { if (!is_array($in['my_btns'])) fail('Ungültige Einstellung'); $b = myBtns(); foreach (MY_BTNS as $k => $_) if (array_key_exists($k, $in['my_btns'])) $b[$k] = (int)!empty($in['my_btns'][$k]); setSetting('my_btns', json_encode($b)); }
   if (isset($in['overpass_ttl'])) { // Haltedauer des Overpass-Caches in Minuten, 0 = kein Cache, höchstens 7 Tage

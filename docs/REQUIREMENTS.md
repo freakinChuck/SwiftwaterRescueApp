@@ -128,6 +128,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **SG-12** – Zugriff auf Overpass gesamt und je Server abschaltbar (#75).
 - **SG-13** – Hauptquelle für das Gewässernetz ist eine eigene PostGIS-Datenbank mit dem OSM-Auszug der Schweiz (Geofabrik), regelmässig aktualisiert; Overpass bleibt Rückfall, wenn sie nicht antwortet (#131).
 - **SG-14** – PostGIS in der Verwaltung einstellbar (Verbindung, Tabelle, Verschlüsselung, Passwort nie sichtbar), mit Verbindungstest und eigener Zeile in der Statistik; Skripte für Einrichtung und Aktualisierung liegen bei (#131).
+- **SG-15** – Weitere Quelle für das Gewässernetz: die PostGIS-API ([ELSSwift/PostGISApi](https://github.com/ELSSwift/PostGISApi), REST/GeoJSON vor der PostGIS-Datenbank) für Hostings ohne PostgreSQL-Treiber; in der Verwaltung einstellbar (Adresse, Layer, API-Key nie sichtbar), mit Verbindungstest und eigener Zeile in der Statistik.
+- **SG-16** – Die Reihenfolge der Quellen (PostGIS direkt, PostGIS-API, Overpass-Server) ist in der Verwaltung einstellbar; der Server nimmt die erste eingerichtete Quelle, die antwortet. Ändert SG-13: PostGIS ist nicht mehr fest die Hauptquelle.
 - Gewässerwahl am PLS korrigierbar (Auswahlschritt) (**offen**).
 
 ## 9. Rettlinge (RE)
@@ -265,7 +267,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **RC-01** – Eine Seite «Impressum, Lizenzen & Datenschutz» ist ohne Anmeldung erreichbar, verlinkt bei der Anmeldung, im Profil der Einsatz-App, in der öffentlichen Ansicht und in der Verwaltung (#102).
 - **RC-02** – Impressum mit den Angaben der betreibenden Organisation und den Verwendungseinschränkungen: kein Ersatz für Notrufnummern, Alarmierung ohne Gewähr, Standorte und Suchgebiet sind Schätzungen, Kartendaten und Luftfahrzeuge ohne Gewähr, nur nicht-kommerzielle Nutzung, keine Haftung (#102).
-- **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, PostGIS, Helikopter-Quellen, BAFU-Hydrodaten) (#102, #125, #131).
+- **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, PostGIS, PostGIS-API, Helikopter-Quellen, BAFU-Hydrodaten) (#102, #125, #131).
 - **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen, Speicher im Gerät, Rechte der betroffenen Personen (#102).
 - **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
 
