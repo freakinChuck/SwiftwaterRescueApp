@@ -28,7 +28,7 @@ set_exception_handler(function ($e) { global $db;
 // Nie Passwörter, Schlüssel oder Inhalte von Einsätzen ins Log, nur Kennungen und technische Angaben.
 const APPLOG_LVL = ['info' => 'Ereignis', 'warn' => 'Warnung', 'err' => 'Fehler'];
 const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
-  'push' => 'Push', 'overpass' => 'Gewässerdaten', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'client' => 'Browser & App'];
+  'push' => 'Push', 'overpass' => 'Gewässerdaten', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'client' => 'Browser & App'];
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
 // Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
@@ -39,7 +39,7 @@ const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['au
   'kind/save' => ['cfg', 'Einsatztyp gespeichert'], 'kind/delete' => ['cfg', 'Einsatztyp gelöscht'], 'mode/save' => ['cfg', 'Einrückoption gespeichert'], 'role/save' => ['cfg', 'Spezialrolle gespeichert'],
   'incident/start' => ['inc', 'Einsatz gestartet'], 'ex/start' => ['inc', 'Vorbereitete Übung gestartet'], 'incident/end' => ['inc', 'Einsatz beendet'],
   'incident/replay/delete' => ['anon', 'Aufzeichnung gelöscht'], 'anon/apply' => ['anon', 'Anonymisierung angewendet'], 'anon/undo' => ['anon', 'Anonymisierung zurückgenommen'],
-  'overpass/stats/reset' => ['overpass', 'Statistik der Gewässerdaten zurückgesetzt']];
+  'overpass/stats/reset' => ['overpass', 'Statistik der Gewässerdaten zurückgesetzt'], 'mail/cfg/save' => ['mail', 'E-Mail-Alarm eingestellt'], 'mail/key/new' => ['mail', 'Neuer Schlüssel für Cron-Job und Webhook']];
 $ALOG_N = 0;
 function alog($lvl, $cat, $msg, $ctx = null) { global $db, $ALOG_N;
   $msg = mb_substr(trim((string)$msg), 0, 1000);
@@ -259,6 +259,7 @@ const PERMS = [
   'aar_cfg' => ['Auswertung', 'After Action Review einrichten', 'Felder, Dokumenttitel, Organisation, Logo, mitgelieferte Abschnitte und erlaubte Formate'],
   'legal' => ['Verwaltung', 'Impressum & Datenschutz einstellen', 'Angaben zur betreibenden Organisation, Kontakt und Zusatztexte der Seite «Impressum, Lizenzen & Datenschutz»'],
   'aar_arch' => ['Auswertung', 'Gesicherte After Action Reviews abrufen', 'Das vor dem Anonymisieren gesicherte, vollständige PDF eines freigegebenen Reviews abrufen, mit allen Namen'],
+  'cfg_conn' => ['Verwaltung', 'Konnektivität einstellen', 'E-Mail-Alarm: Postfach, Schlüsselwörter und erlaubte Absender je Einsatztyp, Abruf über Cron-Job oder Webhook; Verlauf der eingegangenen E-Mails einsehen'],
   'applog' => ['System', 'Applikationslog einsehen', 'Technisches Applikationslog mit Ereignissen, Warnungen und Fehlern des Servers und der Geräte; Aufbewahrung einstellen'],
 ];
 // Alarmstufen der Einsatztypen (Issue #90), von stark nach schwach: Schlüssel => [Bezeichnung, Erklärung]; Einsatz-App und Service Worker setzen sie um
@@ -897,6 +898,182 @@ function waterOrder() { $v = json_decode(setting('water_order', ''), true); $v =
   return array_merge($v, array_values(array_diff(array_keys(WATER_SRC), $v))); }
 function waterReady() { return ['postgis' => pgReady(), 'pgapi' => pgaReady(), 'overpass' => (bool)overpassActive()]; }
 
+/* ---------- E-Mail-Alarm (Issue #65, Verwaltung → Konnektivität → «E-Mail-Alarm», Recht cfg_conn) ---------- */
+// Ein Einsatz startet über eine eingehende E-Mail: Schlüsselwörter je Einsatztyp, nur von erlaubten Adressen oder Domains (je Typ).
+// Eingang über ein IMAP-Postfach (eigener kleiner Client über Sockets, die PHP-Erweiterung imap fehlt ab PHP 8.4) oder als Webhook (rohe E-Mail per POST).
+// Abruf: bei Anfragen angemeldeter Geräte höchstens alle every Sekunden im Nachlauf (after), dazu Route mail/poll mit Schlüssel für einen Cron-Job des Hostings
+// (damit auch ein Alarm ankommt, wenn keine App offen ist). Gestartet wird ohne Person (created_by NULL, Log «System»), Aufgebot = aufbietbare Gruppen des Typs bzw. die gewählten.
+// Einstellung mail_in (JSON, mailCfg/mailIn), Passwort getrennt in mail_in_pass (nie an Geräte), Schlüssel mail_in_key, Stand mail_in_uid (UIDVALIDITY:UID), mail_in_st, Verlauf mail_in_hist.
+const MAIL_DEFAULT = ['on' => 0, 'host' => '', 'port' => 993, 'sec' => 'ssl', 'user' => '', 'folder' => 'INBOX', 'every' => 60, 'age' => 30, 'where' => 'all', 'auth' => 0, 'pls' => 1, 'body' => 1, 'kinds' => []];
+const MAIL_SEC = ['ssl' => 'SSL/TLS (Port 993)', 'tls' => 'STARTTLS (Port 143)', 'none' => 'Unverschlüsselt (nur zum Testen)'];
+const MAIL_WHERE = ['subject' => 'Nur im Betreff', 'all' => 'Im Betreff oder im Text'];
+const MAIL_HIST = 30;   // so viele zuletzt verarbeitete E-Mails im Verlauf der Verwaltung
+const MAIL_MAX = 20;    // höchstens so viele neue E-Mails je Abruf
+const MAIL_BYTES = 262144; // von jeder E-Mail nur der Anfang (Kopf und Text, Anhänge interessieren nicht)
+const MAIL_RES = ['start' => 'Einsatz gestartet', 'busy' => 'Einsatz läuft bereits (im Log vermerkt)', 'nomatch' => 'Kein Schlüsselwort', 'sender' => 'Absender nicht erlaubt', 'auth' => 'Absender nicht bestätigt (SPF/DKIM/DMARC)',
+  'old' => 'Zu alt', 'dup' => 'Schon verarbeitet', 'nogroup' => 'Keine aufbietbaren Personen', 'err' => 'Fehler'];
+function mailCfg($v = null) { if ($v === null) $v = json_decode(setting('mail_in', ''), true); $v = is_array($v) ? $v : []; $c = MAIL_DEFAULT;
+  foreach (['host', 'user', 'folder'] as $k) if (is_string($v[$k] ?? null)) $c[$k] = mb_substr(trim($v[$k]), 0, 200);
+  if ($c['folder'] === '') $c['folder'] = 'INBOX';
+  foreach (['on', 'auth', 'pls', 'body'] as $k) if (isset($v[$k])) $c[$k] = empty($v[$k]) ? 0 : 1;
+  if (isset(MAIL_SEC[$v['sec'] ?? ''])) $c['sec'] = $v['sec']; if (isset(MAIL_WHERE[$v['where'] ?? ''])) $c['where'] = $v['where'];
+  foreach (['port' => [1, 65535], 'every' => [30, 3600], 'age' => [1, 1440]] as $k => [$a, $b]) if (isset($v[$k]) && is_numeric($v[$k])) $c[$k] = max($a, min($b, (int)$v[$k]));
+  $ks = [];
+  foreach (is_array($v['kinds'] ?? null) ? $v['kinds'] : [] as $id => $r) { if (!is_array($r) || (int)$id <= 0) continue;
+    $l = fn($x) => array_values(array_unique(array_filter(array_map(fn($s) => mb_substr(trim((string)$s), 0, 120), is_array($x) ? $x : []), fn($s) => $s !== '')));
+    $ks[(string)(int)$id] = ['on' => empty($r['on']) ? 0 : 1, 'words' => array_slice($l($r['words'] ?? []), 0, 30), 'from' => array_map('mb_strtolower', array_slice($l($r['from'] ?? []), 0, 50)), 'groups' => isset($r['groups']) && is_array($r['groups']) ? idsIn($r['groups']) : null]; }
+  $c['kinds'] = $ks; return $c; }
+// Prüfung der Eingabe aus der Verwaltung (wirft die Meldung als Fehler)
+function mailIn($v) { if (!is_array($v)) fail('Ungültige Einstellung');
+  $r = mailCfg($v);
+  if ($r['host'] !== '' && !preg_match('/^[a-z0-9.-]+$/i', $r['host'])) fail('Ungültiger Host des Postfachs');
+  if ($r['on'] && ($r['host'] === '' || $r['user'] === '')) fail('Für den Abruf braucht es Host und Benutzername des Postfachs (oder nur den Webhook verwenden und den Abruf ausschalten)');
+  foreach ($r['kinds'] as $id => $k) { if (!isset(kinds()[(int)$id])) unset($r['kinds'][$id]); elseif ($k['on'] && (!$k['words'] || !$k['from'])) fail('Bei «' . kinds()[(int)$id]['name'] . '» braucht es mindestens ein Schlüsselwort und einen erlaubten Absender');
+    foreach ($k['from'] as $f) if (!preg_match('/^(@?[a-z0-9.-]+\.[a-z]{2,}|[^@\s]+@[a-z0-9.-]+\.[a-z]{2,})$/i', $f)) fail('Ungültiger Absender «' . $f . '» (Adresse wie alarm@beispiel.ch oder Domain wie beispiel.ch)'); }
+  return $r; }
+function mailReady($c = null) { $c = $c ?? mailCfg(); return $c['on'] && $c['host'] !== '' && $c['user'] !== '' && array_filter($c['kinds'], fn($k) => $k['on']); }
+function mailKey() { $k = (string)setting('mail_in_key', ''); if (!preg_match('/^[0-9a-f]{40}$/', $k)) { $k = bin2hex(random_bytes(20)); setSetting('mail_in_key', $k); } return $k; }
+function mailKeyOk() { $k = (string)($_GET['key'] ?? ''); $s = (string)setting('mail_in_key', ''); return $s !== '' && preg_match('/^[0-9a-f]{40}$/', $k) && hash_equals($s, $k); }
+
+/* IMAP über Sockets: nur LOGIN, SELECT, UID SEARCH, UID FETCH, UID STORE, LOGOUT */
+function imapOpen($c, $pass) {
+  $ctx = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true, 'peer_name' => $c['host']]]);
+  $fp = @stream_socket_client(($c['sec'] === 'ssl' ? 'ssl://' : 'tcp://') . $c['host'] . ':' . $c['port'], $no, $err, 10, STREAM_CLIENT_CONNECT, $ctx);
+  if (!$fp) throw new RuntimeException('Keine Verbindung zu ' . $c['host'] . ':' . $c['port'] . ($err ? ' (' . $err . ')' : ''));
+  stream_set_timeout($fp, 20); $g = fgets($fp); if ($g === false || !preg_match('/^\* (OK|PREAUTH)/i', $g)) throw new RuntimeException('Unerwartete Begrüssung des Servers');
+  $im = ['fp' => $fp, 'n' => 0];
+  if ($c['sec'] === 'tls') { imapCmd($im, 'STARTTLS'); if (!@stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | (defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT') ? STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT : 0))) throw new RuntimeException('STARTTLS fehlgeschlagen'); }
+  $q = fn($s) => '"' . addcslashes($s, "\\\"") . '"';
+  if (preg_match('/[\r\n]/', $c['user'] . $pass)) throw new RuntimeException('Ungültige Zugangsdaten');
+  try { imapCmd($im, 'LOGIN ' . $q($c['user']) . ' ' . $q($pass)); } catch (RuntimeException $e) { throw new RuntimeException('Anmeldung am Postfach fehlgeschlagen'); }
+  return $im; }
+// Befehl senden, Antwort lesen: Liste der ungetaggten Antworten je ['t' => Text, 'lit' => [Literale]]; wirft bei NO/BAD
+function imapCmd(&$im, $cmd) { $tag = 'S' . (++$im['n']); fwrite($im['fp'], "$tag $cmd\r\n"); $items = []; $cur = null;
+  while (true) { $l = fgets($im['fp']); if ($l === false) throw new RuntimeException(stream_get_meta_data($im['fp'])['timed_out'] ? 'Zeitüberschreitung beim Postfach' : 'Verbindung zum Postfach unterbrochen');
+    if ($cur === null) { if (str_starts_with($l, "$tag ")) { if (!preg_match('/^' . $tag . ' OK/i', $l)) throw new RuntimeException('Postfach meldet: ' . mb_substr(trim(substr($l, strlen($tag) + 1)), 0, 150)); break; }
+      $cur = ['t' => '', 'lit' => []]; }
+    $cur['t'] .= $l;
+    if (preg_match('/\{(\d+)\}\r\n$/', $l, $m)) { $n = (int)$m[1]; $d = ''; while (strlen($d) < $n) { $x = fread($im['fp'], min(65536, $n - strlen($d))); if ($x === false || $x === '') throw new RuntimeException('Verbindung zum Postfach unterbrochen'); $d .= $x; } $cur['lit'][] = $d; continue; }
+    $items[] = $cur; $cur = null; }
+  return $items; }
+function imapClose(&$im) { try { imapCmd($im, 'LOGOUT'); } catch (Throwable $e) {} @fclose($im['fp']); }
+function imapSelect(&$im, $folder) { $r = imapCmd($im, 'SELECT "' . addcslashes($folder, "\\\"") . '"'); $o = ['validity' => 0, 'next' => 0, 'exists' => 0];
+  foreach ($r as $x) { if (preg_match('/UIDVALIDITY (\d+)/i', $x['t'], $m)) $o['validity'] = (int)$m[1]; if (preg_match('/UIDNEXT (\d+)/i', $x['t'], $m)) $o['next'] = (int)$m[1]; if (preg_match('/^\* (\d+) EXISTS/i', $x['t'], $m)) $o['exists'] = (int)$m[1]; }
+  return $o; }
+function imapUids(&$im, $from) { $u = [];
+  foreach (imapCmd($im, 'UID SEARCH UID ' . max(1, $from) . ':*') as $x) if (preg_match('/^\* SEARCH([\d ]*)/i', $x['t'], $m)) foreach (preg_split('/\s+/', trim($m[1])) as $n) if ($n !== '' && (int)$n >= $from) $u[] = (int)$n;
+  sort($u); return $u; }
+function imapFetch(&$im, $uid) { foreach (imapCmd($im, "UID FETCH $uid (BODY.PEEK[]<0." . MAIL_BYTES . '>)') as $x) if ($x['lit']) return $x['lit'][0]; return null; }
+
+/* E-Mail zerlegen: Absender, Betreff, Datum, Message-ID, Authentication-Results und Text (text/plain bevorzugt, sonst HTML ohne Tags) */
+function mailHeaders($h) { $h = preg_replace("/\r?\n[ \t]+/", ' ', $h); $r = [];
+  foreach (preg_split("/\r?\n/", $h) as $l) if (preg_match('/^([!-9;-~]+):\s*(.*)$/', $l, $m)) $r[strtolower($m[1])][] = trim($m[2]);
+  return $r; }
+function mailDec($s) { $d = @iconv_mime_decode($s, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8'); return $d === false ? $s : $d; }
+function mailUtf8($s, $cs) { $cs = strtolower(trim($cs, " \"'")) ?: 'utf-8'; if ($cs === 'utf-8' || $cs === 'us-ascii') return mb_check_encoding($s, 'UTF-8') ? $s : mb_convert_encoding($s, 'UTF-8', 'Windows-1252');
+  $d = @iconv($cs, 'UTF-8//IGNORE', $s); return $d === false ? mb_convert_encoding($s, 'UTF-8', 'Windows-1252') : $d; }
+function mailPart($raw, $depth = 0) { $p = preg_split("/\r?\n\r?\n/", $raw, 2); $h = mailHeaders($p[0]); $b = $p[1] ?? '';
+  $ct = strtolower($h['content-type'][0] ?? 'text/plain'); $te = strtolower(trim($h['content-transfer-encoding'][0] ?? ''));
+  if (str_starts_with($ct, 'multipart/') && $depth < 5 && preg_match('/boundary\s*=\s*("([^"]+)"|[^;\s]+)/i', $h['content-type'][0], $m)) {
+    $bd = ($m[2] ?? '') !== '' ? $m[2] : $m[1]; $plain = null; $html = null;
+    foreach (array_slice(explode('--' . $bd, $b), 1) as $x) { if (str_starts_with($x, '--')) break; [$t, $kind] = mailPart(ltrim($x, "\r\n"), $depth + 1);
+      if ($kind === 'plain' && $plain === null) $plain = $t; elseif ($kind === 'html' && $html === null) $html = $t; }
+    return $plain !== null ? [$plain, 'plain'] : ($html !== null ? [$html, 'plain'] : ['', 'none']); }
+  if (!str_starts_with($ct, 'text/plain') && !str_starts_with($ct, 'text/html')) return ['', 'none'];
+  if ($te === 'base64') $b = base64_decode(preg_replace('/\s+/', '', $b)) ?: ''; elseif ($te === 'quoted-printable') $b = quoted_printable_decode($b);
+  $b = mailUtf8($b, preg_match('/charset\s*=\s*("?)([^";\s]+)\1/i', $h['content-type'][0] ?? '', $m) ? $m[2] : 'utf-8');
+  if (str_starts_with($ct, 'text/html')) { $b = preg_replace('#<(script|style)\b.*?</\1>#is', ' ', $b); $b = preg_replace('#<(br|/p|/div|/tr|/li|/h\d)\b[^>]*>#i', "\n", $b); return [html_entity_decode(strip_tags($b), ENT_QUOTES | ENT_HTML5, 'UTF-8'), 'html']; }
+  return [$b, 'plain']; }
+function mailParse($raw) { $raw = (string)$raw; $p = preg_split("/\r?\n\r?\n/", $raw, 2); $h = mailHeaders($p[0]);
+  $from = mailDec($h['from'][0] ?? ''); $addr = preg_match('/<([^<>\s]+@[^<>\s]+)>/', $from, $m) ? $m[1] : (preg_match('/([^\s<>"]+@[^\s<>"]+)/', $from, $m) ? $m[1] : '');
+  $t = mailPart($raw)[0]; $t = trim(preg_replace("/[ \t\x{00a0}]+/u", ' ', preg_replace("/\r\n?/", "\n", $t)));
+  $d = strtotime($h['date'][0] ?? '') ?: null;
+  return ['from' => mb_strtolower(trim($addr, '.')), 'from_name' => trim(preg_replace('/<[^>]*>/', '', $from), ' "'), 'subject' => trim(mailDec($h['subject'][0] ?? '')), 'date' => $d,
+    'id' => mb_substr(trim($h['message-id'][0] ?? ''), 0, 200), 'auth' => strtolower($h['authentication-results'][0] ?? ''), 'text' => mb_substr($t, 0, 20000)]; }
+
+/* Regeln: erster aktiver Einsatztyp (Reihenfolge der Verwaltung), dessen Schlüsselwort vorkommt und dessen Absenderliste passt */
+function mailFromOk($addr, $list) { if ($addr === '' || !str_contains($addr, '@')) return false; $dom = substr($addr, strrpos($addr, '@') + 1);
+  foreach ($list as $f) { $f = mb_strtolower($f); if (str_contains(ltrim($f, '@'), '@')) { if ($f === $addr) return true; continue; } $f = ltrim($f, '@'); if ($dom === $f || str_ends_with($dom, '.' . $f)) return true; }
+  return false; }
+function mailWord($w, $t) { return (bool)preg_match('/(?<![\p{L}\p{N}])' . preg_quote($w, '/') . '(?![\p{L}\p{N}])/iu', $t); }
+// Absender bestätigt: der oberste Authentication-Results-Kopf (vom eigenen Mailserver) meldet dmarc, dkim oder spf «pass»
+function mailAuthOk($m) { return (bool)preg_match('/\b(dmarc|dkim|spf)=pass\b/', $m['auth']); }
+function mailMatch($m, $c) { $t = $c['where'] === 'subject' ? $m['subject'] : $m['subject'] . "\n" . $m['text']; $hit = null; $word = false;
+  foreach (kindsActive() as $id => $k) { $r = $c['kinds'][(string)$id] ?? null; if (!$r || !$r['on']) continue;
+    $w = array_values(array_filter($r['words'], fn($x) => mailWord($x, $t))); if (!$w) continue; $word = true;
+    if (!mailFromOk($m['from'], $r['from'])) continue;
+    $hit = ['kind' => $k, 'rule' => $r, 'word' => $w[0]]; break; }
+  return $hit ?: ['kind' => null, 'res' => $word ? 'sender' : 'nomatch']; }
+// Koordinaten im Text: LV95 (2 600 000 / 1 200 000), LV03 (600 000 / 200 000), WGS84 dezimal (47.123, 8.123; auch in Kartenlinks)
+function mailCoord($t) { $n = '(\d{1,3}(?:[\'’ ]?\d{3})+(?:\.\d+)?)'; $num = fn($s) => (float)preg_replace('/[\'’ ]/u', '', $s);
+  if (preg_match_all('/(?<![\d.])' . $n . '\s*[\/,;]?\s*' . $n . '(?![\d.])/u', $t, $mm, PREG_SET_ORDER)) foreach ($mm as $m) { $e = $num($m[1]); $no = $num($m[2]);
+    if ($e < 1e6 && $no < 1e6) { $e += 2e6; $no += 1e6; }
+    if ($e >= 2480000 && $e <= 2840000 && $no >= 1070000 && $no <= 1300000) return lv95ll($e, $no); }
+  if (preg_match('/(?<![\d.])([-]?\d{1,2}\.\d{3,})\s*°?\s*[NS]?\s*[,;\/ ]\s*([-]?\d{1,3}\.\d{3,})(?![\d.])/u', $t, $m)) { $la = (float)$m[1]; $lo = (float)$m[2]; if (abs($la) <= 90 && abs($lo) <= 180 && ($la != 0 || $lo != 0)) return [$la, $lo]; }
+  return null; }
+function mailHist($e) { $h = json_decode((string)setting('mail_in_hist', ''), true); $h = is_array($h) ? $h : []; array_unshift($h, $e); setSetting('mail_in_hist', json_encode(array_slice($h, 0, MAIL_HIST), JSON_UNESCAPED_UNICODE)); }
+function mailSeen($id) { if ($id === '') return false; foreach (json_decode((string)setting('mail_in_hist', ''), true) ?: [] as $e) if (($e['mid'] ?? '') === $id) return true; return false; }
+// Eine E-Mail verarbeiten (src imap|hook): Ergebnis aus MAIL_RES, Eintrag im Verlauf und im Applikationslog (ohne Absender und Inhalt)
+function mailHandle($raw, $src) { global $db, $now; $c = mailCfg(); $m = mailParse($raw);
+  $e = ['at' => $now, 'src' => $src, 'from' => mb_substr($m['from'], 0, 120), 'subj' => mb_substr($m['subject'], 0, 160), 'mid' => $m['id']]; $res = null; $hit = null;
+  if (mailSeen($m['id'])) return 'dup';
+  if ($m['date'] && $m['date'] < $now - $c['age'] * 60) $res = 'old';
+  if (!$res) { $hit = mailMatch($m, $c); if (!$hit['kind']) $res = $hit['res']; }
+  if (!$res && $c['auth'] && !mailAuthOk($m)) $res = 'auth';
+  if (!$res) { $k = $hit['kind']; $e['kind'] = $k['id']; $e['word'] = $hit['word'];
+    $msg = $m['subject'] !== '' ? $m['subject'] : 'Alarm per E-Mail'; if ($c['body'] && $m['text'] !== '') $msg .= ' – ' . preg_replace('/\s+/u', ' ', $m['text']);
+    $msg = mb_substr($msg, 0, 1000);
+    try { $db->beginTransaction(); $act = activeIncident();
+      if ($act) { logev((int)$act['id'], null, 'mail', 'Alarm-E-Mail eingegangen (' . $k['name'] . ', von ' . $m['from'] . '), kein neuer Einsatz, weil bereits einer läuft: ' . $msg); $res = 'busy'; $e['inc'] = (int)$act['id']; }
+      else { $r = mailStart($k, $hit['rule'], $msg, $c['pls'] ? mailCoord($m['subject'] . "\n" . $m['text']) : null, $m, $c); $res = $r ? 'start' : 'nogroup'; if ($r) $e['inc'] = $r; }
+      $db->commit(); }
+    catch (Throwable $x) { if ($db->inTransaction()) $db->rollBack(); $res = 'err'; alog('err', 'mail', 'E-Mail-Alarm: Start fehlgeschlagen: ' . $x->getMessage(), ['file' => basename($x->getFile()), 'line' => $x->getLine()]); } }
+  $e['res'] = $res; mailHist($e);
+  alog($res === 'start' ? 'info' : ($res === 'err' || $res === 'nogroup' ? 'warn' : 'info'), 'mail', 'E-Mail-Alarm: ' . MAIL_RES[$res], array_filter(['src' => $src, 'kind' => $e['kind'] ?? null, 'incident' => $e['inc'] ?? null]));
+  return $res; }
+// Einsatz starten wie incident/start, ohne Person: Aufgebot = aufbietbare Gruppen des Typs (bzw. die gewählten davon), Alarmeingang = Datum der E-Mail (höchstens Frist age)
+function mailStart($k, $rule, $msg, $pls, $m, $c) { global $db, $now; $kid = $k['id'];
+  $ids = null; $ig = null;
+  if (grpRows(true)) { $g = kindGroups($k); if ($rule['groups'] !== null) $g = array_values(array_intersect($g, $rule['groups'])); $ids = grpMembers($g); if (!$ids) return 0; $ig = ['g' => $g, 'p' => []]; }
+  $abs = $ids === null ? absentIds() : array_values(array_intersect(absentIds(), $ids));
+  $at = $m['date'] && $m['date'] <= $now ? max($m['date'], $now - $c['age'] * 60) : $now;
+  $rec = $k['rec'] && features($kid)['rec'] ? 1 : 0; $air = airCfg()['on'] ? airDef($kid) : null;
+  $db->prepare("INSERT INTO incidents(message,lat,lon,alarm_at,created_by,is_exercise,air,kind_id,invite,inv_groups,inv_absent) VALUES(?,?,?,?,?,?,?,?,?,?,?)")->execute([$msg, $pls[0] ?? null, $pls[1] ?? null, $at, null, $k['plans'] ? 1 : 0, $air, $kid, $ids === null ? null : json_encode($ids), $ig === null ? null : json_encode($ig), $abs ? json_encode($abs) : null]);
+  $nid = (int)$db->lastInsertId(); if ($rec) setRec($nid, 1);
+  logev($nid, null, 'start', 'Einsatz per E-Mail gestartet (' . $k['name'] . ', von ' . $m['from'] . ($rec ? ', mit Aufzeichnung' : '') . ($air ? ', mit Helikoptern' : '') . ($pls ? ', PLS aus der E-Mail' : ', ohne PLS') . '): ' . $msg);
+  if ($ig) logev($nid, null, 'invite', 'bietet auf: ' . invText($ig['g'], []) . ' (' . (($n = count($ids)) === 1 ? '1 Person' : $n . ' Personen') . ($abs ? ', davon ' . absText(count($abs)) : '') . ')');
+  elseif ($abs) logev($nid, null, 'invite', absText(count($abs)));
+  pushAlarm(['id' => $nid, 'kind_id' => $kid, 'message' => $msg], $abs, $ids);
+  return $nid; }
+// Postfach abrufen: neue E-Mails seit dem letzten Stand (UID), beim ersten Abruf bzw. neuer UIDVALIDITY nur den Stand merken (alte E-Mails lösen nie aus)
+function mailPoll($manual = false) { global $now; $c = mailCfg(); if (!mailReady($c)) return ['ok' => 0, 'err' => 'E-Mail-Alarm ist nicht eingerichtet oder ausgeschaltet', 'n' => 0];
+  $lf = __DIR__ . '/data/mail.lock'; @mkdir(dirname($lf), 0775, true); $lk = @fopen($lf, 'c'); if (!$lk || !flock($lk, LOCK_EX | LOCK_NB)) return ['ok' => 0, 'err' => 'Ein Abruf läuft bereits', 'n' => 0, 'busy' => 1];
+  $out = ['ok' => 1, 'n' => 0, 'res' => []]; $t = microtime(true);
+  try { set_time_limit(90); $im = imapOpen($c, (string)setting('mail_in_pass', '')); $sel = imapSelect($im, $c['folder']);
+    $st = explode(':', (string)setting('mail_in_uid', '')); $last = count($st) === 2 && (int)$st[0] === $sel['validity'] ? (int)$st[1] : null;
+    if ($last === null) { $u = imapUids($im, 1); $last = max($sel['next'] - 1, $u ? end($u) : 0, 0); $out['init'] = 1; }
+    else foreach (array_slice(imapUids($im, $last + 1), 0, MAIL_MAX) as $u) { $raw = imapFetch($im, $u); $last = $u;
+      if ($raw !== null) { $r = mailHandle($raw, 'imap'); $out['res'][] = $r; $out['n']++; try { imapCmd($im, "UID STORE $u +FLAGS.SILENT (\\Seen)"); } catch (Throwable $e) {} }
+      setSetting('mail_in_uid', $sel['validity'] . ':' . $last); }
+    setSetting('mail_in_uid', $sel['validity'] . ':' . $last); imapClose($im); }
+  catch (Throwable $e) { $out = ['ok' => 0, 'err' => mb_substr($e->getMessage(), 0, 200), 'n' => $out['n']]; alog('warn', 'mail', 'E-Mail-Alarm: Abruf fehlgeschlagen: ' . $out['err']); }
+  setSetting('mail_in_st', json_encode(['at' => $now, 'ok' => $out['ok'], 'err' => $out['err'] ?? null, 'n' => $out['n'], 'ms' => (int)((microtime(true) - $t) * 1000), 'manual' => $manual ? 1 : 0], JSON_UNESCAPED_UNICODE));
+  flock($lk, LOCK_UN); fclose($lk); return $out; }
+// Abruf im Nachlauf einer Anfrage, höchstens alle every Sekunden (Sperre über das UPDATE, wie anonAuto); Push danach selbst senden, out() hat schon gesendet
+function mailAuto() { global $db, $now, $my; $c = mailCfg(); if (!mailReady($c)) return;
+  $v = (string)setting('mail_in_at', ''); if ($v === '') setSetting('mail_in_at', '0'); if ((int)$v > $now - $c['every']) return;
+  $u = $db->prepare("UPDATE settings SET v=? WHERE k='mail_in_at' AND v=?"); $u->execute([(string)$now, $v === '' ? '0' : $v]); if (!$u->rowCount()) return;
+  after(function () { mailPoll(); if (!empty($GLOBALS['pushQ'])) pushFlush(); }); }
+// Cron-Job des Hostings (ohne Anmeldung, mit Schlüssel): ?r=mail/poll&key=…
+if ($route === 'mail/poll' && isset($_GET['key'])) { if (!mailKeyOk()) fail('Ungültiger Schlüssel', 403);
+  $c = mailCfg(); if (!mailReady($c)) fail('E-Mail-Alarm ist nicht eingerichtet oder ausgeschaltet', 409);
+  setSetting('mail_in_at', (string)$now); $r = mailPoll(); out(['ok' => $r['ok'], 'n' => $r['n'], 'res' => $r['res'] ?? [], 'err' => $r['err'] ?? null]); }
+// Webhook (ohne Anmeldung, mit Schlüssel): rohe E-Mail (RFC 822) als Inhalt eines POST, z. B. aus einer Weiterleitung des Mailservers an ein Skript oder einem E-Mail-Dienst
+if ($route === 'mail/hook') { if (!mailKeyOk()) fail('Ungültiger Schlüssel', 403);
+  $c = mailCfg(); if (!array_filter($c['kinds'], fn($k) => $k['on'])) fail('Für keinen Einsatztyp ist der E-Mail-Alarm eingeschaltet', 409);
+  $raw = file_get_contents('php://input', false, null, 0, 2 * 1048576); if (!is_string($raw) || trim($raw) === '') fail('Leere E-Mail');
+  $r = mailHandle($raw, 'hook'); out(['ok' => 1, 'res' => $r, 'text' => MAIL_RES[$r]]); }
+
 if ($route === 'login') {
   $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
   $u = $st->fetch();
@@ -939,7 +1116,8 @@ if ($route === 'legal') {
     'hydro_src' => array_values(array_map(fn($k) => ['k' => $k] + HYDRO_SOURCES[$k], array_keys(array_filter(hydroCfg()['src'])))), // eingeschaltete Quellen in der Reihenfolge des Vorrangs
     'air_home' => (int)$air['home_km'],
     'air' => ['on' => (int)$air['on'], 'public' => (int)$air['public'], 'replay' => (int)$air['replay'], 'src' => array_map(fn($k) => ['name' => AIR_SOURCES[$k]['name'], 'site' => AIR_SOURCES[$k]['site']], $air['src'])],
-    'push' => pushOk() ? 1 : 0, 'push_native' => fcmOk() ? 1 : 0, 'applog_days' => applogDays(), 'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'days' => (object)array_intersect_key($c['days'], $ks)], array_keys(anonCfg()), anonCfg())]);
+    'push' => pushOk() ? 1 : 0, 'push_native' => fcmOk() ? 1 : 0, 'applog_days' => applogDays(), 'mail_in' => array_filter(mailCfg()['kinds'], fn($k) => $k['on']) ? 1 : 0, // E-Mail-Alarm (Issue #65)
+     'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'days' => (object)array_intersect_key($c['days'], $ks)], array_keys(anonCfg()), anonCfg())]);
 }
 
 // Öffentliche Ansicht (Public Mode): ohne Anmeldung, nur lesend, nur mit dem geheimen Link der Einsatzleitung (k = public_token).
@@ -1973,6 +2151,7 @@ if (array_key_exists($route, FEATURE_ROUTES) && ($inc = activeIncident()) && !fe
 try { anonAuto(); } catch (Throwable $e) { alog('err', 'anon', 'Automatische Anonymisierung fehlgeschlagen: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // fällige automatische Anonymisierung (Issue #87)
 // Applikationslog (Issue #139): Einträge älter als applog_days löschen, höchstens einmal pro Stunde
 try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog_purge_at', (string)$now); $db->prepare("DELETE FROM app_log WHERE at<?")->execute([$now - applogDays() * 86400]); } } catch (Throwable $e) {}
+try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 switch ($route) {
  case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
@@ -2033,6 +2212,35 @@ switch ($route) {
     $r['ways'] = count($w); $r['names'] = array_slice(array_values(array_unique(array_filter(array_map(fn($x) => $x['tags']['name'] ?? null, $w)))), 0, 8); $r['ok'] = true; }
   catch (Throwable $e) { $r['err'] = pgErr($e); }
   $r['ms'] = (int)((microtime(true) - $t) * 1000); out($r);
+ /* E-Mail-Alarm (Issue #65): Einstellung, Test der Verbindung, Prüfen einer Beispiel-E-Mail, Abruf von Hand, Schlüssel für Cron-Job und Webhook */
+ case 'mail/cfg': need('cfg_conn');
+  $c = mailCfg(); $st = json_decode((string)setting('mail_in_st', ''), true);
+  out(['cfg' => ['kinds' => (object)$c['kinds']] + $c, 'pass_set' => (string)setting('mail_in_pass', '') !== '' ? 1 : 0, 'key' => mailKey(), 'ready' => mailReady($c) ? 1 : 0, 'st' => is_array($st) ? $st : null,
+    'hist' => json_decode((string)setting('mail_in_hist', ''), true) ?: [], 'sec' => MAIL_SEC, 'where' => MAIL_WHERE, 'res' => MAIL_RES, 'ssl' => extension_loaded('openssl') ? 1 : 0,
+    'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'grp_off' => array_map('intval', $k['grp_off'])], kindsActive())),
+    'groups' => array_map(fn($g) => ['id' => $g['id'], 'name' => $g['name'], 'color' => $g['color']], grpRows(true))]);
+ case 'mail/cfg/save': need('cfg_conn');
+  $c = mailIn($in['cfg'] ?? null); $o = mailCfg();
+  if ($o['host'] !== $c['host'] || $o['user'] !== $c['user'] || $o['folder'] !== $c['folder']) setSetting('mail_in_uid', ''); // anderes Postfach: Stand neu merken, alte E-Mails lösen nicht aus
+  setSetting('mail_in', json_encode($c, JSON_UNESCAPED_UNICODE));
+  if (!empty($in['pass_clear'])) setSetting('mail_in_pass', ''); elseif (is_string($in['pass'] ?? null) && $in['pass'] !== '') setSetting('mail_in_pass', mb_substr($in['pass'], 0, 300));
+  out(['ok' => true]);
+ case 'mail/test': need('cfg_conn'); // Verbindung prüfen (ungespeicherte Angaben, Passwort leer = gespeichertes), nichts wird verarbeitet
+  $c = mailCfg(is_array($in['cfg'] ?? null) ? $in['cfg'] : null); if ($c['host'] === '' || $c['user'] === '') fail('Bitte Host und Benutzername angeben');
+  if (!preg_match('/^[a-z0-9.-]+$/i', $c['host'])) fail('Ungültiger Host des Postfachs');
+  $pw = is_string($in['pass'] ?? null) && $in['pass'] !== '' ? $in['pass'] : (string)setting('mail_in_pass', ''); $t = microtime(true);
+  try { $im = imapOpen($c, $pw); $sel = imapSelect($im, $c['folder']); imapClose($im); out(['ok' => 1, 'ms' => (int)((microtime(true) - $t) * 1000), 'exists' => $sel['exists'], 'folder' => $c['folder']]); }
+  catch (Throwable $e) { out(['ok' => 0, 'err' => mb_substr($e->getMessage(), 0, 200)]); }
+ case 'mail/check': need('cfg_conn'); // Beispiel-E-Mail gegen die (ungespeicherten) Regeln prüfen, ohne zu starten
+  $c = mailCfg(is_array($in['cfg'] ?? null) ? $in['cfg'] : null);
+  $m = ['from' => mb_strtolower(trim((string)($in['from'] ?? ''))), 'subject' => trim((string)($in['subject'] ?? '')), 'text' => trim((string)($in['text'] ?? '')), 'auth' => '', 'date' => null, 'id' => ''];
+  $h = mailMatch($m, $c); $pl = $c['pls'] ? mailCoord($m['subject'] . "\n" . $m['text']) : null;
+  $msg = ($m['subject'] !== '' ? $m['subject'] : 'Alarm per E-Mail') . ($c['body'] && $m['text'] !== '' ? ' – ' . preg_replace('/\s+/u', ' ', $m['text']) : '');
+  out(['kind' => $h['kind'] ? ['id' => $h['kind']['id'], 'name' => $h['kind']['name']] : null, 'word' => $h['word'] ?? null, 'res' => $h['res'] ?? 'start', 'text' => MAIL_RES[$h['res'] ?? 'start'], 'pls' => $pl, 'message' => mb_substr($msg, 0, 1000), 'auth' => $c['auth']]);
+ case 'mail/poll': need('cfg_conn'); // von Hand «Jetzt abrufen»
+  setSetting('mail_in_at', (string)$now); $r = mailPoll(true); out($r + ['st' => json_decode((string)setting('mail_in_st', ''), true)]);
+ case 'mail/key/new': need('cfg_conn'); setSetting('mail_in_key', bin2hex(random_bytes(20))); out(['key' => mailKey()]);
+ case 'mail/hist/clear': need('cfg_conn'); setSetting('mail_in_hist', '[]'); out(['ok' => true]);
  case 'pgapi/test': need('cfg_map'); // PostGIS-API: Erreichbarkeit (/health), Layer (SRID, Geometrie, Eigenschaften) und Beispielabfrage 5 km um lat/lon (Standard Bern); cfg = ungespeichert, Key leer = gespeicherter
   $c = isset($in['cfg']) ? pgaIn(['on' => 0] + (array)$in['cfg']) : pgaCfg(); $key = is_string($in['cfg']['key'] ?? null) && trim($in['cfg']['key']) !== '' ? trim($in['cfg']['key']) : (string)setting('pgapi_key', '');
   if ($c['url'] === '') out(['ok' => false, 'err' => 'Adresse angeben']);

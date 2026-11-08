@@ -243,7 +243,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 20. Verwaltung (VW)
 
-- **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen, Rechtliches, System), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
+- **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen, Rechtliches, Konnektivität, System), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
 - **VW-02** – Neue Einstellungen erscheinen als Unterpunkt einer Kategorie mit eigenem Recht (#32, #63).
 - **VW-03** – Hinweise verschwinden von selbst; nur Rückfragen brauchen einen Klick (AG).
 - **VW-04** – Navigation der Verwaltung: Kategorien mit Symbol und Anzahl einklappbar, die Kategorie des geöffneten Bereichs ist aufgeklappt, von Hand aufgeklappte pro Gerät gemerkt; Kategorien mit nur einem Bereich als direkter Link; Suchfeld über der Navigation (Enter öffnet den ersten Treffer); die Navigation scrollt bei Bedarf selbst (#128).
@@ -300,3 +300,13 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **PA-07** – Zwei Datenquellen, je in der Verwaltung ein- und ausschaltbar, mit Lizenz, Hinweis, Stand und Test: die Schnittstelle api.existenz.ch mit Vorrang und die Webseite hydrodaten.admin.ch, die Fehlendes (Gefahrenstufe, Stationen) ergänzt und bei Ausfall der Schnittstelle einspringt; die Seite «Impressum, Lizenzen & Datenschutz» nennt die eingeschalteten (Feedback zu #125).
 - **PA-08** – Kartenknopf «Messstationen» rechts unten (Schnellzugriff): Seitenfenster mit denselben Stationen wie im Menü (im Einsatz «Beim PLS» und «Meine Messstationen», ohne Einsatz die persönlichen) mit aktuellen Werten, «Zeigen», Navigation, Häkchen «auf der Karte anzeigen» und «Messstationen wählen»; im Einsatz bei eingeschalteter Funktion, ohne Einsatz, sobald persönliche Messstationen gewählt sind (#147).
 
+## 25. E-Mail-Alarm (EM)
+
+- **EM-01** – Ein Einsatz kann über eine eingehende E-Mail gestartet werden; je Einsatztyp ein- und ausschaltbar (#65).
+- **EM-02** – Je Einsatztyp sind Schlüsselwörter definierbar; eine E-Mail startet den ersten Einsatztyp (Reihenfolge der Verwaltung), dessen Schlüsselwort als ganzes Wort im Betreff (wahlweise auch im Text) vorkommt (#65).
+- **EM-03** – Nur E-Mails von je Einsatztyp erlaubten Absendern (Adressen oder Domains, Domains inklusive Subdomains) lösen aus; optional nur, wenn der eigene Mailserver den Absender bestätigt (SPF, DKIM oder DMARC «pass») (#65).
+- **EM-04** – Gestartet wird ohne Person (im Log «System», mit Absender) mit Alarmstufe, Aufzeichnung und Helikoptern gemäss Einsatztyp; Meldung = Betreff (optional mit Text), Alarmeingang = Datum der E-Mail; Aufgebot = die beim Typ aufbietbaren Einsatzgruppen oder eine Auswahl davon, Abwesende werden nicht alarmiert (#65).
+- **EM-05** – Koordinaten in der E-Mail (LV95, LV03, WGS84 dezimal, auch in Kartenlinks) werden optional zum PLS (#65).
+- **EM-06** – Läuft bereits ein Einsatz, startet keiner; die E-Mail wird im Log des laufenden Einsatzes vermerkt. Zu alte E-Mails (einstellbar, Standard 30 min), doppelte und solche, die schon vor dem Einrichten im Postfach lagen, lösen nie aus (#65).
+- **EM-07** – Eingang über ein IMAP-Postfach (SSL/TLS, STARTTLS), abgerufen bei Anfragen offener Apps in einstellbarem Abstand und über einen Cron-Job des Hostings, oder über einen Webhook mit der rohen E-Mail; Cron-Job und Webhook mit geheimem, erneuerbarem Schlüssel (#65).
+- **EM-08** – Alle Einstellungen in der Verwaltung unter der neuen Kategorie «Konnektivität» (eigenes Recht «Konnektivität einstellen»): Postfach mit Verbindungstest und «Jetzt abrufen», Regeln je Einsatztyp, Prüfen einer Beispiel-E-Mail ohne Start, Verlauf der letzten 30 E-Mails mit Ergebnis; Passwort wird nie angezeigt (#65).
