@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'ctx.dart';
@@ -17,6 +18,10 @@ const _placeCol = '#1d7fd1'; // PLACE_COL
 List<LatLng> _ptsOf(dynamic v) => v is List
     ? v.whereType<List>().where((q) => q.length >= 2 && jd(q[0]) != null && jd(q[1]) != null).map((q) => LatLng(jd(q[0])!, jd(q[1])!)).toList()
     : <LatLng>[];
+
+/// Einsatzsymbol (Issue #146): Bild `img/sym/<Schlüssel>.svg` vom Server des Kontos (wie symImg in common.js)
+Widget symPic(IncStore s, String k, {double size = 32}) => SvgPicture.network('${s.acc.base}img/sym/${Uri.encodeComponent(k)}.svg',
+    width: size, height: size, placeholderBuilder: (_) => SizedBox(width: size, height: size, child: const Icon(Icons.place, size: 18)));
 
 /// Eckpunkte eines Bereichs bzw. [Punkt] einer Markierung (pois.pts = [[lat, lon], …])
 List<LatLng> poiPts(J p) => _ptsOf(p['pts']);
@@ -75,7 +80,7 @@ double _ha(List<LatLng> pts) {
 String _poiInfo(IncStore s, J p) {
   final c = poiPt(p);
   final pos = c == null ? '' : (p['kind'] == 'area' ? s.fcs(c.latitude, c.longitude, ' · Mitte ') : s.fcs(c.latitude, c.longitude));
-  return '${p['kind'] == 'area' ? 'Bereich, ca. ${_ha(poiPts(p)).toStringAsFixed(1)} ha' : 'Markierung'}$pos · ${js(p['by_name'])} · ${fmtT(jn(p['created']))}';
+  return '${p['kind'] == 'area' ? 'Bereich, ca. ${_ha(poiPts(p)).toStringAsFixed(1)} ha' : p['sym'] != null && js(p['sym_name']) != js(p['name']) ? js(p['sym_name']) : 'Markierung'}$pos · ${js(p['by_name'])} · ${fmtT(jn(p['created']))}';
 }
 
 /// Angaben zu einem festen Standort (placeInfo)
@@ -189,32 +194,76 @@ class _PoisPanelState extends State<PoisPanel> {
   }
 
   /// Neu (nur Einsatzleitung): Bezeichnung und Farbe, danach Punkt antippen bzw. Eckpunkte zeichnen (newPoi, startDraw)
+  /// Markierungen mit Einsatzsymbol (Issue #146, wie newPoi in index.html): Auswahl aus me.symbols, «Ohne Symbol» nur mit me.sym_free;
+  /// ohne eigene Bezeichnung gilt der Name des Symbols.
   Future<void> _newPoi(String kind) async {
     final area = kind == 'area';
-    final n = TextEditingController();
+    final n = TextEditingController(), q = TextEditingController();
     var color = poiColors.first.$1;
+    final me = s.me ?? <String, dynamic>{}, syms = area ? <J>[] : ((me['symbols'] as List?) ?? []).map((x) => jm(x)).toList();
+    final free = me['sym_free'] != 0, sets = jm(me['sym_sets']);
+    String? sym;
+    String symName(String? k) => js((syms.firstWhere((x) => x['k'] == k, orElse: () => {}))['name']);
+    Widget grid(StateSetter ss) {
+      final qq = q.text.trim().toLowerCase(), hit = syms.where((x) => qq.isEmpty || '${x['name']} ${x['cat']}'.toLowerCase().contains(qq)).toList();
+      final multi = syms.map((x) => x['set']).toSet().length > 1, out = <Widget>[];
+      Widget btn(String? k, Widget pic, String label) => SizedBox(
+          width: 92,
+          child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  side: BorderSide(color: sym == k ? Colors.white : Colors.white24, width: sym == k ? 2 : 1),
+                  backgroundColor: sym == k ? const Color(0x331D7FD1) : null),
+              onPressed: () => ss(() => sym = k),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [pic, const SizedBox(height: 3), Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11), maxLines: 3)])));
+      if (free && qq.isEmpty) out.add(btn(null, const SizedBox(height: 32, child: Center(child: Text('⚑', style: TextStyle(fontSize: 22)))), 'Ohne Symbol'));
+      String? last;
+      for (final x in hit) {
+        final h = '${multi ? '${js(sets[x['set']])} · ' : ''}${js(x['cat'])}';
+        if (h != last) out.add(SizedBox(width: double.infinity, child: Padding(padding: const EdgeInsets.only(top: 6), child: Mut(h))));
+        last = h;
+        out.add(btn(js(x['k']), symPic(s, js(x['k'])), js(x['name'])));
+      }
+      if (out.isEmpty) out.add(const Mut('Kein Symbol gefunden'));
+      return SizedBox(height: 260, child: SingleChildScrollView(child: Wrap(spacing: 6, runSpacing: 6, children: out)));
+    }
+
     final ok = await formDlg(
         context,
         area ? 'Bereich markieren' : 'Markierung setzen',
         (d, ss) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+              if (syms.isNotEmpty) ...[
+                TextField(controller: q, onChanged: (_) => ss(() {}), decoration: const InputDecoration(labelText: 'Symbol suchen', isDense: true)),
+                const SizedBox(height: 6),
+                grid(ss),
+              ],
               TextField(
                   controller: n,
-                  autofocus: true,
+                  autofocus: syms.isEmpty,
                   maxLength: 80,
-                  decoration: InputDecoration(labelText: 'Bezeichnung', hintText: area ? 'z. B. Suchsektor Nord' : 'z. B. Treffpunkt Boote')),
-              const Padding(padding: EdgeInsets.only(top: 6, bottom: 6), child: Mut('Farbe')),
-              ColorPick(value: color, onChanged: (c) => ss(() => color = c)),
+                  decoration: InputDecoration(labelText: 'Bezeichnung', hintText: sym != null ? symName(sym) : area ? 'z. B. Suchsektor Nord' : 'z. B. Treffpunkt Boote')),
+              if (sym == null) ...[
+                const Padding(padding: EdgeInsets.only(top: 6, bottom: 6), child: Mut('Farbe')),
+                ColorPick(value: color, onChanged: (c) => ss(() => color = c)),
+              ],
               Padding(
                   padding: const EdgeInsets.only(top: 10),
-                  child: Mut(area ? 'Danach die Eckpunkte des Bereichs auf der Karte antippen.' : 'Danach den Punkt auf der Karte antippen.')),
+                  child: Mut(area
+                      ? 'Danach die Eckpunkte des Bereichs auf der Karte antippen.'
+                      : '${syms.isNotEmpty ? 'Ohne eigene Bezeichnung gilt der Name des Symbols. ' : ''}Danach den Punkt auf der Karte antippen.')),
             ]),
         ok: 'Weiter', valid: () {
-      if (n.text.trim().isNotEmpty) return true;
+      if (syms.isNotEmpty && sym == null && !free) {
+        s.toast('Bitte ein Symbol wählen.', 'err');
+        return false;
+      }
+      if (n.text.trim().isNotEmpty || sym != null) return true;
       s.toast('Bitte eine Bezeichnung eingeben.', 'err');
       return false;
     });
-    final name = n.text.trim();
+    final name = n.text.trim().isNotEmpty ? n.text.trim() : symName(sym);
     n.dispose();
+    q.dispose();
     if (!ok || name.isEmpty) return;
     List<List<double>>? pts;
     if (area) {
@@ -228,7 +277,7 @@ class _PoisPanelState extends State<PoisPanel> {
         [q.latitude, q.longitude]
       ];
     }
-    if (await s.act('incident/poi', {'kind': kind, 'name': name, 'color': color, 'pts': pts}) != null) map.openPanel('pois');
+    if (await s.act('incident/poi', {'kind': kind, 'name': name, 'color': color, 'sym': sym, 'pts': pts}) != null) map.openPanel('pois');
   }
 
   Widget _swatch(String c, {bool off = false, bool pls = false}) => Container(
@@ -322,7 +371,7 @@ class _PoisPanelState extends State<PoisPanel> {
     final id = '${p['id']}', c = poiPt(p);
     return _item(
         check: Checkbox(value: !s.poiHide.contains(id), onChanged: (v) => s.setPoiHidden([id], v != true)),
-        sw: _swatch(js(p['color'])),
+        sw: p['sym'] != null ? Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: symPic(s, js(p['sym']), size: 24)) : _swatch(js(p['color'])),
         name: js(p['name']),
         info: _poiInfo(s, p),
         acts: [

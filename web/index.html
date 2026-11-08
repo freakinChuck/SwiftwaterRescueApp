@@ -84,6 +84,7 @@ body.jb #followChip{top:calc(7.6rem + env(safe-area-inset-top))}
 .rs .bt{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem}.rs button{padding:.3rem .5rem;font-size:.82rem}.rs .mo{margin-left:auto;min-width:2.4rem;font-weight:700}.rs.done{opacity:.75}#resForm,#peopleForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem}.xtl{display:grid;gap:.3rem;max-height:55vh;overflow:auto}.xtl .pg{margin:.4rem 0 0}.xt{display:flex;gap:.3rem}.xt>button:first-child{flex:1;text-align:left}.xt small{display:block;color:var(--mut);font-weight:400}#resForm[hidden],#peopleForm[hidden]{display:none}
 /* Markierungen und Bereiche der Einsatzleitung: Fähnchen (Spitze unten links), Beschriftung, Liste, Zeichenleiste */
 .plc{width:26px;height:26px;border-radius:4px;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:.72rem;font-weight:700;box-shadow:0 0 0 2px #0008;text-shadow:0 0 2px #000;overflow:hidden;white-space:nowrap}
+.pi .sws{flex:0 0 auto;display:grid;place-items:center;width:24px}
 .poi{width:28px;height:28px;border-radius:8px 8px 8px 0;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:.9rem;box-shadow:0 0 0 2px #0008;text-shadow:0 0 2px #000}
 .leaflet-tooltip.poilbl{background:#0f2430e6;color:#fff;border:0;box-shadow:none;font-weight:600;padding:1px 5px}.leaflet-tooltip.poilbl::before{display:none}
 /* Zeile im Fenster «Markierungen»: Häkchen und Farbe links, Name und Angaben über die ganze Breite, Knöpfe darunter (wie .pp) */
@@ -794,7 +795,7 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-pix]'))return p
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pinfo&&!document.querySelector('.dlg'))pinfoClose()});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;const [la,lo]=b.dataset.nav.split(',').map(Number);map.closePopup();navGo(la,lo,b.dataset.nn)});
 // Karte: nur neu zeichnen, wenn sich Inhalt, Sichtbarkeit oder Berechtigung ändern (ein offenes Popup bleibt offen)
-function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],fs=(st&&feat('place')&&st.places)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color]))+JSON.stringify(fs)+[...poiHide]+vis('pt')+vis('ar')+vis('place')+JSON.stringify(fs.map(f=>pcOn(f.cat_id)))+pcLbl()+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
+function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],fs=(st&&feat('place')&&st.places)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color,p.sym]))+JSON.stringify(fs)+[...poiHide]+vis('pt')+vis('ar')+vis('place')+JSON.stringify(fs.map(f=>pcOn(f.cat_id)))+pcLbl()+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
   // Feste Standorte (Issue #96): eckige Marker in der Farbe mit Kürzel, ausblendbar je Eintrag ('f'+id in poiHide) und als Kategorie
   // feste Bereiche (pts): Fläche in der Farbe, gestrichelt (Unterschied zu den Bereichen der Einsatzleitung), Beschriftung in der Mitte, Navigation zur Mitte
   // feste Linien (line, Issue #134, z. B. Fahrrinnen): breiter gestrichelter Strich, Beschriftung und Navigation auf halber Länge
@@ -804,12 +805,13 @@ function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&
       :L.marker([f.lat,f.lon],{icon:L.divIcon({className:'',html:`<div class="plc" style="background:${f.color||PLACE_COL}">${esc(f.abbr||'◆')}</div>`,iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:700}).bindTooltip(esc(f.name),{permanent:lb,direction:'right',className:'poilbl',offset:[12,0]}))
     .bindPopup(`<div class="mmpop"><b>${esc(f.name)}</b><span class="t">${esc(placeInfo(f))}</span>${navBtn(f.lat,f.lon,f.name,f.pts?'Navigieren (Mitte)':'Navigieren')}</div>`).addTo(poiLayer));
   ps.filter(p=>!poiHide.has(p.id)&&vis(p.kind==='area'?'ar':'pt')).forEach(p=>{const area=p.kind==='area';
-    const l=area?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.marker(p.pts[0],{icon:L.divIcon({className:'',html:`<div class="poi" style="background:${p.color}">⚑</div>`,iconSize:[28,28],iconAnchor:[2,30]}),zIndexOffset:800});
-    l.bindTooltip(esc(p.name),{permanent:true,direction:area?'center':'right',className:'poilbl',offset:area?[0,0]:[14,-16]})
-     .bindPopup(`<div class="mmpop"><b>${esc(p.name)}</b><span class="t">${esc(poiInfo(p))}</span>${navBtn(poiPt(p).lat,poiPt(p).lng,p.name,area?'Navigieren (Mitte)':'Navigieren')}${st.can_manage?`<button data-pdel="${p.id}">Entfernen</button>`:''}</div>`).addTo(poiLayer)})}
+    // Markierung mit Einsatzsymbol (Issue #146): das Symbol selbst, sonst die Fahne in der Farbe
+    const l=area?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):L.marker(p.pts[0],{icon:p.sym?symIcon(p):L.divIcon({className:'',html:`<div class="poi" style="background:${p.color}">⚑</div>`,iconSize:[28,28],iconAnchor:[2,30]}),zIndexOffset:800});
+    l.bindTooltip(esc(p.name),{permanent:true,direction:area?'center':'right',className:'poilbl',offset:area?[0,0]:p.sym?symTip(p):[14,-16]})
+     .bindPopup(`<div class="mmpop"><b>${esc(p.name)}</b>${p.sym&&p.sym_name!==p.name?`<span class="t">${esc(p.sym_name)}</span>`:''}<span class="t">${esc(poiInfo(p))}</span>${navBtn(poiPt(p).lat,poiPt(p).lng,p.name,area?'Navigieren (Mitte)':'Navigieren')}${st.can_manage?`<button data-pdel="${p.id}">Entfernen</button>`:''}</div>`).addTo(poiLayer)})}
 function renderPois(){const o=$('#pois');if(!o)return;const inc=!!(st&&st.incident),on=panel==='pois'&&(inc||poiPlaces());o.hidden=!on;$('#bPoi').setAttribute('aria-expanded',on);if(!on)return;poiHideLoad();
   const ps=st.pois||[],grp=[['point','Markierungen'],['area','Bereiche']].map(([k,t])=>({k,t,items:ps.filter(p=>p.kind===k)}));
-  const row=p=>`<div class="pi"><input type="checkbox" data-pv="${p.id}" ${poiHide.has(p.id)?'':'checked'} aria-label="${esc(p.name)} auf der Karte anzeigen"><span class="sw" style="background:${p.color}"></span><div class="nm">${esc(p.name)}<small>${esc(poiInfo(p))}</small></div><div class="pa"><button data-pg="${p.id}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(poiPt(p).lat,poiPt(p).lng,p.name)}${st.can_manage?`<button data-pdel="${p.id}" aria-label="${esc(p.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div></div>`;
+  const row=p=>`<div class="pi"><input type="checkbox" data-pv="${p.id}" ${poiHide.has(p.id)?'':'checked'} aria-label="${esc(p.name)} auf der Karte anzeigen">${p.sym?`<span class="sws" title="${esc(p.sym_name)}">${symImg(p.sym,24)}</span>`:`<span class="sw" style="background:${p.color}"></span>`}<div class="nm">${esc(p.name)}<small>${p.sym&&p.sym_name!==p.name?esc(p.sym_name)+' · ':''}${esc(poiInfo(p))}</small></div><div class="pa"><button data-pg="${p.id}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(poiPt(p).lat,poiPt(p).lng,p.name)}${st.can_manage?`<button data-pdel="${p.id}" aria-label="${esc(p.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div></div>`;
   // PLS (Point last seen) als eigene Kategorie zuoberst, nicht ausblendbar
   const pl=inc?plsList():[],pls=!inc?'':`<div class="pg">Point last seen (PLS) · immer sichtbar</div>`+(pl.map(p=>`<div class="pi"><span class="nochk"></span><span class="plsw${p.on?'':' off'}"></span><div class="nm">${esc(p.label)}<small>${esc(fcs(p.lat,p.lon,'',' · '))}Drift ab ${fmtDT(p.at)}${p.on?'':' · zählt nicht fürs Suchgebiet'}</small></div><div class="pa"><button data-pls="${p.lat},${p.lon}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(p.lat,p.lon,p.label)}</div></div>`).join('')||'<div class="mut">Kein PLS gesetzt</div>');
   // Feste Standorte (Issue #96) nach dem PLS, nur lesend
@@ -840,11 +842,27 @@ function showPoi(id){const p=(st.pois||[]).find(x=>x.id===id);if(!p)return;stopF
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pdel]');if(!b)return;const p=((st&&st.pois)||[]).find(x=>x.id==b.dataset.pdel);
   if(!p||!confirm(`${p.kind==='area'?'Bereich':'Markierung'} «${p.name}» für alle entfernen?`))return;api('incident/poi/remove',{id:p.id}).then(()=>{map.closePopup();poll()}).catch(fail)});
 // Neu (nur Einsatzleitung): Bezeichnung und Farbe, danach Punkt antippen bzw. Eckpunkte zeichnen
-function newPoi(kind){const area=kind==='area';
-  dlg(area?'Bereich markieren':'Markierung setzen',`<label class="mut">Bezeichnung<input id="poiN" maxlength="80" placeholder="${area?'z. B. Suchsektor Nord':'z. B. Treffpunkt Boote'}"></label><label class="mut">Farbe<select id="poiC">${POI_COLORS.map(([c,n])=>`<option value="${c}">${n}</option>`).join('')}</select></label><div class="mut">${area?'Danach die Eckpunkte des Bereichs auf der Karte antippen.':'Danach den Punkt auf der Karte antippen.'}</div>`,
-    async d=>{const name=$('#poiN',d).value.trim(),color=$('#poiC',d).value;if(!name)throw new Error('Bitte eine Bezeichnung eingeben.');
+// Markierungen mit Einsatzsymbol (Issue #146): Auswahl aus me.symbols (in der Verwaltung eingeschaltete), gruppiert nach Set und Kategorie, mit Suche;
+// «Ohne Symbol» (Fahne mit Farbe) nur, solange die Verwaltung es erlaubt (me.sym_free). Ohne eigene Bezeichnung gilt der Name des Symbols.
+const symRecent=()=>{try{return JSON.parse(localStorage.getItem('sw_symrecent')||'[]')}catch(e){return[]}};
+function symGrid(sel,q){const ss=me.symbols||[],qq=(q||'').trim().toLowerCase(),hit=s=>!qq||(s.name+' '+s.cat).toLowerCase().includes(qq),b=s=>`<button type="button" data-sym="${s.k}" aria-pressed="${sel===s.k}" title="${esc(s.name)}">${symImg(s.k)}${esc(s.name)}</button>`;
+  const rc=qq?[]:symRecent().map(k=>ss.find(s=>s.k===k)).filter(Boolean),sets=[...new Set(ss.map(s=>s.set))],multi=sets.length>1;let h='';
+  if(me.sym_free&&!qq)h+=`<button type="button" data-sym="" aria-pressed="${!sel}" title="Fahne in einer Farbe"><span class="ns">⚑</span>Ohne Symbol</button>`;
+  if(rc.length)h+='<h5>Zuletzt verwendet</h5>'+rc.map(b).join('');
+  sets.forEach(st=>{const l=ss.filter(s=>s.set===st&&hit(s));[...new Set(l.map(s=>s.cat))].forEach(c=>{h+=`<h5>${esc((multi?(me.sym_sets||{})[st]+' · ':'')+c)}</h5>`+l.filter(s=>s.cat===c).map(b).join('')})});
+  return h||'<div class="mut">Kein Symbol gefunden</div>'}
+function newPoi(kind){const area=kind==='area',syms=!area&&(me.symbols||[]).length;let sym=null;
+  dlg(area?'Bereich markieren':'Markierung setzen',(syms?`<input id="symQ" placeholder="Symbol suchen …" aria-label="Symbol suchen"><div class="symgrid" id="symG" role="group" aria-label="Symbol">${symGrid(null)}</div>`:'')
+    +`<label class="mut">Bezeichnung<input id="poiN" maxlength="80" placeholder="${area?'z. B. Suchsektor Nord':'z. B. Treffpunkt Boote'}"></label><label class="mut" id="poiCl">Farbe<select id="poiC">${POI_COLORS.map(([c,n])=>`<option value="${c}">${n}</option>`).join('')}</select></label><div class="mut">${area?'Danach die Eckpunkte des Bereichs auf der Karte antippen.':(syms?'Ohne eigene Bezeichnung gilt der Name des Symbols. ':'')+'Danach den Punkt auf der Karte antippen.'}</div>`,
+    async d=>{const name=$('#poiN',d).value.trim()||(sym?(me.symbols.find(s=>s.k===sym)||{}).name:''),color=$('#poiC',d).value;
+      if(syms&&!sym&&!me.sym_free)throw new Error('Bitte ein Symbol wählen.');if(!name)throw new Error('Bitte eine Bezeichnung eingeben.');
       if(area)return startDraw(name,color);
-      pickPoint(`Tippe auf die Karte, um «${name}» zu setzen.`).then(q=>api('incident/poi',{kind,name,color,pts:[[q.lat,q.lng]]})).then(()=>{togglePanel('pois',true);poll()}).catch(fail)},'Weiter')}
+      if(sym)try{localStorage.setItem('sw_symrecent',JSON.stringify([sym,...symRecent().filter(k=>k!==sym)].slice(0,8)))}catch(e){}
+      pickPoint(`Tippe auf die Karte, um «${name}» zu setzen.`).then(q=>api('incident/poi',{kind,name,color,sym,pts:[[q.lat,q.lng]]})).then(()=>{togglePanel('pois',true);poll()}).catch(fail)},'Weiter');
+  if(!syms)return;const d=$('#symG').closest('.dlg'),g=$('#symG',d),cl=$('#poiCl',d),sync=()=>{cl.hidden=!!sym;$('#poiN',d).placeholder=sym?(me.symbols.find(s=>s.k===sym)||{}).name:'z. B. Treffpunkt Boote'};
+  if(!me.sym_free)sym=null;sync();$('#symQ',d).focus();
+  g.onclick=e=>{const b=e.target.closest('[data-sym]');if(!b)return;sym=b.dataset.sym||null;g.querySelectorAll('[data-sym]').forEach(x=>x.setAttribute('aria-pressed',(x.dataset.sym||null)===sym));sync()};
+  $('#symQ',d).oninput=e=>{g.innerHTML=symGrid(sym,e.target.value)}}
 function startDraw(name,color){if(panel)togglePanel(panel,false);toggleSheet(false);stopFollow();const pts=[],tmp=L.layerGroup().addTo(map),bar=$('#drawBar');
   const add=e=>{pts.push(e.latlng);upd()},end=()=>{map.off('click',add);map.removeLayer(tmp);bar.hidden=true;map.doubleClickZoom.enable();pickMode(false)};
   const upd=()=>{tmp.clearLayers();

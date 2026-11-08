@@ -199,6 +199,12 @@ function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(titl
 const extStyleFields=x=>`<div class="row" style="align-items:flex-end"><label class="mut" style="flex:1">Kürzel (max. 4 Zeichen, auf dem Marker)<input id="xK" maxlength="4" placeholder="z. B. FW" value="${esc(x.abbr||'')}"></label><label class="mut" style="flex:0 0 auto"><span><input type="checkbox" id="xFc" ${x.color?'checked':''}> Farbe</span><input type="color" id="xF" value="${esc(x.color||'#e53935')}" style="width:4rem"></label></div><div class="mut">Die Farbe füllt den Marker, der Rand zeigt die Spezialrolle.</div>`;
 function extStyleVal(d){return{abbr:$('#xK',d).value.trim(),color:$('#xFc',d).checked?$('#xF',d).value:''}}
 function extStyleBind(d){$('#xF',d).addEventListener('input',()=>{$('#xFc',d).checked=true});return d}
+// Einsatzsymbole (Issue #146): Bild img/sym/<Schlüssel>.svg; Marker mit Anker in der Mitte bzw. unten (sym_foot, z. B. Einsatzleitung auf dem Stab).
+// Gemeinsam für Einsatz-App, öffentliche Ansicht und Replay; Name und Anker liefert der Server je Markierung (sym_name, sym_foot).
+const SYM_PX=34;
+const symImg=(k,px=SYM_PX)=>`<img class="symi" src="img/sym/${encodeURIComponent(k)}.svg" alt="" width="${px}" height="${px}" draggable="false">`;
+const symIcon=(p,px=SYM_PX)=>L.divIcon({className:'symk',html:symImg(p.sym,px),iconSize:[px,px],iconAnchor:[px/2,p.sym_foot?px:px/2]});
+const symTip=(p,px=SYM_PX)=>[px/2,p.sym_foot?-px/2:0]; // Beschriftung rechts neben dem Symbol
 function dlg(title,body,save,okText='Speichern',xText='Abbrechen',onX){const d=document.createElement('div');d.className='dlg';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-label',title);
   d.innerHTML=`<div class="card"><h2 style="margin:0">${esc(title)}</h2>${body}<div class="row"><button class="pri" data-ok>${esc(okText)}</button><button data-x>${esc(xText)}</button></div></div>`;
   document.body.appendChild(d);const f=d.querySelector('input,select');f&&f.focus();
