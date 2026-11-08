@@ -32,7 +32,7 @@ const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte s
 // Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
 const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 // Fenster «Ansicht» (Issue #34, öffentliche Ansicht #48): Kategorien auf der Karte [Schlüssel, Bezeichnung, Funktion (feat)]. Neue Kartenelemente hier aufnehmen.
-const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
+const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
 const VIEW_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 // Inhalt des Fensters: Grundkarte (Radio vbase) und, wenn cats (Liste aus VIEW), Häkchen je Kategorie (data-vk) mit «Alle einblenden/ausblenden» (data-va)
 function viewHtml(base,cats,vis){return'<div class="vh"><b>Ansicht</b><button id="bViewX" aria-label="Ansicht schliessen">✕</button></div><h4>Grundkarte</h4>'
@@ -86,6 +86,12 @@ const geoDist=(a,b)=>L.latLng(a.lat,a.lon).distanceTo([b.lat,b.lon]);
 // feste Standorte mit pts (Issue #96, #134): line 1 = Linie (z. B. Fahrrinne, 2–200 Punkte, breiter Strich), sonst Bereich (Fläche); o = Stil der Fläche
 const placeGeo=(f,o)=>f.line?L.polyline(f.pts,{...o,weight:Math.max(4,(o.weight||0)+2),opacity:.95,fill:false}):L.polygon(f.pts,o);
 const lineKm=pts=>pts.reduce((s,p,i)=>i?s+L.latLng(pts[i-1]).distanceTo(p):0,0)/1000;
+// Markierungen der Einsatzleitung (pois): Kategorie im Fenster «Ansicht» je Art (Linien: Issue #150)
+const poiVk=p=>p.kind==='area'?'ar':p.kind==='line'?'ln':'pt';
+// Punkt auf halber Länge einer Linie (wie lineMid im Server)
+function lineMidLL(pts){const d=[0];for(let i=1;i<pts.length;i++)d.push(d[i-1]+L.latLng(pts[i-1]).distanceTo(pts[i]));const h=d[d.length-1]/2;
+  for(let i=1;i<pts.length;i++)if(d[i]>=h){const f=d[i]>d[i-1]?(h-d[i-1])/(d[i]-d[i-1]):0;return L.latLng(pts[i-1][0]+(pts[i][0]-pts[i-1][0])*f,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*f)}return L.latLng(pts[0])}
+const kmTxt=km=>km.toFixed(km<10?2:1);
 const placeShape=f=>!f.pts?'':f.line?'Linie, ca. '+lineKm(f.pts).toFixed(lineKm(f.pts)<10?2:1)+' km':'Bereich';
 // Overpass-Antwort → Wege und Verknüpfungen über gemeinsame Knoten
 function riverNet(j){if(!j||!j.elements)throw new Error('ungültige Antwort');

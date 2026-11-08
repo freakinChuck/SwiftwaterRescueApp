@@ -92,7 +92,7 @@ foreach ([
  "CREATE TABLE IF NOT EXISTS modes(id $ai, code $tx UNIQUE, name $tx, share_location INT DEFAULT 1, active INT DEFAULT 1, lead_rights INT DEFAULT 0, counts INT DEFAULT 1)",
  // Einstellungen der Verwaltung als Schlüssel/Wert, z. B. msg_no_role
  "CREATE TABLE IF NOT EXISTS settings(k $tx PRIMARY KEY, v TEXT)",
- // Positionen und Bereiche der Einsatzleitung: kind point|area, pts = JSON [[lat,lon],…]; removed = Zeitpunkt des Entfernens
+ // Positionen, Bereiche und Linien (Issue #150) der Einsatzleitung: kind point|area|line, pts = JSON [[lat,lon],…]; removed = Zeitpunkt des Entfernens
  "CREATE TABLE IF NOT EXISTS pois(id $ai, incident_id INT, kind $tx, name $tx, color $tx, pts TEXT, created_by INT, created BIGINT, removed BIGINT NULL)",
  // Rettlinge (vermisste Personen) eines Einsatzes: letzter markierter Standort (lat/lon, loc_at, loc_by), gerettet (rescued_at, rescued_by); removed = entfernt
 // pls_lat/pls_lon/pls_at: eigener PLS mit Zeitpunkt (Issue #24), NULL = PLS des Einsatzes
@@ -2286,10 +2286,10 @@ switch ($route) {
   logev($inc['id'], $uid, 'markdel', (int)$m['user_id'] === $uid ? 'entfernt die eigene Markierung des Rettlings' : 'entfernt eine Markierung des Rettlings');
   out(['ok' => true]);
 
- case 'incident/poi': // Position (kind=point, 1 Punkt) oder Bereich (kind=area, Polygon mit 3–200 Punkten) markieren: nur Einsatzleitung
+ case 'incident/poi': // Position (kind=point, 1 Punkt), Bereich (kind=area, Polygon mit 3–200 Punkten) oder Linie (kind=line, 2–200 Punkte, Issue #150) markieren: nur Einsatzleitung
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
   if (!canManage($inc)) fail('Nur die Einsatzleitung kann Markierungen und Bereiche setzen', 403);
-  $kind = ($in['kind'] ?? '') === 'area' ? 'area' : 'point';
+  $kind = in_array($in['kind'] ?? '', ['area', 'line'], true) ? $in['kind'] : 'point';
   $sym = null; // Einsatzsymbol (Issue #146): nur bei Markierungen, nur eingeschaltete; ohne Symbol nur, solange die Verwaltung das erlaubt
   if ($kind === 'point') { $sym = trim((string)($in['sym'] ?? '')) ?: null; $sa = symActive();
     if ($sym !== null && !in_array($sym, array_column($sa, 'k'), true)) fail('Dieses Symbol steht nicht zur Wahl');
@@ -2304,10 +2304,13 @@ switch ($route) {
     if (!is_array($q) || count($q) !== 2 || !is_numeric($q[0]) || !is_numeric($q[1]) || abs($q[0]) > 90 || abs($q[1]) > 180) fail('Ungültige Koordinaten');
     $pts[] = [round((float)$q[0], 7), round((float)$q[1], 7)];
   }
-  if ($kind === 'point' ? count($pts) !== 1 : count($pts) < 3 || count($pts) > 200) fail($kind === 'point' ? 'Für eine Markierung ist genau ein Punkt nötig' : 'Ein Bereich braucht 3 bis 200 Punkte');
+  $min = ['point' => 1, 'line' => 2, 'area' => 3][$kind];
+  if ($kind === 'point' ? count($pts) !== 1 : count($pts) < $min || count($pts) > 200) fail(['point' => 'Für eine Markierung ist genau ein Punkt nötig', 'line' => 'Eine Linie braucht 2 bis 200 Punkte', 'area' => 'Ein Bereich braucht 3 bis 200 Punkte'][$kind]);
   $db->prepare("INSERT INTO pois(incident_id,kind,name,color,pts,sym,created_by,created) VALUES(?,?,?,?,?,?,?,?)")->execute([$inc['id'], $kind, $name, $col, json_encode($pts), $sym, $uid, $now]);
   $pid = (int)$db->lastInsertId();
   if ($kind === 'point') $txt = sprintf('setzt die Markierung «%s»%s (%.5F, %.5F)', $name, $sym !== null && $name !== SYMBOLS[$sym][1] ? ' (Symbol ' . SYMBOLS[$sym][1] . ')' : '', $pts[0][0], $pts[0][1]);
+  elseif ($kind === 'line') { $m = 0; for ($j = 1; $j < count($pts); $j++) $m += hav($pts[$j - 1][0], $pts[$j - 1][1], $pts[$j][0], $pts[$j][1]);
+    $txt = sprintf('zeichnet die Linie «%s» (%d Punkte, ca. %s km)', $name, count($pts), number_format($m / 1000, $m < 10000 ? 2 : 1, '.', "'")); }
   else { // Fläche grob über lokale Projektion (Shoelace), reicht für die Angabe im Log
     $k = 111320 * cos(deg2rad($pts[0][0])); $a = 0; $n = count($pts);
     for ($j = 0; $j < $n; $j++) { $p = $pts[$j]; $q = $pts[($j + 1) % $n]; $a += $p[1] * $k * $q[0] * 111320 - $q[1] * $k * $p[0] * 111320; }
@@ -2316,13 +2319,13 @@ switch ($route) {
   logev($inc['id'], $uid, 'poi', $txt);
   out(['ok' => true, 'id' => $pid]);
 
- case 'incident/poi/remove': // Position oder Bereich entfernen: nur Einsatzleitung (bleibt in der Datenbank, removed gesetzt)
+ case 'incident/poi/remove': // Position, Bereich oder Linie entfernen: nur Einsatzleitung (bleibt in der Datenbank, removed gesetzt)
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
   if (!canManage($inc)) fail('Nur die Einsatzleitung kann Markierungen und Bereiche entfernen', 403);
   $s = $db->prepare("SELECT * FROM pois WHERE id=? AND incident_id=? AND removed IS NULL"); $s->execute([(int)($in['id'] ?? 0), $inc['id']]); $p = $s->fetch();
   if (!$p) fail('Markierung nicht gefunden', 404);
   $db->prepare("UPDATE pois SET removed=? WHERE id=?")->execute([$now, $p['id']]);
-  logev($inc['id'], $uid, 'poidel', ($p['kind'] === 'area' ? 'entfernt den Bereich «' : 'entfernt die Markierung «') . $p['name'] . '»');
+  logev($inc['id'], $uid, 'poidel', (['area' => 'entfernt den Bereich «', 'line' => 'entfernt die Linie «'][$p['kind']] ?? 'entfernt die Markierung «') . $p['name'] . '»');
   out(['ok' => true]);
 
  // Rettlinge: erfassen, bearbeiten, Standort und «gerettet» markieren dürfen alle im Einsatz, entfernen nur die Einsatzleitung
