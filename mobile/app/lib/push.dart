@@ -91,6 +91,8 @@ Future<void> initPush(void Function(String accId) onOpen) async {
 }
 
 /// Gerät bei allen aktiven Konten anmelden (und bei inaktiven abmelden). Merkt sich den gemeldeten Stand je Konto.
+/// Bei jedem Aufruf fragt die App den Server (push/key mit Token), ob das Gerät dort angemeldet ist, und meldet es sonst neu an:
+/// Der Server kann FCM erst später erhalten ('none' gilt nur bis zur nächsten Prüfung) oder das Abo löschen (Sitzung entfernt, Passwort zurückgesetzt, Token abgelehnt).
 Future<void> syncPush({bool force = false}) async {
   if (!pushReady) return;
   String? tok;
@@ -118,12 +120,19 @@ Future<void> syncPush({bool force = false}) async {
     final k = 'push_${a.id}', had = await prefs.getString(k);
     final want = a.active && !a.loggedOut;
     try {
-      if (want && (force || had != tok)) {
-        final key = await a.api.call('push/key');
+      if (want) {
+        // Server ohne FCM höchstens alle 6 h erneut fragen (er schreibt dazu jeweils eine Warnung ins Applikationslog)
+        final ck = 'pushchk_${a.id}', last = int.tryParse(await prefs.getString(ck) ?? '') ?? 0, now = DateTime.now().millisecondsSinceEpoch;
+        if (!force && had == 'none' && now - last < 6 * 3600 * 1000) continue;
+        final key = await a.api.call('push/key', body: {'token': tok});
         if (key['native'] != 1) {
           await prefs.setString(k, 'none');
+          await prefs.setString(ck, '$now');
           continue;
         }
+        // Ältere Server liefern registered nicht: dann wie bisher nur bei neuem Token
+        final reg = key['registered'];
+        if (!force && had == tok && (reg == null || reg == 1)) continue;
         await a.api.call('push/native/subscribe', body: {'token': tok, 'platform': Platform.isIOS ? 'ios' : 'android'});
         await prefs.setString(k, tok);
       } else if (!want && had != null && had != 'none') {
