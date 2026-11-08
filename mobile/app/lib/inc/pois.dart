@@ -90,6 +90,18 @@ bool pcOn(IncStore s, dynamic cid) {
   return c == null ? true : jb(c['def_on']);
 }
 
+/// Namen fester Standorte auf der Karte, pro Person (place_view.lbl, Standard an) (pcLbl)
+bool pcLbl(IncStore s) {
+  final v = s.me?['place_view'];
+  return v is! Map || v['lbl'] != 0;
+}
+
+/// eigene Wahl der Kategorien gespeichert (Knopf «Standard der Verwaltung»)
+bool pcOwn(IncStore s) {
+  final v = s.me?['place_view'];
+  return v is Map && v.keys.any((k) => k != 'lbl');
+}
+
 /// Kategorien fester Standorte sichtbar? Kategorie «place», Kategorie des Standorts und der Standort selbst (placeShown)
 bool placeShown(IncStore s, J place) => s.vis('place') && pcOn(s, place['cat_id']) && !s.poiHide.contains('f${place['id']}');
 
@@ -107,8 +119,8 @@ List<({int id, String name, int n})> placeCatsUsed(IncStore s) {
 Timer? _pcSave;
 
 /// Kategorien fester Standorte ein-/ausblenden, pro Person gespeichert (me/settings place_view, verzögert);
-/// ids null = «Standard der Verwaltung» (behält die Wahl lbl der Namen) (setPlaceCat)
-void setPlaceCat(IncStore s, List<int>? ids, bool on) {
+/// ids null = «Standard der Verwaltung» (behält die Wahl lbl der Namen); 'lbl' = Namen auf der Karte (setPlaceCat)
+void setPlaceCat(IncStore s, List<Object>? ids, bool on) {
   final me = s.me;
   if (me == null) return;
   final old = me['place_view'];

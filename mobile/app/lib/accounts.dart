@@ -12,22 +12,23 @@ const _key = 'accounts';
 const storage = FlutterSecureStorage(iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock));
 
 class Account {
-  Account({required this.id, required this.base, required this.username, required this.token, this.name = '', this.org = '', this.active = true, this.loggedOut = false, this.added = 0, this.uid = 0});
+  Account({required this.id, required this.base, required this.username, required this.token, this.name = '', this.org = '', this.alias = '', this.active = true, this.loggedOut = false, this.added = 0, this.uid = 0});
   final String id;
   final String base; // Web-Ordner mit «/» am Ende, z. B. https://example.ch/swiftwater/
   final String username;
   String token;
   String name; // Name der Person (me)
   String org; // Organisation aus dem Impressum des Backends, sonst leer
+  String alias; // eigene Bezeichnung auf diesem Gerät (Kontenliste), leer = Organisation bzw. Adresse
   bool active; // Alarme und Nachrichten dieses Backends empfangen
   bool loggedOut; // Server hat den Schlüssel abgelehnt (z. B. Passwort zurückgesetzt): neu anmelden
   int added;
   int uid; // Benutzer-ID auf diesem Backend (Nachrichten an mich, Push-Zuordnung)
 
-  String get label => org.isNotEmpty ? org : hostPath(base);
+  String get label => alias.isNotEmpty ? alias : (org.isNotEmpty ? org : hostPath(base));
   Api get api => Api(base, token);
 
-  Map<String, dynamic> toJson() => {'id': id, 'base': base, 'username': username, 'token': token, 'name': name, 'org': org, 'active': active, 'loggedOut': loggedOut, 'added': added, 'uid': uid};
+  Map<String, dynamic> toJson() => {'id': id, 'base': base, 'username': username, 'token': token, 'name': name, 'org': org, 'alias': alias, 'active': active, 'loggedOut': loggedOut, 'added': added, 'uid': uid};
   factory Account.fromJson(Map<String, dynamic> j) => Account(
       id: j['id'] as String,
       base: j['base'] as String,
@@ -35,6 +36,7 @@ class Account {
       token: j['token'] as String? ?? '',
       name: j['name'] as String? ?? '',
       org: j['org'] as String? ?? '',
+      alias: j['alias'] as String? ?? '',
       active: j['active'] != false,
       loggedOut: j['loggedOut'] == true,
       added: (j['added'] as num?)?.toInt() ?? 0,

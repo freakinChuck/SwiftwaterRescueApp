@@ -312,11 +312,19 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     _camOpen = false;
   }
 
+  /// Seitenfenster zeigen (null = schliessen). Kein Umschalten: nach dem Speichern rufen die Fenster openPanel mit dem
+  /// eigenen Fenster auf, das dabei offen bleiben muss (Issue #151: sonst schloss es sich, und der Dialog für den PLS kam nicht).
   @override
   void openPanel(String? p) {
     if (p != null && _sk.currentState?.isDrawerOpen == true) Navigator.of(context).pop();
-    setState(() => _panel = _panel == p ? null : p);
+    setState(() => _panel = p);
   }
+
+  /// Kartenknöpfe: offenes Fenster schliessen, sonst öffnen
+  void _togglePanel(String p) => openPanel(_panel == p ? null : p);
+
+  @override
+  BuildContext get ctx => context;
 
   @override
   void closeMenu() {
@@ -725,7 +733,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     // feste Standorte
     if (s.vis('place')) {
       final pl = s.places.where((p) => placeShown(s, p) && !s.poiHide.contains('f${p['id']}')).toList();
-      final lbl = s.me?['place_view'] is! Map || jm(s.me!['place_view'])['lbl'] != 0;
+      final lbl = pcLbl(s);
       final areas = pl.where(placeArea).toList(), lines = pl.where(placeLine).toList();
       // feste Linien (Issue #134, z. B. Fahrrinnen): breiter gestrichelter Strich, Marker und Navigation auf halber Länge
       if (lines.isNotEmpty) {
@@ -986,7 +994,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         if (cats.isNotEmpty) ...[
                           const Divider(),
                           Text('Auf der Karte', style: Theme.of(c).textTheme.titleSmall),
-                          ...cats.map((v) => CheckboxListTile(dense: true, value: s.vis(v.$1), onChanged: (x) => s.setVis([v.$1], x == true), title: Text(v.$2))),
+                          for (final v in cats) ...[
+                            CheckboxListTile(dense: true, value: s.vis(v.$1), onChanged: (x) => s.setVis([v.$1], x == true), title: Text(v.$2)),
+                            if (v.$1 == 'place') ..._viewPlaceCats(),
+                          ],
                           if (cats.length > 1)
                             Wrap(spacing: 8, children: [
                               OutlinedButton(onPressed: () => s.setVis(cats.map((v) => v.$1), true), child: const Text('Alle einblenden')),
@@ -996,6 +1007,27 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         if (_airOn) Padding(padding: const EdgeInsets.only(top: 8), child: Mut(_airInfo(), size: 12)),
                       ])));
             }));
+  }
+
+  /// unter «Feste Standorte»: Kategorien (nur wenn ein Standort eine hat) und «Namen auf der Karte» (viewPlaceCats, Issue #151)
+  List<Widget> _viewPlaceCats() {
+    final cs = placeCatsUsed(s);
+    if (cs.isEmpty) return [];
+    Widget sub(Widget w) => Padding(padding: const EdgeInsets.only(left: 24), child: w);
+    return [
+      if (cs.any((c) => c.id != 0))
+        for (final c in cs)
+          sub(CheckboxListTile(
+              dense: true,
+              value: pcOn(s, c.id),
+              onChanged: (x) {
+                setPlaceCat(s, [c.id], x == true);
+                if (x == true && !s.vis('place')) s.setVis(['place'], true);
+              },
+              title: Text('${c.name} (${c.n})'))),
+      sub(CheckboxListTile(dense: true, value: pcLbl(s), onChanged: (x) => setPlaceCat(s, ['lbl'], x == true), title: const Text('Namen auf der Karte'))),
+      if (pcOwn(s)) sub(Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: () => setPlaceCat(s, null, true), child: const Text('Standard der Verwaltung')))),
+    ];
   }
 
   String _airInfo() {
@@ -1037,12 +1069,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     final i = s.inc;
     final btns = <Widget>[
       if (i != null) _fab('Kamerafokus', const Icon(Icons.center_focus_strong), () => setState(() => _camOpen = !_camOpen), active: s.autoView),
-      if (i != null) _fab('Einsatzkräfte', const Icon(Icons.groups), () => openPanel('people'), count: _pplCount, countCol: const Color(0xFF546E7A), active: _panel == 'people'),
-      if (i != null && s.feat('res')) _fab('Rettlinge', const Text('R', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), () => openPanel('res'), count: _resCount, active: _panel == 'res'),
-      if (i != null && s.feat('msg')) _fab('Nachrichten', const Icon(Icons.chat), () => openPanel('msgs'), count: s.unread, active: _panel == 'msgs'),
+      if (i != null) _fab('Einsatzkräfte', const Icon(Icons.groups), () => _togglePanel('people'), count: _pplCount, countCol: const Color(0xFF546E7A), active: _panel == 'people'),
+      if (i != null && s.feat('res')) _fab('Rettlinge', const Text('R', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), () => _togglePanel('res'), count: _resCount, active: _panel == 'res'),
+      if (i != null && s.feat('msg')) _fab('Nachrichten', const Icon(Icons.chat), () => _togglePanel('msgs'), count: s.unread, active: _panel == 'msgs'),
       if ((i != null && s.feat('poi')) || s.places.isNotEmpty)
-        _fab(i == null ? 'Feste Standorte' : 'Markierungen', const Icon(Icons.place), () => openPanel('pois'), active: _panel == 'pois'),
-      if (i != null && s.feat('rd')) _fab('Flussdistanz', const Icon(Icons.straighten), () => openPanel('rd'), active: _panel == 'rd'),
+        _fab(i == null ? 'Feste Standorte' : 'Markierungen', const Icon(Icons.place), () => _togglePanel('pois'), active: _panel == 'pois'),
+      if (i != null && s.feat('rd')) _fab('Flussdistanz', const Icon(Icons.straighten), () => _togglePanel('rd'), active: _panel == 'rd'),
     ];
     final foldN = _fold ? _resCount + s.unread : 0;
     return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -1115,6 +1147,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         decoration: BoxDecoration(
                             color: s.offline ? const Color(0xFF8A6D00) : (k != null ? hexColor(k.color) : appBlue).withValues(alpha: .92), borderRadius: BorderRadius.circular(16)),
                         child: Text(t, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)))),
+                ?_joinBan(),
                 if (_follow != null || s.autoView)
                   Padding(
                       padding: const EdgeInsets.only(top: 6),
@@ -1125,6 +1158,37 @@ class _IncPageState extends State<IncPage> implements MapCtl {
               const SizedBox(width: 8),
               FloatingActionButton.small(heroTag: 'view', tooltip: 'Ansicht', backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: _viewBox, child: const Icon(Icons.layers)),
             ])));
+  }
+
+  /// Hinweis, solange ein Einsatz läuft, den man sehen darf, aber nicht angenommen hat (Issue #155, joinBan in index.html;
+  /// nicht für die Übungsleitung, sie wird nicht alarmiert). Antippen öffnet das Menü mit der Auswahl der Einrückoption.
+  Widget? _joinBan() {
+    final st = s.st, m = s.myPart;
+    if (s.inc == null || st == null || jb(st['blocked']) || s.exLead || s.joined || !s.modes.any((x) => jb(x['active']))) return null;
+    final t = m != null && m['left_at'] != null ? 'Du nimmst nicht mehr an diesem Einsatz teil.' : 'Einsatz noch nicht angenommen.';
+    return Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Material(
+            color: const Color(0xFFFFD23F),
+            elevation: 3,
+            borderRadius: BorderRadius.circular(10),
+            child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () {
+                  if (_panel != null) openPanel(null);
+                  _sk.currentState?.openDrawer();
+                },
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    child: Row(children: [
+                      const Icon(Icons.warning_amber_rounded, color: Color(0xFF231400), size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(t, style: const TextStyle(color: Color(0xFF231400), fontWeight: FontWeight.w600)),
+                        const Text('Antippen, um die Einrückoption zu wählen.', style: TextStyle(color: Color(0xFF231400), fontSize: 12)),
+                      ])),
+                    ])))));
   }
 
   Widget? _note() {
