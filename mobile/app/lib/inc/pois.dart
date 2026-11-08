@@ -1,12 +1,13 @@
 // Fenster «Markierungen» der nativen Einsatz-App (Gegenstück zu renderPois, newPoi, startDraw, showPlace in web/index.html):
-// PLS zuoberst (immer sichtbar), feste Standorte nach Kategorie, Markierungen und Bereiche der Einsatzleitung,
-// je Eintrag und Gruppe ein-/ausblendbar (pro Gerät und Einsatz, Schlüssel wie sw_poihide_<id>: Markierung = ID, fester Standort = f<ID>).
+// Gruppen PLS (immer sichtbar), Lage (Markierungen, Bereiche und Linien der Einsatzleitung), Feste Standorte (nach Kategorie),
+// alle Gruppen und Untergruppen zusammenklappbar (gemerkt in poifold_<Konto>, wie sw_poifold), je Eintrag und Gruppe ein-/ausblendbar (pro Gerät und Einsatz, Schlüssel wie sw_poihide_<id>: Markierung = ID, fester Standort = f<ID>).
 // Ohne Einsatz nur die festen Standorte.
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ctx.dart';
 import 'store.dart';
@@ -171,6 +172,38 @@ class PoisPanel extends StatefulWidget {
 class _PoisPanelState extends State<PoisPanel> {
   IncStore get s => widget.s;
   MapCtl get map => widget.map;
+  Set<String> _fold = {}; // zugeklappte Gruppen: pls, lage, fix, lage:<Art>, fix:<Kategorie> (sw_poifold)
+  SharedPreferences? _sp;
+
+  String get _fk => 'poifold_${s.acc.id}';
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      if (!mounted) return;
+      setState(() {
+        _sp = p;
+        _fold = (p.getStringList(_fk) ?? []).toSet();
+      });
+    });
+  }
+
+  void _toggleFold(String k) {
+    setState(() => _fold.contains(k) ? _fold.remove(k) : _fold.add(k));
+    _sp?.setStringList(_fk, _fold.toList());
+  }
+
+  /// Gruppe (sub: Untergruppe, eingerückt) mit Häkchen rechts (null = keines), zusammenklappbar
+  Widget _grp(String k, String t, int n, List<Widget> children, {bool? v, ValueChanged<bool>? on, bool sub = false}) => Padding(
+      padding: EdgeInsets.only(left: sub ? 16 : 0),
+      child: FoldGroup(
+          title: t,
+          count: n,
+          open: !_fold.contains(k),
+          onToggle: () => _toggleFold(k),
+          trailing: v == null ? null : Checkbox(value: v, onChanged: on == null ? null : (x) => on(x == true)),
+          children: sub ? children : [Padding(padding: const EdgeInsets.only(left: 8), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children))]));
 
   void _afterShow() {
     if (MediaQuery.sizeOf(context).width < 760) map.openPanel(null);
@@ -276,31 +309,25 @@ class _PoisPanelState extends State<PoisPanel> {
             ...acts,
           ])));
 
-  Widget _groupHead(String t, bool? v, ValueChanged<bool>? on) => Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Row(children: [
-        SizedBox(width: 40, child: v == null ? null : Checkbox(value: v, onChanged: on == null ? null : (x) => on(x == true))),
-        Expanded(child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold))),
-      ]));
-
   List<Widget> _pls() {
     final pl = s.plsList();
     return [
-      _groupHead('Point last seen (PLS) · immer sichtbar', null, null),
-      if (pl.isEmpty) const Padding(padding: EdgeInsets.only(left: 40), child: Mut('Kein PLS gesetzt')),
-      ...pl.map((p) => _item(
-          sw: _swatch('', pls: true, off: !p.on),
-          name: p.label,
-          info: '${s.fcs(p.lat, p.lon, '', ' · ')}Drift ab ${fmtDT(p.at ?? jn(s.inc?['pls_at']))}${p.on ? '' : ' · zählt nicht fürs Suchgebiet'}',
-          faded: !p.on,
-          acts: [
-            smallBtn('Zeigen', () {
-              map.follow(null);
-              map.centerOn(LatLng(p.lat, p.lon));
-              _afterShow();
-            }),
-            ?navBtn(s, p.lat, p.lon, p.label),
-          ])),
+      _grp('pls', 'Point last seen (PLS)', pl.length, [
+        if (pl.isEmpty) const Padding(padding: EdgeInsets.only(left: 40), child: Mut('Kein PLS gesetzt')),
+        ...pl.map((p) => _item(
+            sw: _swatch('', pls: true, off: !p.on),
+            name: p.label,
+            info: '${s.fcs(p.lat, p.lon, '', ' · ')}Drift ab ${fmtDT(p.at ?? jn(s.inc?['pls_at']))}${p.on ? '' : ' · zählt nicht fürs Suchgebiet'}',
+            faded: !p.on,
+            acts: [
+              smallBtn('Zeigen', () {
+                map.follow(null);
+                map.centerOn(LatLng(p.lat, p.lon));
+                _afterShow();
+              }),
+              ?navBtn(s, p.lat, p.lon, p.label),
+            ])),
+      ]),
     ];
   }
 
@@ -316,25 +343,23 @@ class _PoisPanelState extends State<PoisPanel> {
     if (fs.isEmpty) return [];
     final cs = placeCatsUsed(s), withCat = cs.any((c) => c.id != 0);
     return [
-      _groupHead('Feste Standorte (${fs.length})', fs.every((f) => !s.poiHide.contains('f${f['id']}')),
-          (v) => s.setPoiHidden(fs.map((f) => 'f${f['id']}'), !v)),
-      if (withCat)
-        for (final c in cs) ...[
-          Padding(
-              padding: const EdgeInsets.only(left: 20, top: 4),
-              child: Row(children: [
-                Checkbox(
-                    value: pcOn(s, c.id),
-                    onChanged: (v) {
-                      setPlaceCat(s, [c.id], v == true);
-                      if (v == true && !s.vis('place')) s.setVis(['place'], true);
-                    }),
-                Expanded(child: Text('${c.name} (${c.n})', style: const TextStyle(fontWeight: FontWeight.w600))),
-              ])),
-          ...fs.where((f) => (ji(f['cat_id']) ?? 0) == c.id || (c.id == 0 && !cs.any((x) => x.id != 0 && x.id == ji(f['cat_id'])))).map(_placeRow),
-        ]
-      else
-        ...fs.map(_placeRow),
+      _grp(
+          'fix',
+          'Feste Standorte',
+          fs.length,
+          withCat
+              ? [
+                  for (final c in cs)
+                    _grp('fix:${c.id}', c.name, c.n,
+                        fs.where((f) => (ji(f['cat_id']) ?? 0) == c.id || (c.id == 0 && !cs.any((x) => x.id != 0 && x.id == ji(f['cat_id'])))).map(_placeRow).toList(),
+                        v: pcOn(s, c.id), on: (v) {
+                      setPlaceCat(s, [c.id], v);
+                      if (v && !s.vis('place')) s.setVis(['place'], true);
+                    }, sub: true),
+                ]
+              : fs.map(_placeRow).toList(),
+          v: fs.every((f) => !s.poiHide.contains('f${f['id']}')),
+          on: (v) => s.setPoiHidden(fs.map((f) => 'f${f['id']}'), !v)),
     ];
   }
 
@@ -354,16 +379,24 @@ class _PoisPanelState extends State<PoisPanel> {
         ]);
   }
 
+  /// Lage: Markierungen der Einsatzleitung während des Einsatzes, je Art eine Untergruppe
   List<Widget> _poiGroups() {
-    final ps = s.pois, out = <Widget>[];
+    final ps = s.pois, subs = <Widget>[];
     for (final (k, t) in [('point', 'Markierungen'), ('area', 'Bereiche'), ('line', 'Linien')]) {
       final items = ps.where((p) => (p['kind'] == 'area' || p['kind'] == 'line' ? p['kind'] : 'point') == k).toList();
-      out.add(_groupHead('$t (${items.length})', items.isNotEmpty && items.every((p) => !s.poiHide.contains('${p['id']}')),
-          items.isEmpty ? null : (v) => s.setPoiHidden(items.map((p) => '${p['id']}'), !v)));
-      if (items.isEmpty) out.add(const Padding(padding: EdgeInsets.only(left: 40), child: Mut('Keine')));
-      out.addAll(items.map(_poiRow));
+      subs.add(_grp(
+          'lage:$k',
+          t,
+          items.length,
+          items.isEmpty ? [const Padding(padding: EdgeInsets.only(left: 40), child: Mut('Keine'))] : items.map(_poiRow).toList(),
+          v: items.isNotEmpty && items.every((p) => !s.poiHide.contains('${p['id']}')),
+          on: items.isEmpty ? null : (v) => s.setPoiHidden(items.map((p) => '${p['id']}'), !v),
+          sub: true));
     }
-    return out;
+    return [
+      _grp('lage', 'Lage', ps.length, subs,
+          v: ps.isNotEmpty && ps.every((p) => !s.poiHide.contains('${p['id']}')), on: ps.isEmpty ? null : (v) => s.setPoiHidden(ps.map((p) => '${p['id']}'), !v)),
+    ];
   }
 
   @override
@@ -373,8 +406,8 @@ class _PoisPanelState extends State<PoisPanel> {
         final inc = s.inc != null, form = inc && s.canManage && s.feat('poi');
         final body = [
           if (inc) ..._pls(),
-          ..._places(),
           if (inc && s.feat('poi')) ..._poiGroups(),
+          ..._places(),
         ];
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           PanelHead(inc ? 'Markierungen' : 'Feste Standorte', onClose: () => map.openPanel(null)),

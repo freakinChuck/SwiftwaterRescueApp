@@ -97,6 +97,10 @@ table.crew small{display:block;color:var(--mut)}table.crew select{width:100%;pad
 #fitBtns .cnt.n{background:var(--mut);color:var(--bg)} /* nur Anzahl, kein Handlungsbedarf (Einsatzkräfte) */
 .pg{margin:.7rem 0 .2rem;font-size:.8rem;color:var(--mut);font-weight:600}
 .pfold{display:flex;align-items:center;gap:.4rem;width:100%;margin:.6rem 0 0;padding:.4rem .5rem;text-align:left;font-weight:700}.pfold .ar{width:1em;color:var(--mut)}.pfold+.pg{margin-top:.4rem}
+/* Fenster «Markierungen»: Gruppen und Untergruppen mit Häkchen links und Knopf zum Zuklappen */
+.pfh,.psh{display:flex;align-items:center;gap:.45rem}.pfh{margin:.6rem 0 0}.pfh .pfold{flex:1;margin:0}.psh{margin:.45rem 0 0;border-bottom:1px solid var(--line)}
+.sfold{flex:1;display:flex;align-items:center;gap:.4rem;background:none;border:0;padding:.35rem .2rem;text-align:left;font-size:.85rem;font-weight:600;color:var(--mut)}.sfold .ar{width:1em}
+.pgb{padding-left:.6rem}.pfh .nochk{width:13px;flex:0 0 auto}
 /* Zeile im Fenster «Einsatzkräfte»: Marker links, Name und Angaben über die ganze Breite, Knöpfe darunter */
 .pp{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:.5rem;row-gap:.3rem;padding:.4rem 0;border-bottom:1px solid var(--line)}.pp .mk{width:30px;height:30px;font-size:.7rem;border-width:3px}
 .pp .nm{min-width:0;overflow-wrap:anywhere}.pp .pa{grid-column:2;display:flex;flex-wrap:wrap;gap:.35rem}.pp .nm small{display:block;color:var(--mut)}.pp button{padding:.35rem .5rem;font-size:.82rem}.pp button[aria-pressed=true]{background:var(--ex);border-color:var(--ex)}
@@ -212,8 +216,8 @@ const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOp
   $('#bRes').onclick=()=>togglePanel('res');$('#bResX').onclick=()=>togglePanel('res',false);
   $('#bFold').onclick=()=>setBtnFold(!btnFold);updFold();
   rd=null;$('#bRd').onclick=rdOpen; // Flussdistanz (zusätzlich im ☰-Menü, auch ohne Einsatz)
-  $('#poiList').onclick=e=>{const b=e.target.closest('[data-pg],[data-pls],[data-pf]');if(!b)return;if(b.dataset.pg)return showPoi(+b.dataset.pg);if(b.dataset.pf)return showPlace(+b.dataset.pf);stopFollow();map.panTo(b.dataset.pls.split(',').map(Number));if(narrow())togglePanel('pois',false)};
-  $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pfcat){setPlaceCat([+t.dataset.pfcat],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.pfv)setPoiHidden(['f'+t.dataset.pfv],!t.checked);else if(t.dataset.pfgrp)setPoiHidden((st.places||[]).map(f=>'f'+f.id),!t.checked);else if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
+  $('#poiList').onclick=e=>{const b=e.target.closest('[data-pof],[data-pg],[data-pls],[data-pf]');if(!b)return;if(b.dataset.pof)return setPoiFold(b.dataset.pof);if(b.dataset.pg)return showPoi(+b.dataset.pg);if(b.dataset.pf)return showPlace(+b.dataset.pf);stopFollow();map.panTo(b.dataset.pls.split(',').map(Number));if(narrow())togglePanel('pois',false)};
+  $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pfcat){setPlaceCat([+t.dataset.pfcat],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.pfv)setPoiHidden(['f'+t.dataset.pfv],!t.checked);else if(t.dataset.pfgrp)setPoiHidden((st.places||[]).map(f=>'f'+f.id),!t.checked);else if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>t.dataset.pgrp==='all'||p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
   $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.pf)setPplFold(b.dataset.pf);else if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f);else if(b.dataset.pi)pinfoShow(b.dataset.pi)};
   map=L.map('map',{zoomControl:false,rotate:true,touchRotate:true,rotateControl:false}).setView([46.8,8.2],8);L.control.zoom({position:'bottomright'}).addTo(map);addCompass();
   // Grundkarte: Auswahl im Fenster «Ansicht» (setBase), pro Gerät gemerkt (sw_base)
@@ -798,17 +802,27 @@ function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&
 function renderPois(){const o=$('#pois');if(!o)return;const inc=!!(st&&st.incident),on=panel==='pois'&&(inc||poiPlaces());o.hidden=!on;$('#bPoi').setAttribute('aria-expanded',on);if(!on)return;poiHideLoad();
   const ps=st.pois||[],grp=[['point','Markierungen'],['area','Bereiche'],['line','Linien']].map(([k,t])=>({k,t,items:ps.filter(p=>p.kind===k)}));
   const row=p=>`<div class="pi"><input type="checkbox" data-pv="${p.id}" ${poiHide.has(p.id)?'':'checked'} aria-label="${esc(p.name)} auf der Karte anzeigen"><span class="sw" style="background:${p.color}"></span><div class="nm">${esc(p.name)}<small>${esc(poiInfo(p))}</small></div><div class="pa"><button data-pg="${p.id}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(poiPt(p).lat,poiPt(p).lng,p.name)}${st.can_manage?`<button data-pdel="${p.id}" aria-label="${esc(p.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div></div>`;
-  // PLS (Point last seen) als eigene Kategorie zuoberst, nicht ausblendbar
-  const pl=inc?plsList():[],pls=!inc?'':`<div class="pg">Point last seen (PLS) · immer sichtbar</div>`+(pl.map(p=>`<div class="pi"><span class="nochk"></span><span class="plsw${p.on?'':' off'}"></span><div class="nm">${esc(p.label)}<small>${esc(fcs(p.lat,p.lon,'',' · '))}Drift ab ${fmtDT(p.at)}${p.on?'':' · zählt nicht fürs Suchgebiet'}</small></div><div class="pa"><button data-pls="${p.lat},${p.lon}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(p.lat,p.lon,p.label)}</div></div>`).join('')||'<div class="mut">Kein PLS gesetzt</div>');
-  // Feste Standorte (Issue #96) nach dem PLS, nur lesend
+  // Gruppen (Rückmeldung zu #150): PLS, Lage (Markierungen, Bereiche, Linien der Einsatzleitung), Feste Standorte; alle Gruppen und Untergruppen zusammenklappbar (poiFold)
+  // Kopf: Häkchen (ein-/ausblenden, wo möglich) links, Knopf mit Titel klappt zu
+  const hd=(k,t,n,chk,sub)=>{const c=poiFold.has(k);return `<div class="${sub?'psh':'pfh'}">${chk||''}<button class="${sub?'sfold':'pfold'}" data-pof="${k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${n})</button></div>`};
+  const grpBody=(k,html)=>poiFold.has(k)?'':`<div class="pgb">${html}</div>`;
+  const chk=(attr,on,dis,lbl)=>`<input type="checkbox" ${attr} ${on?'checked':''} ${dis?'disabled':''} aria-label="${esc(lbl)}">`;
+  // PLS (Point last seen) zuoberst, nicht ausblendbar
+  const pl=inc?plsList():[],pls=!inc?'':hd('pls','Point last seen (PLS)',pl.length,'<span class="nochk"></span>')+grpBody('pls',(pl.map(p=>`<div class="pi"><span class="nochk"></span><span class="plsw${p.on?'':' off'}"></span><div class="nm">${esc(p.label)}<small>${esc(fcs(p.lat,p.lon,'',' · '))}Drift ab ${fmtDT(p.at)}${p.on?'':' · zählt nicht fürs Suchgebiet'}</small></div><div class="pa"><button data-pls="${p.lat},${p.lon}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(p.lat,p.lon,p.label)}</div></div>`).join(''))||'<div class="mut">Kein PLS gesetzt</div>');
+  // Lage: Markierungen der Einsatzleitung während des Einsatzes, je Art eine Untergruppe
+  const lg=inc&&feat('poi')?hd('lage','Lage',ps.length,chk('data-pgrp="all"',ps.length&&ps.every(p=>!poiHide.has(p.id)),!ps.length,'Alle Markierungen der Lage anzeigen'))
+    +grpBody('lage',grp.map(g=>hd('lage:'+g.k,g.t,g.items.length,chk(`data-pgrp="${g.k}"`,g.items.length&&g.items.every(p=>!poiHide.has(p.id)),!g.items.length,'Alle '+g.t+' anzeigen'),1)+grpBody('lage:'+g.k,g.items.map(row).join('')||'<div class="mut">Keine</div>')).join('')):'';
+  // Feste Standorte (Issue #96), nur lesend; je Kategorie eine Untergruppe mit Häkchen (pro Person gespeichert, wie im Fenster «Ansicht»), darunter die Standorte mit eigenem Häkchen (pro Gerät und Einsatz)
   const fs=feat('place')?st.places||[]:[],cs=placeCatsUsed(),withCat=cs.some(c=>c.id);
   const frow=f=>`<div class="pi"><input type="checkbox" data-pfv="${f.id}" ${poiHide.has('f'+f.id)?'':'checked'} aria-label="${esc(f.name)} auf der Karte anzeigen"><span class="sw" style="background:${f.color||PLACE_COL}"></span><div class="nm">${esc(f.name)}<small>${esc(placeInfo(f))}</small></div><div class="pa"><button data-pf="${f.id}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(f.lat,f.lon,f.name)}</div></div>`;
-  // je Kategorie ein Häkchen (pro Person gespeichert, wie im Fenster «Ansicht»), darunter die Standorte mit eigenem Häkchen (pro Gerät und Einsatz)
-  const fl=fs.length?`<label class="pg"><input type="checkbox" data-pfgrp="1" ${fs.every(f=>!poiHide.has('f'+f.id))?'checked':''} aria-label="Alle festen Standorte anzeigen"> Feste Standorte (${fs.length})</label>`
-    +(withCat?cs.map(c=>`<label class="pi" style="font-weight:600"><input type="checkbox" data-pfcat="${c.id}" ${pcOn(c.id)?'checked':''} aria-label="Kategorie ${esc(c.name)} anzeigen"> ${esc(c.name)} (${c.n})</label>`+fs.filter(f=>(f.cat_id||0)===c.id).map(frow).join('')).join(''):fs.map(frow).join('')):'';
-  $('#poiList').innerHTML=pls+fl+(inc&&feat('poi')?grp:[]).map(g=>`<label class="pg"><input type="checkbox" data-pgrp="${g.k}" ${g.items.length&&g.items.every(p=>!poiHide.has(p.id))?'checked':''} ${g.items.length?'':'disabled'} aria-label="Alle ${g.t} anzeigen"> ${g.t} (${g.items.length})</label>`+(g.items.map(row).join('')||'<div class="mut">Keine</div>')).join('');
+  const fl=!fs.length?'':hd('fix','Feste Standorte',fs.length,chk('data-pfgrp="1"',fs.every(f=>!poiHide.has('f'+f.id)),0,'Alle festen Standorte anzeigen'))
+    +grpBody('fix',withCat?cs.map(c=>hd('fix:'+c.id,esc(c.name),c.n,chk(`data-pfcat="${c.id}"`,pcOn(c.id),0,'Kategorie '+c.name+' anzeigen'),1)+grpBody('fix:'+c.id,fs.filter(f=>(f.cat_id||0)===c.id).map(frow).join(''))).join(''):fs.map(frow).join(''));
+  $('#poiList').innerHTML=pls+lg+fl;
   const f=$('#poiForm'),ok=inc&&!!st.can_manage&&feat('poi');f.hidden=!ok;if(ok&&!$('#bPoiP')){f.innerHTML='<div class="row" style="margin:0"><button class="pri" id="bPoiP">+ Markierung</button><button class="pri" id="bPoiA">+ Bereich</button><button class="pri" id="bPoiL">+ Linie</button></div>';$('#bPoiP').onclick=()=>newPoi('point');$('#bPoiA').onclick=()=>newPoi('area');$('#bPoiL').onclick=()=>newPoi('line')}}
 const PLACE_COL='#1d7fd1';
+// zugeklappte Gruppen im Fenster «Markierungen» (pls, lage, fix, lage:<Art>, fix:<Kategorie>), pro Gerät gemerkt (localStorage sw_poifold)
+const poiFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_poifold')||'[]'))}catch(e){return new Set()}})();
+function setPoiFold(k){poiFold.has(k)?poiFold.delete(k):poiFold.add(k);try{localStorage.setItem('sw_poifold',JSON.stringify([...poiFold]))}catch(e){}renderPois()}
 function poiPlaces(){return feat('place')&&!!(st&&(st.places||[]).length)} // Fenster «Markierungen» auch ohne Funktion «Markierungen & Bereiche» bzw. ohne Einsatz («Feste Standorte»), wenn es feste Standorte gibt
 // Kategorien fester Standorte: Standard der Verwaltung (place_cats.def_on, ohne Kategorie = an), pro Person übersteuert in me.place_view (gespeichert über me/settings)
 function pcOn(cid){const k=String(cid||0),v=me&&me.place_view;if(v&&Object.prototype.hasOwnProperty.call(v,k))return!!v[k];const c=((st&&st.place_cats)||[]).find(x=>x.id===cid);return c?!!c.def_on:true}
