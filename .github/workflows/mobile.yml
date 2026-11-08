@@ -131,8 +131,13 @@ jobs:
           METHOD: ${{ secrets.IOS_EXPORT_METHOD }}
         shell: bash
         run: |
-          if [ -z "$P12" ] || [ -z "$PROFILE" ] || [ -z "$TEAM" ]; then
-            echo "::warning::Keine iOS-Signatur eingerichtet: es entsteht ein unsigniertes IPA (nicht installierbar ohne Nachsignieren)"
+          miss=""
+          [ -z "$P12" ] && miss="$miss IOS_CERT_P12_BASE64"
+          [ -z "$PROFILE" ] && miss="$miss IOS_PROFILE_BASE64"
+          [ -z "$TEAM" ] && miss="$miss IOS_TEAM_ID"
+          [ -z "$P12_PW" ] && echo "::notice::IOS_CERT_PASSWORD ist leer (nur richtig, wenn das .p12 kein Passwort hat)"
+          if [ -n "$miss" ]; then
+            echo "::warning::Keine iOS-Signatur eingerichtet, es fehlt:$miss. Es entsteht ein unsigniertes IPA (nicht installierbar ohne Nachsignieren)"
             echo "signed=0" >> "$GITHUB_OUTPUT"; exit 0
           fi
           kc="$RUNNER_TEMP/build.keychain-db"; kpw=$(uuidgen)
