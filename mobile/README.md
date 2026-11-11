@@ -92,6 +92,7 @@ Geheimnisse (Repository → Settings → Secrets and variables → Actions) sind
 | `IOS_EXPORT_METHOD` | `app-store-connect` (Standard), `ad-hoc` oder `enterprise` |
 | `ASC_KEY_ID`, `ASC_ISSUER_ID` | Schlüssel-ID und Issuer-ID des App-Store-Connect-API-Schlüssels |
 | `ASC_KEY_P8` | Inhalt der Datei `AuthKey_<ID>.p8` (direkt oder base64) |
+| `PLAY_SERVICE_ACCOUNT_JSON` | Inhalt der JSON-Datei des Google-Cloud-Dienstkontos für den Upload in Google Play |
 | `FCM_API_KEY`, `FCM_PROJECT_ID`, `FCM_SENDER_ID`, `FCM_APP_ID_ANDROID`, `FCM_APP_ID_IOS` | Firebase-Angaben für Push (siehe unten) |
 
 Ohne iOS-Signatur entsteht ein unsigniertes `…-unsigned.ipa`. Installieren lässt es sich erst nach dem Nachsignieren.
@@ -99,6 +100,16 @@ Ohne iOS-Signatur entsteht ein unsigniertes `…-unsigned.ipa`. Installieren lä
 Upload nach TestFlight: Läuft die Pipeline auf `main` (Push oder «Run workflow» auf `main`), ist das IPA signiert, gilt `IOS_EXPORT_METHOD` `app-store-connect` und sind die drei `ASC_*`-Geheimnisse gesetzt, lädt sie das IPA mit `xcrun altool` nach App Store Connect. Den Schlüssel erzeugt man in App Store Connect unter Benutzer und Zugriff → Integrationen → App Store Connect API (Team-Schlüssel, Rolle «App Manager»); die `.p8`-Datei lässt sich nur einmal herunterladen. Die App muss in App Store Connect angelegt sein (Bundle-ID `ch.swiftwaterrescue.app`). Die iOS-Build-Nummer ist Datum und Zeit des Builds (UTC, `JJMMTThhmm`, z. B. 2611081530) und steigt deshalb über beide Workflows hinweg. Pull Requests und Tags laden nichts hoch. Der iOS-Teil steht in `.github/workflows/ios.yml` (wiederverwendbar).
 
 Nur iOS nach TestFlight, von Hand: Actions → «TestFlight» → «Run workflow», Branch wählen (`.github/workflows/testflight.yml`). Baut und lädt hoch ohne Prüfung und ohne Android, auch von anderen Branches als `main`. `ITSAppUsesNonExemptEncryption` = `false` in `Info.plist` (nur HTTPS), damit App Store Connect nicht bei jedem Build nach der Verschlüsselung fragt.
+
+Upload in Google Play: Läuft die Pipeline auf `main` (Push oder «Run workflow» auf `main`), ist das AAB mit dem Release-Schlüssel signiert und ist `PLAY_SERVICE_ACCOUNT_JSON` gesetzt, lädt sie das AAB mit `r0adkll/upload-google-play` hoch. Spur und Status über die Repository-Variablen (Actions → Variables, nicht Secrets) `PLAY_TRACK` (`internal` Standard, `alpha`, `beta`, `production`) und `PLAY_STATUS` (`completed` Standard, `draft`, `inProgress`). Pull Requests und Tags laden nichts hoch. Einrichten, einmalig:
+
+1. In der [Play Console](https://play.google.com/console) die App mit der Paket-ID `ch.swiftwaterrescue.app` anlegen und das erste AAB (aus den Artefakten eines Laufs auf `main`) **von Hand** hochladen, zum Beispiel in den internen Test. Erst danach nimmt die API Uploads an. Dabei «Play App Signing» annehmen: Der Schlüssel aus `ANDROID_KEYSTORE_BASE64` wird zum Upload-Schlüssel, Google signiert die ausgelieferte App.
+2. In der [Google Cloud Console](https://console.cloud.google.com/) im selben oder einem neuen Projekt die «Google Play Android Developer API» aktivieren, ein Dienstkonto anlegen und dafür einen JSON-Schlüssel erzeugen.
+3. In der Play Console unter Nutzer und Berechtigungen das Dienstkonto (E-Mail-Adresse aus der JSON-Datei) einladen, mit Zugriff auf die App und den Rechten «Releases verwalten» bzw. «Releases in Test-Tracks veröffentlichen».
+4. Den ganzen Inhalt der JSON-Datei als Geheimnis `PLAY_SERVICE_ACCOUNT_JSON` hinterlegen. Die Datei nie einchecken.
+5. Solange die App in Google Play noch nie veröffentlicht wurde (Status «Entwurf»), nimmt Google nur Releases im Status `draft` an: Variable `PLAY_STATUS` = `draft` setzen und den Entwurf in der Play Console freigeben. Nach der ersten Veröffentlichung die Variable entfernen.
+
+Die Android-Build-Nummer (`versionCode`) ist die Laufnummer des Workflows «Native Apps» und steigt mit jedem Lauf. Ein erneut gestarteter Lauf («Re-run») hat dieselbe Nummer; Google lehnt sie dann als schon verwendet ab.
 
 Lokal liest Android den Signierschlüssel aus `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Die Datei steht in der `.gitignore`.
 
