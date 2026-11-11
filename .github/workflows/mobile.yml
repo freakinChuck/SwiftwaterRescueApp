@@ -4,6 +4,8 @@
 #   Android: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 #   iOS:     IOS_CERT_P12_BASE64, IOS_CERT_PASSWORD, IOS_PROFILE_BASE64, IOS_TEAM_ID, IOS_EXPORT_METHOD (app-store-connect | ad-hoc | enterprise)
 #   Upload:  ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (App-Store-Connect-API-Schlüssel; lädt signierte IPAs von main nach TestFlight)
+#   Play:    PLAY_SERVICE_ACCOUNT_JSON (Dienstkonto mit Zugriff in der Play Console; lädt das signierte AAB von main in Google Play)
+#            Variablen (Actions → Variables, optional): PLAY_TRACK (Standard internal), PLAY_STATUS (Standard completed, draft solange die App unveröffentlicht ist)
 #   Push:    FCM_API_KEY, FCM_PROJECT_ID, FCM_SENDER_ID, FCM_APP_ID_ANDROID, FCM_APP_ID_IOS
 # Der iOS-Teil steht in ios.yml; nur iOS bauen und nach TestFlight laden: testflight.yml («Run workflow»).
 # Ein Tag «mobile-v<Version>» (z. B. mobile-v1.2.0) setzt die Version und hängt die Pakete an ein GitHub-Release.
@@ -104,6 +106,32 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: mobile/app/out/*
+      # Upload in Google Play nur auf main, nur mit Release-Schlüssel und Dienstkonto (wie TestFlight bei iOS)
+      - name: Google Play prüfen
+        id: play
+        env:
+          SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Kein Upload in Google Play: nur auf main"
+          elif [ -z "$ANDROID_KEYSTORE_PATH" ]; then
+            echo "::warning::Kein Upload in Google Play: mit dem Debug-Schlüssel signiert"
+          elif [ -z "$SA" ]; then
+            echo "::warning::Kein Upload in Google Play: PLAY_SERVICE_ACCOUNT_JSON fehlt"
+          else
+            echo "go=1" >> "$GITHUB_OUTPUT"
+          fi
+      - name: In Google Play hochladen
+        if: steps.play.outputs.go == '1'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ch.swiftwaterrescue.app
+          releaseFiles: mobile/app/out/*.aab
+          releaseName: ${{ steps.ver.outputs.name }} (${{ github.run_number }})
+          track: ${{ vars.PLAY_TRACK || 'internal' }}
+          status: ${{ vars.PLAY_STATUS || 'completed' }}
 
   ios:
     needs: check
