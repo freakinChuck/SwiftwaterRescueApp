@@ -280,7 +280,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  /// Im Einsatz gilt die Wahl bis zum Einsatzende (v_base_<Konto>_<Einsatz>), ohne Einsatz v_base
+  /// Im Einsatz gilt die Wahl bis zum Einsatzende (`v_base_<Konto>_<Einsatz>`), ohne Einsatz `v_base`
   void setBase(String k) {
     if (!_hasMap(k)) return;
     base = k;
