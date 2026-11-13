@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../sys.dart';
+import '../version.dart';
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
@@ -488,6 +489,18 @@ class _PrefsPageState extends State<PrefsPage> {
     ]);
   }
 
+  // Version (Issue #175): App und Server, Hinweis bei veralteter App, «Was ist neu» vom Server des Kontos
+  Widget _version(J me) {
+    final v = me['version'] is Map ? jm(me['version']) : null, un = updateNote(v, js(me['app_min']));
+    return MCard(title: 'Version', buttons: [
+      OutlinedButton(onPressed: () => showChanges(context, s.api), child: const Text('Was ist neu')),
+      if (un != null) FilledButton(onPressed: openStore, child: const Text('Aktualisieren')),
+    ], children: [
+      Mkv([('App', appVerLabel), ('Server', verTxt(v))]),
+      if (un != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(un, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+    ]);
+  }
+
   Widget _legal() => MCard(title: 'Rechtliches', buttons: [
         OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#impressum'), child: const Text('Impressum')),
         OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#lizenzen'), child: const Text('Lizenzen')),
@@ -513,6 +526,7 @@ class _PrefsPageState extends State<PrefsPage> {
                   _alarm(me),
                   _anzeige(me),
                   ?_ai(me),
+                  _version(me),
                   _legal(),
                 ]));
           }));

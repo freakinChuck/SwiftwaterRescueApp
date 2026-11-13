@@ -440,7 +440,7 @@ function footInfo(){const i=st&&st.incident,m=i&&st.me,joined=!!(m&&!m.left_at&&
   if(csys()!=='none')rows.push(['Mein Standort',mp?`LV95 ${fmtC(mp.lat,mp.lon,'lv95')} · WGS84 ${fmtC(mp.lat,mp.lon,'wgs84dms')}${manual&&mp===lastPos?' (manuell gesetzt)':''}`:hereErr||'wird ermittelt …']);
   if(!i)rows.push(...infoRows());
   return rows.length?`<div class="foot">${rows.map(([k,v])=>`<div><b>${k}:</b> ${esc(v)}</div>`).join('')}</div>`:''}
-const infoRows=()=>[['Angemeldet',`${me.name} (${me.username}) · ${roleNames(me)}${me.exercise_mode?' · Übungsmodus an':''}`],['Server',location.host+location.pathname.replace(/[^/]*$/,'')]];
+const infoRows=()=>[['Angemeldet',`${me.name} (${me.username}) · ${roleNames(me)}${me.exercise_mode?' · Übungsmodus an':''}`],['Server',location.host+location.pathname.replace(/[^/]*$/,'')],['Version',verTxt(me.version)]].filter(r=>r[1]);
 // Register «Info»: alle aktuellen Rechte im Einsatz (nur Anzeige, massgebend sind die Prüfungen auf dem Server)
 function infoTab(){const i=st.incident,m=st.me,joined=!!(m&&!m.left_at&&m.mode!=='declined'),r=joined&&roles.find(x=>x.id==m.role_id),sh=joined&&shares(m.mode);
   const yes=[],no=[],add=(c,t)=>(c?yes:no).push(t);
@@ -1118,12 +1118,13 @@ function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.ac
     +`<h5>Übungsmodus</h5><label class="row" style="align-items:center;margin:0"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Einsatztypen, die das vorsehen (z. B. Übungen), kritisch alarmieren</span></label>${pushHtml()}</div>`
     +`<div class="pcard"><h4>Anzeige</h4><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label>${feat('nav')?`<label class="mut">Navigations-App (Knopf 🧭)<select id="navA"><option value="">Standard: ${esc(NAV_APPS[me.nav_default]||NAV_APPS.google)}</option>${(me.nav_apps||[]).filter(navOk).map(k=>`<option value="${k}" ${k===me.nav_app?'selected':''}>${esc(NAV_APPS[k])}</option>`).join('')}</select></label>`:''}</div>`
     +hyPrefs()+aiPrefs()
+    +`<div class="pcard"><h4>Version</h4>${mkv([['Version',esc(verTxt(me.version)||'unbekannt')],['Server',esc(location.host+location.pathname.replace(/[^/]*$/,''))]])}<div class="pbtns"><button id="bChg">Was ist neu</button></div></div>` // Issue #175
     +`<div class="pcard"><h4>Rechtliches</h4><div class="mut">Wer die App betreibt, welche Daten sie speichert und welche Lizenzen gelten.</div><div class="pbtns"><a class="btn" href="legal.html#impressum" target="_blank" rel="noopener">Impressum</a><a class="btn" href="legal.html#lizenzen" target="_blank" rel="noopener">Lizenzen</a><a class="btn" href="legal.html#datenschutz" target="_blank" rel="noopener">Datenschutz</a></div></div>`;
   // Issue #126: früher stand diese Prüfung doppelt; die zweite brach immer ab, Knöpfe und Abwesenheiten blieben ohne Funktion
   if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();sessMine();hyBindPrefs(p);
   p.querySelectorAll('[data-aisel]').forEach(x=>x.onchange=e=>{e.target.blur();const v={};p.querySelectorAll('[data-aisel]').forEach(y=>{if(y.value)v[y.dataset.aisel]=y.value});
     api('me/settings',{ai_modes:v}).then(()=>api('me')).then(r=>{me=r.me;prefsHtml='';prefsDraw();draw()}).catch(fail)});
-  $('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=async()=>{await pushOff(true);prefsHash();logout();stop();render()};bindPush();
+  $('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bChg').onclick=()=>changesDlg();$('#bOut').onclick=async()=>{await pushOff(true);prefsHash();logout();stop();render()};bindPush();
   $('#exm').onchange=e=>{const v=e.target.checked?1:0;api('me/settings',{exercise_mode:v}).then(()=>{me.exercise_mode=v;prefsHtml='';e.target.blur();return poll()}).catch(x=>{e.target.checked=!v;e.target.blur();fail(x)})};
   // eigenes Koordinatensystem ('' = Standard der Verwaltung); Kartenebenen neu aufbauen, damit Popups die neue Anzeige zeigen
   $('#csys').onchange=e=>{const v=e.target.value,old=me.coord_sys;e.target.blur();me.coord_sys=v||null;poiKey=resKey='';prefsHtml='';api('me/settings',{coord_sys:v}).then(poll).catch(x=>{me.coord_sys=old;fail(x);poll()})};
@@ -1138,6 +1139,7 @@ function absDone(){api('me').then(r=>{me.absent=r.me.absent;prefsHtml='';prefsDr
 async function render(){clearInterval(timer);if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
   try{me=(await api('me')).me}catch(e){if(e instanceof TypeError&&!bootOff&&bootOffline())return;if(e instanceof TypeError)setTimeout(render,5000);return} // offline: letzter Stand (Issue #67)
   if(me.must_change){$('#app').innerHTML='';return pwDialog(true,render)} // nach Zurücksetzen zuerst eigenes Passwort setzen
+  whatsNew(me.version); // nach einem Update einmal «Was ist neu» (Issue #175)
   try{roles=await api('roles');modes=await api('modes')}catch(e){return}
   lsSet('sw_boot',{uid:me.id,me,roles,modes});bootOff=false;pushSync().then(()=>{if($('#bPushOn,#bPushOff')||pushSt!=='?')draw()});
   shell();await poll();draw();timer=setInterval(poll,4000);if(location.hash==='#einstellungen')prefs(true);if(focusReq){focusReq=false;focusArea()}}

@@ -31,8 +31,9 @@ jobs:
         id: ver
         shell: bash
         run: |
-          v=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')
-          if [[ "$GITHUB_REF" == refs/tags/mobile-v* ]]; then v="${GITHUB_REF#refs/tags/mobile-v}"; fi
+          # Gemeinsame Version (Issue #175): Datei VERSION im Hauptordner, bei einem Release-Tag vX.Y.Z (bzw. älter mobile-vX.Y.Z) die Nummer des Tags
+          v=$(tr -d ' \r\n' < ../../VERSION)
+          if [[ "$GITHUB_REF" == refs/tags/mobile-v* ]]; then v="${GITHUB_REF#refs/tags/mobile-v}"; elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF#refs/tags/v}"; fi
           echo "name=$v" >> "$GITHUB_OUTPUT"
           # Build-Nummer aus Datum und Zeit (UTC, JJMMTThhmm): steigt über beide Workflows hinweg (Native Apps und TestFlight),
           # App Store Connect verlangt je Version eine höhere Nummer als die zuletzt hochgeladene
@@ -91,6 +92,8 @@ jobs:
             --dart-define=FCM_PROJECT_ID=${{ secrets.FCM_PROJECT_ID }}
             --dart-define=FCM_SENDER_ID=${{ secrets.FCM_SENDER_ID }}
             --dart-define=FCM_APP_ID_IOS=${{ secrets.FCM_APP_ID_IOS }}
+            --dart-define=APP_VERSION=${{ steps.ver.outputs.name }}
+            --dart-define=APP_BUILD=${{ steps.ver.outputs.build }}
           HAS_FCM: ${{ secrets.FCM_API_KEY != '' && secrets.FCM_PROJECT_ID != '' && secrets.FCM_SENDER_ID != '' && secrets.FCM_APP_ID_IOS != '' }}
         shell: bash
         run: |
@@ -147,9 +150,9 @@ jobs:
         if: always()
         shell: bash
         run: rm -rf ~/.appstoreconnect/private_keys
-      # Nur aus Native Apps (Tag mobile-v…), die TestFlight-Action hat kein Schreibrecht
+      # Nur aus Native Apps (Tag v… bzw. mobile-v…), die TestFlight-Action hat kein Schreibrecht
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/mobile-v') && github.workflow == 'Native Apps'
+        if: (startsWith(github.ref, 'refs/tags/mobile-v') || startsWith(github.ref, 'refs/tags/v')) && github.workflow == 'Native Apps'
         uses: softprops/action-gh-release@v2
         with:
           files: mobile/app/out/*

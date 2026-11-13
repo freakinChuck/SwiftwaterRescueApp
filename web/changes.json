@@ -1,0 +1,14 @@
+{
+  "versions": [
+    {
+      "version": "0.1.0",
+      "date": "2026-11-13",
+      "items": [
+        "Erste Version mit Versionsnummer: Die Version steht in der Web-App, in der Verwaltung, bei der Anmeldung und in der App (Issue #175).",
+        "«Was ist neu» zeigt nach einem Update die Änderungen seit der zuletzt gesehenen Version.",
+        "Hinweis «Neue Version verfügbar», wenn auf dem Server eine neuere Fassung der Web-App läuft.",
+        "Verwaltung → System → «Versionen»: Versionen der angemeldeten Apps und Mindestversion der App (Hinweis «Bitte App aktualisieren»)."
+      ]
+    }
+  ]
+}

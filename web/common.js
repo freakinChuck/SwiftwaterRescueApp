@@ -10,7 +10,7 @@ const swNative=(h,...a)=>{try{const w=window.flutter_inappwebview;if(w&&w.callHa
 function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHandler){const r=new FileReader();r.onload=()=>swNative('swSave',name,blob.type||'application/octet-stream',String(r.result).split(',')[1]||'');r.readAsDataURL(blob);return}
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download=name;document.body.appendChild(l);l.click();setTimeout(()=>{URL.revokeObjectURL(l.href);l.remove()},3000)}
 async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
-  const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
+  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
 // Applikationslog (Issue #139): Skriptfehler an den Server melden (nur angemeldet, höchstens 5 je Seitenaufruf, gleiche Meldung einmal; der Server begrenzt zusätzlich).
 // Nicht gemeldet: Fehler fremder Skripte ohne Angaben («Script error.»), Verbindungsabbrüche (offline) und abgelehnte API-Antworten (stehen schon im Log bzw. sind Eingabefehler).
@@ -190,13 +190,34 @@ const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
 const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
 const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
-const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon','cfg_conn','applog']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon','cfg_conn','applog','versions']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 // Abmelden: Server meldet die Sitzung ab (Gerätesitzung der App bzw. Browser-Token, Route logout), danach die App benachrichtigen (beendet das Konto, Issue #108)
 function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});
   token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k));swNative('swLogout')} // letzter Stand gehört der abgemeldeten Person
+/* ---------- Versionen (Issue #175) ---------- */
+// Stand dieser Seite = ?v= von common.js (deploy.ps1 setzt den Commit ein, im Repo 0 = unbekannt). Der Server liefert seinen Stand im Header X-Build (api());
+// weicht er ab, ist inzwischen eine neuere Fassung ausgeliefert: Hinweis «Neue Version verfügbar» mit «Neu laden», einmal je Seitenaufruf («Später» blendet ihn aus).
+const BUILD=(()=>{try{const m=/[?&]v=([0-9a-z]+)/.exec(document.currentScript.src);return m&&m[1]!=='0'?m[1]:''}catch(e){return''}})();
+let verNewShown=false;
+function verNew(b){if(verNewShown||!BUILD||!b||b===BUILD||!document.body)return;verNewShown=true;const d=document.createElement('div');d.id='verNew';d.setAttribute('role','status');
+  d.innerHTML='<span>Neue Version verfügbar.</span><button class="pri" data-r>Neu laden</button><button data-x>Später</button>';
+  d.querySelector('[data-r]').onclick=()=>location.reload();d.querySelector('[data-x]').onclick=()=>d.remove();document.body.appendChild(d)}
+// Anzeige der Version (verPub im Server): Produktiv nur die Nummer, sonst mit Abstand, Commit und System, z. B. «0.1.0+12.abc1234 · Test»
+const verTxt=v=>v&&v.version?v.full+(v.env&&v.env!=='prod'?' · '+(v.env_name||v.env)+(v.pr?' PR '+v.pr:''):''):'';
+const verParse=s=>String(s||'').split(/[^0-9.]/)[0].split('.').map(Number);
+function verCmp(a,b){const x=verParse(a),y=verParse(b);for(let i=0;i<3;i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0}
+// «Was ist neu» (Route changes, Datei changes.json): since = nur Versionen danach; quiet = ohne Fehlermeldung und ohne Dialog, wenn nichts Neues
+const changesHtml=vs=>vs.length?vs.map(v=>`<h3 class="chv">Version ${esc(v.version)}${v.date?` <small class="mut">${esc(v.date.split('-').reverse().join('.'))}</small>`:''}</h3><ul class="chl">${v.items.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`).join(''):'<div class="mut">Keine Angaben.</div>';
+async function changesDlg(since,quiet){let r;try{r=await api('changes')}catch(e){if(!quiet)fail(e);return}
+  const vs=r.versions.filter(v=>!since||verCmp(v.version,since)>0);if(quiet&&!vs.length)return;
+  const d=dlg('Was ist neu',`<div class="chw">${changesHtml(vs)}</div>`,()=>{},'OK');d.querySelector('[data-x]').remove()}
+// Nach einem Update einmal «Was ist neu» mit den Versionen seit der zuletzt gesehenen (pro Gerät, sw_seenver); beim allerersten Öffnen nur merken
+function whatsNew(v){if(!v||!v.version||v.version==='0.0.0')return;let seen='';try{seen=localStorage.getItem('sw_seenver')||'';localStorage.setItem('sw_seenver',v.version)}catch(e){return}
+  if(seen&&verCmp(v.version,seen)>0)changesDlg(seen,true)}
 /* ---------- Anmeldung ---------- */
-function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a></div>`;
+function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
+  fetch(`${API}?r=version`).then(r=>r.json()).then(v=>{const e=$('#lgVer');if(e&&v.version)e.textContent='Version '+verTxt(v)}).catch(()=>{}); // Version auch ohne Anmeldung (Issue #175)
   const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 /* ---------- Dialoge ---------- */

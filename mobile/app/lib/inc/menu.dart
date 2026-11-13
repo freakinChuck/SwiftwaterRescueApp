@@ -7,12 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../version.dart';
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
 
 /// Rechte mit einem Bereich in der Verwaltung (ADMIN_PERMS in common.js)
-const _adminPerms = ['users', 'uroles', 'groups', 'avail', 'cfg_inc', 'ex_plan', 'cfg_func', 'cfg_ai', 'cfg_map', 'stats', 'cfg_my', 'aar', 'aar_rel', 'aar_cfg', 'aar_arch', 'legal', 'anon'];
+const _adminPerms = ['users', 'uroles', 'groups', 'avail', 'cfg_inc', 'ex_plan', 'cfg_func', 'cfg_ai', 'cfg_map', 'stats', 'cfg_my', 'aar', 'aar_rel', 'aar_cfg', 'aar_arch', 'legal', 'anon', 'cfg_conn', 'applog', 'versions'];
 
 /// Arten der Übungselemente (EXK)
 const _exk = {'pls': 'PLS des Einsatzes', 'res': 'Neuer Rettling', 'seen': 'Rettling gesichtet', 'ext': 'Neue externe Einsatzkraft', 'extdel': 'Externe Einsatzkraft entfernen'};
@@ -38,6 +39,15 @@ class _IncMenuState extends State<IncMenu> {
   final _flFocus = FocusNode();
   String? _flSrv;
   final _busy = <String>{};
+  bool _updLater = true; // Hinweis «Bitte App aktualisieren» bis zur Prüfung von «Später» ausgeblendet (Issue #175)
+
+  @override
+  void initState() {
+    super.initState();
+    updateLater().then((v) {
+      if (mounted) setState(() => _updLater = v);
+    });
+  }
 
   @override
   void dispose() {
@@ -64,6 +74,8 @@ class _IncMenuState extends State<IncMenu> {
     if (s.offline) top.add(_offline(c));
     final abs = st?['my_abs'] is Map ? jm(st!['my_abs']) : null;
     if (abs != null) top.add(_absNote(c, abs));
+    final un = _updLater ? null : updateNote(s.me?['version'] is Map ? jm(s.me!['version']) : null, js(s.me?['app_min']));
+    if (un != null) top.add(_updNote(un));
     Widget body;
     if (st != null && jb(st['blocked'])) {
       body = ListView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), children: [
@@ -136,6 +148,17 @@ class _IncMenuState extends State<IncMenu> {
     final u = jn(a['until_at']);
     return '${a['kind'] == 'sus' ? 'ausgesetzt' : 'abwesend'} ${u == null ? 'bis auf Weiteres' : 'bis ${fmtDT(u)}'}';
   }
+
+  // Hinweis für ältere Apps (Issue #175): Mindestversion des Servers bzw. höhere API-Stufe; «Später» blendet ihn 7 Tage aus
+  Widget _updNote(String t) => MCard(color: accOrange.withValues(alpha: .25), children: [
+        Text(t, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ], buttons: [
+        smallBtn('Aktualisieren', openStore, primary: true),
+        smallBtn('Später', () async {
+          await setUpdateLater();
+          if (mounted) setState(() => _updLater = true);
+        }),
+      ]);
 
   Widget _absNote(BuildContext c, J a) => MCard(children: [
         Row(children: [

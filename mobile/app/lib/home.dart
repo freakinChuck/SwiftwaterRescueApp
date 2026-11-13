@@ -13,6 +13,7 @@ import 'notify.dart';
 import 'push.dart';
 import 'service.dart';
 import 'sys.dart';
+import 'version.dart';
 
 void snack(BuildContext c, String t) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(t), duration: const Duration(seconds: 3)));
 
@@ -43,6 +44,8 @@ class _HomeState extends State<HomePage> {
   List<Account> _acc = [];
   Map<String, AccState> _st = {};
   Map<String, String> _push = {};
+  final Map<String, Map> _ver = {}; // Version je Konto (Route version, ohne Anmeldung): Hinweis «Bitte App aktualisieren» (Issue #175)
+  bool _newShown = false;
   Timer? _t;
   StreamSubscription? _sub;
   bool _loaded = false;
@@ -76,11 +79,29 @@ class _HomeState extends State<HomePage> {
       _push = pu;
       _loaded = true;
     });
+    if (!_newShown) {
+      _newShown = true;
+      _checkVersions();
+      final a = l.where((x) => !x.loggedOut).firstOrNull;
+      if (a != null) whatsNew(context, a.api); // nach einem App-Update einmal «Was ist neu»
+    }
+  }
+
+  /// Version und Mindestversion jedes Servers (beim Start der Kontenliste und beim Aktualisieren)
+  Future<void> _checkVersions() async {
+    for (final a in _acc) {
+      try {
+        final v = await Api(a.base).call('version', timeout: const Duration(seconds: 10));
+        _ver[a.id] = v;
+      } catch (_) {}
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _refresh() async {
     await pollAll();
     await _load();
+    await _checkVersions();
   }
 
   Future<void> _changed() async {
@@ -172,6 +193,15 @@ class _HomeState extends State<HomePage> {
         _ => pushIssue != null ? 'Push: $pushIssue' : null,
       };
       if (pt != null) rows.add(Text(pt, style: TextStyle(fontSize: 12, color: p == 'server' ? th.hintColor : th.colorScheme.error)));
+      final v = _ver[a.id], un = updateNote(v, v == null ? null : '${v['app_min'] ?? ''}');
+      if (un != null) {
+        rows.add(Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(children: [
+              Expanded(child: Text(un, style: TextStyle(fontSize: 12, color: th.colorScheme.error))),
+              TextButton(onPressed: openStore, child: const Text('Aktualisieren')),
+            ])));
+      }
     }
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
@@ -246,9 +276,8 @@ class _HomeState extends State<HomePage> {
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text(
-                            Platform.isAndroid
-                                ? 'Aktive Konten werden im Hintergrund abgefragt (Anzeige «Bereit für Alarme»).'
-                                : 'Bei geschlossener App kommen Alarme nur über Push, sofern der Server ihn eingerichtet hat.',
+                            '${Platform.isAndroid ? 'Aktive Konten werden im Hintergrund abgefragt (Anzeige «Bereit für Alarme»).' : 'Bei geschlossener App kommen Alarme nur über Push, sofern der Server ihn eingerichtet hat.'}'
+                            '\nApp-Version $appVerLabel',
                             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
                             textAlign: TextAlign.center),
                       ),
@@ -485,13 +514,27 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               _load();
             }),
         ListTile(leading: const Icon(Icons.app_settings_alt), title: const Text('Systemeinstellungen der App'), onTap: openAppSettings),
+        ListTile(
+            leading: const Icon(Icons.new_releases_outlined),
+            title: const Text('Was ist neu'),
+            subtitle: Text('Version $appVerLabel'),
+            onTap: () async {
+              // Release Notes vom Server des ersten Kontos (Route changes, Issue #175)
+              final l = (await Accounts.load()).where((a) => !a.loggedOut).toList();
+              if (!context.mounted) return;
+              if (l.isEmpty) {
+                snack(context, 'Zuerst ein Backend hinzufügen');
+                return;
+              }
+              await showChanges(context, l.first.api);
+            }),
         const Divider(),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
               'Push: ${pushBuilt ? 'in dieser App eingebaut, aktiv auf allen Backends, die ihn eingerichtet haben' : 'in dieser App nicht eingebaut'}.\n'
               '${Platform.isIOS ? 'iOS erlaubt keine Abfrage im Hintergrund: Bei geschlossener App kommen Alarme nur über Push. Kritische Alarme umgehen «Nicht stören» nur mit der Berechtigung für kritische Hinweise.' : 'Die App fragt alle aktiven Backends in einem Vordergrunddienst ab, auch bei geschlossener App und nach einem Neustart.'}\n\n'
-              'Version $appUa',
+              'Version $appVerLabel',
               style: hint),
         ),
       ]),

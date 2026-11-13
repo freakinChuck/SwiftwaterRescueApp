@@ -16,3 +16,4 @@ node_modules/
 web/api/data/fcm_token.json
 web/api/data/firebase-service-account.json
 *service-account*.json
+web/api/data/version.json
