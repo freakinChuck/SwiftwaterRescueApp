@@ -63,9 +63,9 @@ function baseSaved(key){let sv=null;try{sv=localStorage.getItem(key||'sw_base')}
 const PM_JS='https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js';let pmLoad=null;
 function pmLib(){return pmLoad=pmLoad||new Promise((ok,no)=>{const s=document.createElement('script');s.src=PM_JS;s.onload=()=>window.protomapsL?ok(window.protomapsL):no(new Error('Kartenbibliothek fehlt'));s.onerror=()=>{pmLoad=null;no(new Error('Die Kartenbibliothek konnte nicht geladen werden (Verbindung?)'))};document.head.appendChild(s)})}
 const PM_WATER='#1f6fd1',pmW=(z,a,b)=>z<a?0:Math.min(b,(z-a+1)*b/6);
-function vecLayer(P){const g=L.layerGroup();g.getAttribution=()=>P.attr;
-  pmLib().then(pm=>{const ly=pm.leafletLayer({url:new URL(P.url,location.href).href,flavor:'light',lang:'de',maxZoom:P.max||19,maxDataZoom:P.nat||15,...(P.bounds?{bounds:P.bounds}:{})});
-    try{const R=ly.paintRules,i=R.reduce((n,r,j)=>r.dataLayer==='water'?j:n,-1);
+function vecLayer(P){const g=L.layerGroup();
+  pmLib().then(pm=>{const ly=pm.leafletLayer({url:new URL(P.url,location.href).href,attribution:P.attr,flavor:'light',lang:'de',maxZoom:P.max||19,maxDataZoom:P.nat||15,...(P.bounds?{bounds:P.bounds}:{})});
+    try{const R=ly.paintRules,i=R.findIndex(r=>r.dataLayer==='water'); // direkt nach der Wasserfläche, also unter Strassen und Brücken
       R.forEach(r=>{if(r.dataLayer==='water'&&r.symbolizer instanceof pm.PolygonSymbolizer)r.symbolizer=new pm.PolygonSymbolizer({fill:'#7fb8ea'})});
       R.splice(i+1,0,{dataLayer:'water',symbolizer:new pm.LineSymbolizer({color:PM_WATER,width:(z,f)=>{const k=f&&f.props&&f.props.kind;return k==='stream'||k==='ditch'?pmW(z,12,3):pmW(z,8,7)}}),filter:(z,f)=>f.geomType===2&&['river','canal','stream'].includes(f.props.kind)})}catch(e){}
     g.addLayer(ly)}).catch(fail);

@@ -82,6 +82,7 @@ h3.lgh{margin:1rem 0 .2rem;font-size:.95rem}details.lgd{margin-top:1rem;border-t
 #sAi label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0}
 #sMail label.chk{display:flex;flex-direction:row;align-items:center;gap:.4rem}#sMail .mut>label.chk{display:inline-flex}#sMail label.chk input{margin:0;flex:none}#sMail label.chk .gdot{margin:0;flex:none} /* E-Mail-Alarm: Farbpunkt auf der Zeile des Häkchens */
 .pgf{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.4rem 1rem;max-width:46rem;margin:.5rem 0}.pgf label{display:flex;flex-direction:column;gap:.25rem;margin:0}.pgf input,.pgf select{margin:0;width:100%;box-sizing:border-box}
+#sMp .mpr.off{opacity:.65}#sMp .mpb{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:.3rem 0}#sMp .mpb button{flex:0 0 auto;width:auto;min-width:2.4rem;padding:.3rem .7rem;margin:0}#sMp .mpb label{margin-right:auto!important}#sMp .chip{font-size:.72rem;padding:.05rem .4rem;border-radius:.6rem;background:var(--chip,rgba(127,127,127,.18))}#sMp .mpimg{width:96px;height:96px;vertical-align:middle;border-radius:4px;margin-left:.4rem}#sMp table.mpk{border-collapse:collapse}#sMp table.mpk td,#sMp table.mpk th{padding:.25rem .5rem;text-align:center;border-bottom:1px solid rgba(127,127,127,.25)}#sMp table.mpk td:first-child,#sMp table.mpk th:first-child{text-align:left}#sMp .tblw{overflow-x:auto}
 #sO label.chk,#sHy label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
 #sAi .aiflds{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:.6rem;margin:.4rem 0 .6rem}#sAi .aifld{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem;margin:.4rem 0}#sAi .aiflds .aifld{margin:0}#sAi .aifld>label:first-child,#sAi .aifld>b{font-weight:600}#sAi .aifld input,#sAi .aifld select{margin:0;width:100%}#sAi .aifld .h{color:var(--mut);font-size:.82rem}#sAi .aifld label.chk{margin:.1rem 0}
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
@@ -133,6 +134,7 @@ const roleWire=el=>{const bs=[...el.querySelectorAll('.urb')],n=el.querySelector
 const roleVal=el=>[...el.querySelectorAll('[data-ur]')].filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>+c.dataset.ur);
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
+  mapsSet(me.maps,me.map_def); // Kartenanbieter für die kleinen Karten (Issue #106)
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   if(!nav().length&&me.my_runs==='off'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Deine Benutzerrollen geben dir keinen Zugriff auf die Verwaltung.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   MY=myMode();const adm=nav().length>0;
@@ -156,14 +158,14 @@ const NAV=[
   ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt],['symbole','sSy','Einsatzsymbole',loadSym]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['ai','sAi','AI-Assistent',loadAi]]],
-  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces]]],
+  ['Karte & Daten',[['karten','sMp','Kartenanbieter',loadMaps],['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
   ['Konnektivität',[['emailalarm','sMail','E-Mail-Alarm',loadMail]]],
   ['System',[['applog','sAL','Applikationslog',loadAppLog]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -678,6 +680,57 @@ function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000
     $('#aiSv').disabled=true;try{const r=await api('ai/cfg/save',p);toast(r.ready?'Gespeichert. Der AI-Assistent ist eingerichtet.':'Gespeichert.');me=(await api('me')).me;loadAi()}catch(e){fail(e);$('#aiSv').disabled=false}};
   $('#aiT').onclick=async()=>{const b=$('#aiT'),o=$('#aiTr');b.disabled=true;o.textContent='Teste die gespeicherte Einstellung …';
     try{const r=await api('ai/test',{});o.innerHTML=`✓ Antwort in ${n(r.ms)} ms von <b>${esc(r.model)}</b>: «${esc(r.text)}»${r.tokens?` · ${n(r.tokens)} Tokens`:''}`}catch(e){o.innerHTML=`<span class="aierr">⚠ ${esc(e.message)}</span>`}b.disabled=false}}
+/* ---------- Kartenanbieter (Issue #106): Katalog MAP_SOURCES (Ein/Aus, Reihenfolge, Standard, Test im Browser) und je Einsatztyp (ausgeschaltete, Standardkarte) ---------- */
+// Einstellung maps {order, on, def} und je Einsatztyp map_off/map_def (settings/save mit maps und map_kinds), gespeichert erst mit «Speichern»
+let mpS=null,mpC=null,mpK={};
+const MP_KIND={sat:'Luftbild',topo:'Karte',street:'Strassenkarte',vec:'Vektorkarte'};
+const mpSrc=k=>mpS.map_sources.find(x=>x.k===k);
+async function loadMaps(){const el=$('#sMp');try{mpS=await api('settings')}catch(e){el.innerHTML='<h2>Kartenanbieter</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  mpC=JSON.parse(JSON.stringify(mpS.maps));mpK={};(mpS.kinds||[]).forEach(k=>mpK[k.id]={off:[...(k.map_off||[])],def:k.map_def||null});drawMaps()}
+// Beispielkachel: Mitte der Abdeckung, sonst Bern; Zoom 13 (Sentinel-2 höchstens dessen Zoom)
+function mpTile(S){const b=S.bounds,la=b?(b[0][0]+b[1][0])/2:46.948,lo=b?(b[0][1]+b[1][1])/2:7.447,z=Math.min(13,S.nat||13),n=2**z,r=la*Math.PI/180;
+  const x=Math.floor((lo+180)/360*n),y=Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n);
+  return S.url.replace('{s}',(S.sub||'a')[0]).replace('{z}',z).replace('{x}',x).replace('{y}',y)}
+const mpMB=b=>b<1048576?Math.ceil(b/1024)+' KB':(b/1048576).toLocaleString('de-CH',{maximumFractionDigits:0})+' MB';
+function mpOwnInfo(){const o=mpS.map_own;if(!o)return'<div class="mut">⚠ Datei <code>tiles/osm.pmtiles</code> fehlt im Webroot. Erzeugen und hochladen mit den Skripten in <code>scripts/tiles/</code>; bis dahin ist diese Karte nicht wählbar.</div>';
+  const b=o.bounds;return`<div class="mut">Datei vorhanden: ${mpMB(o.size)}, Stand ${new Date(o.mtime*1000).toLocaleDateString('de-CH')}, Zoom ${o.minz}–${o.maxz}, Ausschnitt ${b[0]}–${b[2]}° N, ${b[1]}–${b[3]}° O${o.type!==1?' · <b>⚠ keine Vektorkacheln (MVT), nicht wählbar</b>':''}</div>`}
+function drawMaps(){const el=$('#sMp'),c=mpC,ks=mpS.kinds||[];
+  const row=(k,i)=>{const S=mpSrc(k);if(!S)return'';const on=c.on.includes(k),comb=S.combo?mpS.map_combo.map(x=>mpSrc(x)).filter(Boolean):null;
+    return`<div class="inc mpr${on?'':' off'}" style="display:block;padding:.5rem .7rem"><label class="chk" style="margin:0"><input type="checkbox" data-mo="${k}" ${on?'checked':''}> <b>${esc(S.label)}</b> <span class="chip">${MP_KIND[S.kind]||S.kind}</span> <span class="mut">${esc(S.area)}</span></label>
+      <div class="mpb"><label class="chk" style="margin:0"><input type="radio" name="mpdef" value="${k}" ${c.def===k?'checked':''} ${on?'':'disabled'}> Standard</label>
+      <button data-mu="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button data-md="${i}" ${i<c.order.length-1?'':'disabled'} aria-label="Nach unten">↓</button>${comb?'':`<button data-mt="${k}">Testen</button>`}</div>
+      <div class="mut">${comb?'Teile (unten zuerst): '+comb.map(x=>esc(x.label)+(c.on.includes(x.k)?'':' (aus)')).join(', ')+'. Nur eingeschaltete werden verwendet, mindestens zwei.':`Lizenz: ${esc(S.lic)}${S.terms?` · <a href="${esc(S.terms)}" target="_blank" rel="noopener">Nutzungsbedingungen</a>`:''}${S.site?` · <a href="${esc(S.site)}" target="_blank" rel="noopener">${esc(S.site.replace(/^https:\/\//,''))}</a>`:''}`}</div>
+      <div class="mut">⚠ ${esc(S.note)}</div>${S.vec?mpOwnInfo():''}<div class="mut mpt" id="mt_${k}"></div></div>`};
+  const kon=ks.length?`<h3>Je Einsatztyp</h3><div class="mut">Im Einsatz gelten die hier eingeschalteten Karten seines Typs, sofort, auch im laufenden Einsatz. Beim Öffnen eines Einsatzes zeigt die Karte die Standardkarte des Typs; danach kann jede Person umschalten, die Wahl gilt bis zum Einsatzende. Ohne Einsatz gilt die Liste oben.</div>
+    <div class="tblw"><table class="mpk"><thead><tr><th>Kartenanbieter</th>${ks.map(k=>`<th>${kindBadge({kind_name:k.name,kind_color:k.color})}</th>`).join('')}</tr></thead><tbody>
+    ${c.order.filter(k=>c.on.includes(k)).map(k=>`<tr><td>${esc(mpSrc(k).label)}</td>${ks.map(t=>`<td><input type="checkbox" data-mkt="${t.id}" data-mkk="${k}" aria-label="${esc(mpSrc(k).label)} bei ${esc(t.name)}" ${mpK[t.id].off.includes(k)?'':'checked'}></td>`).join('')}</tr>`).join('')}
+    <tr><td><b>Standardkarte</b></td>${ks.map(t=>{const av=c.order.filter(k=>c.on.includes(k)&&!mpK[t.id].off.includes(k));return`<td><select data-mkd="${t.id}" aria-label="Standardkarte bei ${esc(t.name)}"><option value="">wie oben (${esc((mpSrc(c.def)||{}).label||'')})</option>${av.map(k=>`<option value="${k}" ${mpK[t.id].def===k?'selected':''}>${esc(mpSrc(k).label)}</option>`).join('')}</select></td>`}).join('')}</tr></tbody></table></div>`:'';
+  el.innerHTML=`<h2>Kartenanbieter</h2><div class="mut">Grundkarten der Einsatz-App, der öffentlichen Ansicht, des Replays und der Karten hier in der Verwaltung. Die Geräte laden die Kacheln direkt beim Anbieter; er sieht dabei die IP-Adresse und den Kartenausschnitt (steht in der Datenschutzerklärung). Alle Anbieter sind gratis und ohne Schlüssel; die Bedingungen der Betreiber gelten, einige erlauben nur nicht-kommerzielle Nutzung.</div>
+    <h3>Anbieter</h3><div class="mut">Eingeschaltete stehen im Fenster «Ansicht» zur Wahl, in dieser Reihenfolge (nach Luftbildern und Karten gruppiert). Der Standard gilt ohne Einsatz und für Einsatztypen ohne eigene Standardkarte. «Testen» lädt im Browser eine Beispielkachel.</div>
+    ${c.order.map(row).join('')}${kon}
+    <div class="row"><button id="mpSv" class="pri">Speichern</button><button id="mpDf">Standard wiederherstellen</button><button id="mpRl">Verwerfen</button></div>`;
+  el.onchange=e=>{const t=e.target;if(t.dataset.mo){const k=t.dataset.mo;c.on=c.order.filter(x=>x===k?t.checked:c.on.includes(x));if(!c.on.includes(c.def))c.def=c.on[0]||'';drawMaps()}
+    else if(t.name==='mpdef')c.def=t.value;
+    else if(t.dataset.mkt){const o=mpK[t.dataset.mkt];o.off=t.checked?o.off.filter(x=>x!==t.dataset.mkk):[...o.off,t.dataset.mkk];if(o.def&&o.off.includes(o.def))o.def=null;drawMaps()}
+    else if(t.dataset.mkd)mpK[t.dataset.mkd].def=t.value||null};
+  el.onclick=async e=>{const b=e.target.closest('button');if(!b)return;const mv=(i,d)=>{const o=c.order;[o[i],o[i+d]]=[o[i+d],o[i]];c.on=o.filter(k=>c.on.includes(k));drawMaps()};
+    if(b.dataset.mu)mv(+b.dataset.mu,-1);else if(b.dataset.md)mv(+b.dataset.md,1);
+    else if(b.dataset.mt)mpTest(b.dataset.mt,b);
+    else if(b.id==='mpRl')loadMaps();
+    else if(b.id==='mpDf'){if(confirm('Standard wiederherstellen (noch nicht gespeichert)? Die Einstellungen je Einsatztyp bleiben.')){c.order=mpS.map_sources.map(x=>x.k);c.on=mpS.map_sources.filter(x=>x.def).map(x=>x.k);c.def=mpS.map_default;drawMaps()}}
+    else if(b.id==='mpSv'){if(!c.on.length)return toast('Mindestens ein Kartenanbieter muss eingeschaltet bleiben.','err');
+      const mk={};ks.forEach(t=>{const o=mpK[t.id];mk[t.id]={off:o.off.filter(k=>c.on.includes(k)),def:o.def&&c.on.includes(o.def)?o.def:null}});
+      const bad=ks.find(t=>!c.on.some(k=>!mk[t.id].off.includes(k)));if(bad)return toast(`Für «${bad.name}» muss mindestens ein Kartenanbieter eingeschaltet bleiben.`,'err');
+      b.disabled=true;api('settings/save',{maps:c,map_kinds:mk}).then(async()=>{toast('Gespeichert. Gilt sofort, die Geräte übernehmen es mit der nächsten Aktualisierung.');try{me=(await api('me')).me;mapsSet(me.maps,me.map_def)}catch(_){}loadMaps()}).catch(x=>{fail(x);b.disabled=false})}}}
+// Test im Browser, weil auch die Geräte die Kacheln direkt laden: Beispielkachel als Bild bzw. Kopf der PMTiles-Datei (Range-Abfrage)
+async function mpTest(k,b){const S=mpSrc(k),o=$('#mt_'+k),t0=performance.now();b.disabled=true;o.textContent='Wird geladen …';
+  try{if(S.vec){const r=await fetch(new URL(S.url,location.href).href,{headers:{Range:'bytes=0-126'},cache:'no-store'});const ms=Math.round(performance.now()-t0);
+      if(!r.ok)throw new Error('Datei nicht gefunden (HTTP '+r.status+')');const a=new Uint8Array(await r.arrayBuffer());
+      if(String.fromCharCode(...a.slice(0,7))!=='PMTiles')throw new Error('Keine PMTiles-Datei');
+      o.innerHTML=`✓ Antwort in ${ms} ms, Version ${a[7]}, Zoom ${a[100]}–${a[101]}${r.status===206?', Teilabfragen (Range) funktionieren':' · <b>⚠ der Server liefert keine Teilabfragen (HTTP '+r.status+'), die Karte lädt dann die ganze Datei</b>'}.`}
+    else{const u=mpTile(S);await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('Keine Kachel erhalten (gesperrt, nicht erreichbar oder ausserhalb der Abdeckung)'));i.src=u;
+        i.alt='Beispielkachel';i.className='mpimg';i.addEventListener('load',()=>{o.innerHTML=`✓ Kachel in ${Math.round(performance.now()-t0)} ms geladen: `;o.appendChild(i)},{once:true})});}}
+  catch(x){o.textContent='✗ '+x.message}b.disabled=false}
 /* ---------- Helikopter (Issue #73): Datenquellen (Reihenfolge, Ein/Aus, Test), Filter, Sichtbarkeit je Ansicht, Relevanzzone, Rettungshelikopter ---------- */
 // Alles in der Einstellung air (JSON), gespeichert erst mit «Speichern»; der Server prüft die Werte (airIn)
 let airS=null,airC=null;
@@ -1543,9 +1596,8 @@ async function openReplay(id,o={}){let d;try{d=await api('incident/replay&id='+i
   const plsLog=d.log.filter(x=>x.kind==='pls'),plsOn=t=>{const x=plsLog.filter(x=>x.ts<=t).pop();return x?!/^entfernt/.test(x.text):!plsLog.length||!/^setzt/.test(plsLog[0].text)};
   const pls=[...(i.lat!=null?[[i.lat,i.lon,'PLS',plsOn]]:[]),...d.rescuees.filter(r=>r.pls_lat!=null).map(r=>[r.pls_lat,r.pls_lon,'PLS '+r.name,t=>r.created<=t&&(r.removed==null||t<r.removed)])];
   const map=L.map('rpMap',{zoomControl:true}).setView(pls.length?[pls[0][0],pls[0][1]]:[46.8,8.2],pls.length?14:8),bases={};
-  // Grundkarte über das Fenster «Ansicht» (Issue #53) statt des Leaflet-Ebenenmenüs, gemerkt in sw_base wie in der Einsatz-App
-  Object.entries(MAP_PROVIDERS).forEach(([k,P])=>bases[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
-  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}const baseKey=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;bases[baseKey].addTo(map);
+  // Grundkarte über das Fenster «Ansicht» (Issue #53) statt des Leaflet-Ebenenmenüs, gemerkt in sw_base wie in der Einsatz-App; Anbieter des Einsatztyps (Issue #106), closeReplay stellt die eigenen wieder her
+  mapsSet(d.maps,d.map_def);Object.assign(bases,mapBases());const baseKey=baseSaved();bases[baseKey].addTo(map);
   pls.forEach(p=>p.mk=L.circleMarker([p[0],p[1]],{radius:rz(9),color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:1}).bindTooltip(esc(p[2]),{permanent:true,direction:'right',className:'rplbl'}));
   // Personen: Verlauf je Person, Farbe der Spezialrolle (Stand Einsatzende)
   // Aufgezeichnete Zeiträume [start, stop]; ausserhalb (Pause/aus) keine Standorte, Spuren und Interpolation enden dort
@@ -1585,7 +1637,7 @@ async function openReplay(id,o={}){let d;try{d=await api('incident/replay&id='+i
   if(!d.track.length)$('#rpInfo').insertAdjacentHTML('afterend','<div class="mut">Keine Standortmeldungen aufgezeichnet.</div>');
   if(o.t!=null)rp.t=Math.max(t0,Math.min(t1,o.t));
   drawReplay()}
-function closeReplay(){if(!rp)return;clearInterval(rp.timer);rp.map.remove();rp=null;const o=$('#replay');if(o)o.remove()}
+function closeReplay(){if(!rp)return;clearInterval(rp.timer);rp.map.remove();rp=null;mapsSet(me.maps,me.map_def);const o=$('#replay');if(o)o.remove()}
 function playReplay(on){if(!rp)return;if(on&&rp.t>=rp.t1)rp.t=rp.t0;rp.play=on;$('#rpPlay').textContent=on?'❚❚ Pause':'▶ Abspielen';clearInterval(rp.timer);
   if(on){rp.last=performance.now();rp.timer=setInterval(()=>{const n=performance.now(),dt=(n-rp.last)/1000;rp.last=n;rp.t=Math.min(rp.t1,rp.t+dt*+$('#rpSpd').value);if(rp.t>=rp.t1)playReplay(false);drawReplay()},200)}}
 function rpFollow(id){rp.follow=id;rp.pKey=null;rp.auto=false;drawReplay()}
