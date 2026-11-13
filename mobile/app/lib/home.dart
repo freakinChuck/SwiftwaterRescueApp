@@ -11,8 +11,10 @@ import 'main.dart';
 import 'monitor.dart';
 import 'notify.dart';
 import 'push.dart';
+import 'sounds.dart';
 import 'service.dart';
 import 'sys.dart';
+import 'track.dart';
 
 void snack(BuildContext c, String t) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(t), duration: const Duration(seconds: 3)));
 
@@ -32,6 +34,15 @@ String _ago(int ms) {
   return 'um ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }
 
+/// Zeile «Standort» in der Kontenliste: Stand des Teilens im laufenden Einsatz (track.dart), (Text, Fehler?).
+(String, bool)? _locText(LocStat? l, int? inc) {
+  if (l == null || l.inc != inc) return ('Standort: noch nicht gesendet', false);
+  if (l.off) return ('Standort: wird nicht geteilt${l.offWhy != null ? ' (${l.offWhy})' : ''}', false);
+  final e = l.err;
+  if (e != null && l.fails > 0) return ('Standort: Fehler: $e · zuletzt gesendet ${_ago(l.ok)}', true);
+  return ('Standort: zuletzt gesendet ${_ago(l.ok)}', false);
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.onIntervalChanged});
   final VoidCallback onIntervalChanged;
@@ -43,6 +54,7 @@ class _HomeState extends State<HomePage> {
   List<Account> _acc = [];
   Map<String, AccState> _st = {};
   Map<String, String> _push = {};
+  Map<String, LocStat> _loc = {};
   Timer? _t;
   StreamSubscription? _sub;
   bool _loaded = false;
@@ -64,22 +76,25 @@ class _HomeState extends State<HomePage> {
 
   Future<void> _load() async {
     final l = await Accounts.load();
-    final st = <String, AccState>{}, pu = <String, String>{};
+    final st = <String, AccState>{}, pu = <String, String>{}, lo = <String, LocStat>{};
     for (final a in l) {
       st[a.id] = await accState(a.id);
       pu[a.id] = await pushStatus(a);
+      lo[a.id] = await locStat(a.id);
     }
     if (!mounted) return;
     setState(() {
       _acc = l;
       _st = st;
       _push = pu;
+      _loc = lo;
       _loaded = true;
     });
   }
 
   Future<void> _refresh() async {
-    await pollAll();
+    await pollAll(track: Platform.isIOS); // Android: Standort teilt nur der Vordergrunddienst
+    await syncService();
     await _load();
   }
 
@@ -107,6 +122,8 @@ class _HomeState extends State<HomePage> {
     if (!a.loggedOut) await a.api.logout();
     await Accounts.remove(a.id);
     await clearState(a.id);
+    await forgetSnd(a.id);
+    await clearLocStat(a.id);
     await _changed();
   }
 
@@ -164,6 +181,8 @@ class _HomeState extends State<HomePage> {
           padding: const EdgeInsets.only(top: 4),
           child: Text(s.err != null ? 'Fehler: ${s.err} · zuletzt erreicht ${_ago(s.at)}' : 'Abgefragt ${_ago(s.at)}',
               style: TextStyle(fontSize: 12, color: s.err != null ? th.colorScheme.error : th.hintColor))));
+      final lt = s.joined ? _locText(_loc[a.id], s.inc) : null; // Standort im Einsatz (Issue #183)
+      if (lt != null) rows.add(Text(lt.$1, style: TextStyle(fontSize: 12, color: lt.$2 ? th.colorScheme.error : th.hintColor)));
       final p = _push[a.id];
       final pt = switch (p) {
         'server' => 'Push: auf diesem Server nicht eingerichtet${Platform.isIOS ? ' – Alarme nur bei offener App' : ''}',
@@ -247,7 +266,7 @@ class _HomeState extends State<HomePage> {
                         padding: const EdgeInsets.all(16),
                         child: Text(
                             Platform.isAndroid
-                                ? 'Aktive Konten werden im Hintergrund abgefragt (Anzeige «Bereit für Alarme»).'
+                                ? 'Alarme kommen über Push. Ohne Push und während eines Einsatzes fragt die App die aktiven Konten im Hintergrund ab (Anzeige «Bereit für Alarme»).'
                                 : 'Bei geschlossener App kommen Alarme nur über Push, sofern der Server ihn eingerichtet hat.',
                             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
                             textAlign: TextAlign.center),
@@ -377,6 +396,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   int _iv = 15;
   bool? _bat, _dnd;
+  bool _always = false, _running = false;
   int? _loc;
 
   @override
@@ -399,8 +419,11 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
 
   Future<void> _load() async {
     final iv = await pollInterval(), bat = await batteryExempt(), dnd = await hasDndAccess(), loc = await locLevel();
+    final alw = await serviceAlways(), run = Platform.isAndroid && await service.isRunning();
     if (mounted) {
       setState(() {
+        _always = alw;
+        _running = run;
         _iv = iv;
         _bat = bat;
         _dnd = dnd;
@@ -442,6 +465,19 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               _load();
             }),
         if (Platform.isAndroid) ...[
+          // Issue #179: Der Dienst (mit der dauerhaften Meldung «Bereit für Alarme») läuft nur noch, wenn er nötig ist
+          SwitchListTile(
+              secondary: const Icon(Icons.sync),
+              value: _always,
+              title: const Text('Immer im Hintergrund abfragen'),
+              subtitle: Text('Aus: Mit Push kommen Alarme ohne dauerhafte Meldung; abgefragt wird im Hintergrund nur ohne Push und während eines Einsatzes. '
+                  'Ein: zusätzlich dauernd, mit der Meldung «Bereit für Alarme» (für Geräte, die Push zurückhalten). ${_running ? 'Läuft gerade.' : 'Läuft gerade nicht.'}'),
+              isThreeLine: true,
+              onChanged: (v) async {
+                await prefs.setBool('svc_always', v);
+                await syncService();
+                _load();
+              }),
           ListTile(
               leading: const Icon(Icons.do_not_disturb_on),
               title: const Text('«Nicht stören» umgehen'),
