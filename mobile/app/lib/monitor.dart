@@ -75,12 +75,13 @@ Future<bool> isForeground(String id) async {
 /// Meldung zeigen, ausser schon gemeldet oder die Web-App des Kontos ist offen (dann nur merken). Alarme der Stufen crit und high
 /// zeigt die App immer: Nur ihre Meldung umgeht «Nicht stören» und klingelt sicher (sicherer als ein Ton in der Seite).
 /// Quittiert man den Alarm in der App (inc/store.dart), schliesst sie die Meldung.
-Future<void> report(Account a, String tag, String title, String body, String lvl) async {
+/// kind/ksnd: Einsatztyp und Vorgabe des Tons für kritische Alarme (sounds.dart).
+Future<void> report(Account a, String tag, String title, String body, String lvl, {int? kind, String? ksnd}) async {
   if (lvl == 'none') return;
   if (!await markTag(a.id, tag)) return;
   final alarm = tag.startsWith('i:') && (lvl == 'crit' || lvl == 'high');
   if (!alarm && await isForeground(a.id)) return;
-  await showNote(a.id, tag, title, body, lvl, sub: a.label);
+  await showNote(a.id, tag, title, body, lvl, sub: a.label, kind: kind, ksnd: ksnd);
 }
 
 bool _forMe(Map m, int uid) {
@@ -115,7 +116,9 @@ Future<AccState> pollOne(Account a) async {
       if (st.inc != id) {
         // neuer Einsatz: alarmieren, sofern aufgeboten (alarm) und noch nicht angenommen; früheren Stand vergessen
         j['alarmed'] = r['alarm'] != false;
-        if (r['alarm'] != false && !joined) await report(a, 'i:$id', _up(kind), '${inc['message'] ?? ''}', lvl);
+        if (r['alarm'] != false && !joined) {
+          await report(a, 'i:$id', _up(kind), '${inc['message'] ?? ''}', lvl, kind: (inc['kind_id'] as num?)?.toInt(), ksnd: (inc['kind'] as Map?)?['snd'] as String?);
+        }
       }
       final ml = lvl == 'none' || lvl == 'low' ? 'low' : 'normal';
       var since = st.since;

@@ -11,6 +11,7 @@ import 'main.dart';
 import 'monitor.dart';
 import 'notify.dart';
 import 'push.dart';
+import 'sounds.dart';
 import 'service.dart';
 import 'sys.dart';
 
@@ -107,6 +108,7 @@ class _HomeState extends State<HomePage> {
     if (!a.loggedOut) await a.api.logout();
     await Accounts.remove(a.id);
     await clearState(a.id);
+    await forgetSnd(a.id);
     await _changed();
   }
 

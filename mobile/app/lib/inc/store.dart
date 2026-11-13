@@ -45,8 +45,10 @@ const mapProviders = {
 const defaultBase = 'swisstopo_sat';
 
 class AlarmItem {
-  AlarmItem(this.title, this.body, this.key, this.lvl);
+  AlarmItem(this.title, this.body, this.key, this.lvl, [this.kind, this.ksnd]);
   final String title, body, key, lvl;
+  final int? kind; // Einsatztyp und Vorgabe des Tons (kritisch, Issue #171)
+  final String? ksnd;
 }
 
 class Toast {
@@ -302,7 +304,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           _msgInit = false;
           msgs.clear();
           if (nx['alarm'] != false && !(nx['me'] is Map && jm(nx['me'])['left_at'] == null && jm(nx['me'])['mode'] != 'declined')) {
-            notify(kindOf(i).name.toUpperCase(), js(i['message']), 'i:$id', lv);
+            notify(kindOf(i).name.toUpperCase(), js(i['message']), 'i:$id', lv, kind: ji(i['kind_id']), ksnd: i['kind'] is Map ? jm(i['kind'])['snd'] as String? : null);
           }
           events.add('inc');
         }
@@ -387,12 +389,12 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---------- Alarme und Hinweise ----------
   /// Alarmstufe (Issue #90): crit Vollbild mit Dauerton, high Vollbild mit einmaligem Ton, normal Hinweis mit Ton, low still, none nichts
-  void notify(String t, String b, String key, String lvl) {
+  void notify(String t, String b, String key, String lvl, {int? kind, String? ksnd}) {
     if (lvl == 'none') return;
     if (_acked.contains(key)) return;
     if (lvl == 'crit' || lvl == 'high') {
       if (alarm?.key == key || alarmQ.any((q) => q.key == key)) return;
-      alarmQ.add(AlarmItem(t, b, key, lvl));
+      alarmQ.add(AlarmItem(t, b, key, lvl, kind, ksnd));
       _showAlarm();
       return;
     }
@@ -411,7 +413,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     final a = alarm!;
     // Meldung des Geräts mit Weckton (kritisch) bzw. Alarmton; dieselbe Kennung wie die Überwachung, also nie doppelt
     markTag(acc.id, a.key);
-    showNote(acc.id, a.key, a.title, a.body, a.lvl, sub: acc.label);
+    showNote(acc.id, a.key, a.title, a.body, a.lvl, sub: acc.label, kind: a.kind, ksnd: a.ksnd);
     if (a.lvl == 'crit' && Platform.isIOS) HapticFeedback.heavyImpact();
     notifyListeners();
   }
