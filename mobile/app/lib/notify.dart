@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'sounds.dart';
 import 'sys.dart';
 
 final notes = FlutterLocalNotificationsPlugin();
@@ -84,13 +85,15 @@ Future<void> refreshChannels() => initNotes(force: true);
 Future<bool?> hasDndAccess() async => notes.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.hasNotificationPolicyAccess();
 
 /// Meldung zeigen. lvl: crit|high|normal|low; payload = Konto-ID (Antippen öffnet das Konto).
-Future<void> showNote(String acc, String tag, String title, String body, String lvl, {String? sub}) async {
+/// kind/ksnd: Einsatztyp und dessen Vorgabe für den Ton (kritisch, Issue #171); snd: Ton fest vorgeben (Probe im Profil).
+Future<void> showNote(String acc, String tag, String title, String body, String lvl, {String? sub, int? kind, String? ksnd, String? snd}) async {
   await initNotes();
   final crit = lvl == 'crit', high = lvl == 'high', low = lvl == 'low' || lvl == 'none';
+  final tone = crit ? (snd ?? await alarmSnd(acc, kind, ksnd)) : sndSystem;
   final ch = crit ? (_dnd ? chCritDnd : chCrit) : (high ? chHigh : (low ? chLow : chNormal));
   // kritisch: Weckton über den Wecker (sys.dart), klingelt auch lautlos und bei «Nicht stören»; die Meldung selbst wiederholt
   // ihren Ton nur, wenn der Weckton nicht startet
-  final ring = crit && Platform.isAndroid && await alarmStart();
+  final ring = crit && Platform.isAndroid && await alarmStart(path: await sndPath(tone));
   final android = AndroidNotificationDetails(ch, ch,
       importance: low ? Importance.low : Importance.max,
       priority: low ? Priority.low : Priority.max,
@@ -113,6 +116,7 @@ Future<void> showNote(String acc, String tag, String title, String body, String 
       threadIdentifier: tag,
       subtitle: sub,
       interruptionLevel: crit ? InterruptionLevel.critical : (high ? InterruptionLevel.timeSensitive : (low ? InterruptionLevel.passive : InterruptionLevel.active)),
+      sound: crit && sndKnown(tone) ? sndFile(tone) : null, // aus Library/Sounds (sounds.dart)
       criticalSoundVolume: crit ? 1.0 : null);
   await notes.show(id: noteId(acc, tag), title: title, body: body, notificationDetails: NotificationDetails(android: android, iOS: ios), payload: acc);
 }
