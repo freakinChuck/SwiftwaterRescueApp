@@ -121,23 +121,26 @@ Future<AccState> pollOne(Account a) async {
           await report(a, 'i:$id', _up(kind), '${inc['message'] ?? ''}', lvl, kind: (inc['kind_id'] as num?)?.toInt(), ksnd: (inc['kind'] as Map?)?['snd'] as String?);
         }
       }
-      final ml = lvl == 'none' || lvl == 'low' ? 'low' : 'normal';
+      // Stufen je Meldungstyp und Einsatztyp (Issue #168); ältere Server ohne Angabe wie bisher
+      final dl = lvl == 'none' || lvl == 'low' ? 'low' : 'normal';
+      final ml = (r['msg_level'] as String?) ?? dl, el = (r['end_level'] as String?) ?? dl;
       var since = st.since;
       for (final m in (r['messages'] as List? ?? [])) {
         final mid = (m['id'] as num).toInt();
         if (mid > since) since = mid;
-        if (st.init && joined && (m['from_user'] as num?)?.toInt() != a.uid && _forMe(m as Map, a.uid)) {
+        if (st.init && joined && ml != 'none' && (m['from_user'] as num?)?.toInt() != a.uid && _forMe(m as Map, a.uid)) {
           await report(a, 'm:$mid', 'Nachricht von ${m['from_name'] ?? '?'}', '${m['text'] ?? ''}', ml);
         }
       }
-      j.addAll({'inc': id, 'since': since, 'joined': joined, 'title': '${inc['message'] ?? ''}', 'kind': kind, 'color': inc['kind_color'], 'level': lvl});
+      j.addAll({'inc': id, 'since': since, 'joined': joined, 'title': '${inc['message'] ?? ''}', 'kind': kind, 'color': inc['kind_color'], 'level': lvl, 'end_level': el});
     } else {
       if (st.inc != null && (st.alarmed || st.joined)) {
         final k = st.kind.isEmpty ? 'Einsatz' : st.kind;
         final l = (st.j['level'] as String?) ?? 'normal';
-        await report(a, 'e:${st.inc}', '${_up(k)} BEENDET', '$k beendet.', l == 'none' || l == 'low' ? 'low' : 'normal');
+        final el = (st.j['end_level'] as String?) ?? (l == 'none' || l == 'low' ? 'low' : 'normal');
+        if (el != 'none') await report(a, 'e:${st.inc}', '${_up(k)} BEENDET', '$k beendet.', el);
       }
-      for (final k in ['inc', 'joined', 'alarmed', 'title', 'kind', 'color', 'level']) {
+      for (final k in ['inc', 'joined', 'alarmed', 'title', 'kind', 'color', 'level', 'end_level']) {
         j.remove(k);
       }
     }
