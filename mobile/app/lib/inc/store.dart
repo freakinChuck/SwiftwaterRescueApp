@@ -295,7 +295,9 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       final nx = await api.call('incident/state', query: {'since': '$_lastMsg'});
       final i = nx['incident'] is Map ? jm(nx['incident']) : null;
       if (i != null) {
-        final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']), cr = lv == 'none' ? 'low' : lv;
+        final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']);
+        // Stufe für Nachrichten je Einsatztyp (Issue #168), ältere Server ohne msg_level wie bisher
+        final cr = js(nx['msg_level']).isNotEmpty ? js(nx['msg_level']) : (lv == 'none' ? 'low' : lv), kr = cr == 'none' ? 'low' : cr;
         if (_lastIncId != id) {
           _lastIncId = id;
           _lastMsg = 0;
@@ -313,19 +315,20 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           if (mid > _lastMsg) _lastMsg = mid;
           if (msgs.any((x) => x['id'] == m['id'])) continue;
           msgs.add(m);
-          if (_msgInit && ji(m['from_user']) != uid && inNow && msgForMe(m)) notify('Nachricht von ${js(m['from_name'])}', js(m['text']), 'm:$mid', cr);
+          if (_msgInit && cr != 'none' && ji(m['from_user']) != uid && inNow && msgForMe(m)) notify('Nachricht von ${js(m['from_name'])}', js(m['text']), 'm:$mid', cr);
         }
         _msgInit = true;
         final was = myPart;
         if (was != null && was['left_at'] == null && was['mode'] != 'declined' && nm != null && nm['left_at'] != null && !selfLeft) {
-          notify('AUS EINSATZ ENTFERNT', 'Die Einsatzleitung hat dich aus dem Einsatz entfernt.', 'k:$id:${nm['left_at']}', cr);
+          notify('AUS EINSATZ ENTFERNT', 'Die Einsatzleitung hat dich aus dem Einsatz entfernt.', 'k:$id:${nm['left_at']}', kr);
         }
         st = nx;
       } else {
         final o = inc;
         if (o != null) {
           final k = kindOf(o).name, lv = js(st?['level']).isEmpty ? 'crit' : js(st!['level']);
-          if (st?['alarm'] != false || st?['me'] != null) notify('${k.toUpperCase()} BEENDET', '$k beendet.', 'e:${o['id']}', lv == 'none' ? 'low' : lv);
+          final el = js(st?['end_level']).isNotEmpty ? js(st!['end_level']) : (lv == 'none' ? 'low' : lv); // Issue #168
+          if (el != 'none' && (st?['alarm'] != false || st?['me'] != null)) notify('${k.toUpperCase()} BEENDET', '$k beendet.', 'e:${o['id']}', el);
         }
         st = nx;
         _lastIncId = null;
