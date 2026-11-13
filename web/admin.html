@@ -92,7 +92,7 @@ h3.lgh{margin:1rem 0 .2rem;font-size:.95rem}details.lgd{margin-top:1rem;border-t
 .geok{display:flex;align-items:center;justify-content:center;width:26px;height:20px;border-radius:4px;border:2px solid #fff;color:#fff;font:700 10px/1 system-ui,sans-serif;box-shadow:0 1px 3px #0008}
 .geok.have{opacity:.45}.geok.sel{outline:3px solid #ffd166}
 .navn{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#1b998b;border:2px solid #fff;color:#fff;font:700 11px/1 system-ui,sans-serif;box-shadow:0 1px 3px #0008}
-.pchip{display:inline-block;padding:.05rem .4rem;margin:.1rem .25rem .1rem 0;border-radius:999px;border:1px solid var(--line);font-size:.8rem;white-space:nowrap}
+.pchip,a.pchip{color:inherit;text-decoration:none}.pchip{display:inline-block;padding:.05rem .4rem;margin:.1rem .25rem .1rem 0;border-radius:999px;border:1px solid var(--line);font-size:.8rem;white-space:nowrap}
 .navrow{display:flex;gap:.4rem;align-items:center;margin:.25rem 0}.navrow input{flex:1;min-width:0}
 /* Dialog «Element»: breit, links die Felder, rechts Standort und Karte; am Handy untereinander */
 .dlg .card.wide{max-width:960px}.jgrid,.jcol{display:grid;gap:.7rem;align-content:start}.jtwo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.7rem;align-items:end}.jtwo>*,.jtwo select,.jtwo input{min-width:0;width:100%}
@@ -555,7 +555,7 @@ async function loadGeo(){const el=$('#sGeo'),pq=new URLSearchParams(location.has
     <details><summary><b>Vorgaben je Objektart</b> <span class="mut">(Kategorie, Eigenschaften, Kürzel und Farbe beim Übernehmen; Angebot in der Geodaten-Ebene der Einsatz-App)</span></summary>
       <div class="tw"><table><thead><tr><th>Objektart</th><th>Kategorie</th><th>Eigenschaften</th><th>Kürzel / Farbe</th><th>In der Einsatz-App</th></tr></thead><tbody>${K.map(k=>`<tr data-gk="${k.k}"><td>${esc(k.icon)} ${esc(k.name)}</td>
         <td><select data-gc>${'<option value="">Ohne Kategorie</option>'+plCats.map(x=>`<option value="${x.id}" ${x.id===c[k.k].cat_id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></td>
-        <td>${plProps.map(p=>`<label class="chk" style="margin:.05rem .5rem .05rem 0"><input type="checkbox" data-gp="${p.id}" ${c[k.k].props.includes(p.id)?'checked':''}> ${esc(p.icon||'')} ${esc(p.name)}</label>`).join('')||'<span class="mut">keine</span>'}</td>
+        <td>${plProps.map(p=>`<label class="pchip" style="cursor:pointer;border-color:${esc(p.color||'#6c757d')}"><input type="checkbox" data-gp="${p.id}" ${c[k.k].props.includes(p.id)?'checked':''} style="width:auto;margin:0 .25rem 0 0;vertical-align:-.1em"> ${esc(p.icon||'')} ${esc(p.name)}</label>`).join('')||'<span class="mut">keine</span>'}</td>
         <td style="white-space:nowrap"><input data-ga maxlength="4" value="${esc(c[k.k].abbr)}" style="width:4.5rem" aria-label="Kürzel"> <input type="color" data-gf value="${esc(c[k.k].color)}" aria-label="Farbe"></td>
         <td><label class="chk"><input type="checkbox" data-gl ${c[k.k].live?'checked':''}> anbieten</label></td></tr>`).join('')}</tbody></table></div>
       <div class="mut">«In der Einsatz-App»: welche Arten die zuschaltbare Geodaten-Ebene zeigt (Funktion «Geodaten-Ebene» je Einsatztyp unter «Funktionen»). Die Ebene ist auf jedem Gerät zuerst ausgeblendet.</div>
@@ -564,7 +564,7 @@ async function loadGeo(){const el=$('#sGeo'),pq=new URLSearchParams(location.has
     <div id="gMap" class="pickmap geomap"></div>
     <div class="row"><button id="gS" class="pri">In diesem Ausschnitt suchen</button><span class="mut" id="gSt">Karte auf das Gebiet ausrichten (höchstens ca. 40 × 30 km) und suchen.</span></div>
     <div id="gL"></div>
-    ${plan?'':`<h3>Abgleich mit der Quelle</h3><div class="mut">${geoD.linked.length} übernommene Standorte${geoD.linked.filter(l=>l.src_state).length?`, davon <b>${geoD.linked.filter(l=>l.src_state).length} mit Abweichung</b> (unter «Feste Standorte» bearbeiten)`:''}. Der automatische Abgleich prüft jeden Standort einmal täglich (zuletzt ${dt(geoD.check_at)}).</div>
+    ${plan?'':`<h3>Abgleich mit der Quelle</h3><div class="mut">${geoD.linked.length===1?'1 übernommener Standort':geoD.linked.length+' übernommene Standorte'}${geoD.linked.filter(l=>l.src_state).length?`, davon <b>${geoD.linked.filter(l=>l.src_state).length} mit Abweichung</b> (unter «Feste Standorte» bearbeiten)`:''}. Der automatische Abgleich prüft jeden Standort einmal täglich (zuletzt ${dt(geoD.check_at)}).</div>
       <div class="row"><button id="gC" ${geoD.linked.length?'':'disabled'}>Jetzt abgleichen</button>${geoD.can_map?'<a class="btn" href="#standorte">Zu den festen Standorten</a>':''}</div><div class="mut" id="gCr"></div>`}`;
   // Vorgaben speichern
   $('#gCs').onclick=()=>{const o={};el.querySelectorAll('[data-gk]').forEach(r=>{o[r.dataset.gk]={cat_id:+$('[data-gc]',r).value||null,props:[...r.querySelectorAll('[data-gp]:checked')].map(i=>+i.dataset.gp),abbr:$('[data-ga]',r).value.trim(),color:$('[data-gf]',r).value,live:$('[data-gl]',r).checked?1:0}});
