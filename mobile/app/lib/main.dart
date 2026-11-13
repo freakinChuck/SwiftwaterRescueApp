@@ -14,12 +14,14 @@ import 'sounds.dart';
 import 'sys.dart';
 import 'inc/map_page.dart';
 import 'accounts.dart';
+import 'demo.dart';
 
 final navKey = GlobalKey<NavigatorState>();
 
 /// Einsatz-App eines Kontos öffnen (aus der Liste, nach dem Antippen einer Meldung oder einer Push-Nachricht).
 /// focus: aus einer Meldung geöffnet, die Einsatz-App zeigt das Einsatzgebiet (IncPage.focusReq).
 Future<void> openAccount(String id, {bool focus = false}) async {
+  if (id == demoId) return openDemo(); // Meldung aus dem Demo-Modus angetippt (Issue #74)
   final l = await Accounts.load();
   final a = l.where((x) => x.id == id).firstOrNull;
   final nav = navKey.currentState;
@@ -34,6 +36,16 @@ Future<void> openAccount(String id, {bool focus = false}) async {
   if (IncPage.openId == id) return;
   nav.popUntil((r) => r.isFirst);
   nav.push(MaterialPageRoute(builder: (_) => IncPage(account: a)));
+}
+
+/// Demo-Modus (Issue #74): Einsatz-App mit dem simulierten Backend (demo.dart) öffnen; mode null = bisherigen Stand weiterführen
+void openDemo([String? mode]) {
+  final nav = navKey.currentState;
+  if (nav == null) return;
+  if (mode != null || !Demo.started) Demo.restart(mode ?? 'bsp');
+  if (mode == null && IncPage.openId == demoId) return;
+  nav.popUntil((r) => r.isFirst);
+  nav.push(MaterialPageRoute(builder: (_) => IncPage(account: demoAccount())));
 }
 
 String? _pendingOpen;

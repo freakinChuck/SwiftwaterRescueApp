@@ -438,8 +438,8 @@ class _PrefsPageState extends State<PrefsPage> {
           padding: const EdgeInsets.only(top: 10),
           child: Wrap(spacing: 8, runSpacing: 6, children: [
             OutlinedButton(onPressed: _photo, child: const Text('Profilbild ändern')),
-            OutlinedButton(onPressed: _pw, child: const Text('Passwort ändern')),
-            OutlinedButton(onPressed: _busy ? null : _logout, child: const Text('Abmelden')),
+            if (!s.demo) OutlinedButton(onPressed: _pw, child: const Text('Passwort ändern')),
+            OutlinedButton(onPressed: _busy ? null : _logout, child: Text(s.demo ? 'Demo beenden' : 'Abmelden')), // Demo-Modus (Issue #74)
             OutlinedButton(
                 onPressed: () => Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst), child: const Text('Konten / Server wechseln')),
           ])),

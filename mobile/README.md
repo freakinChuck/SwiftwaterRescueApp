@@ -6,6 +6,7 @@ Native Apps für Android und iOS (Issue #108), gebaut mit Flutter in `mobile/app
 
 - **Mehrere Backends:** Mit «Backend hinzufügen» meldet man sich mit Server-Adresse (wie die der Web-App, z. B. `https://example.ch/swiftwater/`), Benutzername und Passwort an. Jedes Backend ist einzeln **aktiv** schaltbar. Auf allen aktiven Backends kommen gleichzeitig Alarme, Nachrichten an einen selbst und das Einsatzende an.
 - **Einsatz-App nativ (ohne WebView):** Ein Antippen öffnet die Einsatz-App des Backends, schon angemeldet, ganz in Flutter (`lib/inc/`). Karte (flutter_map mit denselben Anbietern wie die Web-App, drehbar), Kartenknöpfe und Seitenfenster (Einsatzkräfte, Nachrichten, Rettlinge, Markierungen & Bereiche, Flussdistanz), Suchgebiet entlang des Gewässers, Fenster «Ansicht», Kamerafokus und Auto-Übersicht, ☰-Menü mit den Registern Einsatz/Leitung/Übung/Log/Info, Einsatz starten und vorbereitete Übungen, Profil. Die Abläufe, Routen und Texte entsprechen der Web-App. Die Verwaltung, «Meine Einsätze» und das Rechtliche öffnen sich in der App in einer WebView (`lib/inc/web.dart`), angemeldet mit dem Konto (die App setzt `sw_token` vor dem ersten Skript); «Zur Einsatz-App» führt zur Karte zurück, Dateien (AAR, CSV) gibt die Web-App über `saveBlob` an die App, die sie zum Teilen bzw. Speichern anbietet. Noch nicht nativ: Gross-Modus des Logs, freie Fragen an den AI-Assistenten und dessen Modus «Begleitend».
+- **Demo-Modus (Issue #74):** In der Kontenliste, auch ohne Konto: «Mit Beispieldaten» (ein laufender, fiktiver Einsatz an der Reuss in Luzern) oder «Ohne Daten». Die native Einsatz-App läuft dann mit einem simulierten Backend in der App (`lib/demo.dart`, gleich wie `web/demo.js`): kein Server, keine Überwachung, kein Push, kein Teilen im Hintergrund; simulierte Einsatzkräfte nehmen an, fahren hin, senden Nachrichten und finden den Rettling. Die Kennzeichnung «DEMO» unter dem Menüknopf schaltet Simulation und Leitungsrechte um, startet neu oder beendet das Demo. Der Stand bleibt bis zum Neustart der App.
 - **Eigene Anmeldung je Gerät:** Die App erhält eine Gerätesitzung (`sessions` auf dem Server). Sie meldet weder den Browser noch andere Geräte ab. Im Profil der Web-App stehen die angemeldeten Apps unter «Angemeldete Apps».
 - **Alarme wie in der Web-App:**
 
@@ -52,6 +53,7 @@ In den Einstellungen der App gibt es dazu Folgendes:
 | `inc/prefs.dart` | Profil (Konto, Alarmierung, Anzeige, Pegel & Abfluss, AI-Assistent, Rechtliches) |
 | `inc/area.dart` | Suchgebiet entlang des Gewässers, Gewässernetz über `overpass` (mit Rückfall im Gerät) |
 | `inc/ctx.dart`, `inc/util.dart` | gemeinsame Bausteine (Karten, Dialoge, Navigation, Koordinaten) |
+| `demo.dart`, `demo_ui.dart` | Demo-Modus: simuliertes Backend (`Api.call` für `demoBase`), Einstieg in der Kontenliste, Kennzeichnung und Steuerung; Symbole aus `assets/sym` |
 | `track.dart` | Standort im Einsatz teilen, solange die Einsatz-App nicht im Vordergrund ist |
 | `accounts.dart` | Konten im sicheren Speicher (Keychain bzw. verschlüsselt) |
 | `monitor.dart` | Abfrage `incident/state` je Konto, meldet Neues |
