@@ -152,7 +152,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   List<(String, String, String)> viewCats() =>
-      viewCatsAll.where((v) => v.$1 == 'air' ? jb(st?['air']) : (v.$1 == 'veh' ? st?['veh'] is Map : (v.$3.isEmpty || feat(v.$3)))).toList(); // Fahrzeuge nur, wenn der Server sie liefert (Issue #177)
+      viewCatsAll.where((v) => v.$1 == 'air' ? jb(st?['air']) : (v.$1 == 'veh' ? (st?['veh'] is Map) : (v.$3.isEmpty || feat(v.$3)))).toList(); // Fahrzeuge nur, wenn der Server sie liefert (Issue #177)
   bool vis(String k) => !viewHide.contains(k);
 
   /// Art des Einsatzes (kindOf)
@@ -598,7 +598,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       await api.call('incident/location', body: {
         'lat': p.latitude,
         'lon': p.longitude,
-        if (bs != null) 'beacons': bs,
+        'beacons': ?bs,
         if (manualPos == null && devPos != null) 'acc': devPos!.accuracy,
         'water': waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()) < waterM ? 1 : 0,
         'manual': manualPos != null ? 1 : 0

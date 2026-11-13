@@ -123,14 +123,16 @@ object Beacons {
             sp.edit().remove("watch").apply(); return false
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false // Scan über PendingIntent erst ab Android 8
-        if (sp.getString("watch", null) == key) return true // läuft schon (Android hält ihn auch nach dem Beenden der App)
+        // läuft schon: nicht bei jeder Abfrage neu starten (Android erlaubt höchstens 5 Starts in 30 s). Nach einem Neustart des Geräts oder
+        // «Beenden erzwingen» ist der Scan weg, deshalb spätestens nach einer Stunde neu anmelden.
+        if (sp.getString("watch", null) == key && System.currentTimeMillis() - sp.getLong("watch_at", 0) < 3600_000) return true
         return try {
             try {
                 s.stopScan(pi(c))
             } catch (_: Exception) {
             }
             s.startScan(filters(uuids), ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER).setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES).build(), pi(c))
-            sp.edit().putString("watch", key).apply(); true
+            sp.edit().putString("watch", key).putLong("watch_at", System.currentTimeMillis()).apply(); true
         } catch (_: Exception) {
             false
         }
