@@ -29,6 +29,7 @@ Future<void> openAccount(String id, {bool focus = false}) async {
     return;
   }
   if (focus) IncPage.focusReq.value = id;
+  await prefs.setString('last_acc', id); // zuletzt verwendetes Backend, beim nächsten Start wieder geöffnet (Issue #166)
   // bereits offen: nicht doppelt öffnen
   if (IncPage.openId == id) return;
   nav.popUntil((r) => r.isFirst);
@@ -71,27 +72,36 @@ class _AppState extends State<SwiftwaterApp> with WidgetsBindingObserver {
     unawaited(ensureSounds()); // Töne für kritische Alarme ablegen (Issue #171)
     await requestNotePerms();
     await syncService();
-    unawaited(initPush((id) => openAccount(id, focus: true)));
+    // nach der Anmeldung für Push erneut prüfen, ob der Vordergrunddienst noch nötig ist (Issue #179)
+    unawaited(initPush((id) => openAccount(id, focus: true)).then((_) => syncService()));
     final l = await Accounts.load();
     final p = _pendingOpen;
     _pendingOpen = null;
     if (p != null && p.isNotEmpty) {
       await openAccount(p, focus: true);
-    } else if (l.length == 1 && !l.first.loggedOut) {
-      await openAccount(l.first.id); // nur ein Konto: gleich die Web-App zeigen
+    } else {
+      // zuletzt verwendetes Backend (Issue #166), sonst bei nur einem Konto dieses; abgemeldete führen zur Kontenliste
+      final last = await prefs.getString('last_acc');
+      final a = l.where((x) => x.id == last).firstOrNull ?? (l.length == 1 ? l.first : null);
+      if (a != null && !a.loggedOut) await openAccount(a.id);
     }
     _iosPoll();
   }
 
-  /// iOS hat keinen Hintergrunddienst: solange die App offen ist, fragt sie selbst ab.
+  /// iOS hat keinen Hintergrunddienst, unter Android läuft er nur, wenn er nötig ist (Issue #179): solange die App offen ist, fragt sie
+  /// dann selbst ab (Kontenliste, Teilen des Standorts).
   Future<void> _iosPoll() async {
     _t?.cancel();
-    if (!Platform.isIOS) return;
+    if (Platform.isAndroid && await serviceNeeded()) return;
     Future<void> run() async {
       if (_busy) return;
       _busy = true;
       try {
-        await pollAll();
+        await pollAll(track: Platform.isIOS);
+        if (Platform.isAndroid && await serviceNeeded()) {
+          _t?.cancel(); // z. B. Einsatz angenommen: ab jetzt fragt der Vordergrunddienst ab
+          await syncService();
+        }
       } finally {
         _busy = false;
       }
@@ -107,7 +117,7 @@ class _AppState extends State<SwiftwaterApp> with WidgetsBindingObserver {
       refreshChannels();
       _iosPoll();
       syncService();
-      syncPush();
+      syncPush().then((_) => syncService());
     } else if (s == AppLifecycleState.paused) {
       _t?.cancel();
     }

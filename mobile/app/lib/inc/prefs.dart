@@ -16,6 +16,7 @@ import '../push.dart';
 import '../sounds.dart';
 import '../sys.dart';
 import 'ctx.dart';
+import 'hydro.dart';
 import 'store.dart';
 import 'util.dart';
 
@@ -602,6 +603,7 @@ class _PrefsPageState extends State<PrefsPage> {
                   _konto(me),
                   _alarm(me),
                   _anzeige(me),
+                  if (s.feat('hydro')) HydroPrefs(s: s), // persönliche Messstationen (Issue #165)
                   ?_ai(me),
                   _legal(),
                 ]));

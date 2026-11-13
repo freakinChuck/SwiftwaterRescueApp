@@ -157,10 +157,12 @@ Future<AccState> pollOne(Account a) async {
 }
 
 /// Alle aktiven, angemeldeten Konten parallel abfragen. Rückgabe: Anzahl überwachter Konten.
-Future<int> pollAll() async {
+/// track: Standort danach teilen (nicht in der Oberfläche unter Android, dort teilt nur der Vordergrunddienst).
+Future<int> pollAll({bool track = true}) async {
   final l = (await Accounts.load()).where((a) => a.active && !a.loggedOut).toList();
   final r = await Future.wait(l.map(pollOne));
   final st = {for (var i = 0; i < l.length; i++) l[i].id: r[i]};
+  if (!track) return l.length;
   try {
     await Tracker.sync(); // Standort im Einsatz teilen (track.dart)
   } catch (e) {
@@ -170,4 +172,17 @@ Future<int> pollAll() async {
     }
   }
   return l.length;
+}
+
+/// Teilnahme aus der Einsatz-App übernehmen (Android, Issue #179): Der Vordergrunddienst läuft mit Push nur im Einsatz und muss
+/// deshalb gleich nach dem Annehmen davon wissen (serviceNeeded), nicht erst nach seiner nächsten Abfrage.
+Future<void> setJoined(String id, int? inc, bool joined) async {
+  final st = await accState(id);
+  if (st.inc == inc && st.joined == joined) return;
+  if (inc == null) return; // Einsatzende meldet weiterhin die Überwachung (pollOne)
+  final j = Map<String, dynamic>.from(st.j);
+  if (st.inc != inc) j['alarmed'] = true; // Einsatz zuerst in der Einsatz-App gesehen: das Ende meldet pollOne trotzdem
+  j['inc'] = inc;
+  j['joined'] = joined;
+  await _saveState(id, j);
 }

@@ -36,6 +36,7 @@ const viewCatsAll = [
   ('ln', 'Linien', 'poi'),
   ('mm', 'Nachrichten-Markierungen', 'msg'),
   ('air', 'Helikopter', ''),
+  ('hydro', 'Messstationen', 'hydro'),
 ];
 
 /// Grundkarten (MAP_PROVIDERS in common.js)
@@ -289,6 +290,71 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     _sp?.setInt('msgseen_${acc.id}_${_poiInc ?? 0}', id);
   }
 
+  // ---------- Pegel & Abfluss (Issue #125, nativ seit Issue #165) ----------
+  // Messstationen des BAFU: die des Einsatzes (st.hydro, zu Beginn und am Ende erfasst) und die persönlichen (me.hydro, im Profil gewählt).
+  // Aktuelle Werte über hydro (Server mit Cache), höchstens alle 5 Minuten und sofort, wenn sich die Stationen ändern (hyPoll).
+  Map<String, J> hyData = {};
+  String? hyErr;
+  List<J>? hyAll; // alle Stationen (Suche im Profil), einmal geladen
+  int _hyAt = 0;
+  String _hyKey = '';
+  bool _hyBusy = false;
+
+  List<String> get hyMine => me?['hydro'] is List ? (me!['hydro'] as List).map((e) => '$e').toList() : <String>[];
+  List<J> get hyInc => inc != null ? jl(st?['hydro']) : <J>[];
+  List<String> get hyIds => {...hyInc.map((r) => js(r['station'])), ...hyMine}.where((x) => x.isNotEmpty).toList();
+  J? hyStation(String id) => hyData[id] ?? hyInc.where((r) => js(r['station']) == id).firstOrNull ?? hyAll?.where((x) => js(x['id']) == id).firstOrNull;
+
+  /// Kartenknopf «Messstationen» (hyBtn): im Einsatz bei eingeschalteter Funktion, ohne Einsatz, sobald man eigene Stationen hat
+  bool get hyBtn => feat('hydro') && (inc != null || hyMine.isNotEmpty);
+
+  Future<void> hyPoll({bool force = false}) async {
+    if (!feat('hydro')) return;
+    final ids = hyIds, k = ids.join(',');
+    if (ids.isEmpty) {
+      if (_hyKey.isNotEmpty) {
+        _hyKey = '';
+        hyData = {};
+        notifyListeners();
+      }
+      return;
+    }
+    if (_hyBusy || (!force && k == _hyKey && DateTime.now().millisecondsSinceEpoch - _hyAt < 300000)) return;
+    _hyBusy = true;
+    try {
+      final d = await api.call('hydro', body: {'ids': ids});
+      hyData = {for (final x in jl(d['stations'])) js(x['id']): x};
+      hyErr = d['err'] == null ? null : js(d['err']);
+    } on ApiError catch (e) {
+      hyErr = e.offline ? 'Keine Verbindung zum Server' : e.message;
+    } catch (e) {
+      hyErr = '$e';
+    } finally {
+      _hyBusy = false;
+      _hyKey = k;
+      _hyAt = DateTime.now().millisecondsSinceEpoch;
+      if (!closed) notifyListeners();
+    }
+  }
+
+  /// alle Stationen für die Suche im Profil
+  Future<List<J>> hyLoadAll() async => hyAll ??= jl((await api.call('hydro', body: {}))['stations']);
+
+  /// persönliche Messstationen speichern (me/settings mit hydro, höchstens 20)
+  Future<void> hySave(List<String> l) async {
+    final old = me?['hydro'];
+    me?['hydro'] = l;
+    notifyListeners();
+    try {
+      await api.call('me/settings', body: {'hydro': l});
+      await hyPoll(force: true);
+    } catch (e) {
+      me?['hydro'] = old;
+      fail(e);
+      notifyListeners();
+    }
+  }
+
   int get unread => msgs.where((m) => (ji(m['id']) ?? 0) > msgSeen && ji(m['from_user']) != uid).length;
 
   // ---------- Polling ----------
@@ -339,6 +405,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         _lastMsg = 0;
       }
       selfLeft = false;
+      hyPoll();
       _poiHideLoad();
       _calcArea();
       _syncPos();
@@ -370,9 +437,11 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   /// Stand des Kontos für die Überwachung sofort nachführen und das Teilen im Hintergrund starten (Issue #183). Vorher geschah das erst
   /// beim nächsten Polling der App (Standard 15 s); unter iOS ist dieses im Hintergrund gestoppt, wer annahm und gleich sperrte, teilte nie.
   /// Unter Android teilt der Vordergrunddienst in seinem eigenen Isolate, er erhält nur den Auftrag, sofort abzufragen.
+  /// Android (Issue #179): Mit Push läuft der Dienst nur im Einsatz (serviceNeeded); damit er gleich startet, zuerst die Teilnahme
+  /// im Stand der Überwachung festhalten (setJoined).
   void _trackNow() {
     if (Platform.isAndroid) {
-      unawaited(syncService());
+      unawaited(setJoined(acc.id, ji(inc?['id']), true).then((_) => syncService()).catchError((Object e) => debugPrint('Dienst $e')));
       return;
     }
     unawaited(pollOne(acc).then((_) => Tracker.sync()).catchError((Object e) => debugPrint('Tracker $e')));
