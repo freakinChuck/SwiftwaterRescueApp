@@ -163,6 +163,8 @@ foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NU
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
 try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
+// Version der nativen App je Gerätesitzung (Issue #175), aus der Anmeldung bzw. dem Header X-App-Version
+try { $db->exec("ALTER TABLE sessions ADD COLUMN app_ver VARCHAR(40) NULL"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX track_inc ON track(incident_id,ts)"); } catch (Throwable $e) {} // schlägt bei vorhandenem Index still fehl
 // Bilder im After Action Review: einmalig ein Feld «Bilder» an bereits gespeicherte Einstellungen anhängen (der Standard hat es schon); entfernbar
 if (setting('aar_img_mig', '') === '') { $c = json_decode((string)setting('aar_cfg', ''), true);
@@ -221,6 +223,44 @@ $route = $_GET['r'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: [];
 $now = time();
 
+/* ---------- Versionen (Issue #175) ---------- */
+// Eine gemeinsame Version für Web, API und App (MAJOR.MINOR.PATCH, Datei VERSION im Hauptordner, Tags vX.Y.Z auf main).
+// deploy.ps1 / deploy-dev.ps1 schreiben beim Ausliefern api/data/version.json: version (letzter Tag bzw. VERSION), full (mit Abstand und Commit, z. B. 0.1.0+12.abc1234),
+// commit (= ?v= der Seiten), env (dev|test|prod), pr (DEV), at. Ohne Datei (lokal mit php -S) gilt VERSION aus dem Hauptordner mit «+lokal».
+// API_LEVEL = Kompatibilitätsstufe der API, nur bei inkompatiblen Änderungen erhöhen; die App vergleicht sie (bei 0.x sagt MAJOR nichts darüber aus).
+const API_LEVEL = 1;
+const VER_RX = '/^\d{1,4}\.\d{1,4}\.\d{1,4}$/';
+const VER_ENV = ['dev' => 'DEV', 'test' => 'Test', 'prod' => 'Produktiv', 'local' => 'lokal'];
+function verInfo() { static $v = null; if ($v !== null) return $v;
+  $j = json_decode((string)@file_get_contents(__DIR__ . '/data/version.json'), true);
+  if (!is_array($j) || !preg_match(VER_RX, (string)($j['version'] ?? ''))) { $b = trim((string)@file_get_contents(dirname(__DIR__, 2) . '/VERSION')); $b = preg_match(VER_RX, $b) ? $b : '0.0.0';
+    $j = ['version' => $b, 'full' => "$b+lokal", 'commit' => '', 'env' => 'local']; }
+  $f = (string)($j['full'] ?? ''); $c = (string)($j['commit'] ?? '');
+  return $v = ['version' => $j['version'], 'full' => preg_match('/^[0-9A-Za-z.+-]{1,60}$/', $f) ? $f : $j['version'], 'commit' => preg_match('/^[0-9a-f]{4,40}$/', $c) ? $c : '',
+    'env' => isset(VER_ENV[$j['env'] ?? '']) ? $j['env'] : 'test', 'pr' => is_numeric($j['pr'] ?? null) ? (int)$j['pr'] : null, 'at' => (int)($j['at'] ?? 0)]; }
+// Für alle, auch ohne Anmeldung: auf dem Produktivsystem nur die Version, sonst mit Abstand, Commit und Umgebung (Rückmeldungen eindeutig zuordnen)
+function verPub() { $v = verInfo(); $p = $v['env'] === 'prod';
+  return ['version' => $v['version'], 'full' => $p ? $v['version'] : $v['full'], 'env' => $v['env'], 'env_name' => VER_ENV[$v['env']], 'commit' => $p ? '' : $v['commit'], 'pr' => $v['env'] === 'dev' ? $v['pr'] : null, 'api' => API_LEVEL]; }
+// Versionen vergleichen (nur MAJOR.MINOR.PATCH, Zusätze wie +45 zählen nicht): <0, 0, >0
+function verCmp($a, $b) { $x = array_map('intval', explode('.', preg_replace('/[^0-9.].*$/', '', (string)$a) . '.0.0')); $y = array_map('intval', explode('.', preg_replace('/[^0-9.].*$/', '', (string)$b) . '.0.0'));
+  for ($i = 0; $i < 3; $i++) if ($x[$i] !== $y[$i]) return $x[$i] <=> $y[$i]; return 0; }
+// Mindestversion der nativen App (Einstellung app_min, Verwaltung → System → «Versionen»): ältere Apps zeigen nur einen Hinweis, gesperrt wird nie; '' = kein Hinweis
+function appMin() { $v = (string)setting('app_min', ''); return preg_match(VER_RX, $v) ? $v : ''; }
+// Version der App aus der Anmeldung bzw. dem Header X-App-Version, z. B. 0.4.0+2611131200 (Version + Build); sonst ''
+function appVer($s) { $s = trim((string)$s); return preg_match('/^\d{1,4}\.\d{1,4}\.\d{1,4}(\+\d{1,12})?$/', $s) ? $s : ''; }
+// Commit des ausgelieferten Stands in jeder Antwort: Die Seiten vergleichen ihn mit ihrem ?v= und bieten «Neu laden» an, wenn eine neuere Version ausgeliefert ist
+if (verInfo()['commit'] !== '') header('X-Build: ' . verInfo()['commit']);
+// Applikationslog: beim ersten Aufruf nach einem Deployment «Version a → b» (Stand in der Einstellung ver_seen)
+try { $vi = verInfo(); if ($vi['env'] !== 'local' && ($vs = (string)setting('ver_seen', '')) !== $vi['full']) { setSetting('ver_seen', $vi['full']);
+  alog('info', 'api', $vs === '' ? 'Version ' . $vi['full'] . ' ausgeliefert' : "Version $vs → " . $vi['full'], ['commit' => $vi['commit'], 'env' => $vi['env']] + ($vi['pr'] ? ['pr' => $vi['pr']] : [])); } } catch (Throwable $e) {}
+// Version ohne Anmeldung (Anmeldung, legal.html, Kontenliste der App)
+if ($route === 'version') out(verPub() + ['app_min' => appMin()]);
+// Release Notes («Was ist neu», Datei changes.json, geschrieben von release.yml): nur ausgelieferte Versionen (bis zur eigenen), neueste zuerst; ohne Anmeldung
+if ($route === 'changes') { $j = json_decode((string)@file_get_contents(dirname(__DIR__) . '/changes.json'), true); $cur = verInfo()['version'];
+  $vs = array_values(array_filter(is_array($j['versions'] ?? null) ? $j['versions'] : [], fn($x) => is_array($x) && preg_match(VER_RX, (string)($x['version'] ?? '')) && ($cur === '0.0.0' || verCmp($x['version'], $cur) <= 0)));
+  usort($vs, fn($a, $b) => verCmp($b['version'], $a['version']));
+  out(['version' => $cur, 'versions' => array_map(fn($x) => ['version' => $x['version'], 'date' => mb_substr((string)($x['date'] ?? ''), 0, 10), 'items' => array_values(array_map(fn($t) => mb_substr((string)$t, 0, 500), array_filter((array)($x['items'] ?? []), 'is_string')))], $vs)]); }
+
 $MODES = ['base' => 'Anfahrt via Stützpunkt', 'direct' => 'Anfahrt direkt', 'logistics' => 'Logistik', 'coordinator' => 'Koordinator KP Rück'];
 // Einsatzlog: nur Fahrten mit Fahrzeug protokollieren (nicht zu Fuss, nicht auf dem Gewässer)
 const VEHICLE_MS = 7;    // ab ca. 25 km/h zwischen zwei Standortmeldungen gilt eine Bewegung als Fahrt (Gehen/Laufen liegt deutlich darunter)
@@ -260,13 +300,14 @@ const PERMS = [
   'legal' => ['Verwaltung', 'Impressum & Datenschutz einstellen', 'Angaben zur betreibenden Organisation, Kontakt und Zusatztexte der Seite «Impressum, Lizenzen & Datenschutz»'],
   'aar_arch' => ['Auswertung', 'Gesicherte After Action Reviews abrufen', 'Das vor dem Anonymisieren gesicherte, vollständige PDF eines freigegebenen Reviews abrufen, mit allen Namen'],
   'cfg_conn' => ['Verwaltung', 'Konnektivität einstellen', 'E-Mail-Alarm: Postfach, Schlüsselwörter und erlaubte Absender je Einsatztyp, Abruf über Cron-Job oder Webhook; Verlauf der eingegangenen E-Mails einsehen'],
+  'versions' => ['System', 'Versionen einsehen und einstellen', 'Ausgelieferte Version des Servers, Versionen der angemeldeten Apps und Mindestversion der App (Hinweis «Bitte App aktualisieren»)'],
   'applog' => ['System', 'Applikationslog einsehen', 'Technisches Applikationslog mit Ereignissen, Warnungen und Fehlern des Servers und der Geräte; Aufbewahrung einstellen'],
 ];
 // Alarmstufen der Einsatztypen (Issue #90), von stark nach schwach: Schlüssel => [Bezeichnung, Erklärung]; Einsatz-App und Service Worker setzen sie um
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func', 'sym' => 'cfg_inc',
-  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'applog_days' => 'applog']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
+  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'applog_days' => 'applog', 'app_min' => 'versions']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
@@ -1083,7 +1124,7 @@ if ($route === 'login') {
   // Native App (Issue #108): mit device eine eigene Gerätesitzung, andere Geräte bleiben angemeldet; höchstens 20 je Person (die ältesten fallen weg)
   $dev = mb_substr(trim(preg_replace('/[\x00-\x1f]/u', ' ', (string)($in['device'] ?? ''))), 0, 80);
   if ($dev !== '') { $pf = in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : '';
-    $db->prepare("INSERT INTO sessions(user_id,token,device,platform,created,last_seen) VALUES(?,?,?,?,?,?)")->execute([$u['id'], $t, $dev, $pf, time(), time()]);
+    $db->prepare("INSERT INTO sessions(user_id,token,device,platform,created,last_seen,app_ver) VALUES(?,?,?,?,?,?,?)")->execute([$u['id'], $t, $dev, $pf, time(), time(), appVer($in['app_ver'] ?? '') ?: null]);
     $db->prepare("UPDATE users SET last_login=? WHERE id=?")->execute([time(), $u['id']]);
     $s = $db->prepare("SELECT id FROM sessions WHERE user_id=? ORDER BY last_seen DESC, id DESC"); $s->execute([$u['id']]);
     foreach (array_slice($s->fetchAll(PDO::FETCH_COLUMN), 20) as $x) { $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$x]); $db->prepare("DELETE FROM sessions WHERE id=?")->execute([$x]); }
@@ -1108,7 +1149,7 @@ if ($route === 'legal') {
   $aiOn = !empty($ai['on']) && trim((string)($ai['model'] ?? '')) !== '' && ($aiPv === 'anthropic' ? (string)setting('ai_key', '') !== '' : $aiU !== '');
   $aiP = fn($p) => (object)array_map(fn($k) => is_array($ai[$p] ?? null) ? (int)($ai[$p][(string)$k['id']] ?? 1) : (int)($ai[$p] ?? 1), $ks);
   out(['ai' => ['on' => $aiOn ? 1 : 0, 'host' => $aiOn ? ($aiPv === 'anthropic' && $aiU === '' ? 'api.anthropic.com' : (string)(parse_url($aiU, PHP_URL_HOST) ?: '')) : '', 'anon' => $aiP('anon'), 'round_loc' => $aiP('round_loc')],
-    'cfg' => legalCfg(), 'updated' => (int)setting('legal_at', '0'),
+    'cfg' => legalCfg(), 'updated' => (int)setting('legal_at', '0'), 'version' => verPub(),
     'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color']], $ks)),
     'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'on' => (object)array_map(fn($f) => $f[$k], $fk)], array_keys(FEATURES)),
     'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120'), 'postgis' => pgReady() ? 1 : 0, 'pgapi' => pgaReady() ? 1 : 0, 'order' => array_values(array_filter(waterOrder(), fn($k) => waterReady()[$k]))],
@@ -1172,8 +1213,10 @@ if ($route === 'public/state') {
 $tok = (string)($_SERVER['HTTP_X_TOKEN'] ?? ''); $sid = null; // $sid = Gerätesitzung der nativen App (Issue #108), null = Anmeldung über users.token (Browser)
 $ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.nav_app,u.place_view,u.ai_modes,u.hydro';
 $me = null; if ($tok !== '') { $st = $db->prepare("SELECT $ucols FROM users u WHERE u.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor(); } // Lesezugriff sofort beenden, nicht erst am Ende des Requests
-if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_seen FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor();
-  if ($me) { $sid = (int)$me['sid']; if ((int)$me['last_seen'] < $now - 600) $db->prepare("UPDATE sessions SET last_seen=? WHERE id=?")->execute([$now, $sid]); unset($me['sid'], $me['last_seen']); } }
+if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_seen, s.app_ver FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor();
+  if ($me) { $sid = (int)$me['sid']; if ((int)$me['last_seen'] < $now - 600) $db->prepare("UPDATE sessions SET last_seen=? WHERE id=?")->execute([$now, $sid]);
+    $av = appVer($_SERVER['HTTP_X_APP_VERSION'] ?? ''); if ($av !== '' && $av !== (string)$me['app_ver']) $db->prepare("UPDATE sessions SET app_ver=? WHERE id=?")->execute([$av, $sid]); // Version der App nachführen (Issue #175)
+    unset($me['sid'], $me['last_seen'], $me['app_ver']); } }
 if (!$me) fail('Nicht angemeldet', 401);
 $me = ints($me, ['id', 'exercise_mode', 'must_change']); $me['place_view'] = (object)placeView($me['place_view'] ?? null); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
 $me['ai_modes'] = json_decode((string)$me['ai_modes'], true) ?: []; // AI-Assistent (Issue #111): gewählter Modus je Funktion
@@ -2153,7 +2196,7 @@ try { anonAuto(); } catch (Throwable $e) { alog('err', 'anon', 'Automatische Ano
 try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog_purge_at', (string)$now); $db->prepare("DELETE FROM app_log WHERE at<?")->execute([$now - applogDays() * 86400]); } } catch (Throwable $e) {}
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 switch ($route) {
- case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin()]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts FROM modes ORDER BY id")->fetchAll()));
@@ -3209,8 +3252,12 @@ switch ($route) {
   else { $db->prepare("UPDATE users SET token=NULL WHERE id=?")->execute([$uid]); $db->prepare("DELETE FROM push_native WHERE user_id=? AND session_id IS NULL")->execute([$uid]); }
   out(['ok' => true]);
  case 'me/sessions': // eigene Gerätesitzungen ohne Token; cur 1 = diese Sitzung
-  $s = $db->prepare("SELECT id,device,platform,created,last_seen FROM sessions WHERE user_id=? ORDER BY last_seen DESC, id DESC"); $s->execute([$uid]);
+  $s = $db->prepare("SELECT id,device,platform,created,last_seen,app_ver FROM sessions WHERE user_id=? ORDER BY last_seen DESC, id DESC"); $s->execute([$uid]);
   out(array_map(fn($r) => ints($r, ['id', 'created', 'last_seen']) + ['cur' => (int)$r['id'] === $sid ? 1 : 0], $s->fetchAll()));
+ case 'versions': // Verwaltung → System → «Versionen» (Issue #175): ausgelieferter Stand, Mindestversion, Gerätesitzungen der Apps aktiver Personen mit ihrer Version
+  need('versions');
+  $s = $db->query("SELECT s.id,s.user_id,u.name,s.device,s.platform,s.app_ver,s.created,s.last_seen FROM sessions s JOIN users u ON u.id=s.user_id WHERE u.active=1 ORDER BY s.last_seen DESC, s.id DESC LIMIT 2000");
+  out(['server' => verInfo() + ['env_name' => VER_ENV[verInfo()['env']]], 'api' => API_LEVEL, 'app_min' => appMin(), 'apps' => array_map(fn($r) => ints($r, ['id', 'user_id', 'created', 'last_seen']), $s->fetchAll())]);
  case 'me/session/remove': // id; meldet die App auf diesem Gerät ab (sie erhält beim nächsten Aufruf 401)
   $x = (int)($in['id'] ?? 0); $s = $db->prepare("DELETE FROM sessions WHERE id=? AND user_id=?"); $s->execute([$x, $uid]);
   if (!$s->rowCount()) fail('Sitzung nicht gefunden', 404);
@@ -3513,6 +3560,7 @@ switch ($route) {
     if (!is_numeric($in['overpass_ttl']) || (int)$in['overpass_ttl'] < 0 || (int)$in['overpass_ttl'] > 10080) fail('Haltedauer: 0 bis 10080 Minuten');
     setSetting('overpass_ttl', (string)(int)$in['overpass_ttl']);
   }
+  if (isset($in['app_min'])) { $v = trim((string)$in['app_min']); if ($v !== '' && !preg_match(VER_RX, $v)) fail('Mindestversion: z. B. 0.4.0, leer = kein Hinweis'); setSetting('app_min', $v); } // Mindestversion der App (Issue #175)
   if (isset($in['applog_days'])) { // Aufbewahrung des Applikationslogs in Tagen (Issue #139)
     if (!is_numeric($in['applog_days']) || (int)$in['applog_days'] < 1 || (int)$in['applog_days'] > 365) fail('Aufbewahrung: 1 bis 365 Tage');
     setSetting('applog_days', (string)(int)$in['applog_days']); setSetting('applog_purge_at', '0'); }

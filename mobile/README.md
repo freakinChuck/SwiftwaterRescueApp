@@ -73,12 +73,12 @@ flutter build ipa --release      # iOS (Signatur in Xcode einrichten)
 
 ### Pipeline (GitHub Actions)
 
-`.github/workflows/mobile.yml` läuft bei Änderungen unter `mobile/` (Push auf `main` und Pull Requests), bei Tags `mobile-v<Version>` und von Hand («Run workflow»). Die Pipeline prüft zuerst (`flutter analyze`, `flutter test`) und baut dann:
+`.github/workflows/mobile.yml` läuft bei Änderungen unter `mobile/` (Push auf `main` und Pull Requests), bei Release-Tags `v<Version>` (vom Workflow «Release» gestartet, siehe unten; ältere Tags `mobile-v<Version>` gehen weiterhin) und von Hand («Run workflow»). Die Pipeline prüft zuerst (`flutter analyze`, `flutter test`) und baut dann:
 
 - **Android:** `swiftwater-rescue-<Version>.apk` (direkt installierbar) und `.aab` (für Google Play)
 - **iOS:** `swiftwater-rescue-<Version>.ipa`
 
-Die Pakete stehen als Artefakte beim Lauf. Bei einem Tag `mobile-v1.2.0` übernimmt die Pipeline die Version 1.2.0, hängt die Pakete an ein GitHub-Release an und nimmt die Laufnummer als Build-Nummer (Android; iOS siehe unten).
+Die Pakete stehen als Artefakte beim Lauf. Version (Issue #175): Web, API und App haben eine gemeinsame Version in der Datei `VERSION` im Hauptordner; `pubspec.yaml` wird nicht mehr von Hand geändert. Die Pipeline übergibt Version und Build-Nummer zusätzlich mit `--dart-define=APP_VERSION/APP_BUILD` (`lib/version.dart`, Anzeige im Profil und in den Einstellungen, Header `X-App-Version` an den Server). Ein Release entsteht mit dem Workflow «Release» (Actions → «Release» → «Run workflow» auf `main`): Er erhöht `VERSION`, schreibt «Was ist neu» in `web/changes.json`, setzt den Tag `v<Version>`, erstellt den GitHub-Release und startet diese Pipeline auf dem Tag; sie lädt dann wie auf `main` nach TestFlight bzw. Google Play und hängt die Pakete an den Release. Die Laufnummer ist die Build-Nummer (Android; iOS siehe unten). Lokale Builds ohne `--dart-define` zeigen «Entwicklungsstand ohne Version».
 
 Geheimnisse (Repository → Settings → Secrets and variables → Actions) sind alle optional:
 

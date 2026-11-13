@@ -87,3 +87,7 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .aisc .aith{max-height:min(58dvh,640px)}
 @media(min-width:901px){.aisc>.aichat{border-top:0;padding-top:0}.aisc{border-left:1px solid var(--line);padding-left:1rem}.aiwide:has(.aisc){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
 .aidp{display:grid;gap:.35rem}.aidp label.chk{align-items:flex-start}.aidp label.chk input{margin-top:.15rem}
+/* Versionen (Issue #175): Hinweis «Neue Version verfügbar», «Was ist neu» */
+#verNew{position:fixed;left:50%;top:calc(.6rem + env(safe-area-inset-top));transform:translateX(-50%);z-index:9600;display:flex;flex-wrap:wrap;gap:.4rem .6rem;align-items:center;width:max-content;max-width:calc(100vw - 2rem);padding:.5rem .7rem;background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--ex);border-radius:6px;box-shadow:0 2px 10px #000b}
+#verNew button{margin:0}
+.chw{max-height:60vh;overflow:auto}.chv{margin:.6rem 0 .2rem;font-size:1rem}.chl{margin:.2rem 0 .4rem;padding-left:1.2rem}.chl li{margin:.15rem 0}

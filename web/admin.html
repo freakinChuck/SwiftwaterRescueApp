@@ -25,7 +25,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:1.2rem}main>section[hi
 main>section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:1rem} /* nur die Abschnitte: Leaflet baut die Kartenauswahl ebenfalls als section (Issue #26) */
 h2{margin:0 0 .6rem;font-size:1.1rem}h3{margin:1rem 0 .3rem;font-size:1rem}
 .tw{overflow-x:auto}th{text-align:left;padding:.3rem;color:var(--mut);font-weight:600;border-bottom:1px solid var(--line);white-space:nowrap}
-tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:100%;min-width:8rem;margin:0}tr.new select{min-width:10rem}tfoot th{padding-top:1rem}td.act{white-space:nowrap;text-align:right}td.act button{padding:.35rem .6rem;margin:.1rem}
+tr.vold td{color:var(--alarm)}tr.off td{opacity:.55}tr.new td{padding:.3rem}tr.new input,tr.new select{width:100%;min-width:8rem;margin:0}tr.new select{min-width:10rem}tfoot th{padding-top:1rem}td.act{white-space:nowrap;text-align:right}td.act button{padding:.35rem .6rem;margin:.1rem}
 /* Einsatzlog: scharfe Einsätze rot, Übungen blau */
 .badge.real{background:var(--alarm)}
 /* Einsatzstatistik als Karten statt Tabelle: bricht um, kein seitliches Scrollen (auch am Handy) */
@@ -134,6 +134,7 @@ const roleVal=el=>[...el.querySelectorAll('[data-ur]')].filter(c=>c.getAttribute
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
+  whatsNew(me.version); // nach einem Update einmal «Was ist neu» (Issue #175)
   if(!nav().length&&me.my_runs==='off'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Deine Benutzerrollen geben dir keinen Zugriff auf die Verwaltung.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   MY=myMode();const adm=nav().length>0;
   if(MY){a.innerHTML=`<header><h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}${userMenu()}</header>
@@ -160,10 +161,10 @@ const NAV=[
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
   ['Konnektivität',[['emailalarm','sMail','E-Mail-Alarm',loadMail]]],
-  ['System',[['applog','sAL','Applikationslog',loadAppLog]]],
+  ['System',[['applog','sAL','Applikationslog',loadAppLog],['versionen','sVer','Versionen',loadVer]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog',versionen:'versions'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -182,12 +183,12 @@ function navWire(){const n=$('#nav'),s=navOGet();n.querySelectorAll('.ngw:not(.o
     w.querySelectorAll('a').forEach(a=>{const h=!t||gm||a.textContent.toLowerCase().includes(t);a.hidden=!h;if(h)hit++});w.hidden=!!t&&!hit;w.classList.toggle('q',!!t&&!!hit);any+=hit});n.querySelector('.nq0').hidden=!t||any>0};
   q.onkeydown=e=>{if(e.key==='Enter'){const a=[...n.querySelectorAll('.navl a')].find(a=>!a.hidden&&!a.closest('.ngw').hidden);if(a){location.hash=a.dataset.k;q.value='';q.oninput();q.blur()}}else if(e.key==='Escape'){q.value='';q.oninput()}}}
 // Konto-Menü in der Kopfzeile (Issue #128): Name, Passwort ändern, Abmelden, Impressum
-const userMenu=()=>`<div class="um"><button id="bUm" aria-expanded="false" aria-haspopup="menu" aria-controls="umL" title="Konto">👤 <span>${esc(me.name)}</span> ▾</button><div id="umL" role="menu" hidden><div class="mut">${esc(me.username)}</div><button id="bPw" role="menuitem">Passwort ändern</button><button id="bOut" role="menuitem">Abmelden</button><a class="mut" href="legal.html" target="_blank" rel="noopener" role="menuitem">Impressum · Datenschutz</a></div></div>`;
+const userMenu=()=>`<div class="um"><button id="bUm" aria-expanded="false" aria-haspopup="menu" aria-controls="umL" title="Konto">👤 <span>${esc(me.name)}</span> ▾</button><div id="umL" role="menu" hidden><div class="mut">${esc(me.username)}</div><button id="bPw" role="menuitem">Passwort ändern</button><button id="bOut" role="menuitem">Abmelden</button><button id="bChg" role="menuitem">Was ist neu</button><a class="mut" href="legal.html" target="_blank" rel="noopener" role="menuitem">Impressum · Datenschutz</a>${me.version?`<div class="mut">Version ${esc(verTxt(me.version))}</div>`:''}</div></div>`;
 let umDoc=false;
 function userMenuWire(){const b=$('#bUm'),l=$('#umL'),set=o=>{l.hidden=!o;b.setAttribute('aria-expanded',o)};b.onclick=e=>{e.stopPropagation();set(l.hidden)};
   if(!umDoc){umDoc=true;document.addEventListener('click',e=>{const m=$('#umL');if(m&&!e.target.closest('.um')){m.hidden=true;$('#bUm').setAttribute('aria-expanded',false)}})}
   l.onkeydown=e=>{if(e.key==='Escape'){set(false);b.focus()}};
-  $('#bPw').onclick=()=>{set(false);pwDialog(false)};$('#bOut').onclick=()=>{logout();start()}}
+  $('#bPw').onclick=()=>{set(false);pwDialog(false)};$('#bChg').onclick=()=>{set(false);changesDlg()};$('#bOut').onclick=()=>{logout();start()}}
 function showNav(){if(!$('#nav'))return;const its=navItems(),it=its.find(x=>x[0]===location.hash.slice(1))||its[0],[k,id,l,load]=it;
   its.forEach(([,i])=>{$('#'+i).hidden=i!==id});
   document.querySelectorAll('#nav a').forEach(a=>{if(a.dataset.k===k)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
@@ -361,6 +362,24 @@ function renderAL(keep){const el=$('#sAL'),D=alD;
     alOpen.has(id)?alOpen.delete(id):alOpen.add(id);r.outerHTML=alRow(x)};
   $('#alMo').onclick=async()=>{const b=$('#alMo');b.disabled=true;try{const r=await api('applog',alQ({before:D.rows[D.rows.length-1].id}));D.rows=D.rows.concat(r.rows);D.more=r.more;renderAL(true);$('#alMoW').hidden=!r.more}catch(e){fail(e)}b.disabled=false};
   $('#alDs').onclick=()=>api('settings/save',{applog_days:+$('#alDays').value}).then(()=>{toast('Gespeichert','ok');loadAppLog()}).catch(fail)}
+/* ---------- Versionen (Issue #175) ---------- */
+// Ausgelieferter Stand des Servers (api/data/version.json, deploy.ps1), Mindestversion der App (app_min: nur Hinweis «Bitte App aktualisieren», nie gesperrt)
+// und die Gerätesitzungen der Apps aktiver Personen mit ihrer Version (aus der Anmeldung bzw. dem Header X-App-Version; ältere Apps melden keine)
+const VPF={android:'Android',ios:'iOS'};
+async function loadVer(){const el=$('#sVer');let D;try{D=await api('versions')}catch(e){el.innerHTML='<h2>Versionen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const sv=D.server,base=a=>(a.app_ver||'').split('+')[0],old=a=>!!(D.app_min&&a.app_ver&&verCmp(a.app_ver,D.app_min)<0);
+  const g=new Map();D.apps.forEach(a=>{const k=(a.platform||'')+'|'+base(a),x=g.get(k)||{pf:a.platform||'',v:base(a),old:old(a),n:0,ppl:new Set(),last:0};x.n++;x.ppl.add(a.user_id);x.last=Math.max(x.last,a.last_seen);g.set(k,x)});
+  const gs=[...g.values()].sort((a,b)=>verCmp(b.v||'0',a.v||'0')||a.pf.localeCompare(b.pf)),vt=v=>v?esc(v):'<span class="mut">unbekannt (ältere App)</span>';
+  const nOld=D.apps.filter(old).length;
+  el.innerHTML=`<h2>Versionen</h2><div class="mut">Web-App, Server und App haben eine gemeinsame Version (MAJOR.MINOR.PATCH, vor dem Produktivstart 0.x). Ein Release entsteht auf GitHub mit dem Workflow «Release» (Tag vX.Y.Z); dazwischen zeigen Test und DEV den Abstand zum letzten Release und den Commit, z. B. 0.1.0+12.abc1234.</div>
+    <h3>Server</h3><div class="tw"><table><tbody>${[['Version',esc(sv.full)],['Release',esc(sv.version)],['Commit',esc(sv.commit||'–')],['System',esc(sv.env_name+(sv.pr?' · PR '+sv.pr:''))],['Ausgeliefert',sv.at?esc(alDt(sv.at)):'–'],['API-Stufe',String(D.api)]].map(([k,v])=>`<tr><th>${k}</th><td>${v}</td></tr>`).join('')}</tbody></table></div>
+    <div class="row"><button id="vChg">Was ist neu</button></div>
+    <h3>Mindestversion der App</h3><div class="mut">Ältere Apps zeigen den Hinweis «Bitte App aktualisieren». Alarmierung und Einsatz funktionieren weiter, gesperrt wird nie. Leer = kein Hinweis.</div>
+    <div class="row"><input id="vMin" placeholder="z. B. ${esc(sv.version)}" value="${esc(D.app_min)}" style="width:9rem" aria-label="Mindestversion der App"><button id="vMinS" class="pri">Speichern</button>${D.app_min?`<span class="mut">${nOld} von ${D.apps.length} Gerätesitzungen darunter</span>`:''}</div>
+    <h3>Angemeldete Apps</h3>${gs.length?`<div class="tw"><table><thead><tr><th>Plattform</th><th>Version</th><th>Geräte</th><th>Personen</th><th>Zuletzt</th></tr></thead><tbody>${gs.map(x=>`<tr${x.old?' class="vold"':''}><td>${esc(VPF[x.pf]||x.pf||'–')}</td><td>${vt(x.v)}${x.old?' <b>veraltet</b>':''}</td><td>${x.n}</td><td>${x.ppl.size}</td><td>${esc(alDt(x.last))}</td></tr>`).join('')}</tbody></table></div>
+    <details><summary>Alle Gerätesitzungen (${D.apps.length})</summary><div class="tw"><table><thead><tr><th>Person</th><th>Gerät</th><th>Plattform</th><th>Version</th><th>Zuletzt</th></tr></thead><tbody>${D.apps.map(a=>`<tr${old(a)?' class="vold"':''}><td>${nmG(a.name,a.user_id)}</td><td>${esc(a.device)}</td><td>${esc(VPF[a.platform]||a.platform||'–')}</td><td>${vt(a.app_ver)}</td><td>${esc(alDt(a.last_seen))}</td></tr>`).join('')}</tbody></table></div></details>`:'<div class="mut">Keine App angemeldet.</div>'}`;
+  $('#vChg').onclick=()=>changesDlg();
+  $('#vMinS').onclick=()=>api('settings/save',{app_min:$('#vMin').value.trim()}).then(()=>{toast('Gespeichert','ok');loadVer()}).catch(fail)}
 /* ---------- Einsatztypen (Issue #90) ---------- */
 // Frei konfigurierbar statt der festen Unterscheidung scharf/Übung: alle Unterschiede sind Einstellungen je Typ. Funktionen, Aufzeichnung, Helikopter und Anonymisierung stehen in ihren eigenen Abschnitten (eigene Rechte).
 async function loadTypes(){const el=$('#sT');let D;try{D=await api('kinds')}catch(e){el.innerHTML='<h2>Einsatztypen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
