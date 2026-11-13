@@ -140,6 +140,7 @@ body.picking .pinfo{pointer-events:none;opacity:.6}
 <div id="offline" role="status" hidden></div>
 <div id="toasts" aria-live="polite"></div>
 <div id="app"></div>
+<script src="demo.js?v=0"></script><!-- Demo-Modus (Issue #74): nur mit ?demo aktiv, vor common.js -->
 <script src="common.js?v=0"></script>
 <script>
 /* ---------- Konfiguration ---------- */
@@ -173,7 +174,8 @@ function notify(t,b,key,lvl){if(lvl==='none')return false;if(key){if(ackGet().in
 const ackGet=()=>{try{return JSON.parse(localStorage.getItem('sw_acked')||'[]')}catch(e){return[]}};
 function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}swNative('swAck',k)} // native App: ihre Meldung dazu schliessen
 // Systembenachrichtigung über den Service Worker (Issue #67), mit demselben tag wie die Push-Nachricht des Servers: ersetzt sie statt sie zu verdoppeln
-function sysNote(t,b,tag,crit,silent){if(!('Notification'in window)||Notification.permission!=='granted')return;const o={body:b,tag:tag||undefined,requireInteraction:!!crit,silent:!!silent,icon:'img/icon-192.png'};
+function sysNote(t,b,tag,crit,silent){if(!('Notification'in window)||Notification.permission!=='granted')return;if(DEMO){t='DEMO – '+t;tag=tag&&'demo:'+tag} // Demo-Modus (Issue #74): als Demo erkennbar, eigener tag (ersetzt keine echte Meldung)
+  const o={body:b,tag:tag||undefined,requireInteraction:!!crit,silent:!!silent,icon:'img/icon-192.png'};
   (navigator.serviceWorker?navigator.serviceWorker.getRegistration():Promise.resolve(null)).then(r=>r?r.showNotification(t,o):new Notification(t,o)).catch(()=>{try{new Notification(t,o)}catch(e){}})}
 /* ---------- Hauptansicht ---------- */
 // Beim Öffnen des Menüs Abschnitte zurücksetzen (siehe draw: secReset)
@@ -1074,7 +1076,7 @@ const pushCan=()=>'serviceWorker'in navigator&&'PushManager'in window&&'Notifica
 const isIos=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 async function pushSub(){try{const r=await navigator.serviceWorker.getRegistration();return r?await r.pushManager.getSubscription():null}catch(e){return null}}
 // Zustand prüfen und ein bestehendes Abonnement dem Server melden (z. B. nach Anmeldung einer anderen Person auf diesem Gerät)
-async function pushSync(){if(NATIVE){pushSt='native';return} // in der App-Hülle (Issue #108): Push kommt über die App
+async function pushSync(){if(NATIVE){pushSt='native';return}if(DEMO){pushSt='demo';return} // Demo-Modus (Issue #74): kein Push // in der App-Hülle (Issue #108): Push kommt über die App
   if(!pushCan()){pushSt='no';return}if(Notification.permission==='denied'){pushSt='denied';return}
   const sub=await pushSub();pushSt=sub?'on':'off';if(sub)api('push/subscribe',sub.toJSON()).catch(()=>{})}
 async function pushOn(){try{if(await Notification.requestPermission()!=='granted'){pushSt=Notification.permission==='denied'?'denied':'off';return draw()}
@@ -1086,7 +1088,7 @@ async function pushOff(quiet){const sub=await pushSub();if(!sub)return;try{await
 function pushHtml(){if(NATIVE)return'<h5>Benachrichtigungen</h5><div class="mut">Benachrichtigungen kommen über die App. Ein- und ausschalten in den Einstellungen der App bzw. des Geräts.</div>';
   const t={on:'<b>Aktiv</b> auf diesem Gerät: Alarme, Nachrichten an dich und Einsatzende kommen auch bei geschlossener App.',off:'Aus. Ohne Push erfährst du von Alarmen nur, solange die App offen ist.',
     denied:'Vom Browser blockiert. Benachrichtigungen in den Einstellungen des Browsers bzw. Geräts für diese Seite erlauben.',
-    no:isIos&&!standalone?'Auf dem iPhone/iPad zuerst über «Teilen → Zum Home-Bildschirm» installieren und die App von dort öffnen (ab iOS 16.4).':'Dieser Browser unterstützt keine Push-Benachrichtigungen.','?':'Wird geprüft …'}[pushSt];
+    demo:'Im Demo-Modus gibt es keine Push-Benachrichtigungen. Alarme und Nachrichten erscheinen, solange die App offen ist.',no:isIos&&!standalone?'Auf dem iPhone/iPad zuerst über «Teilen → Zum Home-Bildschirm» installieren und die App von dort öffnen (ab iOS 16.4).':'Dieser Browser unterstützt keine Push-Benachrichtigungen.','?':'Wird geprüft …'}[pushSt];
   return`<h5>Push-Benachrichtigungen</h5><div class="mut">${t}</div><div class="pbtns">${pushSt==='off'?'<button id="bPushOn" class="pri">Push einschalten</button>':pushSt==='on'?'<button id="bPushOff">Push ausschalten</button>':''}${instEv?'<button id="bInst">App installieren</button>':''}</div>`
     +(!standalone&&!instEv&&isIos?'<div class="mut">Installieren: «Teilen → Zum Home-Bildschirm».</div>':'')}
 // Hinweis zuoberst im Menü, solange Push auf diesem Gerät aus ist: sonst merkt man erst beim verpassten Alarm, dass man es in den Einstellungen einschalten muss
@@ -1113,17 +1115,19 @@ function aiPrefs(){if(!me.ai)return'';const o=['off','cmd','comp'];
   return`<div class="pcard"><h4>AI-Assistent</h4><div class="mut">Texte, die der AI-Assistent auf Wunsch erstellt. «Begleitend» bereitet sie schon beim Öffnen vor.</div>${Object.entries(me.ai).map(([k,f])=>`<label class="mut">${esc(f.name)}<select data-aisel="${k}"><option value="">Standard: ${AI_MN[f.max]}</option>${o.slice(0,o.indexOf(f.max)+1).map(m=>`<option value="${m}" ${f.choice===m?'selected':''}>${AI_MN[m]}</option>`).join('')}</select></label>`).join('')}</div>`}
 function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#prefs input,#prefs select'))return; // Eingabe nicht überschreiben
   // Karten Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches (Issue #126: je Thema ein Unterabschnitt mit Titel, Knöpfe bündig)
-  const h=`<div class="pcard"><h4>Konto</h4><div class="pwho">${me.photo?`<img src="${esc(me.photo)}" alt="Profilbild">`:'<span class="ph0" aria-hidden="true">👤</span>'}<div><b>${esc(me.name)}</b><div class="mut">${esc(me.username)} · ${esc(roleNames(me))}</div></div></div>${(me.groups||[]).length?`<h5>Meine Einsatzgruppen</h5><div class="isel">${me.groups.map(g=>`<span class="lchip ro"><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)}</span>`).join('')}</div>`:''}<div class="pbtns"><button id="bPh">Profilbild ändern</button><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></div><input type="file" id="ph" accept="image/*" hidden><div id="sessMine"></div></div>`
+  const h=`<div class="pcard"><h4>Konto</h4><div class="pwho">${me.photo?`<img src="${esc(me.photo)}" alt="Profilbild">`:'<span class="ph0" aria-hidden="true">👤</span>'}<div><b>${esc(me.name)}</b><div class="mut">${esc(me.username)} · ${esc(roleNames(me))}</div></div></div>${(me.groups||[]).length?`<h5>Meine Einsatzgruppen</h5><div class="isel">${me.groups.map(g=>`<span class="lchip ro"><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)}</span>`).join('')}</div>`:''}<div class="pbtns"><button id="bPh">Profilbild ändern</button>${DEMO?'':'<button id="bPw">Passwort ändern</button>'}<button id="bOut">${DEMO?'Demo beenden':'Abmelden'}</button></div><input type="file" id="ph" accept="image/*" hidden><div id="sessMine"></div></div>`
     +`<div class="pcard"><h4>Alarmierung</h4><div class="phd"><h5>Einsatzfähigkeit</h5>${me.absent?absChip(me.absent):'<span class="okchip">✓ einsatzfähig</span>'}</div><div class="mut">Abwesend oder Einsatzfähigkeit ausgesetzt: kein Aufgebot und kein Alarm. Laufende Einsätze bleiben sichtbar.</div><div id="absMine" class="pabs"><div class="mut">Wird geladen …</div></div>`
     +`<h5>Übungsmodus</h5><label class="row" style="align-items:center;margin:0"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Einsatztypen, die das vorsehen (z. B. Übungen), kritisch alarmieren</span></label>${pushHtml()}</div>`
     +`<div class="pcard"><h4>Anzeige</h4><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label>${feat('nav')?`<label class="mut">Navigations-App (Knopf 🧭)<select id="navA"><option value="">Standard: ${esc(NAV_APPS[me.nav_default]||NAV_APPS.google)}</option>${(me.nav_apps||[]).filter(navOk).map(k=>`<option value="${k}" ${k===me.nav_app?'selected':''}>${esc(NAV_APPS[k])}</option>`).join('')}</select></label>`:''}</div>`
     +hyPrefs()+aiPrefs()
+    // Demo-Modus (Issue #74): im Demo Steuerung, sonst Link zum Ausprobieren in einem eigenen Tab (echte Anmeldung und Daten bleiben unberührt)
+    +`<div class="pcard"><h4>Demo-Modus</h4><div class="mut">${DEMO?'Du bist im Demo-Modus: Alles läuft nur in diesem Browser-Tab, nichts geht an den Server.':'Die Einsatz-App mit Beispieldaten ausprobieren, ohne echte Einsätze, Daten oder Alarme. Öffnet sich in einem eigenen Tab.'}</div><div class="pbtns">${DEMO?'<button id="bDemo">Demo-Modus steuern</button>':'<a class="btn" href="index.html?demo" target="_blank" rel="noopener">Mit Beispieldaten</a><a class="btn" href="index.html?demo=leer" target="_blank" rel="noopener">Ohne Daten</a>'}</div></div>`
     +`<div class="pcard"><h4>Rechtliches</h4><div class="mut">Wer die App betreibt, welche Daten sie speichert und welche Lizenzen gelten.</div><div class="pbtns"><a class="btn" href="legal.html#impressum" target="_blank" rel="noopener">Impressum</a><a class="btn" href="legal.html#lizenzen" target="_blank" rel="noopener">Lizenzen</a><a class="btn" href="legal.html#datenschutz" target="_blank" rel="noopener">Datenschutz</a></div></div>`;
   // Issue #126: früher stand diese Prüfung doppelt; die zweite brach immer ab, Knöpfe und Abwesenheiten blieben ohne Funktion
-  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();sessMine();hyBindPrefs(p);
+  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();sessMine();hyBindPrefs(p);if($('#bDemo'))$('#bDemo').onclick=()=>DEMO.panel(false);
   p.querySelectorAll('[data-aisel]').forEach(x=>x.onchange=e=>{e.target.blur();const v={};p.querySelectorAll('[data-aisel]').forEach(y=>{if(y.value)v[y.dataset.aisel]=y.value});
     api('me/settings',{ai_modes:v}).then(()=>api('me')).then(r=>{me=r.me;prefsHtml='';prefsDraw();draw()}).catch(fail)});
-  $('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=async()=>{await pushOff(true);prefsHash();logout();stop();render()};bindPush();
+  $('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;if($('#bPw'))$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=async()=>{await pushOff(true);prefsHash();logout();stop();render()};bindPush();
   $('#exm').onchange=e=>{const v=e.target.checked?1:0;api('me/settings',{exercise_mode:v}).then(()=>{me.exercise_mode=v;prefsHtml='';e.target.blur();return poll()}).catch(x=>{e.target.checked=!v;e.target.blur();fail(x)})};
   // eigenes Koordinatensystem ('' = Standard der Verwaltung); Kartenebenen neu aufbauen, damit Popups die neue Anzeige zeigen
   $('#csys').onchange=e=>{const v=e.target.value,old=me.coord_sys;e.target.blur();me.coord_sys=v||null;poiKey=resKey='';prefsHtml='';api('me/settings',{coord_sys:v}).then(poll).catch(x=>{me.coord_sys=old;fail(x);poll()})};

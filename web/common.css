@@ -87,3 +87,6 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .aisc .aith{max-height:min(58dvh,640px)}
 @media(min-width:901px){.aisc>.aichat{border-top:0;padding-top:0}.aisc{border-left:1px solid var(--line);padding-left:1rem}.aiwide:has(.aisc){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
 .aidp{display:grid;gap:.35rem}.aidp label.chk{align-items:flex-start}.aidp label.chk input{margin-top:.15rem}
+/* Demo-Modus (Issue #74): Kennzeichnung links unter dem Menüknopf, Steuerung im Dialog */
+#demoBadge{position:fixed;z-index:1200;top:calc(env(safe-area-inset-top) + 3.7rem);left:.75rem;background:#7b1fa2;color:#fff;border:2px solid #fff;border-radius:999px;padding:.1rem .7rem;font-weight:700;font-size:.75rem;letter-spacing:.08em;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:pointer;min-height:0}
+.demoDlg .card{max-width:34rem}
