@@ -4,7 +4,6 @@
 // Stand je Konto in SharedPreferencesAsync (ohne Zwischenspeicher, damit Dienst und Oberfläche dasselbe sehen).
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'accounts.dart';
@@ -161,14 +160,12 @@ Future<int> pollAll({bool track = true}) async {
   if (!track) return l.length;
   try {
     await Tracker.sync(); // Standort im Einsatz teilen (track.dart)
-  } catch (e) {
-    debugPrint('Tracker: $e'); // Fehler im Einzelnen merkt sich Tracker selbst (trk_<Konto>)
-  }
+  } catch (_) {}
   return l.length;
 }
 
-/// Teilnahme aus der Einsatz-App übernehmen (Issue #183): Nach dem Annehmen soll das Teilen im Hintergrund sofort bereitstehen,
-/// nicht erst nach der nächsten Abfrage (unter iOS steht der Abfrage-Timer im Hintergrund still).
+/// Teilnahme aus der Einsatz-App übernehmen (Android, Issue #179): Der Vordergrunddienst läuft mit Push nur im Einsatz und muss
+/// deshalb gleich nach dem Annehmen davon wissen (serviceNeeded), nicht erst nach seiner nächsten Abfrage.
 Future<void> setJoined(String id, int? inc, bool joined) async {
   final st = await accState(id);
   if (st.inc == inc && st.joined == joined) return;

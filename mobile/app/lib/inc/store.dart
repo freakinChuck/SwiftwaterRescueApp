@@ -19,7 +19,6 @@ import '../monitor.dart';
 import '../notify.dart';
 import '../service.dart';
 import '../sys.dart';
-import '../track.dart';
 import 'area.dart';
 import 'util.dart';
 
@@ -609,8 +608,11 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     }
     locErr = '';
     if (_posSub != null || !_visible) return;
-    // dieselben Einstellungen wie das Teilen im Hintergrund (Issue #183): unter iOS teilen sich beide einen Strom, und es gelten die des ersten
-    _posSub = Geolocator.getPositionStream(locationSettings: locSettings(interval: const Duration(seconds: 3))).listen((p) {
+    _posSub = Geolocator.getPositionStream(
+            locationSettings: Platform.isAndroid
+                ? AndroidSettings(accuracy: LocationAccuracy.best, distanceFilter: 0, intervalDuration: const Duration(seconds: 3))
+                : const LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 0))
+        .listen((p) {
       devPos = p;
       locErr = '';
       if (manualPos == null) {
@@ -665,40 +667,22 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  /// Teilnahme an die Überwachung weitergeben und das Teilen im Hintergrund gleich bereitstellen (Issue #183), nicht erst nach der
-  /// nächsten Abfrage: Wer annimmt und sofort sperrt, teilte sonst unter iOS nie (dort steht der Abfrage-Timer im Hintergrund still).
+  /// Android (Issue #179): Der Vordergrunddienst läuft mit Push nur noch im Einsatz. Nach dem Annehmen die Teilnahme an die
+  /// Überwachung weitergeben und den Dienst gleich starten, sonst teilte er den Standort im Hintergrund nicht.
   bool? _trkJoined;
   int? _trkInc;
   Future<void> _syncTrack() async {
+    if (!Platform.isAndroid) return;
     final id = ji(inc?['id']), j = joined;
     if (id == _trkInc && j == _trkJoined) return;
     _trkInc = id;
     _trkJoined = j;
     try {
       await setJoined(acc.id, id, j);
-      if (Platform.isIOS) {
-        await Tracker.sync();
-      } else {
-        await syncService(); // Android: der Vordergrunddienst fragt sofort ab und teilt dort (eigenes Isolate)
-      }
+      await syncService();
     } catch (e) {
-      debugPrint('Tracker: $e');
+      debugPrint('Dienst: $e');
     }
-  }
-
-  /// In den Hintergrund: zuerst das Teilen im Hintergrund übernehmen lassen (iOS: derselbe Strom läuft dann weiter, ein neuer liesse
-  /// sich im Hintergrund ohne «Immer» nicht mehr starten), danach den eigenen Zuhörer beenden.
-  Future<void> _toBackground() async {
-    await setForeground(null);
-    if (Platform.isIOS) {
-      try {
-        await setJoined(acc.id, ji(inc?['id']), joined);
-        await Tracker.sync();
-      } catch (e) {
-        debugPrint('Tracker: $e');
-      }
-    }
-    if (!_visible) _stopPos();
   }
 
   // ---------- Lebenszyklus ----------
@@ -715,7 +699,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       // Hintergrund: Überwachung und Standortdienst übernehmen (monitor.dart, track.dart)
       _visible = false;
-      _toBackground();
+      setForeground(null);
+      _stopPos();
     }
   }
 

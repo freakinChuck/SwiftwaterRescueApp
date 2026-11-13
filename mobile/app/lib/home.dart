@@ -13,7 +13,6 @@ import 'notify.dart';
 import 'push.dart';
 import 'service.dart';
 import 'sys.dart';
-import 'track.dart';
 
 void snack(BuildContext c, String t) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(t), duration: const Duration(seconds: 3)));
 
@@ -44,7 +43,6 @@ class _HomeState extends State<HomePage> {
   List<Account> _acc = [];
   Map<String, AccState> _st = {};
   Map<String, String> _push = {};
-  Map<String, TrackState> _trk = {};
   Timer? _t;
   StreamSubscription? _sub;
   bool _loaded = false;
@@ -66,18 +64,16 @@ class _HomeState extends State<HomePage> {
 
   Future<void> _load() async {
     final l = await Accounts.load();
-    final st = <String, AccState>{}, pu = <String, String>{}, tk = <String, TrackState>{};
+    final st = <String, AccState>{}, pu = <String, String>{};
     for (final a in l) {
       st[a.id] = await accState(a.id);
       pu[a.id] = await pushStatus(a);
-      tk[a.id] = await trackState(a.id);
     }
     if (!mounted) return;
     setState(() {
       _acc = l;
       _st = st;
       _push = pu;
-      _trk = tk;
       _loaded = true;
     });
   }
@@ -160,15 +156,6 @@ class _HomeState extends State<HomePage> {
           Expanded(child: Text(s.joined ? 'Angenommen' : (s.alarmed ? 'Alarm – noch nicht angenommen' : 'Laufender Einsatz'), style: const TextStyle(fontWeight: FontWeight.w600))),
         ]));
         if (s.title.isNotEmpty) rows.add(Padding(padding: const EdgeInsets.only(top: 4), child: Text(s.title, maxLines: 3, overflow: TextOverflow.ellipsis)));
-        // Stand des Teilens im Hintergrund (Issue #183): zuletzt gesendet bzw. letzter Fehler, statt ihn zu verschlucken
-        final tk = _trk[a.id];
-        if (s.joined && tk != null && (tk.at > 0 || tk.err != null)) {
-          final bad = tk.err != null && tk.errAt >= tk.at;
-          rows.add(Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(bad ? 'Standort im Hintergrund: ${tk.err} (${_ago(tk.errAt)})${tk.at > 0 ? ' · zuletzt gesendet ${_ago(tk.at)}' : ''}' : 'Standort im Hintergrund zuletzt gesendet ${_ago(tk.at)}',
-                  style: TextStyle(fontSize: 12, color: bad ? th.colorScheme.error : th.hintColor))));
-        }
       } else if (s.blocked) {
         rows.add(const Text('Laufender Einsatz ohne Aufgebot'));
       } else {
