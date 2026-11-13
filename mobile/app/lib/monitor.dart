@@ -4,6 +4,7 @@
 // Stand je Konto in SharedPreferencesAsync (ohne Zwischenspeicher, damit Dienst und Oberfläche dasselbe sehen).
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'accounts.dart';
@@ -155,9 +156,15 @@ Future<AccState> pollOne(Account a) async {
 /// Alle aktiven, angemeldeten Konten parallel abfragen. Rückgabe: Anzahl überwachter Konten.
 Future<int> pollAll() async {
   final l = (await Accounts.load()).where((a) => a.active && !a.loggedOut).toList();
-  await Future.wait(l.map(pollOne));
+  final r = await Future.wait(l.map(pollOne));
+  final st = {for (var i = 0; i < l.length; i++) l[i].id: r[i]};
   try {
     await Tracker.sync(); // Standort im Einsatz teilen (track.dart)
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('Tracker.sync $e'); // nicht verschlucken (Issue #183): Stand je Konto für die Kontenliste
+    for (final a in l.where((a) => (st[a.id]?.joined ?? false))) {
+      await locResult(a, st[a.id]?.inc, err: 'Standort teilen fehlgeschlagen: $e');
+    }
+  }
   return l.length;
 }
