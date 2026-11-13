@@ -10,6 +10,7 @@ import 'monitor.dart';
 import 'notify.dart';
 import 'push.dart';
 import 'service.dart';
+import 'sounds.dart';
 import 'sys.dart';
 import 'inc/map_page.dart';
 import 'accounts.dart';
@@ -68,6 +69,7 @@ class _AppState extends State<SwiftwaterApp> with WidgetsBindingObserver {
   }
 
   Future<void> _boot() async {
+    unawaited(ensureSounds()); // Töne für kritische Alarme ablegen (Issue #171)
     await requestNotePerms();
     await syncService();
     // nach der Anmeldung für Push erneut prüfen, ob der Vordergrunddienst noch nötig ist (Issue #179)

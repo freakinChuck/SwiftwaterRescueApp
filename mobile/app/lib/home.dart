@@ -11,8 +11,10 @@ import 'main.dart';
 import 'monitor.dart';
 import 'notify.dart';
 import 'push.dart';
+import 'sounds.dart';
 import 'service.dart';
 import 'sys.dart';
+import 'track.dart';
 
 void snack(BuildContext c, String t) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(t), duration: const Duration(seconds: 3)));
 
@@ -32,6 +34,15 @@ String _ago(int ms) {
   return 'um ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }
 
+/// Zeile «Standort» in der Kontenliste: Stand des Teilens im laufenden Einsatz (track.dart), (Text, Fehler?).
+(String, bool)? _locText(LocStat? l, int? inc) {
+  if (l == null || l.inc != inc) return ('Standort: noch nicht gesendet', false);
+  if (l.off) return ('Standort: wird nicht geteilt${l.offWhy != null ? ' (${l.offWhy})' : ''}', false);
+  final e = l.err;
+  if (e != null && l.fails > 0) return ('Standort: Fehler: $e · zuletzt gesendet ${_ago(l.ok)}', true);
+  return ('Standort: zuletzt gesendet ${_ago(l.ok)}', false);
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.onIntervalChanged});
   final VoidCallback onIntervalChanged;
@@ -43,6 +54,7 @@ class _HomeState extends State<HomePage> {
   List<Account> _acc = [];
   Map<String, AccState> _st = {};
   Map<String, String> _push = {};
+  Map<String, LocStat> _loc = {};
   Timer? _t;
   StreamSubscription? _sub;
   bool _loaded = false;
@@ -64,16 +76,18 @@ class _HomeState extends State<HomePage> {
 
   Future<void> _load() async {
     final l = await Accounts.load();
-    final st = <String, AccState>{}, pu = <String, String>{};
+    final st = <String, AccState>{}, pu = <String, String>{}, lo = <String, LocStat>{};
     for (final a in l) {
       st[a.id] = await accState(a.id);
       pu[a.id] = await pushStatus(a);
+      lo[a.id] = await locStat(a.id);
     }
     if (!mounted) return;
     setState(() {
       _acc = l;
       _st = st;
       _push = pu;
+      _loc = lo;
       _loaded = true;
     });
   }
@@ -108,6 +122,8 @@ class _HomeState extends State<HomePage> {
     if (!a.loggedOut) await a.api.logout();
     await Accounts.remove(a.id);
     await clearState(a.id);
+    await forgetSnd(a.id);
+    await clearLocStat(a.id);
     await _changed();
   }
 
@@ -165,6 +181,8 @@ class _HomeState extends State<HomePage> {
           padding: const EdgeInsets.only(top: 4),
           child: Text(s.err != null ? 'Fehler: ${s.err} · zuletzt erreicht ${_ago(s.at)}' : 'Abgefragt ${_ago(s.at)}',
               style: TextStyle(fontSize: 12, color: s.err != null ? th.colorScheme.error : th.hintColor))));
+      final lt = s.joined ? _locText(_loc[a.id], s.inc) : null; // Standort im Einsatz (Issue #183)
+      if (lt != null) rows.add(Text(lt.$1, style: TextStyle(fontSize: 12, color: lt.$2 ? th.colorScheme.error : th.hintColor)));
       final p = _push[a.id];
       final pt = switch (p) {
         'server' => 'Push: auf diesem Server nicht eingerichtet${Platform.isIOS ? ' – Alarme nur bei offener App' : ''}',

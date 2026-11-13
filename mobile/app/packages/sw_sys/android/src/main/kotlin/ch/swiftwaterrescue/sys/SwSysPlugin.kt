@@ -22,6 +22,7 @@ import android.provider.Settings
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
 
@@ -46,7 +47,8 @@ class SwSysPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissi
         private const val MAX_MS = 5 * 60 * 1000L
 
         @Suppress("DEPRECATION")
-        fun startAlarm(c: Context) {
+        /** path: eigener Ton (WAV-Datei, von der App aus ihren Assets kopiert, Issue #171); null oder fehlend = Weckton des Systems */
+        fun startAlarm(c: Context, path: String? = null) {
             stopAlarm()
             val am = c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             // Lautstärke des Weckers mindestens auf 80 %, danach zurück (ein Wecker auf 0 bliebe sonst stumm)
@@ -64,17 +66,20 @@ class SwSysPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissi
             val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            try {
-                player = MediaPlayer().apply {
+            val own = path?.let { java.io.File(it) }?.takeIf { it.isFile }
+            fun play(src: (MediaPlayer) -> Unit): MediaPlayer? = try {
+                MediaPlayer().apply {
                     setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
-                    setDataSource(c, uri)
+                    src(this)
                     isLooping = true
                     prepare()
                     start()
                 }
             } catch (_: Exception) {
-                player = null
+                null
             }
+            // eigener Ton, bei Fehler (Datei beschädigt) der Weckton des Systems
+            player = (if (own != null) play { it.setDataSource(own.absolutePath) } else null) ?: (if (uri != null) play { it.setDataSource(c, uri) } else null)
             try {
                 val v = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) (c.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
                 else c.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
@@ -118,7 +123,7 @@ class SwSysPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissi
 
     override fun onAttachedToEngine(b: FlutterPlugin.FlutterPluginBinding) {
         ctx = b.applicationContext
-        channel = MethodChannel(b.binaryMessenger, "ch.swiftwaterrescue/sys").also { it.setMethodCallHandler { call, result -> handle(call.method, result) } }
+        channel = MethodChannel(b.binaryMessenger, "ch.swiftwaterrescue/sys").also { it.setMethodCallHandler { call, result -> handle(call, result) } }
     }
 
     override fun onDetachedFromEngine(b: FlutterPlugin.FlutterPluginBinding) {
@@ -175,8 +180,8 @@ class SwSysPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissi
     }
 
     @SuppressLint("BatteryLife")
-    private fun handle(m: String, result: MethodChannel.Result) {
-        when (m) {
+    private fun handle(call: MethodCall, result: MethodChannel.Result) {
+        when (call.method) {
             "batteryExempt" -> result.success((ctx.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(ctx.packageName))
             "requestBatteryExempt" -> {
                 try {
@@ -201,7 +206,7 @@ class SwSysPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissi
                 result.success(null)
             }
             "alarmStart" -> {
-                startAlarm(ctx)
+                startAlarm(ctx, call.argument<String>("path"))
                 result.success(player != null)
             }
             "alarmStop" -> {

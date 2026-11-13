@@ -19,6 +19,7 @@ import '../monitor.dart';
 import '../notify.dart';
 import '../service.dart';
 import '../sys.dart';
+import '../track.dart';
 import 'area.dart';
 import 'util.dart';
 
@@ -47,8 +48,10 @@ const mapProviders = {
 const defaultBase = 'swisstopo_sat';
 
 class AlarmItem {
-  AlarmItem(this.title, this.body, this.key, this.lvl);
+  AlarmItem(this.title, this.body, this.key, this.lvl, [this.kind, this.ksnd]);
   final String title, body, key, lvl;
+  final int? kind; // Einsatztyp und Vorgabe des Tons (kritisch, Issue #171)
+  final String? ksnd;
 }
 
 class Toast {
@@ -369,7 +372,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           _msgInit = false;
           msgs.clear();
           if (nx['alarm'] != false && !(nx['me'] is Map && jm(nx['me'])['left_at'] == null && jm(nx['me'])['mode'] != 'declined')) {
-            notify(kindOf(i).name.toUpperCase(), js(i['message']), 'i:$id', lv);
+            notify(kindOf(i).name.toUpperCase(), js(i['message']), 'i:$id', lv, kind: ji(i['kind_id']), ksnd: i['kind'] is Map ? jm(i['kind'])['snd'] as String? : null);
           }
           events.add('inc');
         }
@@ -388,6 +391,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           notify('AUS EINSATZ ENTFERNT', 'Die Einsatzleitung hat dich aus dem Einsatz entfernt.', 'k:$id:${nm['left_at']}', cr);
         }
         st = nx;
+        if (!_joinedSeen && inNow) _trackNow(); // angenommen: Teilen im Hintergrund sofort vorbereiten, nicht erst beim nächsten Polling
+        _joinedSeen = inNow;
       } else {
         final o = inc;
         if (o != null) {
@@ -400,7 +405,6 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         _lastMsg = 0;
       }
       selfLeft = false;
-      _syncTrack();
       hyPoll();
       _poiHideLoad();
       _calcArea();
@@ -428,6 +432,20 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   bool selfLeft = false; // selbst ausgetreten: keine Meldung «entfernt»
+  bool _joinedSeen = false;
+
+  /// Stand des Kontos für die Überwachung sofort nachführen und das Teilen im Hintergrund starten (Issue #183). Vorher geschah das erst
+  /// beim nächsten Polling der App (Standard 15 s); unter iOS ist dieses im Hintergrund gestoppt, wer annahm und gleich sperrte, teilte nie.
+  /// Unter Android teilt der Vordergrunddienst in seinem eigenen Isolate, er erhält nur den Auftrag, sofort abzufragen.
+  /// Android (Issue #179): Mit Push läuft der Dienst nur im Einsatz (serviceNeeded); damit er gleich startet, zuerst die Teilnahme
+  /// im Stand der Überwachung festhalten (setJoined).
+  void _trackNow() {
+    if (Platform.isAndroid) {
+      unawaited(setJoined(acc.id, ji(inc?['id']), true).then((_) => syncService()).catchError((Object e) => debugPrint('Dienst $e')));
+      return;
+    }
+    unawaited(pollOne(acc).then((_) => Tracker.sync()).catchError((Object e) => debugPrint('Tracker $e')));
+  }
 
   void _saveLast() {
     if (st == null) return;
@@ -456,12 +474,12 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---------- Alarme und Hinweise ----------
   /// Alarmstufe (Issue #90): crit Vollbild mit Dauerton, high Vollbild mit einmaligem Ton, normal Hinweis mit Ton, low still, none nichts
-  void notify(String t, String b, String key, String lvl) {
+  void notify(String t, String b, String key, String lvl, {int? kind, String? ksnd}) {
     if (lvl == 'none') return;
     if (_acked.contains(key)) return;
     if (lvl == 'crit' || lvl == 'high') {
       if (alarm?.key == key || alarmQ.any((q) => q.key == key)) return;
-      alarmQ.add(AlarmItem(t, b, key, lvl));
+      alarmQ.add(AlarmItem(t, b, key, lvl, kind, ksnd));
       _showAlarm();
       return;
     }
@@ -480,7 +498,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     final a = alarm!;
     // Meldung des Geräts mit Weckton (kritisch) bzw. Alarmton; dieselbe Kennung wie die Überwachung, also nie doppelt
     markTag(acc.id, a.key);
-    showNote(acc.id, a.key, a.title, a.body, a.lvl, sub: acc.label);
+    showNote(acc.id, a.key, a.title, a.body, a.lvl, sub: acc.label, kind: a.kind, ksnd: a.ksnd);
     if (a.lvl == 'crit' && Platform.isIOS) HapticFeedback.heavyImpact();
     notifyListeners();
   }
@@ -609,9 +627,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     locErr = '';
     if (_posSub != null || !_visible) return;
     _posSub = Geolocator.getPositionStream(
-            locationSettings: Platform.isAndroid
-                ? AndroidSettings(accuracy: LocationAccuracy.best, distanceFilter: 0, intervalDuration: const Duration(seconds: 3))
-                : const LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 0))
+            // dieselben Einstellungen wie track.dart: unter iOS gibt es nur einen Strom, und wer ihn zuerst öffnet, bestimmt sie (Issue #183)
+            locationSettings: locSettings(android: const Duration(seconds: 3)))
         .listen((p) {
       devPos = p;
       locErr = '';
@@ -654,8 +671,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         'manual': manualPos != null ? 1 : 0
       });
       locStatus = 'Standort wird geteilt (${fmtT(DateTime.now().millisecondsSinceEpoch / 1000)})';
+      unawaited(locResult(acc, ji(inc?['id'])));
     } catch (e) {
       locStatus = 'Standort senden fehlgeschlagen: $e';
+      unawaited(locResult(acc, ji(inc?['id']), err: e is ApiError ? e.message : '$e'));
     }
     _checkArea();
   }
@@ -665,24 +684,6 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     manualPos = p;
     if (p != null) _sendPos(p);
     notifyListeners();
-  }
-
-  /// Android (Issue #179): Der Vordergrunddienst läuft mit Push nur noch im Einsatz. Nach dem Annehmen die Teilnahme an die
-  /// Überwachung weitergeben und den Dienst gleich starten, sonst teilte er den Standort im Hintergrund nicht.
-  bool? _trkJoined;
-  int? _trkInc;
-  Future<void> _syncTrack() async {
-    if (!Platform.isAndroid) return;
-    final id = ji(inc?['id']), j = joined;
-    if (id == _trkInc && j == _trkJoined) return;
-    _trkInc = id;
-    _trkJoined = j;
-    try {
-      await setJoined(acc.id, id, j);
-      await syncService();
-    } catch (e) {
-      debugPrint('Dienst: $e');
-    }
   }
 
   // ---------- Lebenszyklus ----------
@@ -700,7 +701,15 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       // Hintergrund: Überwachung und Standortdienst übernehmen (monitor.dart, track.dart)
       _visible = false;
       setForeground(null);
-      _stopPos();
+      if (Platform.isIOS) {
+        // Erst das Teilen im Hintergrund anhängen, dann den eigenen Strom beenden: So läuft die Ortung ohne Unterbruch weiter
+        // (unter iOS darf sie mit «Beim Verwenden» nur im Vordergrund starten).
+        Tracker.sync().catchError((Object e) => debugPrint('Tracker $e')).whenComplete(() {
+          if (!_visible) _stopPos();
+        });
+      } else {
+        _stopPos();
+      }
     }
   }
 
