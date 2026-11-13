@@ -29,23 +29,49 @@ function toast(t,kind='ok'){t=String(t==null?'':t);let c=document.getElementById
   while(c.children.length>4)c.firstChild.remove();setTimeout(rm,Math.min(12000,(kind==='err'?5000:2500)+t.length*45))}
 const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte später nochmals versuchen.':e.message,'err'); // TypeError: fetch ohne Netz (Issue #67)
 /* ---------- Karte (Einsatz-App und Replay der Verwaltung) ---------- */
-// Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
-const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
+// Kartenanbieter (Issue #106): Katalog MAP_SOURCES im Server, eingestellt in der Verwaltung (global und je Einsatztyp); die Geräte erhalten die Liste über me, incident/state,
+// public/state und incident/replay (maps, map_def) und setzen sie mit mapsSet. MAP_PROVIDERS unten ist nur der Rückfall, bis die Liste da ist (älterer Server, erster Start offline).
+let DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 // Fenster «Ansicht» (Issue #34, öffentliche Ansicht #48): Kategorien auf der Karte [Schlüssel, Bezeichnung, Funktion (feat)]. Neue Kartenelemente hier aufnehmen.
 const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
 const VIEW_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 // Inhalt des Fensters: Grundkarte (Radio vbase) und, wenn cats (Liste aus VIEW), Häkchen je Kategorie (data-vk) mit «Alle einblenden/ausblenden» (data-va)
+// Grundkarten nach Art gruppiert (Luftbilder, Karten), Überschriften nur, wenn es beide gibt
+const MAP_KIND_G={sat:'Luftbilder',topo:'Karten',street:'Karten',vec:'Karten'};
+function baseRadios(base){const g={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>(g[MAP_KIND_G[P.kind]||'Karten']=g[MAP_KIND_G[P.kind]||'Karten']||[]).push([k,P]));const two=Object.keys(g).length>1;
+  return Object.entries(g).map(([t,l])=>(two?`<div class="vbg">${t}</div>`:'')+l.map(([k,P])=>`<label><input type="radio" name="vbase" value="${k}" ${k===base?'checked':''}> ${esc(P.label)}</label>`).join('')).join('')}
 function viewHtml(base,cats,vis){return'<div class="vh"><b>Ansicht</b><button id="bViewX" aria-label="Ansicht schliessen">✕</button></div><h4>Grundkarte</h4>'
-  +Object.entries(MAP_PROVIDERS).map(([k,P])=>`<label><input type="radio" name="vbase" value="${k}" ${k===base?'checked':''}> ${esc(P.label)}</label>`).join('')
+  +baseRadios(base)
   +(cats?'<h4>Auf der Karte</h4><div class="row"><button data-va="1">Alle einblenden</button><button data-va="0">Alle ausblenden</button></div>'+cats.map(([k,t])=>`<label><input type="checkbox" data-vk="${k}" ${vis(k)?'checked':''}> ${t}</label>`).join(''):'')}
 const MAP_PROVIDERS={
-  swisstopo_sat:{label:'Luftbild (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
-  swisstopo:{label:'Landeskarte (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
-  osm:{label:'OpenStreetMap',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap',maxZoom:19}
+  swisstopo_sat:{k:'swisstopo_sat',label:'Luftbild (swisstopo)',kind:'sat',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',max:19,nat:18},
+  swisstopo:{k:'swisstopo',label:'Landeskarte (swisstopo)',kind:'topo',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',max:19,nat:18},
+  osm:{k:'osm',label:'OpenStreetMap',kind:'street',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap-Mitwirkende',max:19,nat:19}
 };
+// Liste vom Server übernehmen; true = geändert (die Karten bauen dann ihre Grundkarten neu, mapBases)
+let mapsKey='';
+function mapsSet(list,def){if(!Array.isArray(list)||!list.length)return false;const key=JSON.stringify([list,def]);if(key===mapsKey)return false;mapsKey=key;
+  Object.keys(MAP_PROVIDERS).forEach(k=>delete MAP_PROVIDERS[k]);list.forEach(P=>MAP_PROVIDERS[P.k]=P);DEFAULT_BASE=MAP_PROVIDERS[def]?def:list[0].k;return true}
+// Leaflet-Ebene eines Anbieters: Kacheln (nur innerhalb von bounds), «Luftbild (automatisch)» als Gruppe (unten zuerst), eigene Vektorkarte (PMTiles) über protomaps-leaflet
+function mapLayer(P,z){if(P.layers){const g=L.layerGroup(P.layers.map((x,i)=>mapLayer(x,i)));return g}
+  if(P.vec)return vecLayer(P);const o={attribution:P.attr,maxZoom:P.max||19,maxNativeZoom:Math.min(P.nat||P.max||19,P.max||19)};
+  if(P.sub)o.subdomains=P.sub;if(P.bounds)o.bounds=P.bounds;if(z!=null)o.zIndex=z+1;return L.tileLayer(P.url,o)}
+function mapBases(){const r={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>r[k]=mapLayer(P));return r}
+// gemerkte Wahl (sw_base bzw. ein anderer Schlüssel), sonst der Standard
+function baseSaved(key){let sv=null;try{sv=localStorage.getItem(key||'sw_base')}catch(e){}return MAP_PROVIDERS[sv]?sv:DEFAULT_BASE}
+// Eigene OSM-Karte: Bibliothek erst beim ersten Gebrauch laden (cdn.jsdelivr.net, im Service Worker zwischengespeichert); Gewässer kräftiger als im Stil «light»
+const PM_JS='https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js';let pmLoad=null;
+function pmLib(){return pmLoad=pmLoad||new Promise((ok,no)=>{const s=document.createElement('script');s.src=PM_JS;s.onload=()=>window.protomapsL?ok(window.protomapsL):no(new Error('Kartenbibliothek fehlt'));s.onerror=()=>{pmLoad=null;no(new Error('Die Kartenbibliothek konnte nicht geladen werden (Verbindung?)'))};document.head.appendChild(s)})}
+const PM_WATER='#1f6fd1',pmW=(z,a,b)=>z<a?0:Math.min(b,(z-a+1)*b/6);
+function vecLayer(P){const g=L.layerGroup();
+  pmLib().then(pm=>{const ly=pm.leafletLayer({url:new URL(P.url,location.href).href,attribution:P.attr,flavor:'light',lang:'de',maxZoom:P.max||19,maxDataZoom:P.nat||15,...(P.bounds?{bounds:P.bounds}:{})});
+    try{const R=ly.paintRules,i=R.findIndex(r=>r.dataLayer==='water'); // direkt nach der Wasserfläche, also unter Strassen und Brücken
+      R.forEach(r=>{if(r.dataLayer==='water'&&r.symbolizer instanceof pm.PolygonSymbolizer)r.symbolizer=new pm.PolygonSymbolizer({fill:'#7fb8ea'})});
+      R.splice(i+1,0,{dataLayer:'water',symbolizer:new pm.LineSymbolizer({color:PM_WATER,width:(z,f)=>{const k=f&&f.props&&f.props.kind;return k==='stream'||k==='ditch'?pmW(z,12,3):pmW(z,8,7)}}),filter:(z,f)=>f.geomType===2&&['river','canal','stream'].includes(f.props.kind)})}catch(e){}
+    g.addLayer(ly)}).catch(fail);
+  return g}
 // Kleine Karten der Verwaltung (Auswahl- und Vorschaukarten, Änderungswunsch #96): alle Anbieter aus MAP_PROVIDERS, umschaltbar über eine Auswahl oben rechts, gemerkt in sw_base wie die übrigen Karten
-function addBases(m){let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}let cur=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;const ls={};
-  Object.entries(MAP_PROVIDERS).forEach(([k,P])=>ls[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));ls[cur].addTo(m);
+function addBases(m){let cur=baseSaved();const ls=mapBases();ls[cur].addTo(m);
   const C=L.Control.extend({options:{position:'topright'},onAdd(){const d=L.DomUtil.create('div','leaflet-bar basesel');d.innerHTML=`<select aria-label="Grundkarte">${Object.entries(MAP_PROVIDERS).map(([k,P])=>`<option value="${k}" ${k===cur?'selected':''}>${esc(P.label)}</option>`).join('')}</select>`;
     L.DomEvent.disableClickPropagation(d);L.DomEvent.disableScrollPropagation(d);d.firstChild.onchange=e=>{const k=e.target.value;if(!ls[k]||k===cur)return;m.removeLayer(ls[cur]);cur=k;ls[k].addTo(m);try{localStorage.setItem('sw_base',k)}catch(_){}};return d}});
   new C().addTo(m);return m}

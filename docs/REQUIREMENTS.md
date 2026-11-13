@@ -82,7 +82,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 ## 5. Karte (KA)
 
 - **KA-01** – Karte im Vollbild; alle Bedienelemente in einem versteckten Menü (☰) (AG).
-- **KA-02** – Grundkarte swisstopo Luftbild (Standard), umschaltbar auf Landeskarte und OpenStreetMap; Anbieter leicht austauschbar; Wahl pro Gerät gemerkt (AG, #34).
+- **KA-02** – Grundkarte swisstopo Luftbild (Standard), umschaltbar auf die in der Verwaltung eingeschalteten Kartenanbieter (KA-13); Wahl pro Gerät gemerkt, im Einsatz bis zum Einsatzende (AG, #34, #106).
 - **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Linien, Nachrichten-Markierungen, Helikopter, Feste Standorte, Messstationen), «Alle ein-/ausblenden», pro Gerät gemerkt (#34); ohne Einsatz feste Standorte, Helikopter und eigene Messstationen (#96, #125, #130).
 - **KA-04** – Karte drehbar (zwei Finger, Shift + Mausrad, Kompass); Klick auf den Kompass richtet nach Norden aus (AG).
 - **KA-05** – Startansicht beim Öffnen eines Einsatzes: Übersicht über alle aktiven Positionen (AG).
@@ -93,6 +93,9 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KA-10** – Startansicht beim Öffnen der App ohne laufenden Einsatz: eigener Standort und alle eingeblendeten festen Standorte im Bild; trifft der eigene Standort erst später ein, wird die Ansicht in den ersten 20 s nachgeführt, solange man die Karte nicht selbst verschoben oder gezoomt hat (#96).
 - **KA-11** – Das Menü (☰) zeigt im Einsatz oben den Einsatz mit Alarmzeit, Alarmstufe, PLS, Fliessgeschwindigkeit, Aufzeichnung und öffentlicher Ansicht, darunter Register: «Einsatz» (AI-Assistent, Teilnahme bzw. Mein Einsatz, Fliessgeschwindigkeit, Werkzeuge), «Leitung» (nur Einsatzleitung: Aufgebot, PLS, Aufzeichnung, Helikopter, öffentliche Ansicht, Einsatzkräfte, Einsatz beenden), «Übung» (Übungsleitung, mit Anzahl offener Elemente), «Log» und «Info» (eigene Rechte). Jedes Thema steht in einer eigenen Karte. Beim Öffnen gilt «Einsatz», für die Übungsleitung «Übung» (#129).
 - **KA-12** – Wird eine Benachrichtigung zum laufenden Einsatz geöffnet (Alarm, Nachricht, Entfernen; als Systembenachrichtigung oder in der App), zeigt die Karte das Einsatzgebiet: Suchgebiet mit den PLS, ohne Einsatzkräfte (solange das Suchgebiet noch berechnet wird, die PLS). Nach dem Annehmen mit einer Einrückoption kehrt sie ebenso aufs Einsatzgebiet zurück. Verschieben von Hand beendet es. Web-App und native App (Feedback zu #108).
+- **KA-13** – Kartenanbieter (#106): Katalog freier Anbieter ohne Schlüssel mit Angabe von Abdeckung, Lizenz, Nutzungsbedingungen und Einschränkungen: swisstopo Luftbild, Landeskarte farbig und grau; weltweites Luftbild (Sentinel-2 von EOX, 10 m); Luftbilder Österreich (basemap.at) und Frankreich (IGN); OpenTopoMap, basemap.de, OpenStreetMap, OSM Humanitarian, CARTO; «Luftbild (automatisch)» (die eingeschalteten Luftbilder nach Abdeckung zusammengesetzt, nur zur Wahl, nicht Standard); eigene OSM-Karte (KA-14). Das Fenster «Ansicht» gruppiert nach Luftbildern und Karten.
+- **KA-14** – Eigene OSM-Karte (#106): Vektorkarte aus OpenStreetMap als PMTiles-Datei auf dem eigenen Webserver, ohne Dienste Dritter, Gewässer hervorgehoben; wählbar, sobald die Datei vorliegt; erzeugen und hochladen mit Skripten. In der nativen App noch nicht (**offen**).
+- **KA-15** – Kartenanbieter in der Verwaltung einstellbar: ein/aus, Reihenfolge, Standard, Test einer Beispielkachel im Browser (bzw. der PMTiles-Datei); je Einsatztyp einzelne Anbieter ausschalten und eine eigene Standardkarte wählen, gilt sofort, auch im laufenden Einsatz. Beim Öffnen eines Einsatzes zeigt die Karte die Standardkarte des Typs; öffentliche Ansicht und Replay folgen dem Typ ihres Einsatzes (#106).
 
 ## 6. Einsatzkräfte und Standort (EK)
 
@@ -268,8 +271,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **RC-01** – Eine Seite «Impressum, Lizenzen & Datenschutz» ist ohne Anmeldung erreichbar, verlinkt bei der Anmeldung, im Profil der Einsatz-App, in der öffentlichen Ansicht und in der Verwaltung (#102).
 - **RC-02** – Impressum mit den Angaben der betreibenden Organisation und den Verwendungseinschränkungen: kein Ersatz für Notrufnummern, Alarmierung ohne Gewähr, Standorte und Suchgebiet sind Schätzungen, Kartendaten und Luftfahrzeuge ohne Gewähr, nur nicht-kommerzielle Nutzung, keine Haftung (#102).
-- **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, PostGIS, PostGIS-API, Helikopter-Quellen, BAFU-Hydrodaten) (#102, #125, #131).
-- **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen, Speicher im Gerät, Rechte der betroffenen Personen (#102).
+- **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, PostGIS, PostGIS-API, Helikopter-Quellen, BAFU-Hydrodaten, eingeschaltete Kartenanbieter je Einsatztyp) (#102, #106, #125, #131).
+- **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen und Kartenanbietern, Speicher im Gerät, Rechte der betroffenen Personen (#102).
 - **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
 
 

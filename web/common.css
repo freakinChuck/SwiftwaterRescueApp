@@ -87,3 +87,5 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .aisc .aith{max-height:min(58dvh,640px)}
 @media(min-width:901px){.aisc>.aichat{border-top:0;padding-top:0}.aisc{border-left:1px solid var(--line);padding-left:1rem}.aiwide:has(.aisc){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
 .aidp{display:grid;gap:.35rem}.aidp label.chk{align-items:flex-start}.aidp label.chk input{margin-top:.15rem}
+/* Grundkarten im Fenster «Ansicht» nach Art gruppiert (Issue #106) */
+.vbg{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin:.35rem 0 .05rem}

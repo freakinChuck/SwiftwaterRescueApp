@@ -160,7 +160,7 @@ try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
 // Ton für kritische Alarme (Issue #171): inc_kinds.snd = Vorgabe des Typs (NULL = Ton des Systems), push_native.snd = Wahl des Geräts je Typ (JSON {Typ-ID: Schlüssel})
-foreach (['inc_kinds' => ["snd $tx NULL", "msg_lvl $tx NULL", "end_lvl $tx NULL"], 'push_native' => ['snd TEXT NULL'], 'aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'pois' => ["sym $tx NULL"], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL', 'line INT DEFAULT 0'], 'place_cats' => ['sort INT NULL'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_groups' => ['show_name INT DEFAULT 1'], 'inc_hydro' => ['danger INT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
+foreach (['inc_kinds' => ["snd $tx NULL", "msg_lvl $tx NULL", "end_lvl $tx NULL", 'map_off TEXT NULL', 'map_def TEXT NULL'], 'push_native' => ['snd TEXT NULL'], 'aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'pois' => ["sym $tx NULL"], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL', 'line INT DEFAULT 0'], 'place_cats' => ['sort INT NULL'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_groups' => ['show_name INT DEFAULT 1'], 'inc_hydro' => ['danger INT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
 try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
@@ -277,7 +277,7 @@ function sndApns($k) { return $k && $k !== 'system' && preg_match('/^[a-z0-9_]{1
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func', 'sym' => 'cfg_inc',
-  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'applog_days' => 'applog']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
+  'coord_sys' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'maps' => 'cfg_map', 'map_kinds' => 'cfg_map', 'applog_days' => 'applog']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
@@ -1104,6 +1104,98 @@ if ($route === 'login') {
   out(['token' => $t]);
 }
 
+/* ---------- Kartenanbieter (Issue #106) ---------- */
+// Katalog der Grundkarten, nur gratis und ohne Schlüssel. kind: sat Luftbild, topo, street, vec (eigene Vektorkarte); url: Vorlage für Leaflet ({s} mit sub),
+// max = höchster Zoom der Karte, nat = höchster Zoom des Anbieters (darüber hochskaliert), cover = Abdeckung [s, w, n, e] (null = weltweit),
+// def = standardmässig eingeschaltet. combo = «Luftbild (automatisch)»: die eingeschalteten Luftbilder in COMBO_LAYERS übereinander (unten zuerst), die mit Abdeckung nur dort.
+// own = eigene OSM-Karte als PMTiles-Datei im Webroot (MAP_OWN_FILE), nur wählbar, solange die Datei vorhanden ist (scripts/tiles/).
+const MAP_CH = [45.8, 5.95, 47.82, 10.5];
+const MAP_SOURCES = [
+  'swisstopo_sat' => ['name' => 'Luftbild (swisstopo)', 'kind' => 'sat', 'url' => 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg', 'attr' => '&copy; swisstopo', 'max' => 19, 'nat' => 18, 'cover' => MAP_CH, 'def' => 1,
+    'site' => 'https://www.swisstopo.admin.ch', 'terms' => 'https://www.geo.admin.ch/de/nutzungsbedingungen', 'lic' => 'OGD, frei nutzbar', 'area' => 'Schweiz und Liechtenstein',
+    'note' => 'SWISSIMAGE, Auflösung bis 10 cm. Quellenangabe «© swisstopo» Pflicht, Dienst nach «Fair Use» (keine Massendownloads). Ausserhalb der Schweiz und Liechtensteins leer.'],
+  'auto_sat' => ['name' => 'Luftbild (automatisch)', 'kind' => 'sat', 'combo' => 1, 'url' => '', 'attr' => '', 'max' => 19, 'nat' => 19, 'cover' => null, 'def' => 1,
+    'site' => '', 'terms' => '', 'lic' => 'je nach Teil', 'area' => 'weltweit',
+    'note' => 'Setzt die eingeschalteten Luftbilder zusammen: swisstopo in der Schweiz, basemap.at in Österreich, IGN in Frankreich, sonst Sentinel-2. Die Abdeckung gilt als Rechteck; an den Grenzen sieht man den Wechsel deutlich.'],
+  'eox_s2' => ['name' => 'Luftbild weltweit (Sentinel-2)', 'kind' => 'sat', 'url' => 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg', 'attr' => '<a href="https://s2maps.eu" target="_blank" rel="noopener">Sentinel-2 cloudless</a> by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2023)', 'max' => 19, 'nat' => 15, 'cover' => null, 'def' => 1,
+    'site' => 'https://s2maps.eu', 'terms' => 'https://s2maps.eu', 'lic' => 'CC BY-NC-SA 4.0', 'area' => 'weltweit',
+    'note' => 'Satellitenbild ohne Wolken, Auflösung 10 m: Flussläufe, Seen und Wälder sind erkennbar, Häuser und Wege kaum. Nur für nicht-kommerzielle Nutzung, Quellenangabe Pflicht.'],
+  'basemap_at_sat' => ['name' => 'Luftbild Österreich (basemap.at)', 'kind' => 'sat', 'url' => 'https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg', 'attr' => 'Datenquelle: <a href="https://basemap.at" target="_blank" rel="noopener">basemap.at</a>', 'max' => 19, 'nat' => 19, 'cover' => [46.37, 9.53, 49.02, 17.17], 'def' => 1,
+    'site' => 'https://basemap.at', 'terms' => 'https://basemap.at/#lizenz', 'lic' => 'CC BY 4.0', 'area' => 'Österreich',
+    'note' => 'Orthofoto der österreichischen Länder, Auflösung bis 30 cm. Quellenangabe «basemap.at» Pflicht.'],
+  'ign_sat' => ['name' => 'Luftbild Frankreich (IGN)', 'kind' => 'sat', 'url' => 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', 'attr' => '&copy; IGN', 'max' => 19, 'nat' => 19, 'cover' => [41.3, -5.2, 51.1, 9.6], 'def' => 1,
+    'site' => 'https://geoservices.ign.fr', 'terms' => 'https://geoservices.ign.fr/cgu-licences', 'lic' => 'Licence Ouverte (Etalab 2.0)', 'area' => 'Frankreich',
+    'note' => 'Orthophotos der Géoplateforme, Auflösung bis 20 cm. Quellenangabe «© IGN» Pflicht.'],
+  'swisstopo' => ['name' => 'Landeskarte (swisstopo)', 'kind' => 'topo', 'url' => 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', 'attr' => '&copy; swisstopo', 'max' => 19, 'nat' => 18, 'cover' => MAP_CH, 'def' => 1,
+    'site' => 'https://www.swisstopo.admin.ch', 'terms' => 'https://www.geo.admin.ch/de/nutzungsbedingungen', 'lic' => 'OGD, frei nutzbar', 'area' => 'Schweiz und Liechtenstein',
+    'note' => 'Landeskarten farbig. Quellenangabe «© swisstopo» Pflicht, «Fair Use».'],
+  'swisstopo_grey' => ['name' => 'Landeskarte grau (swisstopo)', 'kind' => 'topo', 'url' => 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-grau/default/current/3857/{z}/{x}/{y}.jpeg', 'attr' => '&copy; swisstopo', 'max' => 19, 'nat' => 18, 'cover' => MAP_CH, 'def' => 0,
+    'site' => 'https://www.swisstopo.admin.ch', 'terms' => 'https://www.geo.admin.ch/de/nutzungsbedingungen', 'lic' => 'OGD, frei nutzbar', 'area' => 'Schweiz und Liechtenstein',
+    'note' => 'Landeskarten in Graustufen, farbige Marker sind darauf gut lesbar. Quellenangabe «© swisstopo» Pflicht, «Fair Use».'],
+  'opentopo' => ['name' => 'OpenTopoMap', 'kind' => 'topo', 'url' => 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', 'sub' => 'abc', 'attr' => 'Kartendaten: &copy; OpenStreetMap-Mitwirkende, SRTM | Darstellung: &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)', 'max' => 19, 'nat' => 17, 'cover' => null, 'def' => 1,
+    'site' => 'https://opentopomap.org', 'terms' => 'https://opentopomap.org/about', 'lic' => 'CC BY-SA 3.0, Daten ODbL', 'area' => 'weltweit',
+    'note' => 'Topografische Karte mit Höhenlinien aus OpenStreetMap. Freiwillig betrieben, «Fair Use», teils langsam.'],
+  'basemap_de' => ['name' => 'basemap.de (Deutschland)', 'kind' => 'topo', 'url' => 'https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_farbe/default/GLOBAL_WEBMERCATOR/{z}/{y}/{x}.png', 'attr' => '&copy; <a href="https://basemap.de" target="_blank" rel="noopener">basemap.de</a> / BKG', 'max' => 19, 'nat' => 18, 'cover' => [47.2, 5.8, 55.1, 15.1], 'def' => 0,
+    'site' => 'https://basemap.de', 'terms' => 'https://basemap.de/produkte-und-dienste/web-raster/', 'lic' => 'CC BY 4.0', 'area' => 'Deutschland',
+    'note' => 'Amtliche Grundkarte Deutschlands. Quellenangabe «© basemap.de / BKG» Pflicht.'],
+  'osm' => ['name' => 'OpenStreetMap', 'kind' => 'street', 'url' => 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 'attr' => '&copy; OpenStreetMap-Mitwirkende', 'max' => 19, 'nat' => 19, 'cover' => null, 'def' => 1,
+    'site' => 'https://www.openstreetmap.org', 'terms' => 'https://operations.osmfoundation.org/policies/tiles/', 'lic' => 'ODbL, Tile Usage Policy', 'area' => 'weltweit',
+    'note' => 'Kachelserver der OSM Foundation, Gratisangebot ohne Zusicherung: kein starker Verkehr, kein Vorausladen ganzer Gebiete. Quellenangabe Pflicht.'],
+  'osm_hot' => ['name' => 'OSM Humanitarian', 'kind' => 'street', 'url' => 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', 'sub' => 'abc', 'attr' => '&copy; OpenStreetMap-Mitwirkende, Darstellung: Humanitarian OpenStreetMap Team, OSM France', 'max' => 19, 'nat' => 19, 'cover' => null, 'def' => 0,
+    'site' => 'https://www.hotosm.org', 'terms' => 'https://www.openstreetmap.fr/fonds-de-carte/', 'lic' => 'CC0 (Darstellung), Daten ODbL', 'area' => 'weltweit',
+    'note' => 'Darstellung für humanitäre Einsätze, betrieben von OSM France. «Fair Use», ohne Zusicherung.'],
+  'carto' => ['name' => 'CARTO Voyager', 'kind' => 'street', 'url' => 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', 'sub' => 'abcd', 'attr' => '&copy; OpenStreetMap-Mitwirkende &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>', 'max' => 19, 'nat' => 19, 'cover' => null, 'def' => 0,
+    'site' => 'https://carto.com/basemaps', 'terms' => 'https://github.com/CartoDB/basemap-styles#license', 'lic' => 'CC BY 4.0, Daten ODbL', 'area' => 'weltweit',
+    'note' => 'Ruhige Strassenkarte. Gratis nur für nicht-kommerzielle Nutzung bis 75 000 Kartenaufrufe pro Monat.'],
+  'own' => ['name' => 'OSM-Karte (eigener Server)', 'kind' => 'vec', 'vec' => 1, 'url' => 'tiles/osm.pmtiles', 'attr' => '&copy; OpenStreetMap-Mitwirkende, <a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps</a>', 'max' => 19, 'nat' => 15, 'cover' => null, 'def' => 1,
+    'site' => 'https://protomaps.com', 'terms' => 'https://www.openstreetmap.org/copyright', 'lic' => 'ODbL', 'area' => 'gemäss Datei',
+    'note' => 'Vektorkarte aus OpenStreetMap-Daten als Datei auf dem eigenen Webserver (scripts/tiles/), Gewässer hervorgehoben. Es gehen keine Kartenausschnitte an Dritte. Wählbar, sobald die Datei hochgeladen ist; in der nativen App noch nicht.'],
+];
+const COMBO_LAYERS = ['eox_s2', 'ign_sat', 'basemap_at_sat', 'swisstopo_sat']; // unten zuerst: die Schweiz liegt zuoberst
+const MAP_DEFAULT = 'swisstopo_sat';
+const MAP_OWN_FILE = __DIR__ . '/../tiles/osm.pmtiles';
+// Kopf der eigenen PMTiles-Datei (Version 3, 127 Byte): Zoomstufen, Ausschnitt, Kacheltyp; null = keine gültige Datei
+function mapOwn() { static $r = false; if ($r !== false) return $r; $r = null; $f = MAP_OWN_FILE;
+  if (!is_file($f) || !($h = @fopen($f, 'rb'))) return $r; $b = fread($h, 127); fclose($h);
+  if (strlen($b) < 127 || substr($b, 0, 7) !== 'PMTiles' || ord($b[7]) !== 3) return $r;
+  $i32 = function ($o) use ($b) { $v = unpack('V', substr($b, $o, 4))[1]; return $v >= 0x80000000 ? $v - 0x100000000 : $v; };
+  $r = ['size' => (int)filesize($f), 'mtime' => (int)filemtime($f), 'type' => ord($b[99]), 'minz' => ord($b[100]), 'maxz' => ord($b[101]),
+    'bounds' => [round($i32(106) / 1e7, 5), round($i32(102) / 1e7, 5), round($i32(114) / 1e7, 5), round($i32(110) / 1e7, 5)]]; // [s, w, n, e]
+  return $r; }
+function mapAvail($k) { return $k !== 'own' || (mapOwn() && mapOwn()['type'] === 1); } // 1 = Vektorkacheln (MVT)
+// Einstellung maps: order = alle Schlüssel (fehlende hinten angehängt), on = eingeschaltete, def = Standard
+function mapsCfg() { $v = json_decode(setting('maps', ''), true); $v = is_array($v) ? $v : []; $ks = array_keys(MAP_SOURCES);
+  $order = array_values(array_unique(array_merge(array_values(array_intersect(array_filter((array)($v['order'] ?? []), 'is_string'), $ks)), $ks)));
+  $on = is_array($v['on'] ?? null) ? array_values(array_intersect($order, $v['on'])) : array_values(array_filter($order, fn($k) => MAP_SOURCES[$k]['def']));
+  $def = is_string($v['def'] ?? null) && in_array($v['def'], $on, true) ? $v['def'] : (in_array(MAP_DEFAULT, $on, true) ? MAP_DEFAULT : ($on[0] ?? MAP_DEFAULT));
+  return ['order' => $order, 'on' => $on ?: [MAP_DEFAULT], 'def' => $def]; }
+function mapsIn($v) { if (!is_array($v)) fail('Ungültige Einstellung für die Kartenanbieter'); $ks = array_keys(MAP_SOURCES);
+  $order = array_values(array_filter((array)($v['order'] ?? []), 'is_string')); $on = array_values(array_unique(array_filter((array)($v['on'] ?? []), 'is_string')));
+  if (array_diff($order, $ks) || array_diff($on, $ks)) fail('Unbekannter Kartenanbieter');
+  if (!$on) fail('Mindestens ein Kartenanbieter muss eingeschaltet bleiben');
+  if (!in_array($v['def'] ?? '', $on, true)) fail('Der Standard muss ein eingeschalteter Kartenanbieter sein');
+  return ['order' => array_values(array_unique(array_merge($order, $ks))), 'on' => $on, 'def' => $v['def']]; }
+// fürs Frontend: ein Anbieter (bounds [[s, w], [n, e]]); combo mit layers (unten zuerst)
+function mapPub($k, $layers = null) { $S = MAP_SOURCES[$k]; $c = $S['cover'];
+  if ($k === 'own' && ($o = mapOwn())) { $c = $o['bounds']; $S['nat'] = min($S['nat'], max(1, $o['maxz'])); }
+  $r = ['k' => $k, 'label' => $S['name'], 'kind' => $S['kind'], 'url' => $S['url'], 'attr' => $S['attr'], 'max' => $S['max'], 'nat' => $S['nat'], 'bounds' => $c ? [[$c[0], $c[1]], [$c[2], $c[3]]] : null];
+  if (!empty($S['sub'])) $r['sub'] = $S['sub']; if (!empty($S['vec'])) $r['vec'] = 1; if ($layers !== null) $r['layers'] = $layers;
+  return $r; }
+// Anbieter für ein Gerät: global eingeschaltete ohne die des Einsatztyps (kid null = ohne Einsatz), in der eingestellten Reihenfolge; def = Standard des Typs, sonst der globale
+function mapsFor($kid = null) { $c = mapsCfg(); $k = $kid !== null ? (kinds()[(int)$kid] ?? null) : null; $off = $k ? $k['map_off'] : [];
+  $ks = array_values(array_filter($c['order'], fn($x) => in_array($x, $c['on'], true) && !in_array($x, $off, true) && mapAvail($x)));
+  $list = []; foreach ($ks as $x) { if (!empty(MAP_SOURCES[$x]['combo'])) { $ly = array_values(array_map('mapPub', array_filter(COMBO_LAYERS, fn($y) => in_array($y, $ks, true)))); if (count($ly) >= 2) $list[] = mapPub($x, $ly); } else $list[] = mapPub($x); }
+  if (!$list) $list[] = mapPub(MAP_DEFAULT);
+  $have = array_column($list, 'k'); $def = $k && in_array($k['map_def'] ?? '', $have, true) ? $k['map_def'] : (in_array($c['def'], $have, true) ? $c['def'] : $have[0]);
+  return ['maps' => $list, 'map_def' => $def]; }
+// Anbieter, die Geräte zurzeit laden können (Lizenzen und Datenschutz in legal.html): je aktivem Einsatztyp bzw. ohne Einsatz; Teile von «Luftbild (automatisch)» zählen mit
+function mapsUsed($ks) { $u = []; $add = function ($r, $kid) use (&$u) { foreach ($r['maps'] as $m) foreach (isset($m['layers']) ? array_merge([$m], $m['layers']) : [$m] as $x) $u[$x['k']][$kid] = 1; };
+  $add(mapsFor(null), 'none'); foreach ($ks as $k) $add(mapsFor($k['id']), $k['id']);
+  $r = []; foreach (array_keys(MAP_SOURCES) as $k) { if (!isset($u[$k]) || !empty(MAP_SOURCES[$k]['combo'])) continue; $S = MAP_SOURCES[$k];
+    $r[] = ['k' => $k, 'name' => $S['name'], 'site' => $S['site'], 'terms' => $S['terms'], 'lic' => $S['lic'], 'area' => $S['area'], 'note' => $S['note'], 'host' => !empty($S['vec']) ? '' : (string)parse_url(str_replace('{s}.', '', $S['url']), PHP_URL_HOST),
+      'own' => !empty($S['vec']) ? 1 : 0, 'none' => (int)isset($u[$k]['none']), 'on' => (object)array_map(fn($x) => (int)isset($u[$k][$x['id']]), $ks)]; }
+  return $r; }
+
 /* ---------- Impressum, Lizenzen & Datenschutz (Issue #102) ---------- */
 // Seite legal.html, ohne Anmeldung. Angaben der Organisation in der Einstellung legal (JSON, LEGAL_FIELDS, legalCfg), geändert über settings/save (Recht legal).
 // Dazu der aktuelle Stand der Einstellungen, damit die Datenschutzerklärung stimmt: Funktionen, Overpass, Helikopter, Push, Fristen der Anonymisierung.
@@ -1126,7 +1218,7 @@ if ($route === 'legal') {
     'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120'), 'postgis' => pgReady() ? 1 : 0, 'pgapi' => pgaReady() ? 1 : 0, 'order' => array_values(array_filter(waterOrder(), fn($k) => waterReady()[$k]))],
     'hydro' => (object)array_map(fn($f) => $f['hydro'], $fk), // Pegel & Abfluss (Issue #125) je Einsatztyp
     'hydro_src' => array_values(array_map(fn($k) => ['k' => $k] + HYDRO_SOURCES[$k], array_keys(array_filter(hydroCfg()['src'])))), // eingeschaltete Quellen in der Reihenfolge des Vorrangs
-    'air_home' => (int)$air['home_km'],
+    'air_home' => (int)$air['home_km'], 'maps' => mapsUsed($ks), // Kartenanbieter (Issue #106): none = ohne Einsatz, on = je Einsatztyp
     'air' => ['on' => (int)$air['on'], 'public' => (int)$air['public'], 'replay' => (int)$air['replay'], 'src' => array_map(fn($k) => ['name' => AIR_SOURCES[$k]['name'], 'site' => AIR_SOURCES[$k]['site']], $air['src'])],
     'push' => pushOk() ? 1 : 0, 'push_native' => fcmOk() ? 1 : 0, 'applog_days' => applogDays(), 'mail_in' => array_filter(mailCfg()['kinds'], fn($k) => $k['on']) ? 1 : 0, // E-Mail-Alarm (Issue #65)
      'anon' => array_map(fn($k, $c) => ['k' => $k, 'name' => ANON_STEPS[$k][0], 'on' => $c['on'], 'days' => (object)array_intersect_key($c['days'], $ks)], array_keys(anonCfg()), anonCfg())]);
@@ -1178,7 +1270,7 @@ if ($route === 'public/state') {
   $pois = !feature($inc, 'poi') ? [] : array_map(fn($p) => symRow(['pts' => json_decode($p['pts'], true) ?: []] + ints($p, ['id'])), $po->fetchAll());
   $res = [];
   foreach (incRes($inc) as $n => $r) $res[] = ['name' => $anon ? ($c['r'][$r['id']] ?? 'Rettling ' . ($n + 1)) : $r['name'], 'descr' => $anon ? null : $r['descr']] + array_intersect_key($r, array_flip(['id', 'lat', 'lon', 'loc_at', 'rescued_at', 'pls_lat', 'pls_lon', 'pls_at']));
-  out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'features' => features($inc['kind_id']), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0, 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
+  out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'features' => features($inc['kind_id']), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0] + mapsFor($inc['kind_id']) + [ 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
 }
 
 $tok = (string)($_SERVER['HTTP_X_TOKEN'] ?? ''); $sid = null; // $sid = Gerätesitzung der nativen App (Issue #108), null = Anmeldung über users.token (Browser)
@@ -1241,7 +1333,7 @@ function needUserEditable($id) { if (!userEditable($id)) fail('Diese Person hat 
 function pwCheck($p) { if (!is_string($p) || $p === '') fail('Das Passwort darf nicht leer sein'); }
 // Einsatztypen (Issue #90): alle Zeilen, auch gelöschte (bisherige Einsätze behalten ihre Einstellungen); $KINDS = Zwischenspeicher je Anfrage
 $KINDS = null;
-function kinds() { global $db, $KINDS; if ($KINDS === null) { $KINDS = []; foreach ($db->query("SELECT * FROM inc_kinds ORDER BY pos, name")->fetchAll() as $k) { $k = ints($k, ['id', 'pos', 'active', 'deleted', 'mode_up', 'rec', 'air', 'persons', 'open_all', 'plans']); foreach (['feat_off', 'grp_off', 'grp_def'] as $c) $k[$c] = json_decode($k[$c] ?? '[]', true) ?: []; $KINDS[$k['id']] = $k; } } return $KINDS; }
+function kinds() { global $db, $KINDS; if ($KINDS === null) { $KINDS = []; foreach ($db->query("SELECT * FROM inc_kinds ORDER BY pos, name")->fetchAll() as $k) { $k = ints($k, ['id', 'pos', 'active', 'deleted', 'mode_up', 'rec', 'air', 'persons', 'open_all', 'plans']); foreach (['feat_off', 'grp_off', 'grp_def', 'map_off'] as $c) $k[$c] = json_decode($k[$c] ?? '[]', true) ?: []; $KINDS[$k['id']] = $k; } } return $KINDS; }
 function kindsActive() { return array_filter(kinds(), fn($k) => $k['active'] && !$k['deleted']); }
 function kindOf($inc) { $ks = kinds(); return $ks[(int)($inc['kind_id'] ?? 0)] ?? reset($ks); }
 function kindAdd($r) { $k = kindOf($r); $r['kind_id'] = $k['id']; $r['kind_name'] = $k['name']; $r['kind_color'] = $k['color']; return $r; }
@@ -2175,7 +2267,7 @@ try { anonAuto(); } catch (Throwable $e) { alog('err', 'anon', 'Automatische Ano
 try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog_purge_at', (string)$now); $db->prepare("DELETE FROM app_log WHERE at<?")->execute([$now - applogDays() * 86400]); } } catch (Throwable $e) {}
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 switch ($route) {
- case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': out(['me' => $me + mapsFor(null) + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message']), $db->query("SELECT id,name,color,is_lead,is_post,can_message FROM roles WHERE active=1 ORDER BY id")->fetchAll()));
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts FROM modes ORDER BY id")->fetchAll()));
@@ -2387,7 +2479,7 @@ switch ($route) {
     // feste Standorte auch ohne Einsatz (Änderungswunsch #96): die aktiven permanenten, solange die Funktion für einen der Einsatztypen an ist
     $fpl = array_filter(featuresAll(), fn($f) => $f['place']) ? array_values(array_map(fn($r) => array_diff_key($r, ['active' => 1]), array_filter(placesOf(null), fn($r) => $r['active']))) : [];
     if ($blocked) $xp = [];
-    out(['incident' => null, 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'kinds' => kindsPub(), 'features' => featuresAll(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0], $xp)]); // features: Flussdistanz ohne Einsatz
+    out(['incident' => null, 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0], $xp)]); // features: Flussdistanz ohne Einsatz
   }
   $inc['id'] = (int)$inc['id']; $inc['plan_id'] = $inc['plan_id'] === null ? null : (int)$inc['plan_id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc = kindAdd($inc); $inc['kind'] = kindPub(kindOf($inc)); $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
@@ -2445,7 +2537,7 @@ switch ($route) {
        'participants' => array_map(function ($p) use ($pg) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; if ($pg) $p['groups'] = $pg['m'][(int)$p['user_id']] ?? []; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
        'air' => airAllowed($inc) ? 1 : 0, 'air_inc' => airCfg()['on'] ? (airInc($inc) ? 1 : 0) : null, 'ex_lead' => $xl, 'ex_title' => $inc['plan_id'] && ($xl || planner()) ? (exPlan($inc)['title'] ?? null) : null, 'ex_injects' => $inc['plan_id'] && ($xl || planner()) ? exInjects((int)$inc['plan_id']) : [],
-       'log' => $cf ? logRows($id) : null, 'hydro' => $F['hydro'] ? hydroInc($id) : [], 'now' => $now]);
+       'log' => $cf ? logRows($id) : null, 'hydro' => $F['hydro'] ? hydroInc($id) : [], 'now' => $now] + mapsFor($inc['kind_id'])); // maps/map_def: Kartenanbieter des Einsatztyps (Issue #106)
 
  case 'incident/invite/add': // Nachbieten (Issue #90, Einsatzleitung): groups, persons (wenn der Typ das erlaubt) oder all=1; Alarm nur an die neu Aufgebotenen
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz'); if (!canManage($inc)) fail('Nur die Einsatzleitung kann nachbieten', 403);
@@ -3012,7 +3104,7 @@ switch ($route) {
   $per = array_map(fn($r) => ints($r, ['start', 'stop']), $q("SELECT start,stop FROM rec_periods WHERE incident_id=? ORDER BY start,id"));
   $inc = kindAdd(floats(ints($inc, ['id', 'alarm_at', 'ended_at', 'created_by', 'is_exercise', 'record', 'recorded', 'log_anon']), ['lat', 'lon', 'flow_ms'])); $inc['pls_at'] = plsAt($inc);
   unset($inc['public_token']); $inc['rp_anon'] = $rpa ? 1 : 0; if ($anon && $v) $inc['created_by'] = null;
-  out(['incident' => $inc, 'anon' => $anon ? 1 : 0, 'forced' => $v === 2 || $va || $fa ? 1 : 0, 'view_anon' => $va, 'periods' => $per, 'participants' => $parts, 'track' => $tr['u'], 'rtrack' => $tr['r'], 'pois' => $pois, 'rescuees' => $res, 'externals' => $ext, 'marks' => $marks, 'flow' => $flow, 'air' => airReplay($id), 'log' => $v && !myBtns()['log'] ? array_values(array_filter(logRows($id, true, $anon, $self), fn($l) => ($l['kind'] ?? '') === 'pls')) : logRows($id, true, $anon, $self), 'now' => $now]); // air: Helikopter (Issue #73)
+  out(['incident' => $inc, 'anon' => $anon ? 1 : 0, 'forced' => $v === 2 || $va || $fa ? 1 : 0, 'view_anon' => $va, 'periods' => $per, 'participants' => $parts, 'track' => $tr['u'], 'rtrack' => $tr['r'], 'pois' => $pois, 'rescuees' => $res, 'externals' => $ext, 'marks' => $marks, 'flow' => $flow, 'air' => airReplay($id), 'log' => $v && !myBtns()['log'] ? array_values(array_filter(logRows($id, true, $anon, $self), fn($l) => ($l['kind'] ?? '') === 'pls')) : logRows($id, true, $anon, $self), 'now' => $now] + mapsFor($inc['kind_id'])); // air: Helikopter (Issue #73); maps: Kartenanbieter des Einsatztyps (Issue #106)
 
  // Endgültig anonymisieren (Issue #54, nur Verwaltung, nur beendete Einsätze, nicht umkehrbar). Zwei getrennte Funktionen:
  // Replay: Einsatzkräfte im Replay ohne Verbindung zu den Konten (Bezeichnung, Einrückoption, Spezialrolle in rp_anon), Standortverläufe mit negativer ID,
@@ -3464,7 +3556,7 @@ switch ($route) {
   else { $from = kinds()[(int)($in['copy_from'] ?? 0)] ?? null; if (!$from || $from['deleted']) fail('Bitte wählen, von welchem Einsatztyp die Einstellungen übernommen werden');
     $db->beginTransaction();
     $db->prepare("INSERT INTO inc_kinds(name,color,alarm,mode_up,persons,open_all,plans,grp_off,grp_def,active,pos,perm,rec,air,feat_off,msg_lvl,end_lvl) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute(array_merge($vals, [(int)$db->query("SELECT COALESCE(MAX(pos),0)+1 m FROM inc_kinds")->fetch()['m'], '', $rec ?? $from['rec'], $from['air'], json_encode($from['feat_off']), $ml ?? $from['msg_lvl'], $el ?? $from['end_lvl']])); $id = (int)$db->lastInsertId();
-    $db->prepare("UPDATE inc_kinds SET perm=?, snd=? WHERE id=?")->execute(['start_' . $id, $snd === false ? ($from['snd'] ?? null) : ($snd === '' ? null : $snd), $id]);
+    $db->prepare("UPDATE inc_kinds SET perm=?, snd=?, map_off=?, map_def=? WHERE id=?")->execute(['start_' . $id, $snd === false ? ($from['snd'] ?? null) : ($snd === '' ? null : $snd), json_encode($from['map_off']), $from['map_def'], $id]); // Kartenanbieter (Issue #106) mit übernehmen
     // Fristen der Anonymisierung übernehmen, damit Personendaten eines neuen Typs nicht unbemerkt nie anonymisiert werden
     $ac0 = anonCfg(); foreach ($ac0 as $st0 => &$x0) $x0['days'][$id] = $x0['days'][$from['id']] ?? null; unset($x0); setSetting('anon_cfg', json_encode($ac0));
     // Startrecht: Rollen, die den Vorlagen-Typ starten dürfen, dürfen auch den neuen; nur wenn man das Recht selbst hat (Schutz vor Ausweitung wie permsMine)
@@ -3483,7 +3575,8 @@ switch ($route) {
   if (!empty($in['id'])) $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message) VALUES(?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1)]);
   out(['ok' => true]);
- case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
+ case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans'], 'map_off' => $k['map_off'], 'map_def' => $k['map_def']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
+   'maps' => mapsCfg(), 'map_default' => MAP_DEFAULT, 'map_own' => mapOwn(), 'map_sources' => array_map(fn($k) => mapPub($k) + array_intersect_key(MAP_SOURCES[$k], array_flip(['site', 'terms', 'lic', 'area', 'note', 'def', 'combo'])), array_keys(MAP_SOURCES)), 'map_combo' => COMBO_LAYERS, // Kartenanbieter (Issue #106)
    'air' => airCfg(), 'air_default' => AIR_DEFAULT + array_map(fn($x) => $x[0], AIR_NUM), 'air_num' => AIR_NUM, 'air_filters' => AIR_FILTERS, 'air_app' => AIR_APP, 'air_sources' => array_map(fn($s) => ['name' => $s['name'], 'site' => $s['site'], 'note' => $s['note']], AIR_SOURCES),
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
    'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM, 'hydro_sources' => HYDRO_SOURCES, // Pegel & Abfluss (Issue #125)
@@ -3576,6 +3669,15 @@ switch ($route) {
     if (!$c['free'] && !symActive($c)) fail('Ohne eingeschaltetes Symbol müssen Markierungen ohne Symbol erlaubt bleiben');
     setSetting('sym', json_encode($c));
   }
+  if (isset($in['maps'])) setSetting('maps', json_encode(mapsIn($in['maps']))); // Kartenanbieter (Issue #106)
+  if (isset($in['map_kinds'])) { // je Einsatztyp {id: {off: [Schlüssel], def: Schlüssel|null}}; gilt sofort, auch im laufenden Einsatz
+    if (!is_array($in['map_kinds'])) fail('Ungültige Einstellung'); $mc = mapsCfg();
+    foreach (kindsActive() as $id => $k) { $x = $in['map_kinds'][$id] ?? null; if (!is_array($x)) continue;
+      $o = array_values(array_unique(array_filter((array)($x['off'] ?? []), 'is_string'))); if (array_diff($o, array_keys(MAP_SOURCES))) fail('Unbekannter Kartenanbieter');
+      if (!array_diff($mc['on'], $o)) fail('Für «' . $k['name'] . '» muss mindestens ein Kartenanbieter eingeschaltet bleiben');
+      $d = $x['def'] ?? null; if ($d !== null && (!isset(MAP_SOURCES[$d]) || in_array($d, $o, true))) fail('Die Standardkarte von «' . $k['name'] . '» muss eingeschaltet sein');
+      $db->prepare("UPDATE inc_kinds SET map_off=?, map_def=? WHERE id=?")->execute([json_encode($o), $d, $id]); }
+    $KINDS = null; }
   if (isset($in['nav_default'])) { if (!in_array($in['nav_default'], navApps(), true)) fail('Der Standard muss eine eingeschaltete App sein'); setSetting('nav_default', $in['nav_default']); }
   if (isset($in['coord_sys'])) { if (!in_array($in['coord_sys'], COORDS, true)) fail('Unbekanntes Koordinatensystem'); setSetting('coord_sys', $in['coord_sys']); }
   if (isset($in['features'])) { // {Einsatztyp: [ausgeschaltete Schlüssel]}; gilt sofort, auch im laufenden Einsatz

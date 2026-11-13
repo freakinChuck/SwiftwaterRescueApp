@@ -37,9 +37,8 @@ let map=null,lay=null,bases={},baseKey=null,ps=null,cs='lv95',timer=null,fitted=
 const ago=ts=>{const s=Math.max(0,ps.now-ts);return s<60?'vor '+s+' s':s<3600?'vor '+Math.round(s/60)+' min':'vor '+Math.floor(s/3600)+' h'};
 function stopWith(t,b){clearInterval(timer);$('#pbBody').innerHTML=`<div id="pbMsg" class="card"><h2>${esc(t)}</h2><div class="mut">${esc(b)}</div></div>`;map=null}
 function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.lon]:[46.8,8.2],p?14:8);
-  // Grundkarte über das Fenster «Ansicht» wie in der Einsatz-App (setBase, pro Gerät gemerkt in sw_base)
-  Object.entries(MAP_PROVIDERS).forEach(([k,P])=>bases[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
-  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}baseKey=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;bases[baseKey].addTo(map);
+  // Grundkarte über das Fenster «Ansicht» wie in der Einsatz-App (setBase, pro Gerät gemerkt in sw_base); Anbieter des Einsatztyps (Issue #106, pbBases)
+  pbBases(d,true);
   const vb=$('#viewBox'),bv=$('#pbView');bv.innerHTML=VIEW_ICON;[vb,bv].forEach(x=>{L.DomEvent.disableClickPropagation(x);L.DomEvent.disableScrollPropagation(x)});
   bv.onclick=()=>viewBox();vb.onclick=e=>{const a=e.target.closest('[data-va]');if(a)setVis(viewCats().map(v=>v[0]),a.dataset.va==='1');if(e.target.closest('#bViewX'))viewBox(false)};
   vb.onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked)};
@@ -62,6 +61,9 @@ function drawAirP(){if(!airLay)return;const on=ps&&ps.air&&vis('air')&&airD;airS
 function setVis(keys,on){keys.forEach(k=>on?viewHide.delete(k):viewHide.add(k));try{localStorage.setItem('sw_pview',JSON.stringify([...viewHide]))}catch(e){}
   if(ps){draw();if(keys.includes('air'))loadAir()}$('#viewBox').querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk))}
 function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(bases[baseKey]);baseKey=k;bases[k].addTo(map);try{localStorage.setItem('sw_base',k)}catch(e){}}
+// Kartenanbieter aus public/state (maps, map_def); bei einer Änderung in der Verwaltung neu aufbauen, die gewählte Karte bleibt, solange es sie gibt
+function pbBases(d,init){if(!mapsSet(d.maps,d.map_def)&&!init)return;if(baseKey&&bases[baseKey])map.removeLayer(bases[baseKey]);
+  bases=mapBases();const k=baseKey&&MAP_PROVIDERS[baseKey]?baseKey:baseSaved();baseKey=k;bases[k].addTo(map);const b=$('#viewBox');if(b&&!b.hidden)viewBox(true)}
 function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#pbView').setAttribute('aria-expanded',on);if(on)b.innerHTML=viewHtml(baseKey,viewCats(),vis)}
 document.addEventListener('click',e=>{const b=$('#viewBox');if(b&&!b.hidden&&!e.target.closest('#viewBox,#pbView'))viewBox(false)});
 document.addEventListener('keydown',e=>{const b=$('#viewBox');if(e.key==='Escape'&&b&&!b.hidden){viewBox(false);$('#pbView').focus()}});
@@ -95,7 +97,7 @@ async function load(){let d;try{d=await api('public/state&k='+encodeURIComponent
   $('#pbTitle').innerHTML=`${kindBadge(i)} ${esc(i.message)}`;document.title=kindOf(i).name+': '+i.message;
   if(i.ended_at)return stopWith(kindOf(i).name+' beendet.','Die öffentliche Ansicht zeigt nur laufende Einsätze.');
   $('#pbTime').textContent='seit '+Math.round((d.now-i.alarm_at)/60)+' min · öffentliche Ansicht, nur lesen';
-  if(!map)initMap(d);draw();loadAir()}
+  if(!map)initMap(d);else pbBases(d);draw();loadAir()}
 function draw(){const d=ps,i=d.incident,col=p=>(d.roles.find(r=>r.id===p.role_id)||{}).color||'#cfd8dc',ll=(a,b)=>`data-ll="${a},${b}"`;lay.clearLayers();
   drawArea(d);
   const pl=plsList(d);if(vis('pls'))pl.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:p.on?1:.4,opacity:p.on?1:.5}).bindTooltip(esc(p.label),{permanent:true,direction:'right',className:'pblbl'}).addTo(lay));

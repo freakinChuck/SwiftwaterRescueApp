@@ -9,6 +9,7 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart' show LatLngBounds;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,12 +40,37 @@ const viewCatsAll = [
   ('hydro', 'Messstationen', 'hydro'),
 ];
 
-/// Grundkarten (MAP_PROVIDERS in common.js)
-const mapProviders = {
-  'swisstopo_sat': ('Luftbild (swisstopo)', 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg', '© swisstopo', 18),
-  'swisstopo': ('Landeskarte (swisstopo)', 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', '© swisstopo', 18),
-  'osm': ('OpenStreetMap', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', '© OpenStreetMap-Mitwirkende', 19),
-};
+/// Grundkarte (Issue #106, MAP_PROVIDERS/mapsSet in common.js): Liste vom Server (maps, map_def in me und incident/state), eingestellt in der Verwaltung,
+/// global und je Einsatztyp. «Luftbild (automatisch)» hat layers (unten zuerst, je mit Abdeckung). Die eigene Vektorkarte (vec, PMTiles) gibt es nativ noch nicht.
+class MapProv {
+  MapProv(this.k, this.label, this.url, this.attr, this.nat, {this.sub = const [], this.bounds, this.layers = const []});
+  final String k, label, url, attr;
+  final int nat;
+  final List<String> sub;
+  final LatLngBounds? bounds;
+  final List<MapProv> layers;
+
+  /// Quellenangabe als Text (der Server liefert HTML für Leaflet)
+  String get attrText => layers.isNotEmpty ? layers.map((l) => l.attrText).toSet().join(' | ') : attr.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&copy;', '©').replaceAll('&amp;', '&');
+
+  static MapProv? of(J j) {
+    if (j['vec'] != null && j['vec'] != 0) return null;
+    final ly = jl(j['layers']).map(MapProv.of).whereType<MapProv>().toList();
+    if (j['layers'] is List && ly.length < 2) return null;
+    final b = j['bounds'] is List && (j['bounds'] as List).length == 2 ? (j['bounds'] as List).map((p) => p is List && p.length == 2 ? LatLng(jd(p[0]) ?? 0, jd(p[1]) ?? 0) : null).toList() : null;
+    final url = js(j['url']), k = js(j['k']);
+    if (k.isEmpty || (url.isEmpty && ly.isEmpty)) return null;
+    return MapProv(k, js(j['label']), url, js(j['attr']), ji(j['nat']) ?? 19,
+        sub: js(j['sub']).split('').where((x) => x.isNotEmpty).toList(), bounds: b != null && b[0] != null && b[1] != null ? LatLngBounds(b[0]!, b[1]!) : null, layers: ly);
+  }
+}
+
+/// Rückfall, bis die Liste vom Server da ist (älterer Server)
+final mapFallback = [
+  MapProv('swisstopo_sat', 'Luftbild (swisstopo)', 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg', '© swisstopo', 18),
+  MapProv('swisstopo', 'Landeskarte (swisstopo)', 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', '© swisstopo', 18),
+  MapProv('osm', 'OpenStreetMap', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', '© OpenStreetMap-Mitwirkende', 19),
+];
 const defaultBase = 'swisstopo_sat';
 
 class AlarmItem {
@@ -104,6 +130,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   SharedPreferences? _sp;
   Set<String> viewHide = {};
   String base = defaultBase;
+  List<MapProv> maps = mapFallback;
+  String mapDef = defaultBase;
+  String _mapsKey = '';
+  int? _baseInc;
   bool autoView = false;
   Set<String> poiHide = {};
   int? _poiInc;
@@ -222,6 +252,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       offline = true;
       offAt ??= _sp?.getInt('lastAt_${acc.id}') ?? DateTime.now().millisecondsSinceEpoch;
     }
+    _mapsSet(me);
+    _baseSync();
     ready = true;
     notifyListeners();
     await poll();
@@ -241,7 +273,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     final p = _sp!;
     viewHide = (p.getStringList('v_hide') ?? []).toSet();
     final b = p.getString('v_base');
-    base = mapProviders.containsKey(b) ? b! : defaultBase;
+    base = _hasMap(b) ? b! : defaultBase;
     autoView = p.getBool('v_auto') ?? false;
   }
 
@@ -253,11 +285,45 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// Im Einsatz gilt die Wahl bis zum Einsatzende (`v_base_<Konto>_<Einsatz>`), ohne Einsatz `v_base`
   void setBase(String k) {
-    if (!mapProviders.containsKey(k)) return;
+    if (!_hasMap(k)) return;
     base = k;
-    _sp?.setString('v_base', k);
+    _sp?.setString(_baseInc != null && _baseInc != 0 ? 'v_base_${acc.id}_$_baseInc' : 'v_base', k);
     notifyListeners();
+  }
+
+  bool _hasMap(String? k) => k != null && maps.any((m) => m.k == k);
+  MapProv get prov => maps.firstWhere((m) => m.k == base, orElse: () => maps.first);
+
+  /// Liste vom Server übernehmen; true = geändert
+  bool _mapsSet(J? src) {
+    if (src == null || src['maps'] is! List) return false;
+    final key = jsonEncode([src['maps'], src['map_def']]);
+    if (key == _mapsKey) return false;
+    final l = jl(src['maps']).map(MapProv.of).whereType<MapProv>().toList();
+    if (l.isEmpty) return false;
+    _mapsKey = key;
+    maps = l;
+    mapDef = _hasMap(js(src['map_def'])) ? js(src['map_def']) : l.first.k;
+    return true;
+  }
+
+  /// Wie baseSync in index.html: beim ersten Mal in einem Einsatz die eigene Wahl für diesen Einsatz, sonst die Standardkarte des Einsatztyps;
+  /// ohne Einsatz v_base. Nicht mehr erlaubte Karten fallen auf den Standard zurück.
+  void _baseSync() {
+    final id = ji(inc?['id']) ?? 0, ch = _mapsSet(st);
+    if (!ch && id == _baseInc && _hasMap(base)) return;
+    if (!(id == _baseInc && _hasMap(base))) {
+      final sv = _sp?.getString(id != 0 ? 'v_base_${acc.id}_$id' : 'v_base');
+      base = _hasMap(sv) ? sv! : mapDef; // im Einsatz ohne eigene Wahl: Standard des Einsatztyps
+    }
+    if (st != null && _baseInc != id) {
+      for (final k in _sp?.getKeys().where((k) => k.startsWith('v_base_${acc.id}_') && k != 'v_base_${acc.id}_$id').toList() ?? <String>[]) {
+        _sp?.remove(k); // Wahl beendeter Einsätze verwerfen
+      }
+    }
+    _baseInc = id;
   }
 
   void setAuto(bool on) {
@@ -408,6 +474,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         _lastMsg = 0;
       }
       selfLeft = false;
+      _baseSync();
       hyPoll();
       _poiHideLoad();
       _calcArea();
