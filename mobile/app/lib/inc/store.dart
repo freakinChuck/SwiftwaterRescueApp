@@ -17,7 +17,9 @@ import '../accounts.dart';
 import '../api.dart';
 import '../monitor.dart';
 import '../notify.dart';
+import '../service.dart';
 import '../sys.dart';
+import '../track.dart';
 import 'area.dart';
 import 'util.dart';
 
@@ -340,6 +342,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           notify('AUS EINSATZ ENTFERNT', 'Die Einsatzleitung hat dich aus dem Einsatz entfernt.', 'k:$id:${nm['left_at']}', cr);
         }
         st = nx;
+        if (!_joinedSeen && inNow) _trackNow(); // angenommen: Teilen im Hintergrund sofort vorbereiten, nicht erst beim nächsten Polling
+        _joinedSeen = inNow;
       } else {
         final o = inc;
         if (o != null) {
@@ -378,6 +382,18 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   bool selfLeft = false; // selbst ausgetreten: keine Meldung «entfernt»
+  bool _joinedSeen = false;
+
+  /// Stand des Kontos für die Überwachung sofort nachführen und das Teilen im Hintergrund starten (Issue #183). Vorher geschah das erst
+  /// beim nächsten Polling der App (Standard 15 s); unter iOS ist dieses im Hintergrund gestoppt, wer annahm und gleich sperrte, teilte nie.
+  /// Unter Android teilt der Vordergrunddienst in seinem eigenen Isolate, er erhält nur den Auftrag, sofort abzufragen.
+  void _trackNow() {
+    if (Platform.isAndroid) {
+      unawaited(syncService());
+      return;
+    }
+    unawaited(pollOne(acc).then((_) => Tracker.sync()).catchError((Object e) => debugPrint('Tracker $e')));
+  }
 
   void _saveLast() {
     if (st == null) return;
@@ -559,9 +575,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     locErr = '';
     if (_posSub != null || !_visible) return;
     _posSub = Geolocator.getPositionStream(
-            locationSettings: Platform.isAndroid
-                ? AndroidSettings(accuracy: LocationAccuracy.best, distanceFilter: 0, intervalDuration: const Duration(seconds: 3))
-                : const LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 0))
+            // dieselben Einstellungen wie track.dart: unter iOS gibt es nur einen Strom, und wer ihn zuerst öffnet, bestimmt sie (Issue #183)
+            locationSettings: locSettings(android: const Duration(seconds: 3)))
         .listen((p) {
       devPos = p;
       locErr = '';
@@ -604,8 +619,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         'manual': manualPos != null ? 1 : 0
       });
       locStatus = 'Standort wird geteilt (${fmtT(DateTime.now().millisecondsSinceEpoch / 1000)})';
+      unawaited(locResult(acc, ji(inc?['id'])));
     } catch (e) {
       locStatus = 'Standort senden fehlgeschlagen: $e';
+      unawaited(locResult(acc, ji(inc?['id']), err: e is ApiError ? e.message : '$e'));
     }
     _checkArea();
   }
@@ -632,7 +649,15 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       // Hintergrund: Überwachung und Standortdienst übernehmen (monitor.dart, track.dart)
       _visible = false;
       setForeground(null);
-      _stopPos();
+      if (Platform.isIOS) {
+        // Erst das Teilen im Hintergrund anhängen, dann den eigenen Strom beenden: So läuft die Ortung ohne Unterbruch weiter
+        // (unter iOS darf sie mit «Beim Verwenden» nur im Vordergrund starten).
+        Tracker.sync().catchError((Object e) => debugPrint('Tracker $e')).whenComplete(() {
+          if (!_visible) _stopPos();
+        });
+      } else {
+        _stopPos();
+      }
     }
   }
 
