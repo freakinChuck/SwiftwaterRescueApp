@@ -54,7 +54,7 @@ function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.
 // Kategorien ausgeschalteter Funktionen (features aus public/state) fehlen, Nachrichten gibt es hier nicht.
 const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pview')||'[]'))}catch(e){return new Set()}})();
 const vis=k=>!viewHide.has(k);
-const viewCats=()=>VIEW.filter(([k,,f])=>k!=='mm'&&k!=='hydro'&&(k!=='air'||!!(ps&&ps.air))&&(!f||!ps||!ps.features||ps.features[f]!==0)); // Helikopter nur, wenn die Verwaltung sie hier freigibt (air)
+const viewCats=()=>VIEW.filter(([k,,f])=>k!=='mm'&&k!=='hydro'&&k!=='geo'&&(k!=='air'||!!(ps&&ps.air))&&(!f||!ps||!ps.features||ps.features[f]!==0)); // Helikopter nur, wenn die Verwaltung sie hier freigibt (air)
 /* ---------- Helikopter (Issue #73): über public/air, mit jeder Aktualisierung ---------- */
 let airLay=null,airD=null;
 function loadAir(){if(!ps||!ps.air||!vis('air')){airD=null;return drawAirP()}api('public/air&k='+encodeURIComponent(K)).then(a=>{airD=a}).catch(()=>{airD=null}).finally(drawAirP)}
@@ -78,7 +78,7 @@ function autoFit(pts){if(!autoView)return;const k=JSON.stringify(pts.map(p=>p.ma
 // Suchgebiet aus allen PLS der vermissten Rettlinge (sources, Issue #24), Gewässernetz je PLS über public/net
 function drawArea(d){if(d.features&&d.features.area===0){areaInfo='';return} // Funktion «Suchgebiet» aus (Issue #75)
   const i=d.incident,posts=d.participants.filter(p=>p.lat!=null&&(d.roles.find(r=>r.id===p.role_id)||{}).is_post);
-  const a=searchArea(d.sources||[],nets,i.flow_ms,d.now,posts,(s,R)=>overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R+'&la='+s.lat+'&lo='+s.lon),()=>{if(ps)draw()},d.rescuees);
+  const a=searchArea(d.sources||[],nets,i.flow_ms,d.now,posts,(s,R)=>overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R+'&la='+s.lat+'&lo='+s.lon),()=>{if(ps)draw()},d.rescuees,d.stops||[]);
   areaInfo=a.info.join(' ');if(!vis('area'))return;
   a.circles.forEach(c=>L.circle([c.lat,c.lon],{radius:c.r,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false}).addTo(lay));
   a.polys.forEach(cp=>L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false}).addTo(lay));

@@ -83,6 +83,10 @@ body.jb #followChip{top:calc(7.6rem + env(safe-area-inset-top))}
 .rs .st{font-size:.72rem;font-weight:700;padding:0 .4em;border-radius:4px;color:#fff;background:var(--alarm)}.rs .st.loc{background:#ff9f1c;color:#2a1600}.rs .st.ok{background:#35c27a;color:#002b14}
 .rs .bt{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem}.rs button{padding:.3rem .5rem;font-size:.82rem}.rs .mo{margin-left:auto;min-width:2.4rem;font-weight:700}.rs.done{opacity:.75}#resForm,#peopleForm{border-top:1px solid var(--line);padding:.5rem .7rem .6rem}.xtl{display:grid;gap:.3rem;max-height:55vh;overflow:auto}.xtl .pg{margin:.4rem 0 0}.xt{display:flex;gap:.3rem}.xt>button:first-child{flex:1;text-align:left}.xt small{display:block;color:var(--mut);font-weight:400}#resForm[hidden],#peopleForm[hidden]{display:none}
 /* Markierungen und Bereiche der Einsatzleitung: Fähnchen (Spitze unten links), Beschriftung, Liste, Zeichenleiste */
+.plcw{position:relative;width:26px;height:26px}.plb{position:absolute;top:-9px;right:-11px;font-style:normal;font-size:13px;line-height:1;filter:drop-shadow(0 0 2px #000)} /* Issue #182: Flusssperre ⛔ bzw. Warnung ⚠ */
+.plc.hot{box-shadow:0 0 0 3px #f77f00,0 0 10px 3px #f77f00aa}.plc.off{opacity:.75}
+.pchip{display:inline-block;padding:.05rem .4rem;margin:.1rem .25rem .1rem 0;border-radius:999px;border:1px solid #6c757d;font-size:.75rem;white-space:nowrap}
+.geok{display:flex;align-items:center;justify-content:center;width:24px;height:18px;border-radius:4px;border:1.5px solid #fff;background:#5c677dd9;color:#fff;font:700 9px/1 system-ui,sans-serif;box-shadow:0 1px 3px #0008}
 .plc{width:26px;height:26px;border-radius:4px;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:.72rem;font-weight:700;box-shadow:0 0 0 2px #0008;text-shadow:0 0 2px #000;overflow:hidden;white-space:nowrap}
 .pi .sws{flex:0 0 auto;display:grid;place-items:center;width:24px}
 .poi{width:28px;height:28px;border-radius:8px 8px 8px 0;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:.9rem;box-shadow:0 0 0 2px #0008;text-shadow:0 0 2px #000}
@@ -246,6 +250,7 @@ $('#joinBan').onclick=joinOpen;const an=$('#areaNote');an.onclick=()=>{if(an.cla
   hyLayer=L.layerGroup().addTo(map);hyLayerKey=''; // Messstationen Pegel & Abfluss (Issue #125)
   $('#mmShow').checked=mmVisible();$('#mmShow').onchange=e=>setMmVisible(e.target.checked,true);
   $('#msgList').onclick=e=>{const b=e.target.closest('[data-goto]');if(!b)return;const[a,o]=b.dataset.goto.split(',').map(Number);stopFollow();map.panTo([a,o]);if(narrow())togglePanel('msgs',false)};
+  geoLayer=L.layerGroup().addTo(map);geoKey='';map.on('moveend',geoSync); // Geodaten-Ebene (Issue #182)
   layers={};fitted=null;map.on('zoomend',drawMap);map.on('click',()=>pinfoClose()); // Antippen der leeren Karte schliesst die Personeninfo (Issue #105)
 map.on('dragstart',()=>{homeDone=true;areaFocus=0;if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen, die Auto-Übersicht und die Startansicht
   map.on('zoomstart',()=>{if(Date.now()-homeBusy>1500)homeDone=true;if(autoView&&Date.now()-autoBusy>1500)stopFollow()}); // Zoomen von Hand beendet die Auto-Übersicht (nicht deren eigenes Zoomen)
@@ -365,16 +370,18 @@ const PANEL_FEAT={res:'res',msgs:'msg',pois:'poi',hyd:'hydro'};
 // Kategorien ausgeschalteter Funktionen fehlen; das Ausblenden einzelner Markierungen und Bereiche gilt zusätzlich. Nur die Karte, die Listen bleiben.
 let baseLayers={},baseKey=null;
 // VIEW (Kategorien) und viewHtml stehen in common.js, die öffentliche Ansicht nutzt sie ebenfalls (Issue #48)
-const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_view')||'[]'))}catch(e){return new Set()}})();
+// VIEW_OFF (common.js): Kategorien, die auf jedem Gerät zuerst ausgeblendet sind (einmalig, gemerkt in sw_viewdef), z. B. die Geodaten-Ebene (Issue #182)
+const viewHide=(()=>{let h;try{h=new Set(JSON.parse(localStorage.getItem('sw_view')||'[]'))}catch(e){h=new Set()}
+  try{const d=new Set(JSON.parse(localStorage.getItem('sw_viewdef')||'[]'));let ch=0;VIEW_OFF.forEach(k=>{if(!d.has(k)){h.add(k);d.add(k);ch=1}});if(ch){localStorage.setItem('sw_viewdef',JSON.stringify([...d]));localStorage.setItem('sw_view',JSON.stringify([...h]))}}catch(e){VIEW_OFF.forEach(k=>h.add(k))}return h})();
 const vis=k=>k==='mm'?mmVisible():!viewHide.has(k);
-const viewCats=()=>VIEW.filter(v=>v[0]==='air'?!!(st&&st.air):(!v[2]||feat(v[2]))); // Helikopter nur, wenn für diese Person freigegeben
+const viewCats=()=>VIEW.filter(v=>v[0]==='air'?!!(st&&st.air):v[0]==='geo'?feat('geo')&&geoKinds().length:(!v[2]||feat(v[2]))); // Helikopter nur, wenn für diese Person freigegeben
 // ohne Einsatz: feste Standorte, Helikopter um die festen Standorte (Issue #130) und persönliche Messstationen (Issue #125), soweit vorhanden
-const homeCats=()=>{const c=VIEW.filter(([k])=>k==='place'?feat('place')&&(st.places||[]).length:k==='air'?!!st.air_home:k==='hydro'?feat('hydro')&&hyMine().length:false);return c.length?c:null};
+const homeCats=()=>{const c=VIEW.filter(([k])=>k==='place'?feat('place')&&(st.places||[]).length:k==='air'?!!st.air_home:k==='hydro'?feat('hydro')&&hyMine().length:k==='geo'?feat('geo')&&geoKinds().length:false);return c.length?c:null};
 function setVis(keys,on){keys.forEach(k=>{if(k==='mm')setMmVisible(on,true);else on?viewHide.delete(k):viewHide.add(k)});try{localStorage.setItem('sw_view',JSON.stringify([...viewHide]))}catch(e){}
-  drawMap();autoFit();airPoll();const hs=$('#hydShow');if(hs)hs.checked=vis('hydro');const b=$('#viewBox');if(b)b.querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk));const i=$('#airInfo');if(i)i.innerHTML=airInfo()}
+  drawMap();autoFit();airPoll();geoSync();const hs=$('#hydShow');if(hs)hs.checked=vis('hydro');const b=$('#viewBox');if(b)b.querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk));const i=$('#airInfo');if(i)i.innerHTML=airInfo()}
 function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(baseLayers[baseKey]);baseKey=k;baseLayers[k].addTo(map);try{localStorage.setItem('sw_base',k)}catch(e){}}
 function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#bView').setAttribute('aria-expanded',on);if(!on)return;
-  b.innerHTML=viewHtml(baseKey,st&&st.incident?viewCats():st?homeCats():null,vis)+(airOn()?`<div class="mut" id="airInfo" style="margin-top:.5rem;font-size:.8rem">${airInfo()}</div>`:'');viewPlaceCats()}
+  b.innerHTML=viewHtml(baseKey,st&&st.incident?viewCats():st?homeCats():null,vis)+(airOn()?`<div class="mut" id="airInfo" style="margin-top:.5rem;font-size:.8rem">${airInfo()}</div>`:'');viewPlaceCats();viewGeoKinds()}
 // Kategorien fester Standorte im Fenster «Ansicht» unter «Feste Standorte» (nur wenn es welche mit Kategorie gibt)
 // unter «Feste Standorte»: Kategorien (nur wenn es welche gibt) und «Namen auf der Karte» (pcLbl)
 function viewPlaceCats(){const l=$('#viewBox [data-vk="place"]'),old=$('#vpCats');if(old)old.remove();if(!l)return;const cs=placeCatsUsed();if(!cs.length)return;
@@ -389,7 +396,7 @@ function drawNote(){const n=$('#areaNote');if(!n)return;const pick=window.markPi
   if(more){n.setAttribute('role','button');n.setAttribute('aria-expanded',areaOpen);n.tabIndex=0}else{n.removeAttribute('role');n.removeAttribute('aria-expanded');n.removeAttribute('tabindex')}
   n.innerHTML=pick?esc(pick):!more?esc(areaInfo):areaOpen?areaLines.map(l=>`<div class="ln">${esc(l)}</div>`).join('')+'<div class="tg">▴ weniger</div>':`${esc(areaShort)} <span class="tg">▸ Details</span>`;
   n.hidden=!(areaInfo||pick)}
-function drawMap(){const n=$('#areaNote');selfSync();pinfoDraw();drawMsgMarks();drawPois();drawRes();drawAir();drawHydro();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
+function drawMap(){const n=$('#areaNote');selfSync();pinfoDraw();drawMsgMarks();drawPois();geoSync();drawRes();drawAir();drawHydro();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.layerGroup(plsList().map(p=>navOn(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))),p.lat,p.lon,p.label)));if(vis('pls'))layers.pls.addTo(map);
   try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
@@ -413,7 +420,7 @@ function plsList(){const i=st.incident,src=st.sources||[],l=[];
   if(i.lat!=null)l.push({lat:i.lat,lon:i.lon,at:i.pls_at,label:'PLS des Einsatzes',on:src.some(s=>!s.own)});
   (st.rescuees||[]).filter(r=>r.pls_lat!=null).forEach(r=>l.push({lat:r.pls_lat,lon:r.pls_lon,at:r.pls_at,label:'PLS «'+r.name+'»',on:resSt(r)==='miss'}));return l}
 /* ---------- Suchgebiet entlang des Flusslaufs ---------- */
-let areaInfo='',areaShort='',areaLines=[],areaOpen=false,areaParts=[],netsInc=null;const nets=new Map();
+let areaInfo='',areaShort='',areaLines=[],areaOpen=false,areaParts=[],netsInc=null,areaHot=new Set();const nets=new Map();
 // Gewässernetz je PLS über den Server (Cache, siehe Route overpass); Radius auf 1 km aufgerundet, damit alle Geräte eines Einsatzes dieselbe Abfrage stellen
 // Berechnung (riverNet, riverArea, netRadius, searchArea) in common.js, gemeinsam mit der öffentlichen Ansicht
 const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
@@ -421,7 +428,10 @@ const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
 function drawArea(i){if(netsInc!==i.id){nets.clear();netsInc=i.id}
   if(!feat('area')){areaInfo=areaShort='';areaLines=[];areaParts=[];areaShape=null;return null} // Funktion «Suchgebiet» aus (Issue #75): kein Gewässernetz, kein Gebiet
   const posts=[...st.participants.filter(p=>p.lat!=null&&!p.left_at),...extList()].filter(p=>(roles.find(r=>r.id==p.role_id)||{}).is_post);
-  const a=searchArea(st.sources||[],nets,i.flow_ms,st.now,posts,(s,R)=>overpassNet('overpass',{around:[R,s.lat,s.lon]},'overpass/put'),()=>{drawMap();draw()},st.rescuees);
+  const a=searchArea(st.sources||[],nets,i.flow_ms,st.now,posts,(s,R)=>overpassNet('overpass',{around:[R,s.lat,s.lon]},'overpass/put'),()=>{drawMap();draw()},st.rescuees,st.stops||[]);
+  // Issue #182: feste Standorte mit Wirkung «Warnung» (und nicht berücksichtigte Sperren) im Suchgebiet hervorheben und nennen
+  const hot=feat('place')?(st.places||[]).filter(f=>placeEff(f,'warn')||placeEff(f,'stop')&&!stopOn(f)).filter(f=>a.lines.some(l=>l.some((p,j)=>j&&segDist(l[j-1],p,f)<BANK_M+60))):[];
+  areaHot=new Set(hot.map(f=>f.id));if(hot.length)a.info.push('⚠ Im Suchgebiet: '+hot.map(f=>f.name+' ('+placePropsOf(f).filter(p=>p.effect!=='none').map(p=>p.name).join(', ')+')').join(', ')+'.');
   areaInfo=a.info.join(' ');areaLines=a.info;areaShort=a.short||'';areaParts=a.parts.filter(p=>p.polys.length||p.circles.length);areaShape=a.polys.length||a.circles.length?{polys:a.polys,circles:a.circles}:null;if(!areaShape)return null;const g=L.layerGroup();
   a.circles.forEach(c=>g.addLayer(L.circle([c.lat,c.lon],{radius:c.r,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false})));
   a.polys.forEach(cp=>g.addLayer(L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false})));
@@ -505,6 +515,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   if(st.can_manage){const act=st.participants.filter(p=>p.mode!=='declined');
     P.lead=mcard('Aufgebot',`<div class="mut">${esc(invTxt(i.aufgebot))}</div>${i.aufgebot?`<label class="row" style="align-items:center"><input type="checkbox" id="openJ" style="flex:0 0 auto" ${i.open_join?'checked':''}> <span>Beitritt für alle erlauben (auch nicht Aufgebotene sehen den Einsatz und können ihn annehmen, ohne Alarm)</span></label><div class="mbtns"><button id="bInv">Nachbieten</button></div>`:''}`)
       +mcard('PLS des Einsatzes',`<div class="mut">${i.lat!=null?`${esc(fc(i.lat,i.lon)||'gesetzt')} · Drift ab ${fmtDT(i.pls_at)}`:'Nicht gesetzt. Ohne PLS des Einsatzes braucht jeder Rettling einen eigenen PLS.'} Gilt für alle Rettlinge ohne eigenen PLS.</div><div class="mbtns"><button id="bPls">${i.lat!=null?'PLS verschieben':'PLS setzen'}</button>${i.lat!=null?'<button id="bPlsX">PLS entfernen</button>':''}</div>`)
+      +(feat('area')&&stopCands().length?mcard('Flusssperren',`<label class="row" style="align-items:center"><input type="checkbox" id="stopOn" style="flex:0 0 auto" ${i.stop_on?'checked':''}> <span>Flusssperren fester Standorte im Suchgebiet berücksichtigen</span></label><div class="mut">${stopCands().map(f=>esc(f.name)+((i.stop_off||[]).includes(f.id)?' <i>(ausgenommen)</i>':'')).join(' · ')}</div><div class="mut">Das Suchgebiet endet dort wie bei einem Sicherungsposten. Einzelne Standorte nimmt man im Popup oder im Fenster «Markierungen» aus, z. B. wenn die Person ein Wehr passiert haben könnte.</div>`):'')
       +(feat('rec')?mcard('Aufzeichnung',`${mkv([['Stand',esc(REC[0])]])}<div class="mbtns">${REC[1].map(([a,l])=>`<button data-rec="${a}">${l}</button>`).join('')}</div><div class="mut">Gespeichert werden die Standortverläufe aller Teilnehmenden, solange die Aufzeichnung läuft (Replay in der Verwaltung).</div>`):'')
       +(st.air_inc!=null?mcard('Helikopter',`<label class="row" style="align-items:center"><input type="checkbox" id="airInc" style="flex:0 0 auto" ${st.air_inc?'checked':''}> <span>Helikopter auf der Karte (Luftlage aus ADS-B-Daten)</span></label><div class="mut">Gilt für alle in diesem Einsatz. Wer sie sieht, legt die Verwaltung fest.</div>`):'')
       +(feat('pub')?mcard('Öffentliche Ansicht (ohne Login)',pubSec(i)):'')
@@ -530,6 +541,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
     $('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail);
     $('#bPls').onclick=()=>plsPick('PLS des Einsatzes',i.lat!=null?i.pls_at:i.alarm_at,(lat,lon,at)=>api('incident/pls',{lat,lon,at}));
     if($('#bPlsX'))$('#bPlsX').onclick=()=>confirm('PLS des Einsatzes entfernen? Rettlinge ohne eigenen PLS haben dann kein Suchgebiet mehr.')&&api('incident/pls',{clear:1}).then(poll).catch(fail);
+    if($('#stopOn'))$('#stopOn').onchange=e=>{const c=e.target;c.blur();api('incident/stops',{on:c.checked?1:0}).then(poll).catch(x=>{fail(x);poll()})}; // Flusssperren (Issue #182)
     if($('#airInc'))$('#airInc').onchange=e=>{const c=e.target;c.blur();api('incident/air/set',{on:c.checked?1:0}).then(poll).catch(x=>{fail(x);poll()})}; // Helikopter je Einsatz (Issue #73)
     $('#sheet').querySelectorAll('[data-rec]').forEach(b=>b.onclick=()=>{b.disabled=true;api('incident/record',{action:b.dataset.rec}).then(poll).catch(e=>{b.disabled=false;fail(e)})});
     // Öffentliche Ansicht ein/aus, anonym (Namen ausblenden) und mit Einsatzprotokoll (Issue #54); Häkchen verlieren den Fokus, damit das Menü wieder neu gezeichnet wird
@@ -779,6 +791,41 @@ function navGo(lat,lon,name){const ll=(+lat).toFixed(6)+','+(+lon).toFixed(6),u=
 const navOn=(m,lat,lon,name)=>m.on('click',()=>{if(feat('nav')&&!document.body.classList.contains('picking'))navTo(lat,lon,name)});
 function navTo(lat,lon,name){lat=(+lat).toFixed(6);lon=(+lon).toFixed(6);
   dlg('Navigieren',`<div><b>${esc(name)}</b><div class="mut">${esc(fc(lat,lon)||'')}${fc(lat,lon)?' · ':''}WGS84 ${lat},${lon}</div></div>`,()=>navGo(lat,lon,name),'🧭 Mit '+NAV_APPS[navApp()]+' navigieren','Abbrechen')}
+/* ---------- Geodaten-Ebene (Issue #182, Funktion «geo»): Objekte am Gewässer aus OpenStreetMap, zuschaltbar ----------
+   Im Fenster «Ansicht» zuerst ausgeblendet (VIEW_OFF), darunter je Objektart ein Häkchen (ausgeblendete pro Gerät in sw_geokinds). Geladen ab Zoomstufe GEO_Z in Kacheln
+   von GEO_T Grad (geo/tile, gleicher Zwischenspeicher wie die Verwaltung), höchstens 9 im Bild, je 30 min im Gerät behalten. Wirkt auf nichts (nur Orientierung).
+   Popup: Angaben, Quelle, 🧭; Einsatzleitung «Als Markierung übernehmen», mit Recht geo «Als festen Standort übernehmen» (Vorgaben der Verwaltung). */
+let geoLayer=null,geoKey='',geoBusy=false,geoErr='',geoSrc='';const geoTiles=new Map(),GEO_Z=13,GEO_T=0.1;
+const geoKOff=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_geokinds')||'[]'))}catch(e){return new Set()}})();
+const geoKinds=()=>((st&&st.geo_kinds)||[]).filter(k=>k.live);
+const geoOn=()=>!!(map&&st&&feat('geo')&&geoKinds().length&&vis('geo'));
+const geoTileList=()=>{const b=map.getBounds(),t=[];for(let x=Math.floor(b.getWest()/GEO_T);x<=Math.floor(b.getEast()/GEO_T);x++)for(let y=Math.floor(b.getSouth()/GEO_T);y<=Math.floor(b.getNorth()/GEO_T);y++)t.push([x,y]);return t};
+const geoItems=tl=>{const m=new Map(),ok=new Set(geoKinds().map(k=>k.k));tl.forEach(([x,y])=>((geoTiles.get(x+','+y)||{}).items||[]).forEach(it=>{if(ok.has(it.kind)&&!geoKOff.has(it.kind))m.set(it.ref,it)}));return[...m.values()]};
+const geoFind=ref=>{for(const c of geoTiles.values()){const it=(c.items||[]).find(x=>x.ref===ref);if(it)return it}return null};
+const geoKn=k=>(((st&&st.geo_kinds)||[]).find(x=>x.k===k)||{name:k});
+async function geoSync(){if(!geoLayer)return;if(!geoOn()||map.getZoom()<GEO_Z){geoDraw([]);geoInfoUpd();return}
+  const tl=geoTileList();if(tl.length>9){geoDraw([]);geoInfoUpd();return}
+  geoDraw(tl);const miss=tl.filter(([x,y])=>{const c=geoTiles.get(x+','+y);return!c||Date.now()-c.t>(c.err?60e3:30*60e3)});if(!miss.length||geoBusy)return geoInfoUpd();
+  geoBusy=true;geoInfoUpd();
+  for(const [x,y] of miss){try{const r=await api('geo/tile',{x,y});geoTiles.set(x+','+y,{items:r.items,t:Date.now()});geoSrc=r.src;geoErr=''}catch(e){geoTiles.set(x+','+y,{items:[],t:Date.now(),err:1});geoErr=e.message}}
+  geoBusy=false;if(geoOn()&&map.getZoom()>=GEO_Z)geoDraw(geoTileList());geoInfoUpd()}
+const geoTags=it=>{const t=it.tags||{};return[t.operator&&'Betreiber: '+t.operator,t.ref&&'Nr. '+t.ref,t.height&&'Höhe: '+t.height+(/\d$/.test(t.height)?' m':''),t.access&&'Zugang: '+t.access,t.description].filter(Boolean).join(' · ')};
+function geoDraw(tl){const its=tl.length?geoItems(tl):[],cm=!!(st&&st.incident&&st.can_manage&&feat('poi')),cg=can('geo'),k=its.map(i=>i.ref).join()+[...geoKOff]+cm+cg+feat('nav');if(k===geoKey)return;geoKey=k;geoLayer.clearLayers();
+  its.forEach(it=>{const kn=geoKn(it.kind),nm=it.name||kn.name+(it.water?' '+it.water:''),pop=`<div class="mmpop"><b>${esc(nm)}</b><span class="t">${esc(kn.name)}${it.water?' · '+esc(it.water):''}${it.pts?' · '+(it.line?'Linie':'Fläche'):''}</span>${geoTags(it)?`<span class="t">${esc(geoTags(it))}</span>`:''}<span class="t" style="font-size:.75rem">Geodaten © OpenStreetMap-Mitwirkende, nicht geprüft</span>${navBtn(it.lat,it.lon,nm,'Navigieren')}${cm?`<button data-geop="${esc(it.ref)}">Als Markierung übernehmen</button>`:''}${cg?`<button data-geof="${esc(it.ref)}">Als festen Standort übernehmen</button>`:''}</div>`;
+    if(it.pts)placeGeo(it,{color:'#5c677d',weight:2,dashArray:'3 5',fillOpacity:.08,opacity:.9}).bindPopup(pop).addTo(geoLayer);
+    L.marker([it.lat,it.lon],{icon:L.divIcon({className:'',html:`<div class="geok">${esc(kn.abbr||'·')}</div>`,iconSize:[24,18],iconAnchor:[12,9]}),zIndexOffset:500}).bindTooltip(esc(nm)+' · '+esc(kn.name)).bindPopup(pop).addTo(geoLayer)})}
+function geoInfoUpd(){const o=$('#geoInfo');if(!o)return;const z=map&&map.getZoom()<GEO_Z,many=!z&&map&&geoTileList().length>9;
+  o.textContent=!vis('geo')?'Objekte am Gewässer aus OpenStreetMap (Wehre, Brücken, Einwasserungen …), nur zur Orientierung.':z||many?'Sichtbar ab näherem Zoom (Zoomstufe '+GEO_Z+').':geoBusy?'Wird geladen …':geoErr?'⚠ '+geoErr:geoItems(geoTileList()).length+' Objekte im Bild · © OpenStreetMap-Mitwirkende'}
+// unter «Geodaten» im Fenster «Ansicht»: je Objektart ein Häkchen und der Stand
+function viewGeoKinds(){const l=$('#viewBox [data-vk="geo"]'),old=$('#vgKinds');if(old)old.remove();if(!l)return;
+  l.closest('label').insertAdjacentHTML('afterend',`<div id="vgKinds" style="margin-left:1.5rem">${vis('geo')?geoKinds().map(k=>`<label><input type="checkbox" data-vgk="${k.k}" ${geoKOff.has(k.k)?'':'checked'}> ${esc(k.icon||'')} ${esc(k.name)}</label>`).join(''):''}<div class="mut" id="geoInfo" style="font-size:.8rem"></div></div>`);geoInfoUpd()}
+document.addEventListener('change',e=>{const c=e.target.closest('[data-vgk]');if(c){c.checked?geoKOff.delete(c.dataset.vgk):geoKOff.add(c.dataset.vgk);try{localStorage.setItem('sw_geokinds',JSON.stringify([...geoKOff]))}catch(x){}geoKey='';geoSync()}
+  else if(e.target.closest('[data-vk="geo"]'))setTimeout(viewGeoKinds,0)});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-geop],[data-geof]');if(!b)return;const it=geoFind(b.dataset.geop||b.dataset.geof);if(!it)return;map.closePopup();const kn=geoKn(it.kind),nm=it.name||kn.name+(it.water?' '+it.water:'');
+  if(b.dataset.geop)dlg('Als Markierung übernehmen',`<label class="mut">Bezeichnung<input id="gpN" maxlength="80" value="${esc(nm)}"></label><div class="mut">${it.pts?(it.line?'Als Linie':'Als Bereich'):'Als Markierung'} der Lage, für alle sichtbar.</div>`,
+      async d=>{await api('incident/poi',{kind:it.pts?(it.line?'line':'area'):'point',name:$('#gpN',d).value,color:'#ff9f1c',pts:it.pts||[[it.lat,it.lon]]});toast('Übernommen','ok');poll()},'Übernehmen');
+  else dlg('Als festen Standort übernehmen',`<label class="mut">Name<input id="gfN" maxlength="80" value="${esc(nm)}"></label><div class="mut">Kategorie, Eigenschaften, Kürzel und Farbe gemäss den Vorgaben der Verwaltung («Geodaten übernehmen»). Der Standort erscheint danach in jedem Einsatz; bearbeiten in der Verwaltung unter «Feste Standorte».</div>`,
+      async d=>{await api('geo/import',{items:[{...it,name:$('#gfN',d).value}]});toast('Als festen Standort übernommen','ok');poll()},'Übernehmen')});
 /* ---------- Personeninfo (Issue #105, Funktion «pinfo»): Infofenster beim Antippen einer Einsatzkraft ----------
    Nicht blockierend: hängt als eigener Marker über der Person und fährt bei jeder Aktualisierung mit, Karte und übrige Elemente bleiben bedienbar.
    Inhalt: Profilbild, Name, Spezialrolle, Einrückoption, alle Einsatzgruppen (st.groups, unabhängig von «Farbe beim Namen»), Standort; Folgen und 🧭.
@@ -812,15 +859,15 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-pix]'))return p
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pinfo&&!document.querySelector('.dlg'))pinfoClose()});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;const [la,lo]=b.dataset.nav.split(',').map(Number);map.closePopup();navGo(la,lo,b.dataset.nn)});
 // Karte: nur neu zeichnen, wenn sich Inhalt, Sichtbarkeit oder Berechtigung ändern (ein offenes Popup bleibt offen)
-function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],fs=(st&&feat('place')&&st.places)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color,p.sym]))+JSON.stringify(fs)+[...poiHide]+vis('pt')+vis('ar')+vis('ln')+vis('place')+JSON.stringify(fs.map(f=>pcOn(f.cat_id)))+pcLbl()+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
+function drawPois(){if(!poiLayer)return;poiHideLoad();const ps=(st&&st.incident&&st.pois)||[],fs=(st&&feat('place')&&st.places)||[],k=JSON.stringify(ps.map(p=>[p.id,p.name,p.color,p.sym]))+JSON.stringify(fs)+JSON.stringify([st&&st.place_props,st&&st.stops,st&&st.incident&&st.incident.stop_on,[...areaHot],feat('area')])+[...poiHide]+vis('pt')+vis('ar')+vis('ln')+vis('place')+JSON.stringify(fs.map(f=>pcOn(f.cat_id)))+pcLbl()+!!(st&&st.can_manage)+feat('nav');if(k===poiKey)return;poiKey=k;poiLayer.clearLayers();
   // Feste Standorte (Issue #96): eckige Marker in der Farbe mit Kürzel, ausblendbar je Eintrag ('f'+id in poiHide) und als Kategorie
   // feste Bereiche (pts): Fläche in der Farbe, gestrichelt (Unterschied zu den Bereichen der Einsatzleitung), Beschriftung in der Mitte, Navigation zur Mitte
   // feste Linien (line, Issue #134, z. B. Fahrrinnen): breiter gestrichelter Strich, Beschriftung und Navigation auf halber Länge
   // Namen ausgeschaltet (pcLbl): Name nur beim Darüberfahren und im Popup
   const lb=pcLbl();
   fs.filter(placeShown).forEach(f=>(f.pts?placeGeo(f,{color:f.color||PLACE_COL,weight:2,dashArray:f.line?'12 6':'6 4',fillOpacity:.12}).bindTooltip(esc(f.name),{permanent:lb,sticky:!lb,direction:'center',className:'poilbl'})
-      :L.marker([f.lat,f.lon],{icon:L.divIcon({className:'',html:`<div class="plc" style="background:${f.color||PLACE_COL}">${esc(f.abbr||'◆')}</div>`,iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:700}).bindTooltip(esc(f.name),{permanent:lb,direction:'right',className:'poilbl',offset:[12,0]}))
-    .bindPopup(`<div class="mmpop"><b>${esc(f.name)}</b><span class="t">${esc(placeInfo(f))}</span>${navBtn(f.lat,f.lon,f.name,f.pts?'Navigieren (Mitte)':'Navigieren')}</div>`).addTo(poiLayer));
+      :L.marker([f.lat,f.lon],{icon:L.divIcon({className:'',html:`<div class="plcw"><div class="plc${areaHot.has(f.id)?' hot':''}" style="background:${f.color||PLACE_COL}">${esc(f.abbr||'◆')}</div>${placeBadge(f)}</div>`,iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:700}).bindTooltip(esc(f.name),{permanent:lb,direction:'right',className:'poilbl',offset:[12,0]}))
+    .bindPopup(`<div class="mmpop"><b>${placeBadge(f,1)}${esc(f.name)}</b><span class="t">${esc(placeInfo(f))}</span>${propChips(f)?`<span class="t">${propChips(f)}</span>`:''}${f.src_ref?'<span class="t" style="font-size:.75rem">© OpenStreetMap-Mitwirkende</span>':''}${placeNavBtn(f,f.nav&&f.nav.length>1?'Navigieren ('+f.nav.length+' Ziele)':f.nav&&f.nav.length?'Navigieren'+(f.nav[0].note?' – '+f.nav[0].note:''):f.pts?'Navigieren (Mitte)':'Navigieren')}${stopBtn(f)}</div>`).addTo(poiLayer));
   // Linien der Einsatzleitung (Issue #150): durchgezogen (feste Linien gestrichelt), Beschriftung und Navigation auf halber Länge
   ps.filter(p=>!poiHide.has(p.id)&&vis(poiVk(p))).forEach(p=>{const area=p.kind!=='point';
     const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):p.kind==='line'?L.polyline(p.pts,{color:p.color,weight:4,opacity:.95}):L.marker(p.pts[0],{icon:p.sym?symIcon(p):L.divIcon({className:'',html:`<div class="poi" style="background:${p.color}">⚑</div>`,iconSize:[28,28],iconAnchor:[2,30]}),zIndexOffset:800}); // Markierung mit Einsatzsymbol (Issue #146), sonst die Fahne
@@ -841,7 +888,7 @@ function renderPois(){const o=$('#pois');if(!o)return;const inc=!!(st&&st.incide
     +grpBody('lage',grp.map(g=>hd('lage:'+g.k,g.t,g.items.length,chk(`data-pgrp="${g.k}"`,g.items.length&&g.items.every(p=>!poiHide.has(p.id)),!g.items.length,'Alle '+g.t+' anzeigen'),1)+grpBody('lage:'+g.k,g.items.map(row).join('')||'<div class="mut">Keine</div>')).join('')):'';
   // Feste Standorte (Issue #96), nur lesend; je Kategorie eine Untergruppe mit Häkchen (pro Person gespeichert, wie im Fenster «Ansicht»), darunter die Standorte mit eigenem Häkchen (pro Gerät und Einsatz)
   const fs=feat('place')?st.places||[]:[],cs=placeCatsUsed(),withCat=cs.some(c=>c.id);
-  const frow=f=>`<div class="pi"><input type="checkbox" data-pfv="${f.id}" ${poiHide.has('f'+f.id)?'':'checked'} aria-label="${esc(f.name)} auf der Karte anzeigen"><span class="sw" style="background:${f.color||PLACE_COL}"></span><div class="nm">${esc(f.name)}<small>${esc(placeInfo(f))}</small></div><div class="pa"><button data-pf="${f.id}" title="Auf der Karte zeigen">Zeigen</button>${navBtn(f.lat,f.lon,f.name)}</div></div>`;
+  const frow=f=>`<div class="pi"><input type="checkbox" data-pfv="${f.id}" ${poiHide.has('f'+f.id)?'':'checked'} aria-label="${esc(f.name)} auf der Karte anzeigen"><span class="sw" style="background:${f.color||PLACE_COL}"></span><div class="nm">${placeBadge(f,1)}${esc(f.name)}<small>${esc(placeInfo(f))}</small>${propChips(f)?`<small>${propChips(f)}</small>`:''}</div><div class="pa"><button data-pf="${f.id}" title="Auf der Karte zeigen">Zeigen</button>${placeNavBtn(f)}${stopBtn(f,1)}</div></div>`;
   const fl=!fs.length?'':hd('fix','Feste Standorte',fs.length,chk('data-pfgrp="1"',fs.every(f=>!poiHide.has('f'+f.id)),0,'Alle festen Standorte anzeigen'))
     +grpBody('fix',withCat?cs.map(c=>hd('fix:'+c.id,esc(c.name),c.n,chk(`data-pfcat="${c.id}"`,pcOn(c.id),0,'Kategorie '+c.name+' anzeigen'),1)+grpBody('fix:'+c.id,fs.filter(f=>(f.cat_id||0)===c.id).map(frow).join(''))).join(''):fs.map(frow).join(''));
   $('#poiList').innerHTML=pls+lg+fl;
@@ -863,6 +910,24 @@ function setPlaceCat(ids,on){if(!me)return;const old=me.place_view;const v=ids==
   clearTimeout(pcSave);pcSave=setTimeout(()=>api('me/settings',{place_view:me.place_view}).then(()=>lsSet('sw_boot',Object.assign(lsGet('sw_boot')||{},{me}))).catch(e=>{me.place_view=old;fail(e);drawPois();renderPois();viewPlaceCats()}),400);
   drawPois();renderPois();viewPlaceCats()}
 function showPlace(id){const f=(st.places||[]).find(x=>x.id===id);if(!f)return;stopFollow();if(poiHide.has('f'+id))setPoiHidden(['f'+id],false);if(!pcOn(f.cat_id))setPlaceCat([f.cat_id||0],true);if(!vis('place'))setVis(['place'],true);if(f.pts)map.fitBounds(L.latLngBounds(f.pts),FITPAD);else map.panTo([f.lat,f.lon]);if(narrow())togglePanel('pois',false)}
+// Issue #182: Eigenschaften (st.place_props, effect none|warn|stop), Flusssperren (st.stops = wirksame), Navigationspunkte (f.nav, mehrere mit Kommentar)
+const placePropsOf=f=>(f.props||[]).map(id=>((st&&st.place_props)||[]).find(p=>p.id===id)).filter(Boolean);
+const placeEff=(f,e)=>placePropsOf(f).some(p=>p.effect===e);
+const stopOn=f=>!!(st&&st.incident&&(st.stops||[]).some(s=>s.id===f.id));
+const stopCands=()=>((st&&st.incident&&feat('place')&&st.places)||[]).filter(f=>placeEff(f,'stop'));
+const propChips=f=>placePropsOf(f).map(p=>`<span class="pchip" style="border-color:${esc(p.color||'#6c757d')}">${esc(p.icon||'')} ${esc(p.name)}</span>`).join('');
+// Zeichen am Marker: ⛔ wirksame Flusssperre, ⚠ Warnung bzw. nicht berücksichtigte Sperre; inl = vor dem Namen in Listen und Popups
+const placeBadge=(f,inl)=>{const b=stopOn(f)?'⛔':placeEff(f,'warn')||placeEff(f,'stop')?'⚠':'';return!b?'':inl?b+' ':`<i class="plb" title="${stopOn(f)?'Flusssperre: begrenzt das Suchgebiet':'Achtung'}">${b}</i>`};
+// Einsatzleitung: Sperre dieses Standorts für den Einsatz aus- bzw. wieder einschalten (nur wenn die Sperren insgesamt gelten)
+const stopBtn=(f,sm)=>st&&st.incident&&st.can_manage&&feat('area')&&st.incident.stop_on&&placeEff(f,'stop')?`<button data-pstop="${f.id}" data-off="${stopOn(f)?1:0}" title="${stopOn(f)?'Suchgebiet endet hier nicht mehr (nur in diesem Einsatz)':'Suchgebiet endet wieder hier'}">${sm?(stopOn(f)?'⛔ aus':'⛔ an'):stopOn(f)?'⛔ Sperre aufheben (Einsatz)':'⛔ Sperre wieder berücksichtigen'}</button>`:'';
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pstop]');if(!b)return;api('incident/stops',{id:+b.dataset.pstop,off:+b.dataset.off}).then(()=>{map.closePopup();poll()}).catch(fail)});
+// 🧭 bei festen Standorten: ohne Navigationspunkt zum Standort, mit einem direkt dorthin, mit mehreren Auswahl (nach Luftlinie vom eigenen Standort)
+const placeNavBtn=(f,label)=>{const n=f.nav||[];if(!feat('nav'))return'';if(!n.length)return navBtn(f.lat,f.lon,f.name,label);if(n.length===1)return navBtn(n[0].lat,n[0].lon,f.name+(n[0].note?' – '+n[0].note:''),label);
+  return `<button class="nav" data-pnav="${f.id}" title="Navigationspunkt wählen"${label?'':` aria-label="Zu ${esc(f.name)} navigieren"`}>🧭${label?' '+esc(label):''}</button>`};
+function placeNavPick(id){const f=(st.places||[]).find(x=>x.id===id);if(!f)return;map.closePopup();const me0=selfAt(),l=f.nav.map((n,i)=>({...n,i,d:me0?geoDist(me0,n):null,s:geoDist(f,n)}));if(me0)l.sort((a,b)=>a.d-b.d);
+  const d=dlg('Navigieren: '+f.name,`<div class="mut">Navigationspunkt wählen${me0?' (nach Luftlinie vom eigenen Standort)':''}:</div>${l.map(n=>`<button data-pnv="${n.i}" style="display:block;width:100%;text-align:left;margin:.3rem 0">🧭 ${esc(n.note||'Navigationspunkt '+(n.i+1))}<small class="mut" style="display:block">${n.d!=null?kmT(n.d)+' von hier · ':''}${kmT(n.s)} vom Standort${esc(fcs(n.lat,n.lon,' · '))}</small></button>`).join('')}`,async()=>{},'Schliessen','Abbrechen');
+  d.querySelector('[data-ok]').hidden=true;d.querySelectorAll('[data-pnv]').forEach(b=>b.onclick=()=>{const n=f.nav[+b.dataset.pnv];navGo(n.lat,n.lon,f.name+(n.note?' – '+n.note:''));d.remove()})}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pnav]');if(b)placeNavPick(+b.dataset.pnav)});
 const placeInfo=f=>[f.descr,f.pts?placeShape(f)+fcs(f.lat,f.lon,', Mitte ',''):fcs(f.lat,f.lon,'','')].filter(Boolean).join(' · ');
 function showPoi(id){const p=(st.pois||[]).find(x=>x.id===id);if(!p)return;stopFollow();if(poiHide.has(id))setPoiHidden([id],false);const vk=poiVk(p);if(!vis(vk))setVis([vk],true);
   if(p.kind!=='point')map.fitBounds(L.latLngBounds(p.pts),FITPAD);else map.panTo(p.pts[0]);if(narrow())togglePanel('pois',false)}
@@ -959,6 +1024,9 @@ function rdPath(g,A,B,dir){let best=null;
     if(!best||d<best.d){const nodes=[];for(let n=end;n!=null;n=P.get(n))nodes.unshift(n);best={d,nodes}}});
   return best&&{d:best.d,pts:[A.ll,...best.nodes.map(n=>[g.get(n).lat,g.get(n).lon]),B.ll]}}
 // Fliessgeschwindigkeit fürs Werkzeug: die des Einsatzes, sonst die zuletzt eingegebene (pro Gerät)
+// Issue #182: feste Standorte mit Wirkung «Warnung» oder «begrenzt Suchgebiet», die der Weg passiert (Punkt ≤ 60 m vom Weg, Linie bzw. Rand eines Bereichs geschnitten)
+function rdPass(r){if(r._pass)return r._pass;const fs=((st&&feat('place')&&st.places)||[]).filter(f=>placePropsOf(f).some(p=>p.effect!=='none')),P=r.pts.map(q=>({lat:q[0],lon:q[1]}));
+  return r._pass=fs.filter(f=>{const sg=f.pts?stopCtx([f]).segs:null;for(let i=1;i<P.length;i++)if(segDist(P[i-1],P[i],f)<60||sg&&segHit(sg,P[i-1],P[i]))return true;return false})}
 const rdFlow=()=>{const f=st&&st.incident&&st.incident.flow_ms;if(f)return f;try{return+localStorage.getItem('sw_rdflow')||''}catch(e){return''}};
 function rdRender(){const box=$('#rdBox');if(!rd){box.hidden=true;return}box.hidden=false;const r=rd.res,x='<button id="rdX">Schliessen</button>',again='<button id="rdN">Neu messen</button>';
   box.innerHTML=rd.step==='a'?`<span><b>Flussdistanz:</b> Startpunkt A auf der Karte antippen</span>${x}`
@@ -968,6 +1036,7 @@ function rdRender(){const box=$('#rdBox');if(!rd){box.hidden=true;return}box.hid
     :`<div><b>Flussdistanz A → B: ${kmT(r.d)}</b> <span class="mut">(Luftlinie ${kmT(rd.air)})</span></div><div class="mut">${esc(r.dir)}${esc(fcs(rd.a.lat,rd.a.lng,' · A '))}${esc(fcs(rd.b.lat,rd.b.lng,' · B '))}</div>
       <table class="rdt"><tr><td><label>Fliessgeschwindigkeit <input id="rdV" type="number" step="0.1" min="0" value="${rdFlow()}" aria-label="Fliessgeschwindigkeit in m/s"> m/s</label></td><td id="rdT0"></td></tr>
       ${rdSpeeds().map(v=>`<tr><td>Mit ${v} km/h</td><td>${durS(r.d/(v/3.6))}</td></tr>`).join('')}</table>
+      ${rdPass(r).length?`<div class="mut" style="color:#ffb35c">⚠ Weg passiert: ${rdPass(r).map(f=>esc(f.name)+' ('+esc(placePropsOf(f).filter(p=>p.effect!=='none').map(p=>p.name).join(', '))+')').join(', ')}</div>`:''}
       ${r.down?'':`<div class="mut">${r.dir.includes('aufwärts')?'Treibzeit mit der Fliessgeschwindigkeit: von B nach A (flussabwärts).':'Keine durchgehende Fliessrichtung: Treibzeit nur als Richtwert.'}</div>`}<div class="row">${again}${x}</div>`;
   $('#rdX').onclick=rdClose;if($('#rdN'))$('#rdN').onclick=rdOpen;
   const v=$('#rdV');if(v){const upd=()=>{const f=+v.value;$('#rdT0').textContent=f>0?durS(r.d/f)+` (${(f*3.6).toFixed(1)} km/h)`:'Fliessgeschwindigkeit eingeben'};

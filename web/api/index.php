@@ -1487,7 +1487,7 @@ function geoName($it) { $n = trim((string)($it['name'] ?? '')); if ($n !== '') r
 function placeProps($all = false) { global $db; return array_map(fn($r) => ints($r, ['id', 'sort', 'active']), $db->query("SELECT id,name,icon,color,effect,sort,active FROM place_props" . ($all ? '' : ' WHERE active=1') . " ORDER BY " . SORT_ORDER)->fetchAll()); }
 function placePropsIn($v) { $ok = array_column(placeProps(), 'id'); return array_values(array_intersect($ok, array_map('intval', array_filter((array)$v, 'is_numeric')))); }
 // wirksame Flusssperren eines Einsatzes: feste Standorte des Einsatzes mit einer Eigenschaft der Wirkung stop, solange die Einsatzleitung sie berücksichtigt (stop_on) und nicht einzeln ausgenommen (stop_off)
-function stopOff($inc) { return array_values(array_map('intval', array_filter((array)json_decode((string)($inc['stop_off'] ?? ''), true), 'is_numeric'))); }
+function stopOff($inc) { $v = $inc['stop_off'] ?? null; return array_values(array_map('intval', array_filter(is_array($v) ? $v : (array)json_decode((string)$v, true), 'is_numeric'))); } // auch schon umgewandelt (incident/state)
 function incStops($inc, $pl = null) { if (!feature($inc, 'area') || !(int)($inc['stop_on'] ?? 1)) return [];
   $eff = array_column(array_filter(placeProps(), fn($p) => $p['effect'] === 'stop'), 'name', 'id'); if (!$eff) return []; $off = stopOff($inc); $r = [];
   foreach ($pl ?? incPlaces($inc) as $f) { $why = array_values(array_intersect_key($eff, array_flip($f['props']))); if (!$why || in_array($f['id'], $off, true)) continue;
@@ -3862,7 +3862,11 @@ switch ($route) {
   out(['x' => $x, 'y' => $y, 'items' => $items, 'src' => $t['src'], 'at' => (int)$t['at'], 'stale' => (int)$t['stale']]);
  case 'geo/import': need('geo'); // Objekte als feste Standorte übernehmen (items: Objekt aus geo/tile plus Angaben name, descr, cat_id, props, color, abbr, nav), plan_id = in eine vorbereitete Übung
   $pid = empty($in['plan_id']) ? null : (int)$in['plan_id']; placeAllowed($pid, true); $its = (array)($in['items'] ?? []); if (!$its || count($its) > 500) fail('Keine bzw. zu viele Objekte (höchstens 500)');
-  $db->beginTransaction(); $ids = []; foreach ($its as $it) { if (!is_array($it)) fail('Ungültiges Objekt'); $ids[] = placeSave($it + ['src' => $it], null, $pid); } $db->commit();
+  $gc = geoCfg(); $db->beginTransaction(); $ids = [];
+  foreach ($its as $it) { if (!is_array($it)) fail('Ungültiges Objekt'); $c = $gc[(string)($it['kind'] ?? '')] ?? null; // fehlende Angaben aus den Vorgaben je Objektart (z. B. Übernahme aus der Einsatz-App)
+    if ($c) $it += ['cat_id' => $c['cat_id'], 'props' => $c['props'], 'color' => $c['color'], 'abbr' => empty($it['pts']) ? $c['abbr'] : ''];
+    $ids[] = placeSave($it + ['src' => $it], null, $pid); }
+  $db->commit();
   alog('info', 'geo', 'Geodaten als feste Standorte übernommen', ['n' => count($ids), 'plan' => $pid, 'kinds' => array_count_values(array_map(fn($i) => (string)($i['kind'] ?? ''), $its))]);
   out(['ok' => true, 'ids' => $ids]);
  case 'geo/check': need('geo'); // Abgleich mit der Quelle jetzt (ids = bestimmte Standorte, sonst alle der Reihe nach): liefert Anzahl geprüfte/geänderte/fehlende und left = noch nicht geprüfte dieses Laufs
