@@ -21,8 +21,11 @@ List<LatLng> _ptsOf(dynamic v) => v is List
     : <LatLng>[];
 
 /// Einsatzsymbol (Issue #146): Bild `img/sym/<Schlüssel>.svg` vom Server des Kontos (wie symImg in common.js)
-Widget symPic(IncStore s, String k, {double size = 32}) => SvgPicture.network('${s.acc.base}img/sym/${Uri.encodeComponent(k)}.svg',
-    width: size, height: size, placeholderBuilder: (_) => SizedBox(width: size, height: size, child: const Icon(Icons.place, size: 18)));
+Widget symPic(IncStore s, String k, {double size = 32}) => s.demo
+    // Demo-Modus (Issue #74): kein Server, Symbole aus der App (assets/sym, Kopie von web/img/sym)
+    ? SvgPicture.asset('assets/sym/$k.svg', width: size, height: size, placeholderBuilder: (_) => SizedBox(width: size, height: size, child: const Icon(Icons.place, size: 18)))
+    : SvgPicture.network('${s.acc.base}img/sym/${Uri.encodeComponent(k)}.svg',
+        width: size, height: size, placeholderBuilder: (_) => SizedBox(width: size, height: size, child: const Icon(Icons.place, size: 18)));
 
 /// Eckpunkte eines Bereichs bzw. [Punkt] einer Markierung (pois.pts = [[lat, lon], …])
 List<LatLng> poiPts(J p) => _ptsOf(p['pts']);

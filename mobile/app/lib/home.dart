@@ -7,6 +7,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 
 import 'accounts.dart';
 import 'api.dart';
+import 'demo_ui.dart';
 import 'main.dart';
 import 'monitor.dart';
 import 'notify.dart';
@@ -259,9 +260,12 @@ class _HomeState extends State<HomePage> {
                       SizedBox(height: 8),
                       Text('Melde dich mit «Backend hinzufügen» bei deiner Organisation an. Du kannst mehrere Backends hinzufügen und auf allen gleichzeitig aktiv sein.',
                           textAlign: TextAlign.center),
+                      SizedBox(height: 24),
+                      DemoCard(), // Demo-Modus ohne Konto (Issue #74)
                     ])
                   : ListView(padding: const EdgeInsets.only(top: 6, bottom: 96), children: [
                       ..._acc.map(_card),
+                      const DemoCard(), // Demo-Modus (Issue #74)
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text(

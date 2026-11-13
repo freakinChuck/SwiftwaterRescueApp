@@ -250,6 +250,7 @@ Widget? navBtn(IncStore s, dynamic lat, dynamic lon, String name, {String? label
 
 /// Seite der Web-App (Verwaltung, Meine Einsätze, Rechtliches) in der App öffnen, angemeldet mit dem Konto (web.dart)
 void openWeb(BuildContext context, IncStore s, String page) {
+  if (s.demo) return s.toast('Im Demo-Modus gibt es keine Seiten des Servers (Verwaltung, Meine Einsätze, Rechtliches).', 'info');
   Navigator.of(context).push(MaterialPageRoute(builder: (_) => WebPage(s: s, page: page)));
 }
 

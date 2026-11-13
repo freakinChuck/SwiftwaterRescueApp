@@ -7,7 +7,8 @@
    - Beispieldaten: ein laufender Einsatz an der Reuss in Luzern; simulierte Einsatzkräfte nehmen an, fahren hin, setzen Markierungen,
      senden Nachrichten und finden den Rettling (DEMO_BSP). In einem selbst gestarteten Einsatz nehmen sie ebenfalls an (DEMO_GEN).
    - Externe Dienste wie in der echten App direkt vom Gerät: Kartenkacheln und das Gewässernetz (Overpass, Rückfall im Gerät wie Issue #28).
-   Muss vor common.js geladen werden (common.js liest beim Laden den Anmeldeschlüssel aus localStorage). */
+   Muss vor common.js geladen werden (common.js liest beim Laden den Anmeldeschlüssel aus localStorage).
+   Gegenstück in der nativen App: mobile/app/lib/demo.dart; Änderungen an einer der beiden Simulationen auch in der anderen nachführen. */
 // var statt const: common.js liest window.DEMO
 var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))return null;
   const want=q.get('demo')==='leer'?'leer':'bsp',SS=window.sessionStorage,PFX='swdemo:';
@@ -19,7 +20,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const now=()=>Math.floor(Date.now()/1000);
   // ---------- feste Daten ----------
   const FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1}; // öffentliche Ansicht braucht den Server
-  const KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'crit',alarm_name:'Kritisch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT},
+  const KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'high',alarm_name:'Hoch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT},
                {id:2,name:'Übung',color:'#1d7fd1',alarm:'normal',alarm_name:'Normal',mode_up:1,msg_lvl:'normal',end_lvl:'normal',rec:1,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT}];
   const ROLES=[{id:1,name:'Einsatzleitung',color:'#d62828',is_lead:1,is_post:0,can_message:1},{id:2,name:'Rettungsboot',color:'#1d7fd1',is_lead:0,is_post:0,can_message:1},
                {id:3,name:'Rettungsschlitten',color:'#e6a100',is_lead:0,is_post:0,can_message:1},{id:4,name:'Sicherungs- und Beobachtungsposten',color:'#2a9d5c',is_lead:0,is_post:1,can_message:1}];

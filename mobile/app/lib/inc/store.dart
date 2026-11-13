@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../accounts.dart';
 import '../api.dart';
+import '../demo.dart';
 import '../monitor.dart';
 import '../notify.dart';
 import '../service.dart';
@@ -64,6 +65,9 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   IncStore(this.acc);
   final Account acc;
   late final Api api = acc.api;
+
+  /// Demo-Modus (Issue #74): kein Server, kein Teilen im Hintergrund, kein Dienst, keine Überwachung, nichts gespeichert
+  late final bool demo = isDemoAcc(acc);
 
   J? me;
   List<J> roles = [], modes = [];
@@ -443,6 +447,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   /// Android (Issue #179): Mit Push läuft der Dienst nur im Einsatz (serviceNeeded); damit er gleich startet, zuerst die Teilnahme
   /// im Stand der Überwachung festhalten (setJoined).
   void _trackNow() {
+    if (demo) return;
     if (Platform.isAndroid) {
       unawaited(setJoined(acc.id, ji(inc?['id']), true).then((_) => syncService()).catchError((Object e) => debugPrint('Dienst $e')));
       return;
@@ -451,7 +456,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _saveLast() {
-    if (st == null) return;
+    if (st == null || demo) return;
     try {
       _sp?.setString('last_${acc.id}', jsonEncode({...st!, 'messages': msgs}));
       _sp?.setInt('lastAt_${acc.id}', DateTime.now().millisecondsSinceEpoch);
@@ -492,7 +497,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       SystemSound.play(SystemSoundType.alert);
       HapticFeedback.mediumImpact();
     }
-    if (!_visible) showNote(acc.id, key, t, b, lvl, sub: acc.label);
+    if (!_visible) showNote(acc.id, key, demo ? 'DEMO – $t' : t, b, lvl, sub: acc.label);
   }
 
   void _showAlarm() {
@@ -501,7 +506,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     final a = alarm!;
     // Meldung des Geräts mit Weckton (kritisch) bzw. Alarmton; dieselbe Kennung wie die Überwachung, also nie doppelt
     markTag(acc.id, a.key);
-    showNote(acc.id, a.key, a.title, a.body, a.lvl, sub: acc.label, kind: a.kind, ksnd: a.ksnd);
+    showNote(acc.id, a.key, demo ? 'DEMO – ${a.title}' : a.title, a.body, a.lvl, sub: acc.label, kind: a.kind, ksnd: a.ksnd);
     if (a.lvl == 'crit' && Platform.isIOS) HapticFeedback.heavyImpact();
     notifyListeners();
   }
@@ -674,10 +679,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         'manual': manualPos != null ? 1 : 0
       });
       locStatus = 'Standort wird geteilt (${fmtT(DateTime.now().millisecondsSinceEpoch / 1000)})';
-      unawaited(locResult(acc, ji(inc?['id'])));
+      if (!demo) unawaited(locResult(acc, ji(inc?['id'])));
     } catch (e) {
       locStatus = 'Standort senden fehlgeschlagen: $e';
-      unawaited(locResult(acc, ji(inc?['id']), err: e is ApiError ? e.message : '$e'));
+      if (!demo) unawaited(locResult(acc, ji(inc?['id']), err: e is ApiError ? e.message : '$e'));
     }
     _checkArea();
   }
@@ -691,7 +696,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---------- Lebenszyklus ----------
   void _beat() {
-    if (_visible && !closed) setForeground(acc.id);
+    if (_visible && !closed && !demo) setForeground(acc.id);
   }
 
   @override
@@ -703,8 +708,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       // Hintergrund: Überwachung und Standortdienst übernehmen (monitor.dart, track.dart)
       _visible = false;
-      setForeground(null);
-      if (Platform.isIOS) {
+      if (!demo) setForeground(null);
+      if (Platform.isIOS && !demo) {
         // Erst das Teilen im Hintergrund anhängen, dann den eigenen Strom beenden: So läuft die Ortung ohne Unterbruch weiter
         // (unter iOS darf sie mit «Beim Verwenden» nur im Vordergrund starten).
         Tracker.sync().catchError((Object e) => debugPrint('Tracker $e')).whenComplete(() {
@@ -725,7 +730,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     _poll?.cancel();
     _fg?.cancel();
     _stopPos();
-    setForeground(null);
+    if (!demo) setForeground(null);
     toasts.close();
     events.close();
     super.dispose();

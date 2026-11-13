@@ -78,6 +78,8 @@ flutter:
   # Töne für den kritischen Alarm (Issue #171, erzeugt mit scripts/sounds/gen.py, Katalog in lib/sounds.dart)
   assets:
     - assets/sounds/
+    # Einsatzsymbole für den Demo-Modus (Issue #74, Kopie von web/img/sym; im Konto eines Servers lädt die App sie von dort)
+    - assets/sym/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
