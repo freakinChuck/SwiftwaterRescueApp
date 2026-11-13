@@ -26,6 +26,7 @@ import 'rd.dart';
 import 'res.dart';
 import 'store.dart';
 import 'util.dart';
+import 'veh.dart';
 
 const _fitPad = EdgeInsets.fromLTRB(50, 90, 80, 50);
 const _homeWaitMs = 20000, _areaWaitMs = 30000;
@@ -792,6 +793,21 @@ class _IncPageState extends State<IncPage> implements MapCtl {
             () => _sheet(js(p['name']), [js(p['description']), 'Fester Standort'], lat: ll.latitude, lon: ll.longitude));
       }).toList()));
     }
+    // Fahrzeuge (Issue #177): je Kette ein Marker beim obersten Fahrzeug, auch ohne Einsatz (Sichtbarkeit bestimmt der Server)
+    if (s.vis('veh') && vehOf(s) != null) {
+      out.add(MarkerLayer(
+          markers: vehRoots(s).where((r) => llOf(r) != null).map((r) {
+        final kids = vehKids(s, ji(r['id'])), all = [r, ...kids];
+        return Marker(
+            point: llOf(r)!,
+            width: 150,
+            height: 30,
+            child: GestureDetector(
+                onTap: () => _sheet(all.map((v) => js(v['name'])).join(' + '), vehSheetLines(s, r, kids),
+                    lat: jd(r['lat']), lon: jd(r['lon']), actions: (c) => [for (final v in all) ...vehBtns(context, s, v, before: () => Navigator.pop(c))]),
+                child: Center(child: vehChip(s, r, kids))));
+      }).toList()));
+    }
     if (i == null) return out;
     // Suchgebiet
     final a = s.area;
@@ -1011,7 +1027,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         builder: (c) => ListenableBuilder(
             listenable: s,
             builder: (c, _) {
-              final cats = s.inc != null ? s.viewCats() : (s.places.isNotEmpty ? s.viewCats().where((v) => v.$1 == 'place').toList() : <(String, String, String)>[]);
+              final cats = s.inc != null ? s.viewCats() : s.viewCats().where((v) => (v.$1 == 'place' && s.places.isNotEmpty) || (v.$1 == 'veh' && vehList(s).any((x) => llOf(x) != null))).toList();
               return SafeArea(
                   child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .75),

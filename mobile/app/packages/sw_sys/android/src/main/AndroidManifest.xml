@@ -1,1 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fahrzeuge mit BLE-Beacons (Issue #177): Scannen ohne neverForLocation, sonst filtert Android Beacons heraus; bis Android 11 die alten Rechte -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30"/>
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
+    <application>
+        <receiver android:name="ch.swiftwaterrescue.sys.BeaconReceiver" android:exported="false"/>
+    </application>
+</manifest>

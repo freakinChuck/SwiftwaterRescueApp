@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'accounts.dart';
 import 'api.dart';
+import 'beacon.dart';
 import 'notify.dart';
 import 'track.dart';
 
@@ -158,6 +159,9 @@ Future<int> pollAll() async {
   await Future.wait(l.map(pollOne));
   try {
     await Tracker.sync(); // Standort im Einsatz teilen (track.dart)
+  } catch (_) {}
+  try {
+    await Beacons.sync(); // Fahrzeuge ausserhalb von Einsätzen (beacon.dart, Issue #177)
   } catch (_) {}
   return l.length;
 }

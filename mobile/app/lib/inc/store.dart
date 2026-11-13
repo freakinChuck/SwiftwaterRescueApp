@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../accounts.dart';
 import '../api.dart';
+import '../beacon.dart';
 import '../monitor.dart';
 import '../notify.dart';
 import '../sys.dart';
@@ -34,6 +35,7 @@ const viewCatsAll = [
   ('ln', 'Linien', 'poi'),
   ('mm', 'Nachrichten-Markierungen', 'msg'),
   ('air', 'Helikopter', ''),
+  ('veh', 'Fahrzeuge', 'veh'),
 ];
 
 /// Grundkarten (MAP_PROVIDERS in common.js)
@@ -150,7 +152,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   List<(String, String, String)> viewCats() =>
-      viewCatsAll.where((v) => v.$1 == 'air' ? jb(st?['air']) : (v.$3.isEmpty || feat(v.$3))).toList();
+      viewCatsAll.where((v) => v.$1 == 'air' ? jb(st?['air']) : (v.$1 == 'veh' ? st?['veh'] is Map : (v.$3.isEmpty || feat(v.$3)))).toList(); // Fahrzeuge nur, wenn der Server sie liefert (Issue #177)
   bool vis(String k) => !viewHide.contains(k);
 
   /// Art des Einsatzes (kindOf)
@@ -177,6 +179,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     fatal = null;
     try {
       me = jm((await api.call('me'))['me']);
+      unawaited(Beacons.putMe(acc.id, me)); // Fahrzeuge (Issue #177)
       mustChange = jb(me!['must_change']);
       if (mustChange) {
         ready = true;
@@ -228,6 +231,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> reloadMe() async {
     try {
       me = jm((await api.call('me'))['me']);
+      unawaited(Beacons.putMe(acc.id, me)); // Fahrzeuge (Issue #177)
       notifyListeners();
     } catch (_) {}
   }
@@ -293,6 +297,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     _polling = true;
     try {
       final nx = await api.call('incident/state', query: {'since': '$_lastMsg'});
+      _askBt(nx);
       final i = nx['incident'] is Map ? jm(nx['incident']) : null;
       if (i != null) {
         final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']), cr = lv == 'none' ? 'low' : lv;
@@ -433,6 +438,17 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     markTag(acc.id, k);
     final l = _acked.toList();
     _sp?.setStringList('ack_${acc.id}', l.length > 300 ? l.sublist(l.length - 300) : l);
+  }
+
+  /// Fahrzeuge (Issue #177): im Einsatz mit Fahrzeugen einmal um Bluetooth bitten (Android 12+: «Geräte in der Nähe»), damit die App die Beacons sieht
+  static bool _btAsked = false;
+  void _askBt(J nx) {
+    final v = nx['veh'];
+    if (_btAsked || nx['incident'] is! Map || v is! Map || jl(v['list']).isEmpty) return;
+    final m = nx['me'];
+    if (m is! Map || m['left_at'] != null || m['mode'] == 'declined') return;
+    _btAsked = true;
+    requestBluetooth();
   }
 
   void toast(String text, [String kind = 'ok']) => toasts.add(Toast(text, kind));
@@ -578,9 +594,12 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     if (!sharing) return;
     _lastSent = DateTime.now().millisecondsSinceEpoch;
     try {
+      final bs = manualPos == null ? await Beacons.forReport(acc) : null; // Fahrzeuge (Issue #177)
       await api.call('incident/location', body: {
         'lat': p.latitude,
         'lon': p.longitude,
+        if (bs != null) 'beacons': bs,
+        if (manualPos == null && devPos != null) 'acc': devPos!.accuracy,
         'water': waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()) < waterM ? 1 : 0,
         'manual': manualPos != null ? 1 : 0
       });

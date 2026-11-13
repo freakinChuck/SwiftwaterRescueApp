@@ -2,12 +2,14 @@
 // absRows/absDialog/pwDialog in web/common.js): Konto (Profilbild, Passwort, angemeldete Apps, Abmelden), Alarmierung (Einsatzfähigkeit
 // mit Abwesenheiten, Übungsmodus, Standort und Benachrichtigungen über die Systemeinstellungen), Anzeige, AI-Assistent, Rechtliches.
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../beacon.dart';
 import '../sys.dart';
 import 'ctx.dart';
 import 'store.dart';
@@ -488,6 +490,124 @@ class _PrefsPageState extends State<PrefsPage> {
     ]);
   }
 
+  // ---------- Fahrzeuge (Issue #177) ----------
+  int? _bt;
+  Future<void> _loadBt() async {
+    final b = await btState();
+    if (mounted) setState(() => _bt = b);
+  }
+
+  /// Karte «Fahrzeuge»: Zustimmung für ausserhalb von Einsätzen (nur wenn die Verwaltung es erlaubt), Bluetooth, «Beacon einlernen» (Recht cfg_map)
+  Widget? _veh(J me) {
+    final c = me['beacon_cfg'];
+    if (c is! Map) return null;
+    final home = jb(c['home']), admin = s.can('cfg_map');
+    if (!home && !admin) return null;
+    if (_bt == null) _loadBt();
+    return MCard(title: 'Fahrzeuge', children: [
+      if (home)
+        SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: jb(me['beacon']),
+            title: const Text('Fahrzeuge auch ausserhalb von Einsätzen melden'),
+            subtitle: Text('Die App erkennt die Beacons in den Fahrzeugen und meldet deren Standort ohne deinen Namen, höchstens alle ${ji(c['home_min']) ?? 15} min. '
+                'Das Betriebssystem sucht die Beacons selbst, das braucht wenig Akku. Im Einsatz meldet die App die Fahrzeuge immer, solange du den Standort teilst.'),
+            onChanged: (v) async {
+              if (v) await requestBluetooth();
+              await _set({'beacon': v ? 1 : 0});
+              _loadBt();
+            }),
+      Mut(switch (_bt) {
+        0 => 'Bluetooth ist aus oder fehlt: Die App sieht keine Fahrzeuge.',
+        1 => 'Die App darf Bluetooth noch nicht nutzen.',
+        2 => 'Bluetooth bereit.',
+        _ => '',
+      }),
+      if (_bt == 1) Padding(padding: const EdgeInsets.only(top: 6), child: OutlinedButton(onPressed: () => requestBluetooth().then((_) => _loadBt()), child: const Text('Bluetooth erlauben'))),
+      if (admin) Padding(padding: const EdgeInsets.only(top: 6), child: OutlinedButton(onPressed: _learn, child: const Text('Beacon einlernen …'))),
+    ]);
+  }
+
+  /// Beacons in der Nähe zeigen (Signalstärke), ein Tipp ordnet eines einem Fahrzeug zu (vehicle/save). iOS sieht nur eingetragene UUIDs.
+  Future<void> _learn() async {
+    J d;
+    try {
+      d = await s.api.call('vehicles');
+    } catch (e) {
+      s.fail(e);
+      return;
+    }
+    if (!mounted) return;
+    if (await requestBluetooth() != 2) {
+      s.toast('Bluetooth ist aus oder nicht erlaubt', 'err');
+      return;
+    }
+    final cfg = jm(d['cfg']), vs = jl(d['vehicles']).where((v) => jb(v['active'])).toList();
+    final known = [js(cfg['uuid']), ...(cfg['uuids'] is List ? cfg['uuids'] as List : const []).map((u) => '$u')];
+    if (!mounted) return;
+    await showDialog<void>(
+        context: context,
+        builder: (dc) {
+          List<J>? found;
+          var busy = false;
+          return StatefulBuilder(builder: (dc, set) {
+            Future<void> scan() async {
+              set(() => busy = true);
+              final r = await beaconScan(Platform.isIOS ? known : [], ms: 6000);
+              r.sort((a, b) => (ji(b['rssi']) ?? -127).compareTo(ji(a['rssi']) ?? -127));
+              set(() {
+                found = r;
+                busy = false;
+              });
+            }
+
+            if (found == null && !busy) scan();
+            String owner(J b) {
+              final u = js(b['uuid']).toUpperCase();
+              final v = vs.where((v) => (js(v['uuid']).isEmpty ? js(cfg['uuid']) : js(v['uuid'])).toUpperCase() == u && ji(v['major']) == ji(b['major']) && ji(v['minor']) == ji(b['minor'])).firstOrNull;
+              return v == null ? '' : ' · gehört zu «${js(v['name'])}»';
+            }
+
+            return AlertDialog(
+                title: const Text('Beacon einlernen'),
+                content: SizedBox(
+                    width: 420,
+                    child: busy
+                        ? const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()))
+                        : (found ?? []).isEmpty
+                            ? Mut(Platform.isIOS ? 'Kein Beacon gefunden. iOS sieht nur Beacons mit einer eingetragenen UUID (Verwaltung → Fahrzeuge).' : 'Kein Beacon gefunden. Halte das Handy nahe an das Beacon.')
+                            : ListView(shrinkWrap: true, children: [
+                                const Mut('Das stärkste Signal steht zuoberst. Antippen und das Fahrzeug wählen.'),
+                                for (final b in found!)
+                                  ListTile(
+                                      dense: true,
+                                      title: Text('${ji(b['major'])} / ${ji(b['minor'])} · ${ji(b['rssi'])} dBm'),
+                                      subtitle: Text('${js(b['uuid'])}${known.map((k) => k.toUpperCase()).contains(js(b['uuid']).toUpperCase()) ? '' : ' (UUID nicht eingetragen)'}${owner(b)}'),
+                                      onTap: () async {
+                                        final v = await showDialog<J>(
+                                            context: dc,
+                                            builder: (x) => SimpleDialog(title: const Text('Welches Fahrzeug?'), children: [
+                                                  for (final v in vs) SimpleDialogOption(onPressed: () => Navigator.pop(x, v), child: Text(js(v['name']))),
+                                                ]));
+                                        if (v == null) return;
+                                        final u = js(b['uuid']).toUpperCase() == js(cfg['uuid']).toUpperCase() ? '' : js(b['uuid']);
+                                        try {
+                                          await s.api.call('vehicle/save', body: {...v, 'uuid': u, 'major': ji(b['major']), 'minor': ji(b['minor'])});
+                                          s.toast('«${js(v['name'])}» hat jetzt dieses Beacon');
+                                          if (dc.mounted) Navigator.pop(dc);
+                                        } catch (e) {
+                                          s.fail(e);
+                                        }
+                                      }),
+                              ])),
+                actions: [
+                  TextButton(onPressed: busy ? null : scan, child: const Text('Neu suchen')),
+                  TextButton(onPressed: () => Navigator.pop(dc), child: const Text('Schliessen')),
+                ]);
+          });
+        });
+  }
+
   Widget _legal() => MCard(title: 'Rechtliches', buttons: [
         OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#impressum'), child: const Text('Impressum')),
         OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#lizenzen'), child: const Text('Lizenzen')),
@@ -512,6 +632,7 @@ class _PrefsPageState extends State<PrefsPage> {
                   _konto(me),
                   _alarm(me),
                   _anzeige(me),
+                  ?_veh(me),
                   ?_ai(me),
                   _legal(),
                 ]));

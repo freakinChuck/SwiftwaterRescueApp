@@ -13,6 +13,7 @@ import 'service.dart';
 import 'sys.dart';
 import 'inc/map_page.dart';
 import 'accounts.dart';
+import 'beacon.dart';
 
 final navKey = GlobalKey<NavigatorState>();
 
@@ -46,6 +47,7 @@ Future<void> main() async {
   final start = await notes.getNotificationAppLaunchDetails();
   if (start?.didNotificationLaunchApp == true) _pendingOpen = start!.notificationResponse?.payload;
   await configureService();
+  Beacons.listen(); // iOS: Sichtungen der Fahrzeuge melden, wenn das System die App weckt (Issue #177)
   runApp(const SwiftwaterApp());
 }
 
