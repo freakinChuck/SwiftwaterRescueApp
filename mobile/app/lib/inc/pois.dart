@@ -178,6 +178,73 @@ void setPlaceCat(IncStore s, List<Object>? ids, bool on) {
   });
 }
 
+
+// ---------- Issue #182: Eigenschaften, Flusssperren und Navigationspunkte fester Standorte (wie placePropsOf, stopOn, placeNavBtn in index.html) ----------
+/// Eigenschaften eines Standorts (place_props, effect none|warn|stop)
+List<J> placePropsOf(IncStore s, J f) {
+  final ps = jl(s.st?['place_props']);
+  return (f['props'] is List ? f['props'] as List : const []).map((id) => ps.where((p) => ji(p['id']) == ji(id)).firstOrNull).whereType<J>().toList();
+}
+
+bool placeEff(IncStore s, J f, String e) => placePropsOf(s, f).any((p) => p['effect'] == e);
+
+/// wirksame Flusssperre im laufenden Einsatz (stops aus incident/state)
+bool stopOn(IncStore s, J f) => s.inc != null && jl(s.st?['stops']).any((x) => ji(x['id']) == ji(f['id']));
+
+/// Zeichen vor dem Namen: ⛔ wirksame Sperre, ⚠ Warnung bzw. nicht berücksichtigte Sperre
+String placeBadge(IncStore s, J f) => stopOn(s, f) ? '⛔ ' : (placeEff(s, f, 'warn') || placeEff(s, f, 'stop') ? '⚠ ' : '');
+
+/// Eigenschaften als Text («⛔ Flusssperrung · 🛶 Einwasserung möglich»)
+String placePropsText(IncStore s, J f) => placePropsOf(s, f).map((p) => '${js(p['icon'])} ${js(p['name'])}'.trim()).join(' · ');
+
+/// Navigationspunkte (f.nav: lat, lon, note)
+List<({double lat, double lon, String note})> placeNav(J f) => (f['nav'] is List ? f['nav'] as List : const [])
+    .whereType<Map>()
+    .map((n) => (lat: jd(n['lat']) ?? 0, lon: jd(n['lon']) ?? 0, note: js(n['note'])))
+    .toList();
+
+/// Einsatzleitung: Sperre dieses Standorts im Einsatz aus- bzw. wieder einschalten (nur wenn die Sperren insgesamt gelten)
+bool stopToggleOk(IncStore s, J f) => s.inc != null && jb(s.st?['can_manage']) && s.feat('area') && jb(s.inc?['stop_on']) && placeEff(s, f, 'stop');
+Future<void> stopToggle(IncStore s, J f) => s.act('incident/stops', {'id': ji(f['id']), 'off': stopOn(s, f) ? 1 : 0});
+
+/// 🧭 bei festen Standorten: ohne Navigationspunkt zum Standort, mit einem direkt dorthin, mit mehreren Auswahl (nach Luftlinie vom eigenen Standort)
+Future<void> placeNavGo(BuildContext c, IncStore s, J f) async {
+  final n = placeNav(f), nm = js(f['name']);
+  if (n.isEmpty) return navGo(s, jd(f['lat'])!, jd(f['lon'])!, nm);
+  if (n.length == 1) return navGo(s, n[0].lat, n[0].lon, n[0].note.isEmpty ? nm : '$nm – ${n[0].note}');
+  final here = s.selfAt, at = LatLng(jd(f['lat']) ?? 0, jd(f['lon']) ?? 0);
+  final l = [for (var i = 0; i < n.length; i++) (i: i, p: n[i], d: here == null ? null : geoDist(here, LatLng(n[i].lat, n[i].lon)))];
+  if (here != null) l.sort((a, b) => a.d!.compareTo(b.d!));
+  String km(double m) => m < 1000 ? '${m.round()} m' : '${(m / 1000).toStringAsFixed(m < 10000 ? 2 : 1)} km';
+  await showModalBottomSheet(
+      context: c,
+      showDragHandle: true,
+      builder: (bc) => SafeArea(
+          child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), children: [
+            Text('Navigieren: $nm', style: Theme.of(bc).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Mut('Navigationspunkt wählen${here != null ? ' (nach Luftlinie vom eigenen Standort)' : ''}:'),
+            for (final x in l)
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Text('🧭', style: TextStyle(fontSize: 20)),
+                  title: Text(x.p.note.isEmpty ? 'Navigationspunkt ${x.i + 1}' : x.p.note),
+                  subtitle: Text([if (x.d != null) '${km(x.d!)} von hier', '${km(geoDist(at, LatLng(x.p.lat, x.p.lon)))} vom Standort'].join(' · ')),
+                  onTap: () {
+                    Navigator.pop(bc);
+                    navGo(s, x.p.lat, x.p.lon, x.p.note.isEmpty ? nm : '$nm – ${x.p.note}');
+                  }),
+          ])));
+}
+
+/// Knopf 🧭 für feste Standorte (ersetzt navBtn)
+Widget? placeNavBtn(BuildContext c, IncStore s, J f, {String? label}) {
+  if (!s.feat('nav') || jd(f['lat']) == null) return null;
+  final n = placeNav(f).length;
+  return label == null
+      ? IconButton(tooltip: n > 1 ? 'Navigationspunkt wählen' : 'Zu ${js(f['name'])} navigieren', icon: const Text('🧭', style: TextStyle(fontSize: 18)), onPressed: () => placeNavGo(c, s, f), visualDensity: VisualDensity.compact)
+      : OutlinedButton(onPressed: () => placeNavGo(c, s, f), child: Text('🧭 $label'));
+}
+
 class PoisPanel extends StatefulWidget {
   const PoisPanel({super.key, required this.s, required this.map});
   final IncStore s;
@@ -394,9 +461,13 @@ class _PoisPanelState extends State<PoisPanel> {
   Widget _placeRow(J f) => _item(
       check: Checkbox(value: !s.poiHide.contains('f${f['id']}'), onChanged: (v) => s.setPoiHidden(['f${f['id']}'], v != true)),
       sw: _swatch(js(f['color']).isEmpty ? _placeCol : js(f['color'])),
-      name: js(f['name']),
-      info: placeInfo(s, f),
-      acts: [smallBtn('Zeigen', () => _showPlace(f)), ?navBtn(s, f['lat'], f['lon'], js(f['name']))]);
+      name: '${placeBadge(s, f)}${js(f['name'])}',
+      info: [placeInfo(s, f), placePropsText(s, f)].where((x) => x.isNotEmpty).join(' · '),
+      acts: [
+        smallBtn('Zeigen', () => _showPlace(f)),
+        if (stopToggleOk(s, f)) smallBtn(stopOn(s, f) ? '⛔ aus' : '⛔ an', () => stopToggle(s, f)),
+        ?placeNavBtn(context, s, f),
+      ]);
 
   List<Widget> _places() {
     final fs = s.places;

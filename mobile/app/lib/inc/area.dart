@@ -69,10 +69,59 @@ class NetSlot {
 }
 
 class _Ctx {
-  _Ctx(this.posts);
-  final List<({LatLng p, String name})> posts;
+  _Ctx(this.posts, this.segs);
+  final List<({LatLng p, String cut})> posts; // cut = Text, wo das Gebiet endet («am Posten …», «an «Wehr» (Flusssperrung)»)
+  final List<_Seg> segs; // Flusssperren als Linien bzw. Ränder von Bereichen (Issue #182)
   final done = <String, double>{};
   String? cut;
+}
+
+class _Seg {
+  _Seg(this.a, this.b, this.cut);
+  final LatLng a, b;
+  final String cut;
+}
+
+/// Flusssperren (Issue #182, stops aus incident/state: name, why, lat, lon, pts, line): Punkte wie Posten, Linien und Ränder von Bereichen als Strecken (stopCtx in common.js)
+({List<({LatLng p, String cut})> posts, List<_Seg> segs}) _stopCtx(List<J> stops) {
+  final posts = <({LatLng p, String cut})>[], segs = <_Seg>[];
+  for (final s in stops) {
+    final nm = s['name'] is String ? s['name'] as String : '', why = s['why'] is String ? s['why'] as String : '';
+    final cut = nm.isNotEmpty ? 'an «$nm»${why.isNotEmpty ? ' ($why)' : ''}' : 'an einer Flusssperre';
+    final pts = s['pts'] is List ? (s['pts'] as List).whereType<List>().map((q) => LatLng(jd(q[0])!, jd(q[1])!)).toList() : <LatLng>[];
+    if (pts.length < 2) {
+      final la = jd(s['lat']), lo = jd(s['lon']);
+      if (la != null && lo != null) posts.add((p: LatLng(la, lo), cut: cut));
+      continue;
+    }
+    if (s['line'] != 1 && s['line'] != true) pts.add(pts.first);
+    for (var i = 1; i < pts.length; i++) {
+      segs.add(_Seg(pts[i - 1], pts[i], cut));
+    }
+  }
+  return (posts: posts, segs: segs);
+}
+
+/// erste Strecke, die a → b schneidet, bzw. erster Posten (< 120 m) zwischen a und b: (t = Anteil auf a → b, cut)
+({double t, String cut})? _hit(_Ctx ctx, LatLng a, LatLng b) {
+  ({double t, String cut})? best;
+  final dx = b.longitude - a.longitude, dy = b.latitude - a.latitude;
+  for (final q in ctx.segs) {
+    final ex = q.b.longitude - q.a.longitude, ey = q.b.latitude - q.a.latitude, den = dx * ey - dy * ex;
+    if (den == 0) continue;
+    final t = ((q.a.longitude - a.longitude) * ey - (q.a.latitude - a.latitude) * ex) / den, u = ((q.a.longitude - a.longitude) * dy - (q.a.latitude - a.latitude) * dx) / den;
+    if (t > 1e-9 && t <= 1 && u >= 0 && u <= 1 && (best == null || t < best.t)) best = (t: t, cut: q.cut);
+  }
+  const ky = 111320.0;
+  for (final q in ctx.posts) {
+    final kx = ky * math.cos(deg2rad(q.p.latitude)), ax = (a.longitude - q.p.longitude) * kx, ay = (a.latitude - q.p.latitude) * ky, mx = dx * kx, my = dy * ky, l = mx * mx + my * my;
+    if (l == 0) continue;
+    final t = -(ax * mx + ay * my) / l;
+    if (t <= 0 || t > 1) continue;
+    final ox = ax + t * mx, oy = ay + t * my;
+    if (math.sqrt(ox * ox + oy * oy) < 120 && (best == null || t < best.t)) best = (t: t, cut: q.cut);
+  }
+  return best;
 }
 
 List<List<LatLng>>? _follow(RiverNet net, Way w, int k, double rem, Set<int> seen, _Ctx ctx) {
@@ -84,7 +133,7 @@ List<List<LatLng>>? _follow(RiverNet net, Way w, int k, double rem, Set<int> see
   bool post(LatLng p) {
     for (final q in ctx.posts) {
       if (geoDist(p, q.p) < 120) {
-        ctx.cut = q.name;
+        ctx.cut = q.cut;
         return true;
       }
     }
@@ -101,7 +150,12 @@ List<List<LatLng>>? _follow(RiverNet net, Way w, int k, double rem, Set<int> see
     for (final e in net.byNode[w.nodes[j]] ?? <WayRef>[]) {
       if (e.k == 0 && e.w != w && !seen.contains(e.w.id)) out.addAll(sub(e, rem));
     }
-    final a = w.geometry[j], b = w.geometry[j + 1], d = geoDist(a, b);
+    final a = w.geometry[j], b = w.geometry[j + 1], d = geoDist(a, b), x = _hit(ctx, a, b);
+    if (x != null && d * x.t < rem) {
+      pts.add(LatLng(a.latitude + (b.latitude - a.latitude) * x.t, a.longitude + (b.longitude - a.longitude) * x.t));
+      ctx.cut = x.cut;
+      return [pts, ...out];
+    }
     if (d >= rem) {
       final f = d == 0 ? 0.0 : rem / d;
       pts.add(LatLng(a.latitude + (b.latitude - a.latitude) * f, a.longitude + (b.longitude - a.longitude) * f));
@@ -141,7 +195,7 @@ class RiverArea {
   double maxLen = 0;
 }
 
-RiverArea? riverArea(RiverNet net, LatLng i, double d, List<({LatLng p, String name})> posts) {
+RiverArea? riverArea(RiverNet net, LatLng i, double d, List<({LatLng p, String name})> posts, [List<J> stops = const []]) {
   WayRef? best;
   var bd = 1e12;
   for (final w in net.ways) {
@@ -154,7 +208,7 @@ RiverArea? riverArea(RiverNet net, LatLng i, double d, List<({LatLng p, String n
     }
   }
   if (best == null || bd > snapM) return null;
-  final r = RiverArea(), ctx = _Ctx(posts);
+  final sc = _stopCtx(stops), r = RiverArea(), ctx = _Ctx([...posts.map((q) => (p: q.p, cut: 'am Posten ${q.name}')), ...sc.posts], sc.segs);
   for (final pts in _follow(net, best.w, best.k, d, {}, ctx) ?? <List<LatLng>>[]) {
     if (pts.length < 2) continue;
     var len = 0.0;
@@ -198,7 +252,7 @@ class SearchArea {
 
 /// srcs = sources des Servers ([{lat,lon,at,own,names}]), nets je PLS, get lädt das Netz, redraw nach dem Laden; rs = Rettlinge
 SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num now, List<({LatLng p, String name})> posts,
-    Future<J> Function(LatLng s, int r) get, void Function() redraw, List<J> rs) {
+    Future<J> Function(LatLng s, int r) get, void Function() redraw, List<J> rs, [List<J> stops = const []]) {
   final r = SearchArea();
   if (srcs.isEmpty) {
     final miss = rs.where((x) => x['rescued_at'] == null && x['lat'] == null).toList();
@@ -252,7 +306,7 @@ SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num
       circle('Gewässerdaten werden geladen.');
       continue;
     }
-    final a = riverArea(n.net!, c, d, posts);
+    final a = riverArea(n.net!, c, d, posts, stops);
     if (a == null) {
       circle('Kein Gewässer nahe der PLS.');
       continue;
@@ -260,7 +314,7 @@ SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num
     r.polys.addAll(a.polys);
     r.lines.addAll(a.lines);
     p.polys.addAll(a.polys);
-    r.info.add('$lbl${(a.maxLen / 1000).toStringAsFixed(1)} km Flusslauf ab PLS (Driftdistanz ${d.round()} m), Ufergebiet ${bankM.round()} m je Seite${a.cutBy != null ? ', endet am Posten ${a.cutBy}.' : '.'}');
+    r.info.add('$lbl${(a.maxLen / 1000).toStringAsFixed(1)} km Flusslauf ab PLS (Driftdistanz ${d.round()} m), Ufergebiet ${bankM.round()} m je Seite${a.cutBy != null ? ', endet ${a.cutBy}.' : '.'}');
   }
   if (srcs.length > 1) {
     final riv = r.parts.where((p) => p.polys.isNotEmpty).length, circ = r.parts.length - riv, none = srcs.length - r.parts.length;

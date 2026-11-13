@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'ctx.dart';
+import 'pois.dart';
 import 'store.dart';
 import 'util.dart';
 
@@ -553,6 +554,19 @@ class _IncMenuState extends State<IncMenu> {
               },
               child: const Text('PLS entfernen')),
       ]),
+      // Flusssperren (Issue #182): feste Standorte mit Wirkung «begrenzt Suchgebiet»; einzelne nimmt man im Popup oder im Fenster «Markierungen» aus
+      if (s.feat('area') && s.places.any((f) => placeEff(s, f, 'stop')))
+        MCard(title: 'Flusssperren', children: [
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: jb(i['stop_on']),
+            title: const Text('Flusssperren fester Standorte im Suchgebiet berücksichtigen', style: TextStyle(fontSize: 14)),
+            onChanged: (v) => s.act('incident/stops', {'on': v == true ? 1 : 0}),
+          ),
+          Mut(s.places.where((f) => placeEff(s, f, 'stop')).map((f) => '${js(f['name'])}${(i['stop_off'] is List && (i['stop_off'] as List).contains(f['id'])) ? ' (ausgenommen)' : ''}').join(' · ')),
+          const Mut('Das Suchgebiet endet dort wie bei einem Sicherungsposten. Einzelne Standorte nimmt man im Popup oder im Fenster «Markierungen» aus, z. B. wenn die Person ein Wehr passiert haben könnte.'),
+        ]),
       if (s.feat('rec'))
         MCard(title: 'Aufzeichnung', children: [
           Mkv([('Stand', recS.$1)]),
