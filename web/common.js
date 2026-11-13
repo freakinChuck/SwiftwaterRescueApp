@@ -32,7 +32,8 @@ const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte s
 // Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
 const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 // Fenster «Ansicht» (Issue #34, öffentliche Ansicht #48): Kategorien auf der Karte [Schlüssel, Bezeichnung, Funktion (feat)]. Neue Kartenelemente hier aufnehmen.
-const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
+const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro'],['geo','Geodaten (OpenStreetMap)','geo']];
+const VIEW_OFF=['geo']; // Issue #182: auf jedem Gerät zuerst ausgeblendet (die Ebene schaltet man bewusst zu) // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
 const VIEW_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 // Inhalt des Fensters: Grundkarte (Radio vbase) und, wenn cats (Liste aus VIEW), Häkchen je Kategorie (data-vk) mit «Alle einblenden/ausblenden» (data-va)
 function viewHtml(base,cats,vis){return'<div class="vh"><b>Ansicht</b><button id="bViewX" aria-label="Ansicht schliessen">✕</button></div><h4>Grundkarte</h4>'
@@ -112,27 +113,42 @@ async function overpassNet(r,body,put){try{return await api(r,body)}catch(e){con
   throw e}}
 // Weg ab Punkt k flussabwärts über rem Meter, an Verzweigungen alle Äste. Liefert Linien ab dem Startpunkt, null = von hier aus schon verfolgt.
 // Verzweigungen: am Ende des Weges alle anschliessenden Wege, unterwegs Wege, die an einem Knoten beginnen (Issue #40: Seitenarm, Kanal;
-// in OSM beginnt der Arm oft mitten im Weg des Hauptflusses). Jede Linie endet am ersten Posten (ctx.posts, ctx.cut = dessen Name).
+// in OSM beginnt der Arm oft mitten im Weg des Hauptflusses). Jede Linie endet am ersten Posten (ctx.posts, ctx.cut = Text, wo es endet)
+// bzw. an der ersten Flusssperre (Issue #182: feste Standorte mit Wirkung «begrenzt Suchgebiet»; Punkte wie Posten, Linien und Ränder von Bereichen über ctx.segs, wo der Fluss sie schneidet).
 // ctx.done verhindert, dass derselbe Einstieg (Weg, Knoten) mehrfach verfolgt wird, wenn Arme wieder zusammenfliessen.
 function riverFollow(net,w,k,rem,seen,ctx){const key=w.id+':'+k;if((ctx.done.get(key)??-1)>=rem)return null;ctx.done.set(key,rem);
   const pts=[w.geometry[k]],out=[],last=w.geometry.length-1;seen=new Set(seen).add(w.id);
-  const post=p=>{const po=ctx.posts.find(q=>geoDist(p,q)<120);if(po)ctx.cut=po.name;return!!po};
+  const post=p=>{const po=ctx.posts.find(q=>geoDist(p,q)<120);if(po)ctx.cut=po.cut||'am Posten '+po.name;return!!po};
   const sub=(e,r)=>{const s=riverFollow(net,e.w,e.k,r,seen,ctx);return s?s.map(b=>pts.concat(b.slice(1))):[]};
   if(post(pts[0]))return[pts];
   for(let j=k;j<last;j++){
     for(const e of net.byNode.get(w.nodes[j])||[])if(e.k===0&&e.w!==w&&!seen.has(e.w.id))out.push(...sub(e,rem));
-    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b);
+    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b),x1=segHit(ctx.segs,a,b),x2=postHit(ctx.posts,a,b),x=x1&&x2?(x1.t<x2.t?x1:x2):x1||x2;
+    if(x&&d*x.t<rem){pts.push({lat:a.lat+(b.lat-a.lat)*x.t,lon:a.lon+(b.lon-a.lon)*x.t});ctx.cut=x.cut;return[pts,...out]}
     if(d>=rem){const f=rem/d;pts.push({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});return[pts,...out]}
     pts.push(b);rem-=d;if(post(b))return[pts,...out]}
   const nx=(net.byNode.get(w.nodes[last])||[]).filter(e=>!seen.has(e.w.id)&&e.k<e.w.geometry.length-1).flatMap(e=>sub(e,rem));
   return nx.length?[...nx,...out]:[pts,...out]}
+// Flusssperren (Issue #182) aus stops ({name, why, lat, lon, pts, line}): Punkte als Posten, Linien und Ränder von Bereichen als Strecken
+function stopCtx(stops){const posts=[],segs=[];(stops||[]).forEach(s=>{const cut=s.name?'an «'+s.name+'»'+(s.why?' ('+s.why+')':''):'an einer Flusssperre';
+  if(!s.pts){posts.push({lat:s.lat,lon:s.lon,cut});return}const p=s.pts.map(q=>({lat:q[0],lon:q[1]}));if(!s.line)p.push(p[0]);
+  for(let i=1;i<p.length;i++)segs.push({a:p[i-1],b:p[i],cut,s:Math.min(p[i-1].lat,p[i].lat),n:Math.max(p[i-1].lat,p[i].lat),w:Math.min(p[i-1].lon,p[i].lon),e:Math.max(p[i-1].lon,p[i].lon)})});return{posts,segs}}
+// erste Strecke aus segs, die a → b schneidet: {t: Anteil auf a → b, cut}
+function segHit(segs,a,b){if(!segs||!segs.length)return null;let best=null;const s=Math.min(a.lat,b.lat),n=Math.max(a.lat,b.lat),w=Math.min(a.lon,b.lon),e=Math.max(a.lon,b.lon);
+  segs.forEach(q=>{if(q.n<s||q.s>n||q.e<w||q.w>e)return;const dx=b.lon-a.lon,dy=b.lat-a.lat,ex=q.b.lon-q.a.lon,ey=q.b.lat-q.a.lat,den=dx*ey-dy*ex;if(!den)return;
+    const t=((q.a.lon-a.lon)*ey-(q.a.lat-a.lat)*ex)/den,u=((q.a.lon-a.lon)*dy-(q.a.lat-a.lat)*dx)/den;if(t>1e-9&&t<=1&&u>=0&&u<=1&&(!best||t<best.t))best={t,cut:q.cut}});return best}
+// erster Posten bzw. Punkt-Sperre (< 120 m) zwischen zwei Punkten des Flusslaufs (Issue #182: die Punkte liegen in OSM teils Hunderte Meter auseinander)
+function postHit(posts,a,b){let best=null;const ky=111320;(posts||[]).forEach(q=>{const kx=ky*Math.cos(q.lat*Math.PI/180),ax=(a.lon-q.lon)*kx,ay=(a.lat-q.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy;if(!l)return;
+  const t=-(ax*dx+ay*dy)/l;if(t<=0||t>1)return;if(Math.hypot(ax+t*dx,ay+t*dy)<120&&(!best||t<best.t))best={t,cut:q.cut||'am Posten '+q.name}});return best}
+// Abstand von p zur Strecke a → b in Metern (eben gerechnet)
+const segDist=(a,b,p)=>{const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180),ax=(a.lon-p.lon)*kx,ay=(a.lat-p.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l)):0;return Math.hypot(ax+t*dx,ay+t*dy)};
 function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/180),P=pts.map(p=>C.project(L.latLng(p.lat,p.lon))),A=[],B=[];
   P.forEach((p,j)=>{const a=P[Math.max(0,j-1)],b=P[Math.min(P.length-1,j+1)];let dx=b.x-a.x,dy=b.y-a.y;const n=Math.hypot(dx,dy)||1;dx/=n;dy/=n;
     A.push(C.unproject(L.point(p.x-dy*k,p.y+dx*k)));B.push(C.unproject(L.point(p.x+dy*k,p.y-dx*k)))});return A.concat(B.reverse())}
-// Suchgebiet ab PLS (i) über die Driftdistanz D, endet am ersten Posten (posts: [{lat,lon,name}]); null = kein Gewässer nahe der PLS
-function riverArea(net,i,D,posts){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
+// Suchgebiet ab PLS (i) über die Driftdistanz D, endet am ersten Posten (posts: [{lat,lon,name}]) bzw. an der ersten Flusssperre (stops); null = kein Gewässer nahe der PLS
+function riverArea(net,i,D,posts,stops){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
   if(!best||bd>SNAP_M)return null;const r={lines:[],polys:[],cutBy:null,maxLen:0};
-  const ctx={posts,done:new Map(),cut:null};
+  const sc=stopCtx(stops),ctx={posts:posts.concat(sc.posts),segs:sc.segs,done:new Map(),cut:null};
   (riverFollow(net,best.w,best.k,D,new Set(),ctx)||[]).forEach(pts=>{
     if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=geoDist(pts[j-1],pts[j]);r.maxLen=Math.max(r.maxLen,len);
     r.lines.push(pts);r.polys.push(corridor(pts,BANK_M))});
@@ -144,7 +160,7 @@ const srcKey=s=>s.lat.toFixed(6)+','+s.lon.toFixed(6);
 // Schlüssel eines Teilgebiets: PLS mit Zeitpunkt, wie die Zusammenfassung in plsSources()
 const partKey=(lat,lon,at)=>lat.toFixed(6)+','+lon.toFixed(6)+'@'+at;
 const fmtDT=ts=>new Date(ts*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-function searchArea(srcs,nets,flow,now,posts,get,redraw,rs){const r={polys:[],lines:[],circles:[],info:[],parts:[]};
+function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys:[],lines:[],circles:[],info:[],parts:[]};
   if(!srcs.length){const miss=(rs||[]).filter(x=>!x.rescued_at&&x.lat==null);
     r.info.push(!(rs||[]).length?'Suchgebiet: Kein PLS gesetzt.':miss.length?'Suchgebiet: Kein PLS für '+miss.map(x=>'«'+x.name+'»').join(', ')+'. PLS des Einsatzes oder der Rettlinge setzen.':'Suchgebiet: Alle Rettlinge gefunden.');return r}
   if(!flow){r.info.push('Suchgebiet: Fliessgeschwindigkeit fehlt.');return r}
@@ -157,9 +173,9 @@ function searchArea(srcs,nets,flow,now,posts,get,redraw,rs){const r={polys:[],li
     const circle=why=>{const c={lat:s.lat,lon:s.lon,r:D};r.circles.push(c);p.circles.push(c);r.info.push(lbl+why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.')};
     if(n.fail)return circle('Gewässerdaten nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
     if(!n.ways)return circle('Gewässerdaten werden geladen.');
-    const a=riverArea(n,s,D,posts);if(!a)return circle('Kein Gewässer nahe der PLS.');
+    const a=riverArea(n,s,D,posts,stops);if(!a)return circle('Kein Gewässer nahe der PLS.');
     r.polys.push(...a.polys);r.lines.push(...a.lines);p.polys.push(...a.polys);
-    r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet am Posten ${a.cutBy}.`:'.'))});
+    r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet ${a.cutBy}.`:'.'))});
   // Kurzfassung bei mehreren PLS (Hinweis unten in der Karte, Details per Klick)
   if(srcs.length>1){const riv=r.parts.filter(p=>p.polys.length).length,circ=r.parts.length-riv,none=srcs.length-r.parts.length;
     r.short=`Suchgebiet aus ${srcs.length} PLS: ${riv} entlang Gewässer`+(circ?`, ${circ} als Kreis`:'')+(none?`, ${none} ohne Gebiet`:'')}

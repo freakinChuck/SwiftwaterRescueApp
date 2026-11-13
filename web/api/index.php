@@ -28,7 +28,7 @@ set_exception_handler(function ($e) { global $db;
 // Nie Passwörter, Schlüssel oder Inhalte von Einsätzen ins Log, nur Kennungen und technische Angaben.
 const APPLOG_LVL = ['info' => 'Ereignis', 'warn' => 'Warnung', 'err' => 'Fehler'];
 const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
-  'push' => 'Push', 'overpass' => 'Gewässerdaten', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'client' => 'Browser & App'];
+  'push' => 'Push', 'overpass' => 'Gewässerdaten', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'geo' => 'Geodaten', 'client' => 'Browser & App'];
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
 // Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
@@ -115,6 +115,11 @@ foreach ([
  // Feste Standorte (Issue #96): plan_id NULL = permanent (Verwaltung), sonst nur für diese vorbereitete Übung
  "CREATE TABLE IF NOT EXISTS places(id $ai, plan_id INT NULL, name $tx, descr TEXT, abbr $tx NULL, color $tx NULL, lat DOUBLE, lon DOUBLE, active INT DEFAULT 1)",
  "CREATE TABLE IF NOT EXISTS place_cats(id $ai, name $tx, def_on INT DEFAULT 1)",
+ // Eigenschaften fester Standorte (Issue #182), z. B. «Flusssperrung»: effect none (nur Anzeige), warn (Warnung in der Flussdistanz, Hervorhebung im Suchgebiet), stop (begrenzt das Suchgebiet wie ein Posten);
+ // places.props = JSON-Liste der IDs; deaktiviert statt gelöscht (active), Reihenfolge sort wie die Kategorien
+ "CREATE TABLE IF NOT EXISTS place_props(id $ai, name $tx, icon $tx NULL, color $tx NULL, effect $tx, sort INT NULL, active INT DEFAULT 1)",
+ // Navigationspunkte fester Standorte (Issue #182): höchstens 10 je Standort, mit Kommentar (note); ohne gilt der Standort selbst
+ "CREATE TABLE IF NOT EXISTS place_nav(id $ai, place_id INT, lat DOUBLE, lon DOUBLE, note $tx NULL, sort INT DEFAULT 0)",
  // Verwendung je Overpass-Server (Issue #45): src server = Abfrage vom Hosting, device = direkte Abfrage des Geräts (Rückfall); ok_ms = Summe der Antwortzeiten der erfolgreichen
  "CREATE TABLE IF NOT EXISTS overpass_stats(url $tx, src $tx, uses INT DEFAULT 0, ok INT DEFAULT 0, fails INT DEFAULT 0, ok_ms BIGINT DEFAULT 0, last_ok BIGINT NULL, last_fail BIGINT NULL, last_err $tx NULL, PRIMARY KEY(url, src))",
  // Vorbereitete Übungen (Issue #29): Titel (nur für Verwaltung, Übungsleitung und Warteseite), Aufgebotsmeldung (message), Übungsleitung (leads = JSON-Liste von User-IDs,
@@ -160,7 +165,7 @@ try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
 // Ton für kritische Alarme (Issue #171): inc_kinds.snd = Vorgabe des Typs (NULL = Ton des Systems), push_native.snd = Wahl des Geräts je Typ (JSON {Typ-ID: Schlüssel})
-foreach (['inc_kinds' => ["snd $tx NULL", "msg_lvl $tx NULL", "end_lvl $tx NULL"], 'push_native' => ['snd TEXT NULL'], 'aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'pois' => ["sym $tx NULL"], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL', 'line INT DEFAULT 0'], 'place_cats' => ['sort INT NULL'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_groups' => ['show_name INT DEFAULT 1'], 'inc_hydro' => ['danger INT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
+foreach (['inc_kinds' => ["snd $tx NULL", "msg_lvl $tx NULL", "end_lvl $tx NULL"], 'push_native' => ['snd TEXT NULL'], 'aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'pois' => ["sym $tx NULL"], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL', 'line INT DEFAULT 0', 'props TEXT NULL', "src_ref $tx NULL", "src_kind $tx NULL", 'src_data TEXT NULL', 'src_new TEXT NULL', "src_state $tx NULL", 'src_diff TEXT NULL', 'src_at BIGINT NULL', 'src_chk BIGINT NULL'], 'place_cats' => ['sort INT NULL'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL', 'stop_on INT DEFAULT 1', 'stop_off TEXT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_groups' => ['show_name INT DEFAULT 1'], 'inc_hydro' => ['danger INT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Letzte Anmeldung (Löschen nur für Personen, die sich nie angemeldet haben); bei der Migration gelten Konten mit eigenem Passwort oder Token als angemeldet (0 = Zeitpunkt unbekannt)
 try { $db->exec("ALTER TABLE users ADD COLUMN last_login BIGINT NULL"); $db->exec("UPDATE users SET last_login=0 WHERE must_change=0 OR token IS NOT NULL"); } catch (Throwable $e) {}
@@ -172,6 +177,11 @@ if (setting('aar_img_mig', '') === '') { $c = json_decode((string)setting('aar_c
     setSetting('aar_cfg', json_encode($c, JSON_UNESCAPED_UNICODE)); }
   setSetting('aar_img_mig', '1'); }
 try { $db->exec("CREATE INDEX app_log_at ON app_log(at)"); } catch (Throwable $e) {}
+// Eigenschaften fester Standorte (Issue #182): beim ersten Aufruf die Vorgaben anlegen, danach frei änderbar
+if (setting('place_props_mig', '') === '') { if (!$db->query("SELECT COUNT(*) FROM place_props")->fetchColumn()) { $i = $db->prepare("INSERT INTO place_props(name,icon,color,effect,sort,active) VALUES(?,?,?,?,?,1)");
+    foreach ([['Flusssperrung / nicht passierbar', '⛔', '#d62828', 'stop'], ['Treibgutfang (Rechen)', '🧲', '#9d4edd', 'stop'], ['Lebensgefahr (Walze, Rücklauf)', '⚠️', '#f77f00', 'warn'], ['Umtragestelle', '↪️', '#457b9d', 'none'],
+      ['Einwasserung möglich', '🛶', '#2a9d8f', 'none'], ['Ausstieg möglich', '🪜', '#2a9d8f', 'none'], ['Zufahrt Fahrzeug', '🚒', '#6c757d', 'none'], ['Zufahrt nur zu Fuss', '🚶', '#6c757d', 'none']] as $n => $r) $i->execute([$r[0], $r[1], $r[2], $r[3], $n + 1]); }
+  setSetting('place_props_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
   $st = $db->prepare("INSERT INTO roles(name,color,is_lead,is_post) VALUES(?,?,?,?)");
@@ -261,6 +271,7 @@ const PERMS = [
   'legal' => ['Verwaltung', 'Impressum & Datenschutz einstellen', 'Angaben zur betreibenden Organisation, Kontakt und Zusatztexte der Seite «Impressum, Lizenzen & Datenschutz»'],
   'aar_arch' => ['Auswertung', 'Gesicherte After Action Reviews abrufen', 'Das vor dem Anonymisieren gesicherte, vollständige PDF eines freigegebenen Reviews abrufen, mit allen Namen'],
   'cfg_conn' => ['Verwaltung', 'Konnektivität einstellen', 'E-Mail-Alarm: Postfach, Schlüsselwörter und erlaubte Absender je Einsatztyp, Abruf über Cron-Job oder Webhook; Verlauf der eingegangenen E-Mails einsehen'],
+  'geo' => ['Verwaltung', 'Geodaten übernehmen und abgleichen', 'Objekte am Gewässer (Wehre, Kraftwerke, Brücken …) aus OpenStreetMap als feste Standorte übernehmen, auch in vorbereitete Übungen, und Abweichungen zur Quelle prüfen und übernehmen'],
   'applog' => ['System', 'Applikationslog einsehen', 'Technisches Applikationslog mit Ereignissen, Warnungen und Fehlern des Servers und der Geräte; Aufbewahrung einstellen'],
 ];
 // Alarmstufen der Einsatztypen (Issue #90), von stark nach schwach: Schlüssel => [Bezeichnung, Erklärung]; Einsatz-App und Service Worker setzen sie um
@@ -422,7 +433,7 @@ function aarIn($in) { $old = aarCfg(); $s = fn($v, $n) => mb_substr(trim(preg_re
   $d = isset($in['dl']) ? aarDlNorm((array)$in['dl']) : $old['dl'];
   return ['title' => $s($in['title'] ?? '', 120) ?: AAR_DEFAULT['title'], 'org' => $s($in['org'] ?? '', 120), 'seq' => $seq, 'auto' => $a, 'dl' => $d, 'fields' => $f]; }
 const FEATURES = ['area' => 'Suchgebiet', 'res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
-                  'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)', 'place' => 'Feste Standorte', 'hydro' => 'Pegel & Abfluss (BAFU)', 'pinfo' => 'Personeninfo (Infofenster beim Antippen einer Einsatzkraft)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
+                  'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)', 'place' => 'Feste Standorte', 'hydro' => 'Pegel & Abfluss (BAFU)', 'pinfo' => 'Personeninfo (Infofenster beim Antippen einer Einsatzkraft)', 'geo' => 'Geodaten-Ebene (Objekte am Gewässer aus OpenStreetMap, zuschaltbar)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
 // Navigations-Apps (Funktion «nav»): in der Verwaltung einzeln ausschaltbar (nav_off), Standard nav_default, pro Person users.nav_app
 const NAV_APPS = ['google' => 'Google Maps', 'apple' => 'Apple Karten', 'waze' => 'Waze', 'geo' => 'Andere App (nur Android: Auswahl der Karten-Apps)'];
 function navApps() { $off = json_decode(setting('nav_off', '[]'), true) ?: []; $a = array_values(array_diff(array_keys(NAV_APPS), $off)); return $a ?: ['google']; } // eingeschaltete, mindestens eine
@@ -452,7 +463,7 @@ function symRow($p) { $k = $p['sym'] ?? null; unset($p['sym']); return $p + ($k 
 function navDefault() { $a = navApps(); $d = setting('nav_default', 'google'); return in_array($d, $a, true) ? $d : $a[0]; }
 const FEATURE_ROUTES = ['incident/mark' => 'res', 'incident/mark/remove' => 'res', 'incident/rescuee/save' => 'res', 'incident/rescuee/locate' => 'res', 'incident/rescuee/rescued' => 'res', 'incident/rescuee/remove' => 'res',
                         'incident/message' => 'msg', 'incident/message/unmark' => 'msg', 'incident/poi' => 'poi', 'incident/poi/remove' => 'poi',
-                        'incident/external/save' => 'ext', 'incident/external/remove' => 'ext', 'incident/public' => 'pub', 'incident/record' => 'rec', 'incident/event' => 'area'];
+                        'incident/external/save' => 'ext', 'incident/external/remove' => 'ext', 'incident/public' => 'pub', 'incident/record' => 'rec', 'incident/event' => 'area', 'incident/stops' => 'area'];
 const OVERPASS_KEEP_S = 7 * 86400; // abgelaufene Einträge so lange als Rückfall behalten, falls Overpass nicht erreichbar ist
 /* ---------- Anonymisierung in Stufen, einstellbar und automatisch (Issue #87) ---------- */
 // Stufen in dieser Reihenfolge: [Bezeichnung, Beschreibung, endgültig]. Einstellung anon_cfg je Stufe: on = angeboten (aus: weder von Hand noch automatisch),
@@ -809,19 +820,19 @@ function hydroOn() { return (bool)array_filter(featuresAll(), fn($f) => $f['hydr
 // Hauptquelle fürs Gewässernetz (Suchgebiet, Flussdistanz), vor Overpass: eine eigene PostgreSQL-Datenbank mit PostGIS, gefüllt aus dem OSM-Auszug der Schweiz
 // (Geofabrik, scripts/postgis/). Tabelle mit den Spalten id (OSM-Weg), waterway, name, geom (LineString, SRID 4326). Antwortet sie nicht, gilt der bisherige Ablauf
 // (Cache, Overpass, Rückfall im Gerät). Einstellung postgis (JSON), Passwort getrennt in postgis_pass (nie an Geräte, leer = behalten). Statistik als «postgis» in overpass_stats.
-const PG_DEFAULT = ['on' => 0, 'host' => '', 'port' => 5432, 'db' => '', 'user' => '', 'table' => 'sw_waterways', 'ssl' => 'prefer'];
+const PG_DEFAULT = ['on' => 0, 'host' => '', 'port' => 5432, 'db' => '', 'user' => '', 'table' => 'sw_waterways', 'ftable' => 'sw_features', 'ssl' => 'prefer']; // ftable: Objekte am Gewässer (Issue #182)
 const PG_SSL = ['prefer' => 'Verschlüsselt, wenn der Server es anbietet', 'require' => 'Nur verschlüsselt', 'disable' => 'Unverschlüsselt (nur im eigenen Netz)'];
 const PG_STAT = 'postgis'; // Schlüssel in overpass_stats
 function pgCfg() { $v = json_decode(setting('postgis', ''), true); $v = is_array($v) ? $v : []; $c = PG_DEFAULT;
-  foreach (['host', 'db', 'user', 'table'] as $k) if (is_string($v[$k] ?? null) && $v[$k] !== '') $c[$k] = $v[$k];
+  foreach (['host', 'db', 'user', 'table', 'ftable'] as $k) if (is_string($v[$k] ?? null) && $v[$k] !== '') $c[$k] = $v[$k];
   if (is_numeric($v['port'] ?? null)) $c['port'] = (int)$v['port']; if (isset(PG_SSL[$v['ssl'] ?? ''])) $c['ssl'] = $v['ssl']; $c['on'] = empty($v['on']) ? 0 : 1;
   return $c; }
 function pgIn($v) { if (!is_array($v)) fail('Ungültige Einstellung'); $s = fn($k) => trim((string)($v[$k] ?? ''));
-  $o = ['on' => empty($v['on']) ? 0 : 1, 'host' => $s('host'), 'port' => (int)($v['port'] ?? 5432), 'db' => $s('db'), 'user' => $s('user'), 'table' => $s('table') ?: PG_DEFAULT['table'], 'ssl' => (string)($v['ssl'] ?? 'prefer')];
+  $o = ['on' => empty($v['on']) ? 0 : 1, 'host' => $s('host'), 'port' => (int)($v['port'] ?? 5432), 'db' => $s('db'), 'user' => $s('user'), 'table' => $s('table') ?: PG_DEFAULT['table'], 'ftable' => $s('ftable') ?: PG_DEFAULT['ftable'], 'ssl' => (string)($v['ssl'] ?? 'prefer')];
   if ($o['host'] !== '' && !preg_match('/^[A-Za-z0-9.:\[\]-]{1,200}$/', $o['host'])) fail('Ungültiger Host');
   if ($o['port'] < 1 || $o['port'] > 65535) fail('Ungültiger Port');
   foreach (['db' => 'Datenbank', 'user' => 'Benutzer'] as $k => $n) if ($o[$k] !== '' && !preg_match('/^[A-Za-z0-9_.@-]{1,63}$/', $o[$k])) fail("Ungültiger Name: $n");
-  if (!preg_match('/^[a-z_][a-z0-9_]{0,62}(\.[a-z_][a-z0-9_]{0,62})?$/', $o['table'])) fail('Ungültige Tabelle (Kleinbuchstaben, Ziffern, «_», optional mit Schema: schema.tabelle)');
+  foreach (['table', 'ftable'] as $k) if (!preg_match('/^[a-z_][a-z0-9_]{0,62}(\.[a-z_][a-z0-9_]{0,62})?$/', $o[$k])) fail('Ungültige Tabelle (Kleinbuchstaben, Ziffern, «_», optional mit Schema: schema.tabelle)');
   if (!isset(PG_SSL[$o['ssl']])) fail('Ungültige Verschlüsselung');
   if ($o['on'] && ($o['host'] === '' || $o['db'] === '' || $o['user'] === '')) fail('Zum Einschalten braucht es Host, Datenbank und Benutzer');
   return $o; }
@@ -829,7 +840,7 @@ function pgReady() { $c = pgCfg(); return $c['on'] && $c['host'] !== '' && $c['d
 function pgConnect($c, $pass) { if (!extension_loaded('pdo_pgsql')) throw new RuntimeException('PHP-Erweiterung pdo_pgsql fehlt auf dem Server');
   $h = trim($c['host'], '[]'); $p = new PDO("pgsql:host=$h;port={$c['port']};dbname={$c['db']};sslmode={$c['ssl']};connect_timeout=5", $c['user'], $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_TIMEOUT => 5]);
   $p->exec("SET statement_timeout = 15000"); return $p; }
-function pgTable($c) { return implode('.', array_map(fn($x) => '"' . $x . '"', explode('.', $c['table']))); }
+function pgTable($c, $k = 'table') { return implode('.', array_map(fn($x) => '"' . $x . '"', explode('.', $c[$k]))); }
 // Wege wie bei Overpass (type, id, nodes, geometry, tags waterway/name). Die Knoten-IDs gelten nur innerhalb der Antwort: gleiche Koordinaten = gleicher Knoten,
 // so verbinden sich die Wege an Zusammenflüssen und Gabelungen wie mit den OSM-Knoten (die Tabelle braucht keine Knotenliste). Teile von MultiLineStrings erhalten negative IDs.
 function pgWays($p, $c, $area) { $t = pgTable($c);
@@ -861,15 +872,15 @@ function pgErr($e) { $m = preg_replace('/\s+/', ' ', $e->getMessage()); $m = pre
 // Abfrage: POST {url}/api/v1/layers/{layer}/query mit bbox (bei around zusätzlich dwithin in Metern), Filter waterway in river/stream/canal, Eigenschaften waterway und name,
 // Seiten über offset bis numberMatched (der Layer begrenzt je Antwort auf maxFeatures). Der Layer braucht die Eigenschaften waterway und name, als id den OSM-Weg.
 // Einstellung pgapi (JSON), API-Key getrennt in pgapi_key (Header X-API-Key, nie an Geräte, leer = behalten; ohne Key nur bei öffentlichen Layern). Statistik als «pgapi».
-const PGA_DEFAULT = ['on' => 0, 'url' => '', 'layer' => 'sw_waterways'];
+const PGA_DEFAULT = ['on' => 0, 'url' => '', 'layer' => 'sw_waterways', 'flayer' => 'sw_features']; // flayer: Objekte am Gewässer (Issue #182)
 const PGA_STAT = 'pgapi'; // Schlüssel in overpass_stats
 function pgaCfg() { $v = json_decode(setting('pgapi', ''), true); $v = is_array($v) ? $v : []; $c = PGA_DEFAULT;
-  foreach (['url', 'layer'] as $k) if (is_string($v[$k] ?? null) && $v[$k] !== '') $c[$k] = $v[$k];
+  foreach (['url', 'layer', 'flayer'] as $k) if (is_string($v[$k] ?? null) && $v[$k] !== '') $c[$k] = $v[$k];
   $c['on'] = empty($v['on']) ? 0 : 1; return $c; }
 function pgaIn($v) { if (!is_array($v)) fail('Ungültige Einstellung');
-  $o = ['on' => empty($v['on']) ? 0 : 1, 'url' => rtrim(trim((string)($v['url'] ?? '')), '/'), 'layer' => trim((string)($v['layer'] ?? '')) ?: PGA_DEFAULT['layer']];
+  $o = ['on' => empty($v['on']) ? 0 : 1, 'url' => rtrim(trim((string)($v['url'] ?? '')), '/'), 'layer' => trim((string)($v['layer'] ?? '')) ?: PGA_DEFAULT['layer'], 'flayer' => trim((string)($v['flayer'] ?? '')) ?: PGA_DEFAULT['flayer']];
   if ($o['url'] !== '' && (!preg_match('~^https?://[^/?#@\s]{1,200}(/[^?#\s]{0,200})?$~i', $o['url']))) fail('Ungültige Adresse (http:// oder https://, ohne Parameter)');
-  if (!preg_match('/^[A-Za-z0-9_.-]{1,100}$/', $o['layer'])) fail('Ungültiger Layer (Buchstaben, Ziffern, «_», «-», «.»)');
+  foreach (['layer', 'flayer'] as $k) if (!preg_match('/^[A-Za-z0-9_.-]{1,100}$/', $o[$k])) fail('Ungültiger Layer (Buchstaben, Ziffern, «_», «-», «.»)');
   if ($o['on'] && $o['url'] === '') fail('Zum Einschalten braucht es die Adresse');
   return $o; }
 function pgaReady() { $c = pgaCfg(); return $c['on'] && $c['url'] !== '' && function_exists('curl_init'); }
@@ -908,6 +919,170 @@ const WATER_SRC = ['postgis' => 'PostGIS-Datenbank (direkt)', 'pgapi' => 'PostGI
 function waterOrder() { $v = json_decode(setting('water_order', ''), true); $v = is_array($v) ? array_values(array_unique(array_filter($v, fn($k) => is_string($k) && isset(WATER_SRC[$k])))) : [];
   return array_merge($v, array_values(array_diff(array_keys(WATER_SRC), $v))); }
 function waterReady() { return ['postgis' => pgReady(), 'pgapi' => pgaReady(), 'overpass' => (bool)overpassActive()]; }
+
+/* ---------- Geodaten: Objekte am Gewässer (Issue #182) ---------- */
+// Wehre, Kraftwerke, Brücken, Slipanlagen … aus OpenStreetMap für die Vorbereitungsansicht der Verwaltung («Geodaten übernehmen», Recht geo) und die zuschaltbare
+// Geodaten-Ebene der Einsatz-App (Funktion geo). Quellen wie beim Gewässernetz (waterOrder): PostGIS (Tabelle ftable, scripts/postgis/waterways.lua), PostGIS-API (Layer flayer), Overpass.
+// Abgefragt wird in Kacheln von GEO_TILE Grad (gleiche Kacheln für alle Geräte, Datei-Cache api/data/geo/ GEO_TTL lang, bei Ausfall bis GEO_KEEP alt).
+// Übernommene feste Standorte merken sich die Quelle (places.src_ref = N/W/R + OSM-ID, src_data = Stand bei der Übernahme bzw. zuletzt behalten); geoCheck vergleicht täglich.
+// GEO_KINDS: Schlüssel => [Bezeichnung, Kürzel auf der Karte, Symbol in Listen]; gleiche Schlüssel wie kind in sw_features
+const GEO_KINDS = ['dam' => ['Staumauer / Damm', 'SM', '🧱'], 'weir' => ['Wehr / Schwelle', 'WE', '〰'], 'plant' => ['Wasserkraftwerk', 'KW', '⚡'], 'lock' => ['Schleuse', 'SL', '🚪'],
+  'bridge' => ['Brücke über ein Gewässer', 'BR', '🌉'], 'slip' => ['Slipanlage / Einwasserung', 'EW', '🛶'], 'egress' => ['Ausstieg', 'AS', '🪜'], 'fall' => ['Wasserfall / Stromschnelle', 'WF', '🌊'],
+  'rack' => ['Rechen / Treibgutfang', 'RE', '🧲'], 'rescue' => ['Rettungspunkt', 'RP', '🆘'], 'ring' => ['Rettungsring', 'RR', '🛟'], 'pier' => ['Steg / Anlegestelle', 'ST', '⚓']];
+const GEO_AREA = ['plant' => 1, 'dam' => 1, 'pier' => 1, 'slip' => 1]; // als geschlossener Weg eine Fläche (wie area_kinds im Lua-Skript)
+const GEO_KEEP_TAGS = ['name', 'bridge:name', 'ref', 'operator', 'description', 'note', 'access', 'website', 'wikidata', 'start_date', 'waterway', 'power', 'plant:source', 'generator:source',
+  'plant:output:electricity', 'generator:output:electricity', 'leisure', 'man_made', 'emergency', 'highway', 'railway', 'bridge', 'bridge:structure', 'layer', 'canoe', 'whitewater', 'lock',
+  'height', 'width', 'length', 'material', 'maxweight', 'maxheight', 'motorboat', 'boat', 'surface', 'fee', 'opening_hours', 'phone'];
+const GEO_TILE = 0.1; // Kachelgrösse in Grad (ca. 11 × 8 km)
+const GEO_TTL = 86400; const GEO_KEEP = 14 * 86400; const GEO_MAX = 5000; // Objekte je Kachel
+const GEO_MOVE_M = 25; // Lageänderung ab so vielen Metern gilt als geändert
+const PLACE_EFFECTS = ['none' => 'Nur Anzeige', 'warn' => 'Warnung (Flussdistanz, im Suchgebiet hervorgehoben)', 'stop' => 'Begrenzt das Suchgebiet (wie ein Sicherungsposten)'];
+const PLACE_NAV_MAX = 10;
+const SORT_ORDER = 'sort IS NULL, sort, name';
+function geoHas($v, ...$ws) { foreach (explode(';', (string)$v) as $p) if (in_array(trim($p), $ws, true)) return true; return false; }
+// Objektart aus den OSM-Merkmalen, wie classify in scripts/postgis/waterways.lua
+function geoClassify($t, $isWay) { $ww = $t['waterway'] ?? null;
+  if ($ww === 'dam') return 'dam'; if ($ww === 'weir' || $ww === 'drop') return 'weir';
+  if ($ww === 'lock_gate' || ($t['lock'] ?? null) === 'yes') return 'lock';
+  if ($ww === 'waterfall' || $ww === 'rapids' || geoHas($t['whitewater'] ?? '', 'rapid')) return 'fall';
+  if ($ww === 'debris_screen' || ($t['man_made'] ?? null) === 'debris_screen') return 'rack';
+  if ((($t['power'] ?? null) === 'plant' && ($t['plant:source'] ?? null) === 'hydro') || (($t['power'] ?? null) === 'generator' && ($t['generator:source'] ?? null) === 'hydro')) return 'plant';
+  if (($t['leisure'] ?? null) === 'slipway' || geoHas($t['canoe'] ?? '', 'put_in') || geoHas($t['whitewater'] ?? '', 'put_in')) return 'slip';
+  if (geoHas($t['canoe'] ?? '', 'egress') || geoHas($t['whitewater'] ?? '', 'egress')) return 'egress';
+  if (($t['highway'] ?? null) === 'emergency_access_point' || ($t['emergency'] ?? null) === 'access_point') return 'rescue';
+  if (($t['emergency'] ?? null) === 'life_ring') return 'ring';
+  if (($t['man_made'] ?? null) === 'pier' || ($t['leisure'] ?? null) === 'marina') return 'pier';
+  if ($isWay && isset($t['bridge']) && $t['bridge'] !== 'no' && (isset($t['highway']) || isset($t['railway']))) return 'bridge';
+  return null; }
+function geoTags($t) { $r = []; foreach (GEO_KEEP_TAGS as $k) if (isset($t[$k]) && is_scalar($t[$k]) && $t[$k] !== '') $r[$k] = mb_substr((string)$t[$k], 0, 200); return $r; }
+// höchstens $n Punkte (gleichmässig ausgedünnt, Anfang und Ende bleiben)
+function geoThin($pts, $n = 200) { $c = count($pts); if ($c <= $n) return $pts; $o = []; for ($i = 0; $i < $n; $i++) $o[] = $pts[(int)round($i * ($c - 1) / ($n - 1))]; return $o; }
+// einheitliches Objekt: ref, kind, name, water, tags, lat/lon (Punkt, Mitte des Bereichs bzw. halbe Länge der Linie), pts (null = Punkt), line (0|1)
+function geoItem($ref, $kind, $name, $water, $tags, $g) { if (!isset(GEO_KINDS[$kind]) || !is_array($g)) return null; $ty = $g['type'] ?? ''; $cs = $g['coordinates'] ?? null;
+  $ll = fn($q) => is_array($q) && is_numeric($q[0] ?? null) && is_numeric($q[1] ?? null) ? [round((float)$q[1], 7), round((float)$q[0], 7)] : null;
+  $ring = function ($r) use ($ll) { $p = array_values(array_filter(array_map($ll, (array)$r))); if (count($p) > 1 && $p[0] === $p[count($p) - 1]) array_pop($p); return $p; };
+  $pts = null; $line = 0;
+  if ($ty === 'Point') { $c = $ll($cs); if (!$c) return null; [$la, $lo] = $c; }
+  elseif ($ty === 'LineString' || $ty === 'MultiLineString') { $p = array_values(array_filter(array_map($ll, $ty === 'LineString' ? (array)$cs : (array)($cs[0] ?? [])))); if (count($p) < 2) return null; $pts = geoThin($p); $line = 1; [$la, $lo] = lineMid($pts); }
+  elseif ($ty === 'Polygon' || $ty === 'MultiPolygon') { $rs = $ty === 'Polygon' ? [$cs[0] ?? []] : array_map(fn($x) => $x[0] ?? [], (array)$cs); $best = [];
+    foreach ($rs as $r) { $p = $ring($r); if (count($p) > count($best)) $best = $p; }
+    if (count($best) < 3) return null; $pts = geoThin($best); $la = round(array_sum(array_column($pts, 0)) / count($pts), 7); $lo = round(array_sum(array_column($pts, 1)) / count($pts), 7); }
+  else return null;
+  $tags = geoTags(is_array($tags) ? $tags : []); $nm = trim((string)($name ?? '')) ?: ($tags['name'] ?? $tags['bridge:name'] ?? '');
+  return ['ref' => $ref, 'kind' => $kind, 'name' => mb_substr($nm, 0, 120), 'water' => $water === null || $water === '' ? null : mb_substr((string)$water, 0, 120), 'tags' => (object)$tags, 'lat' => $la, 'lon' => $lo, 'pts' => $pts, 'line' => $line]; }
+function geoBox($x, $y) { $t = GEO_TILE; return [round($y * $t, 5), round($x * $t, 5), round(($y + 1) * $t, 5), round(($x + 1) * $t, 5)]; } // [s, w, n, e]
+function geoTileOf($la, $lo) { return [(int)floor($lo / GEO_TILE), (int)floor($la / GEO_TILE)]; }
+function geoPg($bb) { [$s, $w, $n, $e] = $bb; $c = pgCfg(); $p = pgConnect($c, (string)setting('postgis_pass', '')); $t = pgTable($c, 'ftable');
+  $q = $p->prepare("SELECT osm_type, osm_id, kind, name, water, tags::text tg, ST_AsGeoJSON(geom, 7) g FROM $t WHERE geom && ST_MakeEnvelope(?, ?, ?, ?, 4326) LIMIT " . (GEO_MAX + 1)); $q->execute([$w, $s, $e, $n]);
+  $rows = $q->fetchAll(); if (count($rows) > GEO_MAX) throw new RuntimeException('Zu viele Objekte im Ausschnitt');
+  return array_values(array_filter(array_map(fn($r) => geoItem(strtoupper(substr((string)$r['osm_type'], 0, 1)) . (int)$r['osm_id'], $r['kind'], $r['name'], $r['water'], json_decode((string)$r['tg'], true), json_decode((string)$r['g'], true)), $rows))); }
+function geoPga($bb) { [$s, $w, $n, $e] = $bb; $c = pgaCfg(); $key = (string)setting('pgapi_key', '');
+  $q = ['properties' => ['osm_type', 'osm_id', 'kind', 'name', 'water', 'tags'], 'srid' => 4326, 'precision' => 7, 'limit' => GEO_MAX, 'bbox' => [$w, $s, $e, $n]];
+  $path = '/api/v1/layers/' . rawurlencode($c['flayer']) . '/query'; $out = []; $off = 0; $all = null;
+  for ($pg = 0; $pg < 20; $pg++) { $j = pgaReq($c, $key, $path, $q + ['offset' => $off, 'count' => $all === null]);
+    if (!is_array($j['features'] ?? null)) throw new RuntimeException('Ungültige Antwort (keine FeatureCollection)');
+    if ($all === null) { $all = (int)($j['numberMatched'] ?? count($j['features'])); if ($all > GEO_MAX) throw new RuntimeException('Zu viele Objekte im Ausschnitt'); }
+    foreach ($j['features'] as $f) { $pr = (array)($f['properties'] ?? []); $tg = $pr['tags'] ?? null; if (is_string($tg)) $tg = json_decode($tg, true);
+      $ref = isset($pr['osm_type'], $pr['osm_id']) ? strtoupper(substr((string)$pr['osm_type'], 0, 1)) . (int)$pr['osm_id'] : 'X' . ($f['id'] ?? ($off + count($out)));
+      if ($it = geoItem($ref, (string)($pr['kind'] ?? ''), $pr['name'] ?? null, $pr['water'] ?? null, $tg, $f['geometry'] ?? null)) $out[] = $it; }
+    $off += count($j['features']); if (!$j['features'] || $off >= $all) break; }
+  return $out; }
+function geoQuery($bb) { $b = implode(',', array_map(fn($x) => sprintf('%.5F', $x), $bb));
+  $nw = ['["waterway"~"^(dam|weir|drop|lock_gate|waterfall|rapids|debris_screen)$"]', '["lock"="yes"]', '["power"="plant"]["plant:source"="hydro"]', '["power"="generator"]["generator:source"="hydro"]',
+    '["leisure"~"^(slipway|marina)$"]', '["canoe"]', '["whitewater"]', '["man_made"~"^(pier|debris_screen)$"]', '["highway"="emergency_access_point"]', '["emergency"~"^(access_point|life_ring)$"]'];
+  $q = '[out:json][timeout:25];('; foreach ($nw as $f) $q .= "node$f($b);way$f($b);"; $q .= "way[\"bridge\"][\"bridge\"!=\"no\"][\"highway\"]($b);way[\"bridge\"][\"bridge\"!=\"no\"][\"railway\"]($b);";
+  $q .= "way[\"waterway\"~\"^(river|stream|canal)$\"]($b););out geom;";
+  $q .= "(relation[\"type\"=\"multipolygon\"][\"power\"=\"plant\"][\"plant:source\"=\"hydro\"]($b);relation[\"type\"=\"multipolygon\"][\"leisure\"=\"marina\"]($b););out center;";
+  return $q; }
+// Overpass-Antwort aufbereiten wie update.sh: Brücken nur über Gewässer, water = nächstes benanntes Gewässer (≤ ca. 100 m), über ein Raster von Abschnitten
+function geoOverpass($bb) { $r = overpassFetch(geoQuery($bb)); if ($r === null) throw new RuntimeException('Overpass antwortet nicht');
+  $els = json_decode($r, true)['elements'] ?? []; $segs = []; $grid = []; $G = 0.002; $cell = fn($la, $lo) => (int)floor($la / $G) . ':' . (int)floor($lo / $G);
+  foreach ($els as $e) { $t = $e['tags'] ?? []; if (($e['type'] ?? '') !== 'way' || !preg_match('/^(river|stream|canal)$/', (string)($t['waterway'] ?? ''))) continue; $g = $e['geometry'] ?? [];
+    for ($i = 1; $i < count($g); $i++) { $a = $g[$i - 1]; $b = $g[$i]; if (!isset($a['lat'], $b['lat'])) continue; $k = count($segs); $segs[] = [$a['lat'], $a['lon'], $b['lat'], $b['lon'], $t['name'] ?? null];
+      for ($la = min($a['lat'], $b['lat']); $la <= max($a['lat'], $b['lat']) + $G; $la += $G) for ($lo = min($a['lon'], $b['lon']); $lo <= max($a['lon'], $b['lon']) + $G; $lo += $G) $grid[$cell($la, $lo)][$k] = 1; } }
+  $near = function ($la, $lo, $max) use (&$segs, &$grid, $cell, $G) { $best = null; $bd = $max; $kx = cos(deg2rad($la)) * 111320;
+    for ($i = -1; $i <= 1; $i++) for ($j = -1; $j <= 1; $j++) foreach (array_keys($grid[$cell($la + $i * $G, $lo + $j * $G)] ?? []) as $k) { [$a1, $o1, $a2, $o2, $nm] = $segs[$k];
+      $ax = ($o1 - $lo) * $kx; $ay = ($a1 - $la) * 111320; $bx = ($o2 - $lo) * $kx; $by = ($a2 - $la) * 111320; $dx = $bx - $ax; $dy = $by - $ay; $l = $dx * $dx + $dy * $dy;
+      $f = $l > 0 ? max(0, min(1, -($ax * $dx + $ay * $dy) / $l)) : 0; $d = hypot($ax + $f * $dx, $ay + $f * $dy); if ($d < $bd && ($nm !== null || $best === null)) { $bd = $d; $best = [$nm, $d]; } }
+    return $best; };
+  $cross = function ($pts) use (&$segs, &$grid, $cell) { for ($i = 1; $i < count($pts); $i++) { [$a1, $o1] = $pts[$i - 1]; [$a2, $o2] = $pts[$i];
+      $ks = []; foreach ([[$a1, $o1], [$a2, $o2], [($a1 + $a2) / 2, ($o1 + $o2) / 2]] as [$la, $lo]) $ks += $grid[$cell($la, $lo)] ?? [];
+      foreach (array_keys($ks) as $k) if (geoSegX([$a1, $o1], [$a2, $o2], [$segs[$k][0], $segs[$k][1]], [$segs[$k][2], $segs[$k][3]])) return true; } return false; };
+  $out = [];
+  foreach ($els as $e) { $t = $e['tags'] ?? []; $ty = $e['type'] ?? ''; if (!is_array($t)) continue; $kind = geoClassify($t, $ty === 'way'); if ($kind === null) continue;
+    if ($ty === 'node') $g = ['type' => 'Point', 'coordinates' => [$e['lon'] ?? null, $e['lat'] ?? null]];
+    elseif ($ty === 'relation') { if (!isset($e['center'])) continue; $g = ['type' => 'Point', 'coordinates' => [$e['center']['lon'], $e['center']['lat']]]; }
+    else { $cs = array_map(fn($q) => [$q['lon'] ?? null, $q['lat'] ?? null], (array)($e['geometry'] ?? [])); $closed = count($cs) > 3 && $cs[0] === $cs[count($cs) - 1];
+      $g = $closed && isset(GEO_AREA[$kind]) && ($t['area'] ?? '') !== 'no' ? ['type' => 'Polygon', 'coordinates' => [$cs]] : ['type' => 'LineString', 'coordinates' => $cs]; }
+    $it = geoItem(strtoupper($ty[0]) . (int)($e['id'] ?? 0), $kind, null, null, $t, $g); if (!$it) continue;
+    if ($kind === 'bridge' && !$cross($it['pts'] ?? [])) continue;
+    $nb = $near($it['lat'], $it['lon'], 100); if ($nb && $nb[0] !== null) $it['water'] = mb_substr($nb[0], 0, 120);
+    $out[] = $it; if (count($out) > GEO_MAX) throw new RuntimeException('Zu viele Objekte im Ausschnitt'); }
+  return $out; }
+// schneiden sich die Strecken p1–p2 und q1–q2? (Koordinaten [lat, lon], eben gerechnet, genügt für kurze Abschnitte)
+function geoSegX($p1, $p2, $q1, $q2) { $o = fn($a, $b, $c) => ($b[1] - $a[1]) * ($c[0] - $a[0]) - ($b[0] - $a[0]) * ($c[1] - $a[1]);
+  $d1 = $o($q1, $q2, $p1); $d2 = $o($q1, $q2, $p2); $d3 = $o($p1, $p2, $q1); $d4 = $o($p1, $p2, $q2);
+  return (($d1 > 0 && $d2 < 0) || ($d1 < 0 && $d2 > 0)) && (($d3 > 0 && $d4 < 0) || ($d3 < 0 && $d4 > 0)); }
+function geoReady() { return waterReady(); }
+// Objekte einer Kachel: Cache, sonst Quellen in der Reihenfolge waterOrder; Ausfall: alte Daten bis GEO_KEEP, sonst Fehler. Liefert ['items', 'src', 'at', 'stale']
+function geoTile($x, $y) { global $now; $dir = __DIR__ . '/data/geo'; if (!is_dir($dir)) @mkdir($dir, 0775, true);
+  $file = "$dir/t{$x}_{$y}.json"; $read = function ($ok) use ($file) { clearstatcache(true, $file); if (!is_file($file)) return null; $j = json_decode((string)@file_get_contents($file), true); return is_array($j) && $ok(time() - filemtime($file)) ? $j : null; };
+  if ($j = $read(fn($a) => $a < GEO_TTL)) return $j + ['stale' => 0];
+  $lk = @fopen("$file.lock", 'c'); if ($lk) flock($lk, LOCK_EX);
+  if ($j = $read(fn($a) => $a < GEO_TTL)) return $j + ['stale' => 0];
+  if (mt_rand(1, 50) === 1) foreach (glob("$dir/t*") ?: [] as $f) if ($now - filemtime($f) > GEO_KEEP) @unlink($f);
+  $rd = geoReady(); $err = []; set_time_limit(120); $bb = geoBox($x, $y);
+  foreach (array_filter(waterOrder(), fn($k) => $rd[$k]) as $src) { $t = microtime(true);
+    try { $items = $src === 'postgis' ? geoPg($bb) : ($src === 'pgapi' ? geoPga($bb) : geoOverpass($bb));
+      if ($src !== 'overpass') opStat($src === 'postgis' ? PG_STAT : PGA_STAT, 'server', true, (microtime(true) - $t) * 1000);
+      $j = ['items' => $items, 'src' => $src, 'at' => time()]; if (file_put_contents("$file.tmp", json_encode($j, JSON_UNESCAPED_UNICODE)) !== false) rename("$file.tmp", $file); return $j + ['stale' => 0]; }
+    catch (Throwable $e) { $m = $src === 'postgis' ? pgErr($e) : mb_substr(preg_replace('/\s+/', ' ', $e->getMessage()), 0, 150); $err[] = WATER_SRC[$src] . ': ' . $m;
+      if ($src !== 'overpass') opStat($src === 'postgis' ? PG_STAT : PGA_STAT, 'server', false, (microtime(true) - $t) * 1000, $m); } }
+  if ($j = $read(fn($a) => $a < GEO_KEEP)) return $j + ['stale' => 1];
+  alog('warn', 'geo', 'Geodaten nicht erreichbar', ['tile' => "$x,$y", 'err' => $err ? implode(' | ', $err) : 'keine Quelle eingerichtet']);
+  throw new RuntimeException($err ? implode('; ', $err) : 'Keine Quelle für Geodaten eingerichtet (Verwaltung → Gewässerdaten)'); }
+// Einstellung geo (JSON): je Objektart cat_id (Kategorie beim Übernehmen), props (Eigenschaften), color, abbr, live (in der Geodaten-Ebene der Einsatz-App angeboten, Standard an)
+function geoCfg() { $v = json_decode(setting('geo', ''), true); $v = is_array($v) ? $v : []; $r = [];
+  foreach (GEO_KINDS as $k => [$n, $ab]) { $c = is_array($v[$k] ?? null) ? $v[$k] : [];
+    $r[$k] = ['cat_id' => isset($c['cat_id']) && is_numeric($c['cat_id']) ? (int)$c['cat_id'] : null, 'props' => array_values(array_map('intval', array_filter((array)($c['props'] ?? []), 'is_numeric'))),
+      'color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string)($c['color'] ?? '')) ? $c['color'] : '#5c677d', 'abbr' => mb_substr(trim((string)($c['abbr'] ?? $ab)), 0, 4), 'live' => !array_key_exists('live', $c) || !empty($c['live']) ? 1 : 0]; }
+  return $r; }
+function geoKindsPub() { $c = geoCfg(); $r = []; foreach (GEO_KINDS as $k => [$n, $ab, $ic]) $r[] = ['k' => $k, 'name' => $n, 'abbr' => $ab, 'icon' => $ic, 'live' => $c[$k]['live']]; return $r; }
+function geoLiveOn($inc = null) { return $inc ? feature($inc, 'geo') : (bool)array_filter(featuresAll(), fn($f) => $f['geo']); }
+// Stand eines Objekts für den Abgleich: Name, Merkmale, Lage
+function geoSnap($it) { return ['kind' => $it['kind'], 'name' => (string)$it['name'], 'water' => $it['water'] ?? null, 'tags' => (array)$it['tags'], 'lat' => (float)$it['lat'], 'lon' => (float)$it['lon'], 'pts' => $it['pts'] ?? null, 'line' => (int)($it['line'] ?? 0)]; }
+function geoDiff($a, $b) { $d = [];
+  if (($a['name'] ?? '') !== ($b['name'] ?? '')) $d['name'] = [$a['name'] ?? '', $b['name'] ?? ''];
+  $ta = (array)($a['tags'] ?? []); $tb = (array)($b['tags'] ?? []); $tk = []; foreach (array_unique(array_merge(array_keys($ta), array_keys($tb))) as $k) if ($k !== 'name' && ($ta[$k] ?? null) !== ($tb[$k] ?? null)) $tk[] = $k; if ($tk) $d['tags'] = $tk;
+  $m = hav($a['lat'], $a['lon'], $b['lat'], $b['lon']); $pa = $a['pts'] ?? null; $pb = $b['pts'] ?? null;
+  if (($pa === null) !== ($pb === null) || (int)($a['line'] ?? 0) !== (int)($b['line'] ?? 0)) $d['shape'] = 1;
+  elseif ($pa && (count($pa) !== count($pb) || max(array_map(fn($p, $q) => hav($p[0], $p[1], $q[0], $q[1]), $pa, $pb)) > GEO_MOVE_M)) $d['shape'] = 1;
+  if ($m > GEO_MOVE_M) $d['moved'] = (int)round($m);
+  return $d; }
+// Abgleich übernommener Standorte mit der Quelle: höchstens $max Standorte, die am längsten nicht geprüft wurden (bzw. $ids); Kachel nicht erreichbar = unverändert lassen
+function geoCheck($max = 20, $ids = null, $force = false) { global $db; $t = time();
+  $w = $ids !== null ? ' AND id IN (' . (implode(',', array_map('intval', $ids)) ?: '0') . ')' : ($force ? '' : ' AND (src_chk IS NULL OR src_chk<' . ($t - GEO_TTL) . ')');
+  $rows = $db->query("SELECT id,src_ref,src_data,src_state FROM places WHERE src_ref IS NOT NULL$w ORDER BY src_chk IS NOT NULL, src_chk LIMIT " . (int)$max)->fetchAll();
+  $tiles = []; $res = ['checked' => 0, 'changed' => 0, 'gone' => 0, 'failed' => 0];
+  foreach ($rows as $r) { $sd = json_decode((string)$r['src_data'], true); if (!is_array($sd)) { $db->prepare("UPDATE places SET src_chk=? WHERE id=?")->execute([$t, (int)$r['id']]); continue; }
+    $cand = [geoTileOf($sd['lat'], $sd['lon'])]; foreach ([$sd['pts'][0] ?? null, $sd['pts'] ? end($sd['pts']) : null] as $q) if ($q) $cand[] = geoTileOf($q[0], $q[1]);
+    $found = null; $ok = true;
+    foreach (array_unique(array_map(fn($c) => $c[0] . ',' . $c[1], $cand)) as $tk) { if (!isset($tiles[$tk])) { [$x, $y] = array_map('intval', explode(',', $tk)); try { $tiles[$tk] = array_column(geoTile($x, $y)['items'], null, 'ref'); } catch (Throwable $e) { $tiles[$tk] = false; } }
+      if ($tiles[$tk] === false) { $ok = false; continue; } if (isset($tiles[$tk][$r['src_ref']])) { $found = $tiles[$tk][$r['src_ref']]; break; } }
+    if (!$found && !$ok) { $res['failed']++; continue; }
+    if (!$found) { $db->prepare("UPDATE places SET src_state='gone', src_new=NULL, src_diff=NULL, src_chk=? WHERE id=?")->execute([$t, (int)$r['id']]); $res['gone']++; }
+    else { $nw = geoSnap($found); $d = geoDiff($sd, $nw);
+      if ($d) { $db->prepare("UPDATE places SET src_state='changed', src_new=?, src_diff=?, src_chk=? WHERE id=?")->execute([json_encode($nw, JSON_UNESCAPED_UNICODE), json_encode($d, JSON_UNESCAPED_UNICODE), $t, (int)$r['id']]); $res['changed']++; }
+      else $db->prepare("UPDATE places SET src_state=NULL, src_new=NULL, src_diff=NULL, src_chk=? WHERE id=?")->execute([$t, (int)$r['id']]); }
+    $res['checked']++; }
+  if ($res['checked'] || $res['failed']) alog($res['failed'] ? 'warn' : 'info', 'geo', 'Abgleich fester Standorte mit der Quelle', $res);
+  return $res; }
+// täglich im Nachlauf, höchstens alle 10 min ein Lauf mit 20 Standorten (keine Wartezeit für die Person, die gerade fragt); Sperre über das UPDATE von geo_chk_at
+function geoAuto() { global $db; $t = time(); $last = setting('geo_chk_at', ''); if ($last !== '' && (int)$last > $t - 600) return;
+  if (!$db->query("SELECT COUNT(*) FROM places WHERE src_ref IS NOT NULL AND (src_chk IS NULL OR src_chk<" . ($t - GEO_TTL) . ")")->fetchColumn()) return;
+  if ($last === '') { setSetting('geo_chk_at', '0'); $last = '0'; }
+  $u = $db->prepare("UPDATE settings SET v=? WHERE k='geo_chk_at' AND v=?"); $u->execute([(string)$t, $last]); if (!$u->rowCount()) return;
+  after(fn() => geoCheck(20)); }
 
 /* ---------- E-Mail-Alarm (Issue #65, Verwaltung → Konnektivität → «E-Mail-Alarm», Recht cfg_conn) ---------- */
 // Ein Einsatz startet über eine eingehende E-Mail: Schlüsselwörter je Einsatztyp, nur von erlaubten Adressen oder Domains (je Typ).
@@ -1124,6 +1299,7 @@ if ($route === 'legal') {
     'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color']], $ks)),
     'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'on' => (object)array_map(fn($f) => $f[$k], $fk)], array_keys(FEATURES)),
     'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120'), 'postgis' => pgReady() ? 1 : 0, 'pgapi' => pgaReady() ? 1 : 0, 'order' => array_values(array_filter(waterOrder(), fn($k) => waterReady()[$k]))],
+    'geo_linked' => (int)$db->query("SELECT COUNT(*) FROM places WHERE src_ref IS NOT NULL AND active=1")->fetchColumn(), // aus OpenStreetMap übernommene feste Standorte (Issue #182)
     'hydro' => (object)array_map(fn($f) => $f['hydro'], $fk), // Pegel & Abfluss (Issue #125) je Einsatztyp
     'hydro_src' => array_values(array_map(fn($k) => ['k' => $k] + HYDRO_SOURCES[$k], array_keys(array_filter(hydroCfg()['src'])))), // eingeschaltete Quellen in der Reihenfolge des Vorrangs
     'air_home' => (int)$air['home_km'],
@@ -1178,7 +1354,8 @@ if ($route === 'public/state') {
   $pois = !feature($inc, 'poi') ? [] : array_map(fn($p) => symRow(['pts' => json_decode($p['pts'], true) ?: []] + ints($p, ['id'])), $po->fetchAll());
   $res = [];
   foreach (incRes($inc) as $n => $r) $res[] = ['name' => $anon ? ($c['r'][$r['id']] ?? 'Rettling ' . ($n + 1)) : $r['name'], 'descr' => $anon ? null : $r['descr']] + array_intersect_key($r, array_flip(['id', 'lat', 'lon', 'loc_at', 'rescued_at', 'pls_lat', 'pls_lon', 'pls_at']));
-  out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'features' => features($inc['kind_id']), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0, 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
+  $stops = array_map(fn($x) => ['lat' => $x['lat'], 'lon' => $x['lon'], 'pts' => $x['pts'], 'line' => $x['line']], incStops($inc)); // Flusssperren (Issue #182): nur die Lage, ohne Namen
+  out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'stops' => $stops, 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'features' => features($inc['kind_id']), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0, 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
 }
 
 $tok = (string)($_SERVER['HTTP_X_TOKEN'] ?? ''); $sid = null; // $sid = Gerätesitzung der nativen App (Issue #108), null = Anmeldung über users.token (Browser)
@@ -1284,7 +1461,58 @@ function canManage($inc) { global $uid; return exLead($inc) || isActivePart((int
 // Bereich (Polygon) statt Punkt: pts = JSON [[lat, lon], …] mit 3–200 Eckpunkten, lat/lon = Mitte (für Navigation und Startansicht); NULL = Punkt
 // Linie (Issue #134, z. B. Fahrrinne): line = 1, pts mit 2–200 Punkten in Zeichenreihenfolge, lat/lon = Punkt auf halber Länge
 function placeRow($r) { $r = floats(ints($r, ['id', 'plan_id', 'active', 'sort', 'line']), ['lat', 'lon']); $r['cat_id'] = $r['cat_id'] === null ? null : (int)$r['cat_id']; $r['line'] = empty($r['line']) ? 0 : 1;
-  $p = $r['pts'] === null ? null : json_decode($r['pts'], true); $r['pts'] = is_array($p) && count($p) >= ($r['line'] ? 2 : 3) ? array_map(fn($q) => [(float)$q[0], (float)$q[1]], $p) : null; if (!$r['pts']) $r['line'] = 0; return $r; }
+  $p = $r['pts'] === null ? null : json_decode($r['pts'], true); $r['pts'] = is_array($p) && count($p) >= ($r['line'] ? 2 : 3) ? array_map(fn($q) => [(float)$q[0], (float)$q[1]], $p) : null; if (!$r['pts']) $r['line'] = 0;
+  // Issue #182: Eigenschaften (IDs), Quelle (src_ref, Stand des Abgleichs: src_state changed|gone, src_diff, src_new = neuer Stand der Quelle), src_chk = zuletzt geprüft
+  $r['props'] = array_values(array_map('intval', array_filter((array)json_decode((string)($r['props'] ?? ''), true), 'is_numeric')));
+  foreach (['src_data', 'src_new', 'src_diff'] as $k) if (array_key_exists($k, $r)) $r[$k] = $r[$k] === null ? null : json_decode($r[$k], true);
+  foreach (['src_at', 'src_chk'] as $k) if (array_key_exists($k, $r) && $r[$k] !== null) $r[$k] = (int)$r[$k];
+  return $r; }
+// Navigationspunkte je Standort (Issue #182): [{lat, lon, note}] in der Reihenfolge der Verwaltung
+function placeNav($ids) { global $db; $ids = array_values(array_unique(array_map('intval', $ids))); if (!$ids) return [];
+  $r = []; foreach ($db->query("SELECT place_id,lat,lon,note FROM place_nav WHERE place_id IN (" . implode(',', $ids) . ") ORDER BY place_id, sort, id")->fetchAll() as $n) $r[(int)$n['place_id']][] = ['lat' => (float)$n['lat'], 'lon' => (float)$n['lon'], 'note' => (string)($n['note'] ?? '')];
+  return $r; }
+function placeNavIn($v) { if (!is_array($v)) fail('Ungültige Navigationspunkte'); if (count($v) > PLACE_NAV_MAX) fail('Höchstens ' . PLACE_NAV_MAX . ' Navigationspunkte je Standort');
+  return array_map(function ($q) { if (!is_array($q) || !isset($q['lat'], $q['lon'])) fail('Ungültiger Navigationspunkt'); [$la, $lo] = llIn($q['lat'], $q['lon']); return [$la, $lo, mb_substr(trim(preg_replace('/\s+/u', ' ', (string)($q['note'] ?? ''))), 0, 120)]; }, array_values($v)); }
+function placeNavSet($id, $nav) { global $db; $db->prepare("DELETE FROM place_nav WHERE place_id=?")->execute([(int)$id]); $i = $db->prepare("INSERT INTO place_nav(place_id,lat,lon,note,sort) VALUES(?,?,?,?,?)");
+  foreach ($nav as $n => [$la, $lo, $no]) $i->execute([(int)$id, $la, $lo, $no === '' ? null : $no, $n]); }
+// Rechte für feste Standorte: permanente mit cfg_map (bzw. $geo: Übernahme aus Geodaten mit Recht geo), einer vorbereiteten Übung mit ex_plan, nur vor deren Start
+function placeAllowed($pid, $geo = false) { global $db; if ($pid === null) { if (!$geo) need('cfg_map'); return; }
+  plannerOnly(); $s = $db->prepare("SELECT incident_id FROM ex_plans WHERE id=? AND active=1"); $s->execute([$pid]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404); if ($p['incident_id'] !== null) fail('Die Übung wurde bereits gestartet'); }
+// fester Standort anlegen ($old null) oder ändern, liefert die ID. Felder: name, descr, abbr, color, lat/lon bzw. pts (line), active, cat_id, props, nav;
+// src = Objekt aus den Geodaten (nur beim Anlegen: Verknüpfung mit der Quelle, Stand für den Abgleich; Lage aus dem Objekt, falls nicht übergeben)
+function placeSave($in, $old, $pid) { global $db, $now;
+  $src = !$old && is_array($in['src'] ?? null) ? $in['src'] : null;
+  if ($src) { if (!preg_match('/^[NWRX]\d{1,15}$/', (string)($src['ref'] ?? '')) || !isset(GEO_KINDS[$src['kind'] ?? ''])) fail('Ungültiges Objekt der Geodaten');
+    if (!isset($in['lat']) && !isset($in['pts'])) { if (!empty($src['pts'])) { $in['pts'] = $src['pts']; $in['line'] = $src['line'] ?? 0; } else { $in['lat'] = $src['lat'] ?? null; $in['lon'] = $src['lon'] ?? null; } }
+    if (trim((string)($in['name'] ?? '')) === '') $in['name'] = geoName($src); }
+  $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
+  $de = mb_substr(trim((string)($in['descr'] ?? '')), 0, 500); [$ab, $co] = extStyle($in);
+  $ln = !empty($in['line']) ? 1 : 0; // Linie (Issue #134, z. B. Fahrrinne): pts mit 2–200 Punkten
+  $pts = null; if (!empty($in['pts'])) { $pts = placePts($in['pts'], $ln); $ll = $ln ? lineMid($pts) : [round(array_sum(array_column($pts, 0)) / count($pts), 7), round(array_sum(array_column($pts, 1)) / count($pts), 7)]; } // Bereich: Mitte = Schwerpunkt der Eckpunkte, Linie: Punkt auf halber Länge
+  elseif ($ln) fail('Eine Linie braucht 2–200 Punkte');
+  elseif (!isset($in['lat'], $in['lon']) || $in['lat'] === '' || $in['lon'] === '') fail('Standort fehlt'); else $ll = llIn($in['lat'], $in['lon']);
+  $pj = $pts ? json_encode($pts) : null; if ($pts) $ab = null; // Bereiche und Linien haben kein Kürzel (nur Marker zeigen es)
+  $ac = $pid !== null || !array_key_exists('active', $in) || !empty($in['active']) ? 1 : 0;
+  $cid = null; if (!empty($in['cat_id'])) { $s = $db->prepare("SELECT id FROM place_cats WHERE id=?"); $s->execute([(int)$in['cat_id']]); $cid = $s->fetchColumn() ? (int)$in['cat_id'] : fail('Kategorie nicht gefunden', 404); }
+  $pr = array_key_exists('props', $in) ? json_encode(placePropsIn($in['props'])) : ($old ? $old['props'] : null); $nav = array_key_exists('nav', $in) ? placeNavIn($in['nav']) : null;
+  if ($old) { $db->prepare("UPDATE places SET name=?,descr=?,abbr=?,color=?,lat=?,lon=?,active=?,cat_id=?,pts=?,line=?,sort=?,props=? WHERE id=?")->execute([$nm, $de, $ab, $co, $ll[0], $ll[1], $ac, $cid, $pj, $ln, ($old['cat_id'] === null ? null : (int)$old['cat_id']) === $cid ? $old['sort'] : null, $pr, (int)$old['id']]); $id = (int)$old['id']; } // andere Kategorie: dort ans Ende
+  else { $db->prepare("INSERT INTO places(plan_id,name,descr,abbr,color,lat,lon,active,cat_id,pts,line,props,src_ref,src_kind,src_data,src_at,src_chk) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      ->execute([$pid, $nm, $de, $ab, $co, $ll[0], $ll[1], $ac, $cid, $pj, $ln, $pr, $src ? $src['ref'] : null, $src ? $src['kind'] : null, $src ? json_encode(geoSnap(['tags' => (array)($src['tags'] ?? [])] + $src + ['name' => '', 'water' => null, 'pts' => null, 'line' => 0]), JSON_UNESCAPED_UNICODE) : null, $src ? $now : null, $src ? $now : null]);
+    $id = (int)$db->lastInsertId(); }
+  if ($nav !== null) placeNavSet($id, $nav);
+  return $id; }
+// Vorschlag für den Namen eines Objekts: OSM-Name, sonst Art und Gewässer (z. B. «Wehr / Schwelle Aare»)
+function geoName($it) { $n = trim((string)($it['name'] ?? '')); if ($n !== '') return $n; $k = GEO_KINDS[$it['kind'] ?? ''][0] ?? 'Objekt'; return trim($k . (!empty($it['water']) ? ' ' . $it['water'] : '')); }
+// Eigenschaften fester Standorte (Issue #182), effect: PLACE_EFFECTS
+function placeProps($all = false) { global $db; return array_map(fn($r) => ints($r, ['id', 'sort', 'active']), $db->query("SELECT id,name,icon,color,effect,sort,active FROM place_props" . ($all ? '' : ' WHERE active=1') . " ORDER BY " . SORT_ORDER)->fetchAll()); }
+function placePropsIn($v) { $ok = array_column(placeProps(), 'id'); return array_values(array_intersect($ok, array_map('intval', array_filter((array)$v, 'is_numeric')))); }
+// wirksame Flusssperren eines Einsatzes: feste Standorte des Einsatzes mit einer Eigenschaft der Wirkung stop, solange die Einsatzleitung sie berücksichtigt (stop_on) und nicht einzeln ausgenommen (stop_off)
+function stopOff($inc) { $v = $inc['stop_off'] ?? null; return array_values(array_map('intval', array_filter(is_array($v) ? $v : (array)json_decode((string)$v, true), 'is_numeric'))); } // auch schon umgewandelt (incident/state)
+function incStops($inc, $pl = null) { if (!feature($inc, 'area') || !(int)($inc['stop_on'] ?? 1)) return [];
+  $eff = array_column(array_filter(placeProps(), fn($p) => $p['effect'] === 'stop'), 'name', 'id'); if (!$eff) return []; $off = stopOff($inc); $r = [];
+  foreach ($pl ?? incPlaces($inc) as $f) { $why = array_values(array_intersect_key($eff, array_flip($f['props']))); if (!$why || in_array($f['id'], $off, true)) continue;
+    $r[] = ['id' => $f['id'], 'name' => $f['name'], 'why' => $why[0], 'lat' => $f['lat'], 'lon' => $f['lon'], 'pts' => $f['pts'], 'line' => $f['line']]; }
+  return $r; }
 function placePts($v, $line = false) { $n = $line ? 2 : 3; if (!is_array($v) || count($v) < $n || count($v) > 200) fail($line ? 'Eine Linie braucht 2–200 Punkte' : 'Ein Bereich braucht 3–200 Eckpunkte'); return array_map(fn($q) => is_array($q) && count($q) === 2 ? llIn($q[0], $q[1]) : fail('Ungültige Koordinaten'), array_values($v)); }
 // Punkt auf halber Länge einer Linie (Navigation, Liste)
 function lineMid($pts) { $d = [0]; for ($i = 1; $i < count($pts); $i++) $d[] = $d[$i - 1] + hav($pts[$i - 1][0], $pts[$i - 1][1], $pts[$i][0], $pts[$i][1]);
@@ -1293,7 +1521,7 @@ function lineMid($pts) { $d = [0]; for ($i = 1; $i < count($pts); $i++) $d[] = $
   return [$pts[0][0], $pts[0][1]]; }
 // Kategorien fester Standorte: def_on = Standard eingeblendet; pro Person übersteuert in users.place_view (JSON {Kategorie-ID: 0|1}, '0' = ohne Kategorie)
 // Reihenfolge (sort, in der Verwaltung mit ↑/↓): Kategorien untereinander, Standorte innerhalb ihrer Kategorie; NULL (noch nie verschoben, neu) nach den sortierten, nach Name
-const SORT_ORDER = 'sort IS NULL, sort, name';
+// SORT_ORDER steht weiter oben (bei PLACE_EFFECTS), weil public/state die Flusssperren braucht
 function placeCats() { global $db; return array_map(fn($r) => ints($r, ['id', 'def_on']), $db->query("SELECT id,name,def_on FROM place_cats ORDER BY " . SORT_ORDER)->fetchAll()); }
 // Eintrag $id in der Liste (Abfrage $sql mit $args, liefert id in der geltenden Reihenfolge) um eine Stelle verschieben ($dir -1/1) und die ganze Liste neu nummerieren
 function sortMove($tbl, $sql, $args, $id, $dir) { global $db; $s = $db->prepare($sql); $s->execute($args); $ids = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN));
@@ -1302,7 +1530,8 @@ function sortMove($tbl, $sql, $args, $id, $dir) { global $db; $s = $db->prepare(
   $u = $db->prepare("UPDATE $tbl SET sort=? WHERE id=?"); $db->beginTransaction(); foreach ($ids as $n => $x) $u->execute([$n + 1, $x]); $db->commit(); }
 // zusätzlich lbl = Namen auf der Karte (0 = nur beim Darüberfahren/im Popup)
 function placeView($v) { $o = []; foreach ((array)(is_string($v) ? json_decode($v, true) : $v) as $k => $x) if (preg_match('/^\d{1,9}$/', (string)$k)) $o[(string)(int)$k] = empty($x) ? 0 : 1; elseif ($k === 'lbl') $o['lbl'] = empty($x) ? 0 : 1; return $o; }
-function placesOf($planId) { global $db; $s = $db->prepare("SELECT id,plan_id,cat_id,name,descr,abbr,color,lat,lon,pts,line,active,sort FROM places WHERE plan_id" . ($planId === null ? ' IS NULL' : '=?') . " ORDER BY " . SORT_ORDER); $s->execute($planId === null ? [] : [(int)$planId]); return array_map('placeRow', $s->fetchAll()); }
+function placesOf($planId, $src = false) { global $db; $s = $db->prepare("SELECT id,plan_id,cat_id,name,descr,abbr,color,lat,lon,pts,line,active,sort,props,src_ref,src_kind" . ($src ? ',src_data,src_new,src_state,src_diff,src_at,src_chk' : '') . " FROM places WHERE plan_id" . ($planId === null ? ' IS NULL' : '=?') . " ORDER BY " . SORT_ORDER); $s->execute($planId === null ? [] : [(int)$planId]);
+  $r = array_map('placeRow', $s->fetchAll()); $nv = placeNav(array_column($r, 'id')); foreach ($r as &$f) $f['nav'] = $nv[$f['id']] ?? []; unset($f); return $r; } // $src: Stand des Abgleichs mitliefern (Verwaltung)
 function placeSel($p) { $v = $p['places'] ?? null; return $v === null ? null : array_values(array_map('intval', (array)json_decode($v, true))); }
 function incPlaces($inc) { if (!feature($inc, 'place')) return [];
   $pl = array_values(array_filter(placesOf(null), fn($r) => $r['active']));
@@ -2138,8 +2367,13 @@ function aiTask($fn, $in) { global $db, $uid, $now; $q = trim(mb_substr((string)
     foreach ($J as $j) if ($j['lat'] !== null) $refs['E' . $j['id']] = ['ll' => [(float)$j['lat'], (float)$j['lon']], 'k' => $j['kind'] === 'ext' ? 'ext' : ($j['kind'] === 'res' || $j['kind'] === 'seen' && $j['ref_id'] === null ? 'res' : null), 'label' => $j['label']];
     $fp = array_values(array_filter(placesOf(null), fn($r) => $r['active'])); $sel = placeSel($pl); if ($sel !== null) $fp = array_values(array_filter($fp, fn($r) => in_array($r['id'], $sel, true)));
     $fp = array_merge($fp, placesOf((int)$pl['id']));
-    foreach ($fp as $r) $refs['P' . $r['id']] = ['ll' => [(float)$r['lat'], (float)$r['lon']], 'k' => null, 'label' => $r['name']];
-    $pt = implode("\n", array_map(fn($r) => '- [P' . $r['id'] . '] ' . $r['name'] . ($r['descr'] ? ', ' . $r['descr'] : '') . sprintf(', Standort %.5F, %.5F', $r['lat'], $r['lon']), $fp));
+    // Navigationspunkte (Issue #182) als eigene Bezugspunkte P<id>N<n>, Eigenschaften (z. B. Flusssperrung) im Text
+    $pn = array_column(placeProps(), 'name', 'id');
+    foreach ($fp as $r) { $refs['P' . $r['id']] = ['ll' => [(float)$r['lat'], (float)$r['lon']], 'k' => null, 'label' => $r['name']];
+      foreach ($r['nav'] as $n => $v) $refs['P' . $r['id'] . 'N' . ($n + 1)] = ['ll' => [$v['lat'], $v['lon']], 'k' => null, 'label' => $r['name'] . ', Navigationspunkt ' . ($v['note'] ?: $n + 1)]; }
+    $pt = implode("\n", array_map(fn($r) => '- [P' . $r['id'] . '] ' . $r['name'] . ($r['descr'] ? ', ' . $r['descr'] : '') . sprintf(', Standort %.5F, %.5F', $r['lat'], $r['lon'])
+      . (($q = array_values(array_intersect_key($pn, array_flip($r['props'])))) ? ', Eigenschaften: ' . implode(', ', $q) : '')
+      . implode('', array_map(fn($v, $n) => sprintf('; [P%dN%d] Navigationspunkt %s %.5F, %.5F', $r['id'], $n + 1, $v['note'] ? '«' . $v['note'] . '»' : '', $v['lat'], $v['lon']), $r['nav'], array_keys($r['nav']))), $fp));
     $el = array_map(fn($j) => '- [E' . $j['id'] . '] ' . (EX_KINDS[$j['kind']] ?? $j['kind']) . ': ' . $j['label'] . ($j['name'] ? ', Name ' . $j['name'] : '') . ($j['descr'] ? ', ' . $j['descr'] : '') . ($j['lat'] !== null ? sprintf(', Standort %.5F, %.5F', $j['lat'], $j['lon']) : '') . ($j['auto'] !== null ? ', automatisch ' . (int)$j['auto'] . ' min nach dem Start' : ', Freigabe von Hand') . ((int)$j['ago'] ? ', PLS ' . (int)$j['ago'] . ' min vor der Freigabe' : '') . ($j['msg'] ? ', Meldung: ' . $j['msg'] : '') . ($j['released'] !== null ? ' (bereits freigegeben)' : ''), $J);
     $dt = "Übung (Einsatztyp «{$k['name']}»): {$pl['title']}\nAufgebotsmeldung: " . ($pl['message'] ?: '–') . "\nSpezialrollen: " . (implode(', ', $roles) ?: '–') . "\n\nBisherige Elemente (Arten: " . implode(', ', EX_KINDS) . "):\n" . ($el ? implode("\n", $el) : '– (noch keine)') . "\n\nFeste Standorte:\n" . ($pt ?: '–');
     if (!empty($in['chat'])) return ['p' => '', 'data' => $dt, 'ctx' => (string)$k['id'], 'inc' => null, 'c' => null, 'cv' => null, 'role' => null, 'x' => []];
@@ -2173,6 +2407,7 @@ if (array_key_exists($route, FEATURE_ROUTES) && ($inc = activeIncident()) && !fe
 try { anonAuto(); } catch (Throwable $e) { alog('err', 'anon', 'Automatische Anonymisierung fehlgeschlagen: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // fällige automatische Anonymisierung (Issue #87)
 // Applikationslog (Issue #139): Einträge älter als applog_days löschen, höchstens einmal pro Stunde
 try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog_purge_at', (string)$now); $db->prepare("DELETE FROM app_log WHERE at<?")->execute([$now - applogDays() * 86400]); } } catch (Throwable $e) {}
+try { if (!$me['must_change']) geoAuto(); } catch (Throwable $e) { alog('err', 'geo', 'Abgleich der Geodaten: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // Abgleich übernommener Standorte mit der Quelle (Issue #182), täglich im Nachlauf
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 switch ($route) {
  case 'me': out(['me' => $me + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
@@ -2387,7 +2622,7 @@ switch ($route) {
     // feste Standorte auch ohne Einsatz (Änderungswunsch #96): die aktiven permanenten, solange die Funktion für einen der Einsatztypen an ist
     $fpl = array_filter(featuresAll(), fn($f) => $f['place']) ? array_values(array_map(fn($r) => array_diff_key($r, ['active' => 1]), array_filter(placesOf(null), fn($r) => $r['active']))) : [];
     if ($blocked) $xp = [];
-    out(['incident' => null, 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'kinds' => kindsPub(), 'features' => featuresAll(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0], $xp)]); // features: Flussdistanz ohne Einsatz
+    out(['incident' => null, 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0], $xp)]); // features: Flussdistanz ohne Einsatz
   }
   $inc['id'] = (int)$inc['id']; $inc['plan_id'] = $inc['plan_id'] === null ? null : (int)$inc['plan_id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc = kindAdd($inc); $inc['kind'] = kindPub(kindOf($inc)); $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
@@ -2398,6 +2633,7 @@ switch ($route) {
     $u = $db->prepare("UPDATE incidents SET hydro_s=? WHERE id=? AND (hydro_s IS NULL OR (hydro_s<0 AND hydro_s>?))"); $u->execute([$now, $id, -($now - 120)]);
     if ($u->rowCount()) after(function () use ($id) { global $db; if (!hydroLog($id, 'start')) $db->prepare("UPDATE incidents SET hydro_s=? WHERE id=?")->execute([-time(), $id]); }); }
   unset($inc['hydro_s']);
+  $inc['stop_on'] = (int)($inc['stop_on'] ?? 1); $inc['stop_off'] = stopOff($inc); $ipl = incPlaces($inc); // Flusssperren (Issue #182)
   $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,u.name,u.photo FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
   $ps->execute([$id]);
   $isP = isActivePart($id);
@@ -2441,7 +2677,7 @@ switch ($route) {
   // Personeninfo (Issue #105): alle aktiven Einsatzgruppen (unabhängig von «Farbe beim Namen») und je Teilnahme die Gruppen der Person
   $pg = null; if ($F['pinfo']) { $pg = ['g' => array_map(fn($x) => ['id' => $x['id'], 'name' => $x['name'], 'color' => $x['color']], grpRows(true)), 'm' => []];
     $s = $db->prepare("SELECT m.user_id,m.group_id FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id JOIN participants p ON p.user_id=m.user_id AND p.incident_id=? WHERE g.active=1 ORDER BY g.pos, g.name"); $s->execute([$id]); foreach ($s->fetchAll() as $x) $pg['m'][(int)$x['user_id']][] = (int)$x['group_id']; }
-  out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => incPlaces($inc), 'place_cats' => placeCats(), 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
+  out(['incident' => $inc, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
        'participants' => array_map(function ($p) use ($pg) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; if ($pg) $p['groups'] = $pg['m'][(int)$p['user_id']] ?? []; return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at']); }, $ps->fetchAll()),
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
        'air' => airAllowed($inc) ? 1 : 0, 'air_inc' => airCfg()['on'] ? (airInc($inc) ? 1 : 0) : null, 'ex_lead' => $xl, 'ex_title' => $inc['plan_id'] && ($xl || planner()) ? (exPlan($inc)['title'] ?? null) : null, 'ex_injects' => $inc['plan_id'] && ($xl || planner()) ? exInjects((int)$inc['plan_id']) : [],
@@ -2589,6 +2825,15 @@ switch ($route) {
   logev($inc['id'], $uid, 'markdel', (int)$m['user_id'] === $uid ? 'entfernt die eigene Markierung des Rettlings' : 'entfernt eine Markierung des Rettlings');
   out(['ok' => true]);
 
+ case 'incident/stops': // Flusssperren (Issue #182): on = alle berücksichtigen (1) bzw. nicht (0); id + off = einen Standort ausnehmen (1) bzw. wieder berücksichtigen (0); nur Einsatzleitung
+  $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz'); if (!canManage($inc)) fail('Nur die Einsatzleitung kann Flusssperren ein- und ausschalten', 403);
+  if (array_key_exists('on', $in)) { $on = empty($in['on']) ? 0 : 1; if ($on !== (int)($inc['stop_on'] ?? 1)) { $db->prepare("UPDATE incidents SET stop_on=? WHERE id=?")->execute([$on, $inc['id']]);
+      logev($inc['id'], $uid, 'stop', $on ? 'berücksichtigt die Flusssperren fester Standorte wieder im Suchgebiet' : 'berücksichtigt die Flusssperren fester Standorte im Suchgebiet nicht mehr'); } }
+  if (!empty($in['id'])) { $pl = array_column(incPlaces($inc), null, 'id'); $f = $pl[(int)$in['id']] ?? fail('Standort nicht gefunden', 404); $off = stopOff($inc); $x = !empty($in['off']);
+    if ($x !== in_array($f['id'], $off, true)) { $off = $x ? array_values(array_unique(array_merge($off, [$f['id']]))) : array_values(array_diff($off, [$f['id']]));
+      $db->prepare("UPDATE incidents SET stop_off=? WHERE id=?")->execute([$off ? json_encode($off) : null, $inc['id']]);
+      logev($inc['id'], $uid, 'stop', ($x ? 'berücksichtigt die Flusssperre «' : 'berücksichtigt die Flusssperre «') . $f['name'] . ($x ? '» im Suchgebiet nicht mehr' : '» wieder im Suchgebiet')); } }
+  out(['ok' => true]);
  case 'incident/poi': // Position (kind=point, 1 Punkt), Bereich (kind=area, Polygon mit 3–200 Punkten) oder Linie (kind=line, 2–200 Punkte, Issue #150) markieren: nur Einsatzleitung
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz');
   if (!canManage($inc)) fail('Nur die Einsatzleitung kann Markierungen und Bereiche setzen', 403);
@@ -2869,7 +3114,7 @@ switch ($route) {
   $ps = $db->query("SELECT p.*,i.alarm_at,i.ended_at FROM ex_plans p LEFT JOIN incidents i ON i.id=p.incident_id WHERE p.active=1 ORDER BY p.incident_id IS NOT NULL, i.alarm_at DESC, p.title")->fetchAll();
   // Durchführungen (auch vor einem Zurücksetzen) mit Log und Replay
   $rs = []; foreach ($db->query("SELECT id,plan_id,kind_id,alarm_at,ended_at,recorded FROM incidents WHERE plan_id IS NOT NULL ORDER BY alarm_at DESC")->fetchAll() as $r) $rs[(int)$r['plan_id']][] = ints($r, ['id', 'plan_id', 'kind_id', 'alarm_at', 'ended_at', 'recorded']);
-  out(array_map(fn($p) => ['leads' => exLeads($p), 'invite' => exInvite($p), 'grp_ids' => idsIn(json_decode($p['grp_ids'] ?? '[]', true)), 'injects' => exInjects((int)$p['id']), 'places' => placeSel($p), 'own_places' => placesOf((int)$p['id']), 'runs' => aiRows($rs[(int)$p['id']] ?? [])] + ints($p, ['id', 'kind_id', 'record', 'public_anon', 'created_by', 'created', 'incident_id', 'alarm_at', 'ended_at']), $ps));
+  out(array_map(fn($p) => ['leads' => exLeads($p), 'invite' => exInvite($p), 'grp_ids' => idsIn(json_decode($p['grp_ids'] ?? '[]', true)), 'injects' => exInjects((int)$p['id']), 'places' => placeSel($p), 'own_places' => placesOf((int)$p['id'], true), 'runs' => aiRows($rs[(int)$p['id']] ?? [])] + ints($p, ['id', 'kind_id', 'record', 'public_anon', 'created_by', 'created', 'incident_id', 'alarm_at', 'ended_at']), $ps));
  case 'ex/plan/save': plannerOnly(); // anlegen oder ändern (nur vor dem Start): title, message, leads, invite (null = alle alarmieren), record, public, public_anon
   $title = mb_substr(trim((string)($in['title'] ?? '')), 0, 120); $msg = trim((string)($in['message'] ?? ''));
   if ($title === '') fail('Titel fehlt'); if ($msg === '') fail('Die Aufgebotsmeldung ist Pflicht');
@@ -2906,7 +3151,8 @@ switch ($route) {
   $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)($in['id'] ?? 0)]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
   $db->prepare("INSERT INTO ex_plans(kind_id,title,message,leads,invite,grp_ids,record,public_token,public_anon,created_by,created,places) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")->execute([$p['kind_id'], mb_substr('Kopie von ' . $p['title'], 0, 120), $p['message'], $p['leads'], $p['invite'], $p['grp_ids'], $p['record'], $p['public_token'] === null ? null : bin2hex(random_bytes(16)), $p['public_anon'], $uid, $now, $p['places']]);
   $nid = (int)$db->lastInsertId(); $map = []; $js = exInjects((int)$p['id']);
-  foreach (placesOf((int)$p['id']) as $f) $db->prepare("INSERT INTO places(plan_id,name,descr,abbr,color,lat,lon,active,cat_id,pts,line,sort) VALUES(?,?,?,?,?,?,?,1,?,?,?,?)")->execute([$nid, $f['name'], $f['descr'], $f['abbr'], $f['color'], $f['lat'], $f['lon'], $f['cat_id'], $f['pts'] ? json_encode($f['pts']) : null, $f['line'], $f['sort']]);
+  foreach (placesOf((int)$p['id'], true) as $f) { $db->prepare("INSERT INTO places(plan_id,name,descr,abbr,color,lat,lon,active,cat_id,pts,line,sort,props,src_ref,src_kind,src_data,src_at) VALUES(?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?)")->execute([$nid, $f['name'], $f['descr'], $f['abbr'], $f['color'], $f['lat'], $f['lon'], $f['cat_id'], $f['pts'] ? json_encode($f['pts']) : null, $f['line'], $f['sort'], json_encode($f['props']), $f['src_ref'], $f['src_kind'], $f['src_data'] === null ? null : json_encode($f['src_data'], JSON_UNESCAPED_UNICODE), $f['src_at']]);
+    placeNavSet((int)$db->lastInsertId(), array_map(fn($n) => [$n['lat'], $n['lon'], $n['note']], $f['nav'])); } // mit Eigenschaften, Navigationspunkten und Quelle (Issue #182)
   foreach ($js as $j) {
     $db->prepare("INSERT INTO ex_injects(plan_id,kind,label,name,descr,lat,lon,ago,auto,msg,role_id,abbr,color) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute([$nid, $j['kind'], $j['label'], $j['name'], $j['descr'], $j['lat'], $j['lon'], $j['ago'], $j['auto'], $j['msg'], $j['role_id'], $j['abbr'], $j['color']]);
     $map[$j['id']] = (int)$db->lastInsertId();
@@ -3589,8 +3835,8 @@ switch ($route) {
     }
   }
   out(['ok' => true]);
- case 'places': need('cfg_map', 'ex_plan'); // permanente feste Standorte, auch deaktivierte (Issue #96; Übungsleiter: Auswahl je Übung)
-  out(placesOf(null));
+ case 'places': need('cfg_map', 'ex_plan', 'geo'); // permanente feste Standorte, auch deaktivierte (Issue #96; Übungsleiter: Auswahl je Übung), mit Stand des Abgleichs (Issue #182)
+  out(placesOf(null, true));
  case 'place/cats': need('cfg_map', 'ex_plan'); out(placeCats()); // Kategorien fester Standorte
  case 'place/cat/save': need('cfg_map'); // anlegen oder ändern: id, name, def_on (Standard eingeblendet)
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 60); if ($nm === '') fail('Name fehlt'); $on = !array_key_exists('def_on', $in) || !empty($in['def_on']) ? 1 : 0;
@@ -3607,23 +3853,67 @@ switch ($route) {
  case 'place/cat/remove': need('cfg_map'); // Standorte der Kategorie gelten danach als «ohne Kategorie»
   $db->prepare("UPDATE places SET cat_id=NULL WHERE cat_id=?")->execute([(int)($in['id'] ?? 0)]); $db->prepare("DELETE FROM place_cats WHERE id=?")->execute([(int)($in['id'] ?? 0)]); out(['ok' => true]);
  case 'place/save': case 'place/remove': // fester Standort anlegen, ändern oder entfernen: permanent mit cfg_map, einer vorbereiteten Übung (plan_id) mit ex_plan, nur vor deren Start
+  // neu aus Geodaten (src, Issue #182): mit Recht geo statt cfg_map
   $old = null; if (!empty($in['id'])) { $s = $db->prepare("SELECT * FROM places WHERE id=?"); $s->execute([(int)$in['id']]); $old = $s->fetch() ?: fail('Standort nicht gefunden', 404); }
   $pid = $old ? ($old['plan_id'] === null ? null : (int)$old['plan_id']) : (empty($in['plan_id']) ? null : (int)$in['plan_id']);
-  if ($pid === null) need('cfg_map');
-  else { plannerOnly(); $s = $db->prepare("SELECT incident_id FROM ex_plans WHERE id=? AND active=1"); $s->execute([$pid]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404); if ($p['incident_id'] !== null) fail('Die Übung wurde bereits gestartet'); }
-  if ($route === 'place/remove') { if (!$old) fail('Standort nicht gefunden', 404); $db->prepare("DELETE FROM places WHERE id=?")->execute([(int)$old['id']]); out(['ok' => true]); }
-  $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
-  $de = mb_substr(trim((string)($in['descr'] ?? '')), 0, 500); [$ab, $co] = extStyle($in);
-  $ln = !empty($in['line']) ? 1 : 0; // Linie (Issue #134, z. B. Fahrrinne): pts mit 2–200 Punkten
-  $pts = null; if (!empty($in['pts'])) { $pts = placePts($in['pts'], $ln); $ll = $ln ? lineMid($pts) : [round(array_sum(array_column($pts, 0)) / count($pts), 7), round(array_sum(array_column($pts, 1)) / count($pts), 7)]; } // Bereich: Mitte = Schwerpunkt der Eckpunkte, Linie: Punkt auf halber Länge
-  elseif ($ln) fail('Eine Linie braucht 2–200 Punkte');
-  elseif (!isset($in['lat'], $in['lon']) || $in['lat'] === '' || $in['lon'] === '') fail('Standort fehlt'); else $ll = llIn($in['lat'], $in['lon']);
-  $pj = $pts ? json_encode($pts) : null; if ($pts) $ab = null; // Bereiche und Linien haben kein Kürzel (nur Marker zeigen es)
-  $ac = $pid !== null || !array_key_exists('active', $in) || !empty($in['active']) ? 1 : 0;
-  $cid = null; if (!empty($in['cat_id'])) { $s = $db->prepare("SELECT id FROM place_cats WHERE id=?"); $s->execute([(int)$in['cat_id']]); $cid = $s->fetchColumn() ? (int)$in['cat_id'] : fail('Kategorie nicht gefunden', 404); }
-  if ($old) $db->prepare("UPDATE places SET name=?,descr=?,abbr=?,color=?,lat=?,lon=?,active=?,cat_id=?,pts=?,line=?,sort=? WHERE id=?")->execute([$nm, $de, $ab, $co, $ll[0], $ll[1], $ac, $cid, $pj, $ln, ($old['cat_id'] === null ? null : (int)$old['cat_id']) === $cid ? $old['sort'] : null, (int)$old['id']]); // andere Kategorie: dort ans Ende
-  else $db->prepare("INSERT INTO places(plan_id,name,descr,abbr,color,lat,lon,active,cat_id,pts,line) VALUES(?,?,?,?,?,?,?,?,?,?,?)")->execute([$pid, $nm, $de, $ab, $co, $ll[0], $ll[1], $ac, $cid, $pj, $ln]);
+  if (!$old && !empty($in['src'])) need('geo');
+  placeAllowed($pid, !$old && !empty($in['src']));
+  if ($route === 'place/remove') { if (!$old) fail('Standort nicht gefunden', 404); $db->prepare("DELETE FROM places WHERE id=?")->execute([(int)$old['id']]); $db->prepare("DELETE FROM place_nav WHERE place_id=?")->execute([(int)$old['id']]); out(['ok' => true]); }
+  out(['ok' => true, 'id' => placeSave($in, $old, $pid)]);
+ case 'place/props': need('cfg_map', 'ex_plan', 'geo'); out(['props' => placeProps(true), 'effects' => PLACE_EFFECTS]); // Eigenschaften fester Standorte (Issue #182), auch deaktivierte
+ case 'place/prop/save': need('cfg_map'); // anlegen oder ändern: id, name, icon (kurz, z. B. Emoji), color, effect (PLACE_EFFECTS), active
+  $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 60); if ($nm === '') fail('Name fehlt'); $ef = (string)($in['effect'] ?? 'none'); if (!isset(PLACE_EFFECTS[$ef])) fail('Ungültige Wirkung');
+  $ic = mb_substr(trim((string)($in['icon'] ?? '')), 0, 4) ?: null; $co = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($in['color'] ?? '')) ? $in['color'] : '#6c757d'; $ac = !array_key_exists('active', $in) || !empty($in['active']) ? 1 : 0;
+  if (!empty($in['id'])) { $s = $db->prepare("SELECT id FROM place_props WHERE id=?"); $s->execute([(int)$in['id']]); if (!$s->fetchColumn()) fail('Eigenschaft nicht gefunden', 404);
+    $db->prepare("UPDATE place_props SET name=?, icon=?, color=?, effect=?, active=? WHERE id=?")->execute([$nm, $ic, $co, $ef, $ac, (int)$in['id']]); }
+  else $db->prepare("INSERT INTO place_props(name,icon,color,effect,active) VALUES(?,?,?,?,?)")->execute([$nm, $ic, $co, $ef, $ac]);
   out(['ok' => true]);
+ case 'place/prop/move': need('cfg_map'); sortMove('place_props', "SELECT id FROM place_props ORDER BY " . SORT_ORDER, [], (int)($in['id'] ?? 0), (int)($in['dir'] ?? 1)); out(['ok' => true]);
+ case 'place/prop/remove': need('cfg_map'); // entfernt die Eigenschaft auch bei allen Standorten
+  $pid = (int)($in['id'] ?? 0); $u = $db->prepare("UPDATE places SET props=? WHERE id=?");
+  foreach ($db->query("SELECT id,props FROM places WHERE props IS NOT NULL")->fetchAll() as $r) { $v = array_map('intval', (array)json_decode($r['props'], true)); if (in_array($pid, $v, true)) $u->execute([json_encode(array_values(array_diff($v, [$pid]))), (int)$r['id']]); }
+  $db->prepare("DELETE FROM place_props WHERE id=?")->execute([$pid]); out(['ok' => true]);
+ case 'geo/cfg': need('geo'); // Vorbereitungsansicht «Geodaten übernehmen» (Issue #182): Objektarten, Einstellung, Kategorien, Eigenschaften, Quellen, übernommene Standorte
+  $rd = geoReady(); $pl = []; foreach ($db->query("SELECT p.id,p.plan_id,p.name,p.src_ref,p.src_state,p.active,e.title FROM places p LEFT JOIN ex_plans e ON e.id=p.plan_id WHERE p.src_ref IS NOT NULL ORDER BY p.id")->fetchAll() as $r) $pl[] = ints($r, ['id', 'plan_id', 'active']);
+  out(['kinds' => geoKindsPub(), 'cfg' => geoCfg(), 'cats' => placeCats(), 'props' => placeProps(), 'tile' => GEO_TILE, 'sources' => array_values(array_map(fn($k) => ['k' => $k, 'name' => WATER_SRC[$k]], array_filter(waterOrder(), fn($k) => $rd[$k]))),
+    'linked' => $pl, 'check_at' => (int)setting('geo_chk_at', '0'), 'can_map' => can('cfg_map') ? 1 : 0]);
+ case 'geo/cfg/save': need('geo'); // je Objektart: cat_id, props, color, abbr, live
+  if (!is_array($in['cfg'] ?? null)) fail('Ungültige Einstellung'); $cats = array_column(placeCats(), 'id'); $o = [];
+  foreach (GEO_KINDS as $k => $_) { $c = is_array($in['cfg'][$k] ?? null) ? $in['cfg'][$k] : []; [$ab, $co] = extStyle(['abbr' => $c['abbr'] ?? '', 'color' => $c['color'] ?? '']);
+    $o[$k] = ['cat_id' => !empty($c['cat_id']) && in_array((int)$c['cat_id'], $cats, true) ? (int)$c['cat_id'] : null, 'props' => placePropsIn($c['props'] ?? []), 'color' => $co ?? '#5c677d', 'abbr' => (string)($ab ?? ''), 'live' => empty($c['live']) ? 0 : 1]; }
+  setSetting('geo', json_encode($o, JSON_UNESCAPED_UNICODE)); out(['ok' => true]);
+ case 'geo/tile': // Objekte einer Kachel (x, y = Index zu GEO_TILE Grad); pick = Vorbereitungsansicht (Recht geo, alle Arten), sonst Geodaten-Ebene (Funktion geo, nur angebotene Arten)
+  $x = (int)($in['x'] ?? $_GET['x'] ?? 0); $y = (int)($in['y'] ?? $_GET['y'] ?? 0); if (abs($x * GEO_TILE) > 180 || abs($y * GEO_TILE) > 90) fail('Ungültige Kachel');
+  $pick = !empty($in['pick']) || !empty($_GET['pick']);
+  if ($pick) need('geo'); else { $inc = activeIncident(); if ($inc && incAllowed($inc) ? !feature($inc, 'geo') : !geoLiveOn()) fail('Die Geodaten-Ebene ist ausgeschaltet', 403); }
+  try { $t = geoTile($x, $y); } catch (Throwable $e) { fail('Geodaten nicht verfügbar: ' . $e->getMessage(), 503); }
+  $items = $t['items']; if (!$pick) { $c = geoCfg(); $items = array_values(array_filter($items, fn($i) => $c[$i['kind']]['live'] ?? 0)); }
+  out(['x' => $x, 'y' => $y, 'items' => $items, 'src' => $t['src'], 'at' => (int)$t['at'], 'stale' => (int)$t['stale']]);
+ case 'geo/import': need('geo'); // Objekte als feste Standorte übernehmen (items: Objekt aus geo/tile plus Angaben name, descr, cat_id, props, color, abbr, nav), plan_id = in eine vorbereitete Übung
+  $pid = empty($in['plan_id']) ? null : (int)$in['plan_id']; placeAllowed($pid, true); $its = (array)($in['items'] ?? []); if (!$its || count($its) > 500) fail('Keine bzw. zu viele Objekte (höchstens 500)');
+  $gc = geoCfg(); $db->beginTransaction(); $ids = [];
+  foreach ($its as $it) { if (!is_array($it)) fail('Ungültiges Objekt'); $c = $gc[(string)($it['kind'] ?? '')] ?? null; // fehlende Angaben aus den Vorgaben je Objektart (z. B. Übernahme aus der Einsatz-App)
+    if ($c) $it += ['cat_id' => $c['cat_id'], 'props' => $c['props'], 'color' => $c['color'], 'abbr' => empty($it['pts']) ? $c['abbr'] : ''];
+    $ids[] = placeSave($it + ['src' => $it], null, $pid); }
+  $db->commit();
+  alog('info', 'geo', 'Geodaten als feste Standorte übernommen', ['n' => count($ids), 'plan' => $pid, 'kinds' => array_count_values(array_map(fn($i) => (string)($i['kind'] ?? ''), $its))]);
+  out(['ok' => true, 'ids' => $ids]);
+ case 'geo/check': need('geo'); // Abgleich mit der Quelle jetzt (ids = bestimmte Standorte, sonst alle der Reihe nach): liefert Anzahl geprüfte/geänderte/fehlende und left = noch nicht geprüfte dieses Laufs
+  set_time_limit(300); $since = (int)($in['since'] ?? 0) ?: $now; $ids = isset($in['ids']) ? array_map('intval', (array)$in['ids']) : null;
+  if ($ids === null) { $s = $db->prepare("SELECT id FROM places WHERE src_ref IS NOT NULL AND (src_chk IS NULL OR src_chk<?) ORDER BY src_chk IS NOT NULL, src_chk LIMIT 15"); $s->execute([$since]); $ids = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN)); }
+  $r = geoCheck(15, $ids ?: [0]); $s = $db->prepare("SELECT COUNT(*) FROM places WHERE src_ref IS NOT NULL AND (src_chk IS NULL OR src_chk<?)"); $s->execute([$since]);
+  out($r + ['since' => $since, 'left' => isset($in['ids']) ? 0 : (int)$s->fetchColumn()]);
+ case 'geo/resolve': need('geo'); // Abweichung zur Quelle: take = Lage (und mit name auch den Namen) aus der Quelle übernehmen, keep = behalten (neuer Stand gilt als gesehen), unlink = Verknüpfung lösen
+  $s = $db->prepare("SELECT * FROM places WHERE id=? AND src_ref IS NOT NULL"); $s->execute([(int)($in['id'] ?? 0)]); $f = $s->fetch() ?: fail('Standort nicht gefunden', 404);
+  $a = (string)($in['action'] ?? ''); $nw = json_decode((string)$f['src_new'], true);
+  if ($a === 'unlink') $db->prepare("UPDATE places SET src_ref=NULL, src_kind=NULL, src_data=NULL, src_new=NULL, src_state=NULL, src_diff=NULL, src_chk=NULL WHERE id=?")->execute([(int)$f['id']]);
+  elseif ($a === 'keep') { if ($f['src_state'] === 'gone') $db->prepare("UPDATE places SET src_ref=NULL, src_kind=NULL, src_data=NULL, src_new=NULL, src_state=NULL, src_diff=NULL, src_chk=NULL WHERE id=?")->execute([(int)$f['id']]); // nicht mehr in der Quelle: behalten = Verknüpfung lösen
+    else { if (!is_array($nw)) fail('Keine Abweichung'); $db->prepare("UPDATE places SET src_data=?, src_new=NULL, src_state=NULL, src_diff=NULL WHERE id=?")->execute([json_encode($nw, JSON_UNESCAPED_UNICODE), (int)$f['id']]); } }
+  elseif ($a === 'take') { if (!is_array($nw)) fail('Keine Abweichung');
+    $pts = $nw['pts'] ?? null; $ln = $pts ? (int)($nw['line'] ?? 0) : 0; $nm = !empty($in['name']) && trim((string)$nw['name']) !== '' ? mb_substr(trim((string)$nw['name']), 0, 80) : $f['name'];
+    $db->prepare("UPDATE places SET name=?, lat=?, lon=?, pts=?, line=?, abbr=?, src_data=?, src_kind=?, src_new=NULL, src_state=NULL, src_diff=NULL WHERE id=?")->execute([$nm, (float)$nw['lat'], (float)$nw['lon'], $pts ? json_encode($pts) : null, $ln, $pts ? null : $f['abbr'], json_encode($nw, JSON_UNESCAPED_UNICODE), $nw['kind'] ?? $f['src_kind'], (int)$f['id']]); }
+  else fail('Ungültige Aktion');
+  alog('info', 'geo', 'Abweichung zur Quelle bearbeitet', ['id' => (int)$f['id'], 'action' => $a]); out(['ok' => true]);
  case 'ext_templates': need('cfg_inc', 'ex_plan'); // Vorlagen für externe Einsatzkräfte, auch deaktivierte (Übungsleiter: Übernahme ins Element «Neue externe Einsatzkraft»)
   out(array_map(fn($r) => floats(ints($r, ['id', 'role_id', 'active']), ['lat', 'lon']), $db->query("SELECT id,name,descr,role_id,abbr,color,lat,lon,active FROM ext_templates ORDER BY active DESC, name")->fetchAll()));
  case 'ext_template/save': need('cfg_inc'); // anlegen oder ändern: name, descr, role_id, abbr, color, lat/lon (beide leer = Standort beim Erfassen wählen), active
