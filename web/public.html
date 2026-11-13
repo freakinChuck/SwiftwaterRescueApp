@@ -43,7 +43,7 @@ function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.
   const vb=$('#viewBox'),bv=$('#pbView');bv.innerHTML=VIEW_ICON;[vb,bv].forEach(x=>{L.DomEvent.disableClickPropagation(x);L.DomEvent.disableScrollPropagation(x)});
   bv.onclick=()=>viewBox();vb.onclick=e=>{const a=e.target.closest('[data-va]');if(a)setVis(viewCats().map(v=>v[0]),a.dataset.va==='1');if(e.target.closest('#bViewX'))viewBox(false)};
   vb.onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked)};
-  lay=L.layerGroup().addTo(map);airLay=L.layerGroup().addTo(map);airLay._air=new Map(); // Helikopter (Issue #73) in eigener Ebene, damit offene Popups das Neuzeichnen überstehen
+  lay=L.layerGroup().addTo(map);airLay=L.layerGroup().addTo(map);airLay._air=new Map();vehLay=L.layerGroup().addTo(map); // Helikopter (Issue #73) in eigener Ebene, damit offene Popups das Neuzeichnen überstehen
   $('#pbSide').onclick=e=>{const f=e.target.closest('[data-f]');if(f)return toggleFollow(+f.dataset.f);
     const b=e.target.closest('[data-ll]');if(b)map.panTo(b.dataset.ll.split(',').map(Number))};
   L.DomEvent.disableClickPropagation($('#pbFollow'));$('#pbFollow button').onclick=stopFollow;map.on('dragstart',()=>{if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen und die Auto-Übersicht
@@ -54,9 +54,9 @@ function initMap(d){const p=plsList(d)[0];map=L.map('pbMap').setView(p?[p.lat,p.
 // Kategorien ausgeschalteter Funktionen (features aus public/state) fehlen, Nachrichten gibt es hier nicht.
 const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pview')||'[]'))}catch(e){return new Set()}})();
 const vis=k=>!viewHide.has(k);
-const viewCats=()=>VIEW.filter(([k,,f])=>k!=='mm'&&k!=='hydro'&&(k!=='air'||!!(ps&&ps.air))&&(!f||!ps||!ps.features||ps.features[f]!==0)); // Helikopter nur, wenn die Verwaltung sie hier freigibt (air)
+const viewCats=()=>VIEW.filter(([k,,f])=>k!=='mm'&&k!=='hydro'&&(k!=='air'||!!(ps&&ps.air))&&(k!=='veh'||!!(ps&&ps.veh))&&(!f||!ps||!ps.features||ps.features[f]!==0)); // Helikopter nur, wenn die Verwaltung sie hier freigibt (air)
 /* ---------- Helikopter (Issue #73): über public/air, mit jeder Aktualisierung ---------- */
-let airLay=null,airD=null;
+let airLay=null,airD=null,vehLay=null;
 function loadAir(){if(!ps||!ps.air||!vis('air')){airD=null;return drawAirP()}api('public/air&k='+encodeURIComponent(K)).then(a=>{airD=a}).catch(()=>{airD=null}).finally(drawAirP)}
 function drawAirP(){if(!airLay)return;const on=ps&&ps.air&&vis('air')&&airD;airSync(map,airLay,on?airD.air||[]:[],on?airD.now:0,(a,b)=>fmtC(a,b,cs));airAttr(map,on?airD:null)}
 function setVis(keys,on){keys.forEach(k=>on?viewHide.delete(k):viewHide.add(k));try{localStorage.setItem('sw_pview',JSON.stringify([...viewHide]))}catch(e){}
@@ -98,6 +98,7 @@ async function load(){let d;try{d=await api('public/state&k='+encodeURIComponent
   if(!map)initMap(d);draw();loadAir()}
 function draw(){const d=ps,i=d.incident,col=p=>(d.roles.find(r=>r.id===p.role_id)||{}).color||'#cfd8dc',ll=(a,b)=>`data-ll="${a},${b}"`;lay.clearLayers();
   drawArea(d);
+  vehDraw(vehLay,vis('veh')?d.veh:null,d.now,(r,kids)=>`<b>${esc([r,...kids].map(x=>x.name).join(' + '))}</b><br>${esc(vehAgo(r.seen_at,d.now))}`); // Fahrzeuge (Issue #177), nur wenn die Verwaltung sie hier freigibt
   const pl=plsList(d);if(vis('pls'))pl.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff4d2e',fillOpacity:p.on?1:.4,opacity:p.on?1:.5}).bindTooltip(esc(p.label),{permanent:true,direction:'right',className:'pblbl'}).addTo(lay));
   d.pois.filter(p=>vis(poiVk(p))).forEach(p=>{const l=p.kind==='area'?L.polygon(p.pts,{color:p.color,weight:2,fillOpacity:.15}):p.kind==='line'?L.polyline(p.pts,{color:p.color,weight:4,opacity:.95}):p.sym?L.marker(p.pts[0],{icon:symIcon(p,30)}):L.circleMarker(p.pts[0],{radius:7,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1});l.bindTooltip(esc(p.name),{permanent:true,direction:p.kind!=='point'?'center':'right',className:'pblbl',offset:p.sym?symTip(p,30):[0,0]}).addTo(lay)});
   if(vis('res'))d.rescuees.filter(r=>r.lat!=null).forEach(r=>L.circleMarker([r.lat,r.lon],{radius:9,color:'#fff',weight:2,fillColor:r.rescued_at?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.rescued_at?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[8,0],className:'pblbl'}).addTo(lay));

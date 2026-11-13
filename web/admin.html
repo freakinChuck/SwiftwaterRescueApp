@@ -82,7 +82,8 @@ h3.lgh{margin:1rem 0 .2rem;font-size:.95rem}details.lgd{margin-top:1rem;border-t
 #sAi label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0}
 #sMail label.chk{display:flex;flex-direction:row;align-items:center;gap:.4rem}#sMail .mut>label.chk{display:inline-flex}#sMail label.chk input{margin:0;flex:none}#sMail label.chk .gdot{margin:0;flex:none} /* E-Mail-Alarm: Farbpunkt auf der Zeile des Häkchens */
 .pgf{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.4rem 1rem;max-width:46rem;margin:.5rem 0}.pgf label{display:flex;flex-direction:column;gap:.25rem;margin:0}.pgf input,.pgf select{margin:0;width:100%;box-sizing:border-box}
-#sO label.chk,#sHy label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
+#sO label.chk,#sHy label.chk,#sVeh label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
+#sVeh label.mut{display:flex;flex-direction:column;gap:.2rem;margin:.5rem 0;max-width:36rem} #sVeh #bcU,#sVeh #bcUs{width:100%} #sVeh .row>button{flex:0 0 auto} /* Fahrzeuge (Issue #177) */
 #sAi .aiflds{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:.6rem;margin:.4rem 0 .6rem}#sAi .aifld{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem;margin:.4rem 0}#sAi .aiflds .aifld{margin:0}#sAi .aifld>label:first-child,#sAi .aifld>b{font-weight:600}#sAi .aifld input,#sAi .aifld select{margin:0;width:100%}#sAi .aifld .h{color:var(--mut);font-size:.82rem}#sAi .aifld label.chk{margin:.1rem 0}
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
 .explc{width:20px;height:20px;border-radius:3px;border:2px solid #fff;color:#fff;display:grid;place-items:center;font-size:.6rem;font-weight:700;box-shadow:0 0 0 1px #0008;text-shadow:0 0 2px #000;overflow:hidden;white-space:nowrap}
@@ -156,14 +157,14 @@ const NAV=[
   ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt],['symbole','sSy','Einsatzsymbole',loadSym]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['ai','sAi','AI-Assistent',loadAi]]],
-  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces]]],
+  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['fahrzeuge','sVeh','Fahrzeuge',loadVeh]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
   ['Konnektivität',[['emailalarm','sMail','E-Mail-Alarm',loadMail]]],
   ['System',[['applog','sAL','Applikationslog',loadAppLog]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -816,6 +817,67 @@ function drawOpList(){const n=opUrls.length,el=$('#opList');
   el.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,o=b.dataset.op;
     if(o==='rm')opUrls.splice(k,1);else{const j=o==='up'?k-1:k+1;[opUrls[k],opUrls[j]]=[opUrls[j],opUrls[k]]}drawOpList()})}
 /* ---------- Pegel & Abfluss (Issue #125): Stationen im Einsatz (Umkreis, Anzahl, Seen) und Stand des Datenabrufs beim BAFU ---------- */
+/* ---------- Fahrzeuge mit BLE-Beacons (Issue #177): Einstellung beacon, Fahrzeugarten, Fahrzeuge ---------- */
+let vehD=null;
+const vehKN=id=>(vehD.kinds.find(k=>k.id===id)||{name:'?',sym:'🚐'});
+const vehCapTxt=(c)=>{const e=Object.entries(c||{});return e.length?e.map(([k,n])=>`${n==null?'beliebig viele':n} × ${esc(vehKN(+k).name)}`).join(', '):'–'};
+async function loadVeh(){const el=$('#sVeh');try{vehD=await api('vehicles')}catch(e){el.innerHTML='<h2>Fahrzeuge</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const d=vehD,c=d.cfg,cs=me&&(me.coord_sys&&me.coord_sys!=='none'?me.coord_sys:me.coord_default)||'lv95',by=Object.fromEntries(d.vehicles.map(v=>[v.id,v]));
+  const fOff=Object.values(d.feat).every(f=>!f.veh),num=(k)=>`<label class="mut">${esc(d.num[k][2])}<input type="number" id="bc_${k}" min="${d.num[k][0]}" max="${d.num[k][1]}" value="${c[k]}"></label>`;
+  const sel=(id,opts,v)=>`<select id="${id}">${Object.entries(opts).map(([k,t])=>`<option value="${k}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
+  el.innerHTML=`<h2>Fahrzeuge</h2><div class="mut">Fahrzeuge mit einem BLE-Beacon (iBeacon) erscheinen auf der Karte. Das Beacon sendet nur seine Kennung (UUID, Major, Minor); den Standort liefert die native App der Einsatzkräfte, die es in der Nähe sieht. Ein Fahrzeug steht deshalb dort, wo es zuletzt gesehen wurde. Die Funktionen «Fahrzeuge» und «Personen im Fahrzeug» lassen sich unter «Funktionen» je Einsatztyp ausschalten.${fOff?' <b>Die Funktion «Fahrzeuge» ist zurzeit für alle Einsatztypen ausgeschaltet.</b>':''}</div>
+    <h3>Beacons</h3><div class="mut">Stelle in der App des Beacon-Herstellers das Format iBeacon ein, als UUID die Standard-UUID unten, als Major eine frei wählbare Zahl (z. B. Standort) und als Minor eine eigene Zahl je Fahrzeug. Sendeintervall etwa 1 s. Beacons, deren UUID sich nicht ändern lässt, trägst du bei «Weitere UUIDs» ein (höchstens 5).</div>
+    <label class="mut">Standard-UUID<input id="bcU" value="${esc(c.uuid)}" maxlength="36" style="font-family:monospace"></label><div class="row"><button id="bcUN">Neue UUID erzeugen</button></div>
+    <label class="mut">Weitere UUIDs (eine je Zeile)<textarea id="bcUs" rows="2" style="font-family:monospace">${esc(c.uuids.join('\n'))}</textarea></label>
+    <h3>Im Einsatz</h3><label class="mut">Wer sieht die Fahrzeuge${sel('bcApp',d.app,c.app)}</label>${num('inc_s')}${num('stale_min')}
+    <label class="chk"><input type="checkbox" id="bcAs" ${c.assign?'checked':''}> Personen dem Fahrzeug zuordnen («im Fahrzeug», nur Arten mit Personen und nicht selbst verladen)</label>${num('assign_rssi')}
+    <label class="chk"><input type="checkbox" id="bcLk" ${c.link?'checked':''}> Verbund automatisch erkennen (was gemeinsam fährt, ist verladen bzw. angehängt; getrennt, wenn es auseinander gesehen wird oder ein Boot auf dem Wasser ist)</label>${num('link_rssi')}
+    <label class="chk"><input type="checkbox" id="bcPub" ${c.public?'checked':''}> In der öffentlichen Ansicht zeigen</label>
+    <h3>Ausserhalb von Einsätzen</h3><label class="chk"><input type="checkbox" id="bcH" ${c.home?'checked':''}> Erkennen erlauben (jede Person schaltet es in ihrem Profil selbst ein; gemeldet wird ohne Namen)</label>${num('home_min')}
+    <label class="mut">Wer sieht die Fahrzeuge ohne Einsatz${sel('bcHv',d.home_vis,c.home_vis)}</label>
+    <div class="row"><button class="pri" id="bcS">Einstellungen speichern</button></div>
+    <h3>Fahrzeugarten</h3><div class="mut">Was eine Art kann, steht als Eigenschaft an der Art: ob sie Personen aufnimmt, welche Arten sie aufnimmt bzw. zieht (mit Höchstzahl) und ob sie ein Wasserfahrzeug ist. Ein verladenes Fahrzeug nimmt selbst keine Personen auf.</div>
+    <div class="tw"><table><thead><tr><th>Art</th><th>Personen</th><th>Nimmt auf</th><th>Wasser</th><th>Fahrzeuge</th><th></th></tr></thead><tbody>${d.kinds.map((k,i)=>`<tr${k.active?'':' class="mut"'}><td>${k.sym} ${esc(k.name)}${k.active?'':' (deaktiviert)'}</td><td>${k.persons?'ja':'nein'}</td><td>${vehCapTxt(k.carries)}</td><td>${k.water?'ja':'nein'}</td><td>${d.vehicles.filter(v=>v.kind_id===k.id).length}</td><td class="act">${mvBtns('vkm',k.id,i,d.kinds.length)}<button data-vke="${k.id}">Bearbeiten</button><button data-vkr="${k.id}" aria-label="${esc(k.name)} entfernen" title="Entfernen">✕</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="row"><button id="vkA">Fahrzeugart anlegen</button></div>
+    <h3>Fahrzeuge</h3>${d.vehicles.length?`<div class="tw"><table><thead><tr><th>Fahrzeug</th><th>Beacon</th><th>Standort</th><th>Verbund</th><th></th></tr></thead><tbody>${d.kinds.map(k=>{const vs=d.vehicles.filter(v=>v.kind_id===k.id);return vs.length?`<tr><th colspan="5">${k.sym} ${esc(k.name)} <span class="mut">(${vs.length})</span></th></tr>`+vs.map((v,i)=>`<tr${v.active?'':' class="mut"'}><td>${v.color?`<span class="gdot" style="background:${esc(v.color)}"></span>`:''}${esc(v.name)}${v.abbr?` <span class="mut">${esc(v.abbr)}</span>`:''}${v.descr?`<div class="mut">${esc(v.descr)}</div>`:''}${v.active?'':' (deaktiviert)'}${v.cap?`<div class="mut">Nimmt auf: ${vehCapTxt(v.cap)}</div>`:''}</td><td style="font-family:monospace;font-size:.85em">${v.uuid?esc(v.uuid.slice(0,8))+'…':'Standard'}<br>${v.major} / ${v.minor}</td><td>${v.lat!=null?esc(fmtC(v.lat,v.lon,cs))+`<div class="mut">${esc(vehAgo(v.seen_at))}</div>`:'<span class="mut">noch nie gesehen</span>'}</td><td>${v.carrier_id!=null&&by[v.carrier_id]?(vehKN(by[v.carrier_id].kind_id).persons?'an ':'auf ')+esc(by[v.carrier_id].name)+(v.carrier_manual?' <span class="mut">(von Hand)</span>':''):'–'}</td><td class="act">${mvBtns('vm',v.id,i,vs.length)}<button data-ve="${v.id}">Bearbeiten</button>${v.active?`<button data-vp="${v.id}" title="Standort von Hand setzen (z. B. Magazin, Test ohne Beacon)">Standort</button><button data-vl="${v.id}">Verbund</button>`:''}${v.deletable?`<button data-vr="${v.id}" aria-label="${esc(v.name)} löschen" title="Löschen (nur, solange es in keinem Einsatz vorkommt)">✕</button>`:''}</td></tr>`).join(''):''}).join('')}</tbody></table></div>`:'<div class="mut">Noch keine Fahrzeuge.</div>'}
+    <div class="row"><button id="veA">Fahrzeug anlegen</button></div>`;
+  $('#bcUN').onclick=()=>{const h=[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase().split('');h[12]='4';const s=h.join('');$('#bcU').value=`${s.slice(0,8)}-${s.slice(8,12)}-${s.slice(12,16)}-${s.slice(16,20)}-${s.slice(20)}`;toast('Neue UUID erzeugt. Erst mit «Einstellungen speichern» gültig; danach alle Beacons umstellen.','info')};
+  $('#bcS').onclick=async()=>{const n=k=>+$('#bc_'+k).value;try{await api('settings/save',{beacon:{uuid:$('#bcU').value.trim(),uuids:$('#bcUs').value.split(/\s+/).filter(Boolean),app:$('#bcApp').value,home_vis:$('#bcHv').value,home:$('#bcH').checked?1:0,public:$('#bcPub').checked?1:0,assign:$('#bcAs').checked?1:0,link:$('#bcLk').checked?1:0,inc_s:n('inc_s'),stale_min:n('stale_min'),home_min:n('home_min'),assign_rssi:n('assign_rssi'),link_rssi:n('link_rssi')}});toast('Gespeichert','ok');loadVeh()}catch(e){fail(e)}};
+  $('#vkA').onclick=()=>vehKindDlg({persons:1,active:1,carries:{}});$('#veA').onclick=()=>vehDlg({active:1});
+  el.onclick=async e=>{const b=e.target.closest('button');if(!b)return;const x=b.dataset;
+    try{if(x.vkm)await api('veh/kind/move',{id:+x.vkm,dir:+x.d}).then(loadVeh);else if(x.vm)await api('vehicle/move',{id:+x.vm,dir:+x.d}).then(loadVeh);
+      else if(x.vke)vehKindDlg(d.kinds.find(k=>k.id===+x.vke));else if(x.ve)vehDlg(by[+x.ve]);else if(x.vp)vehPosDlg(by[+x.vp]);else if(x.vl)vehLinkDlg(by[+x.vl]);
+      else if(x.vkr){if(confirm('Fahrzeugart entfernen?'))await api('veh/kind/remove',{id:+x.vkr}).then(loadVeh)}
+      else if(x.vr){if(confirm('Fahrzeug löschen?'))await api('vehicle/remove',{id:+x.vr}).then(loadVeh)}}catch(er){fail(er)}}}
+function vehKindDlg(k){const ks=vehD.kinds.filter(x=>x.id!==k.id),ca=k.carries||{};
+  dlg(k.id?'Fahrzeugart bearbeiten':'Neue Fahrzeugart',`<label class="mut">Name<input id="vkN" maxlength="60" value="${esc(k.name||'')}" placeholder="z. B. Kommandofahrzeug"></label>
+    <label class="mut">Symbol<select id="vkI">${Object.entries(vehD.icons).map(([i,s])=>`<option value="${i}" ${i===k.icon?'selected':''}>${s}</option>`).join('')}</select></label>
+    <label class="chk"><input type="checkbox" id="vkP" ${k.persons?'checked':''}> Nimmt Personen auf (solange es nicht selbst verladen ist)</label><label class="chk"><input type="checkbox" id="vkW" ${k.water?'checked':''}> Wasserfahrzeug (auf dem Wasser gilt es als abgeladen)</label>
+    <h4>Nimmt auf bzw. zieht</h4>${ks.length?ks.map(x=>`<div class="row" style="align-items:center"><label class="chk" style="flex:1"><input type="checkbox" data-vkc="${x.id}" ${x.id in ca?'checked':''}> ${x.sym} ${esc(x.name)}</label><label class="mut">höchstens<input type="number" data-vkn="${x.id}" min="1" max="99" style="width:5rem" value="${x.id in ca&&ca[x.id]!=null?ca[x.id]:''}" placeholder="beliebig"></label></div>`).join(''):'<div class="mut">Es gibt noch keine anderen Arten.</div>'}
+    <label class="chk"><input type="checkbox" id="vkA" ${k.active?'checked':''}> Aktiv</label>`,
+    async d=>{const c={};d.querySelectorAll('[data-vkc]').forEach(x=>{if(x.checked){const n=d.querySelector(`[data-vkn="${x.dataset.vkc}"]`).value;c[x.dataset.vkc]=n===''?null:+n}});
+      await api('veh/kind/save',{id:k.id,name:$('#vkN',d).value,icon:$('#vkI',d).value,persons:$('#vkP',d).checked?1:0,water:$('#vkW',d).checked?1:0,active:$('#vkA',d).checked?1:0,carries:c});loadVeh()})}
+function vehDlg(v){const c=vehD.cfg,own=v.cap!=null,capRows=kid=>{const k=vehD.kinds.find(x=>x.id===kid);return Object.keys(k?k.carries:{})};
+  const d=dlg(v.id?'Fahrzeug bearbeiten':'Neues Fahrzeug',`<label class="mut">Name<input id="veN" maxlength="80" value="${esc(v.name||'')}" placeholder="z. B. Bus 1"></label><label class="mut">Beschreibung<textarea id="veD" rows="2" maxlength="500">${esc(v.descr||'')}</textarea></label>
+    <label class="mut">Art<select id="veK">${vehD.kinds.filter(k=>k.active||k.id===v.kind_id).map(k=>`<option value="${k.id}" ${k.id===v.kind_id?'selected':''}>${k.sym} ${esc(k.name)}</option>`).join('')}</select></label>${extStyleFields(v)}
+    <h4>Beacon</h4><label class="mut">UUID<select id="veU"><option value="">Standard-UUID (${esc(c.uuid.slice(0,8))}…)</option>${c.uuids.map(u=>`<option value="${esc(u)}" ${u===v.uuid?'selected':''}>${esc(u)}</option>`).join('')}</select></label>
+    <div class="row"><label class="mut" style="flex:1">Major<input id="veMa" type="number" min="0" max="65535" value="${v.major??1}"></label><label class="mut" style="flex:1">Minor<input id="veMi" type="number" min="0" max="65535" value="${v.minor??(Math.max(0,...vehD.vehicles.map(x=>x.minor))+1)}"></label></div>
+    <h4>Nimmt auf</h4><label class="chk"><input type="checkbox" id="veC" ${own?'checked':''}> Eigene Höchstzahlen statt der Art (z. B. Doppelanhänger)</label><div id="veCap"></div>
+    <label class="chk"><input type="checkbox" id="veA" ${v.active?'checked':''}> Aktiv</label>`,
+    async x=>{let cap=null;if($('#veC',x).checked){cap={};x.querySelectorAll('[data-vcc]').forEach(i=>{if(i.checked){const n=x.querySelector(`[data-vcn="${i.dataset.vcc}"]`).value;cap[i.dataset.vcc]=n===''?null:+n}})}
+      await api('vehicle/save',{id:v.id,name:$('#veN',x).value,descr:$('#veD',x).value,kind_id:+$('#veK',x).value,...extStyleVal(x),uuid:$('#veU',x).value,major:+$('#veMa',x).value,minor:+$('#veMi',x).value,cap,active:$('#veA',x).checked?1:0});loadVeh()});
+  const capDraw=()=>{const on=$('#veC',d).checked,k=vehD.kinds.find(x=>x.id===+$('#veK',d).value),base=k?k.carries:{},cur=own?v.cap:base;
+    $('#veCap',d).innerHTML=on?vehD.kinds.map(x=>`<div class="row" style="align-items:center"><label class="chk" style="flex:1"><input type="checkbox" data-vcc="${x.id}" ${x.id in cur?'checked':''}> ${x.sym} ${esc(x.name)}</label><label class="mut">höchstens<input type="number" data-vcn="${x.id}" min="1" max="99" style="width:5rem" value="${x.id in cur&&cur[x.id]!=null?cur[x.id]:''}" placeholder="beliebig"></label></div>`).join(''):`<div class="mut">Wie die Art: ${vehCapTxt(base)}</div>`};
+  $('#veC',d).onchange=capDraw;$('#veK',d).onchange=capDraw;capDraw()}
+function vehPosDlg(v){let ll=v.lat!=null?[v.lat,v.lon]:null,m=null,mk=null;
+  const d=dlg(`Standort von «${v.name}»`,`<div class="mut">Für Fahrzeuge, die gerade kein Handy sieht (z. B. im Magazin), oder zum Testen ohne Beacon. Verladene Fahrzeuge ziehen mit.</div><label class="mut">Koordinaten<input id="vpC" value="${ll?esc(fmtC(ll[0],ll[1],'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div id="vpM" class="pickmap"></div>`,
+    async x=>{const p=parseC($('#vpC',x).value);if(!p)throw new Error('Koordinaten angeben oder auf die Karte klicken');await api('vehicle/pos',{id:v.id,lat:p[0],lon:p[1]});loadVeh()});
+  m=addBases(L.map($('#vpM',d)).setView(ll||[46.8,8.2],ll?15:8));const set=p=>{ll=p;mk?mk.setLatLng(p):mk=L.marker(p).addTo(m)};if(ll)set(ll);
+  m.on('click',e=>{set([e.latlng.lat,e.latlng.lng]);$('#vpC',d).value=fmtC(e.latlng.lat,e.latlng.lng,'wgs84')});setTimeout(()=>m.invalidateSize(),50)}
+function vehLinkDlg(v){const by=Object.fromEntries(vehD.vehicles.map(x=>[x.id,x])),inV=c=>{let r=c,i=0;while(r&&r.carrier_id!=null&&i++<20){if(r.carrier_id===v.id)return true;r=by[r.carrier_id]}return false};
+  const cs=vehD.vehicles.filter(c=>c.active&&c.id!==v.id&&!inV(c)&&v.kind_id in ((c.cap||vehKN(c.kind_id).carries)||{}));
+  dlg(`Verbund von «${v.name}»`,`<label class="mut">Verladen auf bzw. angehängt an<select id="vlC"><option value="">– nicht verladen –</option>${cs.map(c=>`<option value="${c.id}" ${c.id===v.carrier_id?'selected':''}>${vehKN(c.kind_id).sym} ${esc(c.name)}</option>`).join('')}</select></label>${cs.length?'':'<div class="mut">Kein Fahrzeug kann diese Art aufnehmen (siehe Fahrzeugarten).</div>'}`,
+    async x=>{const c=$('#vlC',x).value;await api('vehicle/link',{id:v.id,carrier:c===''?null:+c});loadVeh()},'Übernehmen')}
 async function loadHydro(){const el=$('#sHy');let s,h;try{[s,h]=await Promise.all([api('settings'),api('hydro/status',{})])}catch(e){el.innerHTML='<h2>Pegel &amp; Abfluss</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const c=s.hydro,N=s.hydro_num,dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',on=Object.values(s.feat_on||{}).some(f=>f.hydro);
   const st=x=>`${x.stations} Messstationen (${x.rivers} an Fliessgewässern), aktuelle Werte für ${x.values}${x.at?`, Stand ${dt(x.at)}`:''}${x.fail_at?` · ⚠ letzter Fehlschlag ${dt(x.fail_at)}`:''}. Die Werte werden 5 Minuten zwischengespeichert (das BAFU misst alle 10 Minuten).`;
@@ -1557,11 +1619,13 @@ async function openReplay(id,o={}){let d;try{d=await api('incident/replay&id='+i
   // Helikopter (Issue #73): aufgezeichnete Positionen je Luftfahrzeug, zwischen zwei Meldungen interpoliert (Lücken > AIR_GAP_S nicht), Spur wie bei den Personen
   const air=(d.air||[]).map(a=>({...a,mk:L.marker([0,0],{icon:L.divIcon({className:'',html:'',iconSize:[32,32],iconAnchor:[16,16]}),zIndexOffset:1500,keyboard:false}).bindTooltip('',{direction:'top',offset:[0,-16]}),line:L.polyline([],{color:airCol(a),weight:2,opacity:.75,dashArray:'4 4',interactive:false}).addTo(trailL),hk:''}));
   const rtr={};d.rtrack.forEach(q=>(rtr[q[0]]=rtr[q[0]]||[]).push(q));
+  // Fahrzeuge (Issue #177): Sichtungen je Fahrzeug, Verbund aus veh_links; eigene Ebene, neu gezeichnet nur bei Änderungen
+  const veh=d.veh&&d.veh.pts.length?{...d.veh,byV:d.veh.pts.reduce((o,q)=>((o[q[0]]=o[q[0]]||[]).push(q),o),{}),name:Object.fromEntries(d.veh.list.map(v=>[v.id,v.name])),L:L.layerGroup().addTo(map),key:''}:null;
   const all=[...pls.map(p=>[p[0],p[1]]),...d.track.map(q=>[q[2],q[3]]),...d.rtrack.filter(q=>q[2]!=null).map(q=>[q[2],q[3]]),...d.pois.flatMap(p=>p.pts),...(d.externals||[]).map(e=>[e.lat,e.lon])];
   if(all.length>1)map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:17,animate:false}); // ohne Animation: ein verspätetes zoomstart beendete sonst die Auto-Übersicht
-  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,air,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:Date.now(),sz:rpSzSaved()};
+  rp={d,map,t:t0,t0,t1,play:false,timer:null,last:0,poiKey:null,logN:-1,people,air,veh,rtr,dynL,poiL,trailL,pls,perIdx,follow:null,pKey:null,bases,baseKey,auto:true,autoBusy:Date.now(),sz:rpSzSaved()};
   // Fenster «Ansicht»: nur Kategorien, die in diesem Einsatz vorkommen (das Suchgebiet zeichnet das Replay nie)
-  const has={app:d.track.length,ext:(d.externals||[]).length,res:d.rtrack.length||d.rescuees.some(r=>r.lat!=null),pls:pls.length,pt:d.pois.some(p=>p.kind==='point'||!p.kind),ar:d.pois.some(p=>p.kind==='area'),ln:d.pois.some(p=>p.kind==='line'),mm:d.marks.some(m=>m.mark||m.unmarked!=null),air:air.length};
+  const has={app:d.track.length,ext:(d.externals||[]).length,res:d.rtrack.length||d.rescuees.some(r=>r.lat!=null),pls:pls.length,pt:d.pois.some(p=>p.kind==='point'||!p.kind),ar:d.pois.some(p=>p.kind==='area'),ln:d.pois.some(p=>p.kind==='line'),mm:d.marks.some(m=>m.mark||m.unmarked!=null),air:air.length,veh:veh?1:0};
   rp.cats=VIEW.map(v=>v[0]).filter(k=>has[k]);
   // Fenster «Ansicht» und Auto-Übersicht (Issue #53)
   const mc=$('#rpMap');mc.insertAdjacentHTML('beforeend','<button id="rpView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden">'+VIEW_ICON+'</button><div id="viewBox" hidden></div>');
@@ -1626,8 +1690,8 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
     if(!here){rp.dynL.removeLayer(p.mk);p.line.setLatLngs(sv?trail(p,k):[]);if(on(p.joined,p.left_at))info.push([p,rec?'kein Standort':'nicht aufgezeichnet']);return}
     const a=p.pts[k],b=p.pts[k+1];let ll=[a[2],a[3]],age=t-a[1];
     if(b&&p.per[k+1]===pi&&b[1]-a[1]<=GAP_S){const f=(t-a[1])/(b[1]-a[1]);ll=[a[2]+(b[2]-a[2])*f,a[3]+(b[3]-a[3])*f];age=0}
-    p.ll=ll;p.mk.setLatLng(ll).setStyle({fillOpacity:age>GAP_S?.45:1});if(sv)rp.dynL.addLayer(p.mk);else rp.dynL.removeLayer(p.mk);
-    p.line.setLatLngs(sv?trail(p,k,ll):[]);info.push([p,age>GAP_S?'letzte Meldung vor '+durT(age):'Standort aktuell'])});
+    p.ll=ll;p.veh=a[4]&&rp.veh?rp.veh.name[a[4]]:null;p.mk.setLatLng(ll).setStyle({fillOpacity:age>GAP_S?.45:1});if(sv)rp.dynL.addLayer(p.mk);else rp.dynL.removeLayer(p.mk);
+    p.line.setLatLngs(sv?trail(p,k,ll):[]);info.push([p,(age>GAP_S?'letzte Meldung vor '+durT(age):'Standort aktuell')+(p.veh?' · im Fahrzeug «'+p.veh+'»':'')])});
   // Helikopter zum Zeitpunkt t (Issue #73): sichtbar bis AIR_GAP_S nach der letzten Position
   const airNow=[];rp.air.forEach(a=>{const k=lastIdx(a.pts,t),p=k>=0?a.pts[k]:null,q=a.pts[k+1];let ll=null;
     if(p&&t-p[1]<=AIR_GAP_S){ll=[p[2],p[3]];if(q&&q[1]-p[1]<=AIR_GAP_S){const f=(t-p[1])/(q[1]-p[1]);ll=[p[2]+(q[2]-p[2])*f,p[3]+(q[3]-p[3])*f]}}
@@ -1636,6 +1700,13 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
     if(h!==a.hk){a.hk=h;a.mk.setIcon(L.divIcon({className:'',html:h,iconSize:[32,32],iconAnchor:[16,16]}))}
     a.mk.setLatLng(ll).setTooltipContent(esc(airName(x))+(x.desc||x.type?' · '+esc(x.desc||x.type):''));rp.dynL.addLayer(a.mk);
     let j0=0;while(j0<=k&&a.pts[j0][1]<from)j0++;a.line.setLatLngs(win&&j0<=k?[...a.pts.slice(j0,k+1).map(z=>[z[2],z[3]]),ll]:[]);airNow.push(x)});
+  // Fahrzeuge zum Zeitpunkt t: letzte Sichtung (zwischen zwei Sichtungen interpoliert), verladene beim obersten Fahrzeug der Kette
+  if(rp.veh){const V=rp.veh,l=V.list.map(v=>{const pt=V.byV[v.id]||[],k=lastIdx(pt,t),p=k>=0?pt[k]:null,q=pt[k+1];let ll=p?[p[2],p[3]]:null;
+      if(p&&q&&q[1]-p[1]<=GAP_S){const f=(t-p[1])/(q[1]-p[1]);ll=[p[2]+(q[2]-p[2])*f,p[3]+(q[3]-p[3])*f]}const ln=V.links.find(x=>x[0]===v.id&&x[2]<=t&&(x[3]==null||t<x[3]));
+      return{...v,lat:ll?ll[0]:null,lon:ll?ll[1]:null,seen_at:p?p[1]:null,carrier_id:ln?ln[1]:null}});
+    l.forEach(v=>{const r=vehRootOf(l,v);if(r!==v&&r.lat!=null){v.lat=r.lat;v.lon=r.lon}});
+    const vk=rpVis('veh')?JSON.stringify(l.map(v=>[v.id,v.lat==null?null:v.lat.toFixed(5),v.lon==null?null:v.lon.toFixed(5),v.carrier_id])):'';
+    if(vk!==V.key){V.key=vk;vehDraw(V.L,vk?{...V,list:l,stale_min:1e9}:null,t,null)}}
   // Positionen & Bereiche, Rettlinge und Nachrichten-Markierungen: nur neu zeichnen, wenn sich der sichtbare Bestand ändert
   const pois=d.pois.filter(p=>on(p.created,p.removed)),marks=d.marks.filter(m=>m.created<=t&&(m.mark||(m.unmarked!=null&&t<m.unmarked)));
   const res=d.rescuees.filter(r=>on(r.created,r.removed)).map(r=>{const tr=rp.rtr[r.id]||[],k=lastIdx(tr,t),pos=k>=0?(tr[k][2]==null?null:[tr[k][2],tr[k][3]]):!tr.length&&on(r.loc_at)?[r.lat,r.lon]:null;return{...r,pos,ok:on(r.rescued_at)}});

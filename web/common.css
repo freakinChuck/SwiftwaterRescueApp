@@ -87,3 +87,16 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .aisc .aith{max-height:min(58dvh,640px)}
 @media(min-width:901px){.aisc>.aichat{border-top:0;padding-top:0}.aisc{border-left:1px solid var(--line);padding-left:1rem}.aiwide:has(.aisc){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
 .aidp{display:grid;gap:.35rem}.aidp label.chk{align-items:flex-start}.aidp label.chk input{margin-top:.15rem}
+
+/* Fahrzeuge (Issue #177): Kette als ein Marker, Farbe des obersten Fahrzeugs, aufgenommene als Zeichen daran; blass ohne neuere Sichtung */
+.vehw{background:none;border:0}
+.vehk{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:2px;background:var(--c,#335c67);color:#fff;border:2px solid #fff;border-radius:8px;padding:1px 5px;font-size:15px;line-height:20px;white-space:nowrap;box-shadow:0 1px 4px #0008}
+.vehk .a{font-weight:700;font-size:11px;letter-spacing:.02em}
+.vehk .kid{background:#ffffff38;border-radius:4px;padding:0 2px;font-size:13px}
+.vehk.old{opacity:.5}
+.vehrow{display:flex;gap:.5rem;align-items:center;padding:.35rem 0;border-top:1px solid #ffffff14}
+.vehrow.kid{padding-left:1.4rem}
+.vehrow .s{font-size:1.2rem;width:1.6rem;text-align:center}
+.vehrow .nm{flex:1;min-width:0}
+.vehrow small{display:block;opacity:.75}
+.vehhint{background:#5a4300;border-radius:6px;padding:.35rem .5rem;margin:.3rem 0;font-size:.85rem}

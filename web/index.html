@@ -244,6 +244,7 @@ $('#joinBan').onclick=joinOpen;const an=$('#areaNote');an.onclick=()=>{if(an.cla
   msgLayer=L.layerGroup();msgLayerKey='';if(mmVisible())msgLayer.addTo(map);poiLayer=L.layerGroup().addTo(map);poiKey='';resLayer=L.layerGroup().addTo(map);resKey='';
   airLayer=L.layerGroup().addTo(map);airLayer._air=new Map();airData=null;map.on('rotate',()=>airRot(map,airLayer)); // Helikopter (Issue #73)
   hyLayer=L.layerGroup().addTo(map);hyLayerKey=''; // Messstationen Pegel & Abfluss (Issue #125)
+  vehLayer=L.layerGroup().addTo(map);vehKey=''; // Fahrzeuge (Issue #177)
   $('#mmShow').checked=mmVisible();$('#mmShow').onchange=e=>setMmVisible(e.target.checked,true);
   $('#msgList').onclick=e=>{const b=e.target.closest('[data-goto]');if(!b)return;const[a,o]=b.dataset.goto.split(',').map(Number);stopFollow();map.panTo([a,o]);if(narrow())togglePanel('msgs',false)};
   layers={};fitted=null;map.on('zoomend',drawMap);map.on('click',()=>pinfoClose()); // Antippen der leeren Karte schliesst die Personeninfo (Issue #105)
@@ -367,9 +368,9 @@ let baseLayers={},baseKey=null;
 // VIEW (Kategorien) und viewHtml stehen in common.js, die öffentliche Ansicht nutzt sie ebenfalls (Issue #48)
 const viewHide=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_view')||'[]'))}catch(e){return new Set()}})();
 const vis=k=>k==='mm'?mmVisible():!viewHide.has(k);
-const viewCats=()=>VIEW.filter(v=>v[0]==='air'?!!(st&&st.air):(!v[2]||feat(v[2]))); // Helikopter nur, wenn für diese Person freigegeben
+const viewCats=()=>VIEW.filter(v=>v[0]==='air'?!!(st&&st.air):v[0]==='veh'?!!(st&&st.veh):(!v[2]||feat(v[2]))); // Fahrzeuge nur, wenn der Server sie liefert (Sichtbarkeit) // Helikopter nur, wenn für diese Person freigegeben
 // ohne Einsatz: feste Standorte, Helikopter um die festen Standorte (Issue #130) und persönliche Messstationen (Issue #125), soweit vorhanden
-const homeCats=()=>{const c=VIEW.filter(([k])=>k==='place'?feat('place')&&(st.places||[]).length:k==='air'?!!st.air_home:k==='hydro'?feat('hydro')&&hyMine().length:false);return c.length?c:null};
+const homeCats=()=>{const c=VIEW.filter(([k])=>k==='place'?feat('place')&&(st.places||[]).length:k==='air'?!!st.air_home:k==='hydro'?feat('hydro')&&hyMine().length:k==='veh'?!!(st.veh&&st.veh.list.some(v=>v.lat!=null)):false);return c.length?c:null};
 function setVis(keys,on){keys.forEach(k=>{if(k==='mm')setMmVisible(on,true);else on?viewHide.delete(k):viewHide.add(k)});try{localStorage.setItem('sw_view',JSON.stringify([...viewHide]))}catch(e){}
   drawMap();autoFit();airPoll();const hs=$('#hydShow');if(hs)hs.checked=vis('hydro');const b=$('#viewBox');if(b)b.querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk));const i=$('#airInfo');if(i)i.innerHTML=airInfo()}
 function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(baseLayers[baseKey]);baseKey=k;baseLayers[k].addTo(map);try{localStorage.setItem('sw_base',k)}catch(e){}}
@@ -389,7 +390,7 @@ function drawNote(){const n=$('#areaNote');if(!n)return;const pick=window.markPi
   if(more){n.setAttribute('role','button');n.setAttribute('aria-expanded',areaOpen);n.tabIndex=0}else{n.removeAttribute('role');n.removeAttribute('aria-expanded');n.removeAttribute('tabindex')}
   n.innerHTML=pick?esc(pick):!more?esc(areaInfo):areaOpen?areaLines.map(l=>`<div class="ln">${esc(l)}</div>`).join('')+'<div class="tg">▴ weniger</div>':`${esc(areaShort)} <span class="tg">▸ Details</span>`;
   n.hidden=!(areaInfo||pick)}
-function drawMap(){const n=$('#areaNote');selfSync();pinfoDraw();drawMsgMarks();drawPois();drawRes();drawAir();drawHydro();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
+function drawMap(){const n=$('#areaNote');selfSync();pinfoDraw();drawMsgMarks();drawPois();drawRes();drawAir();drawHydro();drawVeh();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.layerGroup(plsList().map(p=>navOn(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))),p.lat,p.lon,p.label)));if(vis('pls'))layers.pls.addTo(map);
   try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
@@ -636,7 +637,7 @@ let autoView=(()=>{try{return localStorage.getItem('sw_autoview')==='1'}catch(e)
 function setAuto(on){autoView=on;autoKey='';try{localStorage.setItem('sw_autoview',on?'1':'0')}catch(e){}if(on&&followId!=null){followId=null;renderPeople()}autoFit();updateFollowChip()}
 function endAuto(){if(autoView)setAuto(false)}
 function overviewPts(){if(!st||!st.incident)return[];return[...(vis('app')?st.participants.filter(p=>p.lat!=null&&!p.left_at&&p.mode!=='declined'):[]),...(vis('ext')?extList():[]),
-  ...(vis('res')?(st.rescuees||[]).filter(r=>r.lat!=null&&!r.rescued_at):[]),...(vis('pls')?plsList().filter(p=>p.on):[])].map(p=>[p.lat,p.lon])}
+  ...(vis('res')?(st.rescuees||[]).filter(r=>r.lat!=null&&!r.rescued_at):[]),...(vis('pls')?plsList().filter(p=>p.on):[]),...(vis('veh')?vehL().filter(v=>v.inc&&v.lat!=null&&v.carrier_id==null):[])].map(p=>[p.lat,p.lon])}
 function autoFit(){if(!autoView||!map)return;const pts=overviewPts(),k=JSON.stringify(pts.map(p=>p.map(x=>x.toFixed(5))));if(!pts.length||k===autoKey)return;autoKey=k;
   autoBusy=Date.now();if(pts.length===1)map.setView(pts[0],15);else map.fitBounds(L.latLngBounds(pts),FITPAD)}
 // Einsatzgebiet zeigen (Feedback zu #108): nach dem Öffnen einer Benachrichtigung zum laufenden Einsatz und nach dem Annehmen.
@@ -673,13 +674,13 @@ function renderPeople(){const o=$('#people');if(!o)return;const on=panel==='peop
   const ap=activePeople(),n=ap.filter(p=>modeOf(p.mode).counts).length,c=$('#peopleCnt');c.hidden=!n;c.textContent=n; // Zähler am Knopf: alle im Einsatz mit zählender Einrückoption (Verwaltung, z. B. ohne Koordinator KP Rück)
   if(!on)return;
   const row=p=>{const has=p.lat!=null,f=followId===p.user_id;
-    return `<div class="pp">${mk(p)}<div class="nm">${esc(p.name)}${p.user_id==me.id?' (du)':''}<small>${esc(modeOf(p.mode).name)} · ${has?'Standort '+ago(p.loc_at):'kein Standort'}</small>${has&&fc(p.lat,p.lon)?`<small>${esc(fc(p.lat,p.lon))}</small>`:''}</div>${has?`<div class="pa"><button data-c="${p.user_id}" title="Auf der Karte zentrieren">Zentrieren</button><button data-f="${p.user_id}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>${pinfoBtn(p)}${navBtn(p.lat,p.lon,p.name)}</div>`:''}</div>`};
+    return `<div class="pp">${mk(p)}<div class="nm">${esc(p.name)}${p.user_id==me.id?' (du)':''}<small>${esc(modeOf(p.mode).name)} · ${has?'Standort '+ago(p.loc_at):'kein Standort'}</small>${vehOf(p)}${has&&fc(p.lat,p.lon)?`<small>${esc(fc(p.lat,p.lon))}</small>`:''}</div>${has?`<div class="pa"><button data-c="${p.user_id}" title="Auf der Karte zentrieren">Zentrieren</button><button data-f="${p.user_id}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>${pinfoBtn(p)}${navBtn(p.lat,p.lon,p.name)}</div>`:''}</div>`};
   // externe Einsatzkräfte: fester Standort, kein Folgen; bearbeiten und entfernen nur die Einsatzleitung
   const xrow=e=>`<div class="pp">${mk(e)}<div class="nm">${esc(e.name)}<small>Extern${e.descr?' · '+esc(e.descr):''}</small>${fc(e.lat,e.lon)?`<small>${esc(fc(e.lat,e.lon))}</small>`:''}</div><div class="pa"><button data-xc="${e.id}" title="Auf der Karte zentrieren">Zentrieren</button>${pinfoBtn(e)}${navBtn(e.lat,e.lon,e.name)}${st.can_manage?`<button data-xe="${e.id}" aria-label="${esc(e.name)} bearbeiten" title="Name, Beschreibung, Spezialrolle, Kürzel, Farbe und Standort ändern">✎</button><button data-xd="${e.id}" aria-label="${esc(e.name)} entfernen" title="Für alle entfernen">✕</button>`:''}</div></div>`;
   // zwei Gruppen (mit App / extern), je zusammenklappbar, darin nach Spezialrolle
   const roleGrp=list=>byRole(list).map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.map(p=>p.ext?xrow(p):row(p)).join('')).join('');
   const xl=extList(),fold=(k,t,list,empty)=>{const c=pplFold.has(k);return `<button class="pfold" data-pf="${k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button>`+(c?'':roleGrp(list)||`<div class="mut" style="padding:.4rem 0">${empty}</div>`)};
-  $('#peopleList').innerHTML=fold('int','Einsatzkräfte mit App',ap,'Noch niemand im Einsatz.')+(feat('ext')&&(xl.length||st.can_manage)?fold('ext','Externe Einsatzkräfte',xl,'Keine erfasst.'):'');
+  $('#peopleList').innerHTML=fold('int','Einsatzkräfte mit App',ap,'Noch niemand im Einsatz.')+(feat('ext')&&(xl.length||st.can_manage)?fold('ext','Externe Einsatzkräfte',xl,'Keine erfasst.'):'')+vehFold();
   $('#peopleForm').hidden=!(st.can_manage&&feat('ext'))}
 // zugeklappte Gruppen im Fenster «Einsatzkräfte», pro Gerät gemerkt (localStorage sw_pplfold)
 const pplFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pplfold')||'[]'))}catch(e){return new Set()}})();
@@ -799,7 +800,7 @@ function pinfoHtml(it){const gs=(st&&st.groups)||[];
     const sub=[r?`<span style="color:${esc(r.color)}">●</span> ${esc(r.name)}`:'Ohne Spezialrolle',p.ext?'Externe Einsatzkraft':esc(modeOf(p.mode).name)].join(' · ');
     return `<div class="pih">${/^data:image\//.test(p.photo||'')?`<img src="${esc(p.photo)}" alt="">`:mk(p)}<div><b>${esc(p.name)}</b><small>${sub}</small></div></div>`+
       (g.length?`<div class="pig">${g.map(x=>`<span class="gchip"><i style="background:${esc(x.color)}"></i>${esc(x.name)}</span>`).join('')}</div>`:'')+
-      (p.ext&&p.descr?`<div class="pid">${esc(p.descr)}</div>`:'')+
+      (p.ext&&p.descr?`<div class="pid">${esc(p.descr)}</div>`:'')+(p.ext?'':vehOf(p))+
       `<small class="mut">${p.ext?'Fester Standort':'Standort '+esc(ago(p.loc_at))}${esc(fcs(p.lat,p.lon))}</small>`+
       `<div class="pib">${p.ext?'':`<button data-pif="${p.user_id}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>`}${navBtn(p.lat,p.lon,p.name)}</div>`};
   return `<div class="pinfo" role="dialog" aria-label="Personeninfo"><button class="pix" data-pix="1" aria-label="Infofenster schliessen" title="Schliessen">✕</button>${it.map(one).join('<hr>')}</div>`}
@@ -975,6 +976,45 @@ function rdRender(){const box=$('#rdBox');if(!rd){box.hidden=true;return}box.hid
 /* ---------- Rettlinge (Kartenknopf «Rettlinge») ---------- */
 // mehrere Rettlinge mit Name und Beschreibung; alle im Einsatz markieren Standort (eigener oder auf der Karte gewählt) und «gerettet»
 // Reihenfolge: vermisst (noch kein Standort) oben, dann Standort bekannt, gerettet zuletzt
+/* ---------- Fahrzeuge mit BLE-Beacons (Issue #177) ---------- */
+// st.veh vom Server (null = für diese Person nicht sichtbar bzw. Funktion aus). Erkennen kann nur die native App, die Web-App zeigt an und verlädt von Hand.
+// Ketten (Verbund) als ein Marker (vehDraw in common.js); verladen/anhängen dürfen alle Teilnehmenden und die Einsatzleitung (can_link), ohne Einsatz die Verwaltung
+let vehLayer=null,vehKey='';
+const vehL=()=>(st&&st.veh&&st.veh.list)||[],vehNow=()=>(st&&st.now)||Date.now()/1000,vehById=id=>vehL().find(v=>v.id===id);
+const vehHang=c=>!!vehKind(st.veh,c).persons; // an einem Fahrzeug mit Personen «angehängt», sonst «verladen»
+function vehCrew(v){return (v.crew||[]).map(u=>{const p=(st.participants||[]).find(x=>x.user_id===u);return p?p.name:null}).filter(Boolean)}
+function vehInfo(v){const k=vehKind(st.veh,v),c=v.carrier_id!=null&&vehById(v.carrier_id);return [k.name,c?(vehHang(c)?'an «':'auf «')+c.name+'»':null,(v.inc?'gesehen ':'zuletzt gesehen ')+vehAgo(v.seen_at,vehNow())].filter(Boolean).join(' · ')}
+// im Fahrzeug (Personen im Fahrzeug, Funktion vehp): Zeile für Liste und Personeninfo
+function vehOf(p){const v=p&&p.veh_id!=null&&vehById(p.veh_id);return v?`<small>${vehKind(st.veh,v).sym} im Fahrzeug «${esc(v.name)}»</small>`:''}
+// mögliche Träger für v (Art passt, nicht v selbst oder etwas, das v trägt), mit Belegung
+function vehCarriers(v){const inV=c=>{let r=c,i=0;while(r&&r.carrier_id!=null&&i++<20){if(r.carrier_id===v.id)return true;r=vehById(r.carrier_id)}return false};
+  return vehL().filter(c=>c.id!==v.id&&!inV(c)&&c.room&&c.room[v.kind_id]).map(c=>{const r=c.room[v.kind_id];return{c,r,full:r.max!=null&&r.n>=r.max&&v.carrier_id!==c.id}})}
+function vehBtns(v){if(!st.veh.can_link)return'';const c=v.carrier_id!=null&&vehById(v.carrier_id);
+  return (c?`<button data-vu="${v.id}">${vehHang(c)?'Abhängen':'Abladen'}</button>`:'')+(vehCarriers(v).length?`<button data-vl="${v.id}">${c?'Umladen …':'Verladen …'}</button>`:'')}
+function vehPop(r,kids){const one=v=>{const cr=vehCrew(v);return `<div style="margin-top:.3rem"><b>${vehKind(st.veh,v).sym} ${esc(v.name)}</b><span class="t">${esc(vehInfo(v))}</span>${v.descr?esc(v.descr)+'<br>':''}${cr.length?`<span class="t">An Bord: ${esc(cr.join(', '))}</span>`:''}${vehBtns(v)}</div>`};
+  return `<div class="mmpop">${one(r)}${kids.map(one).join('')}<span class="t">${esc(fc(r.lat,r.lon)||'')}${r.acc!=null&&r.acc>50?' · Genauigkeit ca. '+Math.round(r.acc)+' m':''}</span>${navBtn(r.lat,r.lon,r.name,'Navigieren')}</div>`}
+function drawVeh(){if(!vehLayer)return;const V=st&&st.veh,on=!!V&&vis('veh');
+  const k=on?JSON.stringify([V.list.map(v=>[v.id,v.lat,v.lon,v.acc,v.carrier_id,v.seen_at,v.name,v.abbr,v.color,v.descr,(v.crew||[]).join()]),V.can_link,feat('nav'),me&&me.coord_sys,Math.floor(vehNow()/60)]):'';
+  if(k===vehKey)return;vehKey=k;vehDraw(vehLayer,on?V:null,vehNow(),vehPop)}
+// Gruppe «Fahrzeuge» im Fenster «Einsatzkräfte»: Hinweise «Träger voll», Ketten mit eingerückten aufgenommenen Fahrzeugen
+function vehFold(){const V=st&&st.veh;if(!V||!V.list.length)return'';const l=V.list,c=pplFold.has('veh');
+  const row=(v,kid)=>{const cr=vehCrew(v);return `<div class="vehrow${kid?' kid':''}"><span class="s">${vehKind(V,v).sym}</span><div class="nm"><b>${esc(v.name)}</b><small>${esc(vehInfo(v))}</small>${cr.length?`<small>An Bord: ${esc(cr.join(', '))}</small>`:''}${!kid&&v.lat!=null&&fc(v.lat,v.lon)?`<small>${esc(fc(v.lat,v.lon))}</small>`:''}</div><div class="pa">${!kid&&v.lat!=null?`<button data-vc="${v.id}" title="Auf der Karte zentrieren">Zentrieren</button>${navBtn(v.lat,v.lon,v.name)}`:''}${vehBtns(v)}</div></div>`};
+  const roots=l.filter(v=>v.carrier_id==null||!vehById(v.carrier_id)),hs=(V.hints||[]).map(h=>[vehById(h.id),vehById(h.carrier)]).filter(([a,b])=>a&&b);
+  return `<button class="pfold" data-pf="veh" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>Fahrzeuge (${l.length})</button>`+(c?'':hs.map(([a,b])=>`<div class="vehhint">«${esc(a.name)}» fährt mit «${esc(b.name)}», dort ist aber kein Platz mehr. Bitte von Hand verladen.</div>`).join('')
+    +roots.map(r=>row(r,false)+vehKids(l,r.id).map(x=>row(x,true)).join('')).join(''))}
+function vehLink(id,carrier){return api(st&&st.incident?'incident/vehicle/link':'vehicle/link',{id,carrier}).then(()=>poll())}
+function vehLoadDlg(id){const v=vehById(id);if(!v)return;const d=c=>v.lat!=null&&c.lat!=null?Math.round(L.latLng(v.lat,v.lon).distanceTo([c.lat,c.lon])):null,cs=vehCarriers(v).sort((a,b)=>(d(a.c)??1e9)-(d(b.c)??1e9));
+  const km=m=>m==null?'':', '+(m<1000?m+' m':(m/1000).toFixed(1)+' km');
+  dlg(`«${v.name}» verladen bzw. anhängen`,`<label class="mut">Auf bzw. an<select id="vlC">${cs.map(({c,r,full})=>`<option value="${c.id}" ${full?'disabled':''} ${c.id===v.carrier_id?'selected':''}>${esc(c.name)} (${esc(vehKind(st.veh,c).name)}${r.max!=null?`, ${r.n} von ${r.max} belegt`:''}${km(d(c))})${full?' – voll':''}</option>`).join('')}</select></label>`,
+    async x=>{await vehLink(id,+x.querySelector('#vlC').value)},'Übernehmen')}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-vl],[data-vu],[data-vc]');if(!b)return;const d=b.dataset;
+  if(d.vl)return vehLoadDlg(+d.vl);
+  if(d.vu)return vehLink(+d.vu,null).catch(fail);
+  const v=vehById(+d.vc);if(v&&v.lat!=null){stopFollow();if(!vis('veh'))setVis(['veh'],true);map.panTo([v.lat,v.lon]);if(narrow())togglePanel('people',false)}});
+// Profil: Fahrzeuge ausserhalb von Einsätzen melden (freiwillig, me.beacon); nur wenn die Verwaltung es erlaubt (beacon_cfg.home)
+function vehPrefs(){const c=me.beacon_cfg;if(!c||!c.home)return'';
+  return `<div class="pcard"><h4>Fahrzeuge</h4><label class="row" style="align-items:center;margin:0"><input type="checkbox" id="vehB" ${me.beacon?'checked':''}><span>Fahrzeuge auch ausserhalb von Einsätzen melden</span></label><div class="mut">Die native App erkennt die Beacons in den Fahrzeugen und meldet den Standort des Fahrzeugs, auch ohne laufenden Einsatz, höchstens alle ${c.home_min} min und ohne deinen Namen. Das braucht wenig Akku (das Betriebssystem sucht die Beacons selbst). Im Einsatz meldet die App die Fahrzeuge immer, solange du den Standort teilst. Im Browser gibt es kein Erkennen.</div></div>`}
+function vehBindPrefs(){const b=$('#vehB');if(b)b.onchange=e=>{const v=e.target.checked?1:0;e.target.blur();api('me/settings',{beacon:v}).then(()=>{me.beacon=v;prefsHtml=''}).catch(x=>{e.target.checked=!v;fail(x)})}}
 let resLayer=null,resKey='';const resMore=new Set();
 // zugeklappte Gruppen (Vermisst, Standort bekannt, Gerettet) im Fenster «Rettlinge», pro Gerät gemerkt (localStorage sw_resfold)
 const resFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_resfold')||'[]'))}catch(e){return new Set()}})();
@@ -1117,10 +1157,10 @@ function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.ac
     +`<div class="pcard"><h4>Alarmierung</h4><div class="phd"><h5>Einsatzfähigkeit</h5>${me.absent?absChip(me.absent):'<span class="okchip">✓ einsatzfähig</span>'}</div><div class="mut">Abwesend oder Einsatzfähigkeit ausgesetzt: kein Aufgebot und kein Alarm. Laufende Einsätze bleiben sichtbar.</div><div id="absMine" class="pabs"><div class="mut">Wird geladen …</div></div>`
     +`<h5>Übungsmodus</h5><label class="row" style="align-items:center;margin:0"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Einsatztypen, die das vorsehen (z. B. Übungen), kritisch alarmieren</span></label>${pushHtml()}</div>`
     +`<div class="pcard"><h4>Anzeige</h4><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label>${feat('nav')?`<label class="mut">Navigations-App (Knopf 🧭)<select id="navA"><option value="">Standard: ${esc(NAV_APPS[me.nav_default]||NAV_APPS.google)}</option>${(me.nav_apps||[]).filter(navOk).map(k=>`<option value="${k}" ${k===me.nav_app?'selected':''}>${esc(NAV_APPS[k])}</option>`).join('')}</select></label>`:''}</div>`
-    +hyPrefs()+aiPrefs()
+    +hyPrefs()+vehPrefs()+aiPrefs()
     +`<div class="pcard"><h4>Rechtliches</h4><div class="mut">Wer die App betreibt, welche Daten sie speichert und welche Lizenzen gelten.</div><div class="pbtns"><a class="btn" href="legal.html#impressum" target="_blank" rel="noopener">Impressum</a><a class="btn" href="legal.html#lizenzen" target="_blank" rel="noopener">Lizenzen</a><a class="btn" href="legal.html#datenschutz" target="_blank" rel="noopener">Datenschutz</a></div></div>`;
   // Issue #126: früher stand diese Prüfung doppelt; die zweite brach immer ab, Knöpfe und Abwesenheiten blieben ohne Funktion
-  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();sessMine();hyBindPrefs(p);
+  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();sessMine();hyBindPrefs(p);vehBindPrefs();
   p.querySelectorAll('[data-aisel]').forEach(x=>x.onchange=e=>{e.target.blur();const v={};p.querySelectorAll('[data-aisel]').forEach(y=>{if(y.value)v[y.dataset.aisel]=y.value});
     api('me/settings',{ai_modes:v}).then(()=>api('me')).then(r=>{me=r.me;prefsHtml='';prefsDraw();draw()}).catch(fail)});
   $('#bPh').onclick=()=>$('#ph').click();$('#ph').onchange=photo;$('#bPw').onclick=()=>pwDialog(false);$('#bOut').onclick=async()=>{await pushOff(true);prefsHash();logout();stop();render()};bindPush();

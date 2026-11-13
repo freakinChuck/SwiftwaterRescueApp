@@ -32,7 +32,7 @@ const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte s
 // Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
 const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 // Fenster «Ansicht» (Issue #34, öffentliche Ansicht #48): Kategorien auf der Karte [Schlüssel, Bezeichnung, Funktion (feat)]. Neue Kartenelemente hier aufnehmen.
-const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
+const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro'],['veh','Fahrzeuge','veh']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
 const VIEW_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 // Inhalt des Fensters: Grundkarte (Radio vbase) und, wenn cats (Liste aus VIEW), Häkchen je Kategorie (data-vk) mit «Alle einblenden/ausblenden» (data-va)
 function viewHtml(base,cats,vis){return'<div class="vh"><b>Ansicht</b><button id="bViewX" aria-label="Ansicht schliessen">✕</button></div><h4>Grundkarte</h4>'
@@ -49,6 +49,20 @@ function addBases(m){let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e)
   const C=L.Control.extend({options:{position:'topright'},onAdd(){const d=L.DomUtil.create('div','leaflet-bar basesel');d.innerHTML=`<select aria-label="Grundkarte">${Object.entries(MAP_PROVIDERS).map(([k,P])=>`<option value="${k}" ${k===cur?'selected':''}>${esc(P.label)}</option>`).join('')}</select>`;
     L.DomEvent.disableClickPropagation(d);L.DomEvent.disableScrollPropagation(d);d.firstChild.onchange=e=>{const k=e.target.value;if(!ls[k]||k===cur)return;m.removeLayer(ls[cur]);cur=k;ls[k].addTo(m);try{localStorage.setItem('sw_base',k)}catch(_){}};return d}});
   new C().addTo(m);return m}
+/* ---------- Fahrzeuge mit BLE-Beacons (Issue #177): Anzeige in Einsatz-App, öffentlicher Ansicht und Replay ---------- */
+// V = veh aus incident/state bzw. public/state ({kinds, list, hints, stale_min, can_link}); eine Kette (Verbund: Anhänger am Zugfahrzeug, Boot auf dem Anhänger)
+// erscheint als ein Marker beim obersten Fahrzeug, die aufgenommenen Fahrzeuge als Zeichen daran
+const vehKind=(V,v)=>((V&&V.kinds)||[]).find(k=>k.id===v.kind_id)||{name:'Fahrzeug',sym:'🚐',persons:1,carries:{}};
+function vehRootOf(list,v){let r=v,i=0;while(r&&r.carrier_id!=null&&i++<20){const c=list.find(x=>x.id===r.carrier_id);if(!c)break;r=c}return r}
+function vehKids(list,id){const o=[],add=i=>list.filter(x=>x.carrier_id===i).forEach(x=>{if(!o.includes(x)){o.push(x);add(x.id)}});add(id);return o}
+const vehStale=(V,v,now)=>v.seen_at==null||((now||Date.now()/1000)-v.seen_at)>((V&&V.stale_min)||30)*60;
+function vehAgo(ts,now){if(ts==null)return'noch nie gesehen';const s=Math.max(0,Math.round((now||Date.now()/1000)-ts));return s<60?'gerade eben':s<3600?`vor ${Math.round(s/60)} min`:s<86400?`vor ${Math.floor(s/3600)} h ${Math.round(s%3600/60)} min`:'am '+fmtDT(ts)}
+function vehIconHtml(V,root,kids,stale){const k=vehKind(V,root);return `<div class="vehk${stale?' old':''}" style="--c:${esc(root.color||'#335c67')}"><span class="s">${k.sym}</span>${root.abbr?`<span class="a">${esc(root.abbr)}</span>`:''}${kids.map(x=>`<span class="kid" title="${esc(x.name)}">${vehKind(V,x).sym}</span>`).join('')}</div>`}
+// Marker je Kette in eine Ebene; pop(root, kids) liefert den Inhalt des Popups (ohne: nur Tooltip)
+function vehDraw(layer,V,now,pop,scale){layer.clearLayers();if(!V)return;const l=V.list||[];
+  l.filter(v=>v.carrier_id==null||!l.some(x=>x.id===v.carrier_id)).filter(v=>v.lat!=null).forEach(r=>{const kids=vehKids(l,r.id);
+    const m=L.marker([r.lat,r.lon],{icon:L.divIcon({className:'vehw',html:vehIconHtml(V,r,kids,vehStale(V,r,now)),iconSize:[0,0]}),zIndexOffset:900})
+      .bindTooltip(esc([r,...kids].map(x=>x.name).join(' + ')),{direction:'top',offset:[0,-14]});if(pop)m.bindPopup(()=>pop(r,kids));m.addTo(layer)})}
 /* ---------- Helikopter / Luftlage (Issue #73): Anzeige in Einsatz-App, öffentlicher Ansicht und Replay ---------- */
 // Daten vom Server (incident/air, public/air, air in incident/replay): hex, cs, reg, type, desc, cat (A7 = Helikopter), lat, lon, alt (ft), gnd, gs (kt), trk, vr (ft/min), at, rescue, pls_m, trail [[ts, lat, lon, alt]]
 const AIR_STALE_S=20,AIR_GAP_S=60; // ältere Positionen blass; im Replay längere Lücken nicht interpolieren
