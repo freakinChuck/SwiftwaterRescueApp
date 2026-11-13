@@ -17,7 +17,9 @@ import '../accounts.dart';
 import '../api.dart';
 import '../monitor.dart';
 import '../notify.dart';
+import '../service.dart';
 import '../sys.dart';
+import '../track.dart';
 import 'area.dart';
 import 'util.dart';
 
@@ -34,6 +36,7 @@ const viewCatsAll = [
   ('ln', 'Linien', 'poi'),
   ('mm', 'Nachrichten-Markierungen', 'msg'),
   ('air', 'Helikopter', ''),
+  ('hydro', 'Messstationen', 'hydro'),
 ];
 
 /// Grundkarten (MAP_PROVIDERS in common.js)
@@ -285,6 +288,71 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     _sp?.setInt('msgseen_${acc.id}_${_poiInc ?? 0}', id);
   }
 
+  // ---------- Pegel & Abfluss (Issue #125, nativ seit Issue #165) ----------
+  // Messstationen des BAFU: die des Einsatzes (st.hydro, zu Beginn und am Ende erfasst) und die persönlichen (me.hydro, im Profil gewählt).
+  // Aktuelle Werte über hydro (Server mit Cache), höchstens alle 5 Minuten und sofort, wenn sich die Stationen ändern (hyPoll).
+  Map<String, J> hyData = {};
+  String? hyErr;
+  List<J>? hyAll; // alle Stationen (Suche im Profil), einmal geladen
+  int _hyAt = 0;
+  String _hyKey = '';
+  bool _hyBusy = false;
+
+  List<String> get hyMine => me?['hydro'] is List ? (me!['hydro'] as List).map((e) => '$e').toList() : <String>[];
+  List<J> get hyInc => inc != null ? jl(st?['hydro']) : <J>[];
+  List<String> get hyIds => {...hyInc.map((r) => js(r['station'])), ...hyMine}.where((x) => x.isNotEmpty).toList();
+  J? hyStation(String id) => hyData[id] ?? hyInc.where((r) => js(r['station']) == id).firstOrNull ?? hyAll?.where((x) => js(x['id']) == id).firstOrNull;
+
+  /// Kartenknopf «Messstationen» (hyBtn): im Einsatz bei eingeschalteter Funktion, ohne Einsatz, sobald man eigene Stationen hat
+  bool get hyBtn => feat('hydro') && (inc != null || hyMine.isNotEmpty);
+
+  Future<void> hyPoll({bool force = false}) async {
+    if (!feat('hydro')) return;
+    final ids = hyIds, k = ids.join(',');
+    if (ids.isEmpty) {
+      if (_hyKey.isNotEmpty) {
+        _hyKey = '';
+        hyData = {};
+        notifyListeners();
+      }
+      return;
+    }
+    if (_hyBusy || (!force && k == _hyKey && DateTime.now().millisecondsSinceEpoch - _hyAt < 300000)) return;
+    _hyBusy = true;
+    try {
+      final d = await api.call('hydro', body: {'ids': ids});
+      hyData = {for (final x in jl(d['stations'])) js(x['id']): x};
+      hyErr = d['err'] == null ? null : js(d['err']);
+    } on ApiError catch (e) {
+      hyErr = e.offline ? 'Keine Verbindung zum Server' : e.message;
+    } catch (e) {
+      hyErr = '$e';
+    } finally {
+      _hyBusy = false;
+      _hyKey = k;
+      _hyAt = DateTime.now().millisecondsSinceEpoch;
+      if (!closed) notifyListeners();
+    }
+  }
+
+  /// alle Stationen für die Suche im Profil
+  Future<List<J>> hyLoadAll() async => hyAll ??= jl((await api.call('hydro', body: {}))['stations']);
+
+  /// persönliche Messstationen speichern (me/settings mit hydro, höchstens 20)
+  Future<void> hySave(List<String> l) async {
+    final old = me?['hydro'];
+    me?['hydro'] = l;
+    notifyListeners();
+    try {
+      await api.call('me/settings', body: {'hydro': l});
+      await hyPoll(force: true);
+    } catch (e) {
+      me?['hydro'] = old;
+      fail(e);
+      notifyListeners();
+    }
+  }
+
   int get unread => msgs.where((m) => (ji(m['id']) ?? 0) > msgSeen && ji(m['from_user']) != uid).length;
 
   // ---------- Polling ----------
@@ -333,6 +401,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         _lastMsg = 0;
       }
       selfLeft = false;
+      _syncTrack();
+      hyPoll();
       _poiHideLoad();
       _calcArea();
       _syncPos();
@@ -539,11 +609,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     }
     locErr = '';
     if (_posSub != null || !_visible) return;
-    _posSub = Geolocator.getPositionStream(
-            locationSettings: Platform.isAndroid
-                ? AndroidSettings(accuracy: LocationAccuracy.best, distanceFilter: 0, intervalDuration: const Duration(seconds: 3))
-                : const LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 0))
-        .listen((p) {
+    // dieselben Einstellungen wie das Teilen im Hintergrund (Issue #183): unter iOS teilen sich beide einen Strom, und es gelten die des ersten
+    _posSub = Geolocator.getPositionStream(locationSettings: locSettings(interval: const Duration(seconds: 3))).listen((p) {
       devPos = p;
       locErr = '';
       if (manualPos == null) {
@@ -598,6 +665,42 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// Teilnahme an die Überwachung weitergeben und das Teilen im Hintergrund gleich bereitstellen (Issue #183), nicht erst nach der
+  /// nächsten Abfrage: Wer annimmt und sofort sperrt, teilte sonst unter iOS nie (dort steht der Abfrage-Timer im Hintergrund still).
+  bool? _trkJoined;
+  int? _trkInc;
+  Future<void> _syncTrack() async {
+    final id = ji(inc?['id']), j = joined;
+    if (id == _trkInc && j == _trkJoined) return;
+    _trkInc = id;
+    _trkJoined = j;
+    try {
+      await setJoined(acc.id, id, j);
+      if (Platform.isIOS) {
+        await Tracker.sync();
+      } else {
+        await syncService(); // Android: der Vordergrunddienst fragt sofort ab und teilt dort (eigenes Isolate)
+      }
+    } catch (e) {
+      debugPrint('Tracker: $e');
+    }
+  }
+
+  /// In den Hintergrund: zuerst das Teilen im Hintergrund übernehmen lassen (iOS: derselbe Strom läuft dann weiter, ein neuer liesse
+  /// sich im Hintergrund ohne «Immer» nicht mehr starten), danach den eigenen Zuhörer beenden.
+  Future<void> _toBackground() async {
+    await setForeground(null);
+    if (Platform.isIOS) {
+      try {
+        await setJoined(acc.id, ji(inc?['id']), joined);
+        await Tracker.sync();
+      } catch (e) {
+        debugPrint('Tracker: $e');
+      }
+    }
+    if (!_visible) _stopPos();
+  }
+
   // ---------- Lebenszyklus ----------
   void _beat() {
     if (_visible && !closed) setForeground(acc.id);
@@ -612,8 +715,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       // Hintergrund: Überwachung und Standortdienst übernehmen (monitor.dart, track.dart)
       _visible = false;
-      setForeground(null);
-      _stopPos();
+      _toBackground();
     }
   }
 

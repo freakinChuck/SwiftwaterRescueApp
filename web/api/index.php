@@ -928,7 +928,7 @@ function mailIn($v) { if (!is_array($v)) fail('Ungültige Einstellung');
   $r = mailCfg($v);
   if ($r['host'] !== '' && !preg_match('/^[a-z0-9.-]+$/i', $r['host'])) fail('Ungültiger Host des Postfachs');
   if ($r['on'] && ($r['host'] === '' || $r['user'] === '')) fail('Für den Abruf braucht es Host und Benutzername des Postfachs (oder nur den Webhook verwenden und den Abruf ausschalten)');
-  foreach ($r['kinds'] as $id => $k) { if (!isset(kinds()[(int)$id])) unset($r['kinds'][$id]); elseif ($k['on'] && (!$k['words'] || !$k['from'])) fail('Bei «' . kinds()[(int)$id]['name'] . '» braucht es mindestens ein Schlüsselwort und einen erlaubten Absender');
+  foreach ($r['kinds'] as $id => $k) { if (!isset(kinds()[(int)$id])) unset($r['kinds'][$id]); elseif ($k['on'] && !$k['from']) fail('Bei «' . kinds()[(int)$id]['name'] . '» braucht es mindestens einen erlaubten Absender'); // Schlüsselwörter optional (Issue #170)
     foreach ($k['from'] as $f) if (!preg_match('/^(@?[a-z0-9.-]+\.[a-z]{2,}|[^@\s]+@[a-z0-9.-]+\.[a-z]{2,})$/i', $f)) fail('Ungültiger Absender «' . $f . '» (Adresse wie alarm@beispiel.ch oder Domain wie beispiel.ch)'); }
   return $r; }
 function mailReady($c = null) { $c = $c ?? mailCfg(); return $c['on'] && $c['host'] !== '' && $c['user'] !== '' && array_filter($c['kinds'], fn($k) => $k['on']); }
@@ -998,12 +998,13 @@ function mailFromOk($addr, $list) { if ($addr === '' || !str_contains($addr, '@'
 function mailWord($w, $t) { return (bool)preg_match('/(?<![\p{L}\p{N}])' . preg_quote($w, '/') . '(?![\p{L}\p{N}])/iu', $t); }
 // Absender bestätigt: der oberste Authentication-Results-Kopf (vom eigenen Mailserver) meldet dmarc, dkim oder spf «pass»
 function mailAuthOk($m) { return (bool)preg_match('/\b(dmarc|dkim|spf)=pass\b/', $m['auth']); }
-function mailMatch($m, $c) { $t = $c['where'] === 'subject' ? $m['subject'] : $m['subject'] . "\n" . $m['text']; $hit = null; $word = false;
-  foreach (kindsActive() as $id => $k) { $r = $c['kinds'][(string)$id] ?? null; if (!$r || !$r['on']) continue;
-    $w = array_values(array_filter($r['words'], fn($x) => mailWord($x, $t))); if (!$w) continue; $word = true;
+// Typen ohne Schlüsselwort (Issue #170) gelten für jede E-Mail ihrer Absender, aber erst nach allen Typen mit passendem Schlüsselwort
+function mailMatch($m, $c) { $t = $c['where'] === 'subject' ? $m['subject'] : $m['subject'] . "\n" . $m['text']; $word = false;
+  foreach ([true, false] as $withWords) foreach (kindsActive() as $id => $k) { $r = $c['kinds'][(string)$id] ?? null; if (!$r || !$r['on'] || (bool)$r['words'] !== $withWords) continue;
+    $w = $withWords ? array_values(array_filter($r['words'], fn($x) => mailWord($x, $t))) : ['']; if (!$w) continue; if ($withWords) $word = true;
     if (!mailFromOk($m['from'], $r['from'])) continue;
-    $hit = ['kind' => $k, 'rule' => $r, 'word' => $w[0]]; break; }
-  return $hit ?: ['kind' => null, 'res' => $word ? 'sender' : 'nomatch']; }
+    return ['kind' => $k, 'rule' => $r, 'word' => $w[0]]; }
+  return ['kind' => null, 'res' => $word ? 'sender' : 'nomatch']; }
 // Koordinaten im Text: LV95 (2 600 000 / 1 200 000), LV03 (600 000 / 200 000), WGS84 dezimal (47.123, 8.123; auch in Kartenlinks)
 function mailCoord($t) { $n = '(\d{1,3}(?:[\'’ ]?\d{3})+(?:\.\d+)?)'; $num = fn($s) => (float)preg_replace('/[\'’ ]/u', '', $s);
   if (preg_match_all('/(?<![\d.])' . $n . '\s*[\/,;]?\s*' . $n . '(?![\d.])/u', $t, $mm, PREG_SET_ORDER)) foreach ($mm as $m) { $e = $num($m[1]); $no = $num($m[2]);

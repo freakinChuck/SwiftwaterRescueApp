@@ -4,6 +4,7 @@
 // Stand je Konto in SharedPreferencesAsync (ohne Zwischenspeicher, damit Dienst und Oberfläche dasselbe sehen).
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'accounts.dart';
@@ -153,11 +154,28 @@ Future<AccState> pollOne(Account a) async {
 }
 
 /// Alle aktiven, angemeldeten Konten parallel abfragen. Rückgabe: Anzahl überwachter Konten.
-Future<int> pollAll() async {
+/// track: Standort danach teilen (nicht in der Oberfläche unter Android, dort teilt nur der Vordergrunddienst).
+Future<int> pollAll({bool track = true}) async {
   final l = (await Accounts.load()).where((a) => a.active && !a.loggedOut).toList();
   await Future.wait(l.map(pollOne));
+  if (!track) return l.length;
   try {
     await Tracker.sync(); // Standort im Einsatz teilen (track.dart)
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('Tracker: $e'); // Fehler im Einzelnen merkt sich Tracker selbst (trk_<Konto>)
+  }
   return l.length;
+}
+
+/// Teilnahme aus der Einsatz-App übernehmen (Issue #183): Nach dem Annehmen soll das Teilen im Hintergrund sofort bereitstehen,
+/// nicht erst nach der nächsten Abfrage (unter iOS steht der Abfrage-Timer im Hintergrund still).
+Future<void> setJoined(String id, int? inc, bool joined) async {
+  final st = await accState(id);
+  if (st.inc == inc && st.joined == joined) return;
+  if (inc == null) return; // Einsatzende meldet weiterhin die Überwachung (pollOne)
+  final j = Map<String, dynamic>.from(st.j);
+  if (st.inc != inc) j['alarmed'] = true; // Einsatz zuerst in der Einsatz-App gesehen: das Ende meldet pollOne trotzdem
+  j['inc'] = inc;
+  j['joined'] = joined;
+  await _saveState(id, j);
 }

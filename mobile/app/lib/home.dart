@@ -13,6 +13,7 @@ import 'notify.dart';
 import 'push.dart';
 import 'service.dart';
 import 'sys.dart';
+import 'track.dart';
 
 void snack(BuildContext c, String t) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(t), duration: const Duration(seconds: 3)));
 
@@ -43,6 +44,7 @@ class _HomeState extends State<HomePage> {
   List<Account> _acc = [];
   Map<String, AccState> _st = {};
   Map<String, String> _push = {};
+  Map<String, TrackState> _trk = {};
   Timer? _t;
   StreamSubscription? _sub;
   bool _loaded = false;
@@ -64,22 +66,25 @@ class _HomeState extends State<HomePage> {
 
   Future<void> _load() async {
     final l = await Accounts.load();
-    final st = <String, AccState>{}, pu = <String, String>{};
+    final st = <String, AccState>{}, pu = <String, String>{}, tk = <String, TrackState>{};
     for (final a in l) {
       st[a.id] = await accState(a.id);
       pu[a.id] = await pushStatus(a);
+      tk[a.id] = await trackState(a.id);
     }
     if (!mounted) return;
     setState(() {
       _acc = l;
       _st = st;
       _push = pu;
+      _trk = tk;
       _loaded = true;
     });
   }
 
   Future<void> _refresh() async {
-    await pollAll();
+    await pollAll(track: Platform.isIOS); // Android: Standort teilt nur der Vordergrunddienst
+    await syncService();
     await _load();
   }
 
@@ -155,6 +160,15 @@ class _HomeState extends State<HomePage> {
           Expanded(child: Text(s.joined ? 'Angenommen' : (s.alarmed ? 'Alarm – noch nicht angenommen' : 'Laufender Einsatz'), style: const TextStyle(fontWeight: FontWeight.w600))),
         ]));
         if (s.title.isNotEmpty) rows.add(Padding(padding: const EdgeInsets.only(top: 4), child: Text(s.title, maxLines: 3, overflow: TextOverflow.ellipsis)));
+        // Stand des Teilens im Hintergrund (Issue #183): zuletzt gesendet bzw. letzter Fehler, statt ihn zu verschlucken
+        final tk = _trk[a.id];
+        if (s.joined && tk != null && (tk.at > 0 || tk.err != null)) {
+          final bad = tk.err != null && tk.errAt >= tk.at;
+          rows.add(Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(bad ? 'Standort im Hintergrund: ${tk.err} (${_ago(tk.errAt)})${tk.at > 0 ? ' · zuletzt gesendet ${_ago(tk.at)}' : ''}' : 'Standort im Hintergrund zuletzt gesendet ${_ago(tk.at)}',
+                  style: TextStyle(fontSize: 12, color: bad ? th.colorScheme.error : th.hintColor))));
+        }
       } else if (s.blocked) {
         rows.add(const Text('Laufender Einsatz ohne Aufgebot'));
       } else {
@@ -247,7 +261,7 @@ class _HomeState extends State<HomePage> {
                         padding: const EdgeInsets.all(16),
                         child: Text(
                             Platform.isAndroid
-                                ? 'Aktive Konten werden im Hintergrund abgefragt (Anzeige «Bereit für Alarme»).'
+                                ? 'Alarme kommen über Push. Ohne Push und während eines Einsatzes fragt die App die aktiven Konten im Hintergrund ab (Anzeige «Bereit für Alarme»).'
                                 : 'Bei geschlossener App kommen Alarme nur über Push, sofern der Server ihn eingerichtet hat.',
                             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
                             textAlign: TextAlign.center),
@@ -377,6 +391,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   int _iv = 15;
   bool? _bat, _dnd;
+  bool _always = false, _running = false;
   int? _loc;
 
   @override
@@ -399,8 +414,11 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
 
   Future<void> _load() async {
     final iv = await pollInterval(), bat = await batteryExempt(), dnd = await hasDndAccess(), loc = await locLevel();
+    final alw = await serviceAlways(), run = Platform.isAndroid && await service.isRunning();
     if (mounted) {
       setState(() {
+        _always = alw;
+        _running = run;
         _iv = iv;
         _bat = bat;
         _dnd = dnd;
@@ -442,6 +460,19 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               _load();
             }),
         if (Platform.isAndroid) ...[
+          // Issue #179: Der Dienst (mit der dauerhaften Meldung «Bereit für Alarme») läuft nur noch, wenn er nötig ist
+          SwitchListTile(
+              secondary: const Icon(Icons.sync),
+              value: _always,
+              title: const Text('Immer im Hintergrund abfragen'),
+              subtitle: Text('Aus: Mit Push kommen Alarme ohne dauerhafte Meldung; abgefragt wird im Hintergrund nur ohne Push und während eines Einsatzes. '
+                  'Ein: zusätzlich dauernd, mit der Meldung «Bereit für Alarme» (für Geräte, die Push zurückhalten). ${_running ? 'Läuft gerade.' : 'Läuft gerade nicht.'}'),
+              isThreeLine: true,
+              onChanged: (v) async {
+                await prefs.setBool('svc_always', v);
+                await syncService();
+                _load();
+              }),
           ListTile(
               leading: const Icon(Icons.do_not_disturb_on),
               title: const Text('«Nicht stören» umgehen'),

@@ -5,7 +5,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'sys.dart';
 
@@ -83,9 +85,25 @@ Future<void> refreshChannels() => initNotes(force: true);
 
 Future<bool?> hasDndAccess() async => notes.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.hasNotificationPolicyAccess();
 
+/// iOS (Issue #184): Eine Push-Nachricht zeigt dort das System (APNs) selbst, eine Meldung der App mit demselben Schlüssel ersetzt sie
+/// nicht, sondern steht daneben. Läuft die App im Hintergrund weiter (z. B. beim Teilen des Standorts im Einsatz), meldete sie Alarm,
+/// Nachrichten und Einsatzende deshalb doppelt. Ist das Konto für Push angemeldet, meldet im Hintergrund nur noch Push, was der Server
+/// auch pusht (i:, m:, e:); andere Meldungen (z. B. «aus dem Einsatz entfernt») und alles im Vordergrund zeigt weiterhin die App.
+Future<bool> _pushShows(String acc, String tag) async {
+  if (!Platform.isIOS || !RegExp(r'^[ime]:').hasMatch(tag)) return false;
+  if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) return false;
+  try {
+    final t = await SharedPreferencesAsync().getString('push_$acc'); // gesetzt von syncPush (push.dart): Token = angemeldet
+    return t != null && t != 'none';
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Meldung zeigen. lvl: crit|high|normal|low; payload = Konto-ID (Antippen öffnet das Konto).
 Future<void> showNote(String acc, String tag, String title, String body, String lvl, {String? sub}) async {
   await initNotes();
+  if (await _pushShows(acc, tag)) return;
   final crit = lvl == 'crit', high = lvl == 'high', low = lvl == 'low' || lvl == 'none';
   final ch = crit ? (_dnd ? chCritDnd : chCrit) : (high ? chHigh : (low ? chLow : chNormal));
   // kritisch: Weckton über den Wecker (sys.dart), klingelt auch lautlos und bei «Nicht stören»; die Meldung selbst wiederholt
