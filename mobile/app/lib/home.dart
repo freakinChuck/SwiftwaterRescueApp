@@ -11,6 +11,7 @@ import 'main.dart';
 import 'monitor.dart';
 import 'notify.dart';
 import 'push.dart';
+import 'sounds.dart';
 import 'service.dart';
 import 'sys.dart';
 import 'track.dart';
@@ -92,7 +93,8 @@ class _HomeState extends State<HomePage> {
   }
 
   Future<void> _refresh() async {
-    await pollAll();
+    await pollAll(track: Platform.isIOS); // Android: Standort teilt nur der Vordergrunddienst
+    await syncService();
     await _load();
   }
 
@@ -120,6 +122,7 @@ class _HomeState extends State<HomePage> {
     if (!a.loggedOut) await a.api.logout();
     await Accounts.remove(a.id);
     await clearState(a.id);
+    await forgetSnd(a.id);
     await clearLocStat(a.id);
     await _changed();
   }
@@ -263,7 +266,7 @@ class _HomeState extends State<HomePage> {
                         padding: const EdgeInsets.all(16),
                         child: Text(
                             Platform.isAndroid
-                                ? 'Aktive Konten werden im Hintergrund abgefragt (Anzeige «Bereit für Alarme»).'
+                                ? 'Alarme kommen über Push. Ohne Push und während eines Einsatzes fragt die App die aktiven Konten im Hintergrund ab (Anzeige «Bereit für Alarme»).'
                                 : 'Bei geschlossener App kommen Alarme nur über Push, sofern der Server ihn eingerichtet hat.',
                             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
                             textAlign: TextAlign.center),
@@ -393,6 +396,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   int _iv = 15;
   bool? _bat, _dnd;
+  bool _always = false, _running = false;
   int? _loc;
 
   @override
@@ -415,8 +419,11 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
 
   Future<void> _load() async {
     final iv = await pollInterval(), bat = await batteryExempt(), dnd = await hasDndAccess(), loc = await locLevel();
+    final alw = await serviceAlways(), run = Platform.isAndroid && await service.isRunning();
     if (mounted) {
       setState(() {
+        _always = alw;
+        _running = run;
         _iv = iv;
         _bat = bat;
         _dnd = dnd;
@@ -458,6 +465,19 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               _load();
             }),
         if (Platform.isAndroid) ...[
+          // Issue #179: Der Dienst (mit der dauerhaften Meldung «Bereit für Alarme») läuft nur noch, wenn er nötig ist
+          SwitchListTile(
+              secondary: const Icon(Icons.sync),
+              value: _always,
+              title: const Text('Immer im Hintergrund abfragen'),
+              subtitle: Text('Aus: Mit Push kommen Alarme ohne dauerhafte Meldung; abgefragt wird im Hintergrund nur ohne Push und während eines Einsatzes. '
+                  'Ein: zusätzlich dauernd, mit der Meldung «Bereit für Alarme» (für Geräte, die Push zurückhalten). ${_running ? 'Läuft gerade.' : 'Läuft gerade nicht.'}'),
+              isThreeLine: true,
+              onChanged: (v) async {
+                await prefs.setBool('svc_always', v);
+                await syncService();
+                _load();
+              }),
           ListTile(
               leading: const Icon(Icons.do_not_disturb_on),
               title: const Text('«Nicht stören» umgehen'),

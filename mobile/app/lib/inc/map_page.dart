@@ -18,6 +18,7 @@ import '../service.dart';
 import '../sys.dart';
 import 'ctx.dart';
 import 'geo.dart';
+import 'hydro.dart';
 import 'menu.dart';
 import 'msgs.dart';
 import 'people.dart';
@@ -771,6 +772,9 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       decoration: BoxDecoration(color: (bg ?? Colors.black).withValues(alpha: .65), borderRadius: BorderRadius.circular(4)),
       child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 11)));
 
+  // Bereiche und Linien (Issue #176): kein Symbol in der Mitte wie in der Web-App, nur die Bezeichnung; unsichtbare Fläche zum Antippen
+  static const Widget _noDot = SizedBox(width: 24, height: 18);
+
   Marker _dotMk(LatLng p, Widget dot, String? label, VoidCallback onTap, {double w = 120}) => Marker(
       point: p,
       width: w,
@@ -806,7 +810,6 @@ class _IncPageState extends State<IncPage> implements MapCtl {
 
   List<Widget> _layers(BuildContext c) {
     final i = s.inc, out = <Widget>[];
-    final cs = s.csys;
     // feste Standorte
     if (s.vis('place')) {
       final pl = s.places.where((p) => placeShown(s, p) && !s.poiHide.contains('f${p['id']}')).toList();
@@ -837,7 +840,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         return _dotMk(
             ll,
             area || line
-                ? Icon(line ? Icons.timeline : Icons.crop_square, size: 18, color: col)
+                ? _noDot
                 : Container(
                     width: 28,
                     height: 22,
@@ -873,7 +876,16 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                   () => _geoSheet(it)))
               .toList()));
     }
-    if (i == null) return out;
+    // Messstationen Pegel & Abfluss (Issue #165), auch ohne Einsatz (persönliche)
+    final hy = hydroLayer(s, (id) {
+      final st = s.hyStation(id);
+      if (st != null) _sheet(hyName(st), hyPopLines(s, id), lat: jd(st['lat']), lon: jd(st['lon']), actions: (c) => [OutlinedButton(onPressed: () => hyOpenBafu(id), child: const Text('Stationsseite BAFU'))]);
+    });
+    if (hy != null) out.add(hy);
+    if (i == null) {
+      _selfLayer(out);
+      return out;
+    }
     // Suchgebiet
     final a = s.area;
     if (a != null && s.vis('area')) {
@@ -907,12 +919,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     out.add(MarkerLayer(markers: [
       ...ars.map((p) {
         final ll = poiPt(p)!;
-        return _dotMk(ll, Icon(Icons.pentagon_outlined, size: 18, color: hexColor(p['color'])), js(p['label']).isEmpty ? js(p['name']) : js(p['label']),
+        return _dotMk(ll, _noDot, js(p['label']).isEmpty ? js(p['name']) : js(p['label']),
             () => _poiSheet(p, ll));
       }),
       ...lns.map((p) {
         final ll = poiPt(p)!;
-        return _dotMk(ll, Icon(Icons.timeline, size: 18, color: hexColor(p['color'])), js(p['label']).isEmpty ? js(p['name']) : js(p['label']), () => _poiSheet(p, ll));
+        return _dotMk(ll, _noDot, js(p['label']).isEmpty ? js(p['name']) : js(p['label']), () => _poiSheet(p, ll));
       }),
       ...pts.where((p) => p['sym'] != null).map((p) => _symMk(poiPt(p)!, p, () => _poiSheet(p, poiPt(p)!))),
       ...pts.where((p) => p['sym'] == null).map((p) {
@@ -1052,17 +1064,19 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       out.add(PolylineLayer(polylines: [Polyline(points: [..._drawPts, if (_drawPts.length > 2 && !_drawLine) _drawPts.first], color: _drawCol, strokeWidth: 3)]));
       out.add(CircleLayer(circles: _drawPts.map((p) => CircleMarker(point: p, radius: 6, color: _drawCol, borderColor: Colors.white, borderStrokeWidth: 2)).toList()));
     }
-    // eigener Standort (blauer Punkt)
-    final me = s.selfAt;
-    if (me != null) {
-      final acc = s.manualPos == null ? s.devPos?.accuracy : null;
-      out.add(CircleLayer(circles: [
-        if (acc != null && acc > 5) CircleMarker(point: me, radius: acc, useRadiusInMeter: true, color: const Color(0x332196F3), borderColor: const Color(0x662196F3), borderStrokeWidth: 1),
-        CircleMarker(point: me, radius: 8, color: const Color(0xFF2196F3), borderColor: Colors.white, borderStrokeWidth: 3),
-      ]));
-    }
-    if (cs.isEmpty) return out;
+    _selfLayer(out);
     return out;
+  }
+
+  /// eigener Standort (blauer Punkt, Issue #118), auch ohne Einsatz (Issue #172: stand bisher hinter dem Abbruch ohne Einsatz)
+  void _selfLayer(List<Widget> out) {
+    final me = s.selfAt;
+    if (me == null) return;
+    final acc = s.manualPos == null ? s.devPos?.accuracy : null;
+    out.add(CircleLayer(circles: [
+      if (acc != null && acc > 5) CircleMarker(point: me, radius: acc, useRadiusInMeter: true, color: const Color(0x332196F3), borderColor: const Color(0x662196F3), borderStrokeWidth: 1),
+      CircleMarker(point: me, radius: 8, color: const Color(0xFF2196F3), borderColor: Colors.white, borderStrokeWidth: 3),
+    ]));
   }
 
   void _poiSheet(J p, LatLng ll) {
@@ -1092,7 +1106,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         builder: (c) => ListenableBuilder(
             listenable: s,
             builder: (c, _) {
-              final cats = s.inc != null ? s.viewCats() : s.viewCats().where((v) => (v.$1 == 'place' && s.places.isNotEmpty) || v.$1 == 'geo').toList();
+              // ohne Einsatz (homeCats): feste Standorte, persönliche Messstationen und Geodaten-Ebene (Issue #182)
+              final cats = s.inc != null
+                  ? s.viewCats()
+                  : s.viewCats().where((v) => (v.$1 == 'place' && s.places.isNotEmpty) || (v.$1 == 'hydro' && s.hyMine.isNotEmpty) || v.$1 == 'geo').toList();
               return SafeArea(
                   child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .75),
@@ -1198,6 +1215,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (i != null && s.feat('msg')) _fab('Nachrichten', const Icon(Icons.chat), () => _togglePanel('msgs'), count: s.unread, active: _panel == 'msgs'),
       if ((i != null && s.feat('poi')) || s.places.isNotEmpty)
         _fab(i == null ? 'Feste Standorte' : 'Markierungen', const Icon(Icons.place), () => _togglePanel('pois'), active: _panel == 'pois'),
+      if (s.hyBtn) _fab('Messstationen', const Text('💧', style: TextStyle(fontSize: 16)), () => _togglePanel('hyd'), active: _panel == 'hyd'),
       if (i != null && s.feat('rd')) _fab('Flussdistanz', const Icon(Icons.straighten), () => _togglePanel('rd'), active: _panel == 'rd'),
     ];
     final foldN = _fold ? _resCount + s.unread : 0;
@@ -1350,6 +1368,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         'res' => ResPanel(s: s, map: this),
         'pois' => PoisPanel(s: s, map: this),
         'rd' => RdPanel(s: s, map: this, rd: rd),
+        'hyd' => s.hyBtn ? HydPanel(s: s, map: this, openPrefs: _openPrefs) : null,
         _ => null,
       };
 

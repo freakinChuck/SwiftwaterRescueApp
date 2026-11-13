@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'ctx.dart';
+import 'hydro.dart';
 import 'pois.dart';
 import 'store.dart';
 import 'util.dart';
@@ -242,6 +243,7 @@ class _IncMenuState extends State<IncMenu> {
               child: Mut(
                   'Startet die Übung mit der vorbereiteten Aufgebotsmeldung. Du leitest sie als Übungsleitung: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
         ]),
+      ?hydroCard(c, s, map, widget.openPrefs),
       ?_tools(),
     ];
   }
@@ -463,6 +465,8 @@ class _IncMenuState extends State<IncMenu> {
         const Mut('Neue Markierungen über den Kartenknopf «Rettlinge».'),
       ]));
     }
+    final hy = hydroCard(c, s, map, widget.openPrefs); // Pegel & Abfluss (Issue #165)
+    if (hy != null) out.add(hy);
     final t = _tools();
     if (t != null) out.add(t);
     return out;

@@ -17,19 +17,22 @@ Native Apps für Android und iOS (Issue #108), gebaut mit Flutter in `mobile/app
   | leise | Meldung ohne Ton |
   | keine | nichts |
 
-  Die Meldungen nutzen dieselben Schlüssel wie die Web-App (`i:`, `m:`, `e:`), deshalb meldet nichts doppelt. Ist die Einsatz-App eines Kontos offen, zeigt sie Alarme als Vollbild in der Karte (kritisch mit Weckton über dieselbe Meldung, die «Nicht stören» umgeht); «Quittieren» schliesst die Meldung. Die Überwachung bleibt dann für dieses Konto still. Antippen einer Meldung öffnet die Einsatz-App des Kontos auf dem Einsatzgebiet (Suchgebiet und PLS, ohne Einsatzkräfte), ebenso das Annehmen mit einer Einrückoption.
+  Die Meldungen nutzen dieselben Schlüssel wie die Web-App (`i:`, `m:`, `e:`), deshalb meldet nichts doppelt. Unter iOS zeigt das System Push-Nachrichten selbst an, eine Meldung der App ersetzt sie dort nicht: Ist das Konto für Push angemeldet, meldet die App Alarm, Nachrichten und Einsatzende im Hintergrund deshalb nicht noch selbst (Issue #184). Ist die Einsatz-App eines Kontos offen, zeigt sie Alarme als Vollbild in der Karte (kritisch mit Weckton über dieselbe Meldung, die «Nicht stören» umgeht); «Quittieren» schliesst die Meldung. Die Überwachung bleibt dann für dieses Konto still. Antippen einer Meldung öffnet die Einsatz-App des Kontos auf dem Einsatzgebiet (Suchgebiet und PLS, ohne Einsatzkräfte), ebenso das Annehmen mit einer Einrückoption.
 
   Ob ein Alarm kritisch ist, bestimmt der Einsatztyp auf dem Server (Verwaltung → Einsatz → «Einsatztypen», Alarmstufe). Angelegt sind «Einsatz» kritisch und «Übung» normal; eine Übung ist nur im persönlichen Übungsmodus kritisch.
+
+  **Ton kritischer Alarme** (Issue #171): im Profil, Karte «Alarmierung», je Backend und Einsatztyp wählbar (Signalhörner, Sirenen, Melodien, Ton des Systems) mit «▶ Probe»; ohne eigene Wahl gilt die Vorgabe des Einsatztyps (Verwaltung → «Einsatztypen»). Die Töne liegen in `assets/sounds/` (erzeugt mit `python3 scripts/sounds/gen.py`, braucht numpy; neue Töne zusätzlich in `lib/sounds.dart` und `ALARM_SOUNDS` in `web/api/index.php` eintragen und `_ver` in `sounds.dart` erhöhen). Android spielt die Datei als Wecker in Schleife, iOS einmal (höchstens 30 s) aus `Library/Sounds`, auch bei Push (der Server nennt den Ton über `push_native.snd`).
 - **Standort:** Ist die Einsatz-App offen, teilt sie den Standort selbst (`inc/store.dart`, mit «auf dem Gewässer» aus dem geladenen Gewässernetz). Sonst teilt ihn im Einsatz der Hintergrund (`track.dart`, alle 5 s bei Bewegung, sonst alle 15 s), bis man austritt oder der Einsatz endet. Bei gesperrtem Bildschirm braucht es dafür «Immer zulassen» (Android: der Dienst läuft dann zusätzlich als Standort-Dienst, sonst erhält er ab Android 14 keine Positionen); die App fragt einmal danach und zeigt den Stand in ihren Einstellungen. Im Hintergrund kennt die App kein Gewässernetz: Positionen gelten dort nie als «auf dem Gewässer». Unter iOS gibt es in geolocator nur einen Positionsstrom; wer ihn zuerst öffnet, bestimmt die Einstellungen. Einsatz-App und Hintergrund nutzen deshalb dieselben (`locSettings`, mit `allowBackgroundLocationUpdates`), sonst stoppte iOS die Ortung beim Sperren (Issue #183). Den Stand je Konto (zuletzt gesendet, Fehler) zeigt die Kontenliste (`LocStat`, `trk_<id>`); Fehler der Ortung, Ablehnungen des Servers und Störungen ab 1 min meldet die App ins Applikationslog (`applog/client`, ohne Koordinaten).
 
 | | Android | iOS |
 |---|---|---|
-| Abfrage bei geschlossener App | Vordergrunddienst «Bereit für Alarme», alle 10–60 s, auch nach einem Neustart | nicht möglich (iOS erlaubt es nicht) |
-| Push (optional, Firebase Cloud Messaging) | zusätzlich, weckt das Gerät auch im Ruhezustand | einziger Weg bei geschlossener App |
+| Abfrage bei geschlossener App | Vordergrunddienst «Bereit für Alarme», alle 10–60 s, auch nach einem Neustart; nur ohne Push, im Einsatz oder mit «Immer im Hintergrund abfragen» (Issue #179) | nicht möglich (iOS erlaubt es nicht) |
+| Push (optional, Firebase Cloud Messaging) | Hauptweg, weckt das Gerät auch im Ruhezustand; mit Push läuft der Dienst (und seine dauerhafte Meldung) nur noch im Einsatz | einziger Weg bei geschlossener App |
 | Kritischer Alarm trotz «Nicht stören» | nach Erlaubnis in den Einstellungen der App | nur mit Freigabe «Critical Alerts» von Apple |
 
 In den Einstellungen der App gibt es dazu Folgendes:
 - Abfrageintervall
+- «Immer im Hintergrund abfragen» (Android, Standard aus: mit Push nur ohne dauerhafte Meldung)
 - Benachrichtigungen
 - «Nicht stören» umgehen
 - Ausnahme von der Akku-Optimierung (sonst kann Android den Dienst anhalten)
@@ -39,20 +42,21 @@ In den Einstellungen der App gibt es dazu Folgendes:
 
 | Datei | Inhalt |
 |---|---|
-| `main.dart` | Start, Navigation, Abfrage bei offener App (iOS) |
+| `main.dart` | Start (öffnet das zuletzt verwendete Backend, Issue #166), Navigation, Abfrage bei offener App (iOS, Android ohne Dienst) |
 | `home.dart` | Kontenliste, Anmeldung, Einstellungen |
 | `inc/store.dart` | Einsatz-App: Zustand, Polling `incident/state` (4 s), Aktionen, Ansicht, Standort teilen, Alarm |
 | `inc/map_page.dart` | Kartenseite: Ebenen, Kartenknöpfe, Seitenfenster, Punktwahl/Bereich zeichnen, Alarm-Vollbild, Startansicht |
 | `inc/menu.dart` | ☰-Menü mit Registern, Einsatz starten, vorbereitete Übungen |
 | `inc/people.dart`, `msgs.dart`, `res.dart`, `pois.dart`, `rd.dart` | Seitenfenster Einsatzkräfte, Nachrichten, Rettlinge (mit «PLS setzen»), Markierungen & Bereiche (mit festen Standorten), Flussdistanz |
-| `inc/prefs.dart` | Profil (Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches) |
+| `inc/hydro.dart` | Pegel & Abfluss (Issue #165): Messstationen auf der Karte, Seitenfenster «Messstationen», Menükarte, Auswahl im Profil |
+| `inc/prefs.dart` | Profil (Konto, Alarmierung, Anzeige, Pegel & Abfluss, AI-Assistent, Rechtliches) |
 | `inc/area.dart` | Suchgebiet entlang des Gewässers, Gewässernetz über `overpass` (mit Rückfall im Gerät) |
 | `inc/ctx.dart`, `inc/util.dart` | gemeinsame Bausteine (Karten, Dialoge, Navigation, Koordinaten) |
 | `track.dart` | Standort im Einsatz teilen, solange die Einsatz-App nicht im Vordergrund ist |
 | `accounts.dart` | Konten im sicheren Speicher (Keychain bzw. verschlüsselt) |
 | `monitor.dart` | Abfrage `incident/state` je Konto, meldet Neues |
 | `notify.dart` | Benachrichtigungen, Kanäle je Alarmstufe |
-| `service.dart` | Android-Vordergrunddienst |
+| `service.dart` | Android-Vordergrunddienst, nur wenn nötig (`serviceNeeded`) |
 | `push.dart` | Firebase Cloud Messaging (optional) |
 | `sys.dart` | Akku-Optimierung, Standortberechtigung (auch «Immer»), App-Einstellungen, Weckton (Android über das Plugin `packages/sw_sys`, auch im Dienst) |
 

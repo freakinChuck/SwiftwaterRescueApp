@@ -1,15 +1,22 @@
 // Seite «Einstellungen» der nativen Einsatz-App (Gegenstück zu prefs/prefsDraw, absMine, sessMine und aiPrefs in web/index.html,
 // absRows/absDialog/pwDialog in web/common.js): Konto (Profilbild, Passwort, angemeldete Apps, Abmelden), Alarmierung (Einsatzfähigkeit
-// mit Abwesenheiten, Übungsmodus, Standort und Benachrichtigungen über die Systemeinstellungen), Anzeige, AI-Assistent, Rechtliches.
+// mit Abwesenheiten, Übungsmodus, Ton bei kritischem Alarm je Einsatztyp (Issue #171, nur nativ), Standort und Benachrichtigungen über die
+// Systemeinstellungen), Anzeige, AI-Assistent, Rechtliches.
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../notify.dart';
+import '../push.dart';
+import '../sounds.dart';
 import '../sys.dart';
 import 'ctx.dart';
+import 'hydro.dart';
 import 'store.dart';
 import 'util.dart';
 
@@ -50,6 +57,9 @@ class _PrefsPageState extends State<PrefsPage> {
   List<J> _sess = [];
   int? _loc; // Stufe der Standortberechtigung
   bool _busy = false;
+  Map<String, String> _snd = {}; // eigene Töne je Einsatztyp (sounds.dart)
+  String? _probe; // Typ-ID, deren Probe gerade läuft (Android)
+  Timer? _probeT;
 
   @override
   void initState() {
@@ -57,6 +67,85 @@ class _PrefsPageState extends State<PrefsPage> {
     _loadAbs();
     _loadSess();
     _loadLoc();
+    _loadSnd();
+  }
+
+  @override
+  void dispose() {
+    if (_probe != null) alarmStop();
+    _probeT?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadSnd() async {
+    final m = await sndChoice(s.acc.id);
+    if (mounted) setState(() => _snd = m);
+  }
+
+  Future<void> _setSnd(int kind, String? k) async {
+    await setSndChoice(s.acc.id, kind, k);
+    await _loadSnd();
+    unawaited(syncPush()); // iOS: der Server nennt APNs den Ton
+  }
+
+  /// Probe: Android als Wecker wie beim echten Alarm (8 s, erneutes Antippen stoppt), iOS als kritische Meldung (einmal).
+  Future<void> _probeSnd(String id, String k) async {
+    final was = _probe;
+    _probeT?.cancel();
+    if (was != null) {
+      await alarmStop();
+      setState(() => _probe = null);
+      if (was == id) return;
+    }
+    if (Platform.isAndroid) {
+      await alarmStart(path: await sndPath(k));
+      setState(() => _probe = id);
+      _probeT = Timer(const Duration(seconds: 8), () {
+        alarmStop();
+        if (mounted) setState(() => _probe = null);
+      });
+    } else {
+      await showNote(s.acc.id, 'snd:probe', 'Probe: ${sndName(k)}', 'So klingt ein kritischer Alarm dieses Typs.', 'crit', sub: s.acc.label, snd: k);
+    }
+  }
+
+  /// Ton bei kritischem Alarm je Einsatztyp, der kritisch alarmieren kann (Alarmstufe kritisch oder mit Übungsmodus)
+  List<Widget> _sounds(J me) {
+    final ks = jl(me['kinds']).map(jm).where((k) => js(k['alarm']) == 'crit' || jb(k['mode_up'])).toList();
+    if (ks.isEmpty) return [const Mut('Kein Einsatztyp alarmiert kritisch.')];
+    final items = <DropdownMenuItem<String>>[];
+    for (final g in sndGroups.entries) {
+      items.add(DropdownMenuItem(enabled: false, value: '#${g.key}', child: Text(g.value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))));
+      items.addAll(alarmSounds.where((x) => x.group == g.key).map((x) => DropdownMenuItem(value: x.key, child: Padding(padding: const EdgeInsets.only(left: 10), child: Text(x.name)))));
+    }
+    return [
+      const Mut('Gilt für dieses Backend auf diesem Gerät. Android spielt ihn als Wecker in Schleife, iOS einmal (höchstens 30 s).'),
+      ...ks.map((k) {
+        final id = '${ji(k['id'])}', def = sndKnown(js(k['snd'])) ? js(k['snd']) : sndSystem, own = _snd[id], eff = sndKnown(own) || own == sndSystem ? own! : def;
+        return Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(children: [
+              Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(js(k['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+                DropdownButton<String>(
+                    isExpanded: true,
+                    value: own == null ? '' : (own == sndSystem || sndKnown(own) ? own : ''),
+                    items: [
+                      DropdownMenuItem(value: '', child: Text('Vorgabe: ${sndName(def)}')),
+                      const DropdownMenuItem(value: sndSystem, child: Text('Ton des Systems')),
+                      ...items,
+                    ],
+                    onChanged: (v) {
+                      if (v == null || v.startsWith('#')) return;
+                      _setSnd(ji(k['id'])!, v.isEmpty ? null : v);
+                    }),
+              ])),
+              const SizedBox(width: 8),
+              smallBtn(_probe == id ? '■ Stopp' : '▶ Probe', () => _probeSnd(id, eff)),
+            ]));
+      }),
+    ];
   }
 
   Future<void> _loadAbs() async {
@@ -407,6 +496,8 @@ class _PrefsPageState extends State<PrefsPage> {
           value: jb(me['exercise_mode']),
           title: const Text('Einsatztypen, die das vorsehen (z. B. Übungen), kritisch alarmieren'),
           onChanged: (v) => _set({'exercise_mode': v ? 1 : 0}, poll: true)),
+      _h5('Ton bei kritischem Alarm'),
+      ..._sounds(me),
       _h5('Standort'),
       Mut(_locText),
       Padding(
@@ -512,6 +603,7 @@ class _PrefsPageState extends State<PrefsPage> {
                   _konto(me),
                   _alarm(me),
                   _anzeige(me),
+                  if (s.feat('hydro')) HydroPrefs(s: s), // persönliche Messstationen (Issue #165)
                   ?_ai(me),
                   _legal(),
                 ]));

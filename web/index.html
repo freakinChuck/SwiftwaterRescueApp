@@ -168,7 +168,7 @@ let actx;function tone(f,ms){try{actx=actx||new(window.AudioContext||webkitAudio
 function ping(){tone(660,250);navigator.vibrate&&navigator.vibrate(200)}
 function alarmTone(){[0,600,1200].forEach(t=>setTimeout(()=>tone(880,400),t));navigator.vibrate&&navigator.vibrate([300,100,300,100,300])}
 // Alarmstufe des Einsatztyps (Issue #90, ALARM_LEVELS). Im Web kein Vollbild mehr (Feedback zu #108): crit/high rote Benachrichtigung, bleibt bis zum Antippen (crit dreifacher, high einfacher Ton),
-// normal Hinweis mit kurzem Ton, low Hinweis still, none nichts. Antippen eines Alarms oder einer Nachricht im Einsatz zeigt das Einsatzgebiet (focusArea).
+// normal Hinweis mit kurzem Ton, low Hinweis still, none nichts. Nachrichten und Einsatzende mit eigener Stufe je Einsatztyp (msg_level, end_level, Issue #168). Antippen eines Alarms oder einer Nachricht im Einsatz zeigt das Einsatzgebiet (focusArea).
 function notify(t,b,key,lvl){if(lvl==='none')return false;if(key){if(ackGet().includes(key))return false;ackAdd(key)}const al=lvl==='crit'||lvl==='high';
   const d=document.createElement('div');d.className='toast'+(al?' al':'');d.setAttribute('role',al?'alert':'status');d.innerHTML=`<b>${esc(t)}</b><div>${esc(b)}</div>`;
   d.onclick=()=>{d.remove();if(key&&/^[imk]:/.test(key))focusArea()};$('#toasts').appendChild(d);if(!al)setTimeout(()=>d.remove(),20000);
@@ -1112,12 +1112,12 @@ function bindMarks(){
 /* ---------- Polling ---------- */
 // Alarmstufe kommt vom Server (level, je Person: Einsatztyp, Übungsmodus); Nachrichten und Einsatzende auch bei «Keine» als stiller Hinweis
 let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}`);
-    if(nx.incident){const i=nx.incident,lv=nx.level||'crit',cr=lv==='none'?'low':lv;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(nx.alarm!==false&&notify(kindOf(i).name.toUpperCase(),i.message,'i:'+i.id,lv))toggleSheet(true)}
+    if(nx.incident){const i=nx.incident,lv=nx.level||'crit',cr=nx.msg_level||(lv==='none'?'low':lv),kr=cr==='none'?'low':cr;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(nx.alarm!==false&&notify(kindOf(i).name.toUpperCase(),i.message,'i:'+i.id,lv))toggleSheet(true)}
       // alle sehen alle Nachrichten, benachrichtigt werden nur die markierten Empfänger (bzw. alle bei «an alle»)
       (nx.messages||[]).forEach(m=>{lastMsg=Math.max(lastMsg,m.id);msgData.push(m);if(m.from_user!=me.id&&nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&msgForMe(m))notify('Nachricht von '+m.from_name,m.text,'m:'+m.id,cr)});msgInit=true;
-      if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,cr))toggleSheet(true);
+      if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,kr))toggleSheet(true);
       st=nx;if(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'&&shares(nx.me.mode))track();else stop()}
-    else{if(st&&st.incident){const k=kindOf(st.incident).name,lv=st.level||'crit';if((st.alarm!==false||st.me)&&notify(k.toUpperCase()+' BEENDET',k+' beendet.','e:'+st.incident.id,lv==='none'?'low':lv))toggleSheet(true)}st=nx;lastIncId=null;stop()}
+    else{if(st&&st.incident){const k=kindOf(st.incident).name,lv=st.level||'crit';if((st.alarm!==false||st.me)&&notify(k.toUpperCase()+' BEENDET',k+' beendet.','e:'+st.incident.id,st.end_level||(lv==='none'?'low':lv)))toggleSheet(true)}st=nx;lastIncId=null;stop()}
     saveLast();setOffline(false);if(bootOff){bootOff=false;return render()} // offline gestartet: jetzt alles frisch laden
     paint()}catch(e){if(e instanceof TypeError)setOffline(true);console.error('Poll',e)}} // TypeError = keine Verbindung (fetch)
 function paint(){if(st&&st.incident)creating=false;updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderHyd();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
