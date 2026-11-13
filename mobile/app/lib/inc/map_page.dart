@@ -1021,7 +1021,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                             groupValue: s.base,
                             onChanged: (v) => v == null ? null : s.setBase(v),
                             child: Column(
-                                children: mapProviders.entries.map((e) => RadioListTile<String>(dense: true, value: e.key, title: Text(e.value.$1))).toList())),
+                                children: s.maps.map((m) => RadioListTile<String>(dense: true, value: m.k, title: Text(m.label))).toList())),
                         if (cats.isNotEmpty) ...[
                           const Divider(),
                           Text('Auf der Karte', style: Theme.of(c).textTheme.titleSmall),
@@ -1294,7 +1294,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     if (s.mustChange) return _MustChange(s: s, onLogout: () => _logout(byServer: false));
     final w = MediaQuery.of(context).size.width, narrow = w < 760;
     final pw = _panelWidget(), note = _note();
-    final prov = mapProviders[s.base]!;
+    final prov = s.prov;
     return PopScope(
         canPop: _panel == null && !_picking,
         onPopInvokedWithResult: (did, _) {
@@ -1335,9 +1335,18 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         }
                       }),
                   children: [
-                    TileLayer(urlTemplate: prov.$2, userAgentPackageName: 'ch.swiftwaterrescue.app', maxNativeZoom: prov.$4, maxZoom: 19),
+                    // Grundkarte (Issue #106); «Luftbild (automatisch)» als mehrere Ebenen, je nur in ihrer Abdeckung
+                    for (final x in prov.layers.isEmpty ? [prov] : prov.layers)
+                      TileLayer(
+                          key: ValueKey('base_${prov.k}_${x.k}'),
+                          urlTemplate: x.url,
+                          subdomains: x.sub.isEmpty ? const ['a', 'b', 'c'] : x.sub,
+                          tileBounds: x.bounds,
+                          userAgentPackageName: 'ch.swiftwaterrescue.app',
+                          maxNativeZoom: x.nat,
+                          maxZoom: 19),
                     ..._layers(context),
-                    RichAttributionWidget(attributions: [TextSourceAttribution(prov.$3), if (_airOn && _air?['src'] is Map) TextSourceAttribution(js(jm(_air!['src'])['name']))]),
+                    RichAttributionWidget(attributions: [TextSourceAttribution(prov.attrText), if (_airOn && _air?['src'] is Map) TextSourceAttribution(js(jm(_air!['src'])['name']))]),
                   ]),
               _topBar(),
               if (!s.ready && s.fatal == null) const Center(child: CircularProgressIndicator()),
