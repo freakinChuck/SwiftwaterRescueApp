@@ -16,3 +16,5 @@ node_modules/
 web/api/data/fcm_token.json
 web/api/data/firebase-service-account.json
 *service-account*.json
+# Eigene OSM-Karte (Issue #106): PMTiles-Datei wird getrennt hochgeladen (scripts/tiles/)
+web/tiles/
