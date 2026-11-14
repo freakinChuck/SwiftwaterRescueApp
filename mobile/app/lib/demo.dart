@@ -1550,6 +1550,8 @@ class Demo {
       case 'ex/start':
       case 'ex/release':
         _fail('Vorbereitete Übungen gibt es im Demo-Modus nicht.');
+      case 'me/skills': // Ausbildung (Issue #117): im Demo keine
+        return {'items': [], 'exp': {}};
       case 'absences':
         return abs
             .where((a) => a['removed'] == 0 && (a['until_at'] == null || (a['until_at'] as int) > t))

@@ -18,6 +18,7 @@ import '../sys.dart';
 import '../version.dart';
 import 'ctx.dart';
 import 'hydro.dart';
+import 'skills.dart';
 import 'store.dart';
 import 'util.dart';
 import 'voice.dart';
@@ -616,6 +617,7 @@ class _PrefsPageState extends State<PrefsPage> {
                 child: ListView(padding: const EdgeInsets.fromLTRB(12, 8, 12, 24), children: [
                   _konto(me),
                   _alarm(me),
+                  if (!s.demo && (ji(jm(me['skills'])['n']) ?? 0) > 0) SkillPrefs(s: s), // Ausbildung (Issue #117)
                   _anzeige(me),
                   if (s.feat('hydro')) HydroPrefs(s: s), // persönliche Messstationen (Issue #165)
                   if (s.feat('voice')) VoicePrefs(s: s), // Funk (Issue #113)
