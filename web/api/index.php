@@ -3995,6 +3995,8 @@ switch ($route) {
   out(['ok' => true]);
  case 'places': need('cfg_map', 'ex_plan', 'geo'); // permanente feste Standorte, auch deaktivierte (Issue #96; Übungsleiter: Auswahl je Übung), mit Stand des Abgleichs (Issue #182)
   out(placesOf(null, true));
+ case 'demo/places': // Demo-Modus «ohne Daten» (Issue #74): alle aktiven permanenten festen Standorte der Organisation mit Kategorien und Eigenschaften, für alle Angemeldeten, unabhängig von laufendem Einsatz und Funktion (dieselben Daten wie incident/state ohne Einsatz)
+  out(['places' => array_values(array_map(fn($r) => array_diff_key($r, ['active' => 1]), array_filter(placesOf(null), fn($r) => $r['active']))), 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm()]);
  case 'place/cats': need('cfg_map', 'ex_plan'); out(placeCats()); // Kategorien fester Standorte
  case 'place/cat/save': need('cfg_map'); // anlegen oder ändern: id, name, def_on (Standard eingeblendet), prio (priorisiert, fehlt = unverändert bzw. 0)
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 60); if ($nm === '') fail('Name fehlt'); $on = !array_key_exists('def_on', $in) || !empty($in['def_on']) ? 1 : 0;

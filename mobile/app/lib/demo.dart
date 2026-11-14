@@ -360,9 +360,11 @@ class Demo {
     final me = m is Map ? m['me'] : null;
     if (me is! Map || me['must_change'] == 1) return;
     final pm = me['perms'] is List ? me['perms'] as List : const [];
-    final res = await Future.wait([get('roles'), get('modes'), get('incident/state'), get('hydro'), if (pm.contains('cfg_inc') || pm.contains('ex_plan')) get('ext_templates')]);
+    final res = await Future.wait([get('roles'), get('modes'), get('demo/places'), get('hydro'), if (pm.contains('cfg_inc') || pm.contains('ex_plan')) get('ext_templates')]);
     List<_J>? l(dynamic x) => x is List ? x.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : null;
-    final st = res[2] is Map ? res[2] as Map : const {}, hy = res[3] is Map ? res[3] as Map : const {};
+    // alle festen Standorte (demo/places); ältere Server ohne die Route: wie bisher aus incident/state
+    final dp = res[2] is Map && (res[2] as Map)['places'] is List ? res[2] : await get('incident/state');
+    final st = dp is Map ? dp : const {}, hy = res[3] is Map ? res[3] as Map : const {};
     final ks = (l(me['kinds']) ?? [])
         .map(
           (k) => {
@@ -383,6 +385,12 @@ class Demo {
     final ms = l(res[1]) ?? [];
     if (_inc != null) return;
     _src = a;
+    // Funktion «Feste Standorte» im Demo an, sobald die Organisation Standorte hat
+    if (st['places'] is List && (st['places'] as List).isNotEmpty) {
+      for (final k in ks) {
+        k['features'] = {...(k['features'] as Map), 'place': 1};
+      }
+    }
     if (ks.isNotEmpty) _ks = ks;
     _rs = l(res[0]) ?? _rs;
     if (ms.any((x) => x['active'] == 1)) _ms = ms;

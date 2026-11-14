@@ -70,7 +70,9 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   let READY=Promise.resolve(),VER=null;
   const realGet=r=>realFetch(API_URL+'?r='+r,{headers:{'X-Token':REAL_TOK||''}}).then(x=>x.ok?x.json():null).catch(()=>null);
   async function loadOrg(){if(!REAL_TOK||REAL_TOK==='demo')return null;const m=await realGet('me'),me=m&&m.me;if(!me||me.must_change)return null;
-    const pm=me.perms||[],[ro,mo,st,hy,ex]=await Promise.all([realGet('roles'),realGet('modes'),realGet('incident/state'),realGet('hydro'),pm.includes('cfg_inc')||pm.includes('ex_plan')?realGet('ext_templates'):null]);
+    const pm=me.perms||[],[ro,mo,dp,hy,ex]=await Promise.all([realGet('roles'),realGet('modes'),realGet('demo/places'),realGet('hydro'),pm.includes('cfg_inc')||pm.includes('ex_plan')?realGet('ext_templates'):null]);
+    // alle festen Standorte (demo/places); ältere Server ohne die Route: wie bisher aus incident/state
+    const st=dp&&Array.isArray(dp.places)?dp:await realGet('incident/state');
     const A=x=>Array.isArray(x)?x:null,ks=(A(me.kinds)||[]).map(k=>({...k,alarm:k.alarm==='crit'?'high':k.alarm,alarm_name:k.alarm==='crit'?'Hoch':k.alarm_name,plans:0,persons:0,open_all:0,
       grp_off:[],grp_def:[],can:1,no_grp:0,features:{...FEAT,...(k.features||{}),pub:0,geo:0}})),md=(A(mo)||[]).filter(x=>x.active);
     const pick=(o,ks)=>Object.fromEntries(ks.filter(k=>o[k]!==undefined).map(k=>[k,o[k]]));
@@ -78,7 +80,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
       cfg:pick(me,['coord_default','rd_speeds','nav_apps','nav_default','symbols','sym_free','sym_sets']),maps:me.maps||null,map_def:me.map_def||null,version:me.version||null,
       kinds:ks.length?ks:null,roles:A(ro),modes:md.length?(A(mo)):null,places:st&&A(st.places),place_cats:st&&A(st.place_cats),place_props:st&&A(st.place_props),place_near_km:st&&typeof st.place_near_km==='number'?st.place_near_km:null,
       hydro:hy&&A(hy.stations),ext:A(ex)?ex.filter(x=>x.active).map(({active,...x})=>x):null}}
-  function applyOrg(){const o=S&&S.mode==='leer'&&S.org;if(!o)return;if(o.kinds)KINDS=o.kinds;if(o.roles)ROLES=o.roles;if(o.modes)MODES=o.modes;if(o.places)PLACES=o.places;
+  function applyOrg(){const o=S&&S.mode==='leer'&&S.org;if(!o)return;if(o.places&&o.places.length&&o.kinds)o.kinds.forEach(k=>{k.features={...k.features,place:1}});if(o.kinds)KINDS=o.kinds;if(o.roles)ROLES=o.roles;if(o.modes)MODES=o.modes;if(o.places)PLACES=o.places;
     if(o.place_cats)PLACE_CATS=o.place_cats;if(o.hydro)HYDRO=o.hydro;if(o.ext)EXT_T=o.ext;if(Array.isArray(o.cfg.symbols))SYMS=o.cfg.symbols;if(o.version)VER=o.version}
   const orgStart=()=>loadOrg().then(o=>{if(o&&S.mode==='leer'&&!S.inc){S.org=o;Object.assign(S.me,o.me);applyOrg();save()}});
   // Flusssperren (Issue #182, wie incStops): feste Standorte mit einer Eigenschaft der Wirkung stop, solange berücksichtigt und nicht ausgenommen
