@@ -1241,21 +1241,23 @@ function mapsUsed($ks) { $u = []; $add = function ($r, $kid) use (&$u) { foreach
 const VOICE_KEEP = ['both' => 'Aufnahme und Transkript', 'tr' => 'Nur Transkript (Aufnahme nach dem Einsatzende löschen)', 'audio' => 'Nur Aufnahme (ohne Transkription)', 'none' => 'Nichts (Aufnahme und Transkript nach dem Einsatzende löschen)'];
 const VOICE_MIME = ['audio/mp4' => 'm4a', 'audio/x-m4a' => 'm4a', 'audio/aac' => 'aac', 'audio/webm' => 'webm', 'audio/ogg' => 'ogg', 'audio/mpeg' => 'mp3', 'audio/wav' => 'wav'];
 const VOICE_BYTES = 3145728; // höchstens 3 MB je Durchsage (60 s AAC mono ≈ 180 KB)
-const VOICE_KIND = ['conf' => 1, 'tr' => 1, 'guests' => 0, 'guest_speak' => 0, 'keep' => 'both', 'ch' => null, 'lvl' => null]; // je Einsatztyp; lvl null = Stufe der Nachrichten (msg_lvl)
+const VOICE_KIND = ['ann' => 1, 'conf' => 1, 'tr' => 1, 'guests' => 0, 'guest_speak' => 0, 'keep' => 'both', 'ch' => null, 'lvl' => null]; // je Einsatztyp; lvl null = Stufe der Nachrichten (msg_lvl)
 const VOICE_STALE_S = 25; // Anwesenheit in der Konferenz: ohne Meldung so lange gilt man als ausgetreten
 const VOICE_GUEST_H = 40; // Durchsagen je Link für Externe und Stunde
 function voiceCfg() { $v = json_decode((string)setting('voice', ''), true); $v = is_array($v) ? $v : []; $b = fn($x, $d) => (int)($x ?? $d) ? 1 : 0;
   $lk = is_array($v['lk'] ?? null) ? $v['lk'] : []; $tr = is_array($v['tr'] ?? null) ? $v['tr'] : [];
-  $r = ['max_s' => max(5, min(120, (int)($v['max_s'] ?? 60))), 'listen' => $b($v['listen'] ?? null, 1), 'no_role' => $b($v['no_role'] ?? null, 1),
+  $r = ['ann' => $b($v['ann'] ?? null, 1), 'max_s' => max(5, min(120, (int)($v['max_s'] ?? 60))), 'listen' => $b($v['listen'] ?? null, 1), 'no_role' => $b($v['no_role'] ?? null, 1),
     'lk' => ['on' => $b($lk['on'] ?? null, 0), 'url' => (string)($lk['url'] ?? ''), 'key' => (string)($lk['key'] ?? '')],
     'tr' => ['url' => (string)($tr['url'] ?? ''), 'model' => (string)($tr['model'] ?? '') ?: 'whisper-1', 'lang' => (string)($tr['lang'] ?? '') ?: 'de'], 'kinds' => []];
   foreach (kinds() as $id => $k) { $x = is_array($v['kinds'][$id] ?? null) ? $v['kinds'][$id] : [];
-    $r['kinds'][$id] = ['conf' => $b($x['conf'] ?? null, 1), 'tr' => $b($x['tr'] ?? null, 1), 'guests' => $b($x['guests'] ?? null, 0), 'guest_speak' => $b($x['guest_speak'] ?? null, 0),
+    $r['kinds'][$id] = ['ann' => $b($x['ann'] ?? null, 1), 'conf' => $b($x['conf'] ?? null, 1), 'tr' => $b($x['tr'] ?? null, 1), 'guests' => $b($x['guests'] ?? null, 0), 'guest_speak' => $b($x['guest_speak'] ?? null, 0),
       'keep' => isset(VOICE_KEEP[$x['keep'] ?? '']) ? $x['keep'] : 'both', 'ch' => is_array($x['ch'] ?? null) ? array_values(array_unique(array_map('intval', $x['ch']))) : null,
       'lvl' => is_string($x['lvl'] ?? null) && isset(ALARM_LEVELS[$x['lvl']]) ? $x['lvl'] : null]; }
   return $r; }
 function voiceKind($inc) { return voiceCfg()['kinds'][kindOf($inc)['id']] ?? VOICE_KIND; }
 function voiceLkReady() { $c = voiceCfg()['lk']; return $c['on'] && preg_match('~^wss?://~i', $c['url']) && $c['key'] !== '' && (string)setting('voice_lk_secret', '') !== ''; }
+// Durchsagen (Sprechtaste, gespeicherte Aufnahmen): global (ann) und je Einsatztyp ausschaltbar; ohne sie bleibt nur die Live-Konferenz, ohne Aufnahme
+function voiceAnnOn($inc) { return feature($inc, 'voice') && voiceCfg()['ann'] && voiceKind($inc)['ann']; }
 function voiceConfOn($inc) { return feature($inc, 'voice') && voiceLkReady() && voiceKind($inc)['conf']; }
 // Transkriptionsdienst (OpenAI-kompatibel, POST <url>/audio/transcriptions); ohne eigene Adresse der AI-Assistent, sofern OpenAI-kompatibel eingerichtet
 function voiceTrEp() { $c = voiceCfg()['tr']; $u = trim($c['url']); $k = (string)setting('voice_tr_key', '');
@@ -1486,11 +1488,12 @@ if (strncmp($route, 'guest/', 6) === 0) {
     if ($g['opened_at'] === null) { $db->prepare("UPDATE voice_guests SET opened_at=? WHERE id=?")->execute([$now, $g['id']]); logev($inc['id'], null, 'voiceguest', 'Link für Externe «' . $g['label'] . '» erstmals geöffnet'); }
     if (isset($_GET['vc'])) voiceConfSet($inc, 'g' . $g['id'], null, $g['id'], $gl, (int)$_GET['vc'] && $conf ? $ch : 0);
     $vs = (int)($_GET['vs'] ?? 0); $k = kindOf($inc);
-    out(['label' => $g['label'], 'speak' => $g['speak'] && voiceKind($inc)['guest_speak'] ? 1 : 0, 'ch' => ['id' => $ch, 'name' => $g['ch_name']], 'conf' => $conf ? 1 : 0, 'max_s' => voiceCfg()['max_s'],
+    out(['label' => $g['label'], 'speak' => $g['speak'] && voiceKind($inc)['guest_speak'] ? 1 : 0, 'ch' => ['id' => $ch, 'name' => $g['ch_name']], 'conf' => $conf ? 1 : 0, 'ann' => voiceAnnOn($inc) ? 1 : 0, 'max_s' => voiceCfg()['max_s'],
       'incident' => ['message' => $inc['message'], 'kind_name' => $k['name'], 'kind_color' => $k['color'], 'alarm_at' => (int)$inc['alarm_at']],
       'voice' => voiceRows($inc['id'], 'AND v.channel_id=? AND v.upd>=?' . ($vs ? '' : ' AND v.id>(SELECT COALESCE(MAX(id),0)-100 FROM voice WHERE incident_id=v.incident_id)'), [$ch, $vs], true),
       'conf_list' => array_values(array_map(fn($c) => $c['user_id'] !== null ? ['name' => voiceAnonName($inc, $c['user_id']), 'user_id' => null] + $c : $c, array_filter(voiceConfList($inc['id']), fn($c) => $c['ch'] === $ch))), 'now' => $now]); } // Einsatzkräfte ohne Namen
   if ($route === 'guest/voice') { if (!$g['speak'] || !voiceKind($inc)['guest_speak']) fail('Über diesen Link darf nur zugehört werden.', 403);
+    if (!voiceAnnOn($inc)) fail('Durchsagen sind ausgeschaltet', 403);
     $s = $db->prepare("SELECT COUNT(*) c, MAX(created) m FROM voice WHERE guest_id=? AND created>?"); $s->execute([$g['id'], $now - 3600]); $x = $s->fetch(); $s->closeCursor();
     if ((int)$x['c'] >= VOICE_GUEST_H || (int)$x['m'] > $now - 2) fail('Zu viele Durchsagen, bitte kurz warten.', 429);
     $vid = voiceStore($inc, $ch, null, $g['id'], $gl, $in);
@@ -2792,7 +2795,7 @@ switch ($route) {
     $vs = (int)($_GET['vs'] ?? 0); $vlast = $vmids ? ($db->query("SELECT id,user_id FROM voice WHERE incident_id=" . (int)$id . " AND channel_id IN (" . implode(',', $vmids) . ") ORDER BY id DESC LIMIT 1")->fetch() ?: null) : null;
     $vo = ['ch' => $vmine, 'items' => $vmids && isset($_GET['vs']) ? voiceRows($id, 'AND v.channel_id IN (' . implode(',', $vmids) . ') AND v.upd>=?' . ($vs ? '' : ' AND v.id>(SELECT COALESCE(MAX(x.id),0)-200 FROM voice x WHERE x.incident_id=v.incident_id)'), [$vs]) : [],
       'v' => $vlast ? (int)$vlast['id'] : 0, 'vu' => $vlast && $vlast['user_id'] !== null ? (int)$vlast['user_id'] : null,
-      'conf' => $vconf ? 1 : 0, 'conf_list' => array_values(array_filter(voiceConfList($id), fn($c) => in_array($c['ch'], $vmids, true))), 'tr' => voiceTrOn($inc) ? 1 : 0, 'max_s' => $vcf['max_s'], 'listen' => $vcf['listen'], 'keep' => $vk['keep']];
+      'ann' => voiceAnnOn($inc) ? 1 : 0, 'conf' => $vconf ? 1 : 0, 'conf_list' => array_values(array_filter(voiceConfList($id), fn($c) => in_array($c['ch'], $vmids, true))), 'tr' => voiceTrOn($inc) ? 1 : 0, 'max_s' => $vcf['max_s'], 'listen' => $vcf['listen'], 'keep' => $vk['keep']];
     if ($vcm) { $ion = array_column(voiceIncCh($inc), 'id');
       $vo['all_ch'] = array_values(array_map(fn($c) => ['id' => $c['id'], 'name' => $c['name'], 'on' => in_array($c['id'], $ion, true) ? 1 : 0], array_filter(voiceChannels(), fn($c) => !$c['plans'] || kindOf($inc)['plans'])));
       $vo['inc_ch'] = $inc['voice_ch'] !== null ? 1 : 0; $vo['guests'] = $vk['guests']; $vo['guest_speak'] = $vk['guest_speak'];
@@ -3139,6 +3142,7 @@ switch ($route) {
   $inc = activeIncident(); if (!$inc || (!empty($in['inc']) && (int)$in['inc'] !== (int)$inc['id'])) fail('Der Einsatz dieser Aufnahme ist beendet', 410);
   $ch = (int)($in['ch'] ?? 0); $c = array_values(array_filter(voiceMine($inc), fn($x) => $x['id'] === $ch))[0] ?? null;
   if (!$c || !$c['speak']) fail('In diesem Kanal darfst du nicht sprechen', 403);
+  if (!voiceAnnOn($inc)) fail('Durchsagen sind ausgeschaltet', 403);
   $vid = voiceStore($inc, $ch, $uid, null, null, $in);
   if (($l = voiceLvl($inc)) !== 'none') pushTo(array_diff(voiceHearers($inc, $ch), [$uid]), ['t' => 'Durchsage «' . $c['name'] . '»', 'b' => $me['name'] . ' (' . voiceDur((int)($in['dur'] ?? 0)) . ')', 'tag' => 'v:' . $vid] + pushLvl($l));
   out(['ok' => true, 'id' => $vid]);
@@ -3210,7 +3214,7 @@ switch ($route) {
   $lk = (array)($c['lk'] ?? []); $url = $str($lk['url'] ?? '', 300); if ($url !== '' && !preg_match('~^wss?://[^\s/]+~i', $url)) fail('Adresse des Medienservers: wss://… (bzw. ws:// nur im eigenen Netz)');
   $tr = (array)($c['tr'] ?? []); $tu = $str($tr['url'] ?? '', 300); if ($tu !== '' && !preg_match('~^https?://[^\s/]+~i', $tu)) fail('Adresse des Transkriptionsdienstes: https://…');
   $ks = []; foreach (kinds() as $id => $k) { $x = (array)($c['kinds'][$id] ?? []); $o = $old['kinds'][$id] ?? VOICE_KIND;
-    $ks[$id] = ['conf' => $b($x['conf'] ?? $o['conf']), 'tr' => $b($x['tr'] ?? $o['tr']), 'guests' => $b($x['guests'] ?? $o['guests']), 'guest_speak' => $b($x['guest_speak'] ?? $o['guest_speak']),
+    $ks[$id] = ['ann' => $b($x['ann'] ?? $o['ann'] ?? 1), 'conf' => $b($x['conf'] ?? $o['conf']), 'tr' => $b($x['tr'] ?? $o['tr']), 'guests' => $b($x['guests'] ?? $o['guests']), 'guest_speak' => $b($x['guest_speak'] ?? $o['guest_speak']),
       'keep' => isset(VOICE_KEEP[$x['keep'] ?? '']) ? $x['keep'] : $o['keep'], 'ch' => array_key_exists('ch', $x) ? ($x['ch'] === null ? null : idsIn($x['ch'])) : $o['ch'],
       'lvl' => array_key_exists('lvl', $x) ? (is_string($x['lvl']) && isset(ALARM_LEVELS[$x['lvl']]) ? $x['lvl'] : null) : $o['lvl']]; }
   $db->beginTransaction();
@@ -3222,7 +3226,7 @@ switch ($route) {
       if ($id && in_array($id, $known, true)) $db->prepare("UPDATE voice_channels SET name=?,sort=?,hear=?,speak=?,plans=?,active=? WHERE id=?")->execute([$nm, $i + 1, json_encode($h), json_encode($sp), $b($x['plans'] ?? 0), $a, $id]);
       else $db->prepare("INSERT INTO voice_channels(name,sort,hear,speak,plans,active) VALUES(?,?,?,?,?,?)")->execute([$nm, $i + 1, json_encode($h), json_encode($sp), $b($x['plans'] ?? 0), $a]); }
     if (!$act) { $db->rollBack(); fail('Mindestens ein Kanal muss aktiv bleiben'); } }
-  setSetting('voice', json_encode(['max_s' => max(5, min(120, (int)($c['max_s'] ?? $old['max_s']))), 'listen' => $b($c['listen'] ?? $old['listen']), 'no_role' => $b($c['no_role'] ?? $old['no_role']),
+  setSetting('voice', json_encode(['ann' => $b($c['ann'] ?? $old['ann']), 'max_s' => max(5, min(120, (int)($c['max_s'] ?? $old['max_s']))), 'listen' => $b($c['listen'] ?? $old['listen']), 'no_role' => $b($c['no_role'] ?? $old['no_role']),
     'lk' => ['on' => $b($lk['on'] ?? 0), 'url' => $url, 'key' => $str($lk['key'] ?? '', 200)], 'tr' => ['url' => $tu, 'model' => $str($tr['model'] ?? '', 100) ?: 'whisper-1', 'lang' => preg_match('/^[a-z]{2}$/', (string)($tr['lang'] ?? '')) ? $tr['lang'] : 'de'], 'kinds' => $ks], JSON_UNESCAPED_UNICODE));
   foreach (['lk_secret' => 'voice_lk_secret', 'tr_key' => 'voice_tr_key'] as $f => $k) { if (!empty($in[$f . '_clear'])) setSetting($k, ''); elseif (trim((string)($in[$f] ?? '')) !== '') setSetting($k, trim((string)$in[$f])); }
   if (isset($in['can_voice']) && is_array($in['can_voice'])) foreach ($in['can_voice'] as $rid => $v) $db->prepare("UPDATE roles SET can_voice=? WHERE id=?")->execute([$b($v), (int)$rid]); // Sprechrecht je Spezialrolle

@@ -1082,9 +1082,10 @@ function paint(){if(st&&st.incident)creating=false;baseSync();updateChip();drawM
 // Durchsagen und Konferenz getrennt: vxCh = Kanal der Durchsagen (Fenster und Sprechtaste der Karte, sw_vxspk), vxCc = Kanal der Konferenz (sw_vxcc). So kann man in der
 // Konferenz «A» sein und Durchsagen in «B» senden. Register vxTab (null = Konferenz, sofern eingerichtet, sonst Durchsagen).
 let vxTab=null,vxCh=null,vxCc=null,vxKey='';
-const vxOn=()=>!!(st&&st.incident&&st.voice&&feat('voice')&&st.voice.ch.length);
+const vxOn=()=>!!(st&&st.incident&&st.voice&&feat('voice')&&st.voice.ch.length&&(st.voice.ann!==0||st.voice.conf));
+const vxAnn=()=>!!(st&&st.voice&&st.voice.ann!==0); // Durchsagen eingeschaltet (aus = nur Live-Konferenz)
 const vxChs=()=>vxOn()?st.voice.ch:[];
-const vxSpeakChs=()=>vxChs().filter(c=>c.speak);
+const vxSpeakChs=()=>vxAnn()?vxChs().filter(c=>c.speak):[]; // Kanäle der Durchsage-Sprechtaste
 const vxPttMap=()=>{const v=vxLs('sw_vxptt');return v===null?1:+v}; // Sprechtaste auf der Karte (pro Gerät)
 const vxChName=id=>(vxChs().find(c=>c.id===id)||(st&&st.voice&&st.voice.all_ch||[]).find(c=>c.id===id)||{name:'Kanal'}).name;
 function vxFix(){const h=vxChs(),s=vxSpeakChs();if(!h.some(c=>c.id===vxCh)){const l=+vxLs('sw_vxspk');vxCh=(h.find(c=>c.id===l)||s[0]||h[0]||{}).id??null}
@@ -1095,7 +1096,7 @@ function vxIo(){return{me:me.id,upload:b=>api('incident/voice',{...b,inc:st.inci
   conf:ch=>api('incident/voice/conf',{ch}).catch(()=>{}),change:()=>{renderVx();vxFab()},poll:()=>poll()}}
 // nach jedem Abruf: neue Durchsagen übernehmen, nachsenden, Hinweis ohne Mithören; Konferenz verlassen, wenn sie nicht mehr erlaubt ist; Stummschaltung übernehmen
 function vxPoll(nx){if(!nx.incident||!nx.voice){if(VX.conf)vxConfLeave();if(VX.rec)vxRecStop(true);return}
-  vxInit(vxIo(),nx.incident.id,nx.voice.listen);VX.io=vxIo();VX.max=nx.voice.max_s||60;
+  vxInit(vxIo(),nx.incident.id,nx.voice.listen);VX.io=vxIo();VX.ann=nx.voice.ann!==0;VX.max=nx.voice.max_s||60;
   const fresh=vxMerge(nx.voice.items,nx.now),lv=nx.msg_level||'normal';
   if(!VX.listen||document.hidden)fresh.slice(-3).forEach(it=>notify('Durchsage «'+vxChName(it.ch)+'»',it.name+' ('+vxDur(it.dur)+')','v:'+it.id,lv==='none'?'low':lv));
   if(VX.conf&&(!nx.voice.conf||!nx.voice.ch.some(c=>c.id===VX.conf.ch)))vxConfLeave();
@@ -1136,8 +1137,8 @@ function vxItem(it){const mine=it.uid===me.id,nw=!VX.heard.has(it.id)&&!mine,lat
 function renderVx(){const o=$('#vx');if(!o)return;const on=panel==='vx'&&vxOn();o.hidden=!on;$('#bVx').setAttribute('aria-expanded',on);
   const n=vxOn()?vxUnheard(null):0,c=$('#vxCnt');c.hidden=!n;c.textContent=n;updFold();vxFab();if(!on)return;
   const body=$('#vxBody'),ae=document.activeElement;if(ae&&ae.tagName==='SELECT'&&body.contains(ae))return vxRecUi(); // Auswahl offen: nicht neu aufbauen
-  vxFix();const v=st.voice,cs=vxChs(),cf=VX.conf,tab=v.conf?(vxTab||'conf'):'ann',L=$('#vxList'),atEnd=!L||L.scrollHeight-L.scrollTop-L.clientHeight<30;
-  const seg=v.conf?`<div class="vxseg" role="tablist"><button role="tab" data-vxt="conf" aria-selected="${tab==='conf'}">${cf&&cf.state==='on'?'<span class="vxlive">LIVE</span>':''}Live-Konferenz</button><button role="tab" data-vxt="ann" aria-selected="${tab==='ann'}">Durchsagen${n?`<span class="n">${n}</span>`:''}</button></div>`:'';
+  vxFix();const v=st.voice,cs=vxChs(),cf=VX.conf,tab=v.conf?(vxAnn()?vxTab||'conf':'conf'):'ann',L=$('#vxList'),atEnd=!L||L.scrollHeight-L.scrollTop-L.clientHeight<30;
+  const seg=v.conf&&vxAnn()?`<div class="vxseg" role="tablist"><button role="tab" data-vxt="conf" aria-selected="${tab==='conf'}">${cf&&cf.state==='on'?'<span class="vxlive">LIVE</span>':''}Live-Konferenz</button><button role="tab" data-vxt="ann" aria-selected="${tab==='ann'}">Durchsagen${n?`<span class="n">${n}</span>`:''}</button></div>`:'';
   let sub,mid,foot='';
   if(tab==='ann'){const ch=cs.find(x=>x.id===vxCh),its=vxList(vxCh),q=vxQueued();
     sub=`<div class="vxsub"><label>Kanal der Durchsagen<select id="vxChP">${cs.map(x=>{const u=vxUnheard(x.id);return`<option value="${x.id}" ${x.id===vxCh?'selected':''}>${esc(x.name)}${u?` (${u} neu)`:''}${x.speak?'':' – nur hören'}</option>`}).join('')}</select></label><label class="vxsw" title="Neue Durchsagen sofort abspielen, solange die App offen ist"><input type="checkbox" id="vxLis" ${VX.listen?'checked':''}> Mithören</label></div>`;
@@ -1154,8 +1155,8 @@ function renderVx(){const o=$('#vx');if(!o)return;const on=panel==='vx'&&vxOn();
         ${sk?'<span class="vxspk" title="spricht">🔊</span>':''}${lead&&!me0?`<button class="vxmb${x.muted?' on':''}" data-vxm="${esc(x.ident)}" data-on="${x.muted?0:1}" title="${x.muted?'Stummschaltung aufheben':'In der Konferenz stumm schalten (bis du es aufhebst)'}">${x.muted?'Aufheben':'🔇 Stumm'}</button>`:''}</div>`};
     mid=`<div class="vxst">${inC&&cf.state==='on'?'<span class="vxlive">LIVE</span>':''}<span>${stt}</span></div>
       <div id="vxList" style="overflow:auto;padding:0 .7rem;flex:1;min-height:0">${list.map(who).join('')||'<div class="mut" style="padding:.6rem 0">Noch niemand verbunden.</div>'}
-      ${activePeople().filter(p=>!ids.has('u'+p.user_id)).map(p=>`<div class="vxpp" style="opacity:.55"><span class="av">${esc(initials(p.name))}</span><div class="nm">${esc(p.name)}<small>nicht in der Konferenz · erhält Durchsagen</small></div></div>`).join('')}</div>`;
-    foot=`<div class="vxfoot" style="gap:.5rem;flex-wrap:wrap">${inC?`${cf.speak?`<button class="vxptt live" id="vxPttC" aria-label="Live sprechen" title="Geht live in die Konferenz und als Durchsage an alle, die nicht verbunden sind">🎙</button><div style="flex:1;min-width:0"><b id="vxPttCT"></b><label class="vxsw" style="display:flex;margin-top:.2rem"><input type="checkbox" id="vxOpen" ${cf.open?'checked':''}> Mikrofon offen</label></div>`:''}<button id="vxLeave" style="margin-left:auto">Verlassen</button>`
+      ${activePeople().filter(p=>!ids.has('u'+p.user_id)).map(p=>`<div class="vxpp" style="opacity:.55"><span class="av">${esc(initials(p.name))}</span><div class="nm">${esc(p.name)}<small>nicht in der Konferenz${vxAnn()?' · erhält Durchsagen':''}</small></div></div>`).join('')}</div>`;
+    foot=`<div class="vxfoot" style="gap:.5rem;flex-wrap:wrap">${inC?`${cf.speak?`<button class="vxptt live" id="vxPttC" aria-label="Live sprechen" title="${vxAnn()?'Geht live in die Konferenz und als Durchsage an alle, die nicht verbunden sind':'Geht nur live in die Konferenz (Durchsagen sind ausgeschaltet)'}">🎙</button><div style="flex:1;min-width:0"><b id="vxPttCT"></b><label class="vxsw" style="display:flex;margin-top:.2rem"><input type="checkbox" id="vxOpen" ${cf.open?'checked':''}> Mikrofon offen</label></div>`:''}<button id="vxLeave" style="margin-left:auto">Verlassen</button>`
       :`<button class="pri" id="vxJoin" style="flex:1" ${cf&&cf.state==='connecting'?'disabled':''}>${cf&&cf.state==='connecting'?'Verbinde …':(cf?'Zu «':'«')+esc(cc?cc.name:'')+(cf?'» wechseln':'» beitreten')}</button>`}</div>`}
   const key=seg+sub+mid+foot;if(key===vxKey)return vxRecUi();vxKey=key;body.innerHTML=key;vxRecUi();
   const nl=$('#vxList');if(nl&&tab==='ann'&&atEnd)nl.scrollTop=nl.scrollHeight;

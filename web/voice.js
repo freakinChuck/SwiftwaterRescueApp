@@ -2,7 +2,7 @@
    Gemeinsam für die Einsatz-App (index.html) und die Gastseite für Externe (funk.html). Die Seite übergibt mit vxInit die Anbindung an den Server (io):
    io.upload(body) → Promise, io.audio(id) → Promise<Blob>, io.join(ch) → Promise<{url, token, speak}>, io.change() (neu zeichnen), io.me (eigene User-ID, Gäste null), io.guest (Gast-ID) */
 const LK_URL='https://cdn.jsdelivr.net/npm/livekit-client@2.23.0/dist/livekit-client.umd.js'; // feste Version, erst beim ersten Beitritt geladen
-const VX={io:null,key:'',items:new Map(),heard:new Set(),first:true,vs:0,listen:true,queue:[],playing:null,audio:null,urls:new Map(),rec:null,conf:null,pend:0,max:60,unlocked:false};
+const VX={ann:true,io:null,key:'',items:new Map(),heard:new Set(),first:true,vs:0,listen:true,queue:[],playing:null,audio:null,urls:new Map(),rec:null,conf:null,pend:0,max:60,unlocked:false};
 const vxLs=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||'null');localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}};
 // key: z. B. Einsatz-ID (gehörte Durchsagen pro Gerät und Einsatz in sw_vxheard_<key>); Mithören pro Gerät in sw_vxlisten (sonst Vorgabe der Verwaltung)
 function vxInit(io,key,listenDef){if(VX.key===String(key)&&VX.io){VX.io=io;return}
@@ -39,7 +39,11 @@ function vxMarkHeard(ch){vxList(ch).forEach(x=>VX.heard.add(x.id));vxSaveHeard()
 const vxMime=()=>{if(!window.MediaRecorder)return'';for(const m of['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'])try{if(MediaRecorder.isTypeSupported(m))return m}catch(e){}return''};
 const vxCanRec=()=>!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&vxMime());
 // Aufnahme starten; ch = Kanal. Während der Aufnahme pausiert die Wiedergabe; in der Konferenz desselben Kanals geht der Ton zusätzlich live hinaus.
-async function vxRecStart(ch){if(VX.rec)return;const mime=vxMime();if(!mime){toast('Dieser Browser kann keine Tonaufnahmen machen.','err');return}
+// Durchsagen ausgeschaltet (VX.ann false, von der Seite gesetzt): nur live in der Konferenz, ohne Aufnahme und ohne Höchstdauer.
+async function vxRecStart(ch){if(VX.rec)return;
+  if(!VX.ann){if(!(VX.conf&&VX.conf.ch===ch&&VX.conf.speak))return toast('Durchsagen sind ausgeschaltet: der Konferenz beitreten, um zu sprechen.','info');
+    const r=VX.rec={ch,on:true,live:true,t0:Date.now(),drop:false};vxConfMic(true);r.tm=setInterval(()=>VX.io.change(),250);VX.io.change();return}
+  const mime=vxMime();if(!mime){toast('Dieser Browser kann keine Tonaufnahmen machen.','err');return}
   if(VX.audio)VX.audio.pause();VX.playing=null;
   const r=VX.rec={ch,on:true,t0:Date.now(),at:Math.floor(Date.now()/1000),chunks:[],drop:false,mime};VX.io.change();
   if(VX.conf&&VX.conf.ch===ch&&VX.conf.speak)vxConfMic(true);
@@ -49,7 +53,7 @@ async function vxRecStart(ch){if(VX.rec)return;const mime=vxMime();if(!mime){toa
   r.mr=new MediaRecorder(r.stream,{mimeType:mime,audioBitsPerSecond:32000});r.mr.ondataavailable=e=>{if(e.data&&e.data.size)r.chunks.push(e.data)};
   r.mr.onstop=()=>vxRecDone(r);r.mr.start(250);r.t0=Date.now();
   r.tm=setInterval(()=>{if((Date.now()-r.t0)/1000>=VX.max)vxRecStop(false);else VX.io.change()},250)}
-function vxRecStop(drop){const r=VX.rec;if(!r)return;r.on=false;if(drop)r.drop=true;clearInterval(r.tm);if(VX.conf&&VX.conf.speak&&!VX.conf.open)vxConfMic(false);
+function vxRecStop(drop){const r=VX.rec;if(!r)return;r.on=false;if(r.live){clearInterval(r.tm);VX.rec=null;if(VX.conf&&!VX.conf.open)vxConfMic(false);VX.io.change();return}if(drop)r.drop=true;clearInterval(r.tm);if(VX.conf&&VX.conf.speak&&!VX.conf.open)vxConfMic(false);
   if(r.mr&&r.mr.state!=='inactive')r.mr.stop();else if(!r.mr){/* Mikrofon noch nicht bereit: vxRecStart räumt auf */}}
 async function vxRecDone(r){r.stream.getTracks().forEach(t=>t.stop());VX.rec=null;const ms=Date.now()-r.t0;VX.io.change();
   if(r.drop)return toast('Aufnahme verworfen.','info');if(ms<600)return toast('Zu kurz: die Sprechtaste gedrückt halten, während du sprichst.','info');

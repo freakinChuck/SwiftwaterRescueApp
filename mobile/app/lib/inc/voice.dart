@@ -73,9 +73,12 @@ class VoiceStore extends ChangeNotifier {
   int? cc; // Kanal der Konferenz im Fenster
 
   J? get v => s.st?['voice'] is Map ? jm(s.st!['voice']) : null;
-  bool get on => s.inc != null && v != null && s.feat('voice') && chs.isNotEmpty;
+  bool get on => s.inc != null && v != null && s.feat('voice') && chs.isNotEmpty && (ann || confAvail);
+  /// Durchsagen eingeschaltet (aus = nur Live-Konferenz, ohne Aufnahme); ältere Server ohne Angabe: an
+  bool get ann => v?['ann'] == null || jb(v!['ann']);
   List<J> get chs => jl(v?['ch']);
-  List<J> get speakChs => chs.where((c) => jb(c['speak'])).toList();
+  /// Kanäle der Durchsage-Sprechtaste
+  List<J> get speakChs => ann ? chs.where((c) => jb(c['speak'])).toList() : <J>[];
   int get maxS => ji(v?['max_s']) ?? 60;
   bool get confAvail => jb(v?['conf']);
   bool get recording => recCh != null;
@@ -257,8 +260,26 @@ class VoiceStore extends ChangeNotifier {
   }
 
   // ---------- Aufnahme ----------
+  bool _live = false; // Durchsagen aus: Sprechtaste nur live in der Konferenz, ohne Aufnahme
+
   Future<void> recStart(int c, {String? btn}) async {
     if (recording || recBusy) return;
+    if (!ann) {
+      if (room == null || confCh != c || !confSpeak) {
+        s.toast('Durchsagen sind ausgeschaltet: der Konferenz beitreten, um zu sprechen.', 'info');
+        return;
+      }
+      recBtn = btn;
+      _live = true;
+      recCh = c;
+      recDrop = false;
+      recT0 = DateTime.now();
+      HapticFeedback.mediumImpact();
+      unawaited(confMicSet(true));
+      _recTm = Timer.periodic(const Duration(milliseconds: 250), (_) => notifyListeners());
+      notifyListeners();
+      return;
+    }
     recBusy = true;
     recBtn = btn;
     try {
@@ -304,6 +325,12 @@ class VoiceStore extends ChangeNotifier {
     _recTm?.cancel();
     recCh = null;
     recT0 = null;
+    if (_live) {
+      _live = false;
+      if (room != null && !confOpen) unawaited(confMicSet(false));
+      notifyListeners();
+      return;
+    }
     final d = drop ?? recDrop;
     if (room != null && confSpeak && !confOpen) unawaited(confMicSet(false));
     String? path;
@@ -859,7 +886,7 @@ class _VoicePanelState extends State<VoicePanel> {
         if (cl.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Mut('Noch niemand verbunden.')),
         ...s.participants.where((p) => p['left_at'] == null && p['mode'] != 'declined' && !ids.contains('u${p['user_id']}')).map((p) => Opacity(
             opacity: .55,
-            child: ListTile(dense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 4), leading: avatar(p, r: 16), title: Text(js(p['name'])), subtitle: const Text('nicht in der Konferenz · erhält Durchsagen')))),
+            child: ListTile(dense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 4), leading: avatar(p, r: 16), title: Text(js(p['name'])), subtitle: Text(vx.ann ? 'nicht in der Konferenz · erhält Durchsagen' : 'nicht in der Konferenz')))),
       ])),
       Container(
           decoration: BoxDecoration(border: Border(top: BorderSide(color: Theme.of(c).dividerColor))),
@@ -886,7 +913,7 @@ class _VoicePanelState extends State<VoicePanel> {
 
   Widget _build(BuildContext context) {
     if (!vx.on) return Column(children: [PanelHead('Funk', onClose: () => widget.map.openPanel(null)), const Padding(padding: EdgeInsets.all(12), child: Mut('Kein Funk in diesem Einsatz.'))]);
-    final tab = vx.confAvail ? (_tab ?? 'conf') : 'ann', its = vx.list(vx.ch), chs = vx.chs, cur = chs.where((c) => ji(c['id']) == vx.ch).firstOrNull, n = vx.unheard(null);
+    final tab = vx.confAvail ? (vx.ann ? (_tab ?? 'conf') : 'conf') : 'ann', its = vx.list(vx.ch), chs = vx.chs, cur = chs.where((c) => ji(c['id']) == vx.ch).firstOrNull, n = vx.unheard(null);
     final hi = its.isEmpty ? 0 : ji(its.last['id'])!;
     if (tab == 'ann' && hi != _last) {
       _last = hi;
@@ -896,7 +923,7 @@ class _VoicePanelState extends State<VoicePanel> {
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       PanelHead('🎙 Funk', onClose: () => widget.map.openPanel(null)),
-      if (vx.confAvail)
+      if (vx.confAvail && vx.ann)
         Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
             child: SegmentedButton<String>(
