@@ -238,7 +238,7 @@ $('#joinBan').onclick=joinOpen;const an=$('#areaNote');an.onclick=()=>{if(an.cla
   $('#bFold').onclick=()=>setBtnFold(!btnFold);updFold();
   rd=null;$('#bRd').onclick=rdOpen; // Flussdistanz (zusätzlich im ☰-Menü, auch ohne Einsatz)
   $('#poiList').onclick=e=>{const b=e.target.closest('[data-pof],[data-pg],[data-pls],[data-pf]');if(!b)return;if(b.dataset.pof)return setPoiFold(b.dataset.pof);if(b.dataset.pg)return showPoi(+b.dataset.pg);if(b.dataset.pf)return showPlace(+b.dataset.pf);stopFollow();map.panTo(b.dataset.pls.split(',').map(Number));if(narrow())togglePanel('pois',false)};
-  $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pfcat){setPlaceCat([+t.dataset.pfcat],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.pfv)setPoiHidden(['f'+t.dataset.pfv],!t.checked);else if(t.dataset.pfgrp)setPoiHidden((st.places||[]).map(f=>'f'+f.id),!t.checked);else if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>t.dataset.pgrp==='all'||p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
+  $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pfcat){setPlaceCat([+t.dataset.pfcat],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.pfids!=null)placeSecSet(t.dataset.pfids.split(',').filter(Boolean).map(Number),t.checked);else if(t.dataset.pfv)setPoiHidden(['f'+t.dataset.pfv],!t.checked);else if(t.dataset.pfgrp)setPoiHidden((st.places||[]).map(f=>'f'+f.id),!t.checked);else if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>t.dataset.pgrp==='all'||p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
   $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.pf)setPplFold(b.dataset.pf);else if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f);else if(b.dataset.pi)pinfoShow(b.dataset.pi)};
   map=L.map('map',{zoomControl:false,rotate:true,touchRotate:true,rotateControl:false}).setView([46.8,8.2],8);L.control.zoom({position:'bottomright'}).addTo(map);addCompass();
   // Grundkarte: Auswahl im Fenster «Ansicht» (setBase); Anbieter vom Server (Issue #106), ohne Einsatz gemerkt in sw_base, im Einsatz je Einsatz (baseSync)
@@ -908,9 +908,11 @@ function renderPois(){const o=$('#pois');if(!o)return;const inc=!!(st&&st.incide
   // Aufteilung nach Einsatzgebiet (areaIn, nur mit Suchgebiet): priorisierte Kategorien (place_cats.prio) immer zuoberst und ganz (im Einsatzgebiet zuerst),
   // danach «Im Einsatzgebiet» und «Ausserhalb des Einsatzgebiets» (zuerst zugeklappt, offen = fix:out+ in poiFold), darin je Kategorie
   const isIn=f=>!!areaIn&&areaIn.has(f.id),pr=new Set(((st&&st.place_cats)||[]).filter(c=>c.prio).map(c=>c.id)),cOf=f=>pr.has(f.cat_id)?f.cat_id:(f.cat_id&&cs.some(c=>c.id===f.cat_id)?f.cat_id:0);
-  const cats=(pre,list)=>withCat?cs.filter(c=>list.some(f=>cOf(f)===c.id)).map(c=>{const it=list.filter(f=>cOf(f)===c.id);return hd(pre+c.id,(pr.has(c.id)?'★ ':'')+esc(c.name),it.length,chk(`data-pfcat="${c.id}"`,pcOn(c.id),0,'Kategorie '+c.name+' anzeigen'),1)+grpBody(pre+c.id,it.map(frow).join(''))}).join(''):list.map(frow).join('');
+  // in «Im/Ausserhalb des Einsatzgebiets» (sec) gilt das Häkchen einer Kategorie nur für deren Standorte in diesem Abschnitt (placeSecSet), sonst für die ganze Kategorie (pro Person)
+  const secChk=(list,lbl)=>chk(`data-pfids="${list.map(f=>f.id).join(',')}"`,list.length&&list.every(placeOn),!list.length,lbl);
+  const cats=(pre,list,sec)=>withCat?cs.filter(c=>list.some(f=>cOf(f)===c.id)).map(c=>{const it=list.filter(f=>cOf(f)===c.id);return hd(pre+c.id,(pr.has(c.id)?'★ ':'')+esc(c.name),it.length,sec?secChk(it,'Kategorie '+c.name+' in diesem Abschnitt anzeigen'):chk(`data-pfcat="${c.id}"`,pcOn(c.id),0,'Kategorie '+c.name+' anzeigen'),1)+grpBody(pre+c.id,it.map(frow).join(''))}).join(''):list.map(frow).join('');
   const ord=l=>l.filter(isIn).concat(l.filter(f=>!isIn(f))),top=ord(fs.filter(f=>pr.has(f.cat_id))),rest=fs.filter(f=>!pr.has(f.cat_id));
-  const sub=(k,t,list,inv)=>{const c=inv?!poiFold.has(k+'+'):poiFold.has(k);return `<div class="psh"><span class="nochk"></span><button class="sfold" data-pof="${inv?k+'+':k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button></div>`+(c?'':`<div class="pgb">${list.length?cats(k+':',list):'<div class="mut">Keine</div>'}</div>`)};
+  const sub=(k,t,list,inv)=>{const c=inv?!poiFold.has(k+'+'):poiFold.has(k);return `<div class="psh">${secChk(list,t+': alle Standorte anzeigen')}<button class="sfold" data-pof="${inv?k+'+':k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button></div>`+(c?'':`<div class="pgb">${list.length?cats(k+':',list,1):'<div class="mut">Keine</div>'}</div>`)};
   const body=!areaIn?cats('fix:',top.concat(rest)):cats('fix:',top)+sub('fix:in','Im Einsatzgebiet',rest.filter(isIn))+sub('fix:out','Ausserhalb des Einsatzgebiets',rest.filter(f=>!isIn(f)),1);
   const fl=!fs.length?'':hd('fix','Feste Standorte',fs.length,chk('data-pfgrp="1"',fs.every(f=>!poiHide.has('f'+f.id)),0,'Alle festen Standorte anzeigen'))+grpBody('fix',body);
   $('#poiList').innerHTML=pls+lg+fl;
@@ -924,6 +926,14 @@ function poiPlaces(){return feat('place')&&!!(st&&(st.places||[]).length)} // Fe
 function pcOn(cid){const k=String(cid||0),v=me&&me.place_view;if(v&&Object.prototype.hasOwnProperty.call(v,k))return!!v[k];const c=((st&&st.place_cats)||[]).find(x=>x.id===cid);return c?!!c.def_on:true}
 const pcLbl=()=>!(me&&me.place_view&&me.place_view.lbl===0); // Namen fester Standorte auf der Karte, pro Person (place_view.lbl, Standard an)
 const placeShown=f=>vis('place')&&pcOn(f.cat_id)&&!poiHide.has('f'+f.id);
+const placeOn=f=>pcOn(f.cat_id)&&!poiHide.has('f'+f.id); // eingeblendet nach Kategorie und Eintrag (ohne Kategorie «place» des Fensters «Ansicht»)
+// Häkchen für einen Teil der Standorte (Abschnitte «Im/Ausserhalb des Einsatzgebiets» und deren Kategorien): wirkt nur über poiHide auf genau diese Standorte.
+// Ist eine Kategorie aus, wird sie eingeschaltet und ihre übrigen Standorte werden einzeln ausgeblendet, damit sie nicht mit erscheinen.
+function placeSecSet(ids,on){const fs=(st&&st.places)||[],set=new Set(ids),hide=[];
+  if(on){const off=new Set(fs.filter(f=>set.has(f.id)&&!pcOn(f.cat_id)).map(f=>f.cat_id||0));
+    fs.forEach(f=>{if(!set.has(f.id)&&off.has(f.cat_id||0))hide.push('f'+f.id)});
+    if(hide.length)setPoiHidden(hide,true);setPoiHidden(ids.map(id=>'f'+id),false);if(off.size)setPlaceCat([...off],true);if(!vis('place'))setVis(['place'],true)}
+  else setPoiHidden(ids.map(id=>'f'+id),true)}
 // vorkommende Kategorien {id, name, n} nach Name, «Ohne Kategorie» (id 0) zuletzt
 function placeCatsUsed(){const fs=(st&&feat('place')&&st.places)||[],cs=((st&&st.place_cats)||[]).map(c=>({id:c.id,name:c.name,n:fs.filter(f=>f.cat_id===c.id).length})).filter(c=>c.n),o=fs.filter(f=>!cs.some(c=>c.id===f.cat_id)).length;return o?cs.concat({id:0,name:'Ohne Kategorie',n:o}):cs}
 let pcSave=null;

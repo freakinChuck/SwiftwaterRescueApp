@@ -141,6 +141,22 @@ bool pcOwn(IncStore s) {
 /// Kategorien fester Standorte sichtbar? Kategorie «place», Kategorie des Standorts und der Standort selbst (placeShown)
 bool placeShown(IncStore s, J place) => s.vis('place') && pcOn(s, place['cat_id']) && !s.poiHide.contains('f${place['id']}');
 
+/// eingeblendet nach Kategorie und Eintrag, ohne die Kategorie «place» des Fensters «Ansicht» (placeOn)
+bool placeOn(IncStore s, J place) => pcOn(s, place['cat_id']) && !s.poiHide.contains('f${place['id']}');
+
+/// Häkchen für einen Teil der Standorte (Abschnitte «Im/Ausserhalb des Einsatzgebiets» und deren Kategorien): wirkt nur über poiHide auf genau diese.
+/// Ist eine Kategorie aus, wird sie eingeschaltet und ihre übrigen Standorte werden einzeln ausgeblendet, damit sie nicht mit erscheinen (placeSecSet).
+void placeSecSet(IncStore s, Iterable<int> ids, bool on) {
+  final set = ids.toSet(), fs = s.places;
+  if (!on) return s.setPoiHidden(set.map((id) => 'f$id'), true);
+  final off = {for (final f in fs) if (set.contains(ji(f['id'])) && !pcOn(s, f['cat_id'])) ji(f['cat_id']) ?? 0};
+  final hide = [for (final f in fs) if (!set.contains(ji(f['id'])) && off.contains(ji(f['cat_id']) ?? 0)) 'f${f['id']}'];
+  if (hide.isNotEmpty) s.setPoiHidden(hide, true);
+  s.setPoiHidden(set.map((id) => 'f$id'), false);
+  if (off.isNotEmpty) setPlaceCat(s, off.toList(), true);
+  if (!s.vis('place')) s.setVis(['place'], true);
+}
+
 double _segDist(LatLng a, LatLng b, LatLng p) {
   const ky = 111320.0;
   final kx = ky * math.cos(p.latitude * math.pi / 180), ax = (a.longitude - p.longitude) * kx, ay = (a.latitude - p.latitude) * ky;
@@ -511,15 +527,22 @@ class _PoisPanelState extends State<PoisPanel> {
     }
 
     bool isIn(J f) => inA.contains(ji(f['id']));
-    List<Widget> cats(String pre, List<J> list) => withCat
+    // in «Im/Ausserhalb des Einsatzgebiets» (sec) gilt das Häkchen einer Kategorie nur für deren Standorte in diesem Abschnitt (placeSecSet), sonst für die ganze Kategorie
+    bool secOn(List<J> l) => l.isNotEmpty && l.every((f) => placeOn(s, f));
+    List<Widget> cats(String pre, List<J> list, {bool sec = false}) => withCat
         ? [
             for (final c in cs)
               if (list.any((f) => cOf(f) == c.id))
                 _grp('$pre${c.id}', '${pr.contains(c.id) ? '★ ' : ''}${c.name}', list.where((f) => cOf(f) == c.id).length,
-                    list.where((f) => cOf(f) == c.id).map(_placeRow).toList(), v: pcOn(s, c.id), on: (v) {
-                  setPlaceCat(s, [c.id], v);
-                  if (v && !s.vis('place')) s.setVis(['place'], true);
-                }, sub: true),
+                    list.where((f) => cOf(f) == c.id).map(_placeRow).toList(),
+                    v: sec ? secOn(list.where((f) => cOf(f) == c.id).toList()) : pcOn(s, c.id),
+                    on: sec
+                        ? (v) => placeSecSet(s, list.where((f) => cOf(f) == c.id).map((f) => ji(f['id']) ?? 0), v)
+                        : (v) {
+                            setPlaceCat(s, [c.id], v);
+                            if (v && !s.vis('place')) s.setVis(['place'], true);
+                          },
+                    sub: true),
           ]
         : list.map(_placeRow).toList();
     final top = [...fs.where((f) => pr.contains(ji(f['cat_id'])) && isIn(f)), ...fs.where((f) => pr.contains(ji(f['cat_id'])) && !isIn(f))],
@@ -533,7 +556,8 @@ class _PoisPanelState extends State<PoisPanel> {
               count: list.length,
               open: open,
               onToggle: () => _toggleFold(key),
-              children: list.isEmpty ? [const Padding(padding: EdgeInsets.all(8), child: Text('Keine'))] : cats('$k:', list)));
+              trailing: Checkbox(value: secOn(list), onChanged: list.isEmpty ? null : (v) => placeSecSet(s, list.map((f) => ji(f['id']) ?? 0), v == true)),
+              children: list.isEmpty ? [const Padding(padding: EdgeInsets.all(8), child: Text('Keine'))] : cats('$k:', list, sec: true)));
     }
 
     return [
