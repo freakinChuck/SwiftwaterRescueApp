@@ -76,7 +76,7 @@ body.jb #followChip{top:calc(7.6rem + env(safe-area-inset-top))}
 /* Funk (Issue #113): Sprechtaste unten in der Mitte der Karte, Kanalwahl darüber; der Hinweis zum Suchgebiet rückt nach oben */
 #vxFab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(1rem + env(safe-area-inset-bottom));z-index:1040;display:flex;flex-direction:column;align-items:center;gap:.3rem}#vxFab .vxptt{width:74px;height:74px;font-size:1.9rem;box-shadow:0 2px 12px #000b}
 #vxFab select{max-width:46vw;font-size:.8rem;padding:.25rem .4rem;border-radius:14px;background:#0f2430e6}#vxLbl{background:#0f2430e6;border:1px solid var(--line);border-radius:12px;padding:.1rem .6rem;font-size:.75rem;white-space:nowrap}
-body.vxp #areaNote{bottom:calc(8.6rem + env(safe-area-inset-bottom))}
+body.vxp #areaNote{bottom:calc(9.4rem + env(safe-area-inset-bottom));right:9.5rem} /* über der Sprechtaste, links der Kartenknöpfe */
 #msgs,#pois,#res,#hyd{position:fixed;right:.7rem;top:calc(7.4rem + env(safe-area-inset-top));bottom:calc(23.1rem + env(safe-area-inset-bottom));width:min(330px,calc(100vw - 1.4rem));z-index:1050;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px #000a;display:flex;flex-direction:column}
 .phead{display:flex;align-items:center;gap:.5rem;padding:.4rem .4rem .4rem .8rem;border-bottom:1px solid var(--line)}.phead b{flex:1}.phead button{padding:.3rem .6rem}
 #peopleList,#msgList,#poiList,#resList,#hydList{overflow:auto;padding:.2rem .7rem .7rem;flex:1;min-height:0}

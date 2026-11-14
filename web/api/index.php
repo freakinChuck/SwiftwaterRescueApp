@@ -1380,7 +1380,8 @@ if (strncmp($route, 'guest/', 6) === 0) {
     if (!$v || !($p = voicePath($v)) || !is_file($p)) fail('Aufnahme nicht gefunden', 404);
     header('Content-Type: ' . $v['mime']); header('Content-Length: ' . filesize($p)); header('Cache-Control: private, max-age=86400'); readfile($p); exit; }
   if ($route === 'guest/voice/join') { if (!$conf) fail('Die Live-Konferenz ist nicht eingerichtet.', 403);
-    out(['url' => voiceCfg()['lk']['url'], 'token' => voiceLkToken(voiceRoom($inc['id'], $ch), 'g' . $g['id'], $gl, $g['speak'] && voiceKind($inc)['guest_speak']), 'room' => voiceRoom($inc['id'], $ch)]); }
+    $gsp = $g['speak'] && voiceKind($inc)['guest_speak'] ? 1 : 0;
+    out(['url' => voiceCfg()['lk']['url'], 'token' => voiceLkToken(voiceRoom($inc['id'], $ch), 'g' . $g['id'], $gl, $gsp), 'room' => voiceRoom($inc['id'], $ch), 'speak' => $gsp]); }
   fail('Unbekannte Route', 404);
 }
 
@@ -2662,11 +2663,13 @@ switch ($route) {
     $s = $db->prepare("SELECT m.user_id,m.group_id FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id JOIN participants p ON p.user_id=m.user_id AND p.incident_id=? WHERE g.active=1 ORDER BY g.pos, g.name"); $s->execute([$id]); foreach ($s->fetchAll() as $x) $pg['m'][(int)$x['user_id']][] = (int)$x['group_id']; }
   // Funk (Issue #113): meine Kanäle, Durchsagen der hörbaren Kanäle seit vs (inkrementell nach upd), Anwesenheit in den Konferenzen (vc = mein Kanal in der Konferenz, 0 = keiner);
   // Einsatzleitung zusätzlich alle Kanäle (Kanäle anpassen) und die Links für Externe. Das Log zeigt Durchsagen nur aus hörbaren Kanälen (Einsatzleitung alle).
+  // Ohne vs (z. B. die Überwachung der App im Hintergrund) keine Durchsagen, nur die Kanäle; die neusten v (ID) und vat (Zeit) für Meldungen ohne Push.
   $vo = null; $vmids = []; $vcm = canManage($inc);
   if ($F['voice']) { $vmine = voiceMine($inc); $vmids = array_column($vmine, 'id'); $vconf = voiceConfOn($inc); $vk = voiceKind($inc); $vcf = voiceCfg();
     if (isset($_GET['vc'])) { $vch = (int)$_GET['vc']; if (!$vconf || !in_array($vch, $vmids, true)) $vch = 0; voiceConfSet($inc, 'u' . $uid, $uid, null, $me['name'], $vch); }
-    $vs = (int)($_GET['vs'] ?? 0);
-    $vo = ['ch' => $vmine, 'items' => $vmids ? voiceRows($id, 'AND v.channel_id IN (' . implode(',', $vmids) . ') AND v.upd>=?' . ($vs ? '' : ' AND v.id>(SELECT COALESCE(MAX(x.id),0)-200 FROM voice x WHERE x.incident_id=v.incident_id)'), [$vs]) : [],
+    $vs = (int)($_GET['vs'] ?? 0); $vlast = $vmids ? ($db->query("SELECT id,user_id FROM voice WHERE incident_id=" . (int)$id . " AND channel_id IN (" . implode(',', $vmids) . ") ORDER BY id DESC LIMIT 1")->fetch() ?: null) : null;
+    $vo = ['ch' => $vmine, 'items' => $vmids && isset($_GET['vs']) ? voiceRows($id, 'AND v.channel_id IN (' . implode(',', $vmids) . ') AND v.upd>=?' . ($vs ? '' : ' AND v.id>(SELECT COALESCE(MAX(x.id),0)-200 FROM voice x WHERE x.incident_id=v.incident_id)'), [$vs]) : [],
+      'v' => $vlast ? (int)$vlast['id'] : 0, 'vu' => $vlast && $vlast['user_id'] !== null ? (int)$vlast['user_id'] : null,
       'conf' => $vconf ? 1 : 0, 'conf_list' => array_values(array_filter(voiceConfList($id), fn($c) => in_array($c['ch'], $vmids, true))), 'tr' => voiceTrOn($inc) ? 1 : 0, 'max_s' => $vcf['max_s'], 'listen' => $vcf['listen'], 'keep' => $vk['keep']];
     if ($vcm) { $ion = array_column(voiceIncCh($inc), 'id');
       $vo['all_ch'] = array_values(array_map(fn($c) => ['id' => $c['id'], 'name' => $c['name'], 'on' => in_array($c['id'], $ion, true) ? 1 : 0], array_filter(voiceChannels(), fn($c) => !$c['plans'] || kindOf($inc)['plans'])));

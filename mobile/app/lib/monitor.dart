@@ -132,6 +132,12 @@ Future<AccState> pollOne(Account a) async {
           await report(a, 'm:$mid', 'Nachricht von ${m['from_name'] ?? '?'}', '${m['text'] ?? ''}', ml);
         }
       }
+      // Durchsagen im Funk (Issue #113): ohne Liste (die lädt erst die Einsatz-App), nur die neuste melden, nicht die eigene
+      final vx = r['voice'] is Map ? r['voice'] as Map : null, v = (vx?['v'] as num?)?.toInt() ?? 0, vSeen = (st.j['vsee'] as num?)?.toInt() ?? 0;
+      if (st.init && st.inc == id && st.j['vsee'] is num && joined && v > vSeen && ml != 'none' && (vx?['vu'] as num?)?.toInt() != a.uid) {
+        await report(a, 'v:$v', 'Neue Durchsage im Funk', 'Zum Abspielen die App öffnen', ml);
+      }
+      if (vx != null) j['vsee'] = v;
       j.addAll({'inc': id, 'since': since, 'joined': joined, 'title': '${inc['message'] ?? ''}', 'kind': kind, 'color': inc['kind_color'], 'level': lvl, 'end_level': el});
     } else {
       if (st.inc != null && (st.alarmed || st.joined)) {
@@ -140,7 +146,7 @@ Future<AccState> pollOne(Account a) async {
         final el = (st.j['end_level'] as String?) ?? (l == 'none' || l == 'low' ? 'low' : 'normal');
         if (el != 'none') await report(a, 'e:${st.inc}', '${_up(k)} BEENDET', '$k beendet.', el);
       }
-      for (final k in ['inc', 'joined', 'alarmed', 'title', 'kind', 'color', 'level', 'end_level']) {
+      for (final k in ['inc', 'joined', 'alarmed', 'title', 'kind', 'color', 'level', 'end_level', 'vsee']) {
         j.remove(k);
       }
     }

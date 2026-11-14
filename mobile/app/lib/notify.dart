@@ -91,7 +91,7 @@ Future<bool?> hasDndAccess() async => notes.resolvePlatformSpecificImplementatio
 /// Nachrichten und Einsatzende deshalb doppelt. Ist das Konto für Push angemeldet, meldet im Hintergrund nur noch Push, was der Server
 /// auch pusht (i:, m:, e:); andere Meldungen (z. B. «aus dem Einsatz entfernt») und alles im Vordergrund zeigt weiterhin die App.
 Future<bool> _pushShows(String acc, String tag) async {
-  if (!Platform.isIOS || !RegExp(r'^[ime]:').hasMatch(tag)) return false;
+  if (!Platform.isIOS || !RegExp(r'^[imev]:').hasMatch(tag)) return false; // v: Durchsage im Funk (Issue #113)
   if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) return false;
   try {
     final t = await SharedPreferencesAsync().getString('push_$acc'); // gesetzt von syncPush (push.dart): Token = angemeldet

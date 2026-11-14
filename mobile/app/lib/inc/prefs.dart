@@ -19,6 +19,7 @@ import 'ctx.dart';
 import 'hydro.dart';
 import 'store.dart';
 import 'util.dart';
+import 'voice.dart';
 
 /// Arten der Abwesenheit (ABS_KIND)
 const _absKind = {'abs': 'Abwesend', 'sus': 'Einsatzfähigkeit ausgesetzt'};
@@ -604,6 +605,7 @@ class _PrefsPageState extends State<PrefsPage> {
                   _alarm(me),
                   _anzeige(me),
                   if (s.feat('hydro')) HydroPrefs(s: s), // persönliche Messstationen (Issue #165)
+                  if (s.feat('voice')) VoicePrefs(s: s), // Funk (Issue #113)
                   ?_ai(me),
                   _legal(),
                 ]));

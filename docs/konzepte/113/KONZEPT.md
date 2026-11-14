@@ -1,6 +1,13 @@
 # Konzept: Sprachchat / Konferenzgespräch für Einsatz und Übung (Issue #113)
 
-Stand: 14.11.2026, Version 2 mit den Antworten des Auftraggebers (PR #194). Nur Konzept, noch kein Code. Die Bilder sind Mockups: in die laufende Einsatz-App bzw. Verwaltung eingesetzt, Kartenhintergrund und Fluss nachgebildet (ohne Kartenkacheln).
+Stand: 14.11.2026, Version 2 mit den Antworten des Auftraggebers (PR #194), umgesetzt im selben PR. Die Bilder sind Mockups: in die laufende Einsatz-App bzw. Verwaltung eingesetzt, Kartenhintergrund und Fluss nachgebildet (ohne Kartenkacheln).
+
+## Umsetzung (PR #194)
+Umgesetzt wie unten beschrieben (Anforderungen FK-01 bis FK-12 in `docs/REQUIREMENTS.md`, Details in `CLAUDE.md`). Abweichungen vom Konzept:
+- **Anwesenheit in der Konferenz** melden die Geräte selbst (Abruf mit `vc`, `incident/voice/conf`), statt über einen Webhook des Medienservers. So braucht LiveKit keine Konfiguration für Rückrufe; Personen entfernen und Räume schliessen geht weiter über die Room-API.
+- **Einstellungen je Einsatztyp** stehen in der Einstellung `voice` (`kinds`), nicht in neuen Spalten von `inc_kinds`; «Einstellungen übernehmen von» kopiert sie mit.
+- Bereich der Anforderungen heisst **FK** (FU ist schon «Funktionen»).
+- **Offen:** Durchsagen bei gesperrtem iPhone über das PushToTalk-Framework (braucht direkten APNs-Versand mit `.p8`-Schlüssel und die Berechtigung von Apple) und die Konferenz als Anruf über CallKit. Heute: unter iOS läuft eine beigetretene Konferenz über den Hintergrundmodus «audio» weiter, Durchsagen kommen bei gesperrtem Gerät als Push.
 
 ## Entscheide des Auftraggebers (Antworten auf die offenen Fragen)
 1. Live-Konferenz **von Anfang an** (nicht erst in einer späteren Stufe).
@@ -103,7 +110,7 @@ Beide teilen dieselben **Kanäle**, Rechte und dieselbe Sprechtaste. Wer in der 
 - `legal.html`: Sprachaufnahmen und Transkripte, Aufbewahrung je Typ, Medienserver und Transkriptionsdienst als Empfänger, Gastzugang.
 - Öffentliche Ansicht: keine Durchsagen.
 
-## Anforderungen (Vorschlag für `docs/REQUIREMENTS.md`, neuer Bereich FU)
+## Anforderungen (umgesetzt als Bereich FK in `docs/REQUIREMENTS.md`)
 - FU-01 Teilnehmende sprechen per Sprechtaste auf einem Kanal; die Kanäle sind in der Verwaltung konfigurierbar und je Einsatztyp wählbar.
 - FU-02 Live-Konferenz je Kanal über einen eigenen Medienserver.
 - FU-03 Wer nicht in der Konferenz ist, erhält Durchsagen; mit «Mithören» spielt die offene App sie automatisch ab, sonst Meldung (Stufe je Einsatztyp).
