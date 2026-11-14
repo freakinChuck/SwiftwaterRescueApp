@@ -1256,6 +1256,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     final btns = <Widget>[
       if (i != null) _fab('Kamerafokus', const Icon(Icons.center_focus_strong), () => setState(() => _camOpen = !_camOpen), active: s.autoView),
       if (i != null) _fab('Einsatzkräfte', const Icon(Icons.groups), () => _togglePanel('people'), count: _pplCount, countCol: const Color(0xFF546E7A), active: _panel == 'people'),
+      // ohne Einsatz: Fahrzeuge im selben Fenster (Issue #177)
+      if (i == null && vehList(s).isNotEmpty) _fab('Fahrzeuge', const Icon(Icons.directions_car), () => _togglePanel('people'), active: _panel == 'people'),
       if (i != null && s.feat('res')) _fab('Rettlinge', const Text('R', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), () => _togglePanel('res'), count: _resCount, active: _panel == 'res'),
       if (i != null && s.feat('msg')) _fab('Nachrichten', const Icon(Icons.chat), () => _togglePanel('msgs'), count: s.unread, active: _panel == 'msgs'),
       if (s.vx.on) _fab('Funk', const Icon(Icons.mic), () => _togglePanel('vx'), count: s.vx.unheard(null), active: _panel == 'vx'),

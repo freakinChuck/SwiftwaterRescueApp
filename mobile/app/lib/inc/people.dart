@@ -387,10 +387,13 @@ class _PeoplePanelState extends State<PeoplePanel> {
         final ap = _active, xl = s.externals.map((e) => <String, dynamic>{...e, 'ext': 1}).toList();
         final showExt = s.feat('ext') && (xl.isNotEmpty || s.canManage);
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          PanelHead('Einsatzkräfte', onClose: () => map.openPanel(null)),
+          PanelHead(s.inc == null ? 'Fahrzeuge' : 'Einsatzkräfte', onClose: () => map.openPanel(null)),
           Expanded(
               child: s.inc == null
-                  ? const Padding(padding: EdgeInsets.all(12), child: Mut('Kein laufender Einsatz.'))
+                  // ohne Einsatz nur die Fahrzeuge (Issue #177)
+                  ? vehList(s).isEmpty
+                      ? const Padding(padding: EdgeInsets.all(12), child: Mut('Keine Fahrzeuge.'))
+                      : ListView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), children: vehRows(context, s, map))
                   : ListView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), children: [
                       _group('int', 'Einsatzkräfte mit App', ap, 'Noch niemand im Einsatz.', _row),
                       if (showExt) _group('ext', 'Externe Einsatzkräfte', xl, 'Keine erfasst.', _xrow),

@@ -237,12 +237,16 @@ List<Widget> vehRows(BuildContext context, IncStore s, MapCtl map) {
                 padding: const EdgeInsets.only(top: 4),
                 child: Wrap(spacing: 6, runSpacing: 4, children: [
                   if (!kid && ll != null)
-                    smallBtn('Zentrieren', () {
-                      if (!s.vis('veh')) s.setVis(['veh'], true);
-                      if (map.followId != null) map.follow(null);
-                      map.centerOn(ll);
-                      if (MediaQuery.sizeOf(context).width < 760) map.openPanel(null);
-                    }),
+                    IconButton(
+                        tooltip: 'Auf der Karte zentrieren',
+                        icon: const Icon(Icons.my_location, size: 20),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          if (!s.vis('veh')) s.setVis(['veh'], true);
+                          if (map.followId != null) map.follow(null);
+                          map.centerOn(ll);
+                          if (MediaQuery.sizeOf(context).width < 760) map.openPanel(null);
+                        }),
                   if (!kid && ll != null) ?navBtn(s, v['lat'], v['lon'], js(v['name'])),
                   ...vehBtns(context, s, v),
                 ])),
