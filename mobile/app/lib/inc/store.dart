@@ -24,6 +24,7 @@ import '../sys.dart';
 import '../track.dart';
 import 'area.dart';
 import 'util.dart';
+import 'voice.dart';
 
 /// Kategorien auf der Karte (VIEW in common.js): Schlüssel, Bezeichnung, Funktion
 const viewCatsAll = [
@@ -143,6 +144,9 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Ereignisse an die Karte (z. B. Einsatz neu: Startansicht)
   final events = StreamController<String>.broadcast();
+
+  /// Funk & Konferenz (Issue #113): Durchsagen, Mithören, Live-Konferenz (voice.dart)
+  late final VoiceStore vx = VoiceStore(this);
 
   // ---------- Hilfen ----------
   int get uid => ji(me?['id']) ?? acc.uid;
@@ -448,7 +452,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     if (_polling || closed || mustChange) return;
     _polling = true;
     try {
-      final nx = await api.call('incident/state', query: {'since': '$_lastMsg'});
+      final nx = await api.call('incident/state', query: {'since': '$_lastMsg', ...vx.query()});
       final i = nx['incident'] is Map ? jm(nx['incident']) : null;
       if (i != null) {
         final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']);
@@ -479,6 +483,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           notify('AUS EINSATZ ENTFERNT', 'Die Einsatzleitung hat dich aus dem Einsatz entfernt.', 'k:$id:${nm['left_at']}', kr);
         }
         st = nx;
+        unawaited(vx.onState(nx));
         if (!_joinedSeen && inNow) _trackNow(); // angenommen: Teilen im Hintergrund sofort vorbereiten, nicht erst beim nächsten Polling
         _joinedSeen = inNow;
       } else {
@@ -489,6 +494,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           if (el != 'none' && (st?['alarm'] != false || st?['me'] != null)) notify('${k.toUpperCase()} BEENDET', '$k beendet.', 'e:${o['id']}', el);
         }
         st = nx;
+        unawaited(vx.onState(nx));
         _lastIncId = null;
         msgs.clear();
         _lastMsg = 0;
@@ -814,6 +820,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     _fg?.cancel();
     _stopPos();
     if (!demo) setForeground(null);
+    vx.dispose();
     toasts.close();
     events.close();
     super.dispose();

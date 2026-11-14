@@ -50,7 +50,8 @@ In den Einstellungen der App gibt es dazu Folgendes:
 | `inc/menu.dart` | ☰-Menü mit Registern, Einsatz starten, vorbereitete Übungen |
 | `inc/people.dart`, `msgs.dart`, `res.dart`, `pois.dart`, `rd.dart` | Seitenfenster Einsatzkräfte, Nachrichten, Rettlinge (mit «PLS setzen»), Markierungen & Bereiche (mit festen Standorten), Flussdistanz |
 | `inc/hydro.dart` | Pegel & Abfluss (Issue #165): Messstationen auf der Karte, Seitenfenster «Messstationen», Menükarte, Auswahl im Profil |
-| `inc/prefs.dart` | Profil (Konto, Alarmierung, Anzeige, Pegel & Abfluss, AI-Assistent, Rechtliches) |
+| `inc/voice.dart` | Funk (Issue #113): Durchsagen aufnehmen (`record`, AAC) und abspielen (`just_audio`), Mithören, Nachsenden, Live-Konferenz über LiveKit (`livekit_client`), Seitenfenster «Funk», Sprechtaste auf der Karte, Leitung (Kanäle, Links für Externe), Profil-Karte |
+| `inc/prefs.dart` | Profil (Konto, Alarmierung, Anzeige, Pegel & Abfluss, Funk, AI-Assistent, Rechtliches) |
 | `inc/area.dart` | Suchgebiet entlang des Gewässers, Gewässernetz über `overpass` (mit Rückfall im Gerät) |
 | `inc/ctx.dart`, `inc/util.dart` | gemeinsame Bausteine (Karten, Dialoge, Navigation, Koordinaten) |
 | `demo.dart`, `demo_ui.dart` | Demo-Modus: simuliertes Backend (`Api.call` für `demoBase`), Einstieg in der Kontenliste, Kennzeichnung und Steuerung; Symbole aus `assets/sym` |
@@ -58,7 +59,7 @@ In den Einstellungen der App gibt es dazu Folgendes:
 | `accounts.dart` | Konten im sicheren Speicher (Keychain bzw. verschlüsselt) |
 | `monitor.dart` | Abfrage `incident/state` je Konto, meldet Neues |
 | `notify.dart` | Benachrichtigungen, Kanäle je Alarmstufe |
-| `service.dart` | Android-Vordergrunddienst, nur wenn nötig (`serviceNeeded`) |
+| `service.dart` | Android-Vordergrunddienst, nur wenn nötig (`serviceNeeded`); während einer Funk-Konferenz mit Typ `microphone` |
 | `push.dart` | Firebase Cloud Messaging (optional) |
 | `sys.dart` | Akku-Optimierung, Standortberechtigung (auch «Immer»), App-Einstellungen, Weckton (Android über das Plugin `packages/sw_sys`, auch im Dienst) |
 

@@ -11,6 +11,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <!-- Standort im Dienst (Typ location, ab Android 14 nötig, damit der Dienst bei gesperrtem Bildschirm Positionen erhält) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <!-- Funk (Issue #113): Durchsagen aufnehmen, Live-Konferenz (auch bei gesperrtem Bildschirm über den Dienst mit Typ microphone), Bluetooth-Headset -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
@@ -44,7 +51,7 @@
         <!-- Vordergrunddienst: fragt alle aktiven Backends ab (lib/service.dart) -->
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"
-            android:foregroundServiceType="specialUse|location"
+            android:foregroundServiceType="specialUse|location|microphone"
             android:exported="false"
             tools:replace="android:exported,android:foregroundServiceType">
             <property
