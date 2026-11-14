@@ -2,6 +2,7 @@
 // ohne sie läuft die App ohne Push (Android: Vordergrunddienst, iOS: nur bei offener App).
 // Der Server sendet nur, wenn er ein Firebase-Dienstkonto hat (config.php, «fcm»; push/key liefert native=1).
 // Android erhält reine Daten-Nachrichten und zeigt sie selbst an (Alarmstufe, Vollbild); iOS zeigt sie über das System (APNs).
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -11,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'accounts.dart';
 import 'api.dart';
 import 'monitor.dart';
+import 'sounds.dart';
 
 const _apiKey = String.fromEnvironment('FCM_API_KEY');
 const _project = String.fromEnvironment('FCM_PROJECT_ID');
@@ -57,7 +59,8 @@ Future<void> _show(RemoteMessage m) async {
   final a = await accountFor(d);
   if (a == null || !a.active) return;
   final tag = '${d['tag'] ?? 'sw'}';
-  await report(a, tag, '${d['t'] ?? m.notification?.title ?? 'Swiftwater Rescue'}', '${d['b'] ?? m.notification?.body ?? ''}', _lvl(d));
+  await report(a, tag, '${d['t'] ?? m.notification?.title ?? 'Swiftwater Rescue'}', '${d['b'] ?? m.notification?.body ?? ''}', _lvl(d),
+      kind: int.tryParse('${d['kind'] ?? ''}'), ksnd: d['ksnd'] as String?);
 }
 
 @pragma('vm:entry-point')
@@ -132,9 +135,12 @@ Future<void> syncPush({bool force = false}) async {
         }
         // Ältere Server liefern registered nicht: dann wie bisher nur bei neuem Token
         final reg = key['registered'];
-        if (!force && had == tok && (reg == null || reg == 1)) continue;
-        await a.api.call('push/native/subscribe', body: {'token': tok, 'platform': Platform.isIOS ? 'ios' : 'android'});
+        // gewählte Töne je Einsatztyp (Issue #171): iOS spielt über APNs den Ton, den der Server nennt; geänderte Wahl neu melden
+        final snd = await sndChoice(a.id), sk = 'pushsnd_${a.id}', sj = jsonEncode(snd);
+        if (!force && had == tok && (reg == null || reg == 1) && (await prefs.getString(sk) ?? '{}') == sj) continue;
+        await a.api.call('push/native/subscribe', body: {'token': tok, 'platform': Platform.isIOS ? 'ios' : 'android', 'snd': snd});
         await prefs.setString(k, tok);
+        await prefs.setString(sk, sj);
       } else if (!want && had != null && had != 'none') {
         await a.api.call('push/native/unsubscribe', body: {'token': had});
         await prefs.remove(k);

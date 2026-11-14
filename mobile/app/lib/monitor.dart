@@ -76,12 +76,13 @@ Future<bool> isForeground(String id) async {
 /// Meldung zeigen, ausser schon gemeldet oder die Web-App des Kontos ist offen (dann nur merken). Alarme der Stufen crit und high
 /// zeigt die App immer: Nur ihre Meldung umgeht «Nicht stören» und klingelt sicher (sicherer als ein Ton in der Seite).
 /// Quittiert man den Alarm in der App (inc/store.dart), schliesst sie die Meldung.
-Future<void> report(Account a, String tag, String title, String body, String lvl) async {
+/// kind/ksnd: Einsatztyp und Vorgabe des Tons für kritische Alarme (sounds.dart).
+Future<void> report(Account a, String tag, String title, String body, String lvl, {int? kind, String? ksnd}) async {
   if (lvl == 'none') return;
   if (!await markTag(a.id, tag)) return;
   final alarm = tag.startsWith('i:') && (lvl == 'crit' || lvl == 'high');
   if (!alarm && await isForeground(a.id)) return;
-  await showNote(a.id, tag, title, body, lvl, sub: a.label);
+  await showNote(a.id, tag, title, body, lvl, sub: a.label, kind: kind, ksnd: ksnd);
 }
 
 bool _forMe(Map m, int uid) {
@@ -116,25 +117,30 @@ Future<AccState> pollOne(Account a) async {
       if (st.inc != id) {
         // neuer Einsatz: alarmieren, sofern aufgeboten (alarm) und noch nicht angenommen; früheren Stand vergessen
         j['alarmed'] = r['alarm'] != false;
-        if (r['alarm'] != false && !joined) await report(a, 'i:$id', _up(kind), '${inc['message'] ?? ''}', lvl);
+        if (r['alarm'] != false && !joined) {
+          await report(a, 'i:$id', _up(kind), '${inc['message'] ?? ''}', lvl, kind: (inc['kind_id'] as num?)?.toInt(), ksnd: (inc['kind'] as Map?)?['snd'] as String?);
+        }
       }
-      final ml = lvl == 'none' || lvl == 'low' ? 'low' : 'normal';
+      // Stufen je Meldungstyp und Einsatztyp (Issue #168); ältere Server ohne Angabe wie bisher
+      final dl = lvl == 'none' || lvl == 'low' ? 'low' : 'normal';
+      final ml = (r['msg_level'] as String?) ?? dl, el = (r['end_level'] as String?) ?? dl;
       var since = st.since;
       for (final m in (r['messages'] as List? ?? [])) {
         final mid = (m['id'] as num).toInt();
         if (mid > since) since = mid;
-        if (st.init && joined && (m['from_user'] as num?)?.toInt() != a.uid && _forMe(m as Map, a.uid)) {
+        if (st.init && joined && ml != 'none' && (m['from_user'] as num?)?.toInt() != a.uid && _forMe(m as Map, a.uid)) {
           await report(a, 'm:$mid', 'Nachricht von ${m['from_name'] ?? '?'}', '${m['text'] ?? ''}', ml);
         }
       }
-      j.addAll({'inc': id, 'since': since, 'joined': joined, 'title': '${inc['message'] ?? ''}', 'kind': kind, 'color': inc['kind_color'], 'level': lvl});
+      j.addAll({'inc': id, 'since': since, 'joined': joined, 'title': '${inc['message'] ?? ''}', 'kind': kind, 'color': inc['kind_color'], 'level': lvl, 'end_level': el});
     } else {
       if (st.inc != null && (st.alarmed || st.joined)) {
         final k = st.kind.isEmpty ? 'Einsatz' : st.kind;
         final l = (st.j['level'] as String?) ?? 'normal';
-        await report(a, 'e:${st.inc}', '${_up(k)} BEENDET', '$k beendet.', l == 'none' || l == 'low' ? 'low' : 'normal');
+        final el = (st.j['end_level'] as String?) ?? (l == 'none' || l == 'low' ? 'low' : 'normal');
+        if (el != 'none') await report(a, 'e:${st.inc}', '${_up(k)} BEENDET', '$k beendet.', el);
       }
-      for (final k in ['inc', 'joined', 'alarmed', 'title', 'kind', 'color', 'level']) {
+      for (final k in ['inc', 'joined', 'alarmed', 'title', 'kind', 'color', 'level', 'end_level']) {
         j.remove(k);
       }
     }
@@ -154,10 +160,12 @@ Future<AccState> pollOne(Account a) async {
 }
 
 /// Alle aktiven, angemeldeten Konten parallel abfragen. Rückgabe: Anzahl überwachter Konten.
-Future<int> pollAll() async {
+/// track: Standort danach teilen (nicht in der Oberfläche unter Android, dort teilt nur der Vordergrunddienst).
+Future<int> pollAll({bool track = true}) async {
   final l = (await Accounts.load()).where((a) => a.active && !a.loggedOut).toList();
   final r = await Future.wait(l.map(pollOne));
   final st = {for (var i = 0; i < l.length; i++) l[i].id: r[i]};
+  if (!track) return l.length;
   try {
     await Tracker.sync(); // Standort im Einsatz teilen (track.dart)
   } catch (e) {
@@ -167,4 +175,17 @@ Future<int> pollAll() async {
     }
   }
   return l.length;
+}
+
+/// Teilnahme aus der Einsatz-App übernehmen (Android, Issue #179): Der Vordergrunddienst läuft mit Push nur im Einsatz und muss
+/// deshalb gleich nach dem Annehmen davon wissen (serviceNeeded), nicht erst nach seiner nächsten Abfrage.
+Future<void> setJoined(String id, int? inc, bool joined) async {
+  final st = await accState(id);
+  if (st.inc == inc && st.joined == joined) return;
+  if (inc == null) return; // Einsatzende meldet weiterhin die Überwachung (pollOne)
+  final j = Map<String, dynamic>.from(st.j);
+  if (st.inc != inc) j['alarmed'] = true; // Einsatz zuerst in der Einsatz-App gesehen: das Ende meldet pollOne trotzdem
+  j['inc'] = inc;
+  j['joined'] = joined;
+  await _saveState(id, j);
 }

@@ -1,6 +1,9 @@
 // Android: Vordergrunddienst, der alle aktiven Konten im eingestellten Abstand abfragt (monitor.dart), auch bei geschlossener App
-// und nach einem Neustart. Er zeigt dauerhaft «Bereit für Alarme». iOS erlaubt keinen solchen Dienst: dort fragt die App nur, solange
-// sie offen ist, und im Hintergrund kommt der Alarm über Push (push.dart).
+// und nach einem Neustart. Android verlangt dafür eine dauerhafte Meldung («Bereit für Alarme»). Seit Issue #179 läuft er nur noch,
+// wenn er nötig ist (serviceNeeded): ein aktives Konto ohne Push (dann kämen Alarme bei geschlossener App sonst nicht an), die Teilnahme
+// an einem Einsatz (Standort im Hintergrund teilen, track.dart) oder die Einstellung «Immer im Hintergrund abfragen» (svc_always).
+// Sonst kommen Alarme, Nachrichten und Einsatzende über Push (push.dart). iOS erlaubt keinen solchen Dienst: dort fragt die App nur,
+// solange sie offen ist, und im Hintergrund kommt der Alarm über Push.
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -12,6 +15,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'accounts.dart';
 import 'monitor.dart';
 import 'notify.dart';
+import 'push.dart';
 import 'sys.dart';
 import 'track.dart';
 
@@ -40,10 +44,25 @@ Future<void> configureService() async {
       iosConfiguration: IosConfiguration(autoStart: false));
 }
 
-/// Dienst starten, wenn mindestens ein Konto aktiv ist, sonst beenden.
+/// Einstellung «Immer im Hintergrund abfragen», auch wenn Push eingerichtet ist (z. B. Geräte, die Push-Nachrichten zurückhalten).
+Future<bool> serviceAlways() async => (await prefs.getBool('svc_always')) ?? false;
+
+/// Braucht es den Dienst? Mindestens ein aktives Konto und eines davon ohne Push oder im Einsatz, oder die Einstellung svc_always (Issue #179).
+Future<bool> serviceNeeded() async {
+  final l = (await Accounts.load()).where((a) => a.active && !a.loggedOut).toList();
+  if (l.isEmpty) return false;
+  if (await serviceAlways()) return true;
+  for (final a in l) {
+    if (await pushStatus(a) != 'on') return true; // ohne Push nur über die Abfrage
+    if ((await accState(a.id)).joined) return true; // Standort im Einsatz teilen, Einsatzende erkennen
+  }
+  return false;
+}
+
+/// Dienst starten, wenn er nötig ist (serviceNeeded), sonst beenden.
 Future<void> syncService() async {
   if (!Platform.isAndroid) return;
-  final on = (await Accounts.load()).any((a) => a.active && !a.loggedOut);
+  final on = await serviceNeeded();
   var run = await service.isRunning();
   if (_cfgLoc != (await locLevel() == locAlways)) {
     // Standortberechtigung geändert: neu einrichten und, falls er läuft, den Dienst mit den neuen Typen neu starten
@@ -78,7 +97,9 @@ Future<void> serviceMain(ServiceInstance s) async {
     try {
       await refreshChannels(); // «Nicht stören» umgehen, sobald der Zugriff erteilt ist
       final n = await pollAll();
-      if (n == 0) {
+      if (n == 0 || !await serviceNeeded()) {
+        // nicht mehr nötig (z. B. Einsatz beendet, Push eingerichtet): beenden, die dauerhafte Meldung verschwindet (Issue #179)
+        Tracker.stop();
         stop = true;
         await s.stopSelf();
         return;
