@@ -580,9 +580,14 @@ class VoiceStore extends ChangeNotifier {
               ? 'Mikrofon offen'
               : 'hört zu';
 
-  void setOpen(bool on) {
+  /// Mikrofon offen lassen, ohne die Taste zu halten; ohne Mikrofon (verweigert) bleibt es zu
+  Future<void> setOpen(bool on) async {
     confOpen = on;
-    confMicSet(on);
+    await confMicSet(on);
+    if (on && !confMic) {
+      confOpen = false;
+      notifyListeners();
+    }
   }
 
   bool speaking(String ident) => speakers.contains(ident);
@@ -682,6 +687,28 @@ Widget _confBtn(VoiceStore vx) {
                       ]))))));
 }
 
+/// Schalter auf der Karte unter der Live-Taste: Mikrofon offen lassen bzw. wieder stumm
+Widget _micBtn(VoiceStore vx) {
+  final open = vx.confOpen, busy = vx.recording;
+  return Semantics(
+      button: true,
+      toggled: open,
+      label: open ? 'Mikrofon ist offen, antippen zum Stummschalten' : 'Mikrofon öffnen, ohne die Taste zu halten',
+      child: Material(
+          color: open ? const Color(0xFF1F6B45) : const Color(0xE60F2430),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: open ? okGreen : Colors.white24)),
+          elevation: 4,
+          child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: busy ? null : () => vx.setOpen(!open),
+              child: SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      child: Text(open ? '🎙 Mikro offen' : '🔇 Mikro zu',
+                          textAlign: TextAlign.center, style: TextStyle(color: busy ? Colors.white54 : Colors.white, fontSize: 12)))))));
+}
+
 /// Sprechtasten links unten über dem Hinweis zum Suchgebiet (vxFab): Durchsage mit Kanal darunter; in der Konferenz darüber die Live-Taste,
 /// ist die Konferenz eingerichtet, zuoberst der Knopf zum Beitreten bzw. Verlassen
 Widget? voiceFab(BuildContext c, VoiceStore vx) {
@@ -698,6 +725,8 @@ Widget? voiceFab(BuildContext c, VoiceStore vx) {
           PttButton(vx: vx, ch: () => vx.confSpeak ? vx.confCh : null, id: 'mapc', size: 50, live: true),
           const SizedBox(height: 3),
           _pill(vx.chName(vx.confCh)),
+          const SizedBox(height: 4),
+          _micBtn(vx),
           const SizedBox(height: 10),
         ],
         if (vx.speakChs.isNotEmpty) ...[
@@ -861,7 +890,7 @@ class _VoicePanelState extends State<VoicePanel> {
                     : vx.confMuted
                         ? '🔇 Von der Einsatzleitung stumm geschaltet'
                         : vx.confSpeak
-                            ? (vx.confMic ? 'Dein Mikrofon ist offen' : 'Du hörst zu · zum Sprechen die Live-Taste halten')
+                            ? (vx.confMic ? 'Dein Mikrofon ist offen' : 'Du hörst zu · zum Sprechen die Live-Taste halten oder das Mikrofon öffnen')
                             : 'Verbunden · in diesem Kanal nur zuhören')
         : '${cl.length} verbunden${vx.confCh != null ? ' · du bist in «${vx.chName(vx.confCh)}»' : ''}';
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

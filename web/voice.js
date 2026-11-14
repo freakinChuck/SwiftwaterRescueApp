@@ -115,7 +115,7 @@ async function vxConfJoin(ch){if(VX.conf&&VX.conf.ch===ch)return;if(VX.conf)awai
 async function vxConfLeave(sw){const c=VX.conf;if(!c)return;VX.conf=null;if(!sw&&c.state==='on')vxTone(false); /* sw: Wechsel in eine andere Konferenz, nur der Beitrittston */try{if(c.room)await c.room.disconnect()}catch(e){}document.querySelectorAll('audio[data-vx]').forEach(el=>el.remove());VX.io.conf&&VX.io.conf(0);VX.io.change()}
 async function vxConfMic(on){const c=VX.conf;if(!c||!c.room||(on&&!c.speak))return;try{await c.room.localParticipant.setMicrophoneEnabled(!!on);c.mic=!!on}catch(e){toast('Mikrofon: '+(e&&e.message||e),'err')}
   if(c.mic)c.mics.add(c.me);else c.mics.delete(c.me);VX.io.change()}
-function vxConfOpen(on){const c=VX.conf;if(!c)return;c.open=!!on;vxConfMic(on)}
+async function vxConfOpen(on){const c=VX.conf;if(!c)return;c.open=!!on;await vxConfMic(on);if(on&&!c.mic){c.open=false;VX.io.change()}} // ohne Mikrofon (verweigert) bleibt es zu
 // Stand vom Server (conf_list): stumm geschaltet; das Senderecht selbst ändert der Medienserver (ParticipantPermissionsChanged)
 function vxConfMuted(m){const c=VX.conf;if(!c||c.muted===!!m)return;c.muted=!!m;if(m){c.speak=false;c.open=false;if(c.mic)vxConfMic(false)}
   else if(c.may){const pm=c.room&&c.room.localParticipant.permissions;c.speak=!pm||!!pm.canPublish}VX.io.change()}
