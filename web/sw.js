@@ -44,6 +44,9 @@ self.addEventListener('push',e=>{let m={};try{m=e.data?e.data.json():{}}catch(_)
 // Klick: offene App in den Vordergrund holen, sonst öffnen. Alarm (i:), Nachricht (m:) und Entfernen (k:) gehören zum laufenden Einsatz:
 // die App zeigt dann das Einsatzgebiet (Feedback zu #108; offene App über postMessage, neue über ?fokus=1)
 self.addEventListener('notificationclick',e=>{e.notification.close();const inc=/^[imkv]:/.test(e.notification.tag||''); // v: Durchsage im Funk (Issue #113)
+  // f: Feedback-Anfrage zum AAR (Issue #103) öffnet «Meine Einsätze»
+  if(/^f:/.test(e.notification.tag||''))return e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>c.url.includes('admin.html'));
+    if(c&&'navigate'in c)return c.navigate(new URL('admin.html#meine',self.registration.scope).href).then(w=>(w||c).focus()).catch(()=>c.focus());return self.clients.openWindow('admin.html#meine')}));
   e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>new URL(c.url).pathname.endsWith('/')||c.url.includes('index.html'));
     if(c){if(inc)c.postMessage({sw:'focus'});return c.focus()}
     return self.clients.openWindow(((e.notification.data&&e.notification.data.url)||'./')+(inc?'?fokus=1':''))}))});

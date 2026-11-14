@@ -212,7 +212,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     return hs.map(h=>{const d=Math.round(hav(a[0],a[1],h.lat,h.lon));return{phase:'start',ts:t,station:h.id,name:h.name,water:h.water,lat:h.lat,lon:h.lon,dist:i.script==='bsp'||S.org?d:null,at:t-300,danger:h.danger,
       v:{flow:h.flow,height:h.height,level:h.level,temp:h.temp,danger:h.danger}}})}
   function state(qs){const t=now();simRun(t);const i=I(),me=S.me;
-    if(!i)return{incident:null,air_home:0,my_abs:absNow(),blocked:0,last_ended:S.last,places:PLACES,place_cats:PLACE_CATS,kinds:KINDS,features:featAll(),ex_plans:[],...mapsOut(),...placeOut()};
+    if(!i)return{incident:null,fb_open:0,air_home:0,my_abs:absNow(),blocked:0,last_ended:S.last,places:PLACES,place_cats:PLACE_CATS,kinds:KINDS,features:featAll(),ex_plans:[],...mapsOut(),...placeOut()};
     const K=kindOf(i),since=+qs.get('since')||0,mgr=canManage(),act=active(),res=i.res.filter(r=>!r.removed).map(r=>({...r,loc_name:r.loc_by?uname(r.loc_by):null,rescued_name:r.rescued_by?uname(r.rescued_by):null}));
     res.forEach(r=>delete r.removed);
     const inc={id:i.id,message:i.message,lat:i.lat,lon:i.lon,alarm_at:i.alarm_at,ended_at:null,flow_ms:i.flow_ms,created_by:i.created_by,is_exercise:K.plans?1:0,record:i.record,recorded:i.recorded,public_anon:1,
