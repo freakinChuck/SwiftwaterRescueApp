@@ -10,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'area.dart' show SearchArea, bankM;
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
@@ -140,6 +141,31 @@ bool pcOwn(IncStore s) {
 /// Kategorien fester Standorte sichtbar? Kategorie «place», Kategorie des Standorts und der Standort selbst (placeShown)
 bool placeShown(IncStore s, J place) => s.vis('place') && pcOn(s, place['cat_id']) && !s.poiHide.contains('f${place['id']}');
 
+double _segDist(LatLng a, LatLng b, LatLng p) {
+  const ky = 111320.0;
+  final kx = ky * math.cos(p.latitude * math.pi / 180), ax = (a.longitude - p.longitude) * kx, ay = (a.latitude - p.latitude) * ky;
+  final dx = (b.longitude - a.longitude) * kx, dy = (b.latitude - a.latitude) * ky, l = dx * dx + dy * dy;
+  final t = l == 0 ? 0.0 : (-(ax * dx + ay * dy) / l).clamp(0.0, 1.0).toDouble(), ox = ax + t * dx, oy = ay + t * dy;
+  return math.sqrt(ox * ox + oy * oy);
+}
+
+/// fester Standort im Einsatzgebiet (placeInArea in web/index.html): ein Punkt (Standort, Eckpunkte, Navigationspunkte) nahe am Suchgebiet
+/// entlang des Gewässers (BANK_M + 60 m) bzw. im Kreis, oder das Gewässer führt durch den Bereich
+bool placeInArea(J f, SearchArea a) {
+  final ps = <LatLng>[?llOf(f), ..._ptsOf(f['pts']), ...placeNav(f).map((q) => LatLng(q.lat, q.lon))];
+  for (final q in ps) {
+    if (a.circles.any((c) => geoDist(q, c.c) <= c.r)) return true;
+    for (final l in a.lines) {
+      for (var j = 1; j < l.length; j++) {
+        if (_segDist(l[j - 1], l[j], q) < bankM + 60) return true;
+      }
+    }
+  }
+  final pl = _ptsOf(f['pts']);
+  if (pl.length < 3 || placeLine(f)) return false;
+  return a.lines.any((l) => l.any((p) => inPoly(p, pl)));
+}
+
 /// vorkommende Kategorien (id, name, n), «Ohne Kategorie» (id 0) zuletzt (placeCatsUsed)
 List<({int id, String name, int n})> placeCatsUsed(IncStore s) {
   final fs = s.places;
@@ -256,7 +282,7 @@ class PoisPanel extends StatefulWidget {
 class _PoisPanelState extends State<PoisPanel> {
   IncStore get s => widget.s;
   MapCtl get map => widget.map;
-  Set<String> _fold = {}; // zugeklappte Gruppen: pls, lage, fix, lage:<Art>, fix:<Kategorie> (sw_poifold)
+  Set<String> _fold = {}; // zugeklappte Gruppen: pls, lage, fix, lage:<Art>, fix:<Kategorie>, fix:in, fix:in:<Kategorie>, fix:out:<Kategorie>; fix:out+ = «Ausserhalb» geöffnet (sw_poifold)
   SharedPreferences? _sp;
 
   String get _fk => 'poifold_${s.acc.id}';
@@ -473,22 +499,50 @@ class _PoisPanelState extends State<PoisPanel> {
     final fs = s.places;
     if (fs.isEmpty) return [];
     final cs = placeCatsUsed(s), withCat = cs.any((c) => c.id != 0);
+    // Aufteilung nach Einsatzgebiet (wie renderPois): priorisierte Kategorien (place_cats.prio) zuoberst und ganz (im Einsatzgebiet zuerst),
+    // danach «Im Einsatzgebiet» und «Ausserhalb des Einsatzgebiets» (zuerst zugeklappt, offen = fix:out+), darin je Kategorie; ohne Suchgebiet keine Aufteilung
+    final a = s.area, split = a != null && (a.lines.isNotEmpty || a.circles.isNotEmpty);
+    final inA = <int>{if (split) for (final f in fs) if (placeInArea(f, a!)) ji(f['id']) ?? 0};
+    final pr = {for (final c in s.placeCats) if (jb(c['prio'])) ji(c['id'])};
+    int cOf(J f) {
+      final c = ji(f['cat_id']);
+      return pr.contains(c) || cs.any((x) => x.id != 0 && x.id == c) ? c! : 0;
+    }
+
+    bool isIn(J f) => inA.contains(ji(f['id']));
+    List<Widget> cats(String pre, List<J> list) => withCat
+        ? [
+            for (final c in cs)
+              if (list.any((f) => cOf(f) == c.id))
+                _grp('$pre${c.id}', '${pr.contains(c.id) ? '★ ' : ''}${c.name}', list.where((f) => cOf(f) == c.id).length,
+                    list.where((f) => cOf(f) == c.id).map(_placeRow).toList(), v: pcOn(s, c.id), on: (v) {
+                  setPlaceCat(s, [c.id], v);
+                  if (v && !s.vis('place')) s.setVis(['place'], true);
+                }, sub: true),
+          ]
+        : list.map(_placeRow).toList();
+    final top = [...fs.where((f) => pr.contains(ji(f['cat_id'])) && isIn(f)), ...fs.where((f) => pr.contains(ji(f['cat_id'])) && !isIn(f))],
+        rest = fs.where((f) => !pr.contains(ji(f['cat_id']))).toList();
+    Widget sub(String k, String t, List<J> list, {bool inv = false}) {
+      final key = inv ? '$k+' : k, open = inv ? _fold.contains(key) : !_fold.contains(key);
+      return Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: FoldGroup(
+              title: t,
+              count: list.length,
+              open: open,
+              onToggle: () => _toggleFold(key),
+              children: list.isEmpty ? [const Padding(padding: EdgeInsets.all(8), child: Text('Keine'))] : cats('$k:', list)));
+    }
+
     return [
       _grp(
           'fix',
           'Feste Standorte',
           fs.length,
-          withCat
-              ? [
-                  for (final c in cs)
-                    _grp('fix:${c.id}', c.name, c.n,
-                        fs.where((f) => (ji(f['cat_id']) ?? 0) == c.id || (c.id == 0 && !cs.any((x) => x.id != 0 && x.id == ji(f['cat_id'])))).map(_placeRow).toList(),
-                        v: pcOn(s, c.id), on: (v) {
-                      setPlaceCat(s, [c.id], v);
-                      if (v && !s.vis('place')) s.setVis(['place'], true);
-                    }, sub: true),
-                ]
-              : fs.map(_placeRow).toList(),
+          split
+              ? [...cats('fix:', top), sub('fix:in', 'Im Einsatzgebiet', rest.where(isIn).toList()), sub('fix:out', 'Ausserhalb des Einsatzgebiets', rest.where((f) => !isIn(f)).toList(), inv: true)]
+              : cats('fix:', [...top, ...rest]),
           v: fs.every((f) => !s.poiHide.contains('f${f['id']}')),
           on: (v) => s.setPoiHidden(fs.map((f) => 'f${f['id']}'), !v)),
     ];

@@ -406,7 +406,7 @@ function drawNote(){const n=$('#areaNote');if(!n)return;const pick=window.markPi
   if(more){n.setAttribute('role','button');n.setAttribute('aria-expanded',areaOpen);n.tabIndex=0}else{n.removeAttribute('role');n.removeAttribute('aria-expanded');n.removeAttribute('tabindex')}
   n.innerHTML=pick?esc(pick):!more?esc(areaInfo):areaOpen?areaLines.map(l=>`<div class="ln">${esc(l)}</div>`).join('')+'<div class="tg">▴ weniger</div>':`${esc(areaShort)} <span class="tg">▸ Details</span>`;
   n.hidden=!(areaInfo||pick)}
-function drawMap(){const n=$('#areaNote');selfSync();pinfoDraw();drawMsgMarks();drawPois();geoSync();drawRes();drawAir();drawHydro();if(!st||!st.incident){if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
+function drawMap(){const n=$('#areaNote');selfSync();pinfoDraw();drawMsgMarks();drawPois();geoSync();drawRes();drawAir();drawHydro();if(!st||!st.incident){areaIn=null;if(n)n.hidden=true;return}const i=st.incident;['pls','area','pp','rm'].forEach(k=>layers[k]&&map.removeLayer(layers[k]));
   layers.pls=L.layerGroup(plsList().map(p=>navOn(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div class="pls${p.on?'':' off'}"></div>`,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(p.label+' · '+fmtDT(p.at))),p.lat,p.lon,p.label)));if(vis('pls'))layers.pls.addTo(map);
   try{layers.area=drawArea(i);if(layers.area&&vis('area'))layers.area.addTo(map)}catch(e){console.error('Suchgebiet',e);areaInfo='Fehler Suchgebiet: '+e.message;areaLines=[areaInfo];areaShort=''}drawNote();checkArea();
   // Einsatzelemente gruppieren, wenn sie im Bild < 40 px auseinanderliegen
@@ -430,18 +430,21 @@ function plsList(){const i=st.incident,src=st.sources||[],l=[];
   if(i.lat!=null)l.push({lat:i.lat,lon:i.lon,at:i.pls_at,label:'PLS des Einsatzes',on:src.some(s=>!s.own)});
   (st.rescuees||[]).filter(r=>r.pls_lat!=null).forEach(r=>l.push({lat:r.pls_lat,lon:r.pls_lon,at:r.pls_at,label:'PLS «'+r.name+'»',on:resSt(r)==='miss'}));return l}
 /* ---------- Suchgebiet entlang des Flusslaufs ---------- */
-let areaInfo='',areaShort='',areaLines=[],areaOpen=false,areaParts=[],netsInc=null,areaHot=new Set();const nets=new Map();
+let areaInfo='',areaShort='',areaLines=[],areaOpen=false,areaParts=[],netsInc=null,areaHot=new Set(),areaIn=null;const nets=new Map();
 // Gewässernetz je PLS über den Server (Cache, siehe Route overpass); Radius auf 1 km aufgerundet, damit alle Geräte eines Einsatzes dieselbe Abfrage stellen
 // Berechnung (riverNet, riverArea, netRadius, searchArea) in common.js, gemeinsam mit der öffentlichen Ansicht
 const dist=(a,b)=>map.distance([a.lat,a.lon],[b.lat,b.lon]);
 // Suchgebiet = Gebiete aller vermissten Rettlinge (sources vom Server), ohne Rettlinge um den PLS des Einsatzes
 function drawArea(i){if(netsInc!==i.id){nets.clear();netsInc=i.id}
-  if(!feat('area')){areaInfo=areaShort='';areaLines=[];areaParts=[];areaShape=null;return null} // Funktion «Suchgebiet» aus (Issue #75): kein Gewässernetz, kein Gebiet
+  if(!feat('area')){areaInfo=areaShort='';areaLines=[];areaParts=[];areaShape=null;areaIn=null;return null} // Funktion «Suchgebiet» aus (Issue #75): kein Gewässernetz, kein Gebiet
   const posts=[...st.participants.filter(p=>p.lat!=null&&!p.left_at),...extList()].filter(p=>(roles.find(r=>r.id==p.role_id)||{}).is_post);
   const a=searchArea(st.sources||[],nets,i.flow_ms,st.now,posts,(s,R)=>overpassNet('overpass',{around:[R,s.lat,s.lon]},'overpass/put'),()=>{drawMap();draw()},st.rescuees,st.stops||[]);
   // Issue #182: feste Standorte mit Wirkung «Warnung» (und nicht berücksichtigte Sperren) im Suchgebiet hervorheben und nennen
   const hot=feat('place')?(st.places||[]).filter(f=>placeEff(f,'warn')||placeEff(f,'stop')&&!stopOn(f)).filter(f=>a.lines.some(l=>l.some((p,j)=>j&&segDist(l[j-1],p,f)<BANK_M+60))):[];
-  areaHot=new Set(hot.map(f=>f.id));if(hot.length)a.info.push('⚠ Im Suchgebiet: '+hot.map(f=>f.name+' ('+placePropsOf(f).filter(p=>p.effect!=='none').map(p=>p.name).join(', ')+')').join(', ')+'.');
+  areaHot=new Set(hot.map(f=>f.id));
+  // feste Standorte im Einsatzgebiet (Fenster «Markierungen»): ein Punkt (Standort, Eckpunkte, Navigationspunkte) nahe am Suchgebiet entlang des Gewässers
+  // bzw. im Kreis, oder das Gewässer führt durch den Bereich; null = kein Suchgebiet, keine Aufteilung
+  areaIn=a.lines.length||a.circles.length?new Set((feat('place')?st.places||[]:[]).filter(f=>placeInArea(f,a)).map(f=>f.id)):null;if(hot.length)a.info.push('⚠ Im Suchgebiet: '+hot.map(f=>f.name+' ('+placePropsOf(f).filter(p=>p.effect!=='none').map(p=>p.name).join(', ')+')').join(', ')+'.');
   areaInfo=a.info.join(' ');areaLines=a.info;areaShort=a.short||'';areaParts=a.parts.filter(p=>p.polys.length||p.circles.length);areaShape=a.polys.length||a.circles.length?{polys:a.polys,circles:a.circles}:null;if(!areaShape)return null;const g=L.layerGroup();
   a.circles.forEach(c=>g.addLayer(L.circle([c.lat,c.lon],{radius:c.r,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false})));
   a.polys.forEach(cp=>g.addLayer(L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false})));
@@ -641,6 +644,9 @@ function checkArea(){if(!st||!st.incident||!areaShape||!areaShape.polys||areaLog
   if(areaShape.polys.some(pl=>inPoly(pos,pl))){const id=st.incident.id;areaLogged[id]=true;api('incident/event',{kind:'area'}).catch(()=>{areaLogged[id]=false})}}
 function areaBounds(sh=areaShape){if(!sh)return null;
   const b=L.latLngBounds([]);sh.circles.forEach(c=>b.extend(L.latLng(c.lat,c.lon).toBounds(c.r*2)));sh.polys.flat().forEach(p=>b.extend([p.lat,p.lng]));return b.isValid()?b:null}
+function placeInArea(f,a){const ps=[{lat:f.lat,lon:f.lon}].concat((f.pts||[]).map(q=>({lat:q[0],lon:q[1]})),(f.nav||[]).map(q=>({lat:q.lat,lon:q.lon}))).filter(q=>q.lat!=null);
+  if(ps.some(q=>a.circles.some(c=>dist(q,c)<=c.r)||a.lines.some(l=>l.some((p,j)=>j&&segDist(l[j-1],p,q)<BANK_M+60))))return true;
+  if(!f.pts||f.line)return false;const pl=f.pts.map(q=>({lat:q[0],lng:q[1]}));return a.lines.some(l=>l.some(p=>inPoly({lat:p.lat,lng:p.lon},pl)))}
 function inArea(pt){if(!areaShape)return false;return areaShape.circles.some(c=>map.distance([pt.lat,pt.lng],[c.lat,c.lon])<=c.r)||areaShape.polys.some(pl=>inPoly(pt,pl))}
 const FITPAD={paddingTopLeft:[50,90],paddingBottomRight:[80,50],maxZoom:17};
 // Kartenknopf «Kamerafokus»: Auswahl Suchgebiet / Suchgebiete je PLS (bei mehreren) / Einsatzkräfte; schliesst bei Auswahl, Klick daneben oder Escape
@@ -899,12 +905,18 @@ function renderPois(){const o=$('#pois');if(!o)return;const inc=!!(st&&st.incide
   // Feste Standorte (Issue #96), nur lesend; je Kategorie eine Untergruppe mit Häkchen (pro Person gespeichert, wie im Fenster «Ansicht»), darunter die Standorte mit eigenem Häkchen (pro Gerät und Einsatz)
   const fs=feat('place')?st.places||[]:[],cs=placeCatsUsed(),withCat=cs.some(c=>c.id);
   const frow=f=>`<div class="pi"><input type="checkbox" data-pfv="${f.id}" ${poiHide.has('f'+f.id)?'':'checked'} aria-label="${esc(f.name)} auf der Karte anzeigen"><span class="sw" style="background:${f.color||PLACE_COL}"></span><div class="nm">${placeBadge(f,1)}${esc(f.name)}<small>${esc(placeInfo(f))}</small>${propChips(f)?`<small>${propChips(f)}</small>`:''}</div><div class="pa"><button data-pf="${f.id}" title="Auf der Karte zeigen">Zeigen</button>${placeNavBtn(f)}${stopBtn(f,1)}</div></div>`;
-  const fl=!fs.length?'':hd('fix','Feste Standorte',fs.length,chk('data-pfgrp="1"',fs.every(f=>!poiHide.has('f'+f.id)),0,'Alle festen Standorte anzeigen'))
-    +grpBody('fix',withCat?cs.map(c=>hd('fix:'+c.id,esc(c.name),c.n,chk(`data-pfcat="${c.id}"`,pcOn(c.id),0,'Kategorie '+c.name+' anzeigen'),1)+grpBody('fix:'+c.id,fs.filter(f=>(f.cat_id||0)===c.id).map(frow).join(''))).join(''):fs.map(frow).join(''));
+  // Aufteilung nach Einsatzgebiet (areaIn, nur mit Suchgebiet): priorisierte Kategorien (place_cats.prio) immer zuoberst und ganz (im Einsatzgebiet zuerst),
+  // danach «Im Einsatzgebiet» und «Ausserhalb des Einsatzgebiets» (zuerst zugeklappt, offen = fix:out+ in poiFold), darin je Kategorie
+  const isIn=f=>!!areaIn&&areaIn.has(f.id),pr=new Set(((st&&st.place_cats)||[]).filter(c=>c.prio).map(c=>c.id)),cOf=f=>pr.has(f.cat_id)?f.cat_id:(f.cat_id&&cs.some(c=>c.id===f.cat_id)?f.cat_id:0);
+  const cats=(pre,list)=>withCat?cs.filter(c=>list.some(f=>cOf(f)===c.id)).map(c=>{const it=list.filter(f=>cOf(f)===c.id);return hd(pre+c.id,(pr.has(c.id)?'★ ':'')+esc(c.name),it.length,chk(`data-pfcat="${c.id}"`,pcOn(c.id),0,'Kategorie '+c.name+' anzeigen'),1)+grpBody(pre+c.id,it.map(frow).join(''))}).join(''):list.map(frow).join('');
+  const ord=l=>l.filter(isIn).concat(l.filter(f=>!isIn(f))),top=ord(fs.filter(f=>pr.has(f.cat_id))),rest=fs.filter(f=>!pr.has(f.cat_id));
+  const sub=(k,t,list,inv)=>{const c=inv?!poiFold.has(k+'+'):poiFold.has(k);return `<div class="psh"><span class="nochk"></span><button class="sfold" data-pof="${inv?k+'+':k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button></div>`+(c?'':`<div class="pgb">${list.length?cats(k+':',list):'<div class="mut">Keine</div>'}</div>`)};
+  const body=!areaIn?cats('fix:',top.concat(rest)):cats('fix:',top)+sub('fix:in','Im Einsatzgebiet',rest.filter(isIn))+sub('fix:out','Ausserhalb des Einsatzgebiets',rest.filter(f=>!isIn(f)),1);
+  const fl=!fs.length?'':hd('fix','Feste Standorte',fs.length,chk('data-pfgrp="1"',fs.every(f=>!poiHide.has('f'+f.id)),0,'Alle festen Standorte anzeigen'))+grpBody('fix',body);
   $('#poiList').innerHTML=pls+lg+fl;
   const f=$('#poiForm'),ok=inc&&!!st.can_manage&&feat('poi');f.hidden=!ok;if(ok&&!$('#bPoiP')){f.innerHTML='<div class="row" style="margin:0"><button class="pri" id="bPoiP">+ Markierung</button><button class="pri" id="bPoiA">+ Bereich</button><button class="pri" id="bPoiL">+ Linie</button></div>';$('#bPoiP').onclick=()=>newPoi('point');$('#bPoiA').onclick=()=>newPoi('area');$('#bPoiL').onclick=()=>newPoi('line')}}
 const PLACE_COL='#1d7fd1';
-// zugeklappte Gruppen im Fenster «Markierungen» (pls, lage, fix, lage:<Art>, fix:<Kategorie>), pro Gerät gemerkt (localStorage sw_poifold)
+// zugeklappte Gruppen im Fenster «Markierungen» (pls, lage, fix, lage:<Art>, fix:<Kategorie>, fix:in, fix:in:<Kategorie>, fix:out:<Kategorie>; fix:out+ = «Ausserhalb» geöffnet), pro Gerät gemerkt (localStorage sw_poifold)
 const poiFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_poifold')||'[]'))}catch(e){return new Set()}})();
 function setPoiFold(k){poiFold.has(k)?poiFold.delete(k):poiFold.add(k);try{localStorage.setItem('sw_poifold',JSON.stringify([...poiFold]))}catch(e){}renderPois()}
 function poiPlaces(){return feat('place')&&!!(st&&(st.places||[]).length)} // Fenster «Markierungen» auch ohne Funktion «Markierungen & Bereiche» bzw. ohne Einsatz («Feste Standorte»), wenn es feste Standorte gibt
