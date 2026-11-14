@@ -630,13 +630,41 @@ Widget _pill(String t, {Color? bg, Color fg = Colors.white}) => Container(
     decoration: BoxDecoration(color: bg ?? Colors.black.withValues(alpha: .7), borderRadius: BorderRadius.circular(10)),
     child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: fg, fontSize: 11, fontWeight: bg != null ? FontWeight.bold : FontWeight.normal)));
 
-/// Sprechtasten links unten über dem Hinweis zum Suchgebiet (vxFab): Durchsage mit Kanal darunter; in der Konferenz darüber die Live-Taste
+/// Knopf auf der Karte: der Konferenz beitreten (Kanal `cc`) bzw. sie verlassen
+Widget _confBtn(VoiceStore vx) {
+  final inConf = vx.room != null, cid = inConf ? vx.confCh : vx.cc, busy = vx.confState == 'connecting';
+  final lbl = inConf ? 'Konferenz «${vx.chName(cid)}» verlassen' : 'Der Konferenz «${vx.chName(cid)}» beitreten';
+  return Semantics(
+      button: true,
+      label: lbl,
+      child: Material(
+          color: const Color(0xE60F2430),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: inConf ? accRed : okGreen)),
+          elevation: 4,
+          child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: busy || cid == null ? null : () => inConf ? vx.confLeave() : vx.confJoin(cid),
+              child: SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text(busy ? '⏳ Verbinde …' : (inConf ? '✕ Verlassen' : '🎧 Beitreten'), style: const TextStyle(color: Colors.white, fontSize: 12)),
+                        if (!inConf || !vx.confSpeak)
+                          Text(vx.chName(cid), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                      ]))))));
+}
+
+/// Sprechtasten links unten über dem Hinweis zum Suchgebiet (vxFab): Durchsage mit Kanal darunter; in der Konferenz darüber die Live-Taste,
+/// ist die Konferenz eingerichtet, zuoberst der Knopf zum Beitreten bzw. Verlassen
 Widget? voiceFab(BuildContext c, VoiceStore vx) {
   final live = vx.room != null && vx.confState == 'on' && vx.confSpeak;
-  if (!vx.on || (vx.speakChs.isEmpty && !live) || !vx.pttMap) return null;
+  final conf = vx.room != null || (vx.confAvail && vx.cc != null);
+  if (!vx.on || (vx.speakChs.isEmpty && !live && !conf) || !vx.pttMap) return null;
   return SizedBox(
       width: 92,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (conf) ...[_confBtn(vx), const SizedBox(height: 6)],
         if (live) ...[
           _pill('LIVE', bg: okGreen, fg: const Color(0xFF06210F)),
           const SizedBox(height: 3),
