@@ -238,11 +238,14 @@ class _IncMenuState extends State<IncMenu> {
   }
 
   List<Widget> _noInc(BuildContext c) {
-    final ks = _kindsNow(), nk = ks.where((k) => jb(k['can'])).toList(), ng = ks.where((k) => jb(k['no_grp'])).toList();
+    final ks = _kindsNow(), ka = ks.where((k) => jb(k['can'])).toList(), ng = ks.where((k) => jb(k['no_grp'])).toList();
+    // Sekundäreinsätze (Issue #164): eigene Karte, starten ohne Alarm
+    final nk = ka.where((k) => !jb(k['sec'])).toList(), sk = ka.where((k) => jb(k['sec'])).toList();
     final xps = jl(s.st?['ex_plans']);
     return [
       MCard(title: 'Kein aktiver Einsatz', children: [
-        if (nk.isEmpty) Mut('Du darfst keine Einsätze starten${ng.isNotEmpty ? '' : ' (Benutzerrolle)'}. Bei einem Alarm erscheint er hier.'),
+        if (nk.isEmpty)
+          Mut('Du darfst ${sk.isNotEmpty ? 'keine Einsätze mit Alarm' : 'keine Einsätze'} starten${ng.isNotEmpty || sk.isNotEmpty ? '' : ' (Benutzerrolle)'}. Bei einem Alarm erscheint er hier.'),
         if (ng.isNotEmpty)
           Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -253,6 +256,12 @@ class _IncMenuState extends State<IncMenu> {
               ? FilledButton(onPressed: () => _startKind(c, nk[n]), child: Text('${js(nk[n]['name'])} starten'))
               : OutlinedButton(onPressed: () => _startKind(c, nk[n]), child: Text('${js(nk[n]['name'])} starten')),
       ]),
+      if (sk.isNotEmpty)
+        MCard(title: 'Sekundäreinsätze', children: [
+          const Mut('Starten ohne Alarm: Die Aufgebotenen sehen den Einsatz in der App und treten selbst bei. Alle Funktionen stehen zur Verfügung.'),
+        ], buttons: [
+          for (final k in sk) OutlinedButton(onPressed: () => _startKind(c, k), child: Text('${js(k['name'])} starten')),
+        ]),
       if (xps.isNotEmpty)
         MCard(title: 'Vorbereitete Übungen (${xps.length})', children: [
           for (final p in xps)
@@ -355,6 +364,7 @@ class _IncMenuState extends State<IncMenu> {
     final st = s.st!, k = s.kindOf(i), kind = jm(i['kind']);
     final secs = s.now - (jn(i['alarm_at']) ?? s.now), rec = ji(i['record']) ?? 0;
     final lvl = st['level'] == 'crit' && kind['alarm'] != 'crit' ? 'Kritisch (Übungsmodus)' : js(kind['alarm_name']);
+    final sec = jb(kind['sec']), par = i['parent'] is Map ? jm(i['parent']) : null; // Sekundäreinsatz, Folgeeinsatz (Issue #164)
     return MCard(children: [
       Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 6, runSpacing: 4, children: [
         Chip2(k.name, color: hexColor(k.color)),
@@ -362,8 +372,9 @@ class _IncMenuState extends State<IncMenu> {
       ]),
       const SizedBox(height: 6),
       Mkv([
-        ('Alarm', '${fmtDT(jn(i['alarm_at']))} · vor ${(secs / 60).round()} min'),
-        ('Alarmstufe', lvl),
+        (sec ? 'Beginn' : 'Alarm', '${fmtDT(jn(i['alarm_at']))} · vor ${(secs / 60).round()} min'),
+        sec ? ('Art', 'Sekundäreinsatz (ohne Alarm)') : ('Alarmstufe', lvl),
+        ('Folgeeinsatz zu', par == null ? '' : '${js(par['kind_name'])} vom ${fmtDT(jn(par['alarm_at']))}${js(par['message']).isNotEmpty ? ': ${js(par['message'])}' : ''}'),
         ('PLS', i['lat'] != null ? s.fc(i['lat'], i['lon']) : ''),
         ('Fliessgeschw.', i['flow_ms'] != null ? '${i['flow_ms']} m/s' : ''),
       ]),
@@ -1086,6 +1097,8 @@ class _StartDraft {
   final msg = TextEditingController(), pls = TextEditingController();
   bool rec, air;
   DateTime? at; // Alarmeingang, null = jetzt
+  int? parent; // Sekundäreinsatz (Issue #164): Folgeeinsatz zu, null = kein Bezug
+  final take = <String>{'pls', 'flow', 'res'};
   J? opts; // start/options
   bool optsLoaded = false;
   final inv = _Inv();
@@ -1159,6 +1172,7 @@ class _StartPageState extends State<_StartPage> {
       'message': d.msg.text,
       if (p != null) ...{'lat': p.latitude, 'lon': p.longitude},
       if (d.at != null) 'alarm_at': d.at!.millisecondsSinceEpoch ~/ 1000,
+      if (d.parent != null) ...{'parent_id': d.parent, for (final t in _takes) 'take_$t': 1},
     };
     if (d.opts != null && jl(d.opts!['groups']).isNotEmpty) {
       final v = d.inv.get();
@@ -1181,16 +1195,62 @@ class _StartPageState extends State<_StartPage> {
 
   bool get _recOn => jm(d.k['features'])['rec'] != 0;
 
+  J? get _par => d.parent == null ? null : jl(d.opts?['parents']).where((p) => ji(p['id']) == d.parent).firstOrNull;
+  List<(String, String)> get _takeOpts {
+    final p = _par;
+    if (p == null) return [];
+    final n = ji(p['missing']) ?? 0;
+    return [
+      if (jb(p['pls'])) ('pls', 'PLS übernehmen (mit dem ursprünglichen Zeitpunkt, falls unten keiner eingegeben ist)'),
+      if (jb(p['flow'])) ('flow', 'Fliessgeschwindigkeit übernehmen'),
+      if (n > 0) ('res', n == 1 ? 'Den vermissten Rettling übernehmen' : 'Die $n vermissten Rettlinge übernehmen'),
+    ];
+  }
+
+  Iterable<String> get _takes => _takeOpts.map((t) => t.$1).where(d.take.contains);
+
+  /// Folgeeinsatz zu einem beendeten Einsatz der letzten 30 Tage (start/options liefert parents)
+  List<Widget> _parPick() {
+    final ps = jl(d.opts?['parents']);
+    if (!jb(d.k['sec']) || ps.isEmpty) return [];
+    return [
+      const SizedBox(height: 10),
+      DropdownButtonFormField<int?>(
+          isExpanded: true,
+          initialValue: d.parent,
+          decoration: const InputDecoration(labelText: 'Folgeeinsatz zu (optional)', isDense: true),
+          items: [
+            const DropdownMenuItem<int?>(value: null, child: Text('– kein Bezug –')),
+            for (final p in ps)
+              DropdownMenuItem<int?>(
+                  value: ji(p['id']),
+                  child: Text('${js(p['kind_name'])} vom ${fmtDT(jn(p['alarm_at']))}: ${js(p['message'])}', overflow: TextOverflow.ellipsis)),
+          ],
+          onChanged: (v) => setState(() => d.parent = v)),
+      if (_par != null && _takeOpts.isEmpty) const Padding(padding: EdgeInsets.only(top: 4), child: Mut('Nichts zu übernehmen (kein PLS, keine vermissten Rettlinge).')),
+      for (final t in _takeOpts)
+        CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: d.take.contains(t.$1),
+            onChanged: (v) => setState(() => v == true ? d.take.add(t.$1) : d.take.remove(t.$1)),
+            title: Text(t.$2)),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final k = d.k, alarm = js(k['alarm']);
+    final k = d.k, sec = jb(k['sec']), alarm = sec ? 'none' : js(k['alarm']);
     final o = d.opts, kid = '${ji(k['id'])}';
     final st = jm(o?['start']), allowed = st[kid] == null ? null : _ints(st[kid]);
     return Scaffold(
       appBar: AppBar(title: Text('${js(k['name'])} starten')),
       body: StatefulBuilder(
         builder: (c, ss) => ListView(padding: const EdgeInsets.all(16), children: [
-          Mut('Alarmstufe ${js(k['alarm_name'])}${jb(k['mode_up']) && alarm != 'crit' ? ' (kritisch bei Personen mit Übungsmodus)' : ''}.'),
+          Mut(sec
+              ? 'Sekundäreinsatz ohne Alarm: Die Aufgebotenen werden nicht alarmiert, sehen den Einsatz aber in der App und treten selbst bei.'
+              : 'Alarmstufe ${js(k['alarm_name'])}${jb(k['mode_up']) && alarm != 'crit' ? ' (kritisch bei Personen mit Übungsmodus)' : ''}.'),
+          ..._parPick(),
           const SizedBox(height: 10),
           TextField(controller: d.msg, minLines: 2, maxLines: 5, autofocus: true, decoration: const InputDecoration(labelText: 'Meldung', border: OutlineInputBorder())),
           const SizedBox(height: 10),
@@ -1227,7 +1287,7 @@ class _StartPageState extends State<_StartPage> {
           Row(children: [
             Expanded(
                 child: Text.rich(TextSpan(children: [
-              const TextSpan(text: 'Alarmeingang: ', style: TextStyle(fontWeight: FontWeight.w600)),
+              TextSpan(text: sec ? 'Beginn: ' : 'Alarmeingang: ', style: const TextStyle(fontWeight: FontWeight.w600)),
               TextSpan(text: d.at == null ? 'jetzt (Standard)' : fmtDT(d.at!.millisecondsSinceEpoch / 1000)),
             ]))),
             TextButton(onPressed: _pickAt, child: const Text('Ändern')),
