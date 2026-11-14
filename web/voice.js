@@ -79,8 +79,17 @@ const vxRecS=()=>VX.rec?Math.floor((Date.now()-VX.rec.t0)/1000):0;
 /* ---------- Live-Konferenz (LiveKit) ---------- */
 function vxLoadLk(){if(window.LivekitClient)return Promise.resolve();if(VX.lkLoad)return VX.lkLoad;
   return VX.lkLoad=new Promise((ok,no)=>{const s=document.createElement('script');s.src=LK_URL;s.onload=()=>ok();s.onerror=()=>{VX.lkLoad=null;no(new Error('LiveKit konnte nicht geladen werden'))};document.head.appendChild(s)})}
+// Ton beim Beitreten und Verlassen (eigenes und das der anderen): zwei weiche Sinustöne, steigend bzw. fallend, leise.
+// Gleiche Werte wie scripts/sounds/conf.py (Dateien der nativen App).
+// Browser erlauben Ton erst nach einer Bedienung: vxAc() beim Antippen von «beitreten» anlegen
+function vxAc(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;const ac=VX.ac||(VX.ac=new C());if(ac.state==='suspended')ac.resume().catch(()=>{});return ac}catch(e){return null}}
+function vxTone(up){try{const ac=vxAc();if(!ac)return;
+  const t0=ac.currentTime+.02,[a,b]=up?[587.33,880]:[880,587.33];
+  [[a,0],[b,.09]].forEach(([f,d])=>{const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.12,t0+d+.012);g.gain.exponentialRampToValueAtTime(.0005,t0+d+.22);
+    o.connect(g).connect(ac.destination);o.start(t0+d);o.stop(t0+d+.24)})}catch(e){}}
 // beitreten (verlässt eine andere Konferenz); stumm, Senden über die Sprechtaste oder «Mikrofon offen»
-async function vxConfJoin(ch){if(VX.conf&&VX.conf.ch===ch)return;if(VX.conf)await vxConfLeave();vxUnlock();
+async function vxConfJoin(ch){if(VX.conf&&VX.conf.ch===ch)return;if(VX.conf)await vxConfLeave(true);vxUnlock();vxAc();
   const c=VX.conf={ch,since:Math.floor(Date.now()/1000),state:'connecting',speak:false,may:false,muted:false,open:false,mic:false,speakers:new Set(),mics:new Set(),peers:[],me:''};VX.io.change();
   try{await vxLoadLk();const j=await VX.io.join(ch);if(VX.conf!==c)return;c.may=!!j.speak;c.muted=!!j.muted;c.speak=c.may&&!c.muted;const LK=window.LivekitClient;
     const room=c.room=new LK.Room({adaptiveStream:false,dynacast:false,audioCaptureDefaults:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
@@ -90,16 +99,16 @@ async function vxConfJoin(ch){if(VX.conf&&VX.conf.ch===ch)return;if(VX.conf)awai
     room.on(LK.RoomEvent.TrackSubscribed,t=>{if(t.kind==='audio'){const el=t.attach();el.dataset.vx='1';el.hidden=true;document.body.appendChild(el)}})
       .on(LK.RoomEvent.TrackUnsubscribed,t=>t.detach().forEach(el=>el.remove()))
       .on(LK.RoomEvent.ActiveSpeakersChanged,sp=>{c.speakers=new Set(sp.map(p=>p.identity));VX.io.change()})
-      .on(LK.RoomEvent.ParticipantConnected,peers).on(LK.RoomEvent.ParticipantDisconnected,peers)
+      .on(LK.RoomEvent.ParticipantConnected,()=>{if(c.state==='on')vxTone(true);peers()}).on(LK.RoomEvent.ParticipantDisconnected,()=>{if(c.state==='on')vxTone(false);peers()})
       .on(LK.RoomEvent.TrackPublished,peers).on(LK.RoomEvent.TrackUnpublished,peers).on(LK.RoomEvent.TrackMuted,peers).on(LK.RoomEvent.TrackUnmuted,peers).on(LK.RoomEvent.LocalTrackPublished,peers).on(LK.RoomEvent.LocalTrackUnpublished,peers)
       // Einsatzleitung schaltet stumm bzw. hebt auf (Senderecht im Raum, incident/voice/mute)
       .on(LK.RoomEvent.ParticipantPermissionsChanged,(prev,p)=>{if(p!==room.localParticipant)return;const can=!!(p.permissions&&p.permissions.canPublish);c.muted=c.may&&!can;c.speak=can;if(!can){c.open=false;c.mic=false;if(VX.rec&&VX.rec.ch===c.ch)vxConfMic(false)}peers()})
       .on(LK.RoomEvent.Reconnecting,()=>{c.state='reconnecting';VX.io.change()}).on(LK.RoomEvent.Reconnected,()=>{c.state='on';VX.io.change()})
-      .on(LK.RoomEvent.Disconnected,()=>{if(VX.conf===c){VX.conf=null;VX.io.conf&&VX.io.conf(0);VX.io.change()}});
+      .on(LK.RoomEvent.Disconnected,()=>{if(VX.conf===c){VX.conf=null;vxTone(false);VX.io.conf&&VX.io.conf(0);VX.io.change()}});
     await room.connect(j.url,j.token,{autoSubscribe:true});await room.startAudio().catch(()=>{});
-    if(VX.conf!==c){room.disconnect();return}c.state='on';c.me=room.localParticipant.identity;peers();VX.io.conf&&VX.io.conf(ch)}
+    if(VX.conf!==c){room.disconnect();return}c.state='on';vxTone(true);c.me=room.localParticipant.identity;peers();VX.io.conf&&VX.io.conf(ch)}
   catch(e){if(VX.conf===c)VX.conf=null;VX.io.change();toast('Konferenz: '+(e&&e.message||e),'err')}}
-async function vxConfLeave(){const c=VX.conf;if(!c)return;VX.conf=null;try{if(c.room)await c.room.disconnect()}catch(e){}document.querySelectorAll('audio[data-vx]').forEach(el=>el.remove());VX.io.conf&&VX.io.conf(0);VX.io.change()}
+async function vxConfLeave(sw){const c=VX.conf;if(!c)return;VX.conf=null;if(!sw&&c.state==='on')vxTone(false); /* sw: Wechsel in eine andere Konferenz, nur der Beitrittston */try{if(c.room)await c.room.disconnect()}catch(e){}document.querySelectorAll('audio[data-vx]').forEach(el=>el.remove());VX.io.conf&&VX.io.conf(0);VX.io.change()}
 async function vxConfMic(on){const c=VX.conf;if(!c||!c.room||(on&&!c.speak))return;try{await c.room.localParticipant.setMicrophoneEnabled(!!on);c.mic=!!on}catch(e){toast('Mikrofon: '+(e&&e.message||e),'err')}
   if(c.mic)c.mics.add(c.me);else c.mics.delete(c.me);VX.io.change()}
 function vxConfOpen(on){const c=VX.conf;if(!c)return;c.open=!!on;vxConfMic(on)}

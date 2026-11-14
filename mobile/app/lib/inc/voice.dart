@@ -45,6 +45,7 @@ class VoiceStore extends ChangeNotifier {
   final queue = <int>[];
   int? playing;
   AudioPlayer? _pl;
+  AudioPlayer? _tonePl; // Töne beim Beitreten und Verlassen der Konferenz, getrennt von den Durchsagen
   final _files = <int, String>{};
   // Aufnahme
   AudioRecorder? _rec;
@@ -375,9 +376,19 @@ class VoiceStore extends ChangeNotifier {
   }
 
   // ---------- Live-Konferenz ----------
+  /// leiser Ton beim Beitreten (steigend) bzw. Verlassen (fallend), eigenes und das der anderen (scripts/sounds/conf.py)
+  Future<void> _tone(bool up) async {
+    try {
+      final pl = _tonePl ??= AudioPlayer();
+      await pl.setVolume(0.7);
+      await pl.setAsset('assets/sounds/conf_${up ? 'join' : 'leave'}.wav');
+      unawaited(pl.play());
+    } catch (_) {}
+  }
+
   Future<void> confJoin(int c) async {
     if (confCh == c && room != null) return;
-    if (room != null) await confLeave();
+    if (room != null) await confLeave(sw: true);
     confCh = c;
     confState = 'connecting';
     confSince = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -399,8 +410,14 @@ class VoiceStore extends ChangeNotifier {
           speakers = e.speakers.map((p) => p.identity).toSet();
           notifyListeners();
         })
-        ..on<lk.ParticipantConnectedEvent>((_) => _peers())
-        ..on<lk.ParticipantDisconnectedEvent>((_) => _peers())
+        ..on<lk.ParticipantConnectedEvent>((_) {
+          if (confState == 'on') unawaited(_tone(true));
+          _peers();
+        })
+        ..on<lk.ParticipantDisconnectedEvent>((_) {
+          if (confState == 'on') unawaited(_tone(false));
+          _peers();
+        })
         ..on<lk.TrackPublishedEvent>((_) => _peers())
         ..on<lk.TrackUnpublishedEvent>((_) => _peers())
         ..on<lk.TrackMutedEvent>((_) => _peers())
@@ -439,6 +456,7 @@ class VoiceStore extends ChangeNotifier {
         await lk.AudioManager.instance.setSpeakerOutputPreferred(true);
       } catch (_) {}
       confState = 'on';
+      unawaited(_tone(true));
       confMe = r.localParticipant?.identity ?? '';
       cc = c;
       _sp?.setInt('vx_cc', c);
@@ -451,10 +469,12 @@ class VoiceStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> confLeave() async {
+  /// sw: Wechsel in eine andere Konferenz (nur der Ton des Beitritts)
+  Future<void> confLeave({bool sw = false}) async {
     final r = room;
     room = null;
     final had = confCh != null;
+    if (!sw && confState == 'on') unawaited(_tone(false));
     confCh = null;
     confState = '';
     confMic = false;
@@ -545,6 +565,7 @@ class VoiceStore extends ChangeNotifier {
     _recTm?.cancel();
     unawaited(confLeave());
     _pl?.dispose();
+    _tonePl?.dispose();
     _rec?.dispose();
     super.dispose();
   }
