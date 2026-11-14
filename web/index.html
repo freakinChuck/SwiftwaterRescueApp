@@ -988,7 +988,7 @@ function vehInfo(v){const k=vehKind(st.veh,v),c=v.carrier_id!=null&&vehById(v.ca
 function vehOf(p){const v=p&&p.veh_id!=null&&vehById(p.veh_id);return v?`<small>${vehKind(st.veh,v).sym} im Fahrzeug «${esc(v.name)}»</small>`:''}
 // mögliche Träger für v (Art passt, nicht v selbst oder etwas, das v trägt), mit Belegung
 function vehCarriers(v){const inV=c=>{let r=c,i=0;while(r&&r.carrier_id!=null&&i++<20){if(r.carrier_id===v.id)return true;r=vehById(r.carrier_id)}return false};
-  return vehL().filter(c=>c.id!==v.id&&!inV(c)&&c.room&&c.room[v.kind_id]).map(c=>{const r=c.room[v.kind_id];return{c,r,full:r.max!=null&&r.n>=r.max&&v.carrier_id!==c.id}})}
+  return vehL().filter(c=>c.id!==v.id&&!inV(c)&&c.room&&c.room[v.kind_id]).map(c=>{const r=c.room[v.kind_id],t=c.room_all;return{c,r,full:(r.max!=null&&r.n>=r.max||t&&t.max!=null&&t.n>=t.max)&&v.carrier_id!==c.id}})}
 function vehBtns(v){if(!st.veh.can_link)return'';const c=v.carrier_id!=null&&vehById(v.carrier_id);
   return (c?`<button data-vu="${v.id}">${vehHang(c)?'Abhängen':'Abladen'}</button>`:'')+(vehCarriers(v).length?`<button data-vl="${v.id}">${c?'Umladen …':'Verladen …'}</button>`:'')}
 function vehPop(r,kids){const one=v=>{const cr=vehCrew(v);return `<div style="margin-top:.3rem"><b>${vehKind(st.veh,v).sym} ${esc(v.name)}</b><span class="t">${esc(vehInfo(v))}</span>${v.descr?esc(v.descr)+'<br>':''}${cr.length?`<span class="t">An Bord: ${esc(cr.join(', '))}</span>`:''}${vehBtns(v)}</div>`};

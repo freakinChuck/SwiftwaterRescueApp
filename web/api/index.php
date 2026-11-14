@@ -169,7 +169,7 @@ foreach (['aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NU
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Fahrzeuge (Issue #177): participants.veh_id = im Fahrzeug (veh_at = zuletzt stark gesehen, veh_cand = Kandidat aus dem letzten Scan), track.veh_id = im Fahrzeug bei der Meldung,
 // users.beacon = Fahrzeuge auch ausserhalb von Einsätzen melden (freiwillig)
-foreach (['participants' => ['veh_id INT NULL', 'veh_at BIGINT NULL', 'veh_cand INT NULL'], 'track' => ['veh_id INT NULL'], 'users' => ['beacon INT DEFAULT 0']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
+foreach (['participants' => ['veh_id INT NULL', 'veh_at BIGINT NULL', 'veh_cand INT NULL'], 'track' => ['veh_id INT NULL'], 'users' => ['beacon INT DEFAULT 0'], 'veh_kinds' => ['carry_max INT NULL'], 'vehicles' => ['cap_max INT NULL']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 try { $db->exec("CREATE INDEX vehicle_seen_inc ON vehicle_seen(incident_id,ts)"); } catch (Throwable $e) {}
 // Standardarten beim ersten Aufruf (Sperre über die Zeile veh_mig wie bei den Einsatztypen): Zug-/Personenfahrzeug nimmt 1 Anhänger auf, Anhänger 1 Boot
 if (!$db->query("SELECT COUNT(*) c FROM veh_kinds")->fetch()['c']) {
@@ -1330,7 +1330,8 @@ function incPlaces($inc) { if (!feature($inc, 'place')) return [];
   return array_map(fn($r) => array_diff_key($r, ['active' => 1]), $pl); }
 /* ---------- Fahrzeuge mit BLE-Beacons (Issue #177) ---------- */
 // Fahrzeugarten (veh_kinds): persons = nimmt Personen auf, carries = welche Arten es aufnimmt bzw. zieht, je mit Höchstzahl ({Art-ID: Anzahl|null}, null = unbegrenzt),
-// water = Wasserfahrzeug. Fahrzeuge (vehicles): cap übersteuert carries der Art (NULL = wie die Art); lat/lon/seen_at = Standort (bei einem Verbund der ganzen Kette),
+// carry_max = insgesamt höchstens so viele aufgenommene Fahrzeuge (NULL = nur je Art begrenzt, z. B. eine Anhängerkupplung für zwei Anhängerarten),
+// water = Wasserfahrzeug. Fahrzeuge (vehicles): cap übersteuert carries der Art (NULL = wie die Art), dann gilt cap_max statt carry_max; lat/lon/seen_at = Standort (bei einem Verbund der ganzen Kette),
 // own_* = letzte eigene Sichtung (für die Trennung über die Distanz), carrier_id = worauf bzw. woran es hängt (Verlauf in veh_links).
 // Ein aufgenommenes Fahrzeug nimmt selbst keine Personen auf.
 function beaconUuid($s) { $s = strtoupper(trim((string)$s)); if (preg_match('/^[0-9A-F]{32}$/', $s)) $s = substr($s, 0, 8) . '-' . substr($s, 8, 4) . '-' . substr($s, 12, 4) . '-' . substr($s, 16, 4) . '-' . substr($s, 20);
@@ -1354,18 +1355,23 @@ function beaconIn($v) { if (!is_array($v)) fail('Ungültige Einstellung');
 function vehCarries($v) { $v = is_string($v) ? json_decode($v, true) : $v; $o = [];
   foreach (is_array($v) ? $v : [] as $k => $n) if (preg_match('/^\d{1,9}$/', (string)$k)) $o[(string)(int)$k] = $n === null || $n === '' ? null : max(1, min(99, (int)$n));
   return $o; }
+function vehMaxIn($n) { return $n === null || $n === '' ? null : max(1, min(99, (int)$n)); } // Gesamtzahl: leer = nur je Art begrenzt
 function vehKinds($all = true) { global $db; $r = [];
   foreach ($db->query("SELECT * FROM veh_kinds ORDER BY " . SORT_ORDER)->fetchAll() as $k) { if (!$all && !(int)$k['active']) continue;
-    $k = ints($k, ['id', 'persons', 'water', 'active', 'sort']); $k['carries'] = (object)vehCarries($k['carries']); $k['sym'] = VEH_ICONS[$k['icon'] ?? ''] ?? '🚐'; $r[] = $k; }
+    $k = ints($k, ['id', 'persons', 'water', 'active', 'sort', 'carry_max']); $k['carries'] = (object)vehCarries($k['carries']); $k['sym'] = VEH_ICONS[$k['icon'] ?? ''] ?? '🚐'; $r[] = $k; }
   return $r; }
-function vehRow($v) { $v = floats(ints($v, ['id', 'kind_id', 'major', 'minor', 'active', 'sort', 'seen_at', 'seen_inc', 'seen_rssi', 'seen_uid', 'own_at', 'carrier_id', 'carrier_at', 'carrier_manual', 'lone_n', 'trip_at', 'fast_at']), ['lat', 'lon', 'acc', 'own_lat', 'own_lon', 'trip_lat', 'trip_lon']);
+function vehRow($v) { $v = floats(ints($v, ['id', 'kind_id', 'major', 'minor', 'active', 'sort', 'seen_at', 'seen_inc', 'seen_rssi', 'seen_uid', 'own_at', 'carrier_id', 'carrier_at', 'carrier_manual', 'lone_n', 'trip_at', 'fast_at', 'cap_max']), ['lat', 'lon', 'acc', 'own_lat', 'own_lon', 'trip_lat', 'trip_lon']);
   $v['cap'] = $v['cap'] === null ? null : vehCarries($v['cap']); return $v; }
 function vehAll() { global $db; return array_map('vehRow', $db->query("SELECT * FROM vehicles ORDER BY " . SORT_ORDER)->fetchAll()); }
 function vehById() { $o = []; foreach (vehAll() as $v) $o[$v['id']] = $v; return $o; }
 function vehCap($v, $kb) { return $v['cap'] ?? (array)($kb[$v['kind_id']]['carries'] ?? []); } // Höchstzahlen {Art-ID: Anzahl|null}
-// Platz auf dem Träger für ein Fahrzeug der Art $kid: -1 = nimmt diese Art nicht auf, PHP_INT_MAX = unbegrenzt, sonst freie Plätze ($except zählt nicht mit)
-function vehRoom($car, $kid, $by, $kb, $except = 0) { $cap = vehCap($car, $kb); if (!array_key_exists((string)$kid, $cap)) return -1; $m = $cap[(string)$kid]; if ($m === null) return PHP_INT_MAX;
-  return $m - count(array_filter($by, fn($x) => $x['active'] && $x['carrier_id'] === $car['id'] && $x['kind_id'] === (int)$kid && $x['id'] !== $except)); }
+function vehCapMax($v, $kb) { return $v['cap'] !== null ? ($v['cap_max'] ?? null) : ($kb[$v['kind_id']]['carry_max'] ?? null); } // insgesamt höchstens (null = nur je Art)
+// Platz auf dem Träger für ein Fahrzeug der Art $kid: -1 = nimmt diese Art nicht auf, PHP_INT_MAX = unbegrenzt, sonst freie Plätze ($except zählt nicht mit);
+// die Gesamtzahl (vehCapMax) begrenzt zusätzlich über alle Arten
+function vehRoom($car, $kid, $by, $kb, $except = 0) { $cap = vehCap($car, $kb); if (!array_key_exists((string)$kid, $cap)) return -1; $m = $cap[(string)$kid];
+  $on = array_filter($by, fn($x) => $x['active'] && $x['carrier_id'] === $car['id'] && $x['id'] !== $except);
+  $r = $m === null ? PHP_INT_MAX : $m - count(array_filter($on, fn($x) => $x['kind_id'] === (int)$kid));
+  $t = vehCapMax($car, $kb); return $t === null ? $r : min($r, $t - count($on)); }
 function vehUp($id, $by) { $o = []; for ($i = 0; $i < 20 && isset($by[$id]) && $by[$id]['carrier_id'] !== null; $i++) { $id = $by[$id]['carrier_id']; if (in_array($id, $o, true)) break; $o[] = $id; } return $o; } // Träger, Träger des Trägers …
 function vehRoot($id, $by) { $u = vehUp($id, $by); return $u ? end($u) : $id; }
 function vehTree($id, $by) { $o = [$id]; for ($i = 0; $i < count($o) && $i < 50; $i++) foreach ($by as $x) if ($x['carrier_id'] === $o[$i] && !in_array($x['id'], $o, true)) $o[] = $x['id']; return $o; } // Fahrzeug und alles, was es (mittelbar) trägt
@@ -1475,7 +1481,7 @@ function vehAutoLink($seen, &$by, $kb, $fast, $water, $inc, $c) { global $db, $n
 function vehVisible($inc) { $c = beaconCfg();
   if ($inc) { if (!feature($inc, 'veh') || $c['app'] === 'off') return false; if ($c['app'] === 'all' || canManage($inc)) return true; return $c['app'] === 'part' && isActivePart((int)$inc['id']); }
   if (!array_filter(featuresAll(), fn($f) => $f['veh'])) return false; return $c['home_vis'] === 'all' || ($c['home_vis'] === 'perm' && can('veh_home')); }
-function vehKindPub($k) { return ['id' => $k['id'], 'name' => $k['name'], 'sym' => $k['sym'], 'persons' => $k['persons'], 'water' => $k['water'], 'carries' => $k['carries']]; }
+function vehKindPub($k) { return ['id' => $k['id'], 'name' => $k['name'], 'sym' => $k['sym'], 'persons' => $k['persons'], 'water' => $k['water'], 'carries' => $k['carries'], 'carry_max' => $k['carry_max']]; }
 // Fahrzeuge für incident/state ($inc null = ohne Einsatz) und public/state ($pub: ohne Personen an Bord und Hinweise)
 function vehState($inc, $pub = false) { global $db, $now; $c = beaconCfg();
   $kinds = vehKinds(); $kb = array_column($kinds, null, 'id'); $all = array_filter(vehById(), fn($v) => $v['active']);
@@ -1484,7 +1490,8 @@ function vehState($inc, $pub = false) { global $db, $now; $c = beaconCfg();
   $list = [];
   foreach ($all as $v) { $room = []; foreach (vehCap($v, $kb) as $k => $m) $room[$k] = ['n' => count(array_filter($all, fn($x) => $x['carrier_id'] === $v['id'] && $x['kind_id'] === (int)$k)), 'max' => $m];
     $list[] = ['id' => $v['id'], 'kind_id' => $v['kind_id'], 'name' => $v['name'], 'descr' => $pub ? null : $v['descr'], 'abbr' => $v['abbr'], 'color' => $v['color'], 'lat' => $v['lat'], 'lon' => $v['lon'], 'acc' => $v['acc'], 'seen_at' => $v['seen_at'],
-      'inc' => $inc && $v['seen_inc'] === (int)$inc['id'] ? 1 : 0, 'carrier_id' => $v['carrier_id'], 'carrier_manual' => $v['carrier_manual'], 'room' => (object)$room] + ($pub ? [] : ['crew' => $crew[$v['id']] ?? []]); }
+      'inc' => $inc && $v['seen_inc'] === (int)$inc['id'] ? 1 : 0, 'carrier_id' => $v['carrier_id'], 'carrier_manual' => $v['carrier_manual'], 'room' => (object)$room,
+      'room_all' => ['n' => count(array_filter($all, fn($x) => $x['carrier_id'] === $v['id'])), 'max' => vehCapMax($v, $kb)]] + ($pub ? [] : ['crew' => $crew[$v['id']] ?? []]); }
   $hints = []; if ($inc && !$pub) { $s = $db->prepare("SELECT a,b FROM veh_cand WHERE full=1 AND n>=? AND at>=?"); $s->execute([VEH_LINK_N, $now - 600]);
     foreach ($s->fetchAll() as $r) if (isset($all[(int)$r['a']], $all[(int)$r['b']]) && $all[(int)$r['a']]['carrier_id'] !== (int)$r['b']) $hints[] = ['id' => (int)$r['a'], 'carrier' => (int)$r['b']]; }
   return ['kinds' => array_values(array_map('vehKindPub', array_filter($kinds, fn($k) => $k['active'] || array_filter($all, fn($v) => $v['kind_id'] === $k['id'])))), 'list' => $list, 'hints' => $hints, 'stale_min' => $c['stale_min'],
@@ -3795,14 +3802,14 @@ switch ($route) {
   vehLinkSet((int)($in['id'] ?? 0), isset($in['carrier']) && $in['carrier'] !== null ? (int)$in['carrier'] : null, true, $uid, $inc);
   out(['ok' => true]);
  case 'veh/kinds': need('cfg_map'); out(['kinds' => vehKinds(), 'icons' => VEH_ICONS]);
- case 'veh/kind/save': need('cfg_map'); // Fahrzeugart: name, icon, persons, water, carries {Art-ID: Anzahl|null}, active
+ case 'veh/kind/save': need('cfg_map'); // Fahrzeugart: name, icon, persons, water, carries {Art-ID: Anzahl|null}, carry_max (insgesamt, leer = nur je Art), active
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 60); if ($nm === '') fail('Name fehlt');
   $ic = isset(VEH_ICONS[$in['icon'] ?? '']) ? $in['icon'] : 'car'; $ids = array_column(vehKinds(), 'id');
   $ca = array_filter(vehCarries($in['carries'] ?? []), fn($k) => in_array((int)$k, $ids, true), ARRAY_FILTER_USE_KEY);
-  $row = [$nm, $ic, empty($in['persons']) ? 0 : 1, empty($in['water']) ? 0 : 1, json_encode((object)$ca), array_key_exists('active', $in) && empty($in['active']) ? 0 : 1];
+  $row = [$nm, $ic, empty($in['persons']) ? 0 : 1, empty($in['water']) ? 0 : 1, json_encode((object)$ca), array_key_exists('active', $in) && empty($in['active']) ? 0 : 1, $ca ? vehMaxIn($in['carry_max'] ?? null) : null];
   if (!empty($in['id'])) { if (!in_array((int)$in['id'], $ids, true)) fail('Fahrzeugart nicht gefunden', 404);
-    $db->prepare("UPDATE veh_kinds SET name=?, icon=?, persons=?, water=?, carries=?, active=? WHERE id=?")->execute([...$row, (int)$in['id']]); }
-  else $db->prepare("INSERT INTO veh_kinds(name,icon,persons,water,carries,active) VALUES(?,?,?,?,?,?)")->execute($row);
+    $db->prepare("UPDATE veh_kinds SET name=?, icon=?, persons=?, water=?, carries=?, active=?, carry_max=? WHERE id=?")->execute([...$row, (int)$in['id']]); }
+  else $db->prepare("INSERT INTO veh_kinds(name,icon,persons,water,carries,active,carry_max) VALUES(?,?,?,?,?,?,?)")->execute($row);
   out(['ok' => true]);
  case 'veh/kind/move': need('cfg_map'); sortMove('veh_kinds', "SELECT id FROM veh_kinds ORDER BY " . SORT_ORDER, [], (int)($in['id'] ?? 0), (int)($in['dir'] ?? 1)); out(['ok' => true]);
  case 'veh/kind/remove': need('cfg_map'); // nur ohne Fahrzeuge dieser Art; aus den carries der übrigen entfernt
@@ -3815,7 +3822,7 @@ switch ($route) {
   $s = $db->query("SELECT DISTINCT vehicle_id FROM vehicle_seen UNION SELECT DISTINCT vehicle_id FROM veh_links"); $used = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN));
   out(['vehicles' => array_map(fn($v) => array_diff_key($v, array_flip(['seen_uid', 'own_lat', 'own_lon', 'lone_n', 'trip_lat', 'trip_lon', 'trip_at', 'fast_at'])) + ['deletable' => in_array($v['id'], $used, true) ? 0 : 1], vehAll()),
     'kinds' => vehKinds(), 'icons' => VEH_ICONS, 'cfg' => beaconCfg(), 'num' => BEACON_NUM, 'app' => VEH_APP, 'home_vis' => VEH_HOME, 'feat' => (object)array_map(fn($f) => ['veh' => $f['veh'], 'vehp' => $f['vehp']], featuresAll())]);
- case 'vehicle/save': need('cfg_map'); // Fahrzeug: name, descr, kind_id, abbr, color, uuid ('' = Standard-UUID), major, minor (0–65535), cap (null = wie die Art), active
+ case 'vehicle/save': need('cfg_map'); // Fahrzeug: name, descr, kind_id, abbr, color, uuid ('' = Standard-UUID), major, minor (0–65535), cap (null = wie die Art), cap_max (nur mit cap: insgesamt, leer = nur je Art), active
   $old = null; if (!empty($in['id'])) { $old = vehById()[(int)$in['id']] ?? fail('Fahrzeug nicht gefunden', 404); }
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
   $kid = (int)($in['kind_id'] ?? 0); if (!in_array($kid, array_column(vehKinds(), 'id'), true)) fail('Fahrzeugart wählen');
@@ -3824,13 +3831,13 @@ switch ($route) {
   $ma = (int)($in['major'] ?? -1); $mi = (int)($in['minor'] ?? -1); if ($ma < 0 || $ma > 65535 || $mi < 0 || $mi > 65535) fail('Major und Minor zwischen 0 und 65535');
   foreach (vehAll() as $x) if ($x['id'] !== ($old['id'] ?? 0) && ($x['uuid'] ?? null) === $u && $x['major'] === $ma && $x['minor'] === $mi) fail('Dieses Beacon (UUID, Major, Minor) gehört schon zu «' . $x['name'] . '»');
   [$ab, $co] = extStyle($in); $cap = array_key_exists('cap', $in) && $in['cap'] !== null ? json_encode((object)vehCarries($in['cap'])) : null;
-  $row = [$nm, mb_substr(trim((string)($in['descr'] ?? '')), 0, 500), $kid, $ab, $co, $u, $ma, $mi, $cap, array_key_exists('active', $in) && empty($in['active']) ? 0 : 1];
-  if ($old) { $db->prepare("UPDATE vehicles SET name=?, descr=?, kind_id=?, abbr=?, color=?, uuid=?, major=?, minor=?, cap=?, active=?" . ($old['kind_id'] !== $kid ? ', sort=NULL' : '') . " WHERE id=?")->execute([...$row, $old['id']]);
+  $row = [$nm, mb_substr(trim((string)($in['descr'] ?? '')), 0, 500), $kid, $ab, $co, $u, $ma, $mi, $cap, array_key_exists('active', $in) && empty($in['active']) ? 0 : 1, $cap === null ? null : vehMaxIn($in['cap_max'] ?? null)];
+  if ($old) { $db->prepare("UPDATE vehicles SET name=?, descr=?, kind_id=?, abbr=?, color=?, uuid=?, major=?, minor=?, cap=?, active=?, cap_max=?" . ($old['kind_id'] !== $kid ? ', sort=NULL' : '') . " WHERE id=?")->execute([...$row, $old['id']]);
     if ($old['kind_id'] !== $kid || !$row[9]) { // andere Art bzw. deaktiviert: Verbund prüfen
       $by = vehById(); $kb = array_column(vehKinds(), null, 'id'); $v = $by[$old['id']];
       if ($v['carrier_id'] !== null && (!$row[9] || !isset($by[$v['carrier_id']]) || vehRoom($by[$v['carrier_id']], $kid, $by, $kb, $v['id']) < 0)) vehLinkSet($v['id'], null, true, $uid, null, false);
       if (!$row[9]) foreach ($by as $x) if ($x['carrier_id'] === $v['id']) { $db->prepare("UPDATE veh_links SET to_at=? WHERE vehicle_id=? AND to_at IS NULL")->execute([$now, $x['id']]); $db->prepare("UPDATE vehicles SET carrier_id=NULL, carrier_at=NULL, carrier_manual=0 WHERE id=?")->execute([$x['id']]); } } }
-  else $db->prepare("INSERT INTO vehicles(name,descr,kind_id,abbr,color,uuid,major,minor,cap,active) VALUES(?,?,?,?,?,?,?,?,?,?)")->execute($row);
+  else $db->prepare("INSERT INTO vehicles(name,descr,kind_id,abbr,color,uuid,major,minor,cap,active,cap_max) VALUES(?,?,?,?,?,?,?,?,?,?,?)")->execute($row);
   out(['ok' => true]);
  case 'vehicle/move': need('cfg_map'); $v = vehById()[(int)($in['id'] ?? 0)] ?? fail('Fahrzeug nicht gefunden', 404); // innerhalb seiner Art
   sortMove('vehicles', "SELECT id FROM vehicles WHERE kind_id=" . (int)$v['kind_id'] . " ORDER BY " . SORT_ORDER, [], $v['id'], (int)($in['dir'] ?? 1)); out(['ok' => true]);

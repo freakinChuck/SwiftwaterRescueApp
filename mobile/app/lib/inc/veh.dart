@@ -81,7 +81,10 @@ List<({J c, int n, int? max, bool full})> vehCarriers(IncStore s, J v) {
     final room = jm(c['room'])['${ji(v['kind_id'])}'];
     if (ji(c['id']) == ji(v['id']) || inV(c) || room is! Map) continue;
     final n = ji(room['n']) ?? 0, max = ji(room['max']);
-    o.add((c: c, n: n, max: max, full: max != null && n >= max && ji(v['carrier_id']) != ji(c['id'])));
+    // Gesamtzahl über alle Arten (room_all), z. B. eine Anhängerkupplung für zwei Anhängerarten
+    final all = jm(c['room_all']), tn = ji(all['n']) ?? 0, tmax = ji(all['max']);
+    final full = (max != null && n >= max) || (tmax != null && tn >= tmax);
+    o.add((c: c, n: n, max: max, full: full && ji(v['carrier_id']) != ji(c['id'])));
   }
   return o;
 }
