@@ -11,6 +11,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../accounts.dart';
+import '../demo.dart';
+import '../demo_ui.dart';
 import '../home.dart' show LoginPage, snack;
 import '../monitor.dart';
 import '../push.dart';
@@ -103,7 +105,14 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     IncPage.focusReq.addListener(_onFocusReq);
     _onFocusReq();
     s.start();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _askLocation());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _askLocation();
+      // Demo-Modus (Issue #74): Erklärung beim ersten Öffnen
+      if (s.demo && !Demo.i.welcomed && mounted) {
+        Demo.i.welcomed = true;
+        demoPanel(context, _demoChanged, first: true);
+      }
+    });
   }
 
   @override
@@ -120,7 +129,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
 
   /// Standort gleich beim Öffnen erlauben lassen; danach einmalig um «Immer zulassen» bitten (Teilen bei gesperrtem Bildschirm, track.dart).
   Future<void> _askLocation() async {
-    if (await requestLocation() != locInUse || !mounted) return;
+    if (await requestLocation() != locInUse || !mounted || s.demo) return; // Demo: kein Teilen im Hintergrund
     if (await prefs.getBool('bgAsked') == true || !mounted) return;
     await prefs.setBool('bgAsked', true);
     if (!mounted) return;
@@ -142,11 +151,20 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     }
   }
 
+  /// Demo-Modus: Leitungsrechte umgeschaltet, Rechte und Stand neu laden
+  void _demoChanged() {
+    s.reloadMe().then((_) => s.poll());
+  }
+
   // ---------- Abmelden ----------
   Future<void> _logout({required bool byServer}) async {
     if (_closing) return;
     _closing = true;
     final a = widget.account;
+    if (s.demo) { // Demo-Modus: «Abmelden» beendet das Demo, kein Konto
+      Navigator.of(context).popUntil((r) => r.isFirst);
+      return;
+    }
     await pushForget(a);
     if (!byServer) await a.api.logout();
     await Accounts.update(a.id, (x) => x.loggedOut = true);
@@ -1278,7 +1296,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         child: Padding(
             padding: const EdgeInsets.all(8),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              FloatingActionButton.small(heroTag: 'menu', tooltip: 'Menü', backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: () => _sk.currentState?.openDrawer(), child: const Icon(Icons.menu)),
+              Column(children: [
+                FloatingActionButton.small(heroTag: 'menu', tooltip: 'Menü', backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: () => _sk.currentState?.openDrawer(), child: const Icon(Icons.menu)),
+                if (s.demo) Padding(padding: const EdgeInsets.only(top: 6), child: DemoBadge(onChanged: _demoChanged)), // Demo-Modus (Issue #74)
+              ]),
               const SizedBox(width: 8),
               Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -1,6 +1,7 @@
 /* Gemeinsamer Code für Einsatz-App (index.html) und Verwaltung (admin.html) */
 const API='api/index.php';
 const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+var DEMO=window.DEMO||null; // Demo-Modus (Issue #74): gesetzt von demo.js (nur index.html lädt es, nur mit ?demo), sonst null
 let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt die jeweilige Seite
 // Native App (Issue #108): Die Flutter-Hülle zeigt die Web-App in einer WebView und hängt «SwiftwaterRescueApp/<Version>» an den User-Agent an.
 // Dann kein Web-Push und kein «App installieren» (Benachrichtigungen kommen über die App); swNative ruft einen Handler der App auf, falls vorhanden.
@@ -264,7 +265,7 @@ async function changesDlg(since,quiet){let r;try{r=await api('changes')}catch(e)
 function whatsNew(v){if(!v||!v.version||v.version==='0.0.0')return;let seen='';try{seen=localStorage.getItem('sw_seenver')||'';localStorage.setItem('sw_seenver',v.version)}catch(e){return}
   if(seen&&verCmp(v.version,seen)>0)changesDlg(seen,true)}
 /* ---------- Anmeldung ---------- */
-function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
+function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="index.html?demo">🎓 Demo ausprobieren (ohne Anmeldung)</a><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
   fetch(`${API}?r=version`).then(r=>r.json()).then(v=>{const e=$('#lgVer');if(e&&v.version)e.textContent='Version '+verTxt(v)}).catch(()=>{}); // Version auch ohne Anmeldung (Issue #175)
   const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}

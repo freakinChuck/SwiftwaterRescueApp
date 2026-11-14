@@ -14,12 +14,15 @@ import 'sounds.dart';
 import 'sys.dart';
 import 'inc/map_page.dart';
 import 'accounts.dart';
+import 'demo.dart';
+import 'demo_ui.dart' show demoSource;
 
 final navKey = GlobalKey<NavigatorState>();
 
 /// Einsatz-App eines Kontos öffnen (aus der Liste, nach dem Antippen einer Meldung oder einer Push-Nachricht).
 /// focus: aus einer Meldung geöffnet, die Einsatz-App zeigt das Einsatzgebiet (IncPage.focusReq).
 Future<void> openAccount(String id, {bool focus = false}) async {
+  if (id == demoId) return openDemo(); // Meldung aus dem Demo-Modus angetippt (Issue #74)
   final l = await Accounts.load();
   final a = l.where((x) => x.id == id).firstOrNull;
   final nav = navKey.currentState;
@@ -34,6 +37,22 @@ Future<void> openAccount(String id, {bool focus = false}) async {
   if (IncPage.openId == id) return;
   nav.popUntil((r) => r.isFirst);
   nav.push(MaterialPageRoute(builder: (_) => IncPage(account: a)));
+}
+
+/// Demo-Modus (Issue #74): Einsatz-App mit dem simulierten Backend (demo.dart) öffnen; mode null = bisherigen Stand weiterführen
+Future<void> openDemo([String? mode]) async {
+  if (navKey.currentState == null) return;
+  if (mode != null || !Demo.started) {
+    // «Ohne Daten» mit einem angemeldeten Konto: dessen Vorgaben übernehmen (bei mehreren Konten Auswahl, Abbrechen = nicht starten)
+    final (ok, src) = mode == 'leer' ? await demoSource() : (true, null);
+    if (!ok) return;
+    Demo.restart(mode ?? 'bsp', src: src);
+  }
+  final nav = navKey.currentState;
+  if (nav == null) return;
+  if (mode == null && IncPage.openId == demoId) return;
+  nav.popUntil((r) => r.isFirst);
+  nav.push(MaterialPageRoute(builder: (_) => IncPage(account: demoAccount())));
 }
 
 String? _pendingOpen;
