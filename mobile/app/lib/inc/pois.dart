@@ -502,7 +502,7 @@ class _PoisPanelState extends State<PoisPanel> {
     // Aufteilung nach Einsatzgebiet (wie renderPois): priorisierte Kategorien (place_cats.prio) zuoberst und ganz (im Einsatzgebiet zuerst),
     // danach «Im Einsatzgebiet» und «Ausserhalb des Einsatzgebiets» (zuerst zugeklappt, offen = fix:out+), darin je Kategorie; ohne Suchgebiet keine Aufteilung
     final a = s.area, split = a != null && (a.lines.isNotEmpty || a.circles.isNotEmpty);
-    final inA = <int>{if (split) for (final f in fs) if (placeInArea(f, a!)) ji(f['id']) ?? 0};
+    final inA = <int>{if (split) for (final f in fs) if (placeInArea(f, a)) ji(f['id']) ?? 0};
     final pr = {for (final c in s.placeCats) if (jb(c['prio'])) ji(c['id'])};
     int cOf(J f) {
       final c = ji(f['cat_id']);
