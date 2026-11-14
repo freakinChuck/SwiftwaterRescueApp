@@ -1042,15 +1042,20 @@ function geoTile($x, $y) { global $now; $dir = __DIR__ . '/data/geo'; if (!is_di
   alog('warn', 'geo', 'Geodaten nicht erreichbar', ['tile' => "$x,$y", 'err' => $err ? implode(' | ', $err) : 'keine Quelle eingerichtet']);
   throw new RuntimeException($err ? implode('; ', $err) : 'Keine Quelle für Geodaten eingerichtet (Verwaltung → Geodaten-Quellen)'); }
 // Einstellung geo (JSON): je Objektart cat_id (Kategorie beim Übernehmen), props (Eigenschaften), color, abbr, live (in der Geodaten-Ebene der Einsatz-App angeboten, Standard an)
+const GEO_SHAPES = ['src', 'point'];
+const GEO_MERGE_MAX = 20; // höchstens so viele Objekte zu einem Standort zusammengefasst
 function geoCfg() { $v = json_decode(setting('geo', ''), true); $v = is_array($v) ? $v : []; $r = [];
   foreach (GEO_KINDS as $k => [$n, $ab]) { $c = is_array($v[$k] ?? null) ? $v[$k] : [];
     $r[$k] = ['cat_id' => isset($c['cat_id']) && is_numeric($c['cat_id']) ? (int)$c['cat_id'] : null, 'props' => array_values(array_map('intval', array_filter((array)($c['props'] ?? []), 'is_numeric'))),
-      'color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string)($c['color'] ?? '')) ? $c['color'] : '#5c677d', 'abbr' => mb_substr(trim((string)($c['abbr'] ?? $ab)), 0, 4), 'live' => !array_key_exists('live', $c) || !empty($c['live']) ? 1 : 0]; }
+      'color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string)($c['color'] ?? '')) ? $c['color'] : '#5c677d', 'abbr' => mb_substr(trim((string)($c['abbr'] ?? $ab)), 0, 4), 'live' => !array_key_exists('live', $c) || !empty($c['live']) ? 1 : 0,
+      'shape' => in_array($c['shape'] ?? '', GEO_SHAPES, true) ? $c['shape'] : 'src']; } // shape: src = wie in der Quelle (Punkt, Linie, Fläche), point = immer als Punkt
+
   return $r; }
 function geoKindsPub() { $c = geoCfg(); $r = []; foreach (GEO_KINDS as $k => [$n, $ab, $ic]) $r[] = ['k' => $k, 'name' => $n, 'abbr' => $ab, 'icon' => $ic, 'live' => $c[$k]['live']]; return $r; }
 function geoLiveOn($inc = null) { return $inc ? feature($inc, 'geo') : (bool)array_filter(featuresAll(), fn($f) => $f['geo']); }
 // Stand eines Objekts für den Abgleich: Name, Merkmale, Lage
 function geoSnap($it) { return ['kind' => $it['kind'], 'name' => (string)$it['name'], 'water' => $it['water'] ?? null, 'tags' => (array)$it['tags'], 'lat' => (float)$it['lat'], 'lon' => (float)$it['lon'], 'pts' => $it['pts'] ?? null, 'line' => (int)($it['line'] ?? 0)]; }
+function geoSnapIn($o) { return geoSnap(['tags' => (array)($o['tags'] ?? [])] + $o + ['name' => '', 'water' => null, 'pts' => null, 'line' => 0]); } // Stand aus einem Objekt der App (geprüft in placeSave)
 function geoDiff($a, $b) { $d = [];
   if (($a['name'] ?? '') !== ($b['name'] ?? '')) $d['name'] = [$a['name'] ?? '', $b['name'] ?? ''];
   $ta = (array)($a['tags'] ?? []); $tb = (array)($b['tags'] ?? []); $tk = []; foreach (array_unique(array_merge(array_keys($ta), array_keys($tb))) as $k) if ($k !== 'name' && ($ta[$k] ?? null) !== ($tb[$k] ?? null)) $tk[] = $k; if ($tk) $d['tags'] = $tk;
@@ -1064,11 +1069,23 @@ function geoCheck($max = 20, $ids = null, $force = false) { global $db; $t = tim
   $w = $ids !== null ? ' AND id IN (' . (implode(',', array_map('intval', $ids)) ?: '0') . ')' : ($force ? '' : ' AND (src_chk IS NULL OR src_chk<' . ($t - GEO_TTL) . ')');
   $rows = $db->query("SELECT id,src_ref,src_data,src_state FROM places WHERE src_ref IS NOT NULL$w ORDER BY src_chk IS NOT NULL, src_chk LIMIT " . (int)$max)->fetchAll();
   $tiles = []; $res = ['checked' => 0, 'changed' => 0, 'gone' => 0, 'failed' => 0];
+  // ein Objekt in den Kacheln um seinen letzten Stand suchen: [gefunden oder null, alle Kacheln erreichbar]
+  $find = function ($sd, $ref) use (&$tiles) { $cand = [geoTileOf($sd['lat'], $sd['lon'])]; foreach ([$sd['pts'][0] ?? null, $sd['pts'] ? end($sd['pts']) : null] as $q) if ($q) $cand[] = geoTileOf($q[0], $q[1]);
+    $ok = true; foreach (array_unique(array_map(fn($c) => $c[0] . ',' . $c[1], $cand)) as $tk) { if (!isset($tiles[$tk])) { [$x, $y] = array_map('intval', explode(',', $tk)); try { $tiles[$tk] = array_column(geoTile($x, $y)['items'], null, 'ref'); } catch (Throwable $e) { $tiles[$tk] = false; } }
+      if ($tiles[$tk] === false) { $ok = false; continue; } if (isset($tiles[$tk][$ref])) return [$tiles[$tk][$ref], true]; }
+    return [null, $ok]; };
   foreach ($rows as $r) { $sd = json_decode((string)$r['src_data'], true); if (!is_array($sd)) { $db->prepare("UPDATE places SET src_chk=? WHERE id=?")->execute([$t, (int)$r['id']]); continue; }
-    $cand = [geoTileOf($sd['lat'], $sd['lon'])]; foreach ([$sd['pts'][0] ?? null, $sd['pts'] ? end($sd['pts']) : null] as $q) if ($q) $cand[] = geoTileOf($q[0], $q[1]);
-    $found = null; $ok = true;
-    foreach (array_unique(array_map(fn($c) => $c[0] . ',' . $c[1], $cand)) as $tk) { if (!isset($tiles[$tk])) { [$x, $y] = array_map('intval', explode(',', $tk)); try { $tiles[$tk] = array_column(geoTile($x, $y)['items'], null, 'ref'); } catch (Throwable $e) { $tiles[$tk] = false; } }
-      if ($tiles[$tk] === false) { $ok = false; continue; } if (isset($tiles[$tk][$r['src_ref']])) { $found = $tiles[$tk][$r['src_ref']]; break; } }
+    if (isset($sd['multi'])) { // zusammengefasster Standort: jedes Objekt einzeln, Abweichung je Objekt in parts; «nicht mehr vorhanden» erst, wenn alle fehlen
+      $refs = explode(',', (string)$r['src_ref']); $nw = []; $parts = []; $fail = false; $gone = 0;
+      foreach ($sd['multi'] as $i => $one) { $ref = $refs[$i] ?? ''; [$f, $ok] = $find($one, $ref);
+        if (!$f && !$ok) { $fail = true; break; } if (!$f) { $gone++; $nw[] = null; $parts[] = ['ref' => $ref, 'gone' => 1]; continue; }
+        $n1 = geoSnap($f); $nw[] = $n1; $d = geoDiff($one, $n1); if ($d) $parts[] = ['ref' => $ref] + $d; }
+      if ($fail) { $res['failed']++; continue; }
+      if ($gone === count($sd['multi'])) { $db->prepare("UPDATE places SET src_state='gone', src_new=NULL, src_diff=NULL, src_chk=? WHERE id=?")->execute([$t, (int)$r['id']]); $res['gone']++; }
+      elseif ($parts) { $db->prepare("UPDATE places SET src_state='changed', src_new=?, src_diff=?, src_chk=? WHERE id=?")->execute([json_encode(['multi' => $nw], JSON_UNESCAPED_UNICODE), json_encode(['parts' => $parts], JSON_UNESCAPED_UNICODE), $t, (int)$r['id']]); $res['changed']++; }
+      else $db->prepare("UPDATE places SET src_state=NULL, src_new=NULL, src_diff=NULL, src_chk=? WHERE id=?")->execute([$t, (int)$r['id']]);
+      $res['checked']++; continue; }
+    [$found, $ok] = $find($sd, $r['src_ref']);
     if (!$found && !$ok) { $res['failed']++; continue; }
     if (!$found) { $db->prepare("UPDATE places SET src_state='gone', src_new=NULL, src_diff=NULL, src_chk=? WHERE id=?")->execute([$t, (int)$r['id']]); $res['gone']++; }
     else { $nw = geoSnap($found); $d = geoDiff($sd, $nw);
@@ -1481,7 +1498,11 @@ function placeAllowed($pid, $geo = false) { global $db; if ($pid === null) { if 
 // fester Standort anlegen ($old null) oder ändern, liefert die ID. Felder: name, descr, abbr, color, lat/lon bzw. pts (line), active, cat_id, props, nav;
 // src = Objekt aus den Geodaten (nur beim Anlegen: Verknüpfung mit der Quelle, Stand für den Abgleich; Lage aus dem Objekt, falls nicht übergeben)
 function placeSave($in, $old, $pid) { global $db, $now;
-  $src = !$old && is_array($in['src'] ?? null) ? $in['src'] : null;
+  $src = !$old && is_array($in['src'] ?? null) ? $in['src'] : null; $multi = null;
+  if (!$old && is_array($in['srcs'] ?? null)) { // mehrere Objekte zu einem Standort zusammengefasst: Lage und Name aus dem Formular, Quelle = alle Objekte
+    $multi = array_values($in['srcs']); if (count($multi) < 2 || count($multi) > GEO_MERGE_MAX) fail('Zusammenfassen: 2–' . GEO_MERGE_MAX . ' Objekte');
+    foreach ($multi as $o) if (!is_array($o) || !preg_match('/^[NWRX]\d{1,15}$/', (string)($o['ref'] ?? '')) || !isset(GEO_KINDS[$o['kind'] ?? '']) || !is_numeric($o['lat'] ?? null) || !is_numeric($o['lon'] ?? null)) fail('Ungültiges Objekt der Geodaten');
+    if (count(array_unique(array_column($multi, 'ref'))) !== count($multi)) fail('Ein Objekt ist doppelt ausgewählt'); $src = null; }
   if ($src) { if (!preg_match('/^[NWRX]\d{1,15}$/', (string)($src['ref'] ?? '')) || !isset(GEO_KINDS[$src['kind'] ?? ''])) fail('Ungültiges Objekt der Geodaten');
     if (!isset($in['lat']) && !isset($in['pts'])) { if (!empty($src['pts'])) { $in['pts'] = $src['pts']; $in['line'] = $src['line'] ?? 0; } else { $in['lat'] = $src['lat'] ?? null; $in['lon'] = $src['lon'] ?? null; } }
     if (trim((string)($in['name'] ?? '')) === '') $in['name'] = geoName($src); }
@@ -1497,7 +1518,8 @@ function placeSave($in, $old, $pid) { global $db, $now;
   $pr = array_key_exists('props', $in) ? json_encode(placePropsIn($in['props'])) : ($old ? $old['props'] : null); $nav = array_key_exists('nav', $in) ? placeNavIn($in['nav']) : null;
   if ($old) { $db->prepare("UPDATE places SET name=?,descr=?,abbr=?,color=?,lat=?,lon=?,active=?,cat_id=?,pts=?,line=?,sort=?,props=? WHERE id=?")->execute([$nm, $de, $ab, $co, $ll[0], $ll[1], $ac, $cid, $pj, $ln, ($old['cat_id'] === null ? null : (int)$old['cat_id']) === $cid ? $old['sort'] : null, $pr, (int)$old['id']]); $id = (int)$old['id']; } // andere Kategorie: dort ans Ende
   else { $db->prepare("INSERT INTO places(plan_id,name,descr,abbr,color,lat,lon,active,cat_id,pts,line,props,src_ref,src_kind,src_data,src_at,src_chk) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-      ->execute([$pid, $nm, $de, $ab, $co, $ll[0], $ll[1], $ac, $cid, $pj, $ln, $pr, $src ? $src['ref'] : null, $src ? $src['kind'] : null, $src ? json_encode(geoSnap(['tags' => (array)($src['tags'] ?? [])] + $src + ['name' => '', 'water' => null, 'pts' => null, 'line' => 0]), JSON_UNESCAPED_UNICODE) : null, $src ? $now : null, $src ? $now : null]);
+      ->execute([$pid, $nm, $de, $ab, $co, $ll[0], $ll[1], $ac, $cid, $pj, $ln, $pr, $src ? $src['ref'] : ($multi ? implode(',', array_column($multi, 'ref')) : null), $src ? $src['kind'] : ($multi ? $multi[0]['kind'] : null),
+        $src ? json_encode(geoSnapIn($src), JSON_UNESCAPED_UNICODE) : ($multi ? json_encode(['multi' => array_map('geoSnapIn', $multi)], JSON_UNESCAPED_UNICODE) : null), $src || $multi ? $now : null, $src || $multi ? $now : null]);
     $id = (int)$db->lastInsertId(); }
   if ($nav !== null) placeNavSet($id, $nav);
   return $id; }
@@ -3877,10 +3899,10 @@ switch ($route) {
   $rd = geoReady(); $pl = []; foreach ($db->query("SELECT p.id,p.plan_id,p.name,p.src_ref,p.src_state,p.active,e.title FROM places p LEFT JOIN ex_plans e ON e.id=p.plan_id WHERE p.src_ref IS NOT NULL ORDER BY p.id")->fetchAll() as $r) $pl[] = ints($r, ['id', 'plan_id', 'active']);
   out(['kinds' => geoKindsPub(), 'cfg' => geoCfg(), 'cats' => placeCats(), 'props' => placeProps(), 'tile' => GEO_TILE, 'sources' => array_values(array_map(fn($k) => ['k' => $k, 'name' => WATER_SRC[$k]], array_filter(waterOrder(), fn($k) => $rd[$k]))),
     'linked' => $pl, 'check_at' => (int)setting('geo_chk_at', '0'), 'can_map' => can('cfg_map') ? 1 : 0]);
- case 'geo/cfg/save': need('geo'); // je Objektart: cat_id, props, color, abbr, live
+ case 'geo/cfg/save': need('geo'); // je Objektart: cat_id, props, color, abbr, live, shape (src|point)
   if (!is_array($in['cfg'] ?? null)) fail('Ungültige Einstellung'); $cats = array_column(placeCats(), 'id'); $o = [];
   foreach (GEO_KINDS as $k => $_) { $c = is_array($in['cfg'][$k] ?? null) ? $in['cfg'][$k] : []; [$ab, $co] = extStyle(['abbr' => $c['abbr'] ?? '', 'color' => $c['color'] ?? '']);
-    $o[$k] = ['cat_id' => !empty($c['cat_id']) && in_array((int)$c['cat_id'], $cats, true) ? (int)$c['cat_id'] : null, 'props' => placePropsIn($c['props'] ?? []), 'color' => $co ?? '#5c677d', 'abbr' => (string)($ab ?? ''), 'live' => empty($c['live']) ? 0 : 1]; }
+    $o[$k] = ['cat_id' => !empty($c['cat_id']) && in_array((int)$c['cat_id'], $cats, true) ? (int)$c['cat_id'] : null, 'props' => placePropsIn($c['props'] ?? []), 'color' => $co ?? '#5c677d', 'abbr' => (string)($ab ?? ''), 'live' => empty($c['live']) ? 0 : 1, 'shape' => in_array($c['shape'] ?? '', GEO_SHAPES, true) ? $c['shape'] : 'src']; }
   setSetting('geo', json_encode($o, JSON_UNESCAPED_UNICODE)); out(['ok' => true]);
  case 'geo/tile': // Objekte einer Kachel (x, y = Index zu GEO_TILE Grad); pick = Vorbereitungsansicht (Recht geo, alle Arten), sonst Geodaten-Ebene (Funktion geo, nur angebotene Arten)
   $x = (int)($in['x'] ?? $_GET['x'] ?? 0); $y = (int)($in['y'] ?? $_GET['y'] ?? 0); if (abs($x * GEO_TILE) > 180 || abs($y * GEO_TILE) > 90) fail('Ungültige Kachel');
@@ -3893,8 +3915,11 @@ switch ($route) {
   $pid = empty($in['plan_id']) ? null : (int)$in['plan_id']; placeAllowed($pid, true); $its = (array)($in['items'] ?? []); if (!$its || count($its) > 500) fail('Keine bzw. zu viele Objekte (höchstens 500)');
   $gc = geoCfg(); $db->beginTransaction(); $ids = [];
   foreach ($its as $it) { if (!is_array($it)) fail('Ungültiges Objekt'); $c = $gc[(string)($it['kind'] ?? '')] ?? null; // fehlende Angaben aus den Vorgaben je Objektart (z. B. Übernahme aus der Einsatz-App)
+    $src = is_array($it['src'] ?? null) ? $it['src'] : ['name' => (string)($it['tags']['name'] ?? $it['tags']['bridge:name'] ?? '')] + $it; unset($it['src']); // Stand der Quelle mit dem Namen aus OpenStreetMap, nicht dem eingegebenen
+    if ($c && ($it['shape'] ?? $c['shape']) === 'point' && !empty($it['pts'])) { unset($it['pts']); $it['line'] = 0; } // Vorgabe «als Punkt»: Mitte bzw. Punkt auf halber Länge (lat/lon des Objekts)
     if ($c) $it += ['cat_id' => $c['cat_id'], 'props' => $c['props'], 'color' => $c['color'], 'abbr' => empty($it['pts']) ? $c['abbr'] : ''];
-    $ids[] = placeSave($it + ['src' => $it], null, $pid); }
+    if (empty($it['pts'])) { $it['lat'] = $it['lat'] ?? null; $it['lon'] = $it['lon'] ?? null; }
+    $ids[] = placeSave($it + ['src' => $src], null, $pid); }
   $db->commit();
   alog('info', 'geo', 'Geodaten als feste Standorte übernommen', ['n' => count($ids), 'plan' => $pid, 'kinds' => array_count_values(array_map(fn($i) => (string)($i['kind'] ?? ''), $its))]);
   out(['ok' => true, 'ids' => $ids]);
@@ -3907,10 +3932,14 @@ switch ($route) {
   $s = $db->prepare("SELECT * FROM places WHERE id=? AND src_ref IS NOT NULL"); $s->execute([(int)($in['id'] ?? 0)]); $f = $s->fetch() ?: fail('Standort nicht gefunden', 404);
   $a = (string)($in['action'] ?? ''); $nw = json_decode((string)$f['src_new'], true);
   if ($a === 'unlink') $db->prepare("UPDATE places SET src_ref=NULL, src_kind=NULL, src_data=NULL, src_new=NULL, src_state=NULL, src_diff=NULL, src_chk=NULL WHERE id=?")->execute([(int)$f['id']]);
+  elseif ($a === 'keep' && is_array($nw) && isset($nw['multi'])) { $o = json_decode((string)$f['src_data'], true)['multi'] ?? []; $refs = explode(',', (string)$f['src_ref']); $kr = []; $ks = []; // zusammengefasst: verschwundene Objekte lösen, übrige mit neuem Stand
+    foreach ($nw['multi'] as $i => $n1) if ($n1 !== null) { $kr[] = $refs[$i]; $ks[] = $n1; }
+    if (count($ks) > 1) $db->prepare("UPDATE places SET src_ref=?, src_data=?, src_new=NULL, src_state=NULL, src_diff=NULL WHERE id=?")->execute([implode(',', $kr), json_encode(['multi' => $ks], JSON_UNESCAPED_UNICODE), (int)$f['id']]);
+    else $db->prepare("UPDATE places SET src_ref=?, src_kind=?, src_data=?, src_new=NULL, src_state=NULL, src_diff=NULL WHERE id=?")->execute([$kr[0], $ks[0]['kind'], json_encode($ks[0], JSON_UNESCAPED_UNICODE), (int)$f['id']]); }
   elseif ($a === 'keep') { if ($f['src_state'] === 'gone') $db->prepare("UPDATE places SET src_ref=NULL, src_kind=NULL, src_data=NULL, src_new=NULL, src_state=NULL, src_diff=NULL, src_chk=NULL WHERE id=?")->execute([(int)$f['id']]); // nicht mehr in der Quelle: behalten = Verknüpfung lösen
     else { if (!is_array($nw)) fail('Keine Abweichung'); $db->prepare("UPDATE places SET src_data=?, src_new=NULL, src_state=NULL, src_diff=NULL WHERE id=?")->execute([json_encode($nw, JSON_UNESCAPED_UNICODE), (int)$f['id']]); } }
-  elseif ($a === 'take') { if (!is_array($nw)) fail('Keine Abweichung');
-    $pts = $nw['pts'] ?? null; $ln = $pts ? (int)($nw['line'] ?? 0) : 0; $nm = !empty($in['name']) && trim((string)$nw['name']) !== '' ? mb_substr(trim((string)$nw['name']), 0, 80) : $f['name'];
+  elseif ($a === 'take') { if (!is_array($nw)) fail('Keine Abweichung'); if (isset($nw['multi'])) fail('Zusammengefasster Standort: Lage bitte von Hand anpassen und «Behalten» wählen');
+    $pts = $f['pts'] === null ? null : ($nw['pts'] ?? null); // als Punkt übernommene bleiben Punkt $ln = $pts ? (int)($nw['line'] ?? 0) : 0; $nm = !empty($in['name']) && trim((string)$nw['name']) !== '' ? mb_substr(trim((string)$nw['name']), 0, 80) : $f['name'];
     $db->prepare("UPDATE places SET name=?, lat=?, lon=?, pts=?, line=?, abbr=?, src_data=?, src_kind=?, src_new=NULL, src_state=NULL, src_diff=NULL WHERE id=?")->execute([$nm, (float)$nw['lat'], (float)$nw['lon'], $pts ? json_encode($pts) : null, $ln, $pts ? null : $f['abbr'], json_encode($nw, JSON_UNESCAPED_UNICODE), $nw['kind'] ?? $f['src_kind'], (int)$f['id']]); }
   else fail('Ungültige Aktion');
   alog('info', 'geo', 'Abweichung zur Quelle bearbeitet', ['id' => (int)$f['id'], 'action' => $a]); out(['ok' => true]);
