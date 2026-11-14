@@ -4,8 +4,10 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import 'version.dart';
+
 /// Kennung der App im User-Agent (auch in der WebView): Die Web-App erkennt daran die App-Hülle (NATIVE in common.js).
-const appUa = 'SwiftwaterRescueApp/1.0';
+const appUa = 'SwiftwaterRescueApp/$appVersion';
 
 class ApiError implements Exception {
   ApiError(this.message, [this.status = 0, this.data]);
@@ -47,7 +49,8 @@ class Api {
   Uri uri(String route, [Map<String, String>? q]) => Uri.parse('${base}api/index.php').replace(queryParameters: {'r': route, ...?q});
 
   Future<Map<String, dynamic>> call(String route, {Map<String, dynamic>? body, Map<String, String>? query, Duration timeout = const Duration(seconds: 20)}) async {
-    final h = {'X-Token': token ?? '', 'User-Agent': appUa, if (body != null) 'Content-Type': 'application/json'};
+    // X-App-Version (Issue #175): der Server führt die Version je Gerätesitzung nach (Verwaltung → System → «Versionen»)
+    final h = {'X-Token': token ?? '', 'User-Agent': appUa, 'X-App-Version': appVerHeader, if (body != null) 'Content-Type': 'application/json'};
     http.Response r;
     try {
       r = body != null
@@ -75,7 +78,7 @@ class Api {
 
   /// Anmeldung mit eigener Gerätesitzung (device): meldet weder den Browser noch andere Geräte ab.
   Future<String> login(String user, String pass, String device) async {
-    final j = await call('login', body: {'username': user, 'password': pass, 'device': device, 'platform': Platform.isIOS ? 'ios' : 'android'});
+    final j = await call('login', body: {'username': user, 'password': pass, 'device': device, 'platform': Platform.isIOS ? 'ios' : 'android', 'app_ver': appVerHeader});
     final t = j['token'];
     if (t is! String || t.isEmpty) throw ApiError('Anmeldung fehlgeschlagen');
     return token = t;

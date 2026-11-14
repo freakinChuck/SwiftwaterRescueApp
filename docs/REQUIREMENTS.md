@@ -82,7 +82,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 ## 5. Karte (KA)
 
 - **KA-01** – Karte im Vollbild; alle Bedienelemente in einem versteckten Menü (☰) (AG).
-- **KA-02** – Grundkarte swisstopo Luftbild (Standard), umschaltbar auf Landeskarte und OpenStreetMap; Anbieter leicht austauschbar; Wahl pro Gerät gemerkt (AG, #34).
+- **KA-02** – Grundkarte swisstopo Luftbild (Standard), umschaltbar auf die in der Verwaltung eingeschalteten Kartenanbieter (KA-13); Wahl pro Gerät gemerkt, im Einsatz bis zum Einsatzende (AG, #34, #106).
 - **KA-03** – Fenster «Ansicht»: Grundkarte und je Kategorie ein Häkchen (Einsatzkräfte, Externe, Rettlinge, PLS, Suchgebiet, Markierungen, Bereiche, Linien, Nachrichten-Markierungen, Helikopter, Feste Standorte, Messstationen), «Alle ein-/ausblenden», pro Gerät gemerkt (#34); ohne Einsatz feste Standorte, Helikopter und eigene Messstationen (#96, #125, #130).
 - **KA-04** – Karte drehbar (zwei Finger, Shift + Mausrad, Kompass); Klick auf den Kompass richtet nach Norden aus (AG).
 - **KA-05** – Startansicht beim Öffnen eines Einsatzes: Übersicht über alle aktiven Positionen (AG).
@@ -93,6 +93,9 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KA-10** – Startansicht beim Öffnen der App ohne laufenden Einsatz: eigener Standort und alle eingeblendeten festen Standorte im Bild; trifft der eigene Standort erst später ein, wird die Ansicht in den ersten 20 s nachgeführt, solange man die Karte nicht selbst verschoben oder gezoomt hat (#96).
 - **KA-11** – Das Menü (☰) zeigt im Einsatz oben den Einsatz mit Alarmzeit, Alarmstufe, PLS, Fliessgeschwindigkeit, Aufzeichnung und öffentlicher Ansicht, darunter Register: «Einsatz» (AI-Assistent, Teilnahme bzw. Mein Einsatz, Fliessgeschwindigkeit, Werkzeuge), «Leitung» (nur Einsatzleitung: Aufgebot, PLS, Aufzeichnung, Helikopter, öffentliche Ansicht, Einsatzkräfte, Einsatz beenden), «Übung» (Übungsleitung, mit Anzahl offener Elemente), «Log» und «Info» (eigene Rechte). Jedes Thema steht in einer eigenen Karte. Beim Öffnen gilt «Einsatz», für die Übungsleitung «Übung» (#129).
 - **KA-12** – Wird eine Benachrichtigung zum laufenden Einsatz geöffnet (Alarm, Nachricht, Entfernen; als Systembenachrichtigung oder in der App), zeigt die Karte das Einsatzgebiet: Suchgebiet mit den PLS, ohne Einsatzkräfte (solange das Suchgebiet noch berechnet wird, die PLS). Nach dem Annehmen mit einer Einrückoption kehrt sie ebenso aufs Einsatzgebiet zurück. Verschieben von Hand beendet es. Web-App und native App (Feedback zu #108).
+- **KA-13** – Kartenanbieter (#106): Katalog freier Anbieter ohne Schlüssel mit Angabe von Abdeckung, Lizenz, Nutzungsbedingungen und Einschränkungen: swisstopo Luftbild, Landeskarte farbig und grau; weltweites Luftbild (Sentinel-2 von EOX, 10 m); OpenStreetMap, OSM Humanitarian; eigene OSM-Karte (KA-14). Entfallen auf Wunsch des Auftraggebers: «Luftbild (automatisch)», Luftbilder Österreich (basemap.at) und Frankreich (IGN), OpenTopoMap, basemap.de, CARTO. Das Fenster «Ansicht» gruppiert nach Luftbildern und Karten.
+- **KA-14** – Eigene OSM-Karte (#106): Vektorkarte aus OpenStreetMap als PMTiles-Datei auf dem eigenen Webserver, ohne Dienste Dritter, Gewässer hervorgehoben; wählbar, sobald die Datei vorliegt; erzeugen und hochladen mit Skripten. In der nativen App noch nicht (**offen**).
+- **KA-15** – Kartenanbieter in der Verwaltung einstellbar: ein/aus, Reihenfolge, Standard, Test einer Beispielkachel im Browser (bzw. der PMTiles-Datei); je Einsatztyp einzelne Anbieter ausschalten und eine eigene Standardkarte wählen, gilt sofort, auch im laufenden Einsatz. Beim Öffnen eines Einsatzes zeigt die Karte die Standardkarte des Typs; öffentliche Ansicht und Replay folgen dem Typ ihres Einsatzes (#106).
 
 ## 6. Einsatzkräfte und Standort (EK)
 
@@ -268,8 +271,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **RC-01** – Eine Seite «Impressum, Lizenzen & Datenschutz» ist ohne Anmeldung erreichbar, verlinkt bei der Anmeldung, im Profil der Einsatz-App, in der öffentlichen Ansicht und in der Verwaltung (#102).
 - **RC-02** – Impressum mit den Angaben der betreibenden Organisation und den Verwendungseinschränkungen: kein Ersatz für Notrufnummern, Alarmierung ohne Gewähr, Standorte und Suchgebiet sind Schätzungen, Kartendaten und Luftfahrzeuge ohne Gewähr, nur nicht-kommerzielle Nutzung, keine Haftung (#102).
-- **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, PostGIS, PostGIS-API, Helikopter-Quellen, BAFU-Hydrodaten) (#102, #125, #131).
-- **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen, Speicher im Gerät, Rechte der betroffenen Personen (#102).
+- **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, PostGIS, PostGIS-API, Helikopter-Quellen, BAFU-Hydrodaten, eingeschaltete Kartenanbieter je Einsatztyp) (#102, #106, #125, #131).
+- **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen und Kartenanbietern, Speicher im Gerät, Rechte der betroffenen Personen (#102).
 - **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
 
 
@@ -316,7 +319,19 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EM-07** – Eingang über ein IMAP-Postfach (SSL/TLS, STARTTLS), abgerufen bei Anfragen offener Apps in einstellbarem Abstand und über einen Cron-Job des Hostings, oder über einen Webhook mit der rohen E-Mail; Cron-Job und Webhook mit geheimem, erneuerbarem Schlüssel (#65).
 - **EM-08** – Alle Einstellungen in der Verwaltung unter der neuen Kategorie «Konnektivität» (eigenes Recht «Konnektivität einstellen»): Postfach mit Verbindungstest und «Jetzt abrufen», Regeln je Einsatztyp, Prüfen einer Beispiel-E-Mail ohne Start, Verlauf der letzten 30 E-Mails mit Ergebnis; Passwort wird nie angezeigt (#65).
 
-## 26. Funk & Konferenz (FK)
+## 26. Versionen (VS)
+
+- **VS-01** – Web-App, Server und native App haben eine gemeinsame Versionsnummer MAJOR.MINOR.PATCH, vor dem Produktivstart 0.x (AG, #175).
+- **VS-02** – Releases sind im Quellcode als Tag vX.Y.Z auf main markiert und als GitHub-Release mit Release Notes veröffentlicht; ein Release entsteht von Hand über einen Workflow, der die Version erhöht, die Notes schreibt und die App-Builds (TestFlight, Google Play) für genau diese Version startet (#175).
+- **VS-03** – Test- und Entwicklungssysteme zeigen zwischen zwei Releases den Abstand zum letzten Release und den Commit sowie das System (z. B. «0.1.0+12.abc1234 · Test», DEV mit PR-Nummer), das Produktivsystem nur die Versionsnummer (AG, #175).
+- **VS-04** – Die Version ist auch ohne Anmeldung sichtbar (Anmeldung, Seite «Impressum, Lizenzen & Datenschutz»), angemeldet im Profil, im Register «Info» bzw. in der Fusszeile des Menüs und im Konto-Menü der Verwaltung (AG, #175).
+- **VS-05** – «Was ist neu»: Nach einem Update zeigen Web-App, Verwaltung und native App einmal die Änderungen seit der zuletzt gesehenen Version; jederzeit abrufbar im Profil bzw. in den Einstellungen und in der Verwaltung (AG, #175).
+- **VS-06** – Läuft auf dem Server inzwischen eine neuere Fassung als die geladene Seite, erscheint der Hinweis «Neue Version verfügbar» mit «Neu laden» (#175).
+- **VS-07** – Die native App meldet ihre Version dem Server; die Verwaltung (System → «Versionen», eigenes Recht) zeigt den ausgelieferten Stand des Servers und die angemeldeten Apps je Plattform und Version (#175).
+- **VS-08** – In der Verwaltung lässt sich eine Mindestversion der App festlegen. Ältere Apps zeigen nur den Hinweis «Bitte App aktualisieren» (im Menü mit «Später» für 7 Tage ausblendbar, in der Kontenliste und im Profil); Alarmierung und Einsatz funktionieren weiter, gesperrt wird nie. Denselben Hinweis gibt es, wenn der Server eine höhere API-Stufe hat als die App (AG, #175).
+- **VS-09** – Jedes Deployment einer neuen Version steht im Applikationslog («Version a → b») (#175).
+
+## 27. Funk & Konferenz (FK)
 
 - **FK-01** – Im laufenden Einsatz sprechen Teilnehmende per Sprechtaste auf einem Kanal (gedrückt halten = sprechen, loslassen = senden, zur Seite wischen = verwerfen; wahlweise antippen zum Starten und Stoppen, z. B. mit Handschuhen); höchstens einstellbare Länge, Standard 60 s (#113).
 - **FK-02** – Kanäle sind in der Verwaltung frei definierbar: Name, Reihenfolge, wer hört und wer spricht (alle Teilnehmenden, Einsatzleitung, Übungsleitung, je Spezialrolle, je Einrückoption), optional nur bei Einsatztypen mit vorbereiteten Übungen; angelegt: Alle, Leitung, Übungsleitung, je Spezialrolle ohne Leitungsrechte. Welche Kanäle ein Einsatz hat, legt der Einsatztyp fest; die Einsatzleitung kann sie im Einsatz anpassen (#113).
