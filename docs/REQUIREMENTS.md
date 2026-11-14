@@ -182,7 +182,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo (#35, #79, #96, #125, #105).
+- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo, Funk (#35, #79, #96, #125, #105, #113).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
 
@@ -315,3 +315,19 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EM-06** – Läuft bereits ein Einsatz, startet keiner; die E-Mail wird im Log des laufenden Einsatzes vermerkt. Zu alte E-Mails (einstellbar, Standard 30 min), doppelte und solche, die schon vor dem Einrichten im Postfach lagen, lösen nie aus (#65).
 - **EM-07** – Eingang über ein IMAP-Postfach (SSL/TLS, STARTTLS), abgerufen bei Anfragen offener Apps in einstellbarem Abstand und über einen Cron-Job des Hostings, oder über einen Webhook mit der rohen E-Mail; Cron-Job und Webhook mit geheimem, erneuerbarem Schlüssel (#65).
 - **EM-08** – Alle Einstellungen in der Verwaltung unter der neuen Kategorie «Konnektivität» (eigenes Recht «Konnektivität einstellen»): Postfach mit Verbindungstest und «Jetzt abrufen», Regeln je Einsatztyp, Prüfen einer Beispiel-E-Mail ohne Start, Verlauf der letzten 30 E-Mails mit Ergebnis; Passwort wird nie angezeigt (#65).
+
+## 26. Funk & Konferenz (FK)
+
+- **FK-01** – Im laufenden Einsatz sprechen Teilnehmende per Sprechtaste auf einem Kanal (gedrückt halten = sprechen, loslassen = senden, zur Seite wischen = verwerfen; wahlweise antippen zum Starten und Stoppen, z. B. mit Handschuhen); höchstens einstellbare Länge, Standard 60 s (#113).
+- **FK-02** – Kanäle sind in der Verwaltung frei definierbar: Name, Reihenfolge, wer hört und wer spricht (alle Teilnehmenden, Einsatzleitung, Übungsleitung, je Spezialrolle, je Einrückoption), optional nur bei Einsatztypen mit vorbereiteten Übungen; angelegt: Alle, Leitung, Übungsleitung, je Spezialrolle ohne Leitungsrechte. Welche Kanäle ein Einsatz hat, legt der Einsatztyp fest; die Einsatzleitung kann sie im Einsatz anpassen (#113).
+- **FK-03** – Sprechen dürfen je Spezialrolle (Verwaltung) bzw. Personen ohne Spezialrolle gemäss Einstellung; Einsatzleitung und Übungsleitung immer (#113).
+- **FK-04** – Live-Konferenz je Kanal in Echtzeit über einen eigenen Medienserver (LiveKit), je Einsatztyp ein- und ausschaltbar; standardmässig stumm, Senden über die Sprechtaste oder «Mikrofon offen», Anzeige, wer verbunden ist und wer spricht; Beitritt und Austritt im Einsatzlog; die Konferenz wird nie aufgezeichnet (#113).
+- **FK-05** – Wer nicht in der Konferenz ist, erhält dieselben Beiträge als Durchsagen; mit «Mithören» (Vorgabe der Verwaltung, pro Gerät änderbar) spielt die offene App neue Durchsagen sofort nacheinander ab, sonst Hinweis bzw. Push mit eigener Stufe je Einsatztyp (Standard wie Nachrichten) (#113).
+- **FK-06** – Ohne Verbindung aufgenommene Durchsagen werden nachgesendet, sobald die Verbindung zurück ist, und mit Aufnahme- und Sendezeitpunkt angezeigt (#113).
+- **FK-07** – Durchsagen stehen mit Kanal, Dauer und Transkript im Einsatzlog (live, Verwaltung, «Meine Einsätze», Replay) und lassen sich dort abspielen, solange die Aufnahme besteht; im laufenden Einsatz nur aus hörbaren Kanälen (Einsatzleitung alle); in anonymisierter Ansicht ohne Aufnahme (#113).
+- **FK-08** – Transkription je Einsatztyp ein- und ausschaltbar, über einen Dienst mit OpenAI-kompatibler Schnittstelle (z. B. eigener Whisper-Server) oder den AI-Assistenten; mit Test in der Verwaltung (#113).
+- **FK-09** – Aufbewahrung je Einsatztyp: Aufnahme und Transkript, nur Transkript (Aufnahme nach dem Einsatzende gelöscht), nur Aufnahme oder nichts (beides nach dem Einsatzende gelöscht); dazu die Anonymisierungsstufe «Sprachaufnahmen löschen» (Standard 90 Tage Einsatz, 30 Tage Übung), Transkripte wie Nachrichten (#113).
+- **FK-10** – Die Einsatzleitung erstellt je Organisation einen Link für Externe (Kanal, nur hören oder hören und sprechen), sofern der Einsatztyp das erlaubt; die Gastseite braucht keine Anmeldung, zeigt keine Karte und keine Standorte, Einsatzkräfte nur mit Spezialrolle bzw. Einrückoption; gültig bis zum Einsatzende oder Entfernen (#113).
+- **FK-11** – Verwaltung → Konnektivität → «Funk & Konferenz» (Recht «Konnektivität einstellen»): Medienserver mit Verbindungstest (Secret nie an Geräte), Kanäle, Sprechrecht, Transkriptionsdienst, je Einsatztyp Konferenz, Transkription, Externe, Kanäle, Aufbewahrung und Stufe der Meldung; Funk als Funktion je Einsatztyp (#113).
+- **FK-12** – Funk auch in der nativen App: Kartenknopf und Seitenfenster «Funk», Sprechtaste auf der Karte, Mithören, Nachsenden, Konferenz (unter Android auch bei gesperrtem Bildschirm über den Vordergrunddienst, unter iOS über den Hintergrundmodus Audio), Karte im Register «Leitung», ▶ im Log, Einstellungen im Profil (#113).
+- Durchsagen bei gesperrtem iPhone mit dem PushToTalk-Framework von Apple und die Konferenz als Anruf über CallKit (**offen**: brauchen direkten Versand über APNs bzw. eine Integration in CallKit).

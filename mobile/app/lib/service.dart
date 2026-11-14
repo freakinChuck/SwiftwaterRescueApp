@@ -11,6 +11,7 @@ import 'dart:ui';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:record/record.dart';
 
 import 'accounts.dart';
 import 'monitor.dart';
@@ -25,11 +26,27 @@ final service = FlutterBackgroundService();
 /// Bildschirm. Ohne diese Berechtigung darf er den Typ nicht tragen (sonst bricht der Start, z. B. nach einem Neustart, ab).
 bool? _cfgLoc;
 
+/// Funk (Issue #113): Während einer Live-Konferenz (vx_conf, gesetzt in inc/voice.dart) trägt der Dienst zusätzlich den Typ microphone.
+/// Android lässt das Mikrofon bei gesperrtem Bildschirm nur so weiterlaufen; gestartet wird er beim Beitritt, also mit offener App.
+bool? _cfgMic;
+Future<bool> _micWanted() async => (await prefs.getBool('vx_conf') ?? false) && await micGranted();
+Future<bool> micGranted() async {
+  final r = AudioRecorder();
+  try {
+    return await r.hasPermission(request: false);
+  } catch (_) {
+    return false;
+  } finally {
+    await r.dispose();
+  }
+}
+
 Future<void> configureService() async {
   if (!Platform.isAndroid) return;
   await initNotes();
-  final loc = await locLevel() == locAlways;
+  final loc = await locLevel() == locAlways, mic = await _micWanted();
   _cfgLoc = loc;
+  _cfgMic = mic;
   await service.configure(
       androidConfiguration: AndroidConfiguration(
           onStart: serviceMain,
@@ -40,7 +57,7 @@ Future<void> configureService() async {
           initialNotificationTitle: 'Swiftwater Rescue',
           initialNotificationContent: 'Bereit für Alarme',
           foregroundServiceNotificationId: serviceNoteId,
-          foregroundServiceTypes: [AndroidForegroundType.specialUse, if (loc) AndroidForegroundType.location]),
+          foregroundServiceTypes: [AndroidForegroundType.specialUse, if (loc) AndroidForegroundType.location, if (mic) AndroidForegroundType.microphone]),
       iosConfiguration: IosConfiguration(autoStart: false));
 }
 
@@ -52,6 +69,7 @@ Future<bool> serviceNeeded() async {
   final l = (await Accounts.load()).where((a) => a.active && !a.loggedOut).toList();
   if (l.isEmpty) return false;
   if (await serviceAlways()) return true;
+  if (await _micWanted()) return true; // Live-Konferenz im Hintergrund (Issue #113)
   for (final a in l) {
     if (await pushStatus(a) != 'on') return true; // ohne Push nur über die Abfrage
     if ((await accState(a.id)).joined) return true; // Standort im Einsatz teilen, Einsatzende erkennen
@@ -64,7 +82,7 @@ Future<void> syncService() async {
   if (!Platform.isAndroid) return;
   final on = await serviceNeeded();
   var run = await service.isRunning();
-  if (_cfgLoc != (await locLevel() == locAlways)) {
+  if (_cfgLoc != (await locLevel() == locAlways) || _cfgMic != await _micWanted()) {
     // Standortberechtigung geändert: neu einrichten und, falls er läuft, den Dienst mit den neuen Typen neu starten
     await configureService();
     if (run) {

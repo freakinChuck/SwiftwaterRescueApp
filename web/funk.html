@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><!-- der Link enthält den geheimen Schlüssel ?k=…; diese Seite lädt keine Kartenkacheln, also nie einen Referer senden -->
+<title>Swiftwater Rescue – Funk</title>
+<link rel="icon" href="img/icon-192.png">
+<link rel="stylesheet" href="common.css?v=0">
+<style>
+/* Funk für Externe (Issue #113): Gastzugang ohne Anmeldung über den Link der Einsatzleitung (?k=), nur der Kanal des Links; keine Karte, keine Standorte */
+html,body{height:100%}body{display:flex;flex-direction:column}
+#gHead{display:flex;gap:.7rem;align-items:center;padding:.6rem 1rem;padding-top:calc(.6rem + env(safe-area-inset-top));border-bottom:1px solid var(--line)}#gHead img{width:40px;height:40px}#gHead h1{margin:0;font-size:1.05rem}
+#gMain{flex:1;min-height:0;overflow:auto;padding:.8rem 1rem;display:grid;gap:.8rem;align-content:start;max-width:640px;width:100%;margin:0 auto;box-sizing:border-box}
+.gcard{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;background:var(--panel)}
+.gcard h2{font-size:1rem;margin:0 0 .3rem}
+#gFoot{max-width:640px;width:100%;margin:0 auto;box-sizing:border-box}
+#gMsg{max-width:420px;margin:12vh auto;padding:1.2rem;text-align:center}
+</style></head><body>
+<div id="gHead"><img src="img/icon-192.png" alt=""><div style="flex:1;min-width:0"><h1>Swiftwater Rescue – Funk</h1><div class="mut" id="gWho">Gastzugang</div></div></div>
+<div id="gMain"><div class="mut">Wird geladen …</div></div>
+<div id="gFoot"></div>
+<div id="vxBar" class="vxbar" hidden role="status" aria-live="polite"></div>
+<script src="common.js?v=0"></script>
+<script src="voice.js?v=0"></script>
+<script>
+// Daten über die Routen guest/* (ohne Anmeldung, Schlüssel k im Link); Abruf alle 3 s, während man zuhört alle 1.5 s.
+// Einsatzkräfte erscheinen nur mit Spezialrolle bzw. Einrückoption, Externe mit der Bezeichnung ihres Links. Aufnahme, Wiedergabe und Konferenz wie in der Einsatz-App (voice.js).
+const K=new URLSearchParams(location.search).get('k')||'';
+let G=null,timer=null,fkey='',confWas=false;
+const gApi=async(r,body)=>{const res=await fetch(`${API}?r=${r}&k=${encodeURIComponent(K)}`,body?{method:'POST',body:JSON.stringify(body)}:{});const j=await res.json().catch(()=>({error:'Serverfehler'}));if(j.error){const e=new Error(j.error);e.status=res.status;throw e}return j};
+const io={me:null,upload:b=>gApi('guest/voice',b),audio:async id=>{const r=await fetch(`${API}?r=guest/voice/get&k=${encodeURIComponent(K)}&id=${id}`);if(!r.ok)throw new Error('Aufnahme nicht verfügbar');return r.blob()},
+  join:()=>gApi('guest/voice/join'),conf:()=>{},change:()=>draw(),poll:()=>poll()};
+const ini=n=>String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?';
+function stop(msg){clearTimeout(timer);vxConfLeave();$('#gFoot').innerHTML='';$('#vxBar').hidden=true;$('#gMain').innerHTML=`<div id="gMsg" class="gcard"><h2>Funk</h2><div class="mut">${esc(msg)}</div></div>`}
+async function poll(){try{const r=await gApi(`guest/state&vs=${VX.vs}${VX.conf?'&vc=1':confWas?'&vc=0':''}`);confWas=!!VX.conf;
+    if(r.ended)return stop(`Der Einsatz ist beendet. Danke für die Unterstützung, ${r.label}.`);
+    G=r;io.me=null;io.guestName=r.label+' (extern)';vxInit(io,'g'+K.slice(0,8),1);VX.max=r.max_s;vxMerge(r.voice,r.now);if(vxQueued())vxFlush();draw()}
+  catch(e){if(e instanceof TypeError){$('#gWho').textContent='Keine Verbindung – versuche es weiter …';return}if(e.status===404||e.status===403)return stop(e.message);toast(e.message,'err')}}
+function loop(){timer=setTimeout(()=>poll().finally(loop),VX.conf||VX.listen?1500:3000)}
+function draw(){if(!G)return;const r=VX.rec,cf=VX.conf,it=VX.playing&&VX.items.get(VX.playing);
+  $('#gWho').textContent=`Gastzugang · ${G.label}`;document.title='Funk «'+G.ch.name+'» – '+G.label;
+  const items=vxList(null),cl=G.conf_list||[];
+  const h=`<div class="gcard"><span class="badge" style="background:${esc(G.incident.kind_color)}">${esc(G.incident.kind_name)}</span> <b>${esc(G.incident.message)}</b>
+      <div class="mut" style="margin-top:.3rem">Kanal «${esc(G.ch.name)}» · ${G.speak?'hören und sprechen':'nur hören'} · gültig bis zum Einsatzende</div>
+      <label class="vxsw" style="margin-top:.4rem"><input type="checkbox" id="gLis" ${VX.listen?'checked':''}> Mithören (neue Durchsagen sofort abspielen)</label></div>
+    ${G.conf?`<div class="gcard"><h2>${cf?'<span class="vxlive">LIVE</span>':''}Live-Konferenz «${esc(G.ch.name)}» <span class="mut">· ${cl.length} verbunden</span></h2>
+      ${cl.map(x=>`<div class="vxpp"><span class="av${vxSpeaking(x.ident)?' sp':''}">${esc(ini(x.name))}</span><div class="nm">${esc(x.name)}${x.guest_id&&x.name===io.guestName?' (ich)':''}</div>${vxSpeaking(x.ident)?'🎙':''}</div>`).join('')}
+      <div class="row">${cf?`${cf.speak?`<label class="vxsw"><input type="checkbox" id="gOpen" ${cf.open?'checked':''}> Mikrofon offen</label>`:''}<button id="gLeave">Verlassen</button>`:`<button class="pri" id="gJoin" ${cf&&cf.state==='connecting'?'disabled':''}>Konferenz beitreten</button>`}</div>
+      <div class="mut">${cf?(cf.state==='on'?(cf.speak?'Verbunden · Senden über die Sprechtaste oder «Mikrofon offen»':'Verbunden · nur zuhören'):'Verbinde …'):'Echtzeit, solange diese Seite offen ist. Sonst erhältst du die Durchsagen unten.'}</div></div>`:''}
+    <div class="gcard"><h2>Durchsagen</h2>${items.map(x=>`<div class="vxit${!VX.heard.has(x.id)?' new':''}"><div class="h"><span class="vxdot" style="background:${esc(x.color||(x.guest?'#9b8cff':'#4b6f80'))}"></span><b>${x.name===io.guestName?'Du':esc(x.name)}</b><span class="mut">${fmtT(x.at)}</span></div>
+      <div class="p">${x.audio?`<button data-p="${x.id}" aria-label="Abspielen">${VX.playing===x.id?'❚❚':'▶'}</button>`:'<button disabled>–</button>'}${vxWave(x)}<span class="mut">${vxDur(x.dur)}</span></div>${x.tr?`<div class="tr">«${esc(x.tr)}»</div>`:''}</div>`).join('')||'<div class="mut">Noch keine Durchsagen.</div>'}</div>
+    <div class="mut" style="font-size:.8rem">Namen der Einsatzkräfte werden Externen nicht gezeigt (nur Spezialrolle bzw. Einrückoption). Keine Karte, keine Standorte. <a href="legal.html#datenschutz" target="_blank" rel="noopener">Datenschutz</a></div>`;
+  if(h!==fkey){fkey=h;const m=$('#gMain'),end=m.scrollHeight-m.scrollTop-m.clientHeight<40;m.innerHTML=h;if(end)m.scrollTop=m.scrollHeight;
+    $('#gLis').onchange=e=>vxSetListen(e.target.checked);m.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const id=+b.dataset.p;VX.playing===id?vxStop():vxPlay(id)});
+    if($('#gJoin'))$('#gJoin').onclick=()=>vxConfJoin(G.ch.id);if($('#gLeave'))$('#gLeave').onclick=()=>vxConfLeave();if($('#gOpen'))$('#gOpen').onchange=e=>vxConfOpen(e.target.checked)}
+  const f=$('#gFoot');if(G.speak&&!f.firstChild){f.innerHTML=`<div class="vxfoot"><button class="vxptt" id="gPtt" aria-label="Sprechtaste">🎙</button><div><b id="gPttT"></b><div class="mut">Kanal «${esc(G.ch.name)}» · höchstens ${VX.max} s · du erscheinst als «${esc(io.guestName)}»</div></div></div>`;vxPttBind($('#gPtt'),()=>G.ch.id)}
+  if($('#gPtt')){const b=$('#gPtt');b.classList.toggle('rec',!!r);b.classList.toggle('drop',!!(r&&r.drop));$('#gPttT').textContent=r?(r.drop?'Loslassen = verwerfen':`Aufnahme ${vxRecS()} s / ${VX.max} s`):(VX.pend?'Wird gesendet …':'Gedrückt halten zum Sprechen')}
+  const bar=$('#vxBar');bar.hidden=!it;if(it)bar.innerHTML=`<span style="font-size:1.3rem">🔊</span><div class="who"><b>${esc(it.name)}</b><span>${vxDur(it.dur)}${VX.queue.length?' · noch '+VX.queue.length:''}</span></div><button data-s aria-label="Wiedergabe beenden">⏹</button>`,$('[data-s]',bar).onclick=vxStop}
+if(!/^[0-9a-f]{32}$/.test(K))stop('Dieser Link ist ungültig.');else poll().then(loop);
+</script></body></html>

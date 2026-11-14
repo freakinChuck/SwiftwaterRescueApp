@@ -27,6 +27,7 @@ import 'rd.dart';
 import 'res.dart';
 import 'store.dart';
 import 'util.dart';
+import 'voice.dart';
 
 const _fitPad = EdgeInsets.fromLTRB(50, 90, 80, 50);
 const _homeWaitMs = 20000, _areaWaitMs = 30000;
@@ -95,6 +96,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (e == 'inc') _fitted = null;
     });
     s.addListener(_onStore);
+    s.vx.addListener(_onVx); // Funk (Issue #113): Sprechtaste, Leiste, Zähler
     IncPage.focusReq.addListener(_onFocusReq);
     _onFocusReq();
     s.start();
@@ -106,6 +108,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     if (IncPage.openId == widget.account.id) IncPage.openId = null;
     IncPage.focusReq.removeListener(_onFocusReq);
     s.removeListener(_onStore);
+    s.vx.removeListener(_onVx);
     _tSub?.cancel();
     _eSub?.cancel();
     s.dispose();
@@ -156,6 +159,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   }
 
   // ---------- Reaktion auf neuen Stand ----------
+  void _onVx() {
+    if (mounted) setState(() {});
+  }
+
   void _onStore() {
     if (!mounted) return;
     if (s.unauth) {
@@ -1120,6 +1127,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (i != null) _fab('Einsatzkräfte', const Icon(Icons.groups), () => _togglePanel('people'), count: _pplCount, countCol: const Color(0xFF546E7A), active: _panel == 'people'),
       if (i != null && s.feat('res')) _fab('Rettlinge', const Text('R', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), () => _togglePanel('res'), count: _resCount, active: _panel == 'res'),
       if (i != null && s.feat('msg')) _fab('Nachrichten', const Icon(Icons.chat), () => _togglePanel('msgs'), count: s.unread, active: _panel == 'msgs'),
+      if (s.vx.on) _fab('Funk', const Icon(Icons.mic), () => _togglePanel('vx'), count: s.vx.unheard(null), active: _panel == 'vx'),
       if ((i != null && s.feat('poi')) || s.places.isNotEmpty)
         _fab(i == null ? 'Feste Standorte' : 'Markierungen', const Icon(Icons.place), () => _togglePanel('pois'), active: _panel == 'pois'),
       if (s.hyBtn) _fab('Messstationen', const Text('💧', style: TextStyle(fontSize: 16)), () => _togglePanel('hyd'), active: _panel == 'hyd'),
@@ -1276,6 +1284,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         'pois' => PoisPanel(s: s, map: this),
         'rd' => RdPanel(s: s, map: this, rd: rd),
         'hyd' => s.hyBtn ? HydPanel(s: s, map: this, openPrefs: _openPrefs) : null,
+        'vx' => s.vx.on ? VoicePanel(s: s, map: this) : null,
         _ => null,
       };
 
@@ -1393,6 +1402,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                     bottom: 0,
                     width: narrow ? w : 400,
                     child: Material(elevation: 8, child: SafeArea(left: false, child: pw))),
+              if (pw == null && voiceFab(context, s.vx) != null)
+                Positioned(left: 0, right: 0, bottom: 18, child: SafeArea(child: Center(child: voiceFab(context, s.vx)!))),
+              if (voiceBar(context, s.vx) != null && !(narrow && pw != null))
+                Positioned(left: 10, right: (pw != null && !narrow) ? 412 : 10, top: 0, child: SafeArea(child: Padding(padding: const EdgeInsets.only(top: 64), child: Align(alignment: Alignment.topCenter, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: voiceBar(context, s.vx)))))),
               if (s.alarm != null) _alarm(s.alarm!),
             ])));
   }

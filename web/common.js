@@ -253,8 +253,18 @@ function pwDialog(forced,done){
     'Speichern',forced?'Abmelden':'Abbrechen',forced?()=>{logout();done&&done()}:null)}
 /* ---------- Einsatzlog im Gross-Modus ---------- */
 let big=null;
-const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],poi:['Markierungen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub','anon','air']]};
-const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0',pub:'#7dd3fc',ext:'#a3e635',anon:'#8fb0bd',air:'#ffd23f'};
+const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],voice:['Funk',['voice','conf','voiceguest','voicech']],poi:['Markierungen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub','anon','air']]};
+const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0',pub:'#7dd3fc',ext:'#a3e635',anon:'#8fb0bd',air:'#ffd23f',voice:'#9b8cff',conf:'#9b8cff',voiceguest:'#9b8cff',voicech:'#9b8cff'};
+/* ---------- Durchsagen im Log abspielen (Funk, Issue #113) ---------- */
+// Log-Einträge der Art voice tragen voice (ID) und audio (1 = Aufnahme vorhanden); ▶ über data-vplay, ein Audio-Element für alle Logs (Menü, Gross-Modus, Verwaltung)
+let VPLAY_Q='',vplayA=null,vplayId=0; // VPLAY_Q: '&my=1' in «Meine Einsätze»
+async function voiceBlob(id,q=''){const r=await fetch(`${API}?r=voice/get&id=${id}${q}`,{headers:{'X-Token':token||''}});if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'HTTP '+r.status)}return r.blob()}
+const vplayBtn=x=>x&&x.kind==='voice'&&x.voice&&x.audio?`<button class="lk vpl" data-vplay="${x.voice}" title="Durchsage abspielen" aria-label="Durchsage abspielen">▶</button>`:'';
+async function vplay(id,b){if(vplayA&&vplayId===id&&!vplayA.paused){vplayA.pause();return}
+  try{if(b)b.textContent='…';const u=URL.createObjectURL(await voiceBlob(id,VPLAY_Q));vplayA=vplayA||new Audio();vplayA.pause();vplayA.src=u;vplayId=id;
+    vplayA.onended=vplayA.onpause=()=>{document.querySelectorAll(`[data-vplay="${id}"]`).forEach(x=>x.textContent='▶')};await vplayA.play();document.querySelectorAll(`[data-vplay="${id}"]`).forEach(x=>x.textContent='❚❚')}
+  catch(e){if(b)b.textContent='▶';toast(e.message,'err')}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-vplay]');if(b){e.preventDefault();vplay(+b.dataset.vplay,b)}});
 // anon (Issue #54, Verwaltung): async on => Fassung laden (anonymisiert oder nicht), dann Knopf «Anonym» in der Kopfzeile
 function openBigLog(title,get,live,anon){big={title,get,live,anon,anonOn:false,desc:true,filter:'all',cache:[]};let o=$('#bigLog');if(o)o.remove();
   o=document.createElement('div');o.id='bigLog';o.setAttribute('role','dialog');o.setAttribute('aria-label','Einsatzlog');
@@ -270,7 +280,7 @@ function renderBigLog(){const o=$('#bigLog');if(!big||!o)return;const got=big.ge
   const g=KIND_GROUPS[big.filter][1],all=big.cache,l=all.filter(x=>!g||g.includes(x.kind)).sort((a,b)=>(big.desc?-1:1)*(a.ts-b.ts||a.id-b.id)); // Log und Nachrichten gemischt, daher nach Zeit
   $('#bigT').textContent=`${big.title} · ${l.length} von ${all.length} Einträgen${big.live&&!got?' · Einsatz beendet':''}`;
   $('#bigS').textContent=big.desc?'Neueste zuerst':'Älteste zuerst';
-  $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
+  $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}${vplayBtn(x)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
 /* ---------- AI-Assistent (Issue #111): Fenster mit Vorschlag, Übernehmen / Verwerfen / Neu, zusätzlichem Wunsch und freien Fragen ---------- */
 // Modus der Person je Funktion und Bereich (Einsatztyp-ID oder 'adm'; me.ai vom Server: aiMe, schon begrenzt auf das Erlaubte und die eigene Wahl): off, cmd (auf Abruf), comp (begleitend)
 const aiM=(fn,ctx)=>(typeof me!=='undefined'&&me&&me.ai&&me.ai[fn]&&me.ai[fn].modes[String(ctx)])||'off';

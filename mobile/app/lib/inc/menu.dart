@@ -11,6 +11,7 @@ import 'ctx.dart';
 import 'hydro.dart';
 import 'store.dart';
 import 'util.dart';
+import 'voice.dart';
 
 /// Rechte mit einem Bereich in der Verwaltung (ADMIN_PERMS in common.js)
 const _adminPerms = ['users', 'uroles', 'groups', 'avail', 'cfg_inc', 'ex_plan', 'cfg_func', 'cfg_ai', 'cfg_map', 'stats', 'cfg_my', 'aar', 'aar_rel', 'aar_cfg', 'aar_arch', 'legal', 'anon'];
@@ -575,6 +576,7 @@ class _IncMenuState extends State<IncMenu> {
           ),
           const Mut('Gilt für alle in diesem Einsatz. Wer sie sieht, legt die Verwaltung fest.'),
         ]),
+      if (s.feat('voice')) ...voiceLeadCards(c, s), // Funk (Issue #113)
       if (s.feat('pub')) _pubSec(c, i),
       MCard(title: 'Einsatzkräfte (${act.where((p) => p['left_at'] == null).length})', children: [
         if (act.isEmpty) const Mut('Noch niemand hat den Einsatz angenommen.'),
@@ -870,13 +872,17 @@ class _IncMenuState extends State<IncMenu> {
       for (final x in l.take(300))
         Padding(
             padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: '${fmtT(jn(x['ts']))}  ', style: TextStyle(color: t.colorScheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()])),
-                  TextSpan(text: js(x['name']).isEmpty ? 'System' : js(x['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
-                  TextSpan(text: ' ${js(x['text'])}'),
-                ]),
-                style: const TextStyle(fontSize: 13))),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                  child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: '${fmtT(jn(x['ts']))}  ', style: TextStyle(color: t.colorScheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()])),
+                        TextSpan(text: js(x['name']).isEmpty ? 'System' : js(x['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        TextSpan(text: ' ${js(x['text'])}'),
+                      ]),
+                      style: const TextStyle(fontSize: 13))),
+              ?voiceLogBtn(s, x), // Durchsage abspielen (Funk, Issue #113)
+            ])),
       if (l.length > 300) const Mut('Ältere Einträge im Log der Verwaltung.'),
     ];
   }

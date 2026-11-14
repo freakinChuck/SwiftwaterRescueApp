@@ -87,3 +87,22 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .aisc .aith{max-height:min(58dvh,640px)}
 @media(min-width:901px){.aisc>.aichat{border-top:0;padding-top:0}.aisc{border-left:1px solid var(--line);padding-left:1rem}.aiwide:has(.aisc){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
 .aidp{display:grid;gap:.35rem}.aidp label.chk{align-items:flex-start}.aidp label.chk input{margin-top:.15rem}
+/* Funk & Konferenz (Issue #113): Durchsagen, Sprechtaste, Live-Konferenz; gemeinsam für die Einsatz-App (index.html) und die Gastseite (funk.html) */
+.vxw{display:inline-flex;align-items:center;gap:2px;height:22px;flex:0 1 auto;overflow:hidden}.vxw i{display:block;width:3px;border-radius:2px;background:#4b6f80}.vxw.on i{background:#8ec5ff}
+.vxtabs{display:flex;gap:.35rem;padding:.45rem .7rem;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}.vxtabs::-webkit-scrollbar{display:none}
+.vxtabs button{border-radius:16px;padding:.25rem .65rem;font-size:.82rem;white-space:nowrap;flex:0 0 auto}.vxtabs button[aria-selected=true]{background:var(--ex);border-color:var(--ex);color:#fff}
+.vxtabs .n{display:inline-block;margin-left:.3rem;background:var(--alarm);color:#fff;border-radius:9px;padding:0 .35em;font-size:.7rem;font-weight:700}
+.vxit{padding:.5rem 0;border-bottom:1px solid var(--line)}.vxit .h{display:flex;gap:.4rem;align-items:baseline;font-size:.85rem}.vxit .h b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vxit .p{display:flex;align-items:center;gap:.5rem;margin-top:.3rem}.vxit .p button{width:36px;height:36px;border-radius:50%;padding:0;flex:0 0 auto}
+.vxit .tr{font-size:.85rem;margin-top:.3rem;color:#d7e6ec;white-space:pre-wrap}.vxit .tr small,.vxit small{color:var(--mut)}.vxit.new{border-left:3px solid var(--alarm);padding-left:.45rem}
+.vxdot{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;margin-right:.3rem;vertical-align:middle;background:#4b6f80;flex:0 0 auto}
+.vxfoot{border-top:1px solid var(--line);padding:.55rem .7rem calc(.55rem + env(safe-area-inset-bottom));display:flex;align-items:center;gap:.65rem;font-size:.85rem}
+.vxptt{width:60px;height:60px;border-radius:50%;font-size:1.5rem;padding:0;border:2px solid #fff;flex:0 0 auto;background:var(--panel);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.vxptt.rec{background:var(--alarm);box-shadow:0 0 0 8px #ff4d2e44,0 0 0 18px #ff4d2e22}.vxptt.drop{background:#5c6b73;box-shadow:none}.vxptt:disabled{opacity:.45}
+.vxsw{display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--mut);cursor:pointer;white-space:nowrap}
+.vxpp{display:flex;align-items:center;gap:.6rem;padding:.45rem 0;border-bottom:1px solid var(--line)}.vxpp .av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.8rem;background:#24485a;flex:0 0 auto;border:2px solid #4b6f80}
+.vxpp .av.sp{box-shadow:0 0 0 3px var(--ok)}.vxpp .nm{flex:1;min-width:0;font-size:.9rem}.vxpp .nm small{display:block;color:var(--mut);font-size:.78rem}
+.vxlive{display:inline-block;background:var(--ok);color:#06210f;font-weight:700;border-radius:4px;padding:0 .35rem;font-size:.75rem;margin-right:.3rem}
+.vxbar{position:fixed;left:.7rem;right:.7rem;top:calc(4.2rem + env(safe-area-inset-top));z-index:1070;background:#16323ff2;border:1px solid var(--line);border-left:4px solid var(--ex);border-radius:8px;padding:.5rem .7rem;display:flex;align-items:center;gap:.6rem;box-shadow:0 2px 10px #000a;max-width:520px;margin:0 auto}
+.vxbar{pointer-events:none}.vxbar button{pointer-events:auto}.vxbar.rec{border-left-color:var(--alarm)}.vxbar .who{flex:1;min-width:0}.vxbar .who b{display:block;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vxbar .who span{font-size:.8rem;color:var(--mut)}
+.vpl{margin-left:.35rem;padding:.05rem .45rem}
