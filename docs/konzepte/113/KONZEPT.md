@@ -80,7 +80,7 @@ Beide teilen dieselben **Kanäle**, Rechte und dieselbe Sprechtaste. Wer in der 
 
 - Je Einsatztyp ein/aus und «Externe dürfen: nur hören / hören und sprechen» (Standard: aus).
 - Die Einsatzleitung erzeugt im Register «Leitung» → «Funk für Externe» je Organisation einen Link: Bezeichnung, Kanal, Recht, gültig bis Einsatzende oder Entfernen. Tabelle `voice_guests` (`incident_id`, `token`, `label`, `channel_id`, `speak`, `opened_at`, `removed`), Log `voiceguest`.
-- Gastseite `funk.html?k=<token>` ohne Anmeldung (wie `public.html`, `referrer` `strict-origin`): Verlauf und Mithören des Kanals, Sprechtaste (falls erlaubt), Beitritt zur Konferenz des Kanals mit eingeschränktem Token. **Keine Karte, keine Standorte**, Einsatzkräfte nur mit Spezialrolle (anonym wie die öffentliche Ansicht). Durchsagen der Gäste erscheinen als «<Bezeichnung> (extern)».
+- Gastseite `funk.html?k=<token>` ohne Anmeldung (wie `public.html`, `referrer` `strict-origin`): Verlauf und Mithören des Kanals, Sprechtaste (falls erlaubt), Beitritt zur Konferenz des Kanals mit eingeschränktem Token. **Keine Karte, keine Standorte**, Einsatzkräfte nur mit Spezialrolle (anonym wie die öffentliche Ansicht). Durchsagen der Gäste erscheinen als «Bezeichnung (extern)», z. B. «Kapo Bern – Einsatzzentrale (extern)».
 - Routen vor der Anmeldeprüfung: `guest/state`, `guest/voice`, `guest/voice/get`, `guest/voice/join`, mit Rate-Limit je Token.
 
 ## Native App (Issue #108)
