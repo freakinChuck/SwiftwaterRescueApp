@@ -6,7 +6,7 @@
    - Die API (api/index.php) geht nie über den Zwischenspeicher; den letzten Stand merkt sich die App selbst (localStorage sw_last). */
 const SHELL='sw-shell-1',LIBS='sw-libs-1',TILES='sw-tiles-1',TILE_MAX=1500;
 const PRE=['./','index.html','common.js?v=0','common.css?v=0','manifest.webmanifest','img/icon-192.png','img/icon-512.png'];
-const CDN=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\//,TILE=/^https:\/\/(wmts\.geo\.admin\.ch|tile\.openstreetmap\.org|tiles\.maps\.eox\.at|mapsneu\.wien\.gv\.at|data\.geopf\.fr|[a-c]\.tile\.opentopomap\.org|[a-c]\.tile\.openstreetmap\.fr|sgx\.geodatenzentrum\.de|[a-d]\.basemaps\.cartocdn\.com)\//;
+const CDN=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\//,TILE=/^https:\/\/(wmts\.geo\.admin\.ch|tile\.openstreetmap\.org|tiles\.maps\.eox\.at|[a-c]\.tile\.openstreetmap\.fr)\//;
 
 self.addEventListener('install',e=>{e.waitUntil(caches.open(SHELL).then(c=>Promise.all(PRE.map(u=>c.add(u).catch(()=>{})))).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>![SHELL,LIBS,TILES].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

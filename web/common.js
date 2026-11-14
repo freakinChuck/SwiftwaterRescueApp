@@ -52,10 +52,10 @@ const MAP_PROVIDERS={
 let mapsKey='';
 function mapsSet(list,def){if(!Array.isArray(list)||!list.length)return false;const key=JSON.stringify([list,def]);if(key===mapsKey)return false;mapsKey=key;
   Object.keys(MAP_PROVIDERS).forEach(k=>delete MAP_PROVIDERS[k]);list.forEach(P=>MAP_PROVIDERS[P.k]=P);DEFAULT_BASE=MAP_PROVIDERS[def]?def:list[0].k;return true}
-// Leaflet-Ebene eines Anbieters: Kacheln (nur innerhalb von bounds), «Luftbild (automatisch)» als Gruppe (unten zuerst), eigene Vektorkarte (PMTiles) über protomaps-leaflet
-function mapLayer(P,z){if(P.layers){const g=L.layerGroup(P.layers.map((x,i)=>mapLayer(x,i)));return g}
+// Leaflet-Ebene eines Anbieters: Kacheln (nur innerhalb von bounds), eigene Vektorkarte (PMTiles) über protomaps-leaflet
+function mapLayer(P){
   if(P.vec)return vecLayer(P);const o={attribution:P.attr,maxZoom:P.max||19,maxNativeZoom:Math.min(P.nat||P.max||19,P.max||19)};
-  if(P.sub)o.subdomains=P.sub;if(P.bounds)o.bounds=P.bounds;if(z!=null)o.zIndex=z+1;return L.tileLayer(P.url,o)}
+  if(P.sub)o.subdomains=P.sub;if(P.bounds)o.bounds=P.bounds;return L.tileLayer(P.url,o)}
 function mapBases(){const r={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>r[k]=mapLayer(P));return r}
 // gemerkte Wahl (sw_base bzw. ein anderer Schlüssel), sonst der Standard
 function baseSaved(key){let sv=null;try{sv=localStorage.getItem(key||'sw_base')}catch(e){}return MAP_PROVIDERS[sv]?sv:DEFAULT_BASE}

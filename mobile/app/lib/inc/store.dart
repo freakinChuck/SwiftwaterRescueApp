@@ -41,27 +41,24 @@ const viewCatsAll = [
 ];
 
 /// Grundkarte (Issue #106, MAP_PROVIDERS/mapsSet in common.js): Liste vom Server (maps, map_def in me und incident/state), eingestellt in der Verwaltung,
-/// global und je Einsatztyp. «Luftbild (automatisch)» hat layers (unten zuerst, je mit Abdeckung). Die eigene Vektorkarte (vec, PMTiles) gibt es nativ noch nicht.
+/// global und je Einsatztyp, je mit Abdeckung (bounds). Die eigene Vektorkarte (vec, PMTiles) gibt es nativ noch nicht.
 class MapProv {
-  MapProv(this.k, this.label, this.url, this.attr, this.nat, {this.sub = const [], this.bounds, this.layers = const []});
+  MapProv(this.k, this.label, this.url, this.attr, this.nat, {this.sub = const [], this.bounds});
   final String k, label, url, attr;
   final int nat;
   final List<String> sub;
   final LatLngBounds? bounds;
-  final List<MapProv> layers;
 
   /// Quellenangabe als Text (der Server liefert HTML für Leaflet)
-  String get attrText => layers.isNotEmpty ? layers.map((l) => l.attrText).toSet().join(' | ') : attr.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&copy;', '©').replaceAll('&amp;', '&');
+  String get attrText => attr.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&copy;', '©').replaceAll('&amp;', '&');
 
   static MapProv? of(J j) {
     if (j['vec'] != null && j['vec'] != 0) return null;
-    final ly = jl(j['layers']).map(MapProv.of).whereType<MapProv>().toList();
-    if (j['layers'] is List && ly.length < 2) return null;
     final b = j['bounds'] is List && (j['bounds'] as List).length == 2 ? (j['bounds'] as List).map((p) => p is List && p.length == 2 ? LatLng(jd(p[0]) ?? 0, jd(p[1]) ?? 0) : null).toList() : null;
     final url = js(j['url']), k = js(j['k']);
-    if (k.isEmpty || (url.isEmpty && ly.isEmpty)) return null;
+    if (k.isEmpty || url.isEmpty) return null;
     return MapProv(k, js(j['label']), url, js(j['attr']), ji(j['nat']) ?? 19,
-        sub: js(j['sub']).split('').where((x) => x.isNotEmpty).toList(), bounds: b != null && b[0] != null && b[1] != null ? LatLngBounds(b[0]!, b[1]!) : null, layers: ly);
+        sub: js(j['sub']).split('').where((x) => x.isNotEmpty).toList(), bounds: b != null && b[0] != null && b[1] != null ? LatLngBounds(b[0]!, b[1]!) : null);
   }
 }
 

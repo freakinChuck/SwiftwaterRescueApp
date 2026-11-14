@@ -1354,16 +1354,15 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         }
                       }),
                   children: [
-                    // Grundkarte (Issue #106); «Luftbild (automatisch)» als mehrere Ebenen, je nur in ihrer Abdeckung
-                    for (final x in prov.layers.isEmpty ? [prov] : prov.layers)
-                      TileLayer(
-                          key: ValueKey('base_${prov.k}_${x.k}'),
-                          urlTemplate: x.url,
-                          subdomains: x.sub.isEmpty ? const ['a', 'b', 'c'] : x.sub,
-                          tileBounds: x.bounds,
-                          userAgentPackageName: 'ch.swiftwaterrescue.app',
-                          maxNativeZoom: x.nat,
-                          maxZoom: 19),
+                    // Grundkarte (Issue #106), nur in ihrer Abdeckung
+                    TileLayer(
+                        key: ValueKey('base_${prov.k}'),
+                        urlTemplate: prov.url,
+                        subdomains: prov.sub.isEmpty ? const ['a', 'b', 'c'] : prov.sub,
+                        tileBounds: prov.bounds,
+                        userAgentPackageName: 'ch.swiftwaterrescue.app',
+                        maxNativeZoom: prov.nat,
+                        maxZoom: 19),
                     ..._layers(context),
                     RichAttributionWidget(attributions: [TextSourceAttribution(prov.attrText), if (_airOn && _air?['src'] is Map) TextSourceAttribution(js(jm(_air!['src'])['name']))]),
                   ]),
