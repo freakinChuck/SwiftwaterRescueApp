@@ -4,7 +4,8 @@
 // Vordergrunddienst (service.dart), unter iOS in der App (im Hintergrund weiter, solange die Ortung läuft).
 // Im Hintergrund braucht es «Immer zulassen» (ACCESS_BACKGROUND_LOCATION bzw. iOS «Immer»), sonst kommen nur Positionen bei offener App.
 // Antwortet der Server mit shared:false (Einrückoption ohne Standort) oder lehnt er ab (Einsatz beendet), ruht das Konto für diesen Einsatz.
-// Das Gerät kennt hier kein Gewässernetz: water ist immer 0, Fahrten mit dem Boot können also als Fahrt im Log erscheinen.
+// Das Gewässernetz lädt das Gerät hier nur, wenn ein Boot (Fahrzeug, Issue #177) in der Nähe ist; sonst ist water 0, Fahrten mit einem Boot
+// ohne Beacon können also als Fahrt im Log erscheinen.
 //
 // Issue #183: geolocator hält unter iOS nur EINEN Positionsstrom; ein zweiter Aufruf von getPositionStream erhält den bestehenden, seine
 // Einstellungen gelten nicht. Die Einsatz-App (inc/store.dart) nutzt deshalb dieselben Einstellungen (locSettings), sonst lief der Strom ohne
@@ -19,6 +20,7 @@ import 'package:geolocator/geolocator.dart';
 
 import 'accounts.dart';
 import 'api.dart';
+import 'beacon.dart';
 import 'monitor.dart';
 import 'sys.dart';
 
@@ -192,7 +194,11 @@ class Tracker {
         _sent[a.id] = now;
         final inc = _inc[a.id], key = '${a.id}|$inc';
         try {
-          final r = await a.api.call('incident/location', body: {'lat': p.latitude, 'lon': p.longitude, 'water': 0, 'manual': 0}, timeout: const Duration(seconds: 15));
+          // Fahrzeuge (Issue #177): Beacons des letzten Scans; water nur, wenn ein Boot in der Nähe ist (sonst lädt die App kein Gewässernetz)
+          final bs = await Beacons.forReport(a);
+          final r = await a.api.call('incident/location',
+              body: {'lat': p.latitude, 'lon': p.longitude, 'acc': p.accuracy, 'water': await Beacons.water(a, p.latitude, p.longitude), 'manual': 0, 'beacons': ?bs},
+              timeout: const Duration(seconds: 15));
           if (r['shared'] == false) {
             _off.add(key);
             await _locOff(a, inc, 'Einrückoption ohne Standort');

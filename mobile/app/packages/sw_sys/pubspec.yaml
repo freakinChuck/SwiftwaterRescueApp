@@ -1,5 +1,5 @@
 name: sw_sys
-description: Systemfunktionen der App Swiftwater Rescue (Android), in jedem Isolate verfügbar, auch im Vordergrunddienst.
+description: Systemfunktionen der App Swiftwater Rescue (Android; iOS nur Beacons der Fahrzeuge), in jedem Isolate verfügbar, auch im Vordergrunddienst.
 version: 1.0.0
 publish_to: none
 
@@ -12,6 +12,8 @@ flutter:
     platforms:
       android:
         package: ch.swiftwaterrescue.sys
+        pluginClass: SwSysPlugin
+      ios:
         pluginClass: SwSysPlugin
 
 dependencies:
