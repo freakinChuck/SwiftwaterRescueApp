@@ -92,6 +92,7 @@ h3.lgh{margin:1rem 0 .2rem;font-size:.95rem}details.lgd{margin-top:1rem;border-t
 .exleg{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.3rem;font-size:.8rem}.exleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;border:1px solid #fff;margin-right:.3rem;vertical-align:-.05rem}
 .pickmap{height:min(24rem,48dvh);isolation:isolate;border-radius:8px;border:1px solid var(--line);background:#0c1c25}
 .pickmap.geomap{height:min(36rem,62dvh)} /* Geodaten übernehmen (Issue #182) */
+.pickmap.vpmap{height:min(40rem,62dvh)} /* Standort eines Fahrzeugs (Issue #177) */
 .geok{display:flex;align-items:center;justify-content:center;width:26px;height:20px;border-radius:4px;border:2px solid #fff;color:#fff;font:700 10px/1 system-ui,sans-serif;box-shadow:0 1px 3px #0008}
 .geok.have{opacity:.45}.geok.sel{outline:3px solid #ffd166}
 .navn{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#1b998b;border:2px solid #fff;color:#fff;font:700 11px/1 system-ui,sans-serif;box-shadow:0 1px 3px #0008}
@@ -1168,11 +1169,18 @@ function vehDlg(v){const c=vehD.cfg,own=v.cap!=null,capRows=kid=>{const k=vehD.k
   const capDraw=()=>{const on=$('#veC',d).checked,k=vehD.kinds.find(x=>x.id===+$('#veK',d).value),base=k?k.carries:{},cur=own?v.cap:base;
     $('#veCap',d).innerHTML=on?vehCapRows(vehD.kinds,cur,'vcc','vcn',own?v.cap_max:k&&k.carry_max,'veM'):`<div class="mut">Wie die Art: ${vehCapTxt(base,k&&k.carry_max)}</div>`};
   d.firstElementChild.classList.add('wide');extStyleBind(d);$('#veC',d).onchange=capDraw;$('#veK',d).onchange=capDraw;capDraw()}
+// Standort von Hand: grosse Karte mit den aktiven permanenten festen Standorten; Klick auf einen Standort übernimmt dessen Lage
 function vehPosDlg(v){let ll=v.lat!=null?[v.lat,v.lon]:null,m=null,mk=null;
-  const d=dlg(`Standort von «${v.name}»`,`<div class="mut">Für Fahrzeuge, die gerade kein Handy sieht (z. B. im Magazin), oder zum Testen ohne Beacon. Verladene Fahrzeuge ziehen mit.</div><label class="mut">Koordinaten<input id="vpC" value="${ll?esc(fmtC(ll[0],ll[1],'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div id="vpM" class="pickmap"></div>`,
+  const d=dlg(`Standort von «${v.name}»`,`<div class="mut">Für Fahrzeuge, die gerade kein Handy sieht (z. B. im Magazin), oder zum Testen ohne Beacon. Verladene Fahrzeuge ziehen mit. Ein Klick auf einen festen Standort übernimmt dessen Lage.</div><label class="mut">Koordinaten<input id="vpC" value="${ll?esc(fmtC(ll[0],ll[1],'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div id="vpM" class="pickmap vpmap"></div>`,
     async x=>{const p=parseC($('#vpC',x).value);if(!p)throw new Error('Koordinaten angeben oder auf die Karte klicken');await api('vehicle/pos',{id:v.id,lat:p.lat,lon:p.lon});loadVeh()});
-  m=addBases(L.map($('#vpM',d)).setView(ll||[46.8,8.2],ll?15:8));const set=p=>{ll=p;mk?mk.setLatLng(p):mk=L.marker(p).addTo(m)};if(ll)set(ll);
-  m.on('click',e=>{set([e.latlng.lat,e.latlng.lng]);$('#vpC',d).value=fmtC(e.latlng.lat,e.latlng.lng,'wgs84')});setTimeout(()=>m.invalidateSize(),50)}
+  d.firstElementChild.classList.add('wide');
+  m=addBases(L.map($('#vpM',d)).setView(ll||[46.8,8.2],ll?15:8));const set=p=>{ll=p;mk?mk.setLatLng(p):mk=L.marker(p,{zIndexOffset:1000}).addTo(m)};if(ll)set(ll);
+  const pick=(la,lo)=>{set([la,lo]);$('#vpC',d).value=fmtC(la,lo,'wgs84')};
+  m.on('click',e=>pick(e.latlng.lat,e.latlng.lng));setTimeout(()=>m.invalidateSize(),50);
+  api('places').then(fs=>{fs=fs.filter(f=>f.active&&f.plan_id==null&&f.lat!=null);if(!d.isConnected)return;
+    fs.filter(f=>f.pts).forEach(f=>placeGeo(f,{color:f.color||PLACE_COL,weight:2,fillOpacity:.15}).bindTooltip(esc(f.name),{permanent:true,direction:'center'}).on('click',e=>{L.DomEvent.stop(e);pick(e.latlng.lat,e.latlng.lng)}).addTo(m));
+    fs.filter(f=>!f.pts).forEach(f=>L.marker([f.lat,f.lon],{icon:L.divIcon({className:'',html:`<div class="explc" style="background:${esc(f.color||PLACE_COL)}">${esc(f.abbr||'◆')}</div>`,iconSize:[20,20],iconAnchor:[10,10]})}).bindTooltip(esc(f.name),{permanent:true,direction:'right',offset:[10,0]}).on('click',()=>pick(f.lat,f.lon)).addTo(m));
+    if(!ll&&fs.length)m.fitBounds(L.latLngBounds([].concat(...fs.map(f=>f.pts||[[f.lat,f.lon]]))),{padding:[40,40],maxZoom:15})}).catch(()=>{})}
 function vehLinkDlg(v){const by=Object.fromEntries(vehD.vehicles.map(x=>[x.id,x])),inV=c=>{let r=c,i=0;while(r&&r.carrier_id!=null&&i++<20){if(r.carrier_id===v.id)return true;r=by[r.carrier_id]}return false};
   const cs=vehD.vehicles.filter(c=>c.active&&c.id!==v.id&&!inV(c)&&v.kind_id in ((c.cap||vehKN(c.kind_id).carries)||{}));
   dlg(`Verbund von «${v.name}»`,`<label class="mut">Verladen auf bzw. angehängt an<select id="vlC"><option value="">– nicht verladen –</option>${cs.map(c=>`<option value="${c.id}" ${c.id===v.carrier_id?'selected':''}>${vehKN(c.kind_id).sym} ${esc(c.name)}</option>`).join('')}</select></label>${cs.length?'':'<div class="mut">Kein Fahrzeug kann diese Art aufnehmen (siehe Fahrzeugarten).</div>'}`,
