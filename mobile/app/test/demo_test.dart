@@ -27,6 +27,27 @@ void main() {
     expect((await c('me'))['me']['perms'], contains('inc_lead'));
   });
 
+  test('Fahrzeuge: Bus mit Anhänger und Boot, Verladen von Hand mit Prüfung (Issue #177)', () async {
+    Demo.restart('bsp');
+    var st = await c('incident/state');
+    final l = (st['veh']['list'] as List).cast<Map>();
+    expect(l.map((v) => v['name']), containsAll(['Bus 1', 'Anhänger 1', 'Boot 1', 'Kommandofahrzeug']));
+    expect(l.firstWhere((v) => v['id'] == 3)['carrier_id'], 2); // Boot auf dem Anhänger
+    expect(l.firstWhere((v) => v['id'] == 1)['crew'], [102]); // Bus mit Besatzung
+    expect(st['veh']['can_link'], 0); // noch nicht angenommen
+    expect(await err('incident/vehicle/link', {'id': 3, 'carrier': null}), 'Nur Personen, die am Einsatz teilnehmen');
+    await c('incident/join', {'mode': 'direct'});
+    expect((await c('incident/vehicle/link', {'id': 3, 'carrier': null}))['ok'], true);
+    expect(await err('incident/vehicle/link', {'id': 4, 'carrier': 2}), '«Anhänger 1» kann «Zug-/Personenfahrzeug» nicht aufnehmen');
+    expect(await err('incident/vehicle/link', {'id': 1, 'carrier': 3}), '«Boot 1» kann «Zug-/Personenfahrzeug» nicht aufnehmen');
+    await c('incident/vehicle/link', {'id': 3, 'carrier': 2});
+    expect(await err('incident/vehicle/link', {'id': 1, 'carrier': 2}), '«Anhänger 1» wird selbst von «Bus 1» getragen');
+    st = await c('incident/state');
+    final log = (st['log'] as List).where((x) => x['kind'] == 'veh').map((x) => x['text']).toList();
+    expect(log, containsAll(['lädt «Boot 1» von «Anhänger 1» ab', 'verlädt «Boot 1» auf «Anhänger 1»']));
+    expect((st['participants'] as List).firstWhere((p) => p['user_id'] == 102)['veh_id'], 1);
+  });
+
   test('Annehmen, Leitung, Rettling, Nachricht mit Antwort, Ende', () async {
     Demo.restart('bsp');
     await c('incident/join', {'mode': 'direct'});
