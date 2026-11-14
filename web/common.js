@@ -10,7 +10,7 @@ const swNative=(h,...a)=>{try{const w=window.flutter_inappwebview;if(w&&w.callHa
 function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHandler){const r=new FileReader();r.onload=()=>swNative('swSave',name,blob.type||'application/octet-stream',String(r.result).split(',')[1]||'');r.readAsDataURL(blob);return}
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download=name;document.body.appendChild(l);l.click();setTimeout(()=>{URL.revokeObjectURL(l.href);l.remove()},3000)}
 async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
-  const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
+  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
 // Applikationslog (Issue #139): Skriptfehler an den Server melden (nur angemeldet, höchstens 5 je Seitenaufruf, gleiche Meldung einmal; der Server begrenzt zusätzlich).
 // Nicht gemeldet: Fehler fremder Skripte ohne Angaben («Script error.»), Verbindungsabbrüche (offline) und abgelehnte API-Antworten (stehen schon im Log bzw. sind Eingabefehler).
@@ -29,24 +29,50 @@ function toast(t,kind='ok'){t=String(t==null?'':t);let c=document.getElementById
   while(c.children.length>4)c.firstChild.remove();setTimeout(rm,Math.min(12000,(kind==='err'?5000:2500)+t.length*45))}
 const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte später nochmals versuchen.':e.message,'err'); // TypeError: fetch ohne Netz (Issue #67)
 /* ---------- Karte (Einsatz-App und Replay der Verwaltung) ---------- */
-// Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
-const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
+// Kartenanbieter (Issue #106): Katalog MAP_SOURCES im Server, eingestellt in der Verwaltung (global und je Einsatztyp); die Geräte erhalten die Liste über me, incident/state,
+// public/state und incident/replay (maps, map_def) und setzen sie mit mapsSet. MAP_PROVIDERS unten ist nur der Rückfall, bis die Liste da ist (älterer Server, erster Start offline).
+let DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 // Fenster «Ansicht» (Issue #34, öffentliche Ansicht #48): Kategorien auf der Karte [Schlüssel, Bezeichnung, Funktion (feat)]. Neue Kartenelemente hier aufnehmen.
 const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro'],['geo','Geodaten (OpenStreetMap)','geo']];
 const VIEW_OFF=['geo']; // Issue #182: auf jedem Gerät zuerst ausgeblendet (die Ebene schaltet man bewusst zu) // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
 const VIEW_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 // Inhalt des Fensters: Grundkarte (Radio vbase) und, wenn cats (Liste aus VIEW), Häkchen je Kategorie (data-vk) mit «Alle einblenden/ausblenden» (data-va)
+// Grundkarten nach Art gruppiert (Luftbilder, Karten), Überschriften nur, wenn es beide gibt
+const MAP_KIND_G={sat:'Luftbilder',topo:'Karten',street:'Karten',vec:'Karten'};
+function baseRadios(base){const g={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>(g[MAP_KIND_G[P.kind]||'Karten']=g[MAP_KIND_G[P.kind]||'Karten']||[]).push([k,P]));const two=Object.keys(g).length>1;
+  return Object.entries(g).map(([t,l])=>(two?`<div class="vbg">${t}</div>`:'')+l.map(([k,P])=>`<label><input type="radio" name="vbase" value="${k}" ${k===base?'checked':''}> ${esc(P.label)}</label>`).join('')).join('')}
 function viewHtml(base,cats,vis){return'<div class="vh"><b>Ansicht</b><button id="bViewX" aria-label="Ansicht schliessen">✕</button></div><h4>Grundkarte</h4>'
-  +Object.entries(MAP_PROVIDERS).map(([k,P])=>`<label><input type="radio" name="vbase" value="${k}" ${k===base?'checked':''}> ${esc(P.label)}</label>`).join('')
+  +baseRadios(base)
   +(cats?'<h4>Auf der Karte</h4><div class="row"><button data-va="1">Alle einblenden</button><button data-va="0">Alle ausblenden</button></div>'+cats.map(([k,t])=>`<label><input type="checkbox" data-vk="${k}" ${vis(k)?'checked':''}> ${t}</label>`).join(''):'')}
 const MAP_PROVIDERS={
-  swisstopo_sat:{label:'Luftbild (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
-  swisstopo:{label:'Landeskarte (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
-  osm:{label:'OpenStreetMap',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap',maxZoom:19}
+  swisstopo_sat:{k:'swisstopo_sat',label:'Luftbild (swisstopo)',kind:'sat',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',max:19,nat:18},
+  swisstopo:{k:'swisstopo',label:'Landeskarte (swisstopo)',kind:'topo',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',max:19,nat:18},
+  osm:{k:'osm',label:'OpenStreetMap',kind:'street',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap-Mitwirkende',max:19,nat:19}
 };
+// Liste vom Server übernehmen; true = geändert (die Karten bauen dann ihre Grundkarten neu, mapBases)
+let mapsKey='';
+function mapsSet(list,def){if(!Array.isArray(list)||!list.length)return false;const key=JSON.stringify([list,def]);if(key===mapsKey)return false;mapsKey=key;
+  Object.keys(MAP_PROVIDERS).forEach(k=>delete MAP_PROVIDERS[k]);list.forEach(P=>MAP_PROVIDERS[P.k]=P);DEFAULT_BASE=MAP_PROVIDERS[def]?def:list[0].k;return true}
+// Leaflet-Ebene eines Anbieters: Kacheln (nur innerhalb von bounds), eigene Vektorkarte (PMTiles) über protomaps-leaflet
+function mapLayer(P){
+  if(P.vec)return vecLayer(P);const o={attribution:P.attr,maxZoom:P.max||19,maxNativeZoom:Math.min(P.nat||P.max||19,P.max||19)};
+  if(P.sub)o.subdomains=P.sub;if(P.bounds)o.bounds=P.bounds;return L.tileLayer(P.url,o)}
+function mapBases(){const r={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>r[k]=mapLayer(P));return r}
+// gemerkte Wahl (sw_base bzw. ein anderer Schlüssel), sonst der Standard
+function baseSaved(key){let sv=null;try{sv=localStorage.getItem(key||'sw_base')}catch(e){}return MAP_PROVIDERS[sv]?sv:DEFAULT_BASE}
+// Eigene OSM-Karte: Bibliothek erst beim ersten Gebrauch laden (cdn.jsdelivr.net, im Service Worker zwischengespeichert); Gewässer kräftiger als im Stil «light»
+const PM_JS='https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js';let pmLoad=null;
+function pmLib(){return pmLoad=pmLoad||new Promise((ok,no)=>{const s=document.createElement('script');s.src=PM_JS;s.onload=()=>window.protomapsL?ok(window.protomapsL):no(new Error('Kartenbibliothek fehlt'));s.onerror=()=>{pmLoad=null;no(new Error('Die Kartenbibliothek konnte nicht geladen werden (Verbindung?)'))};document.head.appendChild(s)})}
+const PM_WATER='#1f6fd1',pmW=(z,a,b)=>z<a?0:Math.min(b,(z-a+1)*b/6);
+function vecLayer(P){const g=L.layerGroup();
+  pmLib().then(pm=>{const ly=pm.leafletLayer({url:new URL(P.url,location.href).href,attribution:P.attr,flavor:'light',lang:'de',maxZoom:P.max||19,maxDataZoom:P.nat||15,...(P.bounds?{bounds:P.bounds}:{})});
+    try{const R=ly.paintRules,i=R.findIndex(r=>r.dataLayer==='water'); // direkt nach der Wasserfläche, also unter Strassen und Brücken
+      R.forEach(r=>{if(r.dataLayer==='water'&&r.symbolizer instanceof pm.PolygonSymbolizer)r.symbolizer=new pm.PolygonSymbolizer({fill:'#7fb8ea'})});
+      R.splice(i+1,0,{dataLayer:'water',symbolizer:new pm.LineSymbolizer({color:PM_WATER,width:(z,f)=>{const k=f&&f.props&&f.props.kind;return k==='stream'||k==='ditch'?pmW(z,12,3):pmW(z,8,7)}}),filter:(z,f)=>f.geomType===2&&['river','canal','stream'].includes(f.props.kind)})}catch(e){}
+    g.addLayer(ly)}).catch(fail);
+  return g}
 // Kleine Karten der Verwaltung (Auswahl- und Vorschaukarten, Änderungswunsch #96): alle Anbieter aus MAP_PROVIDERS, umschaltbar über eine Auswahl oben rechts, gemerkt in sw_base wie die übrigen Karten
-function addBases(m){let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}let cur=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;const ls={};
-  Object.entries(MAP_PROVIDERS).forEach(([k,P])=>ls[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));ls[cur].addTo(m);
+function addBases(m){let cur=baseSaved();const ls=mapBases();ls[cur].addTo(m);
   const C=L.Control.extend({options:{position:'topright'},onAdd(){const d=L.DomUtil.create('div','leaflet-bar basesel');d.innerHTML=`<select aria-label="Grundkarte">${Object.entries(MAP_PROVIDERS).map(([k,P])=>`<option value="${k}" ${k===cur?'selected':''}>${esc(P.label)}</option>`).join('')}</select>`;
     L.DomEvent.disableClickPropagation(d);L.DomEvent.disableScrollPropagation(d);d.firstChild.onchange=e=>{const k=e.target.value;if(!ls[k]||k===cur)return;m.removeLayer(ls[cur]);cur=k;ls[k].addTo(m);try{localStorage.setItem('sw_base',k)}catch(_){}};return d}});
   new C().addTo(m);return m}
@@ -206,13 +232,34 @@ const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
 const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
 const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
-const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon','cfg_conn','applog']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon','cfg_conn','applog','versions']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 // Abmelden: Server meldet die Sitzung ab (Gerätesitzung der App bzw. Browser-Token, Route logout), danach die App benachrichtigen (beendet das Konto, Issue #108)
 function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});
   token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k));swNative('swLogout')} // letzter Stand gehört der abgemeldeten Person
+/* ---------- Versionen (Issue #175) ---------- */
+// Stand dieser Seite = ?v= von common.js (deploy.ps1 setzt den Commit ein, im Repo 0 = unbekannt). Der Server liefert seinen Stand im Header X-Build (api());
+// weicht er ab, ist inzwischen eine neuere Fassung ausgeliefert: Hinweis «Neue Version verfügbar» mit «Neu laden», einmal je Seitenaufruf («Später» blendet ihn aus).
+const BUILD=(()=>{try{const m=/[?&]v=([0-9a-z]+)/.exec(document.currentScript.src);return m&&m[1]!=='0'?m[1]:''}catch(e){return''}})();
+let verNewShown=false;
+function verNew(b){if(verNewShown||!BUILD||!b||b===BUILD||!document.body)return;verNewShown=true;const d=document.createElement('div');d.id='verNew';d.setAttribute('role','status');
+  d.innerHTML='<span>Neue Version verfügbar.</span><button class="pri" data-r>Neu laden</button><button data-x>Später</button>';
+  d.querySelector('[data-r]').onclick=()=>location.reload();d.querySelector('[data-x]').onclick=()=>d.remove();document.body.appendChild(d)}
+// Anzeige der Version (verPub im Server): Produktiv nur die Nummer, sonst mit Abstand, Commit und System, z. B. «0.1.0+12.abc1234 · Test»
+const verTxt=v=>v&&v.version?v.full+(v.env&&v.env!=='prod'?' · '+(v.env_name||v.env)+(v.pr?' PR '+v.pr:''):''):'';
+const verParse=s=>String(s||'').split(/[^0-9.]/)[0].split('.').map(Number);
+function verCmp(a,b){const x=verParse(a),y=verParse(b);for(let i=0;i<3;i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0}
+// «Was ist neu» (Route changes, Datei changes.json): since = nur Versionen danach; quiet = ohne Fehlermeldung und ohne Dialog, wenn nichts Neues
+const changesHtml=vs=>vs.length?vs.map(v=>`<h3 class="chv">Version ${esc(v.version)}${v.date?` <small class="mut">${esc(v.date.split('-').reverse().join('.'))}</small>`:''}</h3><ul class="chl">${v.items.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`).join(''):'<div class="mut">Keine Angaben.</div>';
+async function changesDlg(since,quiet){let r;try{r=await api('changes')}catch(e){if(!quiet)fail(e);return}
+  const vs=r.versions.filter(v=>!since||verCmp(v.version,since)>0);if(quiet&&!vs.length)return;
+  const d=dlg('Was ist neu',`<div class="chw">${changesHtml(vs)}</div>`,()=>{},'OK');d.querySelector('[data-x]').remove()}
+// Nach einem Update einmal «Was ist neu» mit den Versionen seit der zuletzt gesehenen (pro Gerät, sw_seenver); beim allerersten Öffnen nur merken
+function whatsNew(v){if(!v||!v.version||v.version==='0.0.0')return;let seen='';try{seen=localStorage.getItem('sw_seenver')||'';localStorage.setItem('sw_seenver',v.version)}catch(e){return}
+  if(seen&&verCmp(v.version,seen)>0)changesDlg(seen,true)}
 /* ---------- Anmeldung ---------- */
-function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a></div>`;
+function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
+  fetch(`${API}?r=version`).then(r=>r.json()).then(v=>{const e=$('#lgVer');if(e&&v.version)e.textContent='Version '+verTxt(v)}).catch(()=>{}); // Version auch ohne Anmeldung (Issue #175)
   const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 /* ---------- Dialoge ---------- */

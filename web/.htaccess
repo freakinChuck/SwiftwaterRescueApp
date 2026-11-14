@@ -8,4 +8,15 @@
 # PWA (Issue #67): Manifest mit dem richtigen Typ ausliefern; sw.js ist JS und wird damit ebenfalls bei jedem Aufruf geprüft
 <IfModule mod_mime.c>
   AddType application/manifest+json .webmanifest
+  # Eigene OSM-Karte (Issue #106, tiles/osm.pmtiles): Vektorkacheln, gelesen über Teilabfragen (Range)
+  AddType application/vnd.pmtiles .pmtiles
 </IfModule>
+# Eigene OSM-Karte (Issue #106): nicht komprimieren (sonst funktionieren Teilabfragen nicht), einen Tag zwischenspeichern (neue Datei = neues ETag)
+<FilesMatch "\.pmtiles$">
+  <IfModule mod_env.c>
+    SetEnv no-gzip 1
+  </IfModule>
+  <IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=86400"
+  </IfModule>
+</FilesMatch>
