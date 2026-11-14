@@ -135,7 +135,7 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   if(!nav().length&&me.my_runs==='off'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Deine Benutzerrollen geben dir keinen Zugriff auf die Verwaltung.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
-  MY=myMode();const adm=nav().length>0;
+  MY=myMode();VPLAY_Q=MY?'&my=1':'';const adm=nav().length>0; // VPLAY_Q: Durchsagen im Log abspielen (Funk, Issue #113)
   if(MY){a.innerHTML=`<header><h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}${userMenu()}</header>
     <div id="wrap" class="my"><main><section id="sMy"><h2>Meine Einsätze</h2><div class="mut">Wird geladen …</div></section></main></div>`;
     userMenuWire();
@@ -159,11 +159,11 @@ const NAV=[
   ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
-  ['Konnektivität',[['emailalarm','sMail','E-Mail-Alarm',loadMail]]],
+  ['Konnektivität',[['emailalarm','sMail','E-Mail-Alarm',loadMail],['funk','sVx','Funk & Konferenz',loadVoice]]],
   ['System',[['applog','sAL','Applikationslog',loadAppLog]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',funk:'cfg_conn',applog:'applog'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -405,7 +405,7 @@ async function loadModes(){const el=$('#sM');let modes;try{modes=await api('mode
       async d=>{await api('mode/save',{id:x.id,name:$('#oN',d).value,share_location:$('#oS',d).checked?1:0,lead_rights:$('#oL',d).checked?1:0,counts:$('#oC',d).checked?1:0,active:$('#oA',d).checked?1:0});loadModes()})})}
 /* ---------- Spezialrollen ---------- */
 async function loadRoles(){const el=$('#sR');try{roles=await api('roles')}catch(e){el.innerHTML='<h2>Spezialrollen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
-  el.innerHTML=`<h2>Spezialrollen im Einsatz</h2><div class="tw"><table><tbody>${roles.map(r=>`<tr><td><span style="color:${esc(r.color)}">●</span> ${esc(r.name)}${r.is_lead?' <span class="mut">(Einsatzleitung: darf Einsatz verwalten)</span>':''}${r.is_post?' <span class="mut">(Posten: Suchgebiet endet hier)</span>':''}${r.can_message||r.is_lead?'':' <span class="mut">(darf keine Nachrichten senden)</span>'}</td><td class="act"><button data-r="${r.id}">Bearbeiten</button></td></tr>`).join('')}</tbody></table></div>
+  el.innerHTML=`<h2>Spezialrollen im Einsatz</h2><div class="tw"><table><tbody>${roles.map(r=>`<tr><td><span style="color:${esc(r.color)}">●</span> ${esc(r.name)}${r.is_lead?' <span class="mut">(Einsatzleitung: darf Einsatz verwalten)</span>':''}${r.is_post?' <span class="mut">(Posten: Suchgebiet endet hier)</span>':''}${r.can_message||r.is_lead?'':' <span class="mut">(darf keine Nachrichten senden)</span>'}${r.can_voice||r.is_lead?'':' <span class="mut">(darf im Funk nicht sprechen)</span>'}</td><td class="act"><button data-r="${r.id}">Bearbeiten</button></td></tr>`).join('')}</tbody></table></div>
     <h3>Nachrichten senden</h3><label class="row" style="align-items:center"><input type="checkbox" id="msgNoRole" disabled> <span>Personen ohne Spezialrolle dürfen Nachrichten senden</span></label>
     <label class="row" style="align-items:center"><input type="checkbox" id="msgReadAll" disabled> <span>Personen, die den Einsatz nicht angenommen haben, dürfen Nachrichten lesen (ohne Benachrichtigung, ohne Senden)</span></label>
     <div class="mut">Pro Spezialrolle unter «Bearbeiten» einstellbar. Einsatzleitung, Personen mit dem Recht «Jeden Einsatz leiten» und wer den Einsatz gestartet hat, dürfen immer senden. Lesen dürfen alle, die den Einsatz angenommen haben, mit der Einstellung oben auch alle übrigen.</div>
@@ -413,8 +413,8 @@ async function loadRoles(){const el=$('#sR');try{roles=await api('roles')}catch(
   $('#rA').onclick=()=>api('role/save',{name:$('#rn').value,color:$('#rc').value}).then(loadRoles).catch(fail);
   el.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=roles.find(x=>x.id==b.dataset.r);
     dlg('Rolle bearbeiten',`<label class="mut">Name<input id="rN" value="${esc(r.name)}"></label><label class="mut">Farbe<input id="rC" type="color" value="${esc(r.color)}"></label>
-      <label class="chk"><input type="checkbox" id="rL" ${r.is_lead?'checked':''}> Einsatzleitung (darf Einsatz verwalten)</label><label class="chk"><input type="checkbox" id="rP" ${r.is_post?'checked':''}> Sicherungs-/Beobachtungsposten (Suchgebiet endet hier)</label><label class="chk"><input type="checkbox" id="rM" ${r.can_message?'checked':''}> Darf Nachrichten senden</label><label class="chk"><input type="checkbox" id="rD"> Rolle deaktivieren</label>`,
-      async d=>{const n=$('#rN',d).value.trim();if(!n)throw new Error('Name fehlt');await api('role/save',{id:r.id,name:n,color:$('#rC',d).value,is_lead:$('#rL',d).checked?1:0,is_post:$('#rP',d).checked?1:0,can_message:$('#rM',d).checked?1:0,active:$('#rD',d).checked?0:1});loadRoles()})});
+      <label class="chk"><input type="checkbox" id="rL" ${r.is_lead?'checked':''}> Einsatzleitung (darf Einsatz verwalten)</label><label class="chk"><input type="checkbox" id="rP" ${r.is_post?'checked':''}> Sicherungs-/Beobachtungsposten (Suchgebiet endet hier)</label><label class="chk"><input type="checkbox" id="rM" ${r.can_message?'checked':''}> Darf Nachrichten senden</label><label class="chk"><input type="checkbox" id="rV" ${r.can_voice?'checked':''}> Darf im Funk sprechen</label><label class="chk"><input type="checkbox" id="rD"> Rolle deaktivieren</label>`,
+      async d=>{const n=$('#rN',d).value.trim();if(!n)throw new Error('Name fehlt');await api('role/save',{id:r.id,name:n,color:$('#rC',d).value,is_lead:$('#rL',d).checked?1:0,is_post:$('#rP',d).checked?1:0,can_message:$('#rM',d).checked?1:0,can_voice:$('#rV',d).checked?1:0,active:$('#rD',d).checked?0:1});loadRoles()})});
   // Einstellung für Personen ohne Spezialrolle, wird sofort gespeichert
   api('settings').then(s=>[['#msgNoRole','msg_no_role'],['#msgReadAll','msg_read_all']].forEach(([id,k])=>{const c=$(id);c.checked=!!s[k];c.disabled=false;
     c.onchange=()=>{c.disabled=true;api('settings/save',{[k]:c.checked?1:0}).catch(e=>{c.checked=!c.checked;fail(e)}).finally(()=>{c.disabled=false})}})).catch(fail)}
@@ -491,6 +491,69 @@ async function loadPlaces(){const el=$('#sPl');let fs;try{[fs,plCats]=await Prom
   el.querySelectorAll('[data-fm]').forEach(b=>b.onclick=()=>api('place/move',{id:+b.dataset.fm,dir:+b.dataset.d}).then(loadPlaces).catch(fail));
   el.querySelectorAll('[data-fe]').forEach(b=>b.onclick=()=>placeDlg(fs.find(f=>f.id==b.dataset.fe),null,fs,loadPlaces));
   el.querySelectorAll('[data-fr]').forEach(b=>b.onclick=()=>{const f=fs.find(x=>x.id==b.dataset.fr);if(confirm(`Standort «${f.name}» endgültig entfernen? Deaktivieren (Bearbeiten) blendet ihn nur aus.`))api('place/remove',{id:f.id}).then(loadPlaces).catch(fail)})}
+/* ---------- Funk & Konferenz (Issue #113, Konnektivität): Medienserver (LiveKit), Kanäle, Sprechrecht, Transkription, je Einsatztyp Konferenz, Aufbewahrung und Links für Externe ---------- */
+// voice/cfg liefert Einstellung, Kanäle (alle, auch deaktivierte), Rollen, Einrückoptionen, Einsatztypen; gespeichert wird alles zusammen über voice/cfg/save (Secret und Schlüssel nur, wenn eingegeben)
+let vxD=null,vxChE=[];
+const VXM=()=>[['all','Alle Teilnehmenden'],['lead','Einsatzleitung'],['ex','Übungsleitung'],...vxD.roles.filter(r=>r.active).map(r=>['r'+r.id,'Spezialrolle «'+r.name+'»']),...vxD.modes.filter(m=>m.active).map(m=>['m'+m.code,'Einrückoption «'+m.name+'»'])];
+const vxMemTxt=l=>(l||[]).map(t=>(VXM().find(m=>m[0]===t)||[t,t+' (nicht mehr vorhanden)'])[1]).join(', ')||'niemand';
+async function loadVoice(){const el=$('#sVx');try{vxD=await api('voice/cfg')}catch(e){el.innerHTML='<h2>Funk &amp; Konferenz</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  vxChE=vxD.channels.map(c=>({...c}));vxDraw()}
+function vxDraw(){const el=$('#sVx'),s=vxD,c=s.cfg,kb=n=>(n/1048576).toFixed(1).replace('.',',')+' MB';
+  const kcard=k=>{const x=c.kinds[k.id]||{},chs=vxChE.filter(z=>z.active&&(!z.plans||k.plans));
+    return`<div class="inc" style="display:block;padding:.6rem .8rem;border-left-color:${esc(k.color)}" data-vk="${k.id}"><div style="margin-bottom:.3rem"><i class="gdot" style="background:${esc(k.color)}"></i> <b>${esc(k.name)}</b>${k.voice?'':' <span class="mut">– Funk für diesen Typ unter «Funktionen» ausgeschaltet</span>'}</div>
+      <div class="row" style="gap:1.1rem;margin:.2rem 0"><label class="chk" style="margin:0"><input type="checkbox" data-x="conf" ${x.conf?'checked':''}> Live-Konferenz</label><label class="chk" style="margin:0"><input type="checkbox" data-x="tr" ${x.tr?'checked':''}> Transkription</label>
+        <label class="chk" style="margin:0"><input type="checkbox" data-x="guests" ${x.guests?'checked':''}> Links für Externe</label><label class="chk" style="margin:0"><input type="checkbox" data-x="guest_speak" ${x.guest_speak?'checked':''}> Externe dürfen sprechen</label></div>
+      <div class="pgf" style="max-width:none"><label class="mut">Aufbewahrung<select data-x="keep">${Object.entries(s.keep).map(([v,l])=>`<option value="${v}" ${v===x.keep?'selected':''}>${esc(l)}</option>`).join('')}</select></label>
+        <label class="mut">Meldung bei einer Durchsage<select data-x="lvl"><option value="">wie Nachrichten (${esc((s.levels.find(l=>l.k===k.msg_lvl)||{}).name||k.msg_lvl)})</option>${s.levels.map(l=>`<option value="${l.k}" ${l.k===x.lvl?'selected':''}>${esc(l.name)}</option>`).join('')}</select></label></div>
+      <div class="mut" style="margin-top:.3rem">Kanäle: <label class="chk" style="margin:.1rem .6rem .1rem 0"><input type="checkbox" data-x="chall" ${x.ch==null?'checked':''}> alle aktiven</label>${x.ch==null?'':chs.map(z=>`<label class="chk" style="margin:.1rem .6rem .1rem 0"><input type="checkbox" data-xch="${z.id}" ${x.ch.includes(z.id)?'checked':''}> ${esc(z.name)}</label>`).join('')}</div></div>`};
+  el.innerHTML=`<h2>Funk &amp; Konferenz</h2><div class="mut">Sprechfunk über die App als Ergänzung zum Funkgerät. <b>Durchsagen</b> (Sprechtaste) laufen über diesen Server: Aufnahme im Gerät, Verteilung beim Abruf, auch nach einem Funkloch. Die <b>Live-Konferenz</b> braucht einen eigenen Medienserver (LiveKit), weil das Hosting keine Echtzeitverbindungen zulässt; dieser Server stellt nur die Zugänge aus. Ein- und ausschalten je Einsatztyp unter «Funktionen» (Funktion «Funk»).</div>
+    <h3>Medienserver für die Live-Konferenz (LiveKit)</h3><div class="mut">Eigener LiveKit-Server (Open Source, z. B. Docker auf dem Server von PostGIS) oder LiveKit Cloud. Er braucht eine eigene Domain mit Zertifikat; für Mobilnetze TURN über Port 443 einschalten. API-Key und Secret stehen in der Konfiguration des Servers.</div>
+    <label class="chk"><input type="checkbox" id="vLkOn" ${c.lk.on?'checked':''}> Live-Konferenz anbieten${c.lk.on?(s.lk_ready?' <b>✓ eingerichtet</b>':' <span class="mut">(unvollständig)</span>'):''}</label>
+    <div class="pgf"><label class="mut">Adresse (wss://…)<input id="vLkU" value="${esc(c.lk.url)}" placeholder="wss://funk.example.ch" autocomplete="off" inputmode="url"></label>
+      <label class="mut">API-Key<input id="vLkK" value="${esc(c.lk.key)}" autocomplete="off"></label>
+      <label class="mut">API-Secret<input id="vLkS" type="password" autocomplete="new-password" placeholder="${s.lk_secret_set?'gespeichert, leer lassen zum Behalten':'kein Secret gespeichert'}"></label></div>
+    <div class="row"><button id="vLkT">Verbindung testen</button>${s.lk_secret_set?'<button id="vLkX">Secret entfernen</button>':''}</div><div class="mut" id="vLkR"></div>
+    <h3>Durchsagen</h3><div class="pgf"><label class="mut">Höchste Länge einer Durchsage in Sekunden (5–120)<input id="vMax" type="number" min="5" max="120" value="${c.max_s}"></label></div>
+    <label class="chk"><input type="checkbox" id="vLis" ${c.listen?'checked':''}> «Mithören» vorausgewählt (neue Durchsagen spielen bei offener App sofort ab; jede Person kann es auf dem Gerät ändern)</label>
+    <label class="chk"><input type="checkbox" id="vNoR" ${c.no_role?'checked':''}> Personen ohne Spezialrolle dürfen sprechen</label>
+    <div class="mut">Sprechen dürfen je Spezialrolle (Einsatzleitung und Übungsleitung immer):</div><div>${s.roles.filter(r=>r.active).map(r=>`<label class="chk" style="margin:.1rem .8rem .1rem 0"><input type="checkbox" data-cv="${r.id}" ${r.can_voice||r.is_lead?'checked':''} ${r.is_lead?'disabled':''}> <span style="color:${esc(r.color)}">●</span> ${esc(r.name)}</label>`).join('')}</div>
+    <div class="mut">Gespeichert: ${s.storage.n} ${s.storage.n===1?'Aufnahme':'Aufnahmen'} (${kb(s.storage.bytes)}). Gelöscht werden sie nach der Aufbewahrung des Einsatztyps bzw. unter «Anonymisierung» (Stufe «Sprachaufnahmen löschen»).</div>
+    <h3>Kanäle</h3><div class="mut">Wer einen Kanal hört und wer darin spricht (wer sprechen darf, hört ihn auch). Ein Kanal «nur Übungen» gibt es nur bei Einsatztypen mit vorbereiteten Übungen. Welche Kanäle ein Einsatz hat, legt der Einsatztyp fest; die Einsatzleitung kann sie im Einsatz anpassen.</div>
+    <div class="tw"><table><thead><tr><th>Kanal</th><th>Hören</th><th>Sprechen</th><th></th></tr></thead><tbody>${vxChE.map((z,i)=>`<tr${z.active?'':' style="opacity:.5"'}><td><b>${esc(z.name)}</b>${z.plans?' <span class="mut">(nur Übungen)</span>':''}${z.active?'':' <span class="mut">(aus)</span>'}</td><td class="mut">${esc(vxMemTxt(z.hear))}</td><td class="mut">${esc(vxMemTxt(z.speak))}</td>
+      <td class="act" style="white-space:nowrap"><button data-ce="${i}" aria-label="${esc(z.name)} bearbeiten">✎</button><button data-cm="${i}" data-d="-1" ${i?'':'disabled'} aria-label="nach oben">↑</button><button data-cm="${i}" data-d="1" ${i<vxChE.length-1?'':'disabled'} aria-label="nach unten">↓</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="row"><button id="vChN">+ Kanal</button></div>
+    <h3>Transkription</h3><div class="mut">Durchsagen werden nach dem Senden in Text umgewandelt (lesbar im Lärm, durchsuchbar im Log, auch für den AI-Assistenten). Dienst mit OpenAI-kompatibler Schnittstelle <code>/audio/transcriptions</code>, z. B. ein eigener Whisper-Server; ohne Adresse der AI-Assistent${s.ai_openai?' (eingerichtet)':' (nicht als OpenAI-kompatibel eingerichtet)'}. Die Aufnahmen gehen an diesen Dienst.</div>
+    <div class="pgf"><label class="mut">Basis-URL (leer = AI-Assistent)<input id="vTrU" value="${esc(c.tr.url)}" placeholder="https://whisper.example.ch/v1" inputmode="url"></label>
+      <label class="mut">Modell<input id="vTrM" value="${esc(c.tr.model)}"></label><label class="mut">Sprache<input id="vTrL" value="${esc(c.tr.lang)}" maxlength="2"></label>
+      <label class="mut">API-Schlüssel (falls nötig)<input id="vTrK" type="password" autocomplete="new-password" placeholder="${s.tr_key_set?'gespeichert, leer lassen zum Behalten':'kein Schlüssel gespeichert'}"></label></div>
+    <div class="row"><button id="vTrT">Testen</button>${s.tr_key_set?'<button id="vTrX">Schlüssel entfernen</button>':''}</div><div class="mut" id="vTrR">${s.tr_ep?'Dienst: '+esc(s.tr_ep.host)+(s.tr_ep.ai?' (AI-Assistent)':''):'Kein Dienst eingerichtet: es gibt keine Transkripte.'}</div>
+    <h3>Je Einsatztyp</h3>${s.kinds.map(kcard).join('')}
+    <div class="row" style="max-width:260px;margin-top:1rem"><button class="pri" id="vSv">Speichern</button></div>`;
+  const kd=()=>{const r={};el.querySelectorAll('[data-vk]').forEach(b=>{const v=x=>$(`[data-x="${x}"]`,b),all=v('chall').checked;
+    r[b.dataset.vk]={conf:v('conf').checked?1:0,tr:v('tr').checked?1:0,guests:v('guests').checked?1:0,guest_speak:v('guest_speak').checked?1:0,keep:v('keep').value,lvl:v('lvl').value||null,
+      ch:all?null:[...b.querySelectorAll('[data-xch]:checked')].map(x=>+x.dataset.xch)}});return r};
+  const cfg=()=>({max_s:+$('#vMax').value,listen:$('#vLis').checked?1:0,no_role:$('#vNoR').checked?1:0,lk:{on:$('#vLkOn').checked?1:0,url:$('#vLkU').value.trim(),key:$('#vLkK').value.trim()},
+    tr:{url:$('#vTrU').value.trim(),model:$('#vTrM').value.trim(),lang:$('#vTrL').value.trim().toLowerCase()},kinds:kd()});
+  const body=x=>({cfg:cfg(),channels:vxChE.map(z=>({id:z.id||undefined,name:z.name,hear:z.hear,speak:z.speak,plans:z.plans,active:z.active})),
+    can_voice:Object.fromEntries([...el.querySelectorAll('[data-cv]:not([disabled])')].map(c=>[c.dataset.cv,c.checked?1:0])),lk_secret:$('#vLkS').value,tr_key:$('#vTrK').value,...x});
+  const save=async x=>{await api('voice/cfg/save',body(x));toast('Gespeichert.','ok');await loadVoice()};
+  // «alle aktiven» an/aus zeigt bzw. verbirgt die Auswahl einzelner Kanäle (vorher Ungespeichertes bleibt)
+  el.querySelectorAll('[data-x="chall"]').forEach(c=>c.onchange=()=>{const k=c.closest('[data-vk]').dataset.vk;vxD.cfg=cfg();vxD.cfg.kinds[k].ch=c.checked?null:vxChE.filter(z=>z.active).map(z=>z.id);vxDraw()});
+  $('#vSv').onclick=e=>{e.target.disabled=true;save().catch(fail).finally(()=>{if(e.target.isConnected)e.target.disabled=false})};
+  $('#vLkT').onclick=async()=>{const o=$('#vLkR');o.textContent='Speichere und teste …';try{await api('voice/cfg/save',body());const r=await api('voice/test',{what:'lk'});o.textContent=`✓ Medienserver erreichbar (${r.ms} ms, ${r.rooms} offene Räume)`}catch(x){o.textContent='✗ '+x.message}};
+  $('#vTrT').onclick=async()=>{const o=$('#vTrR');o.textContent='Speichere und teste …';try{await api('voice/cfg/save',body());const r=await api('voice/test',{what:'tr'});o.textContent=`✓ Transkription funktioniert (${esc(r.host)}, ${r.ms} ms)`}catch(x){o.textContent='✗ '+x.message}};
+  if($('#vLkX'))$('#vLkX').onclick=()=>confirm('Secret des Medienservers entfernen? Die Live-Konferenz geht danach nicht mehr.')&&save({lk_secret:'',lk_secret_clear:1}).catch(fail);
+  if($('#vTrX'))$('#vTrX').onclick=()=>confirm('Schlüssel des Transkriptionsdienstes entfernen?')&&save({tr_key:'',tr_key_clear:1}).catch(fail);
+  el.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{const i=+b.dataset.cm,j=i+ +b.dataset.d;vxD.cfg=cfg();[vxChE[i],vxChE[j]]=[vxChE[j],vxChE[i]];vxDraw()});
+  const edit=i=>{const z=i==null?{name:'',hear:['all'],speak:['all'],plans:0,active:1}:vxChE[i],M=VXM();
+    dlg(i==null?'Neuer Kanal':'Kanal bearbeiten',`<label class="mut">Name<input id="zN" value="${esc(z.name)}" maxlength="60"></label>
+      <div class="tw"><table><thead><tr><th>Mitglieder</th><th>Hören</th><th>Sprechen</th></tr></thead><tbody>${M.map(([k,l])=>`<tr><td>${esc(l)}</td><td><input type="checkbox" data-zh="${esc(k)}" ${z.hear.includes(k)?'checked':''} aria-label="${esc(l)} hört"></td><td><input type="checkbox" data-zs="${esc(k)}" ${z.speak.includes(k)?'checked':''} aria-label="${esc(l)} spricht"></td></tr>`).join('')}</tbody></table></div>
+      <div class="mut">«Einsatzleitung»: Spezialrolle oder Einrückoption mit Leitungsrechten, Recht «Jeden Einsatz leiten» und wer den Einsatz gestartet hat (je mit Teilnahme).</div>
+      <label class="chk"><input type="checkbox" id="zP" ${z.plans?'checked':''}> Nur bei Einsatztypen mit vorbereiteten Übungen</label><label class="chk"><input type="checkbox" id="zA" ${z.active?'checked':''}> Aktiv</label>`,
+      async d=>{const n=$('#zN',d).value.trim();if(!n)throw new Error('Name fehlt');const h=[...d.querySelectorAll('[data-zh]:checked')].map(x=>x.dataset.zh),sp=[...d.querySelectorAll('[data-zs]:checked')].map(x=>x.dataset.zs);
+        if(!h.length&&!sp.length)throw new Error('Wer hört den Kanal?');const nz={...z,name:n,hear:h,speak:sp,plans:$('#zP',d).checked?1:0,active:$('#zA',d).checked?1:0};vxD.cfg=cfg();
+        if(i==null)vxChE.push(nz);else vxChE[i]=nz;vxDraw();toast('Zum Übernehmen «Speichern» wählen.','info')},'Übernehmen')};
+  el.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>edit(+b.dataset.ce));$('#vChN').onclick=()=>edit(null)}
 /* ---------- E-Mail-Alarm (Issue #65, Konnektivität): Postfach, Regeln je Einsatztyp, Cron-Job und Webhook, Prüfen, Verlauf ---------- */
 // Schlüsselwörter und Absender je Zeile; Absender als Adresse (alarm@beispiel.ch) oder Domain (beispiel.ch, gilt auch für Subdomains). Passwort nie angezeigt, leer = behalten.
 let mailD=null;
@@ -1458,9 +1521,9 @@ async function loadMyS(){const el=$('#sMyS');let s;try{s=await api('settings')}c
 /* ---------- Anonymisierung (Issue #54, konfigurierbar und mehrstufig seit #87) ---------- */
 // Stufen (anon/cfg → steps): view = Anzeige anonymisieren (umkehrbar), replay/log = pseudonymisieren, texts = Personenangaben und Freitexte entfernen, track = Aufzeichnung löschen (endgültig).
 // Je Stufe einstellbar: angeboten (on) und automatisch nach N Tagen ab Einsatzende, je Einsatztyp (leer = nie). Anwenden auch für viele Einsätze (anon/apply).
-const anonTodoJ=(x,k)=>k==='view'?!x.view_anon:k==='replay'?!!x.recorded&&!x.rp_anon:k==='log'?!x.log_anon:k==='texts'?!x.txt_anon:k==='parts'?!x.part_anon:k==='track'?!!x.recorded:false;
+const anonTodoJ=(x,k)=>k==='view'?!x.view_anon:k==='voice'?!!x.voice_todo:k==='replay'?!!x.recorded&&!x.rp_anon:k==='log'?!x.log_anon:k==='texts'?!x.txt_anon:k==='parts'?!x.part_anon:k==='track'?!!x.recorded:false;
 const stRows=R=>{const h=R.filter(r=>r[1]).map(([l,c])=>`<small>${l}</small><div class="fl">${c}</div>`).join('');return h?`<div class="sts">${h}</div>`:''}; // Stand einer Karte: je Thema eine Zeile, Leeres fehlt
-const anonChips=x=>[x.view_anon?'<span class="wip">Anzeige anonymisiert</span>':'',x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':'',x.txt_anon?'<span>Freitexte entfernt</span>':'',x.part_anon?'<span>Teilnahmen gelöst</span>':''].join('');
+const anonChips=x=>[x.view_anon?'<span class="wip">Anzeige anonymisiert</span>':'',x.voice_anon?'<span>Sprachaufnahmen gelöscht</span>':'',x.rp_anon?'<span>Replay anonymisiert</span>':'',x.log_anon?'<span>Protokoll anonymisiert</span>':'',x.txt_anon?'<span>Freitexte entfernt</span>':'',x.part_anon?'<span>Teilnahmen gelöst</span>':''].join('');
 const anonDays=v=>v==null?'nie':v===0?'beim Einsatzende':v+(v===1?' Tag':' Tage')+' nach dem Einsatzende';
 // Stufen auf Einsätze anwenden; endgültige erst nach Rückfrage mit der Anzahl betroffener Einsätze
 async function anonApply(incs,steps,D){const fin=steps.filter(k=>D.steps.find(s=>s.key===k).final),nm=k=>D.steps.find(s=>s.key===k).name;
@@ -1513,7 +1576,7 @@ function renderAnon(){const el=$('#sAnon'),D=anonD,C=D.cfg,f=anonF,[a,b]=psRange
     e.target.disabled=true;try{await api('anon/cfg/save',{cfg});toast('Gespeichert','ok');await loadAnon()}catch(x){fail(x);e.target.disabled=false}}}
 // einzelner Einsatz aus der Einsatzstatistik: angebotene Stufen mit Stand, endgültige nach Rückfrage
 async function anonDlg(x){let D;try{D=await api('anon/cfg')}catch(e){return fail(e)}const i=D.incidents.find(y=>y.id===x.id);if(!i)return toast('Nur beendete Einsätze lassen sich anonymisieren.','err');
-  const norec=k=>(k==='replay'||k==='track')&&!i.recorded&&!i.rec_del,done=k=>!anonTodoJ(i,k)&&!norec(k),why=k=>norec(k)?' (keine Aufzeichnung)':k==='replay'&&done(k)&&!i.recorded?' (Aufzeichnung gelöscht)':done(k)?' (bereits erledigt)':''; // nie aufgezeichnet: nichts zu tun, also nicht erledigt
+  const norec=k=>(k==='replay'||k==='track')&&!i.recorded&&!i.rec_del||k==='voice'&&!i.voice_todo&&!i.voice_anon,done=k=>!anonTodoJ(i,k)&&!norec(k),why=k=>norec(k)?(k==='voice'?' (keine Aufnahmen)':' (keine Aufzeichnung)'):k==='replay'&&done(k)&&!i.recorded?' (Aufzeichnung gelöscht)':done(k)?' (bereits erledigt)':''; // nie aufgezeichnet: nichts zu tun, also nicht erledigt
   const steps=D.steps.filter(s=>D.cfg[s.key].on);
   const dA=dlg('Anonymisieren',`<div class="mut">«${esc(i.message)}»</div>${anonChips(i)?`<div class="fl" style="margin:.4rem 0">${anonChips(i)}</div>`:''}
     ${x.aar_st===1?'<div class="mut" style="font-size:.85rem">Das freigegebene After Action Review wird vorher vollständig als PDF gesichert und ist danach nur noch als dieses PDF verfügbar, auch wenn die Stufe wieder aufgehoben wird. «Aufzeichnung löschen» allein ist davon ausgenommen.</div>':x.aar_seal||x.aar_lock?'':'<div class="mut" style="font-size:.85rem">Danach ist kein After Action Review mehr möglich, auch bereits Erfasstes ist nicht mehr abrufbar. Nur «Aufzeichnung löschen» ist davon ausgenommen.</div>'}
@@ -1662,7 +1725,7 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
   $('#rpAuto').setAttribute('aria-pressed',rp.auto);$('#rpAuto').textContent=(rp.auto?'✓ ':'')+'Auto-Übersicht';
   // Log: nur Einträge bis t, neueste zuerst; Klick springt zum Zeitpunkt
   const lg=d.log.filter(x=>x.ts<=t);if(lg.length!==rp.logN){rp.logN=lg.length;
-    $('#rpLog').innerHTML=lg.reverse().map(x=>`<button class="rpl" data-ts="${x.ts}" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${fmtT(x.ts)}</span><b>${esc(x.name||'System')}</b> ${esc(x.text)}</button>`).join('')||'<div class="mut">Noch keine Einträge</div>'}}
+    $('#rpLog').innerHTML=lg.reverse().map(x=>`<button class="rpl" data-ts="${x.ts}" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${fmtT(x.ts)}</span><b>${esc(x.name||'System')}</b> ${esc(x.text)}${x.kind==='voice'&&x.voice&&x.audio?`<span class="vpl lk" role="button" tabindex="0" data-vplay="${x.voice}" title="Durchsage abspielen">▶</span>`:''}</button>`).join('')||'<div class="mut">Noch keine Einträge</div>'}}
 // Einsatzkräfte im Replay: nach Spezialrolle gruppiert (Reihenfolge wie in der Verwaltung, ohne Rolle zuletzt), mit «Zentrieren» und «Folgen».
 // Die Liste wird nur neu aufgebaut, wenn sich Personen, Standort ja/nein oder das Folgen ändern; Status und Koordinaten werden direkt ersetzt (sonst gehen Klicks beim Abspielen verloren).
 function rpPeople(info){const cs=me&&(me.coord_sys||me.coord_default)||'lv95',f=rp.follow!=null&&rp.people.find(p=>p.user_id===rp.follow);

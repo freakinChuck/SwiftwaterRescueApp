@@ -25,7 +25,7 @@ if (-not (Test-Path $Config)) {
 $c = Get-Content $Config -Raw | ConvertFrom-Json
 # Webroot im Repo, die Dateiliste ist relativ dazu (deploy-dev.ps1 liest beides aus diesem Skript)
 $web = 'web'
-$files ='index.html', 'admin.html', 'public.html', 'legal.html', 'common.js', 'common.css', '.htaccess', 'manifest.webmanifest', 'sw.js', 'img', 'api/index.php', 'api/data/.htaccess'
+$files ='index.html', 'admin.html', 'public.html', 'funk.html', 'legal.html', 'common.js', 'common.css', 'voice.js', '.htaccess', 'manifest.webmanifest', 'sw.js', 'img', 'api/index.php', 'api/data/.htaccess'
 $opt = @('-i', $c.key, '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes')
 $dest = "$($c.user)@$($c.host)"
 $envName = if ($c.env) { $c.env } elseif ((Split-Path $Config -Leaf) -match "prod") { "prod" } else { "test" }
