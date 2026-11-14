@@ -7,6 +7,7 @@
    - Beispieldaten: ein laufender Einsatz an der Reuss in Luzern; simulierte Einsatzkräfte nehmen an, fahren hin, setzen Markierungen,
      senden Nachrichten und finden den Rettling (DEMO_BSP). In einem selbst gestarteten Einsatz nehmen sie ebenfalls an (DEMO_GEN).
    - Externe Dienste wie in der echten App direkt vom Gerät: Kartenkacheln und das Gewässernetz (Overpass, Rückfall im Gerät wie Issue #28).
+     Angemeldet holt das Demo das Gewässernetz über die Route overpass des Servers (realOverpass, nur lesend, nichts wird hochgeladen).
    Muss vor common.js geladen werden (common.js liest beim Laden den Anmeldeschlüssel aus localStorage).
    Gegenstück in der nativen App: mobile/app/lib/demo.dart; Änderungen an einer der beiden Simulationen auch in der anderen nachführen. */
 // var statt const: common.js liest window.DEMO
@@ -228,6 +229,9 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
       alarm:i.created_by!==ME_ID,absent:0,my_abs:absNow(),features:featOf(K),air:i.air?1:0,air_inc:i.air?1:0,ex_lead:false,ex_title:null,ex_injects:[],log:act||mgr?logRows(i):null,hydro:hydroInc(i),...mapsOut(),now:t}}
   // Overpass: wie der Server ohne Antwort (502 mit fertiger Abfrage), das Gerät fragt dann direkt (overpassNet in common.js); Ergebnisse bleiben bis zum Neuladen im Speicher
   const OPC=new Map(),opKey=b=>JSON.stringify(b.around||b.bbox||null);
+  async function realOverpass(b){if(!REAL_TOK||REAL_TOK==='demo')return null;
+    try{const x=await realFetch(API_URL+'?r=overpass',{method:'POST',headers:{'X-Token':REAL_TOK},body:JSON.stringify({around:b.around,bbox:b.bbox})});
+      return x.ok||x.status===502||x.status===503?x:null}catch(e){return null}}
   function overpassQ(b){const f=x=>(+x).toFixed(5);let sel;if(b.around){const[r,la,lo]=b.around.map(Number);if(!(r>=100&&r<=30000))fail('Ungültiger Umkreis');sel=`around:${Math.round(r)},${f(la)},${f(lo)}`}
     else if(b.bbox)sel=b.bbox.map(f).join(',');else fail('Umkreis oder Ausschnitt fehlt');return`[out:json][timeout:25];way(${sel})["waterway"~"^(river|stream|canal)$"];out geom;`}
   const R={
@@ -319,6 +323,9 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     if(u.origin!==location.origin||!/\/api\/index\.php$/.test(u.pathname))return realFetch(input,init);
     const r=u.searchParams.get('r')||'';if(r==='version'||r==='changes')return realFetch(input,init); // öffentlich und nur lesend (Issue #175)
     await READY;let b={};try{b=init&&init.body?JSON.parse(init.body):{}}catch(e){b={}}let st=200,o;
+    // Gewässernetz: angemeldet über den Server der Organisation (Cache, PostGIS, Overpass in deren Reihenfolge), nur lesend; overpass/put bleibt im Demo.
+    // 502 (Gerät soll selbst fragen, mit den Servern der Organisation) und 503 (Overpass dort aus) gelten wie in der echten App; sonst (abgemeldet, kein Netz) wie bisher vom Gerät
+    if(r==='overpass'&&!OPC.has(opKey(b))){const x=await realOverpass(b);if(x)return x}
     try{o=handle(r,b,u.searchParams)}catch(e){st=e.st||500;o=e.data||{error:e.st?e.message:'Fehler im Demo-Modus: '+e.message};if(!e.st)console.error(e)}
     save();await new Promise(res=>setTimeout(res,40+Math.random()*80)); // etwas Verzögerung wie übers Netz
     return new Response(JSON.stringify(o),{status:st,headers:{'Content-Type':'application/json'}})};
@@ -327,7 +334,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   function restart(m){reset(m);location.href=location.pathname+'?demo'+(m==='leer'?'=leer':'')}
   const H=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   function panel(first){document.querySelectorAll('.demoDlg').forEach(x=>x.remove());const d=document.createElement('div');d.className='dlg demoDlg';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-label','Demo-Modus');
-    d.innerHTML=`<div class="card"><h3>🎓 Demo-Modus</h3><p class="mut">Hier kannst du die Einsatz-App gefahrlos ausprobieren. Alles läuft nur in diesem Browser-Tab: nichts wird an den Server gesendet, niemand wird alarmiert, und deine echten Einsätze und Einstellungen bleiben unberührt. Schliesst du den Tab, ist der Demo-Stand weg.</p>
+    d.innerHTML=`<div class="card"><h3>🎓 Demo-Modus</h3><p class="mut">Hier kannst du die Einsatz-App gefahrlos ausprobieren. Alles läuft nur in diesem Browser-Tab: nichts wird auf dem Server gespeichert (angemeldet holt das Demo nur das Gewässernetz von dort), niemand wird alarmiert, und deine echten Einsätze und Einstellungen bleiben unberührt. Schliesst du den Tab, ist der Demo-Stand weg.</p>
       <p class="mut">${S.mode==='bsp'?'<b>Beispieldaten:</b> Ein Einsatz an der Reuss in Luzern läuft bereits (fiktiv). Nimm ihn über das Menü ☰ an und beobachte, wie die simulierten Einsatzkräfte anfahren, Nachrichten senden und den Rettling finden.':'<b>Leer:</b> Es läuft kein Einsatz. Starte über ☰ einen eigenen und setze einen PLS an einem Fluss; simulierte Einsatzkräfte nehmen an und fahren hin.'+(S.org?` Übernommen${S.org.name?' von '+H(S.org.name):''}: feste Standorte, Einsatztypen, Spezialrollen, Einrückoptionen, Messstationen und deine Einstellungen (nur gelesen, Stand beim Start des Demos).`:'')}</p>
       <label class="row" style="align-items:center;margin:.4rem 0"><input type="checkbox" id="dmSim" ${S.sim?'checked':''}><span>Andere Einsatzkräfte simulieren (Annahmen, Standorte, Nachrichten)</span></label>
       <label class="row" style="align-items:center;margin:.4rem 0"><input type="checkbox" id="dmLead" ${S.lead?'checked':''}><span>Nach dem Annehmen mit Rechten der Einsatzleitung (alle Funktionen). Ohne Häkchen wie eine gewöhnliche Einsatzkraft.</span></label>

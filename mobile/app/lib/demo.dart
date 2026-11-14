@@ -5,11 +5,13 @@
 // - Szenario, Routen und Texte wie web/demo.js (Reuss in Luzern, simulierte Einsatzkräfte 101–106, Rega-Helikopter);
 //   **Änderungen an einer der beiden Simulationen auch in der anderen nachführen.**
 // - Externe Dienste wie in der echten App direkt vom Gerät: Kartenkacheln und das Gewässernetz (overpass: 502 mit query/servers,
-//   area.dart fragt dann selbst, Ergebnis über overpass/put nur im Speicher).
+//   area.dart fragt dann selbst, Ergebnis über overpass/put nur im Speicher). Mit einem angemeldeten Konto holt das Demo das Gewässernetz
+//   über die Route overpass dieses Servers (_netAcc, nur lesend, nichts wird hochgeladen).
 import 'dart:math' as math;
 
 import 'accounts.dart';
 import 'api.dart';
+import 'monitor.dart' show prefs;
 
 typedef _J = Map<String, dynamic>;
 typedef _P = List<double>; // [lat, lon]
@@ -1159,11 +1161,38 @@ class Demo {
     return '[out:json][timeout:25];way($sel)["waterway"~"^(river|stream|canal)\$"];out geom;';
   }
 
+  /// Konto für das Gewässernetz: das der Vorgaben, sonst das erste angemeldete (zuletzt verwendetes zuerst); ohne Konto null
+  Account? _net;
+  bool _netDone = false;
+  Future<Account?> _netAcc() async {
+    if (_src != null) return _src;
+    if (_netDone) return _net;
+    _netDone = true;
+    try {
+      final l = (await Accounts.load()).where((a) => !a.loggedOut && a.token.isNotEmpty).toList();
+      final last = await prefs.getString('last_acc');
+      _net = l.where((a) => a.id == last).firstOrNull ?? l.firstOrNull;
+    } catch (_) {}
+    return _net;
+  }
+
   /// Aufruf wie Api.call: Antwort als Map (Listen als {'data': …}), Fehler als ApiError mit Status und Antwort
   Future<Map<String, dynamic>> call(String route, {Map<String, dynamic>? body, Map<String, String>? query}) async {
     await _ready;
     // öffentlich und nur lesend (Issue #175): mit Vorgaben vom Server des Kontos
     if ((route == 'version' || route == 'changes') && _src != null) return _src!.api.call(route, body: body, query: query);
+    // Gewässernetz: angemeldet über den Server der Organisation (Cache, PostGIS, Overpass in deren Reihenfolge), nur lesend; overpass/put bleibt im Demo.
+    // 502 (Gerät soll selbst fragen, mit den Servern der Organisation) und 503 (Overpass dort aus) gelten wie in der echten App; sonst wie bisher vom Gerät (realOverpass in web/demo.js)
+    if (route == 'overpass' && !_opc.containsKey(_opKey(body ?? const {}))) {
+      final a = await _netAcc();
+      if (a != null) {
+        try {
+          return await a.api.call('overpass', body: {'around': body?['around'], 'bbox': body?['bbox']});
+        } on ApiError catch (e) {
+          if (e.status == 502 || e.status == 503) rethrow;
+        } catch (_) {}
+      }
+    }
     await Future<void>.delayed(Duration(milliseconds: 40 + math.Random().nextInt(80))); // etwas Verzögerung wie übers Netz
     final o = _handle(route, body ?? const {}, query ?? const {});
     return o is Map<String, dynamic> ? o : {'data': o};
