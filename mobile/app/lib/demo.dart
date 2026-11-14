@@ -43,7 +43,21 @@ _P _off(_P p, num e, num n) => [p[0] + n / 111320, p[1] + e / (111320 * math.cos
 Never _fail(String m, [int st = 400]) => throw ApiError(m, st, {'error': m});
 
 // ---------- feste Daten (wie web/demo.js) ----------
-const _feat = {'area': 1, 'res': 1, 'msg': 1, 'poi': 1, 'ext': 1, 'rd': 1, 'pub': 0, 'rec': 1, 'nav': 1, 'place': 1, 'hydro': 1, 'pinfo': 1};
+const _feat = {
+  'area': 1,
+  'res': 1,
+  'msg': 1,
+  'poi': 1,
+  'ext': 1,
+  'rd': 1,
+  'pub': 0,
+  'rec': 1,
+  'nav': 1,
+  'place': 1,
+  'hydro': 1,
+  'pinfo': 1,
+  'geo': 0,
+}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server
 _J _kind(int id, String name, String color, String alarm, String an, int modeUp, int rec) => {
   'id': id,
   'name': name,
@@ -279,7 +293,8 @@ class _Inc {
   int? endedAt;
   double? flow;
   final int createdBy, kindId;
-  int record, air, openJoin = 0;
+  int record, air, openJoin = 0, stopOn = 1;
+  final stopOff = <int>[];
   late int recorded = record;
   final String script; // bsp | gen
   int t0;
@@ -361,7 +376,7 @@ class Demo {
             'grp_def': <int>[],
             'can': 1,
             'no_grp': 0,
-            'features': {..._feat, if (k['features'] is Map) ...Map<String, dynamic>.from(k['features'] as Map), 'pub': 0},
+            'features': {..._feat, if (k['features'] is Map) ...Map<String, dynamic>.from(k['features'] as Map), 'pub': 0, 'geo': 0},
           },
         )
         .toList();
@@ -373,6 +388,8 @@ class Demo {
     if (ms.any((x) => x['active'] == 1)) _ms = ms;
     _ps = l(st['places']) ?? _ps;
     _pc = l(st['place_cats']) ?? _pc;
+    _props = l(st['place_props']) ?? _props;
+    if (st['place_near_km'] is num) _nearKm = (st['place_near_km'] as num).toDouble();
     _hy = l(hy['stations'])?.where((h) => h['lat'] is num && h['lon'] is num).toList() ?? _hy;
     if (l(me['symbols']) case final sy?) _sy = sy;
     if (res.length > 4 && l(res[4]) != null) _ext = l(res[4])!.where((x) => x['active'] == 1).map((x) => x..remove('active')).toList();
@@ -392,8 +409,25 @@ class Demo {
     };
   }
 
-  _J _featOf(_J? k) => {..._feat, if (k?['features'] is Map) ...Map<String, dynamic>.from(k!['features'] as Map), 'pub': 0};
+  _J _featOf(_J? k) => {..._feat, if (k?['features'] is Map) ...Map<String, dynamic>.from(k!['features'] as Map), 'pub': 0, 'geo': 0};
   _J get _featAll => {for (final k in _ks) '${k['id']}': _featOf(k)};
+  // Flusssperren (Issue #182, wie incStops): feste Standorte mit einer Eigenschaft der Wirkung stop, solange berücksichtigt und nicht ausgenommen
+  List<_J> _props = [];
+  double _nearKm = 10;
+  _J get _placeOut => {'place_props': _props, 'place_near_km': _nearKm, 'geo_kinds': []};
+  List<_J> _stops(_Inc i) {
+    final f = _featOf(_kindOf(i)), eff = _props.where((p) => p['effect'] == 'stop').toList();
+    if (f['area'] != 1 || f['place'] != 1 || i.stopOn != 1 || eff.isEmpty) return [];
+    final o = <_J>[];
+    for (final pl in _ps) {
+      if (pl['active'] == 0 || i.stopOff.contains(pl['id'])) continue;
+      final pr = pl['props'] is List ? pl['props'] as List : const [];
+      final p = eff.where((e) => pr.contains(e['id'])).firstOrNull;
+      if (p != null) o.add({'id': pl['id'], 'name': pl['name'], 'why': p['name'], 'lat': pl['lat'], 'lon': pl['lon'], 'pts': pl['pts'], 'line': pl['line']});
+    }
+    return o;
+  }
+
   _J get _mapsOut => org == null ? {} : Map<String, dynamic>.from(org!['maps'] as Map);
 
   /// Mit Vorgaben die Spezialrollen und Einrückoptionen der Organisation: 1 = Einsatzleitung, 4 = Posten, 2/3 = übrige
@@ -946,6 +980,7 @@ class Demo {
         'features': _featAll,
         'ex_plans': [],
         ..._mapsOut,
+        ..._placeOut,
         'now': t,
       };
     }
@@ -998,6 +1033,8 @@ class Demo {
         'part_anon': 0,
         'kind_id': k['id'],
         'open_join': i.openJoin,
+        'stop_on': i.stopOn,
+        'stop_off': i.stopOff,
         'kind_name': k['name'],
         'kind_color': k['color'],
         'kind': k,
@@ -1032,6 +1069,8 @@ class Demo {
           .toList(),
       'places': _ps,
       'place_cats': _pc,
+      ..._placeOut,
+      'stops': _stops(i),
       'ext_templates': mgr ? _ext : [],
       'ext_inc_templates': mgr ? itpl.values.toList() : [],
       'sources': _sources(i, res),
@@ -1425,6 +1464,24 @@ class Demo {
         return {'ok': true, 'record': i.record};
       case 'incident/public':
         _fail('Die öffentliche Ansicht gibt es im Demo-Modus nicht.');
+      case 'incident/stops':
+        final i = _needLead('Nur die Einsatzleitung kann Flusssperren ein- und ausschalten');
+        if (b.containsKey('on')) {
+          final on = b['on'] == true || b['on'] == 1 ? 1 : 0;
+          if (on != i.stopOn) {
+            i.stopOn = on;
+            _logev(_meId, 'stop', on == 1 ? 'berücksichtigt die Flusssperren fester Standorte wieder im Suchgebiet' : 'berücksichtigt die Flusssperren fester Standorte im Suchgebiet nicht mehr');
+          }
+        }
+        if (b['id'] != null) {
+          final f = _ps.where((x) => '${x['id']}' == '${b['id']}').firstOrNull ?? _fail('Standort nicht gefunden', 404);
+          final id = f['id'] as int, x = b['off'] == true || b['off'] == 1;
+          if (x != i.stopOff.contains(id)) {
+            x ? i.stopOff.add(id) : i.stopOff.remove(id);
+            _logev(_meId, 'stop', 'berücksichtigt die Flusssperre «${f['name']}»${x ? ' im Suchgebiet nicht mehr' : ' wieder im Suchgebiet'}');
+          }
+        }
+        return {'ok': true};
       case 'incident/open':
         _needLead().openJoin = b['on'] == true || b['on'] == 1 ? 1 : 0;
         return {'ok': true};

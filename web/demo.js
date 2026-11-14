@@ -22,7 +22,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   try{Object.defineProperty(window,'localStorage',{configurable:true,get:()=>store})}catch(e){console.warn('Demo: localStorage nicht umgeleitet',e)}
   const now=()=>Math.floor(Date.now()/1000);
   // ---------- feste Daten ----------
-  let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1}; // öffentliche Ansicht braucht den Server
+  let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1,geo:0}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server
   let KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'high',alarm_name:'Hoch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT},
                {id:2,name:'Übung',color:'#1d7fd1',alarm:'normal',alarm_name:'Normal',mode_up:1,msg_lvl:'normal',end_lvl:'normal',rec:1,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT}];
   let ROLES=[{id:1,name:'Einsatzleitung',color:'#d62828',is_lead:1,is_post:0,can_message:1},{id:2,name:'Rettungsboot',color:'#1d7fd1',is_lead:0,is_post:0,can_message:1},
@@ -72,15 +72,20 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   async function loadOrg(){if(!REAL_TOK||REAL_TOK==='demo')return null;const m=await realGet('me'),me=m&&m.me;if(!me||me.must_change)return null;
     const pm=me.perms||[],[ro,mo,st,hy,ex]=await Promise.all([realGet('roles'),realGet('modes'),realGet('incident/state'),realGet('hydro'),pm.includes('cfg_inc')||pm.includes('ex_plan')?realGet('ext_templates'):null]);
     const A=x=>Array.isArray(x)?x:null,ks=(A(me.kinds)||[]).map(k=>({...k,alarm:k.alarm==='crit'?'high':k.alarm,alarm_name:k.alarm==='crit'?'Hoch':k.alarm_name,plans:0,persons:0,open_all:0,
-      grp_off:[],grp_def:[],can:1,no_grp:0,features:{...FEAT,...(k.features||{}),pub:0}})),md=(A(mo)||[]).filter(x=>x.active);
+      grp_off:[],grp_def:[],can:1,no_grp:0,features:{...FEAT,...(k.features||{}),pub:0,geo:0}})),md=(A(mo)||[]).filter(x=>x.active);
     const pick=(o,ks)=>Object.fromEntries(ks.filter(k=>o[k]!==undefined).map(k=>[k,o[k]]));
     return{name:me.org||'',at:now(),me:pick(me,['name','photo','coord_sys','nav_app','place_view','hydro','exercise_mode']),
       cfg:pick(me,['coord_default','rd_speeds','nav_apps','nav_default','symbols','sym_free','sym_sets']),maps:me.maps||null,map_def:me.map_def||null,version:me.version||null,
-      kinds:ks.length?ks:null,roles:A(ro),modes:md.length?(A(mo)):null,places:st&&A(st.places),place_cats:st&&A(st.place_cats),
+      kinds:ks.length?ks:null,roles:A(ro),modes:md.length?(A(mo)):null,places:st&&A(st.places),place_cats:st&&A(st.place_cats),place_props:st&&A(st.place_props),place_near_km:st&&typeof st.place_near_km==='number'?st.place_near_km:null,
       hydro:hy&&A(hy.stations),ext:A(ex)?ex.filter(x=>x.active).map(({active,...x})=>x):null}}
   function applyOrg(){const o=S&&S.mode==='leer'&&S.org;if(!o)return;if(o.kinds)KINDS=o.kinds;if(o.roles)ROLES=o.roles;if(o.modes)MODES=o.modes;if(o.places)PLACES=o.places;
     if(o.place_cats)PLACE_CATS=o.place_cats;if(o.hydro)HYDRO=o.hydro;if(o.ext)EXT_T=o.ext;if(Array.isArray(o.cfg.symbols))SYMS=o.cfg.symbols;if(o.version)VER=o.version}
   const orgStart=()=>loadOrg().then(o=>{if(o&&S.mode==='leer'&&!S.inc){S.org=o;Object.assign(S.me,o.me);applyOrg();save()}});
+  // Flusssperren (Issue #182, wie incStops): feste Standorte mit einer Eigenschaft der Wirkung stop, solange berücksichtigt und nicht ausgenommen
+  const props=()=>S.org&&S.org.place_props||[];
+  const stops=i=>{const K=kindOf(i),eff=props().filter(p=>p.effect==='stop');if(!featOf(K).area||!featOf(K).place||!(i.stop_on??1)||!eff.length)return[];
+    return PLACES.filter(f=>f.active!==0&&!(i.stop_off||[]).includes(f.id)).map(f=>[f,eff.find(p=>(f.props||[]).includes(p.id))]).filter(x=>x[1]).map(([f,p])=>({id:f.id,name:f.name,why:p.name,lat:f.lat,lon:f.lon,pts:f.pts,line:f.line}))};
+  const placeOut=()=>({place_props:props(),place_near_km:S.org&&S.org.place_near_km!=null?S.org.place_near_km:10,geo_kinds:[]});
   const mapsOut=()=>S.org&&S.org.maps?{maps:S.org.maps,map_def:S.org.map_def}:{};
 
   // ---------- Hilfen ----------
@@ -101,7 +106,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const needLead=m=>{needInc();if(!canManage())fail(m||'Nur die Einsatzleitung kann das',403)};
   const needPart=m=>{needInc();if(!active()&&!canManage())fail(m||'Nur Personen, die den Einsatz angenommen haben, können das',403)};
   const ptsIn=v=>(Array.isArray(v)?v:[]).map(q=>{if(!Array.isArray(q)||q.length!==2||!isFinite(q[0])||!isFinite(q[1]))fail('Ungültige Koordinaten');return[+(+q[0]).toFixed(7),+(+q[1]).toFixed(7)]});
-  const featOf=k=>({...FEAT,...(k&&k.features||{}),pub:0}),featAll=()=>Object.fromEntries(KINDS.map(k=>[k.id,featOf(k)]));
+  const featOf=k=>({...FEAT,...(k&&k.features||{}),pub:0,geo:0}),featAll=()=>Object.fromEntries(KINDS.map(k=>[k.id,featOf(k)]));
   const kindOf=i=>KINDS.find(k=>k.id===i.kind_id)||KINDS[0];
   const unknownName=()=>{const n=I().res.filter(r=>r.name.startsWith('Unbekannter Rettling')).length;return n?'Unbekannter Rettling '+(n+1):'Unbekannter Rettling'};
   function newInc(o){const t=o.alarm_at||now();return{id:++S.seq.inc,message:o.message,lat:o.lat??null,lon:o.lon??null,pls_at:null,alarm_at:t,ended_at:null,flow_ms:null,created_by:o.by,kind_id:o.kind_id||1,
@@ -204,14 +209,14 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     return hs.map(h=>{const d=Math.round(hav(a[0],a[1],h.lat,h.lon));return{phase:'start',ts:t,station:h.id,name:h.name,water:h.water,lat:h.lat,lon:h.lon,dist:i.script==='bsp'||S.org?d:null,at:t-300,danger:h.danger,
       v:{flow:h.flow,height:h.height,level:h.level,temp:h.temp,danger:h.danger}}})}
   function state(qs){const t=now();simRun(t);const i=I(),me=S.me;
-    if(!i)return{incident:null,air_home:0,my_abs:absNow(),blocked:0,last_ended:S.last,places:PLACES,place_cats:PLACE_CATS,kinds:KINDS,features:featAll(),ex_plans:[],...mapsOut()};
+    if(!i)return{incident:null,air_home:0,my_abs:absNow(),blocked:0,last_ended:S.last,places:PLACES,place_cats:PLACE_CATS,kinds:KINDS,features:featAll(),ex_plans:[],...mapsOut(),...placeOut()};
     const K=kindOf(i),since=+qs.get('since')||0,mgr=canManage(),act=active(),res=i.res.filter(r=>!r.removed).map(r=>({...r,loc_name:r.loc_by?uname(r.loc_by):null,rescued_name:r.rescued_by?uname(r.rescued_by):null}));
     res.forEach(r=>delete r.removed);
     const inc={id:i.id,message:i.message,lat:i.lat,lon:i.lon,alarm_at:i.alarm_at,ended_at:null,flow_ms:i.flow_ms,created_by:i.created_by,is_exercise:K.plans?1:0,record:i.record,recorded:i.recorded,public_anon:1,
-      pls_at:i.pls_at||i.alarm_at,plan_id:null,public_log:1,rp_anon:null,log_anon:0,air:i.air,view_anon:0,txt_anon:0,part_anon:0,kind_id:K.id,open_join:i.open_join,kind_name:K.name,kind_color:K.color,kind:kindPub(K),public:0,aufgebot:null};
+      pls_at:i.pls_at||i.alarm_at,plan_id:null,public_log:1,rp_anon:null,log_anon:0,air:i.air,view_anon:0,txt_anon:0,part_anon:0,kind_id:K.id,open_join:i.open_join,stop_on:i.stop_on??1,stop_off:i.stop_off||[],kind_name:K.name,kind_color:K.color,kind:kindPub(K),public:0,aufgebot:null};
     const lvl=K.mode_up&&me.exercise_mode?'crit':K.alarm,canRead=act||mgr;
     return{incident:inc,pois:i.pois.filter(p=>!p.removed).map(p=>sym({id:p.id,kind:p.kind,name:p.name,color:p.color,pts:p.pts,sym:p.sym,created_by:p.created_by,created:p.created,by_name:uname(p.created_by)})),
-      rescuees:res,externals:i.ext.filter(e=>!e.removed).map(({removed,manual,...e})=>({...e,by_name:uname(e.created_by)})),places:PLACES,place_cats:PLACE_CATS,
+      rescuees:res,externals:i.ext.filter(e=>!e.removed).map(({removed,manual,...e})=>({...e,by_name:uname(e.created_by)})),places:PLACES,place_cats:PLACE_CATS,...placeOut(),stops:stops(i),
       ext_templates:mgr?EXT_T:[],
       ext_inc_templates:mgr?[...new Map(i.ext.filter(e=>e.manual).reverse().map(e=>[e.name.toLowerCase(),{name:e.name,descr:e.descr,role_id:e.role_id,abbr:e.abbr,color:e.color}])).values()]:[],
       sources:sources(i,res),participants:i.parts.map(p=>({user_id:p.user_id,mode:p.mode,role_id:p.role_id,lat:p.lat,lon:p.lon,loc_at:p.loc_at,left_at:p.left_at,name:uname(p.user_id),photo:p.user_id===ME_ID?me.photo:null,groups:p.user_id===ME_ID?[1]:(SIM[p.user_id]||{}).g||[]})),
@@ -285,6 +290,10 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     'incident/record':b=>{needLead('Nur die Einsatzleitung kann die Aufzeichnung steuern');const i=I(),T={start:[[0],1,i.recorded?'nimmt die Aufzeichnung wieder auf':'startet die Aufzeichnung'],pause:[[1],2,'pausiert die Aufzeichnung'],resume:[[2],1,'setzt die Aufzeichnung fort'],stop:[[1,2],0,'beendet die Aufzeichnung']}[b.action];
       if(!T)fail('Unbekannte Aktion');if(!T[0].includes(i.record))return{ok:true,record:i.record};i.record=T[1];if(T[1])i.recorded=1;logev(ME_ID,'rec',T[2]);return{ok:true,record:i.record}},
     'incident/public':()=>fail('Die öffentliche Ansicht gibt es im Demo-Modus nicht.'),
+    'incident/stops':b=>{needLead('Nur die Einsatzleitung kann Flusssperren ein- und ausschalten');const i=I();
+      if('on' in b){const on=b.on?1:0;if(on!==(i.stop_on??1)){i.stop_on=on;logev(ME_ID,'stop',on?'berücksichtigt die Flusssperren fester Standorte wieder im Suchgebiet':'berücksichtigt die Flusssperren fester Standorte im Suchgebiet nicht mehr')}}
+      if(b.id){const f=PLACES.find(x=>x.id===+b.id)||fail('Standort nicht gefunden',404),off=i.stop_off||[],x=!!b.off;if(x!==off.includes(f.id)){i.stop_off=x?[...off,f.id]:off.filter(v=>v!==f.id);
+        logev(ME_ID,'stop','berücksichtigt die Flusssperre «'+f.name+(x?'» im Suchgebiet nicht mehr':'» wieder im Suchgebiet'))}}return{ok:true}},
     'incident/open':b=>{needLead();I().open_join=b.on?1:0;return{ok:true}},
     'incident/invite/add':()=>fail('Im Demo-Modus sind bereits alle Personen aufgeboten.'),
     'incident/air/set':b=>{needLead();const on=b.on?1:0;if(on!==I().air){I().air=on;logev(ME_ID,'air',on?'schaltet die Helikopter ein':'schaltet die Helikopter aus')}return{ok:true}},

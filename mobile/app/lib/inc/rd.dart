@@ -135,7 +135,7 @@ class RdState extends ChangeNotifier {
       err = e.m;
     } catch (e) {
       if (run != _run) return;
-      err = 'Gewässerdaten nicht verfügbar: $e';
+      err = 'Gewässernetz nicht verfügbar: $e';
     }
     _set(() => (step = 'done', busy = false));
   }
@@ -370,7 +370,7 @@ class _RdPanelState extends State<RdPanel> {
         } else if (rd.step == 'b') {
           body = const Text('Zielpunkt B auf der Karte antippen');
         } else if (rd.step == 'load') {
-          body = const Row(children: [SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 10), Text('Gewässerdaten werden geladen …')]);
+          body = const Row(children: [SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 10), Text('Gewässernetz wird geladen …')]);
         } else if (rd.err != null) {
           body = Text(rd.err!);
         } else {

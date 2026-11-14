@@ -49,6 +49,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **BE-08** – Die Verwaltung zeigt jeder Person nur die Bereiche, für die sie ein Recht hat (#63).
 - **BE-09** – Die Benutzerkarten in der Verwaltung zeigen Status, letzte Anmeldung und Passwort (gesetzt bzw. Wechsel ausstehend), nicht den Übungsmodus, immer in denselben Spalten, egal wie viele Rollen und Gruppen jemand hat; die Benutzerrollen stehen je als Chip auf einer Zeile, die Einsatzgruppen darunter; links vom Namen das Profilbild bzw. ein Platzhalter (#112, #127).
 - **BE-10** – Die Benutzerliste ist nach aktiven und deaktivierten Personen getrennt (deaktivierte eingeklappt) und ab sechs Personen durchsuchbar (Name, Benutzername, Rolle, Gruppe) (#127).
+- **BE-11** – Eigenes Recht «Geodaten übernehmen und abgleichen»: Objekte aus OpenStreetMap als feste Standorte übernehmen (auch in vorbereitete Übungen) und Abweichungen zur Quelle bearbeiten; bei der Einführung keiner Rolle zugeteilt (#182).
 
 ## 4. Alarmierung und Einsatz (EI)
 
@@ -96,6 +97,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KA-13** – Kartenanbieter (#106): Katalog freier Anbieter ohne Schlüssel mit Angabe von Abdeckung, Lizenz, Nutzungsbedingungen und Einschränkungen: swisstopo Luftbild, Landeskarte farbig und grau; weltweites Luftbild (Sentinel-2 von EOX, 10 m); OpenStreetMap, OSM Humanitarian; eigene OSM-Karte (KA-14). Entfallen auf Wunsch des Auftraggebers: «Luftbild (automatisch)», Luftbilder Österreich (basemap.at) und Frankreich (IGN), OpenTopoMap, basemap.de, CARTO. Das Fenster «Ansicht» gruppiert nach Luftbildern und Karten.
 - **KA-14** – Eigene OSM-Karte (#106): Vektorkarte aus OpenStreetMap als PMTiles-Datei auf dem eigenen Webserver, ohne Dienste Dritter, Gewässer hervorgehoben; wählbar, sobald die Datei vorliegt; erzeugen und hochladen mit Skripten. In der nativen App noch nicht (**offen**).
 - **KA-15** – Kartenanbieter in der Verwaltung einstellbar: ein/aus, Reihenfolge, Standard, Test einer Beispielkachel im Browser (bzw. der PMTiles-Datei); je Einsatztyp einzelne Anbieter ausschalten und eine eigene Standardkarte wählen, gilt sofort, auch im laufenden Einsatz. Beim Öffnen eines Einsatzes zeigt die Karte die Standardkarte des Typs; öffentliche Ansicht und Replay folgen dem Typ ihres Einsatzes (#106).
+- **KA-16** – Geodaten-Ebene: Objekte am Gewässer aus OpenStreetMap (Wehre, Staumauern, Kraftwerke, Schleusen, Brücken über Gewässer, Slipanlagen, Ausstiege, Stromschnellen, Rechen, Rettungspunkte, Rettungsringe, Stege) lassen sich im Fenster «Ansicht» zuschalten, auch ohne Einsatz; auf jedem Gerät zuerst ausgeblendet, je Objektart ein-/ausblendbar, sichtbar ab näherem Zoom, nur zur Orientierung (wirken auf nichts). Popup mit Angaben, Quelle und 🧭; die Einsatzleitung übernimmt ein Objekt als Markierung, Berechtigte als festen Standort. Welche Arten angeboten werden, stellt die Verwaltung ein; je Einsatztyp ausschaltbar (Funktion «Geodaten-Ebene»). Nicht in der öffentlichen Ansicht (#182).
 
 ## 6. Einsatzkräfte und Standort (EK)
 
@@ -124,16 +126,18 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **SG-04** – Fliessgeschwindigkeit: von allen Teilnehmenden manuell setzbar (AG; BAFU-Vorschlag auf Wunsch entfernt).
 - **SG-05** – Das Suchgebiet folgt dem Flusslauf (OSM-Gewässernetz), Ufergebiet 30 m je Seite, Länge aus Fliessgeschwindigkeit × Zeit seit PLS (Spec, AG).
 - **SG-06** – An Gabelungen folgt das Suchgebiet allen Armen (#40).
-- **SG-07** – Das Suchgebiet endet am ersten Sicherungs- bzw. Beobachtungsposten auf dem jeweiligen Arm (Spec).
+- **SG-07** – Das Suchgebiet endet am ersten Sicherungs- bzw. Beobachtungsposten auf dem jeweiligen Arm, auch wenn er zwischen zwei Punkten des Gewässerverlaufs liegt (Spec, #182).
 - **SG-08** – Mehrere PLS ergeben die Vereinigung ihrer Gebiete; es zählen nur vermisste Rettlinge; Hinweis mit Kurzfassung, aufklappbar je PLS (#24).
-- **SG-09** – Rückfall ohne Gewässerdaten: Kreis um den PLS (AG).
-- **SG-10** – Gewässerdaten über den Server mit Cache, Sperre gegen doppelte Abfragen, abgelaufene Daten als Rückfall, konfigurierbare Overpass-Server mit Reihenfolge, Abfrage notfalls direkt vom Gerät (#28).
+- **SG-09** – Rückfall ohne Gewässernetz: Kreis um den PLS (AG).
+- **SG-10** – Gewässernetz über den Server mit Cache, Sperre gegen doppelte Abfragen, abgelaufene Daten als Rückfall, konfigurierbare Overpass-Server mit Reihenfolge, Abfrage notfalls direkt vom Gerät (#28).
 - **SG-11** – Statistik der Overpass-Abfragen je Server und Quelle, zurücksetzbar (#45).
 - **SG-12** – Zugriff auf Overpass gesamt und je Server abschaltbar (#75).
 - **SG-13** – Hauptquelle für das Gewässernetz ist eine eigene PostGIS-Datenbank mit dem OSM-Auszug der Schweiz (Geofabrik), regelmässig aktualisiert; Overpass bleibt Rückfall, wenn sie nicht antwortet (#131).
 - **SG-14** – PostGIS in der Verwaltung einstellbar (Verbindung, Tabelle, Verschlüsselung, Passwort nie sichtbar), mit Verbindungstest und eigener Zeile in der Statistik; Skripte für Einrichtung und Aktualisierung liegen bei (#131).
 - **SG-15** – Weitere Quelle für das Gewässernetz: die PostGIS-API ([ELSSwift/PostGISApi](https://github.com/ELSSwift/PostGISApi), REST/GeoJSON vor der PostGIS-Datenbank) für Hostings ohne PostgreSQL-Treiber; in der Verwaltung einstellbar (Adresse, Layer, API-Key nie sichtbar), mit Verbindungstest und eigener Zeile in der Statistik.
 - **SG-16** – Die Reihenfolge der Quellen (PostGIS direkt, PostGIS-API, Overpass-Server) ist in der Verwaltung einstellbar; der Server nimmt die erste eingerichtete Quelle, die antwortet. Ändert SG-13: PostGIS ist nicht mehr fest die Hauptquelle.
+- **SG-17** – Flusssperren: Feste Standorte mit einer Eigenschaft der Wirkung «begrenzt Suchgebiet» (z. B. «Flusssperrung», «Treibgutfang») beenden das Suchgebiet wie ein Posten; Punkte (wie Posten) nur auf dem nächsten Wasserlauf im Umkreis von 120 m, an Verzweigungen also nur auf ihrem Arm, Linien und Ränder von Bereichen dort, wo der Fluss sie schneidet. Der Hinweis zum Suchgebiet nennt die Sperre; die öffentliche Ansicht rechnet gleich, ohne Namen (#182).
+- **SG-18** – Die Einsatzleitung schaltet die Flusssperren im laufenden Einsatz für alle oder für einzelne Standorte aus und wieder ein («Leitung» → «Flusssperren», Popup, Fenster «Markierungen»), mit Eintrag im Einsatzlog. Standorte mit Wirkung «Warnung» (und ausgenommene Sperren) im Suchgebiet werden auf der Karte hervorgehoben und im Hinweis genannt (#182).
 - Gewässerwahl am PLS korrigierbar (Auswahlschritt) (**offen**).
 
 ## 9. Rettlinge (RE)
@@ -155,6 +159,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **MB-01** – Die Einsatzleitung setzt Markierungen (Punkt) und Bereiche (Polygon, 3–200 Eckpunkte) mit Bezeichnung und Farbe; für alle sichtbar (AG).
 - **MB-02** – Fenster «Markierungen» in drei Gruppen: PLS, «Lage» (Markierungen, Bereiche und Linien der Einsatzleitung als Untergruppen), «Feste Standorte» (Kategorien als Untergruppen); alle Gruppen und Untergruppen zusammenklappbar (pro Gerät gemerkt), je Eintrag und Gruppe ein-/ausblendbar, «Zeigen» (AG, #96, #150).
+- **MB-18** – Im Fenster «Markierungen» stehen die festen Standorte während eines Einsatzes mit Suchgebiet getrennt «Im Einsatzgebiet» und «Ausserhalb des Einsatzgebiets» (zweites zuerst zugeklappt), je nach Kategorie. Als im Einsatzgebiet gilt ein Standort bis zu einer in der Verwaltung einstellbaren Distanz vom Suchgebiet (Standard 10 km, 0 = nur im Suchgebiet). Kategorien lassen sich in der Verwaltung als «priorisiert» markieren: ihre Standorte stehen immer zuoberst, unabhängig vom Einsatzgebiet, die im Einsatzgebiet zuerst. Beide Abschnitte und ihre Kategorien lassen sich mit einem Häkchen ein- und ausblenden; das wirkt nur auf die Standorte dieses Abschnitts (#182).
 - **MB-03** – Feste Standorte: in der Verwaltung gepflegte Orte (Name, Beschreibung, Kürzel, Farbe, Standort, aktiv/deaktiviert), z. B. Bootseinwasserungen, Magazine oder Treffpunkte; erscheinen in jedem Einsatz und jeder Übung (und ohne Einsatz) auf der Karte und im Fenster «Markierungen», mit Navigation (#96).
 - **MB-04** – Vorbereitete Übungen wählen, welche festen Standorte gelten (alle aktiven oder eine Auswahl), und können bis zum Start eigene Standorte ergänzen; sichtbar in der Vorschau auf der Karte (#96).
 - **MB-05** – Feste Standorte stehen auch ohne laufenden Einsatz auf der Karte der Einsatz-App (alle aktiven permanenten, ausblendbar im Fenster «Ansicht»). Ohne Einsatz öffnet der Kartenknopf «Feste Standorte» eine Übersichtsliste wie im Fenster «Markierungen» (nach Kategorie, je Standort ein-/ausblendbar, «Zeigen», Navigation) (#96).
@@ -166,6 +171,10 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **MB-11** – Feste Linien, z. B. Fahrrinnen: Ein fester Standort kann statt eines Punkts oder einer Fläche eine Linie sein (2–200 Punkte, in der Verwaltung der Reihe nach auf der Karte eingezeichnet, mit Länge). In der Einsatz-App als breiter gestrichelter Strich in seiner Farbe mit Beschriftung, Navigation zur Mitte der Linie (halbe Länge), «Zeigen» zeigt die ganze Linie; gilt auch für Kategorien, vorbereitete Übungen, die Startansicht und die native App. Linien haben kein Kürzel (#134).
 - **MB-12** – Linien im Einsatz: Die Einsatzleitung zeichnet neben Markierungen und Bereichen auch Linien (2–200 Punkte der Reihe nach, mit Bezeichnung und Farbe), z. B. Absperrungen oder Fahrwege. Für alle sichtbar als durchgezogener Strich mit Beschriftung, Länge in der Liste, Navigation zur Mitte der Linie (halbe Länge), «Zeigen» zeigt die ganze Linie; eigene Gruppe «Linien» im Fenster «Markierungen» und eigene Kategorie im Fenster «Ansicht»; mit Log-Eintrag, im Replay, in der öffentlichen Ansicht und in der nativen App (#150).
 - **MB-13** – Einsatzsymbole: Beim Setzen einer Markierung wählt die Einsatzleitung ein Symbol (Suche, «Zuletzt verwendet», gruppiert nach Set und Kategorie) oder, falls erlaubt, «Ohne Symbol» (Fahne in einer Farbe); ohne eigene Bezeichnung gilt der Name des Symbols. Die Karte zeigt das Symbol mit Bezeichnung, die Liste das Symbol und seinen Namen; ebenso Replay und öffentliche Ansicht. Zwei Sets: «Taktische Symbole» nach dem Behelf Einsatzführung Feuerwehr, Sanität und Polizei des Kantons Schwyz (Pat Sst, San Hist, Ei Ltg, Sst Unv, Warterm, Helipl, Medien Tpt, Betreu Stel, Streugut Sst, TSst) und «Swiftwater» (eigene Symbole für die Wasserrettung). In der Verwaltung (Einsatz → «Einsatzsymbole») je Set und je Symbol ein-/ausschaltbar, dazu ob Markierungen ohne Symbol erlaubt sind; bestehende Markierungen behalten ihr Symbol. Web-App und native App (#146).
+- **MB-14** – Eigenschaften fester Standorte: in der Verwaltung gepflegt (Name, Symbol, Farbe, Wirkung «nur Anzeige», «Warnung» oder «begrenzt Suchgebiet», aktiv, Reihenfolge; Vorgaben z. B. Flusssperrung, Lebensgefahr, Umtragestelle, Einwasserung/Ausstieg möglich, Zufahrt); je Standort mehrere; in der Einsatz-App im Popup und in den Listen, Sperren und Warnungen mit Zeichen am Marker (#182).
+- **MB-15** – Navigationspunkte: Ein fester Standort kann bis zu 10 Navigationspunkte mit Kommentar haben (z. B. Zufahrt, Parkplatz), in der Verwaltung auf der Karte gesetzt und sortiert. 🧭 führt bei einem direkt dorthin, bei mehreren zu einer Auswahl, sortiert nach Luftlinie vom eigenen Standort; ohne Navigationspunkt zum Standort selbst (#182).
+- **MB-16** – Vorbereitungsansicht «Geodaten übernehmen» (Verwaltung → Karte & Daten): Objekte am Gewässer aus OpenStreetMap im Kartenausschnitt suchen (Quellen wie das Gewässernetz: eigene PostGIS-Datenbank, PostGIS-API, Overpass; nach Objektart filterbar), einzeln mit vorausgefülltem Dialog oder mehrere mit den Vorgaben je Objektart (Kategorie, Eigenschaften, Kürzel, Farbe, Form: wie in OpenStreetMap oder als Punkt) als feste Standorte übernehmen, auch als eigene Standorte einer vorbereiteten Übung. Mehrere Objekte (2–20, z. B. Wehr, Kraftwerk und Rechen einer Anlage) lassen sich zu einem Standort zusammenfassen; der Abgleich prüft dann jedes Objekt. Schon übernommene sind gekennzeichnet (#182).
+- **MB-17** – Abgleich mit der Quelle: Übernommene Standorte bleiben mit dem OSM-Objekt verknüpft und werden täglich (und auf Knopfdruck) verglichen. Abweichungen (Name, Lage, Form, Merkmale, nicht mehr vorhanden) erscheinen unter «Feste Standorte»; je Standort «Lage (und Name) übernehmen», «Behalten» oder «Verknüpfung lösen». Automatisch geändert wird nie etwas; Eigenschaften, Kategorie, Beschreibung und Navigationspunkte bleiben (#182).
 - PLS auf eine Markierung verschieben (**offen**).
 
 ## 12. Werkzeuge (WZ)
@@ -173,6 +182,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **WZ-01** – Flussdistanz: zwei Punkte antippen, Distanz entlang Gewässer und Luftlinie, Richtung, Koordinaten, Treibzeit und Dauer für Vergleichsgeschwindigkeiten (in der Verwaltung einstellbar); auch ohne Einsatz; höchstens 50 km Luftlinie (AG).
 - **WZ-02** – Navigation: Knopf 🧭 bei allen Positionen öffnet die Navigations-App (Google Maps, Apple Karten, Waze, andere App); Apps in der Verwaltung ausschaltbar mit Standard, pro Person wählbar; versehentliches Antippen von Markern fragt nach (#79).
 - **WZ-03** – Koordinaten in allen Listen im gewählten System (LV95 Standard, LV03, WGS84 dezimal, WGS84 Grad/Min/Sek, ausblenden); Standard in der Verwaltung, pro Person übersteuerbar (AG).
+- **WZ-04** – Die Flussdistanz nennt feste Standorte mit Wirkung «Warnung» oder «begrenzt Suchgebiet», die der Weg passiert (#182).
 
 ## 13. Helikopter (HE)
 
@@ -185,7 +195,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo (#35, #79, #96, #125, #105).
+- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo, Geodaten-Ebene (#35, #79, #96, #125, #105, #182).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
 
