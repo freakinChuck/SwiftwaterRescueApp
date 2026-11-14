@@ -1861,8 +1861,8 @@ function featuresAll() { $r = []; foreach (kindsActive() as $id => $_) $r[$id] =
 // Rettlinge des Einsatzes, leer bei ausgeschalteter Funktion (dann zählt fürs Suchgebiet nur der PLS des Einsatzes)
 function incRes($inc) { return feature($inc, 'res') ? incRescuees((int)$inc['id']) : []; }
 // Werkzeug Flussdistanz: Vergleichsgeschwindigkeiten in km/h (Einstellung rd_speeds, kommagetrennt)
-// Fenster «Markierungen»: feste Standorte gelten als «im Einsatzgebiet» bis zu dieser Distanz vom Suchgebiet (km, 0–200, Standard 20; 0 = nur im Suchgebiet)
-function placeNearKm() { $v = setting('place_near_km', ''); return is_numeric($v) ? max(0.0, min(200.0, (float)$v)) : 20.0; }
+// Fenster «Markierungen»: feste Standorte gelten als «im Einsatzgebiet» bis zu dieser Distanz vom Suchgebiet (km, 0–200, Standard 10; 0 = nur im Suchgebiet)
+function placeNearKm() { $v = setting('place_near_km', ''); return is_numeric($v) ? max(0.0, min(200.0, (float)$v)) : 10.0; }
 function rdSpeeds() { return array_map('floatval', array_filter(explode(',', setting('rd_speeds', '10,20,30')), 'strlen')); }
 // Aufzeichnung umschalten: Zeitraum öffnen (an) bzw. schliessen (aus), record = neuer Zustand
 function setRec($incId, $state) { global $db, $now;
