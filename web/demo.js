@@ -13,21 +13,24 @@
 var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))return null;
   const want=q.get('demo')==='leer'?'leer':'bsp',SS=window.sessionStorage,PFX='swdemo:';
   // ---------- eigener Speicher statt localStorage ----------
+  // echte Anmeldung vor dem Umleiten merken: «Neu ohne Daten» übernimmt angemeldet die Vorgaben (nur lesend, loadOrg)
+  let REAL_TOK=null;try{REAL_TOK=window.localStorage.getItem('sw_token')}catch(e){}
+  const realFetch=window.fetch.bind(window),API_URL=location.pathname.replace(/[^/]*$/,'')+'api/index.php';
   const mem={},sg=k=>{try{return SS.getItem(k)}catch(e){return mem[k]??null}},ss=(k,v)=>{try{SS.setItem(k,v)}catch(e){mem[k]=v}},sr=k=>{try{SS.removeItem(k)}catch(e){}delete mem[k]};
   const keys=()=>{const o=[];try{for(let i=0;i<SS.length;i++){const k=SS.key(i);if(k.startsWith(PFX))o.push(k.slice(PFX.length))}}catch(e){Object.keys(mem).forEach(k=>{if(k.startsWith(PFX))o.push(k.slice(PFX.length))})}return o};
   const store={getItem:k=>sg(PFX+k),setItem:(k,v)=>ss(PFX+k,String(v)),removeItem:k=>sr(PFX+k),clear:()=>keys().forEach(k=>sr(PFX+k)),key:i=>keys()[i]??null,get length(){return keys().length}};
   try{Object.defineProperty(window,'localStorage',{configurable:true,get:()=>store})}catch(e){console.warn('Demo: localStorage nicht umgeleitet',e)}
   const now=()=>Math.floor(Date.now()/1000);
   // ---------- feste Daten ----------
-  const FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1}; // öffentliche Ansicht braucht den Server
-  const KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'high',alarm_name:'Hoch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT},
+  let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1}; // öffentliche Ansicht braucht den Server
+  let KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'high',alarm_name:'Hoch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT},
                {id:2,name:'Übung',color:'#1d7fd1',alarm:'normal',alarm_name:'Normal',mode_up:1,msg_lvl:'normal',end_lvl:'normal',rec:1,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT}];
-  const ROLES=[{id:1,name:'Einsatzleitung',color:'#d62828',is_lead:1,is_post:0,can_message:1},{id:2,name:'Rettungsboot',color:'#1d7fd1',is_lead:0,is_post:0,can_message:1},
+  let ROLES=[{id:1,name:'Einsatzleitung',color:'#d62828',is_lead:1,is_post:0,can_message:1},{id:2,name:'Rettungsboot',color:'#1d7fd1',is_lead:0,is_post:0,can_message:1},
                {id:3,name:'Rettungsschlitten',color:'#e6a100',is_lead:0,is_post:0,can_message:1},{id:4,name:'Sicherungs- und Beobachtungsposten',color:'#2a9d5c',is_lead:0,is_post:1,can_message:1}];
-  const MODES=[{id:1,code:'base',name:'Anfahrt via Stützpunkt',share_location:1,active:1,lead_rights:0,counts:1},{id:2,code:'direct',name:'Anfahrt direkt',share_location:1,active:1,lead_rights:0,counts:1},
+  let MODES=[{id:1,code:'base',name:'Anfahrt via Stützpunkt',share_location:1,active:1,lead_rights:0,counts:1},{id:2,code:'direct',name:'Anfahrt direkt',share_location:1,active:1,lead_rights:0,counts:1},
                {id:3,code:'logistics',name:'Logistik',share_location:1,active:1,lead_rights:0,counts:1},{id:4,code:'coordinator',name:'Koordinator KP Rück',share_location:0,active:1,lead_rights:1,counts:0}];
   const GROUPS=[{id:1,name:'Wasserrettung Stadt',color:'#1d7fd1'},{id:2,name:'Wasserrettung Land',color:'#2a9d5c'}];
-  const SYMS=[['sz-el','sz','Führung','Einsatzleitung (Ei Ltg)',1],['sz-warterm','sz','Führung','Warteraum Rettungsmittel (Warterm)',0],['sz-helipl','sz','Führung','Helikopterlandeplatz (Helipl)',0],
+  let SYMS=[['sz-el','sz','Führung','Einsatzleitung (Ei Ltg)',1],['sz-warterm','sz','Führung','Warteraum Rettungsmittel (Warterm)',0],['sz-helipl','sz','Führung','Helikopterlandeplatz (Helipl)',0],
     ['sz-patsst','sz','Sanität','Patientensammelstelle (Pat Sst)',0],['sz-sanhist','sz','Sanität','Sanitätshilfsstelle (San Hist)',0],['sz-tsst','sz','Sanität','Totensammelstelle (TSst)',0],
     ['sz-sstunv','sz','Betreuung','Sammelstelle Unverletzte (Sst Unv)',0],['sz-betreu','sz','Betreuung','Betreuungsstelle (Betreu Stel)',0],['sz-medien','sz','Betreuung','Medientreffpunkt (Medien Tpt)',0],
     ['sz-streugut','sz','Betreuung','Streugut-Sammelstelle (Streugut Sst)',0],['sw-ew','sw','Wasserrettung','Bootseinwasserung',0],['sw-bo','sw','Wasserrettung','Boot im Einsatz',0],
@@ -37,6 +40,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     ['sw-fw','sw','Partner','Feuerwehr',0],['sw-po','sw','Partner','Polizei',0],['sw-zs','sw','Partner','Zivilschutz',0],['sw-we','sw','Gefahren','Gefahrenstelle (Wehr, Schwelle)',0],
     ['sw-wa','sw','Gefahren','Walze / Rücklauf',0],['sw-ab','sw','Allgemein','Absperrung',0],['sw-md','sw','Allgemein','Materialdepot',0],['sw-pk','sw','Allgemein','Parkplatz Fahrzeuge',0],['sw-fo','sw','Allgemein','Fundort Gegenstand',0]]
     .map(([k,set,cat,name,foot])=>({k,set,cat,name,foot}));
+  let EXT_T=[{id:1,name:'Seepolizei Luzern',descr:'Polizeiboot',role_id:null,abbr:'POL',color:'#3949ab',lat:null,lon:null},{id:2,name:'Feuerwehr – Beobachtungsposten',descr:'',role_id:4,abbr:'FW',color:'#e53935',lat:null,lon:null}];
   const SYM=k=>SYMS.find(s=>s.k===k);
   const ME_ID=1;
   // simulierte Einsatzkräfte (fiktive Namen)
@@ -46,10 +50,10 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const P={pls:[47.0534,8.3033],kp:[47.05295,8.30415],sp:[47.0487,8.3097],ew:[47.0612,8.2862],fw:[47.0645,8.2820],post:[47.0688,8.2760],find:[47.0595,8.2902],jacke:[47.0580,8.2927],
     r2:[47.0556,8.2970],r3:[47.0570,8.2940],r4:[47.0588,8.2915],r5:[47.0603,8.2890],r6:[47.0615,8.2865],
     home:{101:[47.0440,8.3220],102:[47.0700,8.3150],103:[47.0390,8.2850],104:[47.0800,8.2900],105:[47.0300,8.3000],106:[47.0500,8.3300]}};
-  const PLACES=[{id:1,plan_id:null,cat_id:1,name:'Stützpunkt Wasserrettung (Demo)',descr:'Boote, Schlitten und Material. Fiktiver Standort für den Demo-Modus.',abbr:'SP',color:'#1d7fd1',lat:P.sp[0],lon:P.sp[1],pts:null,line:0,active:1,sort:null},
+  let PLACES=[{id:1,plan_id:null,cat_id:1,name:'Stützpunkt Wasserrettung (Demo)',descr:'Boote, Schlitten und Material. Fiktiver Standort für den Demo-Modus.',abbr:'SP',color:'#1d7fd1',lat:P.sp[0],lon:P.sp[1],pts:null,line:0,active:1,sort:null},
     {id:2,plan_id:null,cat_id:1,name:'Bootseinwasserung Reusszopf (Demo)',descr:'Einwasserung für Boote, Zufahrt über die Uferstrasse. Fiktiv.',abbr:'EW',color:'#2a9d5c',lat:P.ew[0],lon:P.ew[1],pts:null,line:0,active:1,sort:null}];
-  const PLACE_CATS=[{id:1,name:'Wasserrettung',def_on:1}];
-  const HYDRO=[{id:'D2152',name:'Luzern, Geissmattbrücke (Demo)',water:'Reuss',type:'river',lat:47.0556,lon:8.2968,flow:118.4,height:432.71,level:null,temp:9.8,danger:2,cls:'hoch'},
+  let PLACE_CATS=[{id:1,name:'Wasserrettung',def_on:1}];
+  let HYDRO=[{id:'D2152',name:'Luzern, Geissmattbrücke (Demo)',water:'Reuss',type:'river',lat:47.0556,lon:8.2968,flow:118.4,height:432.71,level:null,temp:9.8,danger:2,cls:'hoch'},
     {id:'D2025',name:'Emmenbrücke (Demo)',water:'Kleine Emme',type:'river',lat:47.0726,lon:8.2738,flow:34.2,height:427.35,level:null,temp:8.9,danger:1,cls:'mittel'}];
 
   // ---------- Zustand (sessionStorage, endet mit dem Tab) ----------
@@ -59,7 +63,25 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
       me:{id:ME_ID,username:'demo',name:'Alex Demo',photo:null,exercise_mode:0,coord_sys:null,nav_app:null,place_view:{},hydro:['D2152'],ai_modes:[]},abs:[],welcome:0,reply:[]};
     if(mode==='bsp')bspStart(s,t-150);return s};
   const save=()=>ss(SK,JSON.stringify(S));
-  function reset(mode){keys().forEach(k=>sr(PFX+k));sr(SK);S=fresh(mode);save();ss(PFX+'sw_token','demo')}
+  function reset(mode){keys().forEach(k=>sr(PFX+k));sr(SK);S=fresh(mode);save();ss(PFX+'sw_token','demo');if(mode==='leer')READY=orgStart()}
+  // ---------- Vorgaben der eigenen Organisation (angemeldet, nur «ohne Daten») ----------
+  // Einmal beim Start des Demos liest das Gerät mit der echten Anmeldung (nur lesende Routen) feste Standorte, Einsatztypen, Spezialrollen,
+  // Einrückoptionen, Messstationen, Symbole, Grundkarten und die eigenen Einstellungen. Geschrieben wird nie etwas; ohne Anmeldung oder Antwort die Demo-Daten.
+  let READY=Promise.resolve(),VER=null;
+  const realGet=r=>realFetch(API_URL+'?r='+r,{headers:{'X-Token':REAL_TOK||''}}).then(x=>x.ok?x.json():null).catch(()=>null);
+  async function loadOrg(){if(!REAL_TOK||REAL_TOK==='demo')return null;const m=await realGet('me'),me=m&&m.me;if(!me||me.must_change)return null;
+    const pm=me.perms||[],[ro,mo,st,hy,ex]=await Promise.all([realGet('roles'),realGet('modes'),realGet('incident/state'),realGet('hydro'),pm.includes('cfg_inc')||pm.includes('ex_plan')?realGet('ext_templates'):null]);
+    const A=x=>Array.isArray(x)?x:null,ks=(A(me.kinds)||[]).map(k=>({...k,alarm:k.alarm==='crit'?'high':k.alarm,alarm_name:k.alarm==='crit'?'Hoch':k.alarm_name,plans:0,persons:0,open_all:0,
+      grp_off:[],grp_def:[],can:1,no_grp:0,features:{...FEAT,...(k.features||{}),pub:0}})),md=(A(mo)||[]).filter(x=>x.active);
+    const pick=(o,ks)=>Object.fromEntries(ks.filter(k=>o[k]!==undefined).map(k=>[k,o[k]]));
+    return{name:me.org||'',at:now(),me:pick(me,['name','photo','coord_sys','nav_app','place_view','hydro','exercise_mode']),
+      cfg:pick(me,['coord_default','rd_speeds','nav_apps','nav_default','symbols','sym_free','sym_sets']),maps:me.maps||null,map_def:me.map_def||null,version:me.version||null,
+      kinds:ks.length?ks:null,roles:A(ro),modes:md.length?(A(mo)):null,places:st&&A(st.places),place_cats:st&&A(st.place_cats),
+      hydro:hy&&A(hy.stations),ext:A(ex)?ex.filter(x=>x.active).map(({active,...x})=>x):null}}
+  function applyOrg(){const o=S&&S.mode==='leer'&&S.org;if(!o)return;if(o.kinds)KINDS=o.kinds;if(o.roles)ROLES=o.roles;if(o.modes)MODES=o.modes;if(o.places)PLACES=o.places;
+    if(o.place_cats)PLACE_CATS=o.place_cats;if(o.hydro)HYDRO=o.hydro;if(o.ext)EXT_T=o.ext;if(Array.isArray(o.cfg.symbols))SYMS=o.cfg.symbols;if(o.version)VER=o.version}
+  const orgStart=()=>loadOrg().then(o=>{if(o&&S.mode==='leer'&&!S.inc){S.org=o;Object.assign(S.me,o.me);applyOrg();save()}});
+  const mapsOut=()=>S.org&&S.org.maps?{maps:S.org.maps,map_def:S.org.map_def}:{};
 
   // ---------- Hilfen ----------
   const hav=(a,b,c,d)=>{const R=6371000,r=x=>x*Math.PI/180,x=r(c-a),y=r(d-b),h=Math.sin(x/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
@@ -79,6 +101,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const needLead=m=>{needInc();if(!canManage())fail(m||'Nur die Einsatzleitung kann das',403)};
   const needPart=m=>{needInc();if(!active()&&!canManage())fail(m||'Nur Personen, die den Einsatz angenommen haben, können das',403)};
   const ptsIn=v=>(Array.isArray(v)?v:[]).map(q=>{if(!Array.isArray(q)||q.length!==2||!isFinite(q[0])||!isFinite(q[1]))fail('Ungültige Koordinaten');return[+(+q[0]).toFixed(7),+(+q[1]).toFixed(7)]});
+  const featOf=k=>({...FEAT,...(k&&k.features||{}),pub:0}),featAll=()=>Object.fromEntries(KINDS.map(k=>[k.id,featOf(k)]));
   const kindOf=i=>KINDS.find(k=>k.id===i.kind_id)||KINDS[0];
   const unknownName=()=>{const n=I().res.filter(r=>r.name.startsWith('Unbekannter Rettling')).length;return n?'Unbekannter Rettling '+(n+1):'Unbekannter Rettling'};
   function newInc(o){const t=o.alarm_at||now();return{id:++S.seq.inc,message:o.message,lat:o.lat??null,lon:o.lon??null,pls_at:null,alarm_at:t,ended_at:null,flow_ms:null,created_by:o.by,kind_id:o.kind_id||1,
@@ -130,10 +153,13 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     [620,101,i=>addMsg(101,'Danke allen. Rettling dem Rettungsdienst übergeben. Rückzug zum Stützpunkt, Material kontrollieren.',{ts:i})],
     [1200,101,i=>{if(!S.lead&&I())endInc(101,i)}]];
   // ---------- eigener Einsatz: simulierte Einsatzkräfte nehmen an und fahren zum PLS ----------
-  const GEN=[[15,101,i=>addPart(101,'direct',i)],[18,101,i=>setRole(101,1,i)],[25,102,i=>addPart(102,'base',i)],[28,102,i=>setRole(102,2,i)],
-    [40,101,i=>addMsg(101,'Bin unterwegs zum PLS und übernehme die Einsatzleitung vor Ort.',{ts:i})],[45,103,i=>addPart(103,'direct',i)],[48,103,i=>setRole(103,2,i)],
-    [60,104,i=>addPart(104,'base',i)],[63,104,i=>setRole(104,3,i)],[90,102,i=>addMsg(102,'Boot wird am Stützpunkt vorbereitet, ETA ca. 8 min.',{ts:i})],
-    [100,105,i=>addPart(105,'direct',i)],[103,105,i=>setRole(105,4,i)],[130,106,i=>addPart(106,'logistics',i)],
+  // Mit Vorgaben der Organisation (loadOrg) deren Spezialrollen und Einrückoptionen: 1 = Einsatzleitung, 4 = Posten, 2/3 = übrige
+  const rl=n=>{if(!S.org)return n;const L=ROLES.find(r=>r.is_lead),Q=ROLES.find(r=>r.is_post),o=ROLES.filter(r=>r!==L&&r!==Q);const r=n===1?L:n===4?Q:n===2?o[0]:o[1]||o[0];return r?r.id:null};
+  const mc=c=>{if(!S.org)return c;const a=MODES.filter(m=>m.active),m=a.find(m=>m.code===c&&!m.lead_rights&&m.share_location)||a.find(m=>m.share_location&&!m.lead_rights)||a[0];return m.code};
+  const GEN=[[15,101,i=>addPart(101,mc('direct'),i)],[18,101,i=>setRole(101,rl(1),i)],[25,102,i=>addPart(102,mc('base'),i)],[28,102,i=>setRole(102,rl(2),i)],
+    [40,101,i=>addMsg(101,'Bin unterwegs zum PLS und übernehme die Einsatzleitung vor Ort.',{ts:i})],[45,103,i=>addPart(103,mc('direct'),i)],[48,103,i=>setRole(103,rl(2),i)],
+    [60,104,i=>addPart(104,mc('base'),i)],[63,104,i=>setRole(104,rl(3),i)],[90,102,i=>addMsg(102,'Boot wird am Stützpunkt vorbereitet, ETA ca. 8 min.',{ts:i})],
+    [100,105,i=>addPart(105,mc('direct'),i)],[103,105,i=>setRole(105,rl(4),i)],[130,106,i=>addPart(106,mc('logistics'),i)],
     [220,101,i=>addMsg(101,'Vor Ort beim PLS. Bitte Standort teilen und Suchgebiet gemäss Karte absuchen.',{ts:i})],
     [320,105,i=>addMsg(105,'Posten flussabwärts bezogen.',{ts:i})]];
   // Wegpunkte relativ zum Bezugspunkt (PLS, sonst Standort der Person): Versatz [Ost, Nord] in Metern, Ankunft in s nach dem Start
@@ -162,8 +188,8 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   // ---------- Antworten ----------
   const kindPub=k=>({...k});
   const meOut=()=>({...S.me,must_change:0,uroles:[{id:3,name:'Einsatzkraft (Demo)',sys:null,perms:['inc_start','ex_start']}],is_admin:0,perms:['inc_start','ex_start',...(S.lead?['inc_lead']:[])],
-    coord_default:'lv95',rd_speeds:[10,20,30],kinds:KINDS.map(kindPub),nav_apps:['google','apple','waze','geo'],nav_default:'google',symbols:SYMS,sym_free:1,sym_sets:{sz:'Taktische Symbole',sw:'Swiftwater'},
-    features:{1:FEAT,2:FEAT},my_runs:'off',groups:GROUPS.slice(0,1),absent:absNow(),ai:null,org:'Demo-Modus',session:0,demo:S.mode});
+    coord_default:'lv95',rd_speeds:[10,20,30],kinds:KINDS.map(kindPub),nav_apps:['google','apple','waze','geo'],nav_default:'google',symbols:SYMS,sym_free:1,sym_sets:{sz:'Taktische Symbole',sw:'Swiftwater'},...(S.org?S.org.cfg:{}),
+    features:featAll(),my_runs:'off',groups:GROUPS.slice(0,1),absent:absNow(),ai:null,org:S.org&&S.org.name?'Demo-Modus · '+S.org.name:'Demo-Modus',session:0,demo:S.mode,...mapsOut(),version:VER});
   function absNow(){const t=now();return S.abs.find(a=>!a.removed&&a.from_at<=t&&(a.until_at==null||a.until_at>t))||null}
   const sym=p=>p.sym?{...p,sym_name:(SYM(p.sym)||{}).name||p.sym,sym_foot:(SYM(p.sym)||{}).foot||0}:p;
   function sources(i,res){const ip=i.lat!=null?{lat:i.lat,lon:i.lon,at:i.pls_at||i.alarm_at,own:0}:null;if(!res.length)return ip?[{...ip,names:[]}]:[];const o={};
@@ -173,10 +199,12 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
       text:`Nachricht an ${to}: ${m.text}`+(m.lat!=null?` · Standort ${f5(m.lat)}, ${f5(m.lon)}`:'')+(m.mark_lat!=null?` · Kartenmarkierung ${f5(m.mark_lat)}, ${f5(m.mark_lon)}${m.mark?'':' (entfernt)'}`:'')})});
     return rows.sort((a,b)=>b.ts-a.ts||b.id-a.id).slice(0,1000)}
   function hydroInc(i){if(i.lat==null&&!i.res.some(r=>r.pls_lat!=null))return[];const a=anchor(i)||P.pls,t=i.alarm_at+30;
-    return HYDRO.slice(0,i.script==='bsp'?2:1).map(h=>{const d=Math.round(hav(a[0],a[1],h.lat,h.lon));return{phase:'start',ts:t,station:h.id,name:h.name,water:h.water,lat:h.lat,lon:h.lon,dist:i.script==='bsp'?d:null,at:t-300,danger:h.danger,
+    // Vorgaben der Organisation: wie der Server die nächsten Stationen mit Messwerten im Umkreis (15 km, höchstens 3, ohne Seen)
+    const hs=S.org?HYDRO.filter(h=>h.type!=='lake'&&h.lat!=null&&(h.flow!=null||h.height!=null||h.level!=null)).map(h=>[hav(a[0],a[1],h.lat,h.lon),h]).filter(x=>x[0]<=15000).sort((x,y)=>x[0]-y[0]).slice(0,3).map(x=>x[1]):HYDRO.slice(0,i.script==='bsp'?2:1);
+    return hs.map(h=>{const d=Math.round(hav(a[0],a[1],h.lat,h.lon));return{phase:'start',ts:t,station:h.id,name:h.name,water:h.water,lat:h.lat,lon:h.lon,dist:i.script==='bsp'||S.org?d:null,at:t-300,danger:h.danger,
       v:{flow:h.flow,height:h.height,level:h.level,temp:h.temp,danger:h.danger}}})}
   function state(qs){const t=now();simRun(t);const i=I(),me=S.me;
-    if(!i)return{incident:null,air_home:0,my_abs:absNow(),blocked:0,last_ended:S.last,places:PLACES,place_cats:PLACE_CATS,kinds:KINDS,features:{1:FEAT,2:FEAT},ex_plans:[]};
+    if(!i)return{incident:null,air_home:0,my_abs:absNow(),blocked:0,last_ended:S.last,places:PLACES,place_cats:PLACE_CATS,kinds:KINDS,features:featAll(),ex_plans:[],...mapsOut()};
     const K=kindOf(i),since=+qs.get('since')||0,mgr=canManage(),act=active(),res=i.res.filter(r=>!r.removed).map(r=>({...r,loc_name:r.loc_by?uname(r.loc_by):null,rescued_name:r.rescued_by?uname(r.rescued_by):null}));
     res.forEach(r=>delete r.removed);
     const inc={id:i.id,message:i.message,lat:i.lat,lon:i.lon,alarm_at:i.alarm_at,ended_at:null,flow_ms:i.flow_ms,created_by:i.created_by,is_exercise:K.plans?1:0,record:i.record,recorded:i.recorded,public_anon:1,
@@ -184,13 +212,13 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     const lvl=K.mode_up&&me.exercise_mode?'crit':K.alarm,canRead=act||mgr;
     return{incident:inc,pois:i.pois.filter(p=>!p.removed).map(p=>sym({id:p.id,kind:p.kind,name:p.name,color:p.color,pts:p.pts,sym:p.sym,created_by:p.created_by,created:p.created,by_name:uname(p.created_by)})),
       rescuees:res,externals:i.ext.filter(e=>!e.removed).map(({removed,manual,...e})=>({...e,by_name:uname(e.created_by)})),places:PLACES,place_cats:PLACE_CATS,
-      ext_templates:mgr?[{id:1,name:'Seepolizei Luzern',descr:'Polizeiboot',role_id:null,abbr:'POL',color:'#3949ab',lat:null,lon:null},{id:2,name:'Feuerwehr – Beobachtungsposten',descr:'',role_id:4,abbr:'FW',color:'#e53935',lat:null,lon:null}]:[],
+      ext_templates:mgr?EXT_T:[],
       ext_inc_templates:mgr?[...new Map(i.ext.filter(e=>e.manual).reverse().map(e=>[e.name.toLowerCase(),{name:e.name,descr:e.descr,role_id:e.role_id,abbr:e.abbr,color:e.color}])).values()]:[],
       sources:sources(i,res),participants:i.parts.map(p=>({user_id:p.user_id,mode:p.mode,role_id:p.role_id,lat:p.lat,lon:p.lon,loc_at:p.loc_at,left_at:p.left_at,name:uname(p.user_id),photo:p.user_id===ME_ID?me.photo:null,groups:p.user_id===ME_ID?[1]:(SIM[p.user_id]||{}).g||[]})),
       groups:GROUPS,marks:[],messages:canRead?i.msgs.filter(m=>m.id>since).map(m=>({id:m.id,from_user:m.from_user,text:m.text,created:m.created,recipients:m.recipients,lat:m.lat,lon:m.lon,mark_lat:m.mark_lat,mark_lon:m.mark_lon,from_name:uname(m.from_user)})):[],
       msg_marks:canRead?i.msgs.filter(m=>m.mark).map(m=>({id:m.id,from_user:m.from_user,text:m.text,created:m.created,lat:m.mark_lat,lon:m.mark_lon,from_name:uname(m.from_user)})):[],
       me:part()?{...part()}:null,is_lead:isLead(),can_manage:mgr,ai:null,can_flow:act||mgr,can_message:act||mgr,can_read_messages:canRead,critical:lvl==='crit',level:lvl,msg_level:K.msg_lvl,end_level:K.end_lvl,
-      alarm:i.created_by!==ME_ID,absent:0,my_abs:absNow(),features:FEAT,air:i.air?1:0,air_inc:i.air?1:0,ex_lead:false,ex_title:null,ex_injects:[],log:act||mgr?logRows(i):null,hydro:hydroInc(i),now:t}}
+      alarm:i.created_by!==ME_ID,absent:0,my_abs:absNow(),features:featOf(K),air:i.air?1:0,air_inc:i.air?1:0,ex_lead:false,ex_title:null,ex_injects:[],log:act||mgr?logRows(i):null,hydro:hydroInc(i),...mapsOut(),now:t}}
   // Overpass: wie der Server ohne Antwort (502 mit fertiger Abfrage), das Gerät fragt dann direkt (overpassNet in common.js); Ergebnisse bleiben bis zum Neuladen im Speicher
   const OPC=new Map(),opKey=b=>JSON.stringify(b.around||b.bbox||null);
   function overpassQ(b){const f=x=>(+x).toFixed(5);let sel;if(b.around){const[r,la,lo]=b.around.map(Number);if(!(r>=100&&r<=30000))fail('Ungültiger Umkreis');sel=`around:${Math.round(r)},${f(la)},${f(lo)}`}
@@ -205,7 +233,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     'start/options':()=>({groups:[],kinds:KINDS,start:{1:null,2:null},add:{1:null,2:null},people:[],kind_people:{1:null,2:null},kind_absent:{1:0,2:0}}),
     'incident/start':b=>{if(I())fail('Es läuft bereits ein Einsatz');if(!String(b.message||'').trim())fail('Die Meldung ist Pflicht');const K=KINDS.find(k=>k.id===+b.kind_id)||KINDS[0],t=now();
       const at=b.alarm_at?Math.min(+b.alarm_at,t):t,pls=b.lat!=null&&b.lon!=null&&b.lat!==''&&isFinite(b.lat)&&isFinite(b.lon);
-      S.inc=newInc({message:String(b.message).trim(),lat:pls?+b.lat:null,lon:pls?+b.lon:null,alarm_at:at,by:ME_ID,kind_id:K.id,record:b.record&&FEAT.rec,air:b.air==null?K.air:b.air,script:'gen'});S.inc.t0=t;
+      S.inc=newInc({message:String(b.message).trim(),lat:pls?+b.lat:null,lon:pls?+b.lon:null,alarm_at:at,by:ME_ID,kind_id:K.id,record:b.record&&featOf(K).rec,air:b.air==null?K.air:b.air,script:'gen'});S.inc.t0=t;
       logev(ME_ID,'start',`hat den Einsatz gestartet (${K.name}${S.inc.record?', mit Aufzeichnung':''}${S.inc.air?', mit Helikoptern':''}${pls?'':', ohne PLS'}): ${S.inc.message}`);return{id:S.inc.id}},
     'incident/join':b=>{needInc();if(b.mode==='declined'){const p=part();if(!p){I().parts.push({id:I().parts.length+1,incident_id:I().id,user_id:ME_ID,mode:'declined',role_id:null,lat:null,lon:null,loc_at:null,left_at:null});logev(ME_ID,'decline','hat den Einsatz abgelehnt')}return{ok:true}}
       const m=mode(String(b.mode||''));if(!m||!m.active)fail('Ungültige Auswahl');addPart(ME_ID,m.code);return{ok:true}},
@@ -269,17 +297,17 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
       const k=['abs','sus'].includes(b.kind)?b.kind:'abs',nt=String(b.note||'').trim().slice(0,200)||null;if(b.id){const a=S.abs.find(x=>x.id===+b.id&&!x.removed)||fail('Eintrag nicht gefunden',404);Object.assign(a,{from_at:from,until_at:until,kind:k,note:nt});return{ok:true,id:a.id}}
       const a={id:S.seq.abs++,user_id:ME_ID,from_at:from,until_at:until,kind:k,note:nt,created_by:ME_ID,created_at:t,removed:0};S.abs.push(a);return{ok:true,id:a.id}},
     'absence/remove':b=>{const a=S.abs.find(x=>x.id===+b.id&&!x.removed)||fail('Eintrag nicht gefunden',404);a.removed=1;return{ok:true}},
-    'hydro':b=>{const ids=b.ids?b.ids.map(String):HYDRO.map(h=>h.id),t=now();return{stations:HYDRO.filter(h=>ids.includes(h.id)).map(h=>({...h,at:t-240})),at:t-240,err:null}},
+    'hydro':b=>{const ids=b.ids?b.ids.map(String):HYDRO.map(h=>h.id),t=now();return{stations:HYDRO.filter(h=>ids.includes(h.id)).map(h=>({...h,at:h.at||t-240})),at:t-240,err:null}},
     'overpass':b=>{const k=opKey(b);if(OPC.has(k))return OPC.get(k);const e=new Error('Gewässernetz vom Gerät laden');e.st=502;e.data={error:e.message,query:overpassQ(b),servers:OVERPASS};throw e},
     'overpass/put':b=>{if(Array.isArray(b.elements))OPC.set(opKey(b),{elements:b.elements});return{ok:true}},'overpass/stat':()=>({ok:true}),
     'push/key':()=>fail('Im Demo-Modus gibt es keine Push-Benachrichtigungen.'),'push/subscribe':()=>({ok:true}),'push/unsubscribe':()=>({ok:true}),
     'ai/ask':()=>fail('Den AI-Assistenten gibt es im Demo-Modus nicht.'),'applog/client':()=>({ok:true}),'legal':()=>fail('Nicht im Demo-Modus')};
   function handle(r,b,qs){const fn=R[r];if(!fn)fail('Im Demo-Modus nicht verfügbar',404);const o=fn(b||{},qs);return o}
   // ---------- fetch abfangen: api/index.php nie ans Netz ----------
-  const realFetch=window.fetch.bind(window);
   window.fetch=async function(input,init){let u;try{u=new URL(typeof input==='string'?input:input.url,location.href)}catch(e){return realFetch(input,init)}
     if(u.origin!==location.origin||!/\/api\/index\.php$/.test(u.pathname))return realFetch(input,init);
-    let b={};try{b=init&&init.body?JSON.parse(init.body):{}}catch(e){b={}}const r=u.searchParams.get('r')||'';let st=200,o;
+    const r=u.searchParams.get('r')||'';if(r==='version'||r==='changes')return realFetch(input,init); // öffentlich und nur lesend (Issue #175)
+    await READY;let b={};try{b=init&&init.body?JSON.parse(init.body):{}}catch(e){b={}}let st=200,o;
     try{o=handle(r,b,u.searchParams)}catch(e){st=e.st||500;o=e.data||{error:e.st?e.message:'Fehler im Demo-Modus: '+e.message};if(!e.st)console.error(e)}
     save();await new Promise(res=>setTimeout(res,40+Math.random()*80)); // etwas Verzögerung wie übers Netz
     return new Response(JSON.stringify(o),{status:st,headers:{'Content-Type':'application/json'}})};
@@ -288,8 +316,8 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   function restart(m){reset(m);location.href=location.pathname+'?demo'+(m==='leer'?'=leer':'')}
   const H=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   function panel(first){document.querySelectorAll('.demoDlg').forEach(x=>x.remove());const d=document.createElement('div');d.className='dlg demoDlg';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-label','Demo-Modus');
-    d.innerHTML=`<div class="card"><h3>🎓 Demo-Modus</h3><p class="mut">Hier kannst du die Einsatz-App gefahrlos ausprobieren. Alles läuft nur in diesem Browser-Tab: nichts geht an den Server, niemand wird alarmiert, und deine echten Einsätze und Einstellungen bleiben unberührt. Schliesst du den Tab, ist der Demo-Stand weg.</p>
-      <p class="mut">${S.mode==='bsp'?'<b>Beispieldaten:</b> Ein Einsatz an der Reuss in Luzern läuft bereits (fiktiv). Nimm ihn über das Menü ☰ an und beobachte, wie die simulierten Einsatzkräfte anfahren, Nachrichten senden und den Rettling finden.':'<b>Leer:</b> Es läuft kein Einsatz. Starte über ☰ einen eigenen und setze einen PLS an einem Fluss; simulierte Einsatzkräfte nehmen an und fahren hin.'}</p>
+    d.innerHTML=`<div class="card"><h3>🎓 Demo-Modus</h3><p class="mut">Hier kannst du die Einsatz-App gefahrlos ausprobieren. Alles läuft nur in diesem Browser-Tab: nichts wird an den Server gesendet, niemand wird alarmiert, und deine echten Einsätze und Einstellungen bleiben unberührt. Schliesst du den Tab, ist der Demo-Stand weg.</p>
+      <p class="mut">${S.mode==='bsp'?'<b>Beispieldaten:</b> Ein Einsatz an der Reuss in Luzern läuft bereits (fiktiv). Nimm ihn über das Menü ☰ an und beobachte, wie die simulierten Einsatzkräfte anfahren, Nachrichten senden und den Rettling finden.':'<b>Leer:</b> Es läuft kein Einsatz. Starte über ☰ einen eigenen und setze einen PLS an einem Fluss; simulierte Einsatzkräfte nehmen an und fahren hin.'+(S.org?` Übernommen${S.org.name?' von '+H(S.org.name):''}: feste Standorte, Einsatztypen, Spezialrollen, Einrückoptionen, Messstationen und deine Einstellungen (nur gelesen, Stand beim Start des Demos).`:'')}</p>
       <label class="row" style="align-items:center;margin:.4rem 0"><input type="checkbox" id="dmSim" ${S.sim?'checked':''}><span>Andere Einsatzkräfte simulieren (Annahmen, Standorte, Nachrichten)</span></label>
       <label class="row" style="align-items:center;margin:.4rem 0"><input type="checkbox" id="dmLead" ${S.lead?'checked':''}><span>Nach dem Annehmen mit Rechten der Einsatzleitung (alle Funktionen). Ohne Häkchen wie eine gewöhnliche Einsatzkraft.</span></label>
       <div class="row" style="flex-wrap:wrap;gap:.4rem;margin-top:.6rem"><button id="dmOk" class="pri">${first?'Los geht’s':'Schliessen'}</button><button id="dmBsp">Neu mit Beispieldaten</button><button id="dmLeer">Neu ohne Daten</button><button id="dmX">Demo beenden</button></div></div>`;
@@ -303,6 +331,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   // Zustand erst hier anlegen (Szenario braucht die Funktionen oben): neu bei fehlendem Stand oder anderer Wahl im Aufruf (?demo=leer)
   if(!S||S.v!==1||(q.get('demo')&&S.mode!==want))reset(want);
   if(!sg(PFX+'sw_token'))ss(PFX+'sw_token','demo');
-  document.addEventListener('DOMContentLoaded',()=>{badge();if(!S.welcome)setTimeout(()=>panel(true),300);document.title='Demo · '+document.title});
+  applyOrg();if(!VER)realGet('version').then(v=>{if(v&&v.version)VER=v}); // Version für Profil und «Was ist neu»
+  document.addEventListener('DOMContentLoaded',()=>{badge();if(!S.welcome)READY.then(()=>setTimeout(()=>panel(true),300));document.title='Demo · '+document.title});
   return{mode:()=>S.mode,panel,exit,restart};
 })();

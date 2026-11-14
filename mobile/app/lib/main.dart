@@ -15,6 +15,7 @@ import 'sys.dart';
 import 'inc/map_page.dart';
 import 'accounts.dart';
 import 'demo.dart';
+import 'demo_ui.dart' show demoSource;
 
 final navKey = GlobalKey<NavigatorState>();
 
@@ -39,10 +40,16 @@ Future<void> openAccount(String id, {bool focus = false}) async {
 }
 
 /// Demo-Modus (Issue #74): Einsatz-App mit dem simulierten Backend (demo.dart) öffnen; mode null = bisherigen Stand weiterführen
-void openDemo([String? mode]) {
+Future<void> openDemo([String? mode]) async {
+  if (navKey.currentState == null) return;
+  if (mode != null || !Demo.started) {
+    // «Ohne Daten» mit einem angemeldeten Konto: dessen Vorgaben übernehmen (bei mehreren Konten Auswahl, Abbrechen = nicht starten)
+    final (ok, src) = mode == 'leer' ? await demoSource() : (true, null);
+    if (!ok) return;
+    Demo.restart(mode ?? 'bsp', src: src);
+  }
   final nav = navKey.currentState;
   if (nav == null) return;
-  if (mode != null || !Demo.started) Demo.restart(mode ?? 'bsp');
   if (mode == null && IncPage.openId == demoId) return;
   nav.popUntil((r) => r.isFirst);
   nav.push(MaterialPageRoute(builder: (_) => IncPage(account: demoAccount())));

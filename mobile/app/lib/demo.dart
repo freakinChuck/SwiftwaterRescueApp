@@ -78,6 +78,10 @@ const _modes = [
   {'id': 3, 'code': 'logistics', 'name': 'Logistik', 'share_location': 1, 'active': 1, 'lead_rights': 0, 'counts': 1},
   {'id': 4, 'code': 'coordinator', 'name': 'Koordinator KP Rück', 'share_location': 0, 'active': 1, 'lead_rights': 1, 'counts': 0},
 ];
+const _extT = [
+  {'id': 1, 'name': 'Seepolizei Luzern', 'descr': 'Polizeiboot', 'role_id': null, 'abbr': 'POL', 'color': '#3949ab', 'lat': null, 'lon': null},
+  {'id': 2, 'name': 'Feuerwehr – Beobachtungsposten', 'descr': '', 'role_id': 4, 'abbr': 'FW', 'color': '#e53935', 'lat': null, 'lon': null},
+];
 const _groups = [
   {'id': 1, 'name': 'Wasserrettung Stadt', 'color': '#1d7fd1'},
   {'id': 2, 'name': 'Wasserrettung Land', 'color': '#2a9d5c'},
@@ -298,8 +302,13 @@ class Demo {
   static Demo? _i;
   static Demo get i => _i ??= Demo._('bsp');
 
-  /// neu beginnen: 'bsp' = Beispieldaten, 'leer' = ohne Einsatz
-  static Demo restart(String mode) => _i = Demo._(mode);
+  /// neu beginnen: 'bsp' = Beispieldaten, 'leer' = ohne Einsatz; src: angemeldetes Konto, dessen Vorgaben «ohne Daten» übernimmt (_loadOrg)
+  static Demo restart(String mode, {Account? src}) {
+    final d = _i = Demo._(mode);
+    if (mode == 'leer' && src != null) d._ready = d._loadOrg(src);
+    return d;
+  }
+
   static bool get started => _i != null;
 
   final String mode;
@@ -310,6 +319,100 @@ class Demo {
   _Inc? _inc;
   _J? _last;
   final abs = <_J>[];
+
+  // ---------- Vorgaben der eigenen Organisation (nur «ohne Daten», wie loadOrg in web/demo.js) ----------
+  // Einmal beim Start liest die App mit dem gewählten Konto (nur lesende Routen) feste Standorte, Einsatztypen, Spezialrollen,
+  // Einrückoptionen, Messstationen, Symbole, Grundkarten und die eigenen Einstellungen. Geschrieben wird nie etwas; ohne Antwort die Demo-Daten.
+  Future<void> _ready = Future.value();
+  Map<String, dynamic>? org; // geladene Vorgaben (name = Organisation), null = Demo-Daten
+  Account? _src;
+  // Kopien mit Typ Map<String, dynamic> (die Konstanten sind Map<String, Object>, firstWhere mit orElse scheitert sonst zur Laufzeit)
+  List<_J> _ks = [..._kinds], _ps = [..._places], _hy = [..._hydro], _sy = [..._syms], _ext = [..._extT];
+  List<Map<String, dynamic>> _rs = [..._roles], _ms = [..._modes], _pc = [..._placeCats];
+
+  Future<void> _loadOrg(Account a) async {
+    final api = a.api;
+    Future<dynamic> get(String r) async {
+      try {
+        final o = await api.call(r, timeout: const Duration(seconds: 8));
+        return o.containsKey('data') && o.length == 1 ? o['data'] : o;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final m = await get('me');
+    final me = m is Map ? m['me'] : null;
+    if (me is! Map || me['must_change'] == 1) return;
+    final pm = me['perms'] is List ? me['perms'] as List : const [];
+    final res = await Future.wait([get('roles'), get('modes'), get('incident/state'), get('hydro'), if (pm.contains('cfg_inc') || pm.contains('ex_plan')) get('ext_templates')]);
+    List<_J>? l(dynamic x) => x is List ? x.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : null;
+    final st = res[2] is Map ? res[2] as Map : const {}, hy = res[3] is Map ? res[3] as Map : const {};
+    final ks = (l(me['kinds']) ?? [])
+        .map(
+          (k) => {
+            ...k,
+            if (k['alarm'] == 'crit') 'alarm': 'high', // kein Dauerton im Demo
+            if (k['alarm'] == 'crit') 'alarm_name': 'Hoch',
+            'plans': 0,
+            'persons': 0,
+            'open_all': 0,
+            'grp_off': <int>[],
+            'grp_def': <int>[],
+            'can': 1,
+            'no_grp': 0,
+            'features': {..._feat, if (k['features'] is Map) ...Map<String, dynamic>.from(k['features'] as Map), 'pub': 0},
+          },
+        )
+        .toList();
+    final ms = l(res[1]) ?? [];
+    if (_inc != null) return;
+    _src = a;
+    if (ks.isNotEmpty) _ks = ks;
+    _rs = l(res[0]) ?? _rs;
+    if (ms.any((x) => x['active'] == 1)) _ms = ms;
+    _ps = l(st['places']) ?? _ps;
+    _pc = l(st['place_cats']) ?? _pc;
+    _hy = l(hy['stations'])?.where((h) => h['lat'] is num && h['lon'] is num).toList() ?? _hy;
+    if (l(me['symbols']) case final sy?) _sy = sy;
+    if (res.length > 4 && l(res[4]) != null) _ext = l(res[4])!.where((x) => x['active'] == 1).map((x) => x..remove('active')).toList();
+    for (final k in ['name', 'photo', 'coord_sys', 'nav_app', 'place_view', 'hydro', 'exercise_mode']) {
+      if (me.containsKey(k)) _me[k] = me[k];
+    }
+    org = {
+      'name': '${me['org'] ?? ''}',
+      'cfg': {
+        for (final k in ['coord_default', 'rd_speeds', 'nav_apps', 'nav_default', 'symbols', 'sym_free', 'sym_sets', 'maps', 'map_def', 'version'])
+          if (me[k] != null) k: me[k],
+      },
+      'maps': {
+        for (final k in ['maps', 'map_def'])
+          if (me[k] != null) k: me[k],
+      },
+    };
+  }
+
+  _J _featOf(_J? k) => {..._feat, if (k?['features'] is Map) ...Map<String, dynamic>.from(k!['features'] as Map), 'pub': 0};
+  _J get _featAll => {for (final k in _ks) '${k['id']}': _featOf(k)};
+  _J get _mapsOut => org == null ? {} : Map<String, dynamic>.from(org!['maps'] as Map);
+
+  /// Mit Vorgaben die Spezialrollen und Einrückoptionen der Organisation: 1 = Einsatzleitung, 4 = Posten, 2/3 = übrige
+  int? _rl(int n) {
+    if (org == null) return n;
+    final l = _rs.where((r) => r['is_lead'] == 1).firstOrNull, q = _rs.where((r) => r['is_post'] == 1).firstOrNull;
+    final o = _rs.where((r) => r != l && r != q).toList();
+    final r = n == 1 ? l : (n == 4 ? q : (n == 2 ? o.firstOrNull : (o.length > 1 ? o[1] : o.firstOrNull)));
+    return r?['id'] as int?;
+  }
+
+  String _mc(String c) {
+    if (org == null) return c;
+    final a = _ms.where((m) => m['active'] == 1).toList();
+    final m =
+        a.where((m) => m['code'] == c && m['lead_rights'] != 1 && m['share_location'] == 1).firstOrNull ?? a.where((m) => m['share_location'] == 1 && m['lead_rights'] != 1).firstOrNull ?? a.first;
+    return '${m['code']}';
+  }
+
   final _reply = <_J>[];
   final _opc = <String, _J>{};
   final _me = <String, dynamic>{
@@ -327,8 +430,8 @@ class Demo {
 
   // ---------- Hilfen ----------
   String _uname(int? id) => id == _meId ? '${_me['name']}' : (_simNames[id] ?? '?');
-  Map<String, Object> _role(int id) => _roles.firstWhere((r) => r['id'] == id);
-  Map<String, Object>? _mode(String? c) => _modes.where((m) => m['code'] == c).firstOrNull;
+  Map<String, dynamic> _role(int id) => _rs.firstWhere((r) => r['id'] == id, orElse: () => {'id': id, 'name': 'Rolle $id', 'is_lead': 0, 'is_post': 0});
+  Map<String, dynamic>? _mode(String? c) => _ms.where((m) => m['code'] == c).firstOrNull;
   void _logev(int? uid, String kind, String text, [int? ts]) => _inc?.log.add({'id': _seqLog++, 'ts': ts ?? _now(), 'kind': kind, 'text': text, 'uid': uid});
   _J? _part([int id = _meId]) => _inc?.parts.where((p) => p['user_id'] == id).firstOrNull;
   bool _active([int id = _meId]) {
@@ -356,7 +459,7 @@ class Demo {
     return i;
   }
 
-  _J _kindOf(_Inc i) => _kinds.firstWhere((k) => k['id'] == i.kindId, orElse: () => _kinds.first);
+  _J _kindOf(_Inc i) => _ks.firstWhere((k) => k['id'] == i.kindId, orElse: () => _ks.first);
   double _d(dynamic v) => v is num ? v.toDouble() : (double.tryParse('$v') ?? double.nan);
   bool _fin(dynamic v) => v != null && _d(v).isFinite;
   List<_P> _ptsIn(dynamic v) => (v is List ? v : const []).map<_P>((q) {
@@ -571,19 +674,19 @@ class Demo {
     }),
   ];
   static final _gen = <_Step>[
-    _Step(15, 101, (d, t) => d._addPart(101, 'direct', t)),
-    _Step(18, 101, (d, t) => d._setRole(101, 1, t)),
-    _Step(25, 102, (d, t) => d._addPart(102, 'base', t)),
-    _Step(28, 102, (d, t) => d._setRole(102, 2, t)),
+    _Step(15, 101, (d, t) => d._addPart(101, d._mc('direct'), t)),
+    _Step(18, 101, (d, t) => d._setRole(101, d._rl(1), t)),
+    _Step(25, 102, (d, t) => d._addPart(102, d._mc('base'), t)),
+    _Step(28, 102, (d, t) => d._setRole(102, d._rl(2), t)),
     _Step(40, 101, (d, t) => d._addMsg(101, 'Bin unterwegs zum PLS und übernehme die Einsatzleitung vor Ort.', ts: t)),
-    _Step(45, 103, (d, t) => d._addPart(103, 'direct', t)),
-    _Step(48, 103, (d, t) => d._setRole(103, 2, t)),
-    _Step(60, 104, (d, t) => d._addPart(104, 'base', t)),
-    _Step(63, 104, (d, t) => d._setRole(104, 3, t)),
+    _Step(45, 103, (d, t) => d._addPart(103, d._mc('direct'), t)),
+    _Step(48, 103, (d, t) => d._setRole(103, d._rl(2), t)),
+    _Step(60, 104, (d, t) => d._addPart(104, d._mc('base'), t)),
+    _Step(63, 104, (d, t) => d._setRole(104, d._rl(3), t)),
     _Step(90, 102, (d, t) => d._addMsg(102, 'Boot wird am Stützpunkt vorbereitet, ETA ca. 8 min.', ts: t)),
-    _Step(100, 105, (d, t) => d._addPart(105, 'direct', t)),
-    _Step(103, 105, (d, t) => d._setRole(105, 4, t)),
-    _Step(130, 106, (d, t) => d._addPart(106, 'logistics', t)),
+    _Step(100, 105, (d, t) => d._addPart(105, d._mc('direct'), t)),
+    _Step(103, 105, (d, t) => d._setRole(105, d._rl(4), t)),
+    _Step(130, 106, (d, t) => d._addPart(106, d._mc('logistics'), t)),
     _Step(220, 101, (d, t) => d._addMsg(101, 'Vor Ort beim PLS. Bitte Standort teilen und Suchgebiet gemäss Karte absuchen.', ts: t)),
     _Step(320, 105, (d, t) => d._addMsg(105, 'Posten flussabwärts bezogen.', ts: t)),
   ];
@@ -737,18 +840,19 @@ class Demo {
     'perms': ['inc_start', 'ex_start', if (lead) 'inc_lead'],
     'coord_default': 'lv95',
     'rd_speeds': [10, 20, 30],
-    'kinds': _kinds,
+    'kinds': _ks,
     'nav_apps': ['google', 'apple', 'waze', 'geo'],
     'nav_default': 'google',
-    'symbols': _syms,
+    'symbols': _sy,
     'sym_free': 1,
     'sym_sets': {'sz': 'Taktische Symbole', 'sw': 'Swiftwater'},
-    'features': {'1': _feat, '2': _feat},
+    if (org != null) ...Map<String, dynamic>.from(org!['cfg'] as Map),
+    'features': _featAll,
     'my_runs': 'off',
     'groups': [_groups.first],
     'absent': _absNow(),
     'ai': null,
-    'org': 'Demo-Modus',
+    'org': '${org?['name'] ?? ''}'.isNotEmpty ? 'Demo-Modus · ${org!['name']}' : 'Demo-Modus',
     'session': 0,
     'demo': mode,
   };
@@ -796,8 +900,19 @@ class Demo {
   List<_J> _hydroInc(_Inc i) {
     if (i.lat == null && !i.res.any((r) => r['pls_lat'] != null)) return [];
     final a = _anchor(i) ?? _pls, t = i.alarmAt + 30, bsp = i.script == 'bsp';
-    return _hydro.take(bsp ? 2 : 1).map((h) {
-      final d = _hav(a[0], a[1], h['lat'] as double, h['lon'] as double).round();
+    // Vorgaben der Organisation: wie der Server die nächsten Stationen mit Messwerten im Umkreis (15 km, höchstens 3, ohne Seen)
+    final hs = org != null
+        ? (_hy
+                  .where((h) => h['type'] != 'lake' && (h['flow'] != null || h['height'] != null || h['level'] != null))
+                  .map((h) => (_hav(a[0], a[1], _d(h['lat']), _d(h['lon'])), h))
+                  .where((x) => x.$1 <= 15000)
+                  .toList()
+                ..sort((x, y) => x.$1.compareTo(y.$1)))
+              .take(3)
+              .map((x) => x.$2)
+        : _hy.take(bsp ? 2 : 1);
+    return hs.map((h) {
+      final d = _hav(a[0], a[1], _d(h['lat']), _d(h['lon'])).round();
       return <String, dynamic>{
         'phase': 'start',
         'ts': t,
@@ -806,7 +921,7 @@ class Demo {
         'water': h['water'],
         'lat': h['lat'],
         'lon': h['lon'],
-        'dist': bsp ? d : null,
+        'dist': bsp || org != null ? d : null,
         'at': t - 300,
         'danger': h['danger'],
         'v': {'flow': h['flow'], 'height': h['height'], 'level': h['level'], 'temp': h['temp'], 'danger': h['danger']},
@@ -825,11 +940,12 @@ class Demo {
         'my_abs': _absNow(),
         'blocked': 0,
         'last_ended': _last,
-        'places': _places,
-        'place_cats': _placeCats,
-        'kinds': _kinds,
-        'features': {'1': _feat, '2': _feat},
+        'places': _ps,
+        'place_cats': _pc,
+        'kinds': _ks,
+        'features': _featAll,
         'ex_plans': [],
+        ..._mapsOut,
         'now': t,
       };
     }
@@ -914,14 +1030,9 @@ class Demo {
               ..['by_name'] = _uname(e['created_by'] as int),
           )
           .toList(),
-      'places': _places,
-      'place_cats': _placeCats,
-      'ext_templates': mgr
-          ? [
-              {'id': 1, 'name': 'Seepolizei Luzern', 'descr': 'Polizeiboot', 'role_id': null, 'abbr': 'POL', 'color': '#3949ab', 'lat': null, 'lon': null},
-              {'id': 2, 'name': 'Feuerwehr – Beobachtungsposten', 'descr': '', 'role_id': 4, 'abbr': 'FW', 'color': '#e53935', 'lat': null, 'lon': null},
-            ]
-          : [],
+      'places': _ps,
+      'place_cats': _pc,
+      'ext_templates': mgr ? _ext : [],
       'ext_inc_templates': mgr ? itpl.values.toList() : [],
       'sources': _sources(i, res),
       'participants': i.parts.map((p) {
@@ -972,7 +1083,8 @@ class Demo {
       'alarm': i.createdBy != _meId,
       'absent': 0,
       'my_abs': _absNow(),
-      'features': _feat,
+      'features': _featOf(k),
+      ..._mapsOut,
       'air': i.air,
       'air_inc': i.air,
       'ex_lead': false,
@@ -1002,6 +1114,9 @@ class Demo {
 
   /// Aufruf wie Api.call: Antwort als Map (Listen als {'data': …}), Fehler als ApiError mit Status und Antwort
   Future<Map<String, dynamic>> call(String route, {Map<String, dynamic>? body, Map<String, String>? query}) async {
+    await _ready;
+    // öffentlich und nur lesend (Issue #175): mit Vorgaben vom Server des Kontos
+    if ((route == 'version' || route == 'changes') && _src != null) return _src!.api.call(route, body: body, query: query);
     await Future<void>.delayed(Duration(milliseconds: 40 + math.Random().nextInt(80))); // etwas Verzögerung wie übers Netz
     final o = _handle(route, body ?? const {}, query ?? const {});
     return o is Map<String, dynamic> ? o : {'data': o};
@@ -1037,15 +1152,15 @@ class Demo {
       case 'me/sessions':
         return [];
       case 'roles':
-        return _roles;
+        return _rs;
       case 'modes':
-        return _modes;
+        return _ms;
       case 'incident/state':
         return _state(q);
       case 'start/options':
         return {
           'groups': [],
-          'kinds': _kinds,
+          'kinds': _ks,
           'start': {'1': null, '2': null},
           'add': {'1': null, '2': null},
           'people': [],
@@ -1056,9 +1171,9 @@ class Demo {
         if (_inc != null) _fail('Es läuft bereits ein Einsatz');
         final msg = '${b['message'] ?? ''}'.trim();
         if (msg.isEmpty) _fail('Die Meldung ist Pflicht');
-        final k = _kinds.firstWhere((x) => '${x['id']}' == '${b['kind_id']}', orElse: () => _kinds.first);
+        final k = _ks.firstWhere((x) => '${x['id']}' == '${b['kind_id']}', orElse: () => _ks.first);
         final at = _fin(b['alarm_at']) ? math.min(_d(b['alarm_at']).toInt(), t) : t, pls = _fin(b['lat']) && _fin(b['lon']);
-        final rec = (b['record'] == true || b['record'] == 1) ? 1 : 0, air = b['air'] == null ? k['air'] as int : (b['air'] == true || b['air'] == 1 ? 1 : 0);
+        final rec = (b['record'] == true || b['record'] == 1) ? 1 : 0, air = b['air'] == null ? ((k['air'] as num?)?.toInt() ?? 0) : (b['air'] == true || b['air'] == 1 ? 1 : 0);
         _inc = _newInc(msg, pls ? _d(b['lat']) : null, pls ? _d(b['lon']) : null, at, _meId, k['id'] as int, rec, air, 'gen')..t0 = t;
         _logev(_meId, 'start', 'hat den Einsatz gestartet (${k['name']}${rec == 1 ? ', mit Aufzeichnung' : ''}${air == 1 ? ', mit Helikoptern' : ''}${pls ? '' : ', ohne PLS'}): $msg');
         return {'id': _inc!.id};
@@ -1373,9 +1488,9 @@ class Demo {
         a['removed'] = 1;
         return {'ok': true};
       case 'hydro':
-        final ids = b['ids'] is List ? (b['ids'] as List).map((x) => '$x').toList() : _hydro.map((h) => '${h['id']}').toList();
+        final ids = b['ids'] is List ? (b['ids'] as List).map((x) => '$x').toList() : _hy.map((h) => '${h['id']}').toList();
         return {
-          'stations': _hydro.where((h) => ids.contains(h['id'])).map((h) => {...h, 'at': t - 240}).toList(),
+          'stations': _hy.where((h) => ids.contains(h['id'])).map((h) => {...h, 'at': h['at'] ?? t - 240}).toList(),
           'at': t - 240,
           'err': null,
         };

@@ -2,7 +2,9 @@
 // (Gegenstück zu panel/badge in web/demo.js).
 import 'package:flutter/material.dart';
 
+import 'accounts.dart';
 import 'demo.dart';
+import 'monitor.dart' show prefs;
 import 'main.dart';
 
 const demoColor = Color(0xFF7B1FA2);
@@ -92,7 +94,8 @@ Future<void> demoPanel(BuildContext context, VoidCallback onChanged, {bool first
               d.mode == 'bsp'
                   ? 'Beispieldaten: Ein Einsatz an der Reuss in Luzern läuft bereits (fiktiv). Nimm ihn über das Menü an und beobachte, wie die simulierten '
                         'Einsatzkräfte anfahren, Nachrichten senden und den Rettling finden.'
-                  : 'Ohne Daten: Es läuft kein Einsatz. Starte über das Menü einen eigenen und setze einen PLS an einem Fluss; simulierte Einsatzkräfte nehmen an und fahren hin.',
+                  : 'Ohne Daten: Es läuft kein Einsatz. Starte über das Menü einen eigenen und setze einen PLS an einem Fluss; simulierte Einsatzkräfte nehmen an und fahren hin.'
+                        '${d.org != null ? ' Übernommen${'${d.org!['name']}'.isNotEmpty ? ' von ${d.org!['name']}' : ''}: feste Standorte, Einsatztypen, Spezialrollen, Einrückoptionen, Messstationen und deine Einstellungen (nur gelesen, Stand beim Start des Demos).' : ''}',
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -134,4 +137,31 @@ void _restart(BuildContext c, String mode) {
   Navigator.pop(c);
   navKey.currentState?.popUntil((r) => r.isFirst);
   openDemo(mode);
+}
+
+/// Konto, dessen Vorgaben «Ohne Daten» übernimmt: ohne angemeldetes Konto keines, mit einem dieses, mit mehreren Auswahl
+/// (zuerst das zuletzt verwendete). ok false = Auswahl abgebrochen.
+Future<(bool, Account?)> demoSource() async {
+  final l = (await Accounts.load()).where((a) => !a.loggedOut).toList();
+  if (l.isEmpty) return (true, null);
+  final last = await prefs.getString('last_acc');
+  l.sort((a, b) => (b.id == last ? 1 : 0) - (a.id == last ? 1 : 0));
+  if (l.length == 1) return (true, l.first);
+  final ctx = navKey.currentContext;
+  if (ctx == null || !ctx.mounted) return (true, l.first);
+  final r = await showDialog<Object>(
+    context: ctx,
+    builder: (c) => SimpleDialog(
+      title: const Text('Vorgaben übernehmen'),
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+          child: Text('Feste Standorte, Einsatztypen, Spezialrollen, Einrückoptionen und deine Einstellungen werden nur gelesen, nichts wird gesendet.'),
+        ),
+        for (final a in l) SimpleDialogOption(onPressed: () => Navigator.pop(c, a), child: Text(a.label)),
+        SimpleDialogOption(onPressed: () => Navigator.pop(c, false), child: const Text('Ohne Vorgaben (Demo-Daten)')),
+      ],
+    ),
+  );
+  return r is Account ? (true, r) : (r == false, null);
 }

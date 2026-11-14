@@ -18,6 +18,16 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 function Check($what) { if ($LASTEXITCODE -ne 0) { throw "$what fehlgeschlagen (Exit-Code $LASTEXITCODE)" } }
+# Version eines Stands (Issue #175), wie in deploy.ps1: letzter Tag vX.Y.Z davor, sonst VERSION; Zwischenstände mit Abstand und Commit (0.1.0+12.abc1234)
+function Get-SwVersion($ref, $sha) {
+  $ErrorActionPreference = 'Continue'
+  $d = git describe --tags --match 'v[0-9]*' --long $ref 2>$null
+  if ($LASTEXITCODE -eq 0 -and "$d" -match '^v(\d+\.\d+\.\d+)-(\d+)-g[0-9a-f]+$') { $v = $Matches[1]; $n = [int]$Matches[2] }
+  else { $v = ((git show "${ref}:VERSION" 2>$null) | Out-String).Trim(); $n = -1; if ($v -notmatch '^\d+\.\d+\.\d+$') { $v = '0.0.0' } }
+  $global:LASTEXITCODE = 0
+  $full = if ($n -eq 0) { $v } elseif ($n -gt 0) { "$v+$n.$sha" } else { "$v+$sha" }
+  return @{ version = $v; full = $full }
+}
 
 $deny = @'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -45,6 +55,7 @@ $db = new PDO('sqlite:' . $dst, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_E
 try { $db->exec('DELETE FROM push_subs'); } catch (PDOException $e) {} // Test-Alarme sollen keine echten Geraete erreichen
 '@
 
+git fetch -q --tags origin; Check 'git fetch --tags' # Tags für die Version (Get-SwVersion)
 $targets = @($Pr | Where-Object { $_ })
 if ($All -or $Testbase) { $targets += 'testbase' }
 foreach ($n in $targets) {
@@ -93,6 +104,9 @@ foreach ($n in $targets) {
   $cfg = Join-Path $dest 'api\config.php'
   if (-not (Test-Path $cfg)) { git show $cfgSrc | Set-Content -Encoding Ascii $cfg }
   [IO.File]::WriteAllText((Join-Path $data 'deployed.txt'), "$($label.Trim()) $sha`n", $enc)
+  # Version für die API (Issue #175, verInfo): Commit = ?v= der Seiten, pr = PR-Nummer (testbase ohne)
+  $ver = Get-SwVersion $full $sha
+  [IO.File]::WriteAllText((Join-Path $data 'version.json'), (@{ version = $ver.version; full = $ver.full; commit = $sha; env = 'dev'; pr = $(if ($isBase) { $null } else { [int]$n }); at = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() } | ConvertTo-Json -Compress), $enc)
   $db = Join-Path $data 'swiftwater.sqlite'
   $baseDb = Join-Path $Base 'api\data\swiftwater.sqlite'
   $seeded = ''
@@ -103,6 +117,6 @@ foreach ($n in $targets) {
     $seeded = ', Datenbank aus testbase'
   }
   Remove-Item -Recurse -Force $stage
-  Write-Host "$($label.Trim()) ($sha) -> $dest$seeded"
+  Write-Host "$($label.Trim()) ($sha, Version $($ver.full)) -> $dest$seeded"
 }
 $global:LASTEXITCODE = 0
