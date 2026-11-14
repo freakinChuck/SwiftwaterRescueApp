@@ -17,6 +17,7 @@ import '../push.dart';
 import '../service.dart';
 import '../sys.dart';
 import 'ctx.dart';
+import 'geo.dart';
 import 'hydro.dart';
 import 'menu.dart';
 import 'msgs.dart';
@@ -48,6 +49,10 @@ class IncPage extends StatefulWidget {
 class _IncPageState extends State<IncPage> implements MapCtl {
   late final IncStore s = IncStore(widget.account);
   final mc = MapController();
+  late final geo = GeoLayer(s); // Geodaten-Ebene (Issue #182)
+  void _geoSync() {
+    if (_mapReady) geo.sync(mc.camera, () => mounted ? setState(() {}) : null);
+  }
   final rd = RdState();
   final _sk = GlobalKey<ScaffoldState>();
   StreamSubscription<Toast>? _tSub;
@@ -177,6 +182,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (i == null) _homeView();
       if (s.autoView) _autoFit();
       _airPoll();
+      _geoSync();
     }
     setState(() {});
   }
@@ -519,6 +525,56 @@ class _IncPageState extends State<IncPage> implements MapCtl {
 
   void _navAsk(double lat, double lon, String name, [List<String> lines = const []]) => _sheet(name, lines, lat: lat, lon: lon);
 
+  // fester Standort (Issue #182): Eigenschaften, Quelle, Navigationspunkte (mehrere: Auswahl), Sperre für die Einsatzleitung
+  void _placeSheet(J p) {
+    final n = placeNav(p), ll = llOf(p)!;
+    _sheet('${placeBadge(s, p)}${js(p['name'])}', [js(p['descr']), placeInfo(s, p), placePropsText(s, p), if (js(p['src_ref']).isNotEmpty) '© OpenStreetMap-Mitwirkende'],
+        lat: n.length > 1 ? null : (n.isEmpty ? ll.latitude : n[0].lat),
+        lon: n.length > 1 ? null : (n.isEmpty ? ll.longitude : n[0].lon),
+        navName: n.length == 1 && n[0].note.isNotEmpty ? '${js(p['name'])} – ${n[0].note}' : js(p['name']),
+        actions: (c) => [
+              if (n.length > 1 && s.feat('nav'))
+                FilledButton(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      placeNavGo(context, s, p);
+                    },
+                    child: Text('🧭 Navigieren (${n.length} Ziele)')),
+              if (stopToggleOk(s, p))
+                OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      stopToggle(s, p);
+                    },
+                    child: Text(stopOn(s, p) ? '⛔ Sperre aufheben (Einsatz)' : '⛔ Sperre wieder berücksichtigen')),
+            ]);
+  }
+
+  // Objekt der Geodaten-Ebene: Angaben, Quelle, 🧭; Einsatzleitung als Markierung, mit Recht geo als festen Standort übernehmen
+  void _geoSheet(J it) {
+    final k = geo.kindOf(js(it['kind'])), nm = geo.name(it), t = jm(it['tags']), pts = it['pts'] is List ? (it['pts'] as List) : null;
+    final tg = [if (js(t['operator']).isNotEmpty) 'Betreiber: ${js(t['operator'])}', if (js(t['ref']).isNotEmpty) 'Nr. ${js(t['ref'])}', if (js(t['height']).isNotEmpty) 'Höhe: ${js(t['height'])}'].join(' · ');
+    _sheet(nm, ['${js(k?['name'])}${js(it['water']).isNotEmpty ? ' · ${js(it['water'])}' : ''}', tg, 'Geodaten © OpenStreetMap-Mitwirkende, nicht geprüft'],
+        lat: jd(it['lat']),
+        lon: jd(it['lon']),
+        actions: (c) => [
+              if (s.inc != null && jb(s.st?['can_manage']) && s.feat('poi'))
+                OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      s.act('incident/poi', {'kind': pts != null ? (jb(it['line']) ? 'line' : 'area') : 'point', 'name': nm, 'color': '#ff9f1c', 'pts': pts ?? [[it['lat'], it['lon']]]}, 'Übernommen');
+                    },
+                    child: const Text('Als Markierung übernehmen')),
+              if (s.can('geo'))
+                OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      s.act('geo/import', {'items': [{...it, 'name': nm}]}, 'Als festen Standort übernommen');
+                    },
+                    child: const Text('Als festen Standort übernehmen')),
+            ]);
+  }
+
   // ---------- Personeninfo (Issue #105, Funktion «pinfo», wie pinfo in index.html) ----------
   // Nicht blockierend: Karte als Marker über der Person, fährt bei jeder Aktualisierung mit, Karte und übrige Elemente bleiben bedienbar.
   // Schliesst über ✕, Antippen der leeren Karte und wenn die Person den Einsatz verlässt, ausgeblendet wird oder keinen Standort mehr hat.
@@ -791,9 +847,34 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(5), border: Border.all(color: Colors.white, width: 2)),
                     child: Text(js(p['abbr']).isEmpty ? '⌂' : js(p['abbr']), style: TextStyle(color: fgOn(col), fontSize: 10, fontWeight: FontWeight.bold))),
-            lbl ? js(p['name']) : null,
-            () => _sheet(js(p['name']), [js(p['description']), 'Fester Standort'], lat: ll.latitude, lon: ll.longitude));
+            lbl ? '${placeBadge(s, p)}${js(p['name'])}' : null,
+            () => _placeSheet(p));
       }).toList()));
+    }
+    // Geodaten-Ebene (Issue #182): grau, gestrichelt, Kürzel der Objektart
+    final gi = geo.items(mc.camera);
+    if (gi.isNotEmpty) {
+      const gc = Color(0xFF5C677D);
+      final gl = gi.where((it) => it['pts'] is List && jb(it['line'])).toList(), ga = gi.where((it) => it['pts'] is List && !jb(it['line'])).toList();
+      List<LatLng> pts(J it) => (it['pts'] as List).whereType<List>().map((q) => LatLng(jd(q[0])!, jd(q[1])!)).toList();
+      if (gl.isNotEmpty) out.add(PolylineLayer(polylines: gl.map((it) => Polyline(points: pts(it), color: gc, strokeWidth: 2, pattern: StrokePattern.dashed(segments: const [3, 5]))).toList()));
+      if (ga.isNotEmpty) {
+        out.add(PolygonLayer(
+            polygons: ga.map((it) => Polygon(points: pts(it), color: gc.withValues(alpha: .08), borderColor: gc, borderStrokeWidth: 2, pattern: StrokePattern.dashed(segments: const [3, 5]))).toList()));
+      }
+      out.add(MarkerLayer(
+          markers: gi
+              .map((it) => _dotMk(
+                  LatLng(jd(it['lat'])!, jd(it['lon'])!),
+                  Container(
+                      width: 24,
+                      height: 18,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: gc.withValues(alpha: .85), borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.white, width: 1.5)),
+                      child: Text(js(geo.kindOf(js(it['kind']))?['abbr']), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold))),
+                  null,
+                  () => _geoSheet(it)))
+              .toList()));
     }
     // Messstationen Pegel & Abfluss (Issue #165), auch ohne Einsatz (persönliche)
     final hy = hydroLayer(s, (id) {
@@ -1025,10 +1106,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         builder: (c) => ListenableBuilder(
             listenable: s,
             builder: (c, _) {
-              // ohne Einsatz (homeCats): feste Standorte und persönliche Messstationen
+              // ohne Einsatz (homeCats): feste Standorte, persönliche Messstationen und Geodaten-Ebene (Issue #182)
               final cats = s.inc != null
                   ? s.viewCats()
-                  : s.viewCats().where((v) => (v.$1 == 'place' && s.places.isNotEmpty) || (v.$1 == 'hydro' && s.hyMine.isNotEmpty)).toList();
+                  : s.viewCats().where((v) => (v.$1 == 'place' && s.places.isNotEmpty) || (v.$1 == 'hydro' && s.hyMine.isNotEmpty) || v.$1 == 'geo').toList();
               return SafeArea(
                   child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .75),
@@ -1045,6 +1126,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                           for (final v in cats) ...[
                             CheckboxListTile(dense: true, value: s.vis(v.$1), onChanged: (x) => s.setVis([v.$1], x == true), title: Text(v.$2)),
                             if (v.$1 == 'place') ..._viewPlaceCats(),
+                            if (v.$1 == 'geo') ..._viewGeoKinds(),
                           ],
                           if (cats.length > 1)
                             Wrap(spacing: 8, children: [
@@ -1055,6 +1137,17 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         if (_airOn) Padding(padding: const EdgeInsets.only(top: 8), child: Mut(_airInfo(), size: 12)),
                       ])));
             }));
+  }
+
+  /// unter «Geodaten»: je Objektart ein Häkchen (pro Gerät) und der Stand (viewGeoKinds, Issue #182)
+  List<Widget> _viewGeoKinds() {
+    Widget sub(Widget w) => Padding(padding: const EdgeInsets.only(left: 24), child: w);
+    return [
+      if (s.vis('geo'))
+        for (final k in s.geoKinds)
+          sub(CheckboxListTile(dense: true, value: !s.geoOff.contains(js(k['k'])), onChanged: (x) => s.setGeoOff(js(k['k']), x != true), title: Text('${js(k['icon'])} ${js(k['name'])}'.trim()))),
+      sub(Mut(geo.info(mc.camera), size: 12)),
+    ];
   }
 
   /// unter «Feste Standorte»: Kategorien (nur wenn ein Standort eine hat) und «Namen auf der Karte» (viewPlaceCats, Issue #151)
@@ -1346,6 +1439,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                       },
                       onMapEvent: (e) {
                         if (e is MapEventRotate || e is MapEventRotateEnd) setState(() => _rot = mc.camera.rotation);
+                        if (e is MapEventMoveEnd || e is MapEventFlingAnimationEnd || e is MapEventDoubleTapZoomEnd || e is MapEventScrollWheelZoom) _geoSync();
                         final hand = e.source == MapEventSource.onDrag || e.source == MapEventSource.onMultiFinger || e.source == MapEventSource.doubleTap || e.source == MapEventSource.doubleTapHold || e.source == MapEventSource.scrollWheel;
                         if (hand && e is MapEventMoveStart) {
                           if (!_homeBusy) _homeDone = true;

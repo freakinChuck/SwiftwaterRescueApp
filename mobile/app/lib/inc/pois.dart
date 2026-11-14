@@ -10,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'area.dart' show SearchArea, bankM;
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
@@ -140,6 +141,48 @@ bool pcOwn(IncStore s) {
 /// Kategorien fester Standorte sichtbar? Kategorie «place», Kategorie des Standorts und der Standort selbst (placeShown)
 bool placeShown(IncStore s, J place) => s.vis('place') && pcOn(s, place['cat_id']) && !s.poiHide.contains('f${place['id']}');
 
+/// eingeblendet nach Kategorie und Eintrag, ohne die Kategorie «place» des Fensters «Ansicht» (placeOn)
+bool placeOn(IncStore s, J place) => pcOn(s, place['cat_id']) && !s.poiHide.contains('f${place['id']}');
+
+/// Häkchen für einen Teil der Standorte (Abschnitte «Im/Ausserhalb des Einsatzgebiets» und deren Kategorien): wirkt nur über poiHide auf genau diese.
+/// Ist eine Kategorie aus, wird sie eingeschaltet und ihre übrigen Standorte werden einzeln ausgeblendet, damit sie nicht mit erscheinen (placeSecSet).
+void placeSecSet(IncStore s, Iterable<int> ids, bool on) {
+  final set = ids.toSet(), fs = s.places;
+  if (!on) return s.setPoiHidden(set.map((id) => 'f$id'), true);
+  final off = {for (final f in fs) if (set.contains(ji(f['id'])) && !pcOn(s, f['cat_id'])) ji(f['cat_id']) ?? 0};
+  final hide = [for (final f in fs) if (!set.contains(ji(f['id'])) && off.contains(ji(f['cat_id']) ?? 0)) 'f${f['id']}'];
+  if (hide.isNotEmpty) s.setPoiHidden(hide, true);
+  s.setPoiHidden(set.map((id) => 'f$id'), false);
+  if (off.isNotEmpty) setPlaceCat(s, off.toList(), true);
+  if (!s.vis('place')) s.setVis(['place'], true);
+}
+
+double _segDist(LatLng a, LatLng b, LatLng p) {
+  const ky = 111320.0;
+  final kx = ky * math.cos(p.latitude * math.pi / 180), ax = (a.longitude - p.longitude) * kx, ay = (a.latitude - p.latitude) * ky;
+  final dx = (b.longitude - a.longitude) * kx, dy = (b.latitude - a.latitude) * ky, l = dx * dx + dy * dy;
+  final t = l == 0 ? 0.0 : (-(ax * dx + ay * dy) / l).clamp(0.0, 1.0).toDouble(), ox = ax + t * dx, oy = ay + t * dy;
+  return math.sqrt(ox * ox + oy * oy);
+}
+
+/// fester Standort im Einsatzgebiet (placeInArea in web/index.html): ein Punkt (Standort, Eckpunkte, Navigationspunkte) höchstens nearKm
+/// (place_near_km aus incident/state, Standard 10 km) vom Suchgebiet entlang des Gewässers bzw. vom Kreis, oder das Gewässer führt durch den Bereich
+bool placeInArea(J f, SearchArea a, double nearKm) {
+  final d = bankM + nearKm * 1000;
+  final ps = <LatLng>[?llOf(f), ..._ptsOf(f['pts']), ...placeNav(f).map((q) => LatLng(q.lat, q.lon))];
+  for (final q in ps) {
+    if (a.circles.any((c) => geoDist(q, c.c) <= c.r + d - bankM)) return true;
+    for (final l in a.lines) {
+      for (var j = 1; j < l.length; j++) {
+        if (_segDist(l[j - 1], l[j], q) <= d) return true;
+      }
+    }
+  }
+  final pl = _ptsOf(f['pts']);
+  if (pl.length < 3 || placeLine(f)) return false;
+  return a.lines.any((l) => l.any((p) => inPoly(p, pl)));
+}
+
 /// vorkommende Kategorien (id, name, n), «Ohne Kategorie» (id 0) zuletzt (placeCatsUsed)
 List<({int id, String name, int n})> placeCatsUsed(IncStore s) {
   final fs = s.places;
@@ -178,6 +221,73 @@ void setPlaceCat(IncStore s, List<Object>? ids, bool on) {
   });
 }
 
+
+// ---------- Issue #182: Eigenschaften, Flusssperren und Navigationspunkte fester Standorte (wie placePropsOf, stopOn, placeNavBtn in index.html) ----------
+/// Eigenschaften eines Standorts (place_props, effect none|warn|stop)
+List<J> placePropsOf(IncStore s, J f) {
+  final ps = jl(s.st?['place_props']);
+  return (f['props'] is List ? f['props'] as List : const []).map((id) => ps.where((p) => ji(p['id']) == ji(id)).firstOrNull).whereType<J>().toList();
+}
+
+bool placeEff(IncStore s, J f, String e) => placePropsOf(s, f).any((p) => p['effect'] == e);
+
+/// wirksame Flusssperre im laufenden Einsatz (stops aus incident/state)
+bool stopOn(IncStore s, J f) => s.inc != null && jl(s.st?['stops']).any((x) => ji(x['id']) == ji(f['id']));
+
+/// Zeichen vor dem Namen: ⛔ wirksame Sperre, ⚠ Warnung bzw. nicht berücksichtigte Sperre
+String placeBadge(IncStore s, J f) => stopOn(s, f) ? '⛔ ' : (placeEff(s, f, 'warn') || placeEff(s, f, 'stop') ? '⚠ ' : '');
+
+/// Eigenschaften als Text («⛔ Flusssperrung · 🛶 Einwasserung möglich»)
+String placePropsText(IncStore s, J f) => placePropsOf(s, f).map((p) => '${js(p['icon'])} ${js(p['name'])}'.trim()).join(' · ');
+
+/// Navigationspunkte (f.nav: lat, lon, note)
+List<({double lat, double lon, String note})> placeNav(J f) => (f['nav'] is List ? f['nav'] as List : const [])
+    .whereType<Map>()
+    .map((n) => (lat: jd(n['lat']) ?? 0, lon: jd(n['lon']) ?? 0, note: js(n['note'])))
+    .toList();
+
+/// Einsatzleitung: Sperre dieses Standorts im Einsatz aus- bzw. wieder einschalten (nur wenn die Sperren insgesamt gelten)
+bool stopToggleOk(IncStore s, J f) => s.inc != null && jb(s.st?['can_manage']) && s.feat('area') && jb(s.inc?['stop_on']) && placeEff(s, f, 'stop');
+Future<void> stopToggle(IncStore s, J f) => s.act('incident/stops', {'id': ji(f['id']), 'off': stopOn(s, f) ? 1 : 0});
+
+/// 🧭 bei festen Standorten: ohne Navigationspunkt zum Standort, mit einem direkt dorthin, mit mehreren Auswahl (nach Luftlinie vom eigenen Standort)
+Future<void> placeNavGo(BuildContext c, IncStore s, J f) async {
+  final n = placeNav(f), nm = js(f['name']);
+  if (n.isEmpty) return navGo(s, jd(f['lat'])!, jd(f['lon'])!, nm);
+  if (n.length == 1) return navGo(s, n[0].lat, n[0].lon, n[0].note.isEmpty ? nm : '$nm – ${n[0].note}');
+  final here = s.selfAt, at = LatLng(jd(f['lat']) ?? 0, jd(f['lon']) ?? 0);
+  final l = [for (var i = 0; i < n.length; i++) (i: i, p: n[i], d: here == null ? null : geoDist(here, LatLng(n[i].lat, n[i].lon)))];
+  if (here != null) l.sort((a, b) => a.d!.compareTo(b.d!));
+  String km(double m) => m < 1000 ? '${m.round()} m' : '${(m / 1000).toStringAsFixed(m < 10000 ? 2 : 1)} km';
+  await showModalBottomSheet(
+      context: c,
+      showDragHandle: true,
+      builder: (bc) => SafeArea(
+          child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), children: [
+            Text('Navigieren: $nm', style: Theme.of(bc).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Mut('Navigationspunkt wählen${here != null ? ' (nach Luftlinie vom eigenen Standort)' : ''}:'),
+            for (final x in l)
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Text('🧭', style: TextStyle(fontSize: 20)),
+                  title: Text(x.p.note.isEmpty ? 'Navigationspunkt ${x.i + 1}' : x.p.note),
+                  subtitle: Text([if (x.d != null) '${km(x.d!)} von hier', '${km(geoDist(at, LatLng(x.p.lat, x.p.lon)))} vom Standort'].join(' · ')),
+                  onTap: () {
+                    Navigator.pop(bc);
+                    navGo(s, x.p.lat, x.p.lon, x.p.note.isEmpty ? nm : '$nm – ${x.p.note}');
+                  }),
+          ])));
+}
+
+/// Knopf 🧭 für feste Standorte (ersetzt navBtn)
+Widget? placeNavBtn(BuildContext c, IncStore s, J f, {String? label}) {
+  if (!s.feat('nav') || jd(f['lat']) == null) return null;
+  final n = placeNav(f).length;
+  return label == null
+      ? IconButton(tooltip: n > 1 ? 'Navigationspunkt wählen' : 'Zu ${js(f['name'])} navigieren', icon: const Text('🧭', style: TextStyle(fontSize: 18)), onPressed: () => placeNavGo(c, s, f), visualDensity: VisualDensity.compact)
+      : OutlinedButton(onPressed: () => placeNavGo(c, s, f), child: Text('🧭 $label'));
+}
+
 class PoisPanel extends StatefulWidget {
   const PoisPanel({super.key, required this.s, required this.map});
   final IncStore s;
@@ -189,7 +299,7 @@ class PoisPanel extends StatefulWidget {
 class _PoisPanelState extends State<PoisPanel> {
   IncStore get s => widget.s;
   MapCtl get map => widget.map;
-  Set<String> _fold = {}; // zugeklappte Gruppen: pls, lage, fix, lage:<Art>, fix:<Kategorie> (sw_poifold)
+  Set<String> _fold = {}; // zugeklappte Gruppen: pls, lage, fix, lage:<Art>, fix:<Kategorie>, fix:in, fix:in:<Kategorie>, fix:out:<Kategorie>; fix:out+ = «Ausserhalb» geöffnet (sw_poifold)
   SharedPreferences? _sp;
 
   String get _fk => 'poifold_${s.acc.id}';
@@ -394,30 +504,70 @@ class _PoisPanelState extends State<PoisPanel> {
   Widget _placeRow(J f) => _item(
       check: Checkbox(value: !s.poiHide.contains('f${f['id']}'), onChanged: (v) => s.setPoiHidden(['f${f['id']}'], v != true)),
       sw: _swatch(js(f['color']).isEmpty ? _placeCol : js(f['color'])),
-      name: js(f['name']),
-      info: placeInfo(s, f),
-      acts: [smallBtn('Zeigen', () => _showPlace(f)), ?navBtn(s, f['lat'], f['lon'], js(f['name']))]);
+      name: '${placeBadge(s, f)}${js(f['name'])}',
+      info: [placeInfo(s, f), placePropsText(s, f)].where((x) => x.isNotEmpty).join(' · '),
+      acts: [
+        smallBtn('Zeigen', () => _showPlace(f)),
+        if (stopToggleOk(s, f)) smallBtn(stopOn(s, f) ? '⛔ aus' : '⛔ an', () => stopToggle(s, f)),
+        ?placeNavBtn(context, s, f),
+      ]);
 
   List<Widget> _places() {
     final fs = s.places;
     if (fs.isEmpty) return [];
     final cs = placeCatsUsed(s), withCat = cs.any((c) => c.id != 0);
+    // Aufteilung nach Einsatzgebiet (wie renderPois): priorisierte Kategorien (place_cats.prio) zuoberst und ganz (im Einsatzgebiet zuerst),
+    // danach «Im Einsatzgebiet» und «Ausserhalb des Einsatzgebiets» (zuerst zugeklappt, offen = fix:out+), darin je Kategorie; ohne Suchgebiet keine Aufteilung
+    final a = s.area, split = a != null && (a.lines.isNotEmpty || a.circles.isNotEmpty);
+    final inA = <int>{if (split) for (final f in fs) if (placeInArea(f, a, jd(s.st?['place_near_km']) ?? 10)) ji(f['id']) ?? 0};
+    final pr = {for (final c in s.placeCats) if (jb(c['prio'])) ji(c['id'])};
+    int cOf(J f) {
+      final c = ji(f['cat_id']);
+      return pr.contains(c) || cs.any((x) => x.id != 0 && x.id == c) ? c! : 0;
+    }
+
+    bool isIn(J f) => inA.contains(ji(f['id']));
+    // in «Im/Ausserhalb des Einsatzgebiets» (sec) gilt das Häkchen einer Kategorie nur für deren Standorte in diesem Abschnitt (placeSecSet), sonst für die ganze Kategorie
+    bool secOn(List<J> l) => l.isNotEmpty && l.every((f) => placeOn(s, f));
+    List<Widget> cats(String pre, List<J> list, {bool sec = false}) => withCat
+        ? [
+            for (final c in cs)
+              if (list.any((f) => cOf(f) == c.id))
+                _grp('$pre${c.id}', '${pr.contains(c.id) ? '★ ' : ''}${c.name}', list.where((f) => cOf(f) == c.id).length,
+                    list.where((f) => cOf(f) == c.id).map(_placeRow).toList(),
+                    v: sec ? secOn(list.where((f) => cOf(f) == c.id).toList()) : pcOn(s, c.id),
+                    on: sec
+                        ? (v) => placeSecSet(s, list.where((f) => cOf(f) == c.id).map((f) => ji(f['id']) ?? 0), v)
+                        : (v) {
+                            setPlaceCat(s, [c.id], v);
+                            if (v && !s.vis('place')) s.setVis(['place'], true);
+                          },
+                    sub: true),
+          ]
+        : list.map(_placeRow).toList();
+    final top = [...fs.where((f) => pr.contains(ji(f['cat_id'])) && isIn(f)), ...fs.where((f) => pr.contains(ji(f['cat_id'])) && !isIn(f))],
+        rest = fs.where((f) => !pr.contains(ji(f['cat_id']))).toList();
+    Widget sub(String k, String t, List<J> list, {bool inv = false}) {
+      final key = inv ? '$k+' : k, open = inv ? _fold.contains(key) : !_fold.contains(key);
+      return Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: FoldGroup(
+              title: t,
+              count: list.length,
+              open: open,
+              onToggle: () => _toggleFold(key),
+              trailing: Checkbox(value: secOn(list), onChanged: list.isEmpty ? null : (v) => placeSecSet(s, list.map((f) => ji(f['id']) ?? 0), v == true)),
+              children: list.isEmpty ? [const Padding(padding: EdgeInsets.all(8), child: Text('Keine'))] : cats('$k:', list, sec: true)));
+    }
+
     return [
       _grp(
           'fix',
           'Feste Standorte',
           fs.length,
-          withCat
-              ? [
-                  for (final c in cs)
-                    _grp('fix:${c.id}', c.name, c.n,
-                        fs.where((f) => (ji(f['cat_id']) ?? 0) == c.id || (c.id == 0 && !cs.any((x) => x.id != 0 && x.id == ji(f['cat_id'])))).map(_placeRow).toList(),
-                        v: pcOn(s, c.id), on: (v) {
-                      setPlaceCat(s, [c.id], v);
-                      if (v && !s.vis('place')) s.setVis(['place'], true);
-                    }, sub: true),
-                ]
-              : fs.map(_placeRow).toList(),
+          split
+              ? [...cats('fix:', top), sub('fix:in', 'Im Einsatzgebiet', rest.where(isIn).toList()), sub('fix:out', 'Ausserhalb des Einsatzgebiets', rest.where((f) => !isIn(f)).toList(), inv: true)]
+              : cats('fix:', [...top, ...rest]),
           v: fs.every((f) => !s.poiHide.contains('f${f['id']}')),
           on: (v) => s.setPoiHidden(fs.map((f) => 'f${f['id']}'), !v)),
     ];

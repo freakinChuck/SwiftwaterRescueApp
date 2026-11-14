@@ -38,6 +38,7 @@ const viewCatsAll = [
   ('mm', 'Nachrichten-Markierungen', 'msg'),
   ('air', 'Helikopter', ''),
   ('hydro', 'Messstationen', 'hydro'),
+  ('geo', 'Geodaten (OpenStreetMap)', 'geo'), // Issue #182, zuerst ausgeblendet
 ];
 
 /// Grundkarte (Issue #106, MAP_PROVIDERS/mapsSet in common.js): Liste vom Server (maps, map_def in me und incident/state), eingestellt in der Verwaltung,
@@ -182,7 +183,18 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   List<(String, String, String)> viewCats() =>
-      viewCatsAll.where((v) => v.$1 == 'air' ? jb(st?['air']) : (v.$3.isEmpty || feat(v.$3))).toList();
+      viewCatsAll.where((v) => v.$1 == 'air' ? jb(st?['air']) : v.$1 == 'geo' ? feat('geo') && geoKinds.isNotEmpty : (v.$3.isEmpty || feat(v.$3))).toList();
+
+  /// Objektarten der Geodaten-Ebene, die die Verwaltung anbietet (Issue #182)
+  List<J> get geoKinds => jl(st?['geo_kinds']).where((k) => jb(k['live'])).toList();
+
+  /// ausgeblendete Objektarten der Geodaten-Ebene, pro Gerät (geo_off)
+  Set<String> geoOff = {};
+  void setGeoOff(String k, bool off) {
+    off ? geoOff.add(k) : geoOff.remove(k);
+    _sp?.setStringList('geo_off', geoOff.toList());
+    notifyListeners();
+  }
   bool vis(String k) => !viewHide.contains(k);
 
   /// Art des Einsatzes (kindOf)
@@ -269,6 +281,13 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   void _loadView() {
     final p = _sp!;
     viewHide = (p.getStringList('v_hide') ?? []).toSet();
+    // Geodaten-Ebene (Issue #182) auf jedem Gerät zuerst ausgeblendet (VIEW_OFF)
+    if (!(p.getBool('v_def_geo') ?? false)) {
+      viewHide.add('geo');
+      p.setStringList('v_hide', viewHide.toList());
+      p.setBool('v_def_geo', true);
+    }
+    geoOff = (p.getStringList('geo_off') ?? []).toSet();
     final b = p.getString('v_base');
     base = _hasMap(b) ? b! : defaultBase;
     autoView = p.getBool('v_auto') ?? false;
@@ -643,7 +662,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     area = searchArea(jl(st?['sources']), nets, jd(i['flow_ms']), now, posts, (s, r) => overpassNet(api, {'around': [r, s.latitude, s.longitude]}), () {
       _calcArea();
       notifyListeners();
-    }, rescuees);
+    }, rescuees, jl(st?['stops'])); // Flusssperren (Issue #182)
   }
 
   void _checkArea() {
