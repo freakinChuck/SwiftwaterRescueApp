@@ -149,15 +149,16 @@ double _segDist(LatLng a, LatLng b, LatLng p) {
   return math.sqrt(ox * ox + oy * oy);
 }
 
-/// fester Standort im Einsatzgebiet (placeInArea in web/index.html): ein Punkt (Standort, Eckpunkte, Navigationspunkte) nahe am Suchgebiet
-/// entlang des Gewässers (BANK_M + 60 m) bzw. im Kreis, oder das Gewässer führt durch den Bereich
-bool placeInArea(J f, SearchArea a) {
+/// fester Standort im Einsatzgebiet (placeInArea in web/index.html): ein Punkt (Standort, Eckpunkte, Navigationspunkte) höchstens nearKm
+/// (place_near_km aus incident/state, Standard 20 km) vom Suchgebiet entlang des Gewässers bzw. vom Kreis, oder das Gewässer führt durch den Bereich
+bool placeInArea(J f, SearchArea a, double nearKm) {
+  final d = bankM + nearKm * 1000;
   final ps = <LatLng>[?llOf(f), ..._ptsOf(f['pts']), ...placeNav(f).map((q) => LatLng(q.lat, q.lon))];
   for (final q in ps) {
-    if (a.circles.any((c) => geoDist(q, c.c) <= c.r)) return true;
+    if (a.circles.any((c) => geoDist(q, c.c) <= c.r + d - bankM)) return true;
     for (final l in a.lines) {
       for (var j = 1; j < l.length; j++) {
-        if (_segDist(l[j - 1], l[j], q) < bankM + 60) return true;
+        if (_segDist(l[j - 1], l[j], q) <= d) return true;
       }
     }
   }
@@ -502,7 +503,7 @@ class _PoisPanelState extends State<PoisPanel> {
     // Aufteilung nach Einsatzgebiet (wie renderPois): priorisierte Kategorien (place_cats.prio) zuoberst und ganz (im Einsatzgebiet zuerst),
     // danach «Im Einsatzgebiet» und «Ausserhalb des Einsatzgebiets» (zuerst zugeklappt, offen = fix:out+), darin je Kategorie; ohne Suchgebiet keine Aufteilung
     final a = s.area, split = a != null && (a.lines.isNotEmpty || a.circles.isNotEmpty);
-    final inA = <int>{if (split) for (final f in fs) if (placeInArea(f, a)) ji(f['id']) ?? 0};
+    final inA = <int>{if (split) for (final f in fs) if (placeInArea(f, a, jd(s.st?['place_near_km']) ?? 20)) ji(f['id']) ?? 0};
     final pr = {for (final c in s.placeCats) if (jb(c['prio'])) ji(c['id'])};
     int cOf(J f) {
       final c = ji(f['cat_id']);

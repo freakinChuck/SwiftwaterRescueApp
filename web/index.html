@@ -442,8 +442,8 @@ function drawArea(i){if(netsInc!==i.id){nets.clear();netsInc=i.id}
   // Issue #182: feste Standorte mit Wirkung «Warnung» (und nicht berücksichtigte Sperren) im Suchgebiet hervorheben und nennen
   const hot=feat('place')?(st.places||[]).filter(f=>placeEff(f,'warn')||placeEff(f,'stop')&&!stopOn(f)).filter(f=>a.lines.some(l=>l.some((p,j)=>j&&segDist(l[j-1],p,f)<BANK_M+60))):[];
   areaHot=new Set(hot.map(f=>f.id));
-  // feste Standorte im Einsatzgebiet (Fenster «Markierungen»): ein Punkt (Standort, Eckpunkte, Navigationspunkte) nahe am Suchgebiet entlang des Gewässers
-  // bzw. im Kreis, oder das Gewässer führt durch den Bereich; null = kein Suchgebiet, keine Aufteilung
+  // feste Standorte im Einsatzgebiet (Fenster «Markierungen»): ein Punkt (Standort, Eckpunkte, Navigationspunkte) höchstens place_near_km (Verwaltung, Standard 20 km)
+  // vom Suchgebiet entlang des Gewässers bzw. vom Kreis, oder das Gewässer führt durch den Bereich; null = kein Suchgebiet, keine Aufteilung
   areaIn=a.lines.length||a.circles.length?new Set((feat('place')?st.places||[]:[]).filter(f=>placeInArea(f,a)).map(f=>f.id)):null;if(hot.length)a.info.push('⚠ Im Suchgebiet: '+hot.map(f=>f.name+' ('+placePropsOf(f).filter(p=>p.effect!=='none').map(p=>p.name).join(', ')+')').join(', ')+'.');
   areaInfo=a.info.join(' ');areaLines=a.info;areaShort=a.short||'';areaParts=a.parts.filter(p=>p.polys.length||p.circles.length);areaShape=a.polys.length||a.circles.length?{polys:a.polys,circles:a.circles}:null;if(!areaShape)return null;const g=L.layerGroup();
   a.circles.forEach(c=>g.addLayer(L.circle([c.lat,c.lon],{radius:c.r,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false})));
@@ -644,8 +644,8 @@ function checkArea(){if(!st||!st.incident||!areaShape||!areaShape.polys||areaLog
   if(areaShape.polys.some(pl=>inPoly(pos,pl))){const id=st.incident.id;areaLogged[id]=true;api('incident/event',{kind:'area'}).catch(()=>{areaLogged[id]=false})}}
 function areaBounds(sh=areaShape){if(!sh)return null;
   const b=L.latLngBounds([]);sh.circles.forEach(c=>b.extend(L.latLng(c.lat,c.lon).toBounds(c.r*2)));sh.polys.flat().forEach(p=>b.extend([p.lat,p.lng]));return b.isValid()?b:null}
-function placeInArea(f,a){const ps=[{lat:f.lat,lon:f.lon}].concat((f.pts||[]).map(q=>({lat:q[0],lon:q[1]})),(f.nav||[]).map(q=>({lat:q.lat,lon:q.lon}))).filter(q=>q.lat!=null);
-  if(ps.some(q=>a.circles.some(c=>dist(q,c)<=c.r)||a.lines.some(l=>l.some((p,j)=>j&&segDist(l[j-1],p,q)<BANK_M+60))))return true;
+function placeInArea(f,a){const D=BANK_M+(st.place_near_km??20)*1000,ps=[{lat:f.lat,lon:f.lon}].concat((f.pts||[]).map(q=>({lat:q[0],lon:q[1]})),(f.nav||[]).map(q=>({lat:q.lat,lon:q.lon}))).filter(q=>q.lat!=null);
+  if(ps.some(q=>a.circles.some(c=>dist(q,c)<=c.r+D-BANK_M)||a.lines.some(l=>l.some((p,j)=>j&&segDist(l[j-1],p,q)<=D))))return true;
   if(!f.pts||f.line)return false;const pl=f.pts.map(q=>({lat:q[0],lng:q[1]}));return a.lines.some(l=>l.some(p=>inPoly({lat:p.lat,lng:p.lon},pl)))}
 function inArea(pt){if(!areaShape)return false;return areaShape.circles.some(c=>map.distance([pt.lat,pt.lng],[c.lat,c.lon])<=c.r)||areaShape.polys.some(pl=>inPoly(pt,pl))}
 const FITPAD={paddingTopLeft:[50,90],paddingBottomRight:[80,50],maxZoom:17};
