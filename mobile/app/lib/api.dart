@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import 'demo.dart';
 import 'version.dart';
 
 /// Kennung der App im User-Agent (auch in der WebView): Die Web-App erkennt daran die App-Hülle (NATIVE in common.js).
@@ -49,6 +50,7 @@ class Api {
   Uri uri(String route, [Map<String, String>? q]) => Uri.parse('${base}api/index.php').replace(queryParameters: {'r': route, ...?q});
 
   Future<Map<String, dynamic>> call(String route, {Map<String, dynamic>? body, Map<String, String>? query, Duration timeout = const Duration(seconds: 20)}) async {
+    if (isDemoBase(base)) return Demo.i.call(route, body: body, query: query); // Demo-Modus (Issue #74): kein Netz
     // X-App-Version (Issue #175): der Server führt die Version je Gerätesitzung nach (Verwaltung → System → «Versionen»)
     final h = {'X-Token': token ?? '', 'User-Agent': appUa, 'X-App-Version': appVerHeader, if (body != null) 'Content-Type': 'application/json'};
     http.Response r;
