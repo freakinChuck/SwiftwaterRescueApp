@@ -171,8 +171,8 @@ function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys
     if(!n||(!n.loading&&((!n.fail&&n.R<D*1.1&&n.R<30000)||(n.fail&&Date.now()>n.retryAt)))){const R=netRadius(D),old=n;n={...(old||{}),loading:true};nets.set(k,n);
       get(s,R).then(j=>({R,...riverNet(j)})).catch(e=>({R,fail:true,err:e.message,retryAt:Date.now()+20000})).then(v=>{if(nets.get(k)===n){nets.set(k,v);redraw()}})}
     const circle=why=>{const c={lat:s.lat,lon:s.lon,r:D};r.circles.push(c);p.circles.push(c);r.info.push(lbl+why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.')};
-    if(n.fail)return circle('Gewässerdaten nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
-    if(!n.ways)return circle('Gewässerdaten werden geladen.');
+    if(n.fail)return circle('Gewässernetz nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
+    if(!n.ways)return circle('Gewässernetz wird geladen.');
     const a=riverArea(n,s,D,posts,stops);if(!a)return circle('Kein Gewässer nahe der PLS.');
     r.polys.push(...a.polys);r.lines.push(...a.lines);p.polys.push(...a.polys);
     r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet ${a.cutBy}.`:'.'))});

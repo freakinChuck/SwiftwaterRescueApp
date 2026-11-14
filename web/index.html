@@ -994,7 +994,7 @@ async function rdCalc(){const cur=rd,air=cur.a.distanceTo(cur.b);cur.air=air;
     cur.res={...r,dir,down:dir.includes('abwärts')};
     [[cur.a,A.ll],[cur.b,B.ll]].forEach(([p,q])=>L.polyline([p,q],{color:'#fff',weight:1,dashArray:'3',interactive:false}).addTo(cur.layer));
     const line=L.polyline(r.pts,{color:'#2ee6d6',weight:5,opacity:.9,interactive:false}).addTo(cur.layer);map.fitBounds(line.getBounds().extend(cur.a).extend(cur.b),{padding:[60,60],maxZoom:16})}
-  catch(e){if(rd!==cur)return;cur.err=e.message.startsWith('Kein')||e.message.startsWith('Zwischen')?e.message:'Gewässerdaten nicht verfügbar: '+e.message}
+  catch(e){if(rd!==cur)return;cur.err=e.message.startsWith('Kein')||e.message.startsWith('Zwischen')?e.message:'Gewässernetz nicht verfügbar: '+e.message}
   cur.step='done';rdRender()}
 // Gewässernetz als Graph: Knoten-ID → {id, lat, lon, adj:[[Nachbar, Meter, 1 = in Fliessrichtung]]}; bereits geladenes Netz wiederverwenden, wenn es beide Punkte abdeckt
 async function rdGraph(a,b){const m=Math.max(1500,a.distanceTo(b)*.3),la=m/111320,lo=m/(111320*Math.cos(a.lat*Math.PI/180));
@@ -1031,7 +1031,7 @@ const rdFlow=()=>{const f=st&&st.incident&&st.incident.flow_ms;if(f)return f;try
 function rdRender(){const box=$('#rdBox');if(!rd){box.hidden=true;return}box.hidden=false;const r=rd.res,x='<button id="rdX">Schliessen</button>',again='<button id="rdN">Neu messen</button>';
   box.innerHTML=rd.step==='a'?`<span><b>Flussdistanz:</b> Startpunkt A auf der Karte antippen</span>${x}`
     :rd.step==='b'?`<span><b>Flussdistanz:</b> Zielpunkt B auf der Karte antippen</span>${x}`
-    :rd.step==='load'?`<span><b>Flussdistanz:</b> Gewässerdaten werden geladen …</span>${x}`
+    :rd.step==='load'?`<span><b>Flussdistanz:</b> Gewässernetz wird geladen …</span>${x}`
     :rd.err?`<span><b>Flussdistanz:</b> ${esc(rd.err)}</span><div class="row">${again}${x}</div>`
     :`<div><b>Flussdistanz A → B: ${kmT(r.d)}</b> <span class="mut">(Luftlinie ${kmT(rd.air)})</span></div><div class="mut">${esc(r.dir)}${esc(fcs(rd.a.lat,rd.a.lng,' · A '))}${esc(fcs(rd.b.lat,rd.b.lng,' · B '))}</div>
       <table class="rdt"><tr><td><label>Fliessgeschwindigkeit <input id="rdV" type="number" step="0.1" min="0" value="${rdFlow()}" aria-label="Fliessgeschwindigkeit in m/s"> m/s</label></td><td id="rdT0"></td></tr>

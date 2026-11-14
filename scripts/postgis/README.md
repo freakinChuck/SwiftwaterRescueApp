@@ -14,7 +14,7 @@ Antwortet PostGIS nicht, läuft alles wie bisher über Overpass.
 
 - Ein Server mit PostgreSQL ≥ 13, PostGIS ≥ 3 und osm2pgsql ≥ 1.9 (Flex-Ausgabe mit `--schema`), z. B. ein kleiner VPS.
   Das Hosting cyon «Webhosting Single» bietet kein PostgreSQL; die Datenbank läuft deshalb getrennt.
-- Auf dem Webserver der App die PHP-Erweiterung `pdo_pgsql` (in der Verwaltung unter «Gewässerdaten» sichtbar, falls sie fehlt).
+- Auf dem Webserver der App die PHP-Erweiterung `pdo_pgsql` (in der Verwaltung unter «Geodaten-Quellen» sichtbar, falls sie fehlt).
 - Platz: Download rund 500 MB, Tabelle rund 100 MB, osm2pgsql braucht beim Import 1–2 GB RAM.
 
 ## Einrichten (Debian/Ubuntu)
@@ -44,11 +44,11 @@ bisherigen Tabellen. Unter Windows macht `update.bat` dasselbe (Pfade und Zugang
 15 3 * * 1 /opt/swiftwater/postgis/update.sh >> /var/log/swiftwater-postgis.log 2>&1
 ```
 
-Der Zwischenspeicher der App (Verwaltung → Gewässerdaten, Haltedauer) hält Antworten weiter so lange wie eingestellt.
+Der Zwischenspeicher der App (Verwaltung → Geodaten-Quellen, Haltedauer) hält Antworten weiter so lange wie eingestellt.
 
 ## In der App einschalten
 
-Verwaltung → Karte & Daten → Gewässerdaten → «PostGIS (Hauptquelle)»: Host, Port, Datenbank, Benutzer, Passwort, Tabelle
+Verwaltung → Karte & Daten → Geodaten-Quellen → «PostGIS (Hauptquelle)»: Host, Port, Datenbank, Benutzer, Passwort, Tabelle
 (Standard `sw_waterways`), Verschlüsselung. «Verbindung testen» prüft Verbindung, PostGIS, Tabelle, SRID (4326) und fragt
 5 km um Bern ab. Die Statistik darunter zeigt PostGIS als eigene Zeile.
 

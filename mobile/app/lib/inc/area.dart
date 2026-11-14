@@ -299,11 +299,11 @@ SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num
     }
 
     if (n.fail) {
-      circle('Gewässerdaten nicht verfügbar (${n.err}), neuer Versuch folgt.');
+      circle('Gewässernetz nicht verfügbar (${n.err}), neuer Versuch folgt.');
       continue;
     }
     if (n.net == null) {
-      circle('Gewässerdaten werden geladen.');
+      circle('Gewässernetz wird geladen.');
       continue;
     }
     final a = riverArea(n.net!, c, d, posts, stops);

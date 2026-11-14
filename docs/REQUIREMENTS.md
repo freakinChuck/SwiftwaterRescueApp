@@ -125,8 +125,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **SG-06** – An Gabelungen folgt das Suchgebiet allen Armen (#40).
 - **SG-07** – Das Suchgebiet endet am ersten Sicherungs- bzw. Beobachtungsposten auf dem jeweiligen Arm, auch wenn er zwischen zwei Punkten des Gewässerverlaufs liegt (Spec, #182).
 - **SG-08** – Mehrere PLS ergeben die Vereinigung ihrer Gebiete; es zählen nur vermisste Rettlinge; Hinweis mit Kurzfassung, aufklappbar je PLS (#24).
-- **SG-09** – Rückfall ohne Gewässerdaten: Kreis um den PLS (AG).
-- **SG-10** – Gewässerdaten über den Server mit Cache, Sperre gegen doppelte Abfragen, abgelaufene Daten als Rückfall, konfigurierbare Overpass-Server mit Reihenfolge, Abfrage notfalls direkt vom Gerät (#28).
+- **SG-09** – Rückfall ohne Gewässernetz: Kreis um den PLS (AG).
+- **SG-10** – Gewässernetz über den Server mit Cache, Sperre gegen doppelte Abfragen, abgelaufene Daten als Rückfall, konfigurierbare Overpass-Server mit Reihenfolge, Abfrage notfalls direkt vom Gerät (#28).
 - **SG-11** – Statistik der Overpass-Abfragen je Server und Quelle, zurücksetzbar (#45).
 - **SG-12** – Zugriff auf Overpass gesamt und je Server abschaltbar (#75).
 - **SG-13** – Hauptquelle für das Gewässernetz ist eine eigene PostGIS-Datenbank mit dem OSM-Auszug der Schweiz (Geofabrik), regelmässig aktualisiert; Overpass bleibt Rückfall, wenn sie nicht antwortet (#131).

@@ -162,14 +162,14 @@ const NAV=[
   ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt],['symbole','sSy','Einsatzsymbole',loadSym]]],
   ['Übungen',[['uebungen','sEx','Übungen vorbereiten',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['ai','sAi','AI-Assistent',loadAi]]],
-  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['gewaesserdaten','sO','Gewässerdaten',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['geodaten','sGeo','Geodaten übernehmen',loadGeo]]],
+  ['Karte & Daten',[['koordinaten','sC','Koordinaten',loadCoords],['geoquellen','sO','Geodaten-Quellen',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['geodaten','sGeo','Geodaten übernehmen',loadGeo]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
   ['Konnektivität',[['emailalarm','sMail','E-Mail-Alarm',loadMail]]],
   ['System',[['applog','sAL','Applikationslog',loadAppLog]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',gewaesserdaten:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',uebungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',applog:'applog'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -194,7 +194,8 @@ function userMenuWire(){const b=$('#bUm'),l=$('#umL'),set=o=>{l.hidden=!o;b.setA
   if(!umDoc){umDoc=true;document.addEventListener('click',e=>{const m=$('#umL');if(m&&!e.target.closest('.um')){m.hidden=true;$('#bUm').setAttribute('aria-expanded',false)}})}
   l.onkeydown=e=>{if(e.key==='Escape'){set(false);b.focus()}};
   $('#bPw').onclick=()=>{set(false);pwDialog(false)};$('#bOut').onclick=()=>{logout();start()}}
-function showNav(){if(!$('#nav'))return;const its=navItems(),it=its.find(x=>x[0]===location.hash.slice(1).split('?')[0])||its[0],[k,id,l,load]=it;
+function showNav(){if(!$('#nav'))return;if(location.hash==='#gewaesserdaten')history.replaceState(null,'','#geoquellen'); // früherer Name des Bereichs
+  const its=navItems(),it=its.find(x=>x[0]===location.hash.slice(1).split('?')[0])||its[0],[k,id,l,load]=it;
   its.forEach(([,i])=>{$('#'+i).hidden=i!==id});
   document.querySelectorAll('#nav a').forEach(a=>{if(a.dataset.k===k)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   const g=(nav().find(([,its])=>its.some(x=>x[0]===k))||[])[0];document.querySelectorAll('#nav .ngw').forEach(w=>{const c=w.dataset.g===g;w.classList.toggle('cur',c);navOpen(w,c||navOGet().has(w.dataset.g),false)}); // von Hand geöffnete bleiben offen
@@ -555,7 +556,7 @@ async function loadGeo(){const el=$('#sGeo'),pq=new URLSearchParams(location.has
   catch(e){el.innerHTML='<h2>Geodaten übernehmen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   const c=geoD.cfg,K=geoD.kinds,dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–';let kf;try{kf=new Set(JSON.parse(localStorage.getItem('sw_geof')||'null')||K.map(k=>k.k))}catch(e){kf=new Set(K.map(k=>k.k))}
   const have=ref=>geoD.linked.filter(l=>l.src_ref===ref&&(planId?l.plan_id===planId:l.plan_id==null));
-  el.innerHTML=`<h2>Geodaten übernehmen</h2><div class="mut">Objekte am Gewässer aus OpenStreetMap (Wehre, Kraftwerke, Brücken über Gewässer, Slipanlagen, Rettungspunkte …) im Kartenausschnitt suchen und als feste Standorte übernehmen. Übernommene Standorte bleiben mit der Quelle verknüpft: Ein Abgleich prüft sie täglich, Abweichungen erscheinen unter «Feste Standorte» und werden nie automatisch übernommen. Quellen in der Reihenfolge der Gewässerdaten: ${geoD.sources.length?esc(geoD.sources.map(x=>x.name).join(', ')):'<b>keine eingerichtet</b> (Verwaltung → Gewässerdaten)'}. Daten © OpenStreetMap-Mitwirkende (ODbL).</div>
+  el.innerHTML=`<h2>Geodaten übernehmen</h2><div class="mut">Objekte am Gewässer aus OpenStreetMap (Wehre, Kraftwerke, Brücken über Gewässer, Slipanlagen, Rettungspunkte …) im Kartenausschnitt suchen und als feste Standorte übernehmen. Übernommene Standorte bleiben mit der Quelle verknüpft: Ein Abgleich prüft sie täglich, Abweichungen erscheinen unter «Feste Standorte» und werden nie automatisch übernommen. Quellen in der Reihenfolge unter «Geodaten-Quellen»: ${geoD.sources.length?esc(geoD.sources.map(x=>x.name).join(', ')):'<b>keine eingerichtet</b> (Verwaltung → Geodaten-Quellen)'}. Daten © OpenStreetMap-Mitwirkende (ODbL).</div>
     ${plan?`<div class="inc" style="display:block;padding:.6rem .8rem;margin:.6rem 0">Übernahme in die vorbereitete Übung <b>${esc(plan.title)}</b> (eigene Standorte der Übung). <a href="#uebungen">Zurück zu den Übungen</a>${geoD.can_map?' · <a href="#geodaten">Permanente Standorte</a>':''}</div>`:geoD.can_map?'':'<div class="mut">⚠ Ohne das Recht «Karte & Daten einstellen» sind die bestehenden Standorte hier nicht sichtbar.</div>'}
     <details><summary><b>Vorgaben je Objektart</b> <span class="mut">(Kategorie, Eigenschaften, Kürzel und Farbe beim Übernehmen; Angebot in der Geodaten-Ebene der Einsatz-App)</span></summary>
       <div class="tw"><table><thead><tr><th>Objektart</th><th>Kategorie</th><th>Eigenschaften</th><th>Kürzel / Farbe</th><th>In der Einsatz-App</th></tr></thead><tbody>${K.map(k=>`<tr data-gk="${k.k}"><td>${esc(k.icon)} ${esc(k.name)}</td>
@@ -859,12 +860,12 @@ function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?n
     else if(b.id==='aSv'){if(!c.src.length&&!confirm('Keine Datenquelle eingeschaltet: Es werden keine Helikopter angezeigt. Trotzdem speichern?'))return;
       c.rescue=c.rescue.filter(x=>x.k.trim()||x.n.trim());b.disabled=true;
       api('settings/save',{air:{...c,rescue:c.rescue},air_kinds:airK}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.');loadAir()}).catch(x=>{fail(x);b.disabled=false})}}}
-/* ---------- Gewässerdaten: Haltedauer des Overpass-Caches und Overpass-Server (Reihenfolge) ---------- */
+/* ---------- Geodaten-Quellen: Reihenfolge, PostGIS, PostGIS-API, Overpass-Server, Haltedauer ---------- */
 let opUrls=[],opDef=[],opOff=[];
-async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all([api('settings'),api('overpass/stats')])}catch(e){el.innerHTML='<h2>Gewässerdaten</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all([api('settings'),api('overpass/stats')])}catch(e){el.innerHTML='<h2>Geodaten-Quellen</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
   opUrls=[...s.overpass_urls];opDef=s.overpass_default;opOff=[...(s.overpass_off||[])];
   wOrd=[...(s.water_order||[])];
-  el.innerHTML=`<h2>Gewässerdaten</h2><div class="mut">Das Gewässernetz für Suchgebiet und Flussdistanz (OpenStreetMap) holt der Server und speichert es zwischen. Er fragt die eingerichteten Quellen in der Reihenfolge unten ab, bis eine antwortet: die eigene PostGIS-Datenbank direkt, die PostGIS-API oder die Overpass-Server. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal hinaus. Antwortet keine Quelle, verwendet der Server ältere Daten (bis 7 Tage).</div>
+  el.innerHTML=`<h2>Geodaten-Quellen</h2><div class="mut">Die Geodaten aus OpenStreetMap, das Gewässernetz für Suchgebiet und Flussdistanz und die Objekte am Gewässer («Geodaten übernehmen», Geodaten-Ebene), holt der Server und speichert es zwischen. Er fragt die eingerichteten Quellen in der Reihenfolge unten ab, bis eine antwortet: die eigene PostGIS-Datenbank direkt, die PostGIS-API oder die Overpass-Server. Gleiche Abfragen, z. B. das Suchgebiet auf allen Geräten eines Einsatzes, gehen so nur einmal hinaus. Antwortet keine Quelle, verwendet der Server ältere Daten (bis 7 Tage).</div>
     ${s.water_order?'<h3>Reihenfolge der Quellen</h3><div id="wOrd"></div>':''}
     ${pgHtml(s)}${pgaHtml(s)}
     <h3>Overpass</h3>

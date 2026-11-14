@@ -28,7 +28,7 @@ set_exception_handler(function ($e) { global $db;
 // Nie Passwörter, Schlüssel oder Inhalte von Einsätzen ins Log, nur Kennungen und technische Angaben.
 const APPLOG_LVL = ['info' => 'Ereignis', 'warn' => 'Warnung', 'err' => 'Fehler'];
 const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
-  'push' => 'Push', 'overpass' => 'Gewässerdaten', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'geo' => 'Geodaten', 'client' => 'Browser & App'];
+  'push' => 'Push', 'overpass' => 'Geodaten-Quellen', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'geo' => 'Geodaten Ã¼bernehmen', 'client' => 'Browser & App'];
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
 // Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
@@ -39,7 +39,7 @@ const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['au
   'kind/save' => ['cfg', 'Einsatztyp gespeichert'], 'kind/delete' => ['cfg', 'Einsatztyp gelöscht'], 'mode/save' => ['cfg', 'Einrückoption gespeichert'], 'role/save' => ['cfg', 'Spezialrolle gespeichert'],
   'incident/start' => ['inc', 'Einsatz gestartet'], 'ex/start' => ['inc', 'Vorbereitete Übung gestartet'], 'incident/end' => ['inc', 'Einsatz beendet'],
   'incident/replay/delete' => ['anon', 'Aufzeichnung gelöscht'], 'anon/apply' => ['anon', 'Anonymisierung angewendet'], 'anon/undo' => ['anon', 'Anonymisierung zurückgenommen'],
-  'overpass/stats/reset' => ['overpass', 'Statistik der Gewässerdaten zurückgesetzt'], 'mail/cfg/save' => ['mail', 'E-Mail-Alarm eingestellt'], 'mail/key/new' => ['mail', 'Neuer Schlüssel für Cron-Job und Webhook']];
+  'overpass/stats/reset' => ['overpass', 'Statistik der Geodaten-Quellen zurückgesetzt'], 'mail/cfg/save' => ['mail', 'E-Mail-Alarm eingestellt'], 'mail/key/new' => ['mail', 'Neuer Schlüssel für Cron-Job und Webhook']];
 $ALOG_N = 0;
 function alog($lvl, $cat, $msg, $ctx = null) { global $db, $ALOG_N;
   $msg = mb_substr(trim((string)$msg), 0, 1000);
@@ -241,7 +241,7 @@ const TRIP_LOG_S = 600;  // lange Fahrten zusätzlich alle 10 Minuten protokolli
 const COORDS = ['lv95', 'lv03', 'wgs84', 'wgs84dms']; // Koordinatensysteme für die Anzeige (Umrechnung im Frontend, COORD_SYS in common.js)
 // Gewässernetz (OSM via Overpass) über den Server mit Datei-Cache in api/data/overpass/ (overpassServe)
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
-// Reihenfolge der Abfrage: Einstellung overpass_urls (JSON-Liste, in der Verwaltung unter «Gewässerdaten»), leer = OVERPASS
+// Reihenfolge der Abfrage: Einstellung overpass_urls (JSON-Liste, in der Verwaltung unter «Geodaten-Quellen»), leer = OVERPASS
 function overpassUrls() { $v = json_decode(setting('overpass_urls', ''), true); return is_array($v) && $v ? $v : OVERPASS; }
 // Issue #75: ausgeschaltete Server (Einstellung overpass_off, JSON-Liste) und Zugriff ganz aus (overpass_on = 0); abgefragt werden nur die übrigen
 function overpassOff() { $v = json_decode(setting('overpass_off', ''), true); return array_values(array_intersect(overpassUrls(), is_array($v) ? $v : [])); }
@@ -260,7 +260,7 @@ const PERMS = [
   'uroles' => ['Verwaltung', 'Benutzerrollen verwalten', 'Rollen anlegen, ändern und entfernen'],
   'cfg_inc' => ['Verwaltung', 'Einsatz einstellen', 'Einsatztypen (Alarmstufe, aufbietbare Einsatzgruppen), Einrückoptionen, Spezialrollen, Nachrichten, Vorlagen für externe Einsatzkräfte'],
   'cfg_func' => ['Verwaltung', 'Funktionen einstellen', 'Funktionen und Aufzeichnung je Einsatztyp, Flussdistanz, Navigation'],
-  'cfg_map' => ['Verwaltung', 'Karte & Daten einstellen', 'Koordinaten, Gewässerdaten (PostGIS, Overpass), Helikopter, Pegel & Abfluss, feste Standorte'],
+  'cfg_map' => ['Verwaltung', 'Karte & Daten einstellen', 'Koordinaten, Geodaten-Quellen (PostGIS, Overpass), Helikopter, Pegel & Abfluss, feste Standorte'],
   'cfg_ai' => ['Verwaltung', 'AI-Assistent einstellen', 'Anbieter, API-Schlüssel, erlaubte Modi je Benutzerrolle, Datenschutz und Limits des AI-Assistenten; Nutzung einsehen'],
   'stats' => ['Auswertung', 'Alle Einsätze auswerten', 'Einsatzstatistik, Log und Replay aller Einsätze'],
   'anon' => ['Auswertung', 'Anonymisieren und Aufzeichnungen löschen', 'Anonymisierung einstellen (Stufen, automatisch nach Tagen) und anwenden, auch für mehrere Einsätze; endgültige Stufen sind nicht umkehrbar'],
@@ -1040,7 +1040,7 @@ function geoTile($x, $y) { global $now; $dir = __DIR__ . '/data/geo'; if (!is_di
       if ($src !== 'overpass') opStat($src === 'postgis' ? PG_STAT : PGA_STAT, 'server', false, (microtime(true) - $t) * 1000, $m); } }
   if ($j = $read(fn($a) => $a < GEO_KEEP)) return $j + ['stale' => 1];
   alog('warn', 'geo', 'Geodaten nicht erreichbar', ['tile' => "$x,$y", 'err' => $err ? implode(' | ', $err) : 'keine Quelle eingerichtet']);
-  throw new RuntimeException($err ? implode('; ', $err) : 'Keine Quelle für Geodaten eingerichtet (Verwaltung → Gewässerdaten)'); }
+  throw new RuntimeException($err ? implode('; ', $err) : 'Keine Quelle für Geodaten eingerichtet (Verwaltung → Geodaten-Quellen)'); }
 // Einstellung geo (JSON): je Objektart cat_id (Kategorie beim Übernehmen), props (Eigenschaften), color, abbr, live (in der Geodaten-Ebene der Einsatz-App angeboten, Standard an)
 function geoCfg() { $v = json_decode(setting('geo', ''), true); $v = is_array($v) ? $v : []; $r = [];
   foreach (GEO_KINDS as $k => [$n, $ab]) { $c = is_array($v[$k] ?? null) ? $v[$k] : [];
@@ -1899,16 +1899,16 @@ function overpassServe($q, $area = null) { global $now;
 function overpassPut($q, $els) {
   $ttl = max(0, (int)setting('overpass_ttl', '120')) * 60;
   if (!overpassActive()) out(['ok' => true]); // Overpass ausgeschaltet: nichts annehmen
-  if (!is_array($els) || count($els) > 50000) fail('Ungültige Gewässerdaten');
+  if (!is_array($els) || count($els) > 50000) fail('Ungültiges Gewässernetz');
   $num = fn($x, $m) => (is_int($x) || is_float($x)) && abs($x) <= $m;
   $w = [];
   foreach ($els as $e) {
     $n = $e['nodes'] ?? null; $g = $e['geometry'] ?? null; $t = $e['tags'] ?? [];
-    if (($e['type'] ?? '') !== 'way' || !is_int($e['id'] ?? null) || !is_array($n) || !is_array($g) || count($n) < 2 || count($n) !== count($g) || count($n) > 100000) fail('Ungültige Gewässerdaten');
-    if (!is_array($t) || !preg_match('/^(river|stream|canal)$/', (string)($t['waterway'] ?? ''))) fail('Ungültige Gewässerdaten');
+    if (($e['type'] ?? '') !== 'way' || !is_int($e['id'] ?? null) || !is_array($n) || !is_array($g) || count($n) < 2 || count($n) !== count($g) || count($n) > 100000) fail('Ungültiges Gewässernetz');
+    if (!is_array($t) || !preg_match('/^(river|stream|canal)$/', (string)($t['waterway'] ?? ''))) fail('Ungültiges Gewässernetz');
     $p = [];
     foreach ($n as $k => $id) {
-      if (!is_int($id) || !$num($g[$k]['lat'] ?? null, 90) || !$num($g[$k]['lon'] ?? null, 180)) fail('Ungültige Gewässerdaten');
+      if (!is_int($id) || !$num($g[$k]['lat'] ?? null, 90) || !$num($g[$k]['lon'] ?? null, 180)) fail('Ungültiges Gewässernetz');
       $p[] = ['lat' => (float)$g[$k]['lat'], 'lon' => (float)$g[$k]['lon']];
     }
     $w[] = ['type' => 'way', 'id' => $e['id'], 'nodes' => array_values($n), 'geometry' => $p, 'tags' => ['waterway' => $t['waterway']] + (is_string($t['name'] ?? null) ? ['name' => mb_substr($t['name'], 0, 200)] : [])];
@@ -2423,7 +2423,7 @@ switch ($route) {
     opStat($x['url'], 'device', !empty($x['ok']), min(max(0, (float)($x['ms'] ?? 0)), 120000), empty($x['ok']) ? (mb_substr(trim((string)($x['err'] ?? '')), 0, 150) ?: 'Fehler') : null);
   }
   out(['ok' => true]);
- case 'overpass/stats': need('cfg_map'); // Statistik für die Verwaltung (Gewässerdaten)
+ case 'overpass/stats': need('cfg_map'); // Statistik für die Verwaltung (Geodaten-Quellen)
   out(['since' => (int)setting('overpass_stats_since', '0') ?: null, 'rows' => array_map(fn($r) => ints($r, ['uses', 'ok', 'fails', 'ok_ms', 'last_ok', 'last_fail']), $db->query("SELECT * FROM overpass_stats ORDER BY url, src")->fetchAll())]);
  case 'overpass/stats/reset': need('cfg_map');
   $db->exec("DELETE FROM overpass_stats"); setSetting('overpass_stats_since', (string)time()); out(['ok' => true]);
