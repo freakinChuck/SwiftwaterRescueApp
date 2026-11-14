@@ -103,7 +103,7 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .vehrow .s{font-size:1.2rem;text-align:center;line-height:1.4}
 .vehrow .nm{min-width:0;overflow-wrap:anywhere}
 .vehrow .pa{grid-column:2;display:flex;flex-wrap:wrap;gap:.3rem}.vehrow .pa:empty{display:none} /* Knöpfe klein unter dem Text */
-.vehrow .pa button{padding:.2rem .5rem;font-size:.8rem;min-height:0;line-height:1.3}
+.vehrow .pa button{padding:.2rem .5rem;font-size:.8rem;min-height:0;line-height:1.3}.vehrow .pa button[data-vc]{font-size:1.05rem;padding:.05rem .5rem}.vehrow .pa button[data-vc]+button{font-size:1rem;padding:.1rem .45rem}
 .vehrow small{display:block;opacity:.75}
 .vehhint{background:#5a4300;border-radius:6px;padding:.35rem .5rem;margin:.3rem 0;font-size:.85rem}
 /* Funk & Konferenz (Issue #113): Durchsagen, Sprechtaste, Live-Konferenz; gemeinsam für die Einsatz-App (index.html) und die Gastseite (funk.html) */
