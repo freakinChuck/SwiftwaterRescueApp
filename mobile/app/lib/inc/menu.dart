@@ -7,12 +7,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../version.dart';
 import 'ctx.dart';
+import 'hydro.dart';
+import 'pois.dart';
 import 'store.dart';
 import 'util.dart';
+import 'voice.dart';
 
 /// Rechte mit einem Bereich in der Verwaltung (ADMIN_PERMS in common.js)
-const _adminPerms = ['users', 'uroles', 'groups', 'avail', 'cfg_inc', 'ex_plan', 'cfg_func', 'cfg_ai', 'cfg_map', 'stats', 'cfg_my', 'aar', 'aar_rel', 'aar_cfg', 'aar_arch', 'legal', 'anon'];
+const _adminPerms = ['users', 'uroles', 'groups', 'avail', 'cfg_inc', 'ex_plan', 'cfg_func', 'cfg_ai', 'cfg_map', 'stats', 'cfg_my', 'aar', 'aar_rel', 'aar_cfg', 'aar_arch', 'legal', 'anon', 'cfg_conn', 'applog', 'versions'];
 
 /// Arten der Übungselemente (EXK)
 const _exk = {'pls': 'PLS des Einsatzes', 'res': 'Neuer Rettling', 'seen': 'Rettling gesichtet', 'ext': 'Neue externe Einsatzkraft', 'extdel': 'Externe Einsatzkraft entfernen'};
@@ -38,6 +42,15 @@ class _IncMenuState extends State<IncMenu> {
   final _flFocus = FocusNode();
   String? _flSrv;
   final _busy = <String>{};
+  bool _updLater = true; // Hinweis «Bitte App aktualisieren» bis zur Prüfung von «Später» ausgeblendet (Issue #175)
+
+  @override
+  void initState() {
+    super.initState();
+    updateLater().then((v) {
+      if (mounted) setState(() => _updLater = v);
+    });
+  }
 
   @override
   void dispose() {
@@ -64,6 +77,8 @@ class _IncMenuState extends State<IncMenu> {
     if (s.offline) top.add(_offline(c));
     final abs = st?['my_abs'] is Map ? jm(st!['my_abs']) : null;
     if (abs != null) top.add(_absNote(c, abs));
+    final un = _updLater ? null : updateNote(s.me?['version'] is Map ? jm(s.me!['version']) : null, js(s.me?['app_min']));
+    if (un != null) top.add(_updNote(un));
     Widget body;
     if (st != null && jb(st['blocked'])) {
       body = ListView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), children: [
@@ -136,6 +151,17 @@ class _IncMenuState extends State<IncMenu> {
     final u = jn(a['until_at']);
     return '${a['kind'] == 'sus' ? 'ausgesetzt' : 'abwesend'} ${u == null ? 'bis auf Weiteres' : 'bis ${fmtDT(u)}'}';
   }
+
+  // Hinweis für ältere Apps (Issue #175): Mindestversion des Servers bzw. höhere API-Stufe; «Später» blendet ihn 7 Tage aus
+  Widget _updNote(String t) => MCard(color: accOrange.withValues(alpha: .25), children: [
+        Text(t, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ], buttons: [
+        smallBtn('Aktualisieren', openStore, primary: true),
+        smallBtn('Später', () async {
+          await setUpdateLater();
+          if (mounted) setState(() => _updLater = true);
+        }),
+      ]);
 
   Widget _absNote(BuildContext c, J a) => MCard(children: [
         Row(children: [
@@ -241,6 +267,7 @@ class _IncMenuState extends State<IncMenu> {
               child: Mut(
                   'Startet die Übung mit der vorbereiteten Aufgebotsmeldung. Du leitest sie als Übungsleitung: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
         ]),
+      ?hydroCard(c, s, map, widget.openPrefs),
       ?_tools(),
     ];
   }
@@ -462,6 +489,8 @@ class _IncMenuState extends State<IncMenu> {
         const Mut('Neue Markierungen über den Kartenknopf «Rettlinge».'),
       ]));
     }
+    final hy = hydroCard(c, s, map, widget.openPrefs); // Pegel & Abfluss (Issue #165)
+    if (hy != null) out.add(hy);
     final t = _tools();
     if (t != null) out.add(t);
     return out;
@@ -553,6 +582,19 @@ class _IncMenuState extends State<IncMenu> {
               },
               child: const Text('PLS entfernen')),
       ]),
+      // Flusssperren (Issue #182): feste Standorte mit Wirkung «begrenzt Suchgebiet»; einzelne nimmt man im Popup oder im Fenster «Markierungen» aus
+      if (s.feat('area') && s.places.any((f) => placeEff(s, f, 'stop')))
+        MCard(title: 'Flusssperren', children: [
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: jb(i['stop_on']),
+            title: const Text('Flusssperren fester Standorte im Suchgebiet berücksichtigen', style: TextStyle(fontSize: 14)),
+            onChanged: (v) => s.act('incident/stops', {'on': v == true ? 1 : 0}),
+          ),
+          Mut(s.places.where((f) => placeEff(s, f, 'stop')).map((f) => '${js(f['name'])}${(i['stop_off'] is List && (i['stop_off'] as List).contains(f['id'])) ? ' (ausgenommen)' : ''}').join(' · ')),
+          const Mut('Das Suchgebiet endet dort wie bei einem Sicherungsposten. Einzelne Standorte nimmt man im Popup oder im Fenster «Markierungen» aus, z. B. wenn die Person ein Wehr passiert haben könnte.'),
+        ]),
       if (s.feat('rec'))
         MCard(title: 'Aufzeichnung', children: [
           Mkv([('Stand', recS.$1)]),
@@ -571,6 +613,7 @@ class _IncMenuState extends State<IncMenu> {
           ),
           const Mut('Gilt für alle in diesem Einsatz. Wer sie sieht, legt die Verwaltung fest.'),
         ]),
+      if (s.feat('voice')) ...voiceLeadCards(c, s), // Funk (Issue #113)
       if (s.feat('pub')) _pubSec(c, i),
       MCard(title: 'Einsatzkräfte (${act.where((p) => p['left_at'] == null).length})', children: [
         if (act.isEmpty) const Mut('Noch niemand hat den Einsatz angenommen.'),
@@ -866,13 +909,17 @@ class _IncMenuState extends State<IncMenu> {
       for (final x in l.take(300))
         Padding(
             padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: '${fmtT(jn(x['ts']))}  ', style: TextStyle(color: t.colorScheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()])),
-                  TextSpan(text: js(x['name']).isEmpty ? 'System' : js(x['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
-                  TextSpan(text: ' ${js(x['text'])}'),
-                ]),
-                style: const TextStyle(fontSize: 13))),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                  child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: '${fmtT(jn(x['ts']))}  ', style: TextStyle(color: t.colorScheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()])),
+                        TextSpan(text: js(x['name']).isEmpty ? 'System' : js(x['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        TextSpan(text: ' ${js(x['text'])}'),
+                      ]),
+                      style: const TextStyle(fontSize: 13))),
+              ?voiceLogBtn(s, x), // Durchsage abspielen (Funk, Issue #113)
+            ])),
       if (l.length > 300) const Mut('Ältere Einträge im Log der Verwaltung.'),
     ];
   }

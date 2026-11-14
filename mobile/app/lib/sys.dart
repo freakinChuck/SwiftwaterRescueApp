@@ -5,10 +5,10 @@ import 'dart:io';
 import 'package:geolocator/geolocator.dart';
 import 'package:sw_sys/sw_sys.dart';
 
-Future<T?> _call<T>(String m) async {
+Future<T?> _call<T>(String m, [Object? args]) async {
   if (!Platform.isAndroid) return null;
   try {
-    return await swSys.invokeMethod<T>(m);
+    return await swSys.invokeMethod<T>(m, args);
   } catch (_) {
     return null;
   }
@@ -20,7 +20,8 @@ Future<void> requestBatteryExempt() => _call<void>('requestBatteryExempt');
 
 /// Weckton kritischer Alarme (Android): Alarm-Lautstärke, Wiedergabe als Wecker. Wecker kommen bei «Nicht stören» standardmässig
 /// durch und klingeln auch im Lautlos-Modus, anders als der Ton einer Benachrichtigung. Endet nach 5 min von selbst.
-Future<bool> alarmStart() async => (await _call<bool>('alarmStart')) ?? false;
+/// path: gewählter Ton (sounds.dart, Issue #171), null = Weckton des Systems.
+Future<bool> alarmStart({String? path}) async => (await _call<bool>('alarmStart', {'path': path})) ?? false;
 Future<void> alarmStop() => _call<void>('alarmStop');
 
 /// Stufe der Standortberechtigung: 0 = keine, 1 = nur während der Nutzung, 2 = immer (auch bei gesperrtem Bildschirm).

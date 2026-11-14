@@ -7,12 +7,16 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 
 import 'accounts.dart';
 import 'api.dart';
+import 'demo_ui.dart';
 import 'main.dart';
 import 'monitor.dart';
 import 'notify.dart';
 import 'push.dart';
+import 'sounds.dart';
 import 'service.dart';
 import 'sys.dart';
+import 'track.dart';
+import 'version.dart';
 
 void snack(BuildContext c, String t) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(t), duration: const Duration(seconds: 3)));
 
@@ -32,6 +36,15 @@ String _ago(int ms) {
   return 'um ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }
 
+/// Zeile «Standort» in der Kontenliste: Stand des Teilens im laufenden Einsatz (track.dart), (Text, Fehler?).
+(String, bool)? _locText(LocStat? l, int? inc) {
+  if (l == null || l.inc != inc) return ('Standort: noch nicht gesendet', false);
+  if (l.off) return ('Standort: wird nicht geteilt${l.offWhy != null ? ' (${l.offWhy})' : ''}', false);
+  final e = l.err;
+  if (e != null && l.fails > 0) return ('Standort: Fehler: $e · zuletzt gesendet ${_ago(l.ok)}', true);
+  return ('Standort: zuletzt gesendet ${_ago(l.ok)}', false);
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.onIntervalChanged});
   final VoidCallback onIntervalChanged;
@@ -43,6 +56,9 @@ class _HomeState extends State<HomePage> {
   List<Account> _acc = [];
   Map<String, AccState> _st = {};
   Map<String, String> _push = {};
+  Map<String, LocStat> _loc = {};
+  final Map<String, Map> _ver = {}; // Version je Konto (Route version, ohne Anmeldung): Hinweis «Bitte App aktualisieren» (Issue #175)
+  bool _newShown = false;
   Timer? _t;
   StreamSubscription? _sub;
   bool _loaded = false;
@@ -64,23 +80,44 @@ class _HomeState extends State<HomePage> {
 
   Future<void> _load() async {
     final l = await Accounts.load();
-    final st = <String, AccState>{}, pu = <String, String>{};
+    final st = <String, AccState>{}, pu = <String, String>{}, lo = <String, LocStat>{};
     for (final a in l) {
       st[a.id] = await accState(a.id);
       pu[a.id] = await pushStatus(a);
+      lo[a.id] = await locStat(a.id);
     }
     if (!mounted) return;
     setState(() {
       _acc = l;
       _st = st;
       _push = pu;
+      _loc = lo;
       _loaded = true;
     });
+    if (!_newShown) {
+      _newShown = true;
+      _checkVersions();
+      final a = l.where((x) => !x.loggedOut).firstOrNull;
+      if (a != null) whatsNew(context, a.api); // nach einem App-Update einmal «Was ist neu»
+    }
+  }
+
+  /// Version und Mindestversion jedes Servers (beim Start der Kontenliste und beim Aktualisieren)
+  Future<void> _checkVersions() async {
+    for (final a in _acc) {
+      try {
+        final v = await Api(a.base).call('version', timeout: const Duration(seconds: 10));
+        _ver[a.id] = v;
+      } catch (_) {}
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _refresh() async {
-    await pollAll();
+    await pollAll(track: Platform.isIOS); // Android: Standort teilt nur der Vordergrunddienst
+    await syncService();
     await _load();
+    await _checkVersions();
   }
 
   Future<void> _changed() async {
@@ -107,6 +144,8 @@ class _HomeState extends State<HomePage> {
     if (!a.loggedOut) await a.api.logout();
     await Accounts.remove(a.id);
     await clearState(a.id);
+    await forgetSnd(a.id);
+    await clearLocStat(a.id);
     await _changed();
   }
 
@@ -164,6 +203,8 @@ class _HomeState extends State<HomePage> {
           padding: const EdgeInsets.only(top: 4),
           child: Text(s.err != null ? 'Fehler: ${s.err} · zuletzt erreicht ${_ago(s.at)}' : 'Abgefragt ${_ago(s.at)}',
               style: TextStyle(fontSize: 12, color: s.err != null ? th.colorScheme.error : th.hintColor))));
+      final lt = s.joined ? _locText(_loc[a.id], s.inc) : null; // Standort im Einsatz (Issue #183)
+      if (lt != null) rows.add(Text(lt.$1, style: TextStyle(fontSize: 12, color: lt.$2 ? th.colorScheme.error : th.hintColor)));
       final p = _push[a.id];
       final pt = switch (p) {
         'server' => 'Push: auf diesem Server nicht eingerichtet${Platform.isIOS ? ' – Alarme nur bei offener App' : ''}',
@@ -172,6 +213,15 @@ class _HomeState extends State<HomePage> {
         _ => pushIssue != null ? 'Push: $pushIssue' : null,
       };
       if (pt != null) rows.add(Text(pt, style: TextStyle(fontSize: 12, color: p == 'server' ? th.hintColor : th.colorScheme.error)));
+      final v = _ver[a.id], un = updateNote(v, v == null ? null : '${v['app_min'] ?? ''}');
+      if (un != null) {
+        rows.add(Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(children: [
+              Expanded(child: Text(un, style: TextStyle(fontSize: 12, color: th.colorScheme.error))),
+              TextButton(onPressed: openStore, child: const Text('Aktualisieren')),
+            ])));
+      }
     }
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
@@ -240,15 +290,19 @@ class _HomeState extends State<HomePage> {
                       SizedBox(height: 8),
                       Text('Melde dich mit «Backend hinzufügen» bei deiner Organisation an. Du kannst mehrere Backends hinzufügen und auf allen gleichzeitig aktiv sein.',
                           textAlign: TextAlign.center),
+                      SizedBox(height: 24),
+                      DemoCard(), // Demo-Modus ohne Konto (Issue #74)
                     ])
                   : ListView(padding: const EdgeInsets.only(top: 6, bottom: 96), children: [
                       ..._acc.map(_card),
+                      const DemoCard(), // Demo-Modus (Issue #74)
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text(
-                            Platform.isAndroid
-                                ? 'Aktive Konten werden im Hintergrund abgefragt (Anzeige «Bereit für Alarme»).'
-                                : 'Bei geschlossener App kommen Alarme nur über Push, sofern der Server ihn eingerichtet hat.',
+                            '${(Platform.isAndroid
+                                ? 'Alarme kommen über Push. Ohne Push und während eines Einsatzes fragt die App die aktiven Konten im Hintergrund ab (Anzeige «Bereit für Alarme»).'
+                                : 'Bei geschlossener App kommen Alarme nur über Push, sofern der Server ihn eingerichtet hat.')}'
+                            '\nApp-Version $appVerLabel',
                             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
                             textAlign: TextAlign.center),
                       ),
@@ -377,6 +431,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   int _iv = 15;
   bool? _bat, _dnd;
+  bool _always = false, _running = false;
   int? _loc;
 
   @override
@@ -399,8 +454,11 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
 
   Future<void> _load() async {
     final iv = await pollInterval(), bat = await batteryExempt(), dnd = await hasDndAccess(), loc = await locLevel();
+    final alw = await serviceAlways(), run = Platform.isAndroid && await service.isRunning();
     if (mounted) {
       setState(() {
+        _always = alw;
+        _running = run;
         _iv = iv;
         _bat = bat;
         _dnd = dnd;
@@ -442,6 +500,19 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               _load();
             }),
         if (Platform.isAndroid) ...[
+          // Issue #179: Der Dienst (mit der dauerhaften Meldung «Bereit für Alarme») läuft nur noch, wenn er nötig ist
+          SwitchListTile(
+              secondary: const Icon(Icons.sync),
+              value: _always,
+              title: const Text('Immer im Hintergrund abfragen'),
+              subtitle: Text('Aus: Mit Push kommen Alarme ohne dauerhafte Meldung; abgefragt wird im Hintergrund nur ohne Push und während eines Einsatzes. '
+                  'Ein: zusätzlich dauernd, mit der Meldung «Bereit für Alarme» (für Geräte, die Push zurückhalten). ${_running ? 'Läuft gerade.' : 'Läuft gerade nicht.'}'),
+              isThreeLine: true,
+              onChanged: (v) async {
+                await prefs.setBool('svc_always', v);
+                await syncService();
+                _load();
+              }),
           ListTile(
               leading: const Icon(Icons.do_not_disturb_on),
               title: const Text('«Nicht stören» umgehen'),
@@ -485,13 +556,27 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               _load();
             }),
         ListTile(leading: const Icon(Icons.app_settings_alt), title: const Text('Systemeinstellungen der App'), onTap: openAppSettings),
+        ListTile(
+            leading: const Icon(Icons.new_releases_outlined),
+            title: const Text('Was ist neu'),
+            subtitle: Text('Version $appVerLabel'),
+            onTap: () async {
+              // Release Notes vom Server des ersten Kontos (Route changes, Issue #175)
+              final l = (await Accounts.load()).where((a) => !a.loggedOut).toList();
+              if (!context.mounted) return;
+              if (l.isEmpty) {
+                snack(context, 'Zuerst ein Backend hinzufügen');
+                return;
+              }
+              await showChanges(context, l.first.api);
+            }),
         const Divider(),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
               'Push: ${pushBuilt ? 'in dieser App eingebaut, aktiv auf allen Backends, die ihn eingerichtet haben' : 'in dieser App nicht eingebaut'}.\n'
               '${Platform.isIOS ? 'iOS erlaubt keine Abfrage im Hintergrund: Bei geschlossener App kommen Alarme nur über Push. Kritische Alarme umgehen «Nicht stören» nur mit der Berechtigung für kritische Hinweise.' : 'Die App fragt alle aktiven Backends in einem Vordergrunddienst ab, auch bei geschlossener App und nach einem Neustart.'}\n\n'
-              'Version $appUa',
+              'Version $appVerLabel',
               style: hint),
         ),
       ]),

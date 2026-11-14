@@ -1,6 +1,9 @@
 // Android: Vordergrunddienst, der alle aktiven Konten im eingestellten Abstand abfragt (monitor.dart), auch bei geschlossener App
-// und nach einem Neustart. Er zeigt dauerhaft «Bereit für Alarme». iOS erlaubt keinen solchen Dienst: dort fragt die App nur, solange
-// sie offen ist, und im Hintergrund kommt der Alarm über Push (push.dart).
+// und nach einem Neustart. Android verlangt dafür eine dauerhafte Meldung («Bereit für Alarme»). Seit Issue #179 läuft er nur noch,
+// wenn er nötig ist (serviceNeeded): ein aktives Konto ohne Push (dann kämen Alarme bei geschlossener App sonst nicht an), die Teilnahme
+// an einem Einsatz (Standort im Hintergrund teilen, track.dart) oder die Einstellung «Immer im Hintergrund abfragen» (svc_always).
+// Sonst kommen Alarme, Nachrichten und Einsatzende über Push (push.dart). iOS erlaubt keinen solchen Dienst: dort fragt die App nur,
+// solange sie offen ist, und im Hintergrund kommt der Alarm über Push.
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -8,10 +11,12 @@ import 'dart:ui';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:record/record.dart';
 
 import 'accounts.dart';
 import 'monitor.dart';
 import 'notify.dart';
+import 'push.dart';
 import 'sys.dart';
 import 'track.dart';
 
@@ -21,11 +26,27 @@ final service = FlutterBackgroundService();
 /// Bildschirm. Ohne diese Berechtigung darf er den Typ nicht tragen (sonst bricht der Start, z. B. nach einem Neustart, ab).
 bool? _cfgLoc;
 
+/// Funk (Issue #113): Während einer Live-Konferenz (vx_conf, gesetzt in inc/voice.dart) trägt der Dienst zusätzlich den Typ microphone.
+/// Android lässt das Mikrofon bei gesperrtem Bildschirm nur so weiterlaufen; gestartet wird er beim Beitritt, also mit offener App.
+bool? _cfgMic;
+Future<bool> _micWanted() async => (await prefs.getBool('vx_conf') ?? false) && await micGranted();
+Future<bool> micGranted() async {
+  final r = AudioRecorder();
+  try {
+    return await r.hasPermission(request: false);
+  } catch (_) {
+    return false;
+  } finally {
+    await r.dispose();
+  }
+}
+
 Future<void> configureService() async {
   if (!Platform.isAndroid) return;
   await initNotes();
-  final loc = await locLevel() == locAlways;
+  final loc = await locLevel() == locAlways, mic = await _micWanted();
   _cfgLoc = loc;
+  _cfgMic = mic;
   await service.configure(
       androidConfiguration: AndroidConfiguration(
           onStart: serviceMain,
@@ -36,16 +57,32 @@ Future<void> configureService() async {
           initialNotificationTitle: 'Swiftwater Rescue',
           initialNotificationContent: 'Bereit für Alarme',
           foregroundServiceNotificationId: serviceNoteId,
-          foregroundServiceTypes: [AndroidForegroundType.specialUse, if (loc) AndroidForegroundType.location]),
+          foregroundServiceTypes: [AndroidForegroundType.specialUse, if (loc) AndroidForegroundType.location, if (mic) AndroidForegroundType.microphone]),
       iosConfiguration: IosConfiguration(autoStart: false));
 }
 
-/// Dienst starten, wenn mindestens ein Konto aktiv ist, sonst beenden.
+/// Einstellung «Immer im Hintergrund abfragen», auch wenn Push eingerichtet ist (z. B. Geräte, die Push-Nachrichten zurückhalten).
+Future<bool> serviceAlways() async => (await prefs.getBool('svc_always')) ?? false;
+
+/// Braucht es den Dienst? Mindestens ein aktives Konto und eines davon ohne Push oder im Einsatz, oder die Einstellung svc_always (Issue #179).
+Future<bool> serviceNeeded() async {
+  final l = (await Accounts.load()).where((a) => a.active && !a.loggedOut).toList();
+  if (l.isEmpty) return false;
+  if (await serviceAlways()) return true;
+  if (await _micWanted()) return true; // Live-Konferenz im Hintergrund (Issue #113)
+  for (final a in l) {
+    if (await pushStatus(a) != 'on') return true; // ohne Push nur über die Abfrage
+    if ((await accState(a.id)).joined) return true; // Standort im Einsatz teilen, Einsatzende erkennen
+  }
+  return false;
+}
+
+/// Dienst starten, wenn er nötig ist (serviceNeeded), sonst beenden.
 Future<void> syncService() async {
   if (!Platform.isAndroid) return;
-  final on = (await Accounts.load()).any((a) => a.active && !a.loggedOut);
+  final on = await serviceNeeded();
   var run = await service.isRunning();
-  if (_cfgLoc != (await locLevel() == locAlways)) {
+  if (_cfgLoc != (await locLevel() == locAlways) || _cfgMic != await _micWanted()) {
     // Standortberechtigung geändert: neu einrichten und, falls er läuft, den Dienst mit den neuen Typen neu starten
     await configureService();
     if (run) {
@@ -78,7 +115,9 @@ Future<void> serviceMain(ServiceInstance s) async {
     try {
       await refreshChannels(); // «Nicht stören» umgehen, sobald der Zugriff erteilt ist
       final n = await pollAll();
-      if (n == 0) {
+      if (n == 0 || !await serviceNeeded()) {
+        // nicht mehr nötig (z. B. Einsatz beendet, Push eingerichtet): beenden, die dauerhafte Meldung verschwindet (Issue #179)
+        Tracker.stop();
         stop = true;
         await s.stopSelf();
         return;

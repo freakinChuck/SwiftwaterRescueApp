@@ -1,0 +1,76 @@
+# Release (Issue #175): gemeinsame Version für Web, API und App. Von Hand: Actions → «Release» → «Run workflow» (Branch main).
+# Erhöht die Datei VERSION (beim ersten Release gilt sie unverändert), schreibt «Was ist neu» in web/changes.json (Titel der gemergten PRs
+# seit dem letzten Tag plus die eigenen Punkte), committet beides auf main, setzt den annotierten Tag vX.Y.Z, erstellt den GitHub-Release
+# und startet die App-Builds (Native Apps) auf dem Tag; diese laden nach TestFlight bzw. Google Play und hängen die Pakete an den Release.
+# Danach: Testsystem mit scripts/deploy.ps1 (origin/main), Produktivsystem auf Auftrag mit scripts/deploy.ps1 -Ref vX.Y.Z.
+# Schützt eine Regel den Branch main vor direkten Pushes, muss sie GitHub Actions ausnehmen (sonst schlägt «Auf main pushen» fehl).
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Art der Änderung (patch = Fehlerbehebungen, minor = neue Funktionen, major = inkompatible API)
+        type: choice
+        options: [minor, patch, major]
+        default: minor
+      notes:
+        description: Eigene Punkte für «Was ist neu» (optional, mehrere mit \n trennen); stehen vor den PR-Titeln
+        type: string
+        required: false
+      apps:
+        description: Apps bauen und hochladen (TestFlight, Google Play)
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency: release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Nur von main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Ein Release gibt es nur von main"
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Version und Release Notes
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ inputs.notes }}
+        run: python3 .github/scripts/release.py "${{ inputs.bump }}"
+      - name: Commit und Tag
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION web/changes.json
+          git diff --cached --quiet || git commit -m "Version $V"
+          git tag -a "v$V" -m "Version $V"
+      - name: Auf main pushen
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: git push origin HEAD:main "v$V"
+      - name: GitHub-Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.v.outputs.version }}
+        run: gh release create "v$V" --title "Version $V" --notes-file release-notes.md --verify-tag
+      # Mit dem GITHUB_TOKEN gepushte Tags starten keine Workflows, ein workflow_dispatch schon
+      - name: Apps bauen
+        if: inputs.apps
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          gh workflow run mobile.yml --ref "v$V"
+          echo "::notice::Version $V veröffentlicht, App-Builds gestartet (Actions → Native Apps)"

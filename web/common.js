@@ -1,6 +1,7 @@
 /* Gemeinsamer Code für Einsatz-App (index.html) und Verwaltung (admin.html) */
 const API='api/index.php';
 const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+var DEMO=window.DEMO||null; // Demo-Modus (Issue #74): gesetzt von demo.js (nur index.html lädt es, nur mit ?demo), sonst null
 let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt die jeweilige Seite
 // Native App (Issue #108): Die Flutter-Hülle zeigt die Web-App in einer WebView und hängt «SwiftwaterRescueApp/<Version>» an den User-Agent an.
 // Dann kein Web-Push und kein «App installieren» (Benachrichtigungen kommen über die App); swNative ruft einen Handler der App auf, falls vorhanden.
@@ -10,7 +11,7 @@ const swNative=(h,...a)=>{try{const w=window.flutter_inappwebview;if(w&&w.callHa
 function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHandler){const r=new FileReader();r.onload=()=>swNative('swSave',name,blob.type||'application/octet-stream',String(r.result).split(',')[1]||'');r.readAsDataURL(blob);return}
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download=name;document.body.appendChild(l);l.click();setTimeout(()=>{URL.revokeObjectURL(l.href);l.remove()},3000)}
 async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
-  const res=await fetch(`${API}?r=${r}`,o);const j=await res.json().catch(()=>({error:'Serverfehler'}));
+  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
 // Applikationslog (Issue #139): Skriptfehler an den Server melden (nur angemeldet, höchstens 5 je Seitenaufruf, gleiche Meldung einmal; der Server begrenzt zusätzlich).
 // Nicht gemeldet: Fehler fremder Skripte ohne Angaben («Script error.»), Verbindungsabbrüche (offline) und abgelehnte API-Antworten (stehen schon im Log bzw. sind Eingabefehler).
@@ -29,23 +30,50 @@ function toast(t,kind='ok'){t=String(t==null?'':t);let c=document.getElementById
   while(c.children.length>4)c.firstChild.remove();setTimeout(rm,Math.min(12000,(kind==='err'?5000:2500)+t.length*45))}
 const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte später nochmals versuchen.':e.message,'err'); // TypeError: fetch ohne Netz (Issue #67)
 /* ---------- Karte (Einsatz-App und Replay der Verwaltung) ---------- */
-// Kartenanbieter austauschbar: neuen Eintrag ergänzen bzw. Standard über DEFAULT_BASE wählen
-const DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
+// Kartenanbieter (Issue #106): Katalog MAP_SOURCES im Server, eingestellt in der Verwaltung (global und je Einsatztyp); die Geräte erhalten die Liste über me, incident/state,
+// public/state und incident/replay (maps, map_def) und setzen sie mit mapsSet. MAP_PROVIDERS unten ist nur der Rückfall, bis die Liste da ist (älterer Server, erster Start offline).
+let DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 // Fenster «Ansicht» (Issue #34, öffentliche Ansicht #48): Kategorien auf der Karte [Schlüssel, Bezeichnung, Funktion (feat)]. Neue Kartenelemente hier aufnehmen.
-const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro'],['veh','Fahrzeuge','veh']]; // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
+const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro'],['geo','Geodaten (OpenStreetMap)','geo'],['veh','Fahrzeuge','veh']];
+const VIEW_OFF=['geo']; // Issue #182: auf jedem Gerät zuerst ausgeblendet (die Ebene schaltet man bewusst zu) // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
 const VIEW_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 // Inhalt des Fensters: Grundkarte (Radio vbase) und, wenn cats (Liste aus VIEW), Häkchen je Kategorie (data-vk) mit «Alle einblenden/ausblenden» (data-va)
+// Grundkarten nach Art gruppiert (Luftbilder, Karten), Überschriften nur, wenn es beide gibt
+const MAP_KIND_G={sat:'Luftbilder',topo:'Karten',street:'Karten',vec:'Karten'};
+function baseRadios(base){const g={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>(g[MAP_KIND_G[P.kind]||'Karten']=g[MAP_KIND_G[P.kind]||'Karten']||[]).push([k,P]));const two=Object.keys(g).length>1;
+  return Object.entries(g).map(([t,l])=>(two?`<div class="vbg">${t}</div>`:'')+l.map(([k,P])=>`<label><input type="radio" name="vbase" value="${k}" ${k===base?'checked':''}> ${esc(P.label)}</label>`).join('')).join('')}
 function viewHtml(base,cats,vis){return'<div class="vh"><b>Ansicht</b><button id="bViewX" aria-label="Ansicht schliessen">✕</button></div><h4>Grundkarte</h4>'
-  +Object.entries(MAP_PROVIDERS).map(([k,P])=>`<label><input type="radio" name="vbase" value="${k}" ${k===base?'checked':''}> ${esc(P.label)}</label>`).join('')
+  +baseRadios(base)
   +(cats?'<h4>Auf der Karte</h4><div class="row"><button data-va="1">Alle einblenden</button><button data-va="0">Alle ausblenden</button></div>'+cats.map(([k,t])=>`<label><input type="checkbox" data-vk="${k}" ${vis(k)?'checked':''}> ${t}</label>`).join(''):'')}
 const MAP_PROVIDERS={
-  swisstopo_sat:{label:'Luftbild (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
-  swisstopo:{label:'Landeskarte (swisstopo)',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',maxZoom:18},
-  osm:{label:'OpenStreetMap',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap',maxZoom:19}
+  swisstopo_sat:{k:'swisstopo_sat',label:'Luftbild (swisstopo)',kind:'sat',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',max:19,nat:18},
+  swisstopo:{k:'swisstopo',label:'Landeskarte (swisstopo)',kind:'topo',url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',attr:'&copy; swisstopo',max:19,nat:18},
+  osm:{k:'osm',label:'OpenStreetMap',kind:'street',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; OpenStreetMap-Mitwirkende',max:19,nat:19}
 };
+// Liste vom Server übernehmen; true = geändert (die Karten bauen dann ihre Grundkarten neu, mapBases)
+let mapsKey='';
+function mapsSet(list,def){if(!Array.isArray(list)||!list.length)return false;const key=JSON.stringify([list,def]);if(key===mapsKey)return false;mapsKey=key;
+  Object.keys(MAP_PROVIDERS).forEach(k=>delete MAP_PROVIDERS[k]);list.forEach(P=>MAP_PROVIDERS[P.k]=P);DEFAULT_BASE=MAP_PROVIDERS[def]?def:list[0].k;return true}
+// Leaflet-Ebene eines Anbieters: Kacheln (nur innerhalb von bounds), eigene Vektorkarte (PMTiles) über protomaps-leaflet
+function mapLayer(P){
+  if(P.vec)return vecLayer(P);const o={attribution:P.attr,maxZoom:P.max||19,maxNativeZoom:Math.min(P.nat||P.max||19,P.max||19)};
+  if(P.sub)o.subdomains=P.sub;if(P.bounds)o.bounds=P.bounds;return L.tileLayer(P.url,o)}
+function mapBases(){const r={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>r[k]=mapLayer(P));return r}
+// gemerkte Wahl (sw_base bzw. ein anderer Schlüssel), sonst der Standard
+function baseSaved(key){let sv=null;try{sv=localStorage.getItem(key||'sw_base')}catch(e){}return MAP_PROVIDERS[sv]?sv:DEFAULT_BASE}
+// Eigene OSM-Karte: Bibliothek erst beim ersten Gebrauch laden (cdn.jsdelivr.net, im Service Worker zwischengespeichert); Gewässer kräftiger als im Stil «light»
+const PM_JS='https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js';let pmLoad=null;
+function pmLib(){return pmLoad=pmLoad||new Promise((ok,no)=>{const s=document.createElement('script');s.src=PM_JS;s.onload=()=>window.protomapsL?ok(window.protomapsL):no(new Error('Kartenbibliothek fehlt'));s.onerror=()=>{pmLoad=null;no(new Error('Die Kartenbibliothek konnte nicht geladen werden (Verbindung?)'))};document.head.appendChild(s)})}
+const PM_WATER='#1f6fd1',pmW=(z,a,b)=>z<a?0:Math.min(b,(z-a+1)*b/6);
+function vecLayer(P){const g=L.layerGroup();
+  pmLib().then(pm=>{const ly=pm.leafletLayer({url:new URL(P.url,location.href).href,attribution:P.attr,flavor:'light',lang:'de',maxZoom:P.max||19,maxDataZoom:P.nat||15,...(P.bounds?{bounds:P.bounds}:{})});
+    try{const R=ly.paintRules,i=R.findIndex(r=>r.dataLayer==='water'); // direkt nach der Wasserfläche, also unter Strassen und Brücken
+      R.forEach(r=>{if(r.dataLayer==='water'&&r.symbolizer instanceof pm.PolygonSymbolizer)r.symbolizer=new pm.PolygonSymbolizer({fill:'#7fb8ea'})});
+      R.splice(i+1,0,{dataLayer:'water',symbolizer:new pm.LineSymbolizer({color:PM_WATER,width:(z,f)=>{const k=f&&f.props&&f.props.kind;return k==='stream'||k==='ditch'?pmW(z,12,3):pmW(z,8,7)}}),filter:(z,f)=>f.geomType===2&&['river','canal','stream'].includes(f.props.kind)})}catch(e){}
+    g.addLayer(ly)}).catch(fail);
+  return g}
 // Kleine Karten der Verwaltung (Auswahl- und Vorschaukarten, Änderungswunsch #96): alle Anbieter aus MAP_PROVIDERS, umschaltbar über eine Auswahl oben rechts, gemerkt in sw_base wie die übrigen Karten
-function addBases(m){let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}let cur=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;const ls={};
-  Object.entries(MAP_PROVIDERS).forEach(([k,P])=>ls[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));ls[cur].addTo(m);
+function addBases(m){let cur=baseSaved();const ls=mapBases();ls[cur].addTo(m);
   const C=L.Control.extend({options:{position:'topright'},onAdd(){const d=L.DomUtil.create('div','leaflet-bar basesel');d.innerHTML=`<select aria-label="Grundkarte">${Object.entries(MAP_PROVIDERS).map(([k,P])=>`<option value="${k}" ${k===cur?'selected':''}>${esc(P.label)}</option>`).join('')}</select>`;
     L.DomEvent.disableClickPropagation(d);L.DomEvent.disableScrollPropagation(d);d.firstChild.onchange=e=>{const k=e.target.value;if(!ls[k]||k===cur)return;m.removeLayer(ls[cur]);cur=k;ls[k].addTo(m);try{localStorage.setItem('sw_base',k)}catch(_){}};return d}});
   new C().addTo(m);return m}
@@ -126,27 +154,48 @@ async function overpassNet(r,body,put){try{return await api(r,body)}catch(e){con
   throw e}}
 // Weg ab Punkt k flussabwärts über rem Meter, an Verzweigungen alle Äste. Liefert Linien ab dem Startpunkt, null = von hier aus schon verfolgt.
 // Verzweigungen: am Ende des Weges alle anschliessenden Wege, unterwegs Wege, die an einem Knoten beginnen (Issue #40: Seitenarm, Kanal;
-// in OSM beginnt der Arm oft mitten im Weg des Hauptflusses). Jede Linie endet am ersten Posten (ctx.posts, ctx.cut = dessen Name).
+// in OSM beginnt der Arm oft mitten im Weg des Hauptflusses). Jede Linie endet am ersten Posten (ctx.posts, ctx.cut = Text, wo es endet)
+// bzw. an der ersten Flusssperre (Issue #182: feste Standorte mit Wirkung «begrenzt Suchgebiet»; Punkte wie Posten, Linien und Ränder von Bereichen über ctx.segs, wo der Fluss sie schneidet).
 // ctx.done verhindert, dass derselbe Einstieg (Weg, Knoten) mehrfach verfolgt wird, wenn Arme wieder zusammenfliessen.
 function riverFollow(net,w,k,rem,seen,ctx){const key=w.id+':'+k;if((ctx.done.get(key)??-1)>=rem)return null;ctx.done.set(key,rem);
   const pts=[w.geometry[k]],out=[],last=w.geometry.length-1;seen=new Set(seen).add(w.id);
-  const post=p=>{const po=ctx.posts.find(q=>geoDist(p,q)<120);if(po)ctx.cut=po.name;return!!po};
+  const post=p=>{const po=ctx.posts.find(q=>geoDist(p,q)<(q.r||120));if(po)ctx.cut=po.cut||'am Posten '+po.name;return!!po};
   const sub=(e,r)=>{const s=riverFollow(net,e.w,e.k,r,seen,ctx);return s?s.map(b=>pts.concat(b.slice(1))):[]};
   if(post(pts[0]))return[pts];
   for(let j=k;j<last;j++){
     for(const e of net.byNode.get(w.nodes[j])||[])if(e.k===0&&e.w!==w&&!seen.has(e.w.id))out.push(...sub(e,rem));
-    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b);
+    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b),x1=segHit(ctx.segs,a,b),x2=postHit(ctx.posts,a,b),x=x1&&x2?(x1.t<x2.t?x1:x2):x1||x2;
+    if(x&&d*x.t<rem){pts.push({lat:a.lat+(b.lat-a.lat)*x.t,lon:a.lon+(b.lon-a.lon)*x.t});ctx.cut=x.cut;return[pts,...out]}
     if(d>=rem){const f=rem/d;pts.push({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});return[pts,...out]}
     pts.push(b);rem-=d;if(post(b))return[pts,...out]}
   const nx=(net.byNode.get(w.nodes[last])||[]).filter(e=>!seen.has(e.w.id)&&e.k<e.w.geometry.length-1).flatMap(e=>sub(e,rem));
   return nx.length?[...nx,...out]:[pts,...out]}
+// Flusssperren (Issue #182) aus stops ({name, why, lat, lon, pts, line}): Punkte als Posten, Linien und Ränder von Bereichen als Strecken
+function stopCtx(stops){const posts=[],segs=[];(stops||[]).forEach(s=>{const cut=s.name?'an «'+s.name+'»'+(s.why?' ('+s.why+')':''):'an einer Flusssperre';
+  if(!s.pts){posts.push({lat:s.lat,lon:s.lon,cut});return}const p=s.pts.map(q=>({lat:q[0],lon:q[1]}));if(!s.line)p.push(p[0]);
+  for(let i=1;i<p.length;i++)segs.push({a:p[i-1],b:p[i],cut,s:Math.min(p[i-1].lat,p[i].lat),n:Math.max(p[i-1].lat,p[i].lat),w:Math.min(p[i-1].lon,p[i].lon),e:Math.max(p[i-1].lon,p[i].lon)})});return{posts,segs}}
+// erste Strecke aus segs, die a → b schneidet: {t: Anteil auf a → b, cut}
+function segHit(segs,a,b){if(!segs||!segs.length)return null;let best=null;const s=Math.min(a.lat,b.lat),n=Math.max(a.lat,b.lat),w=Math.min(a.lon,b.lon),e=Math.max(a.lon,b.lon);
+  segs.forEach(q=>{if(q.n<s||q.s>n||q.e<w||q.w>e)return;const dx=b.lon-a.lon,dy=b.lat-a.lat,ex=q.b.lon-q.a.lon,ey=q.b.lat-q.a.lat,den=dx*ey-dy*ex;if(!den)return;
+    const t=((q.a.lon-a.lon)*ey-(q.a.lat-a.lat)*ex)/den,u=((q.a.lon-a.lon)*dy-(q.a.lat-a.lat)*dx)/den;if(t>1e-9&&t<=1&&u>=0&&u<=1&&(!best||t<best.t))best={t,cut:q.cut}});return best}
+// erster Posten bzw. Punkt-Sperre (< 120 m) zwischen zwei Punkten des Flusslaufs (Issue #182: die Punkte liegen in OSM teils Hunderte Meter auseinander)
+function postHit(posts,a,b){let best=null;const ky=111320;(posts||[]).forEach(q=>{const kx=ky*Math.cos(q.lat*Math.PI/180),ax=(a.lon-q.lon)*kx,ay=(a.lat-q.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy;if(!l)return;
+  const t=-(ax*dx+ay*dy)/l;if(t<=0||t>1)return;if(Math.hypot(ax+t*dx,ay+t*dy)<(q.r||120)&&(!best||t<best.t))best={t,cut:q.cut||'am Posten '+q.name}});return best}
+// Posten und Punkt-Sperren auf den nächsten Wasserlauf setzen (r = 3 m): sonst beendet ein Punkt nahe einer Verzweigung beide Arme,
+// er gilt aber nur für den Arm, an dem er steht. Weiter als 120 m von jedem Wasserlauf bleibt er, wie er ist.
+function snapPost(net,q){const ky=111320,kx=ky*Math.cos(q.lat*Math.PI/180);let bd=120,bp=null;
+  net.ways.forEach(w=>{const g=w.geometry;for(let j=1;j<g.length;j++){const a=g[j-1],b=g[j],ax=(a.lon-q.lon)*kx,ay=(a.lat-q.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy,
+    t=l?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l)):0,d=Math.hypot(ax+t*dx,ay+t*dy);if(d<bd){bd=d;bp={lat:a.lat+(b.lat-a.lat)*t,lon:a.lon+(b.lon-a.lon)*t}}}});
+  return bp?Object.assign({},q,bp,{r:3}):q}
+// Abstand von p zur Strecke a → b in Metern (eben gerechnet)
+const segDist=(a,b,p)=>{const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180),ax=(a.lon-p.lon)*kx,ay=(a.lat-p.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l)):0;return Math.hypot(ax+t*dx,ay+t*dy)};
 function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/180),P=pts.map(p=>C.project(L.latLng(p.lat,p.lon))),A=[],B=[];
   P.forEach((p,j)=>{const a=P[Math.max(0,j-1)],b=P[Math.min(P.length-1,j+1)];let dx=b.x-a.x,dy=b.y-a.y;const n=Math.hypot(dx,dy)||1;dx/=n;dy/=n;
     A.push(C.unproject(L.point(p.x-dy*k,p.y+dx*k)));B.push(C.unproject(L.point(p.x+dy*k,p.y-dx*k)))});return A.concat(B.reverse())}
-// Suchgebiet ab PLS (i) über die Driftdistanz D, endet am ersten Posten (posts: [{lat,lon,name}]); null = kein Gewässer nahe der PLS
-function riverArea(net,i,D,posts){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
+// Suchgebiet ab PLS (i) über die Driftdistanz D, endet am ersten Posten (posts: [{lat,lon,name}]) bzw. an der ersten Flusssperre (stops); null = kein Gewässer nahe der PLS
+function riverArea(net,i,D,posts,stops){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
   if(!best||bd>SNAP_M)return null;const r={lines:[],polys:[],cutBy:null,maxLen:0};
-  const ctx={posts,done:new Map(),cut:null};
+  const sc=stopCtx(stops),ctx={posts:posts.concat(sc.posts).map(q=>snapPost(net,q)),segs:sc.segs,done:new Map(),cut:null};
   (riverFollow(net,best.w,best.k,D,new Set(),ctx)||[]).forEach(pts=>{
     if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=geoDist(pts[j-1],pts[j]);r.maxLen=Math.max(r.maxLen,len);
     r.lines.push(pts);r.polys.push(corridor(pts,BANK_M))});
@@ -158,7 +207,7 @@ const srcKey=s=>s.lat.toFixed(6)+','+s.lon.toFixed(6);
 // Schlüssel eines Teilgebiets: PLS mit Zeitpunkt, wie die Zusammenfassung in plsSources()
 const partKey=(lat,lon,at)=>lat.toFixed(6)+','+lon.toFixed(6)+'@'+at;
 const fmtDT=ts=>new Date(ts*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-function searchArea(srcs,nets,flow,now,posts,get,redraw,rs){const r={polys:[],lines:[],circles:[],info:[],parts:[]};
+function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys:[],lines:[],circles:[],info:[],parts:[]};
   if(!srcs.length){const miss=(rs||[]).filter(x=>!x.rescued_at&&x.lat==null);
     r.info.push(!(rs||[]).length?'Suchgebiet: Kein PLS gesetzt.':miss.length?'Suchgebiet: Kein PLS für '+miss.map(x=>'«'+x.name+'»').join(', ')+'. PLS des Einsatzes oder der Rettlinge setzen.':'Suchgebiet: Alle Rettlinge gefunden.');return r}
   if(!flow){r.info.push('Suchgebiet: Fliessgeschwindigkeit fehlt.');return r}
@@ -169,11 +218,11 @@ function searchArea(srcs,nets,flow,now,posts,get,redraw,rs){const r={polys:[],li
     if(!n||(!n.loading&&((!n.fail&&n.R<D*1.1&&n.R<30000)||(n.fail&&Date.now()>n.retryAt)))){const R=netRadius(D),old=n;n={...(old||{}),loading:true};nets.set(k,n);
       get(s,R).then(j=>({R,...riverNet(j)})).catch(e=>({R,fail:true,err:e.message,retryAt:Date.now()+20000})).then(v=>{if(nets.get(k)===n){nets.set(k,v);redraw()}})}
     const circle=why=>{const c={lat:s.lat,lon:s.lon,r:D};r.circles.push(c);p.circles.push(c);r.info.push(lbl+why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.')};
-    if(n.fail)return circle('Gewässerdaten nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
-    if(!n.ways)return circle('Gewässerdaten werden geladen.');
-    const a=riverArea(n,s,D,posts);if(!a)return circle('Kein Gewässer nahe der PLS.');
+    if(n.fail)return circle('Gewässernetz nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
+    if(!n.ways)return circle('Gewässernetz wird geladen.');
+    const a=riverArea(n,s,D,posts,stops);if(!a)return circle('Kein Gewässer nahe der PLS.');
     r.polys.push(...a.polys);r.lines.push(...a.lines);p.polys.push(...a.polys);
-    r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet am Posten ${a.cutBy}.`:'.'))});
+    r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet ${a.cutBy}.`:'.'))});
   // Kurzfassung bei mehreren PLS (Hinweis unten in der Karte, Details per Klick)
   if(srcs.length>1){const riv=r.parts.filter(p=>p.polys.length).length,circ=r.parts.length-riv,none=srcs.length-r.parts.length;
     r.short=`Suchgebiet aus ${srcs.length} PLS: ${riv} entlang Gewässer`+(circ?`, ${circ} als Kreis`:'')+(none?`, ${none} ohne Gebiet`:'')}
@@ -204,13 +253,34 @@ const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
 const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
 const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
-const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon','cfg_conn','applog']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon','cfg_conn','applog','versions']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 // Abmelden: Server meldet die Sitzung ab (Gerätesitzung der App bzw. Browser-Token, Route logout), danach die App benachrichtigen (beendet das Konto, Issue #108)
 function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});
   token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k));swNative('swLogout')} // letzter Stand gehört der abgemeldeten Person
+/* ---------- Versionen (Issue #175) ---------- */
+// Stand dieser Seite = ?v= von common.js (deploy.ps1 setzt den Commit ein, im Repo 0 = unbekannt). Der Server liefert seinen Stand im Header X-Build (api());
+// weicht er ab, ist inzwischen eine neuere Fassung ausgeliefert: Hinweis «Neue Version verfügbar» mit «Neu laden», einmal je Seitenaufruf («Später» blendet ihn aus).
+const BUILD=(()=>{try{const m=/[?&]v=([0-9a-z]+)/.exec(document.currentScript.src);return m&&m[1]!=='0'?m[1]:''}catch(e){return''}})();
+let verNewShown=false;
+function verNew(b){if(verNewShown||!BUILD||!b||b===BUILD||!document.body)return;verNewShown=true;const d=document.createElement('div');d.id='verNew';d.setAttribute('role','status');
+  d.innerHTML='<span>Neue Version verfügbar.</span><button class="pri" data-r>Neu laden</button><button data-x>Später</button>';
+  d.querySelector('[data-r]').onclick=()=>location.reload();d.querySelector('[data-x]').onclick=()=>d.remove();document.body.appendChild(d)}
+// Anzeige der Version (verPub im Server): Produktiv nur die Nummer, sonst mit Abstand, Commit und System, z. B. «0.1.0+12.abc1234 · Test»
+const verTxt=v=>v&&v.version?v.full+(v.env&&v.env!=='prod'?' · '+(v.env_name||v.env)+(v.pr?' PR '+v.pr:''):''):'';
+const verParse=s=>String(s||'').split(/[^0-9.]/)[0].split('.').map(Number);
+function verCmp(a,b){const x=verParse(a),y=verParse(b);for(let i=0;i<3;i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0}
+// «Was ist neu» (Route changes, Datei changes.json): since = nur Versionen danach; quiet = ohne Fehlermeldung und ohne Dialog, wenn nichts Neues
+const changesHtml=vs=>vs.length?vs.map(v=>`<h3 class="chv">Version ${esc(v.version)}${v.date?` <small class="mut">${esc(v.date.split('-').reverse().join('.'))}</small>`:''}</h3><ul class="chl">${v.items.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`).join(''):'<div class="mut">Keine Angaben.</div>';
+async function changesDlg(since,quiet){let r;try{r=await api('changes')}catch(e){if(!quiet)fail(e);return}
+  const vs=r.versions.filter(v=>!since||verCmp(v.version,since)>0);if(quiet&&!vs.length)return;
+  const d=dlg('Was ist neu',`<div class="chw">${changesHtml(vs)}</div>`,()=>{},'OK');d.querySelector('[data-x]').remove()}
+// Nach einem Update einmal «Was ist neu» mit den Versionen seit der zuletzt gesehenen (pro Gerät, sw_seenver); beim allerersten Öffnen nur merken
+function whatsNew(v){if(!v||!v.version||v.version==='0.0.0')return;let seen='';try{seen=localStorage.getItem('sw_seenver')||'';localStorage.setItem('sw_seenver',v.version)}catch(e){return}
+  if(seen&&verCmp(v.version,seen)>0)changesDlg(seen,true)}
 /* ---------- Anmeldung ---------- */
-function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a></div>`;
+function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="index.html?demo">🎓 Demo ausprobieren (ohne Anmeldung)</a><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
+  fetch(`${API}?r=version`).then(r=>r.json()).then(v=>{const e=$('#lgVer');if(e&&v.version)e.textContent='Version '+verTxt(v)}).catch(()=>{}); // Version auch ohne Anmeldung (Issue #175)
   const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 /* ---------- Dialoge ---------- */
@@ -267,8 +337,18 @@ function pwDialog(forced,done){
     'Speichern',forced?'Abmelden':'Abbrechen',forced?()=>{logout();done&&done()}:null)}
 /* ---------- Einsatzlog im Gross-Modus ---------- */
 let big=null;
-const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],poi:['Markierungen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub','anon','air']]};
-const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0',pub:'#7dd3fc',ext:'#a3e635',anon:'#8fb0bd',air:'#ffd23f'};
+const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],voice:['Funk',['voice','conf','voiceguest','voicech']],poi:['Markierungen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub','anon','air']]};
+const KIND_COL={start:'#ff4d2e',end:'#ff4d2e',accept:'#35c27a',decline:'#8fb0bd',leave:'#8fb0bd',role:'#e6a100',flow:'#1d7fd1',message:'#cfd8dc',move:'#c78cff',area:'#ffd23f',kick:'#ff4d2e',mark:'#2ee6d6',markdel:'#8fb0bd',poi:'#ff9f1c',poidel:'#8fb0bd',rescuee:'#ff6b6b',resmark:'#ff9f1c',rescued:'#35c27a',rec:'#e05cb0',pub:'#7dd3fc',ext:'#a3e635',anon:'#8fb0bd',air:'#ffd23f',voice:'#9b8cff',conf:'#9b8cff',voiceguest:'#9b8cff',voicech:'#9b8cff'};
+/* ---------- Durchsagen im Log abspielen (Funk, Issue #113) ---------- */
+// Log-Einträge der Art voice tragen voice (ID) und audio (1 = Aufnahme vorhanden); ▶ über data-vplay, ein Audio-Element für alle Logs (Menü, Gross-Modus, Verwaltung)
+let VPLAY_Q='',vplayA=null,vplayId=0; // VPLAY_Q: '&my=1' in «Meine Einsätze»
+async function voiceBlob(id,q=''){const r=await fetch(`${API}?r=voice/get&id=${id}${q}`,{headers:{'X-Token':token||''}});if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'HTTP '+r.status)}return r.blob()}
+const vplayBtn=x=>x&&x.kind==='voice'&&x.voice&&x.audio?`<button class="lk vpl" data-vplay="${x.voice}" title="Durchsage abspielen" aria-label="Durchsage abspielen">▶</button>`:'';
+async function vplay(id,b){if(vplayA&&vplayId===id&&!vplayA.paused){vplayA.pause();return}
+  try{if(b)b.textContent='…';const u=URL.createObjectURL(await voiceBlob(id,VPLAY_Q));vplayA=vplayA||new Audio();vplayA.pause();vplayA.src=u;vplayId=id;
+    vplayA.onended=vplayA.onpause=()=>{document.querySelectorAll(`[data-vplay="${id}"]`).forEach(x=>x.textContent='▶')};await vplayA.play();document.querySelectorAll(`[data-vplay="${id}"]`).forEach(x=>x.textContent='❚❚')}
+  catch(e){if(b)b.textContent='▶';toast(e.message,'err')}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-vplay]');if(b){e.preventDefault();vplay(+b.dataset.vplay,b)}});
 // anon (Issue #54, Verwaltung): async on => Fassung laden (anonymisiert oder nicht), dann Knopf «Anonym» in der Kopfzeile
 function openBigLog(title,get,live,anon){big={title,get,live,anon,anonOn:false,desc:true,filter:'all',cache:[]};let o=$('#bigLog');if(o)o.remove();
   o=document.createElement('div');o.id='bigLog';o.setAttribute('role','dialog');o.setAttribute('aria-label','Einsatzlog');
@@ -284,7 +364,7 @@ function renderBigLog(){const o=$('#bigLog');if(!big||!o)return;const got=big.ge
   const g=KIND_GROUPS[big.filter][1],all=big.cache,l=all.filter(x=>!g||g.includes(x.kind)).sort((a,b)=>(big.desc?-1:1)*(a.ts-b.ts||a.id-b.id)); // Log und Nachrichten gemischt, daher nach Zeit
   $('#bigT').textContent=`${big.title} · ${l.length} von ${all.length} Einträgen${big.live&&!got?' · Einsatz beendet':''}`;
   $('#bigS').textContent=big.desc?'Neueste zuerst':'Älteste zuerst';
-  $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
+  $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}${vplayBtn(x)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
 /* ---------- AI-Assistent (Issue #111): Fenster mit Vorschlag, Übernehmen / Verwerfen / Neu, zusätzlichem Wunsch und freien Fragen ---------- */
 // Modus der Person je Funktion und Bereich (Einsatztyp-ID oder 'adm'; me.ai vom Server: aiMe, schon begrenzt auf das Erlaubte und die eigene Wahl): off, cmd (auf Abruf), comp (begleitend)
 const aiM=(fn,ctx)=>(typeof me!=='undefined'&&me&&me.ai&&me.ai[fn]&&me.ai[fn].modes[String(ctx)])||'off';

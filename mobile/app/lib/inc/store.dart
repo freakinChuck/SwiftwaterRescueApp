@@ -9,6 +9,7 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart' show LatLngBounds;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,11 +17,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../accounts.dart';
 import '../api.dart';
 import '../beacon.dart';
+import '../demo.dart';
 import '../monitor.dart';
 import '../notify.dart';
+import '../service.dart';
 import '../sys.dart';
+import '../track.dart';
 import 'area.dart';
 import 'util.dart';
+import 'voice.dart';
 
 /// Kategorien auf der Karte (VIEW in common.js): Schlüssel, Bezeichnung, Funktion
 const viewCatsAll = [
@@ -36,19 +41,45 @@ const viewCatsAll = [
   ('mm', 'Nachrichten-Markierungen', 'msg'),
   ('air', 'Helikopter', ''),
   ('veh', 'Fahrzeuge', 'veh'),
+  ('hydro', 'Messstationen', 'hydro'),
+  ('geo', 'Geodaten (OpenStreetMap)', 'geo'), // Issue #182, zuerst ausgeblendet
 ];
 
-/// Grundkarten (MAP_PROVIDERS in common.js)
-const mapProviders = {
-  'swisstopo_sat': ('Luftbild (swisstopo)', 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg', '© swisstopo', 18),
-  'swisstopo': ('Landeskarte (swisstopo)', 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', '© swisstopo', 18),
-  'osm': ('OpenStreetMap', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', '© OpenStreetMap-Mitwirkende', 19),
-};
+/// Grundkarte (Issue #106, MAP_PROVIDERS/mapsSet in common.js): Liste vom Server (maps, map_def in me und incident/state), eingestellt in der Verwaltung,
+/// global und je Einsatztyp, je mit Abdeckung (bounds). Die eigene Vektorkarte (vec, PMTiles) gibt es nativ noch nicht.
+class MapProv {
+  MapProv(this.k, this.label, this.url, this.attr, this.nat, {this.sub = const [], this.bounds});
+  final String k, label, url, attr;
+  final int nat;
+  final List<String> sub;
+  final LatLngBounds? bounds;
+
+  /// Quellenangabe als Text (der Server liefert HTML für Leaflet)
+  String get attrText => attr.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&copy;', '©').replaceAll('&amp;', '&');
+
+  static MapProv? of(J j) {
+    if (j['vec'] != null && j['vec'] != 0) return null;
+    final b = j['bounds'] is List && (j['bounds'] as List).length == 2 ? (j['bounds'] as List).map((p) => p is List && p.length == 2 ? LatLng(jd(p[0]) ?? 0, jd(p[1]) ?? 0) : null).toList() : null;
+    final url = js(j['url']), k = js(j['k']);
+    if (k.isEmpty || url.isEmpty) return null;
+    return MapProv(k, js(j['label']), url, js(j['attr']), ji(j['nat']) ?? 19,
+        sub: js(j['sub']).split('').where((x) => x.isNotEmpty).toList(), bounds: b != null && b[0] != null && b[1] != null ? LatLngBounds(b[0]!, b[1]!) : null);
+  }
+}
+
+/// Rückfall, bis die Liste vom Server da ist (älterer Server)
+final mapFallback = [
+  MapProv('swisstopo_sat', 'Luftbild (swisstopo)', 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg', '© swisstopo', 18),
+  MapProv('swisstopo', 'Landeskarte (swisstopo)', 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', '© swisstopo', 18),
+  MapProv('osm', 'OpenStreetMap', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', '© OpenStreetMap-Mitwirkende', 19),
+];
 const defaultBase = 'swisstopo_sat';
 
 class AlarmItem {
-  AlarmItem(this.title, this.body, this.key, this.lvl);
+  AlarmItem(this.title, this.body, this.key, this.lvl, [this.kind, this.ksnd]);
   final String title, body, key, lvl;
+  final int? kind; // Einsatztyp und Vorgabe des Tons (kritisch, Issue #171)
+  final String? ksnd;
 }
 
 class Toast {
@@ -61,6 +92,9 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   IncStore(this.acc);
   final Account acc;
   late final Api api = acc.api;
+
+  /// Demo-Modus (Issue #74): kein Server, kein Teilen im Hintergrund, kein Dienst, keine Überwachung, nichts gespeichert
+  late final bool demo = isDemoAcc(acc);
 
   J? me;
   List<J> roles = [], modes = [];
@@ -101,6 +135,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   SharedPreferences? _sp;
   Set<String> viewHide = {};
   String base = defaultBase;
+  List<MapProv> maps = mapFallback;
+  String mapDef = defaultBase;
+  String _mapsKey = '';
+  int? _baseInc;
   bool autoView = false;
   Set<String> poiHide = {};
   int? _poiInc;
@@ -108,6 +146,9 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Ereignisse an die Karte (z. B. Einsatz neu: Startansicht)
   final events = StreamController<String>.broadcast();
+
+  /// Funk & Konferenz (Issue #113): Durchsagen, Mithören, Live-Konferenz (voice.dart)
+  late final VoiceStore vx = VoiceStore(this);
 
   // ---------- Hilfen ----------
   int get uid => ji(me?['id']) ?? acc.uid;
@@ -152,7 +193,18 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   List<(String, String, String)> viewCats() =>
-      viewCatsAll.where((v) => v.$1 == 'air' ? jb(st?['air']) : (v.$1 == 'veh' ? (st?['veh'] is Map) : (v.$3.isEmpty || feat(v.$3)))).toList(); // Fahrzeuge nur, wenn der Server sie liefert (Issue #177)
+      viewCatsAll.where((v) => v.$1 == 'air' ? jb(st?['air']) : v.$1 == 'geo' ? feat('geo') && geoKinds.isNotEmpty : v.$1 == 'veh' ? (st?['veh'] is Map) : (v.$3.isEmpty || feat(v.$3))).toList(); // Fahrzeuge nur, wenn der Server sie liefert (Issue #177)
+
+  /// Objektarten der Geodaten-Ebene, die die Verwaltung anbietet (Issue #182)
+  List<J> get geoKinds => jl(st?['geo_kinds']).where((k) => jb(k['live'])).toList();
+
+  /// ausgeblendete Objektarten der Geodaten-Ebene, pro Gerät (geo_off)
+  Set<String> geoOff = {};
+  void setGeoOff(String k, bool off) {
+    off ? geoOff.add(k) : geoOff.remove(k);
+    _sp?.setStringList('geo_off', geoOff.toList());
+    notifyListeners();
+  }
   bool vis(String k) => !viewHide.contains(k);
 
   /// Art des Einsatzes (kindOf)
@@ -220,6 +272,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       offline = true;
       offAt ??= _sp?.getInt('lastAt_${acc.id}') ?? DateTime.now().millisecondsSinceEpoch;
     }
+    _mapsSet(me);
+    _baseSync();
     ready = true;
     notifyListeners();
     await poll();
@@ -239,8 +293,15 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   void _loadView() {
     final p = _sp!;
     viewHide = (p.getStringList('v_hide') ?? []).toSet();
+    // Geodaten-Ebene (Issue #182) auf jedem Gerät zuerst ausgeblendet (VIEW_OFF)
+    if (!(p.getBool('v_def_geo') ?? false)) {
+      viewHide.add('geo');
+      p.setStringList('v_hide', viewHide.toList());
+      p.setBool('v_def_geo', true);
+    }
+    geoOff = (p.getStringList('geo_off') ?? []).toSet();
     final b = p.getString('v_base');
-    base = mapProviders.containsKey(b) ? b! : defaultBase;
+    base = _hasMap(b) ? b! : defaultBase;
     autoView = p.getBool('v_auto') ?? false;
   }
 
@@ -252,11 +313,45 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// Im Einsatz gilt die Wahl bis zum Einsatzende (`v_base_<Konto>_<Einsatz>`), ohne Einsatz `v_base`
   void setBase(String k) {
-    if (!mapProviders.containsKey(k)) return;
+    if (!_hasMap(k)) return;
     base = k;
-    _sp?.setString('v_base', k);
+    _sp?.setString(_baseInc != null && _baseInc != 0 ? 'v_base_${acc.id}_$_baseInc' : 'v_base', k);
     notifyListeners();
+  }
+
+  bool _hasMap(String? k) => k != null && maps.any((m) => m.k == k);
+  MapProv get prov => maps.firstWhere((m) => m.k == base, orElse: () => maps.first);
+
+  /// Liste vom Server übernehmen; true = geändert
+  bool _mapsSet(J? src) {
+    if (src == null || src['maps'] is! List) return false;
+    final key = jsonEncode([src['maps'], src['map_def']]);
+    if (key == _mapsKey) return false;
+    final l = jl(src['maps']).map(MapProv.of).whereType<MapProv>().toList();
+    if (l.isEmpty) return false;
+    _mapsKey = key;
+    maps = l;
+    mapDef = _hasMap(js(src['map_def'])) ? js(src['map_def']) : l.first.k;
+    return true;
+  }
+
+  /// Wie baseSync in index.html: beim ersten Mal in einem Einsatz die eigene Wahl für diesen Einsatz, sonst die Standardkarte des Einsatztyps;
+  /// ohne Einsatz v_base. Nicht mehr erlaubte Karten fallen auf den Standard zurück.
+  void _baseSync() {
+    final id = ji(inc?['id']) ?? 0, ch = _mapsSet(st);
+    if (!ch && id == _baseInc && _hasMap(base)) return;
+    if (!(id == _baseInc && _hasMap(base))) {
+      final sv = _sp?.getString(id != 0 ? 'v_base_${acc.id}_$id' : 'v_base');
+      base = _hasMap(sv) ? sv! : mapDef; // im Einsatz ohne eigene Wahl: Standard des Einsatztyps
+    }
+    if (st != null && _baseInc != id) {
+      for (final k in _sp?.getKeys().where((k) => k.startsWith('v_base_${acc.id}_') && k != 'v_base_${acc.id}_$id').toList() ?? <String>[]) {
+        _sp?.remove(k); // Wahl beendeter Einsätze verwerfen
+      }
+    }
+    _baseInc = id;
   }
 
   void setAuto(bool on) {
@@ -289,6 +384,71 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     _sp?.setInt('msgseen_${acc.id}_${_poiInc ?? 0}', id);
   }
 
+  // ---------- Pegel & Abfluss (Issue #125, nativ seit Issue #165) ----------
+  // Messstationen des BAFU: die des Einsatzes (st.hydro, zu Beginn und am Ende erfasst) und die persönlichen (me.hydro, im Profil gewählt).
+  // Aktuelle Werte über hydro (Server mit Cache), höchstens alle 5 Minuten und sofort, wenn sich die Stationen ändern (hyPoll).
+  Map<String, J> hyData = {};
+  String? hyErr;
+  List<J>? hyAll; // alle Stationen (Suche im Profil), einmal geladen
+  int _hyAt = 0;
+  String _hyKey = '';
+  bool _hyBusy = false;
+
+  List<String> get hyMine => me?['hydro'] is List ? (me!['hydro'] as List).map((e) => '$e').toList() : <String>[];
+  List<J> get hyInc => inc != null ? jl(st?['hydro']) : <J>[];
+  List<String> get hyIds => {...hyInc.map((r) => js(r['station'])), ...hyMine}.where((x) => x.isNotEmpty).toList();
+  J? hyStation(String id) => hyData[id] ?? hyInc.where((r) => js(r['station']) == id).firstOrNull ?? hyAll?.where((x) => js(x['id']) == id).firstOrNull;
+
+  /// Kartenknopf «Messstationen» (hyBtn): im Einsatz bei eingeschalteter Funktion, ohne Einsatz, sobald man eigene Stationen hat
+  bool get hyBtn => feat('hydro') && (inc != null || hyMine.isNotEmpty);
+
+  Future<void> hyPoll({bool force = false}) async {
+    if (!feat('hydro')) return;
+    final ids = hyIds, k = ids.join(',');
+    if (ids.isEmpty) {
+      if (_hyKey.isNotEmpty) {
+        _hyKey = '';
+        hyData = {};
+        notifyListeners();
+      }
+      return;
+    }
+    if (_hyBusy || (!force && k == _hyKey && DateTime.now().millisecondsSinceEpoch - _hyAt < 300000)) return;
+    _hyBusy = true;
+    try {
+      final d = await api.call('hydro', body: {'ids': ids});
+      hyData = {for (final x in jl(d['stations'])) js(x['id']): x};
+      hyErr = d['err'] == null ? null : js(d['err']);
+    } on ApiError catch (e) {
+      hyErr = e.offline ? 'Keine Verbindung zum Server' : e.message;
+    } catch (e) {
+      hyErr = '$e';
+    } finally {
+      _hyBusy = false;
+      _hyKey = k;
+      _hyAt = DateTime.now().millisecondsSinceEpoch;
+      if (!closed) notifyListeners();
+    }
+  }
+
+  /// alle Stationen für die Suche im Profil
+  Future<List<J>> hyLoadAll() async => hyAll ??= jl((await api.call('hydro', body: {}))['stations']);
+
+  /// persönliche Messstationen speichern (me/settings mit hydro, höchstens 20)
+  Future<void> hySave(List<String> l) async {
+    final old = me?['hydro'];
+    me?['hydro'] = l;
+    notifyListeners();
+    try {
+      await api.call('me/settings', body: {'hydro': l});
+      await hyPoll(force: true);
+    } catch (e) {
+      me?['hydro'] = old;
+      fail(e);
+      notifyListeners();
+    }
+  }
+
   int get unread => msgs.where((m) => (ji(m['id']) ?? 0) > msgSeen && ji(m['from_user']) != uid).length;
 
   // ---------- Polling ----------
@@ -296,18 +456,20 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     if (_polling || closed || mustChange) return;
     _polling = true;
     try {
-      final nx = await api.call('incident/state', query: {'since': '$_lastMsg'});
+      final nx = await api.call('incident/state', query: {'since': '$_lastMsg', ...vx.query()});
       _askBt(nx);
       final i = nx['incident'] is Map ? jm(nx['incident']) : null;
       if (i != null) {
-        final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']), cr = lv == 'none' ? 'low' : lv;
+        final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']);
+        // Stufe für Nachrichten je Einsatztyp (Issue #168), ältere Server ohne msg_level wie bisher
+        final cr = js(nx['msg_level']).isNotEmpty ? js(nx['msg_level']) : (lv == 'none' ? 'low' : lv), kr = cr == 'none' ? 'low' : cr;
         if (_lastIncId != id) {
           _lastIncId = id;
           _lastMsg = 0;
           _msgInit = false;
           msgs.clear();
           if (nx['alarm'] != false && !(nx['me'] is Map && jm(nx['me'])['left_at'] == null && jm(nx['me'])['mode'] != 'declined')) {
-            notify(kindOf(i).name.toUpperCase(), js(i['message']), 'i:$id', lv);
+            notify(kindOf(i).name.toUpperCase(), js(i['message']), 'i:$id', lv, kind: ji(i['kind_id']), ksnd: i['kind'] is Map ? jm(i['kind'])['snd'] as String? : null);
           }
           events.add('inc');
         }
@@ -318,26 +480,33 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           if (mid > _lastMsg) _lastMsg = mid;
           if (msgs.any((x) => x['id'] == m['id'])) continue;
           msgs.add(m);
-          if (_msgInit && ji(m['from_user']) != uid && inNow && msgForMe(m)) notify('Nachricht von ${js(m['from_name'])}', js(m['text']), 'm:$mid', cr);
+          if (_msgInit && cr != 'none' && ji(m['from_user']) != uid && inNow && msgForMe(m)) notify('Nachricht von ${js(m['from_name'])}', js(m['text']), 'm:$mid', cr);
         }
         _msgInit = true;
         final was = myPart;
         if (was != null && was['left_at'] == null && was['mode'] != 'declined' && nm != null && nm['left_at'] != null && !selfLeft) {
-          notify('AUS EINSATZ ENTFERNT', 'Die Einsatzleitung hat dich aus dem Einsatz entfernt.', 'k:$id:${nm['left_at']}', cr);
+          notify('AUS EINSATZ ENTFERNT', 'Die Einsatzleitung hat dich aus dem Einsatz entfernt.', 'k:$id:${nm['left_at']}', kr);
         }
         st = nx;
+        unawaited(vx.onState(nx));
+        if (!_joinedSeen && inNow) _trackNow(); // angenommen: Teilen im Hintergrund sofort vorbereiten, nicht erst beim nächsten Polling
+        _joinedSeen = inNow;
       } else {
         final o = inc;
         if (o != null) {
           final k = kindOf(o).name, lv = js(st?['level']).isEmpty ? 'crit' : js(st!['level']);
-          if (st?['alarm'] != false || st?['me'] != null) notify('${k.toUpperCase()} BEENDET', '$k beendet.', 'e:${o['id']}', lv == 'none' ? 'low' : lv);
+          final el = js(st?['end_level']).isNotEmpty ? js(st!['end_level']) : (lv == 'none' ? 'low' : lv); // Issue #168
+          if (el != 'none' && (st?['alarm'] != false || st?['me'] != null)) notify('${k.toUpperCase()} BEENDET', '$k beendet.', 'e:${o['id']}', el);
         }
         st = nx;
+        unawaited(vx.onState(nx));
         _lastIncId = null;
         msgs.clear();
         _lastMsg = 0;
       }
       selfLeft = false;
+      _baseSync();
+      hyPoll();
       _poiHideLoad();
       _calcArea();
       _syncPos();
@@ -364,9 +533,24 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   bool selfLeft = false; // selbst ausgetreten: keine Meldung «entfernt»
+  bool _joinedSeen = false;
+
+  /// Stand des Kontos für die Überwachung sofort nachführen und das Teilen im Hintergrund starten (Issue #183). Vorher geschah das erst
+  /// beim nächsten Polling der App (Standard 15 s); unter iOS ist dieses im Hintergrund gestoppt, wer annahm und gleich sperrte, teilte nie.
+  /// Unter Android teilt der Vordergrunddienst in seinem eigenen Isolate, er erhält nur den Auftrag, sofort abzufragen.
+  /// Android (Issue #179): Mit Push läuft der Dienst nur im Einsatz (serviceNeeded); damit er gleich startet, zuerst die Teilnahme
+  /// im Stand der Überwachung festhalten (setJoined).
+  void _trackNow() {
+    if (demo) return;
+    if (Platform.isAndroid) {
+      unawaited(setJoined(acc.id, ji(inc?['id']), true).then((_) => syncService()).catchError((Object e) => debugPrint('Dienst $e')));
+      return;
+    }
+    unawaited(pollOne(acc).then((_) => Tracker.sync()).catchError((Object e) => debugPrint('Tracker $e')));
+  }
 
   void _saveLast() {
-    if (st == null) return;
+    if (st == null || demo) return;
     try {
       _sp?.setString('last_${acc.id}', jsonEncode({...st!, 'messages': msgs}));
       _sp?.setInt('lastAt_${acc.id}', DateTime.now().millisecondsSinceEpoch);
@@ -392,12 +576,12 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---------- Alarme und Hinweise ----------
   /// Alarmstufe (Issue #90): crit Vollbild mit Dauerton, high Vollbild mit einmaligem Ton, normal Hinweis mit Ton, low still, none nichts
-  void notify(String t, String b, String key, String lvl) {
+  void notify(String t, String b, String key, String lvl, {int? kind, String? ksnd}) {
     if (lvl == 'none') return;
     if (_acked.contains(key)) return;
     if (lvl == 'crit' || lvl == 'high') {
       if (alarm?.key == key || alarmQ.any((q) => q.key == key)) return;
-      alarmQ.add(AlarmItem(t, b, key, lvl));
+      alarmQ.add(AlarmItem(t, b, key, lvl, kind, ksnd));
       _showAlarm();
       return;
     }
@@ -407,7 +591,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       SystemSound.play(SystemSoundType.alert);
       HapticFeedback.mediumImpact();
     }
-    if (!_visible) showNote(acc.id, key, t, b, lvl, sub: acc.label);
+    if (!_visible) showNote(acc.id, key, demo ? 'DEMO – $t' : t, b, lvl, sub: acc.label);
   }
 
   void _showAlarm() {
@@ -416,7 +600,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     final a = alarm!;
     // Meldung des Geräts mit Weckton (kritisch) bzw. Alarmton; dieselbe Kennung wie die Überwachung, also nie doppelt
     markTag(acc.id, a.key);
-    showNote(acc.id, a.key, a.title, a.body, a.lvl, sub: acc.label);
+    showNote(acc.id, a.key, demo ? 'DEMO – ${a.title}' : a.title, a.body, a.lvl, sub: acc.label, kind: a.kind, ksnd: a.ksnd);
     if (a.lvl == 'crit' && Platform.isIOS) HapticFeedback.heavyImpact();
     notifyListeners();
   }
@@ -505,7 +689,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     area = searchArea(jl(st?['sources']), nets, jd(i['flow_ms']), now, posts, (s, r) => overpassNet(api, {'around': [r, s.latitude, s.longitude]}), () {
       _calcArea();
       notifyListeners();
-    }, rescuees);
+    }, rescuees, jl(st?['stops'])); // Flusssperren (Issue #182)
   }
 
   void _checkArea() {
@@ -556,9 +740,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     locErr = '';
     if (_posSub != null || !_visible) return;
     _posSub = Geolocator.getPositionStream(
-            locationSettings: Platform.isAndroid
-                ? AndroidSettings(accuracy: LocationAccuracy.best, distanceFilter: 0, intervalDuration: const Duration(seconds: 3))
-                : const LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 0))
+            // dieselben Einstellungen wie track.dart: unter iOS gibt es nur einen Strom, und wer ihn zuerst öffnet, bestimmt sie (Issue #183)
+            locationSettings: locSettings(android: const Duration(seconds: 3)))
         .listen((p) {
       devPos = p;
       locErr = '';
@@ -604,8 +787,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         'manual': manualPos != null ? 1 : 0
       });
       locStatus = 'Standort wird geteilt (${fmtT(DateTime.now().millisecondsSinceEpoch / 1000)})';
+      if (!demo) unawaited(locResult(acc, ji(inc?['id'])));
     } catch (e) {
       locStatus = 'Standort senden fehlgeschlagen: $e';
+      if (!demo) unawaited(locResult(acc, ji(inc?['id']), err: e is ApiError ? e.message : '$e'));
     }
     _checkArea();
   }
@@ -619,7 +804,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---------- Lebenszyklus ----------
   void _beat() {
-    if (_visible && !closed) setForeground(acc.id);
+    if (_visible && !closed && !demo) setForeground(acc.id);
   }
 
   @override
@@ -631,8 +816,16 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       // Hintergrund: Überwachung und Standortdienst übernehmen (monitor.dart, track.dart)
       _visible = false;
-      setForeground(null);
-      _stopPos();
+      if (!demo) setForeground(null);
+      if (Platform.isIOS && !demo) {
+        // Erst das Teilen im Hintergrund anhängen, dann den eigenen Strom beenden: So läuft die Ortung ohne Unterbruch weiter
+        // (unter iOS darf sie mit «Beim Verwenden» nur im Vordergrund starten).
+        Tracker.sync().catchError((Object e) => debugPrint('Tracker $e')).whenComplete(() {
+          if (!_visible) _stopPos();
+        });
+      } else {
+        _stopPos();
+      }
     }
   }
 
@@ -645,7 +838,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     _poll?.cancel();
     _fg?.cancel();
     _stopPos();
-    setForeground(null);
+    if (!demo) setForeground(null);
+    vx.dispose();
     toasts.close();
     events.close();
     super.dispose();

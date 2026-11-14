@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 0.1.0+1 # Version und Build setzen die Workflows aus der Datei VERSION (Issue #175), nicht von Hand ändern
 
 environment:
   sdk: ^3.13.7
@@ -52,6 +52,10 @@ dependencies:
   share_plus: ^13.3.1
   path_provider: ^2.1.6
   flutter_svg: ^2.3.2
+  # Funk & Konferenz (Issue #113): Durchsagen aufnehmen (AAC) und abspielen, Live-Konferenz über LiveKit
+  record: '>=7.1.2 <7.2.0' # 7.2.0 ist erst wenige Tage alt
+  just_audio: ^0.10.6
+  livekit_client: ^2.13.2
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +78,12 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Töne für den kritischen Alarm (Issue #171, erzeugt mit scripts/sounds/gen.py, Katalog in lib/sounds.dart)
+  assets:
+    - assets/sounds/
+    # Einsatzsymbole für den Demo-Modus (Issue #74, Kopie von web/img/sym; im Konto eines Servers lädt die App sie von dort)
+    - assets/sym/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

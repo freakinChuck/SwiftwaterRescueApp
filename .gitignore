@@ -4,6 +4,8 @@ web/api/data/*.sqlite-*
 web/api/data/hydro/
 web/api/data/overpass/
 web/api/data/air/
+web/api/data/voice/
+web/api/data/geo/
 web/api/data/mail.lock
 web/api/data/deployed.txt
 # Deploy-Konfigurationen (Test, Prod, …) nur lokal, Vorlage scripts/deploy.example.json bleibt im Repo
@@ -16,3 +18,6 @@ node_modules/
 web/api/data/fcm_token.json
 web/api/data/firebase-service-account.json
 *service-account*.json
+web/api/data/version.json
+# Eigene OSM-Karte (Issue #106): PMTiles-Datei wird getrennt hochgeladen (scripts/tiles/)
+web/tiles/

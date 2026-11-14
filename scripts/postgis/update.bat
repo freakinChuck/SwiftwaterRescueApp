@@ -25,6 +25,9 @@ REM Import-Konfiguration
 set "URL=https://download.geofabrik.de/europe/switzerland-latest.osm.pbf"
 set "WORKDIR=C:\Swiftwater\data"
 set "TABLE=sw_waterways"
+set "FTABLE=sw_features"
+set "MIN_FEAT=100"
+set "NEAR=0.001"
 set "READER=swiftwater_app"
 set "STAGE=sw_import"
 
@@ -106,17 +109,53 @@ if %COUNT% LSS 1000 (
     exit /b 1
 )
 
-echo Ersetze Produktivtabelle...
+echo [%date% %time%] Bereite sw_features auf (nur Bruecken ueber Gewaesser, naechstes Gewaesser)...
 
 "%PSQL%" ^
 -h %PGHOST% ^
 -p %PGPORT% ^
 -U %PGUSER% ^
 -d %PGDATABASE% ^
--c "BEGIN; DROP TABLE IF EXISTS public.%TABLE%; ALTER TABLE %STAGE%.sw_waterways SET SCHEMA public; GRANT USAGE ON SCHEMA public TO %READER%; GRANT SELECT ON public.%TABLE% TO %READER%; COMMIT;"
+-v ON_ERROR_STOP=1 ^
+-c "DELETE FROM %STAGE%.sw_features f WHERE f.kind = 'bridge' AND NOT EXISTS (SELECT 1 FROM %STAGE%.sw_waterways w WHERE w.geom && f.geom AND ST_Intersects(w.geom, f.geom));" ^
+-c "UPDATE %STAGE%.sw_features f SET water = (SELECT w.name FROM %STAGE%.sw_waterways w WHERE w.name IS NOT NULL AND ST_DWithin(w.geom, f.geom, %NEAR%) ORDER BY w.geom <-> f.geom LIMIT 1);" ^
+-c "CREATE INDEX ON %STAGE%.sw_features (kind);"
 
 if errorlevel 1 (
-    echo Fehler beim Austausch der Tabelle.
+    echo Fehler beim Aufbereiten von sw_features.
+    exit /b 1
+)
+
+set "FCOUNT="
+for /f %%i in ('
+    "%PSQL%" -h %PGHOST% -p %PGPORT% -U %PGUSER% -d %PGDATABASE% -t -A -c "SELECT count(*) FROM %STAGE%.sw_features;"
+') do set FCOUNT=%%i
+
+echo.
+echo Objekte am Gewaesser: %FCOUNT%
+echo.
+
+if not defined FCOUNT (
+    echo Konnte Anzahl Objekte nicht bestimmen.
+    exit /b 1
+)
+
+if %FCOUNT% LSS %MIN_FEAT% (
+    echo Zu wenige Objekte am Gewaesser importiert, die bisherigen Tabellen bleiben.
+    exit /b 1
+)
+
+echo Ersetze Produktivtabellen...
+
+"%PSQL%" ^
+-h %PGHOST% ^
+-p %PGPORT% ^
+-U %PGUSER% ^
+-d %PGDATABASE% ^
+-c "BEGIN; DROP TABLE IF EXISTS public.%TABLE%; DROP TABLE IF EXISTS public.%FTABLE%; ALTER TABLE %STAGE%.sw_waterways SET SCHEMA public; ALTER TABLE %STAGE%.sw_features SET SCHEMA public; GRANT USAGE ON SCHEMA public TO %READER%; GRANT SELECT ON public.%TABLE%, public.%FTABLE% TO %READER%; COMMIT;"
+
+if errorlevel 1 (
+    echo Fehler beim Austausch der Tabellen.
     exit /b 1
 )
 
@@ -127,7 +166,8 @@ echo ANALYZE ausfuehren...
 -p %PGPORT% ^
 -U %PGUSER% ^
 -d %PGDATABASE% ^
--c "ANALYZE public.%TABLE%;"
+-c "ANALYZE public.%TABLE%;" ^
+-c "ANALYZE public.%FTABLE%;"
 
 echo.
 echo ======================================

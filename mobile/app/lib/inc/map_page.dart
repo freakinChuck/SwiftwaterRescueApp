@@ -11,12 +11,16 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../accounts.dart';
+import '../demo.dart';
+import '../demo_ui.dart';
 import '../home.dart' show LoginPage, snack;
 import '../monitor.dart';
 import '../push.dart';
 import '../service.dart';
 import '../sys.dart';
 import 'ctx.dart';
+import 'geo.dart';
+import 'hydro.dart';
 import 'menu.dart';
 import 'msgs.dart';
 import 'people.dart';
@@ -27,6 +31,7 @@ import 'res.dart';
 import 'store.dart';
 import 'util.dart';
 import 'veh.dart';
+import 'voice.dart';
 
 const _fitPad = EdgeInsets.fromLTRB(50, 90, 80, 50);
 const _homeWaitMs = 20000, _areaWaitMs = 30000;
@@ -48,6 +53,10 @@ class IncPage extends StatefulWidget {
 class _IncPageState extends State<IncPage> implements MapCtl {
   late final IncStore s = IncStore(widget.account);
   final mc = MapController();
+  late final geo = GeoLayer(s); // Geodaten-Ebene (Issue #182)
+  void _geoSync() {
+    if (_mapReady) geo.sync(mc.camera, () => mounted ? setState(() {}) : null);
+  }
   final rd = RdState();
   final _sk = GlobalKey<ScaffoldState>();
   StreamSubscription<Toast>? _tSub;
@@ -95,10 +104,18 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (e == 'inc') _fitted = null;
     });
     s.addListener(_onStore);
+    s.vx.addListener(_onVx); // Funk (Issue #113): Sprechtaste, Leiste, Zähler
     IncPage.focusReq.addListener(_onFocusReq);
     _onFocusReq();
     s.start();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _askLocation());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _askLocation();
+      // Demo-Modus (Issue #74): Erklärung beim ersten Öffnen
+      if (s.demo && !Demo.i.welcomed && mounted) {
+        Demo.i.welcomed = true;
+        demoPanel(context, _demoChanged, first: true);
+      }
+    });
   }
 
   @override
@@ -106,6 +123,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     if (IncPage.openId == widget.account.id) IncPage.openId = null;
     IncPage.focusReq.removeListener(_onFocusReq);
     s.removeListener(_onStore);
+    s.vx.removeListener(_onVx);
     _tSub?.cancel();
     _eSub?.cancel();
     s.dispose();
@@ -115,7 +133,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
 
   /// Standort gleich beim Öffnen erlauben lassen; danach einmalig um «Immer zulassen» bitten (Teilen bei gesperrtem Bildschirm, track.dart).
   Future<void> _askLocation() async {
-    if (await requestLocation() != locInUse || !mounted) return;
+    if (await requestLocation() != locInUse || !mounted || s.demo) return; // Demo: kein Teilen im Hintergrund
     if (await prefs.getBool('bgAsked') == true || !mounted) return;
     await prefs.setBool('bgAsked', true);
     if (!mounted) return;
@@ -137,11 +155,20 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     }
   }
 
+  /// Demo-Modus: Leitungsrechte umgeschaltet, Rechte und Stand neu laden
+  void _demoChanged() {
+    s.reloadMe().then((_) => s.poll());
+  }
+
   // ---------- Abmelden ----------
   Future<void> _logout({required bool byServer}) async {
     if (_closing) return;
     _closing = true;
     final a = widget.account;
+    if (s.demo) { // Demo-Modus: «Abmelden» beendet das Demo, kein Konto
+      Navigator.of(context).popUntil((r) => r.isFirst);
+      return;
+    }
     await pushForget(a);
     if (!byServer) await a.api.logout();
     await Accounts.update(a.id, (x) => x.loggedOut = true);
@@ -156,6 +183,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   }
 
   // ---------- Reaktion auf neuen Stand ----------
+  void _onVx() {
+    if (mounted) setState(() {});
+  }
+
   void _onStore() {
     if (!mounted) return;
     if (s.unauth) {
@@ -177,6 +208,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (i == null) _homeView();
       if (s.autoView) _autoFit();
       _airPoll();
+      _geoSync();
     }
     setState(() {});
   }
@@ -519,6 +551,56 @@ class _IncPageState extends State<IncPage> implements MapCtl {
 
   void _navAsk(double lat, double lon, String name, [List<String> lines = const []]) => _sheet(name, lines, lat: lat, lon: lon);
 
+  // fester Standort (Issue #182): Eigenschaften, Quelle, Navigationspunkte (mehrere: Auswahl), Sperre für die Einsatzleitung
+  void _placeSheet(J p) {
+    final n = placeNav(p), ll = llOf(p)!;
+    _sheet('${placeBadge(s, p)}${js(p['name'])}', [js(p['descr']), placeInfo(s, p), placePropsText(s, p), if (js(p['src_ref']).isNotEmpty) '© OpenStreetMap-Mitwirkende'],
+        lat: n.length > 1 ? null : (n.isEmpty ? ll.latitude : n[0].lat),
+        lon: n.length > 1 ? null : (n.isEmpty ? ll.longitude : n[0].lon),
+        navName: n.length == 1 && n[0].note.isNotEmpty ? '${js(p['name'])} – ${n[0].note}' : js(p['name']),
+        actions: (c) => [
+              if (n.length > 1 && s.feat('nav'))
+                FilledButton(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      placeNavGo(context, s, p);
+                    },
+                    child: Text('🧭 Navigieren (${n.length} Ziele)')),
+              if (stopToggleOk(s, p))
+                OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      stopToggle(s, p);
+                    },
+                    child: Text(stopOn(s, p) ? '⛔ Sperre aufheben (Einsatz)' : '⛔ Sperre wieder berücksichtigen')),
+            ]);
+  }
+
+  // Objekt der Geodaten-Ebene: Angaben, Quelle, 🧭; Einsatzleitung als Markierung, mit Recht geo als festen Standort übernehmen
+  void _geoSheet(J it) {
+    final k = geo.kindOf(js(it['kind'])), nm = geo.name(it), t = jm(it['tags']), pts = it['pts'] is List ? (it['pts'] as List) : null;
+    final tg = [if (js(t['operator']).isNotEmpty) 'Betreiber: ${js(t['operator'])}', if (js(t['ref']).isNotEmpty) 'Nr. ${js(t['ref'])}', if (js(t['height']).isNotEmpty) 'Höhe: ${js(t['height'])}'].join(' · ');
+    _sheet(nm, ['${js(k?['name'])}${js(it['water']).isNotEmpty ? ' · ${js(it['water'])}' : ''}', tg, 'Geodaten © OpenStreetMap-Mitwirkende, nicht geprüft'],
+        lat: jd(it['lat']),
+        lon: jd(it['lon']),
+        actions: (c) => [
+              if (s.inc != null && jb(s.st?['can_manage']) && s.feat('poi'))
+                OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      s.act('incident/poi', {'kind': pts != null ? (jb(it['line']) ? 'line' : 'area') : 'point', 'name': nm, 'color': '#ff9f1c', 'pts': pts ?? [[it['lat'], it['lon']]]}, 'Übernommen');
+                    },
+                    child: const Text('Als Markierung übernehmen')),
+              if (s.can('geo'))
+                OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      s.act('geo/import', {'items': [{...it, 'name': nm}]}, 'Als festen Standort übernommen');
+                    },
+                    child: const Text('Als festen Standort übernehmen')),
+            ]);
+  }
+
   // ---------- Personeninfo (Issue #105, Funktion «pinfo», wie pinfo in index.html) ----------
   // Nicht blockierend: Karte als Marker über der Person, fährt bei jeder Aktualisierung mit, Karte und übrige Elemente bleiben bedienbar.
   // Schliesst über ✕, Antippen der leeren Karte und wenn die Person den Einsatz verlässt, ausgeblendet wird oder keinen Standort mehr hat.
@@ -716,6 +798,9 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       decoration: BoxDecoration(color: (bg ?? Colors.black).withValues(alpha: .65), borderRadius: BorderRadius.circular(4)),
       child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 11)));
 
+  // Bereiche und Linien (Issue #176): kein Symbol in der Mitte wie in der Web-App, nur die Bezeichnung; unsichtbare Fläche zum Antippen
+  static const Widget _noDot = SizedBox(width: 24, height: 18);
+
   Marker _dotMk(LatLng p, Widget dot, String? label, VoidCallback onTap, {double w = 120}) => Marker(
       point: p,
       width: w,
@@ -751,7 +836,6 @@ class _IncPageState extends State<IncPage> implements MapCtl {
 
   List<Widget> _layers(BuildContext c) {
     final i = s.inc, out = <Widget>[];
-    final cs = s.csys;
     // feste Standorte
     if (s.vis('place')) {
       final pl = s.places.where((p) => placeShown(s, p) && !s.poiHide.contains('f${p['id']}')).toList();
@@ -782,17 +866,48 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         return _dotMk(
             ll,
             area || line
-                ? Icon(line ? Icons.timeline : Icons.crop_square, size: 18, color: col)
+                ? _noDot
                 : Container(
                     width: 28,
                     height: 22,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(5), border: Border.all(color: Colors.white, width: 2)),
                     child: Text(js(p['abbr']).isEmpty ? '⌂' : js(p['abbr']), style: TextStyle(color: fgOn(col), fontSize: 10, fontWeight: FontWeight.bold))),
-            lbl ? js(p['name']) : null,
-            () => _sheet(js(p['name']), [js(p['description']), 'Fester Standort'], lat: ll.latitude, lon: ll.longitude));
+            lbl ? '${placeBadge(s, p)}${js(p['name'])}' : null,
+            () => _placeSheet(p));
       }).toList()));
     }
+    // Geodaten-Ebene (Issue #182): grau, gestrichelt, Kürzel der Objektart
+    final gi = geo.items(mc.camera);
+    if (gi.isNotEmpty) {
+      const gc = Color(0xFF5C677D);
+      final gl = gi.where((it) => it['pts'] is List && jb(it['line'])).toList(), ga = gi.where((it) => it['pts'] is List && !jb(it['line'])).toList();
+      List<LatLng> pts(J it) => (it['pts'] as List).whereType<List>().map((q) => LatLng(jd(q[0])!, jd(q[1])!)).toList();
+      if (gl.isNotEmpty) out.add(PolylineLayer(polylines: gl.map((it) => Polyline(points: pts(it), color: gc, strokeWidth: 2, pattern: StrokePattern.dashed(segments: const [3, 5]))).toList()));
+      if (ga.isNotEmpty) {
+        out.add(PolygonLayer(
+            polygons: ga.map((it) => Polygon(points: pts(it), color: gc.withValues(alpha: .08), borderColor: gc, borderStrokeWidth: 2, pattern: StrokePattern.dashed(segments: const [3, 5]))).toList()));
+      }
+      out.add(MarkerLayer(
+          markers: gi
+              .map((it) => _dotMk(
+                  LatLng(jd(it['lat'])!, jd(it['lon'])!),
+                  Container(
+                      width: 24,
+                      height: 18,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: gc.withValues(alpha: .85), borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.white, width: 1.5)),
+                      child: Text(js(geo.kindOf(js(it['kind']))?['abbr']), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold))),
+                  null,
+                  () => _geoSheet(it)))
+              .toList()));
+    }
+    // Messstationen Pegel & Abfluss (Issue #165), auch ohne Einsatz (persönliche)
+    final hy = hydroLayer(s, (id) {
+      final st = s.hyStation(id);
+      if (st != null) _sheet(hyName(st), hyPopLines(s, id), lat: jd(st['lat']), lon: jd(st['lon']), actions: (c) => [OutlinedButton(onPressed: () => hyOpenBafu(id), child: const Text('Stationsseite BAFU'))]);
+    });
+    if (hy != null) out.add(hy);
     // Fahrzeuge (Issue #177): je Kette ein Marker beim obersten Fahrzeug, auch ohne Einsatz (Sichtbarkeit bestimmt der Server)
     if (s.vis('veh') && vehOf(s) != null) {
       out.add(MarkerLayer(
@@ -808,7 +923,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                 child: Center(child: vehChip(s, r, kids))));
       }).toList()));
     }
-    if (i == null) return out;
+    if (i == null) {
+      _selfLayer(out);
+      return out;
+    }
     // Suchgebiet
     final a = s.area;
     if (a != null && s.vis('area')) {
@@ -842,12 +960,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     out.add(MarkerLayer(markers: [
       ...ars.map((p) {
         final ll = poiPt(p)!;
-        return _dotMk(ll, Icon(Icons.pentagon_outlined, size: 18, color: hexColor(p['color'])), js(p['label']).isEmpty ? js(p['name']) : js(p['label']),
+        return _dotMk(ll, _noDot, js(p['label']).isEmpty ? js(p['name']) : js(p['label']),
             () => _poiSheet(p, ll));
       }),
       ...lns.map((p) {
         final ll = poiPt(p)!;
-        return _dotMk(ll, Icon(Icons.timeline, size: 18, color: hexColor(p['color'])), js(p['label']).isEmpty ? js(p['name']) : js(p['label']), () => _poiSheet(p, ll));
+        return _dotMk(ll, _noDot, js(p['label']).isEmpty ? js(p['name']) : js(p['label']), () => _poiSheet(p, ll));
       }),
       ...pts.where((p) => p['sym'] != null).map((p) => _symMk(poiPt(p)!, p, () => _poiSheet(p, poiPt(p)!))),
       ...pts.where((p) => p['sym'] == null).map((p) {
@@ -987,17 +1105,19 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       out.add(PolylineLayer(polylines: [Polyline(points: [..._drawPts, if (_drawPts.length > 2 && !_drawLine) _drawPts.first], color: _drawCol, strokeWidth: 3)]));
       out.add(CircleLayer(circles: _drawPts.map((p) => CircleMarker(point: p, radius: 6, color: _drawCol, borderColor: Colors.white, borderStrokeWidth: 2)).toList()));
     }
-    // eigener Standort (blauer Punkt)
-    final me = s.selfAt;
-    if (me != null) {
-      final acc = s.manualPos == null ? s.devPos?.accuracy : null;
-      out.add(CircleLayer(circles: [
-        if (acc != null && acc > 5) CircleMarker(point: me, radius: acc, useRadiusInMeter: true, color: const Color(0x332196F3), borderColor: const Color(0x662196F3), borderStrokeWidth: 1),
-        CircleMarker(point: me, radius: 8, color: const Color(0xFF2196F3), borderColor: Colors.white, borderStrokeWidth: 3),
-      ]));
-    }
-    if (cs.isEmpty) return out;
+    _selfLayer(out);
     return out;
+  }
+
+  /// eigener Standort (blauer Punkt, Issue #118), auch ohne Einsatz (Issue #172: stand bisher hinter dem Abbruch ohne Einsatz)
+  void _selfLayer(List<Widget> out) {
+    final me = s.selfAt;
+    if (me == null) return;
+    final acc = s.manualPos == null ? s.devPos?.accuracy : null;
+    out.add(CircleLayer(circles: [
+      if (acc != null && acc > 5) CircleMarker(point: me, radius: acc, useRadiusInMeter: true, color: const Color(0x332196F3), borderColor: const Color(0x662196F3), borderStrokeWidth: 1),
+      CircleMarker(point: me, radius: 8, color: const Color(0xFF2196F3), borderColor: Colors.white, borderStrokeWidth: 3),
+    ]));
   }
 
   void _poiSheet(J p, LatLng ll) {
@@ -1027,7 +1147,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         builder: (c) => ListenableBuilder(
             listenable: s,
             builder: (c, _) {
-              final cats = s.inc != null ? s.viewCats() : s.viewCats().where((v) => (v.$1 == 'place' && s.places.isNotEmpty) || (v.$1 == 'veh' && vehList(s).any((x) => llOf(x) != null))).toList();
+              // ohne Einsatz (homeCats): feste Standorte, persönliche Messstationen und Geodaten-Ebene (Issue #182)
+              final cats = s.inc != null
+                  ? s.viewCats()
+                  : s.viewCats().where((v) => (v.$1 == 'place' && s.places.isNotEmpty) || (v.$1 == 'hydro' && s.hyMine.isNotEmpty) || v.$1 == 'geo' || (v.$1 == 'veh' && vehList(s).any((x) => llOf(x) != null))).toList();
               return SafeArea(
                   child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .75),
@@ -1037,13 +1160,14 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                             groupValue: s.base,
                             onChanged: (v) => v == null ? null : s.setBase(v),
                             child: Column(
-                                children: mapProviders.entries.map((e) => RadioListTile<String>(dense: true, value: e.key, title: Text(e.value.$1))).toList())),
+                                children: s.maps.map((m) => RadioListTile<String>(dense: true, value: m.k, title: Text(m.label))).toList())),
                         if (cats.isNotEmpty) ...[
                           const Divider(),
                           Text('Auf der Karte', style: Theme.of(c).textTheme.titleSmall),
                           for (final v in cats) ...[
                             CheckboxListTile(dense: true, value: s.vis(v.$1), onChanged: (x) => s.setVis([v.$1], x == true), title: Text(v.$2)),
                             if (v.$1 == 'place') ..._viewPlaceCats(),
+                            if (v.$1 == 'geo') ..._viewGeoKinds(),
                           ],
                           if (cats.length > 1)
                             Wrap(spacing: 8, children: [
@@ -1054,6 +1178,17 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         if (_airOn) Padding(padding: const EdgeInsets.only(top: 8), child: Mut(_airInfo(), size: 12)),
                       ])));
             }));
+  }
+
+  /// unter «Geodaten»: je Objektart ein Häkchen (pro Gerät) und der Stand (viewGeoKinds, Issue #182)
+  List<Widget> _viewGeoKinds() {
+    Widget sub(Widget w) => Padding(padding: const EdgeInsets.only(left: 24), child: w);
+    return [
+      if (s.vis('geo'))
+        for (final k in s.geoKinds)
+          sub(CheckboxListTile(dense: true, value: !s.geoOff.contains(js(k['k'])), onChanged: (x) => s.setGeoOff(js(k['k']), x != true), title: Text('${js(k['icon'])} ${js(k['name'])}'.trim()))),
+      sub(Mut(geo.info(mc.camera), size: 12)),
+    ];
   }
 
   /// unter «Feste Standorte»: Kategorien (nur wenn ein Standort eine hat) und «Namen auf der Karte» (viewPlaceCats, Issue #151)
@@ -1119,8 +1254,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (i != null) _fab('Einsatzkräfte', const Icon(Icons.groups), () => _togglePanel('people'), count: _pplCount, countCol: const Color(0xFF546E7A), active: _panel == 'people'),
       if (i != null && s.feat('res')) _fab('Rettlinge', const Text('R', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), () => _togglePanel('res'), count: _resCount, active: _panel == 'res'),
       if (i != null && s.feat('msg')) _fab('Nachrichten', const Icon(Icons.chat), () => _togglePanel('msgs'), count: s.unread, active: _panel == 'msgs'),
+      if (s.vx.on) _fab('Funk', const Icon(Icons.mic), () => _togglePanel('vx'), count: s.vx.unheard(null), active: _panel == 'vx'),
       if ((i != null && s.feat('poi')) || s.places.isNotEmpty)
         _fab(i == null ? 'Feste Standorte' : 'Markierungen', const Icon(Icons.place), () => _togglePanel('pois'), active: _panel == 'pois'),
+      if (s.hyBtn) _fab('Messstationen', const Text('💧', style: TextStyle(fontSize: 16)), () => _togglePanel('hyd'), active: _panel == 'hyd'),
       if (i != null && s.feat('rd')) _fab('Flussdistanz', const Icon(Icons.straighten), () => _togglePanel('rd'), active: _panel == 'rd'),
     ];
     final foldN = _fold ? _resCount + s.unread : 0;
@@ -1183,7 +1320,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         child: Padding(
             padding: const EdgeInsets.all(8),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              FloatingActionButton.small(heroTag: 'menu', tooltip: 'Menü', backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: () => _sk.currentState?.openDrawer(), child: const Icon(Icons.menu)),
+              Column(children: [
+                FloatingActionButton.small(heroTag: 'menu', tooltip: 'Menü', backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: () => _sk.currentState?.openDrawer(), child: const Icon(Icons.menu)),
+                if (s.demo) Padding(padding: const EdgeInsets.only(top: 6), child: DemoBadge(onChanged: _demoChanged)), // Demo-Modus (Issue #74)
+              ]),
               const SizedBox(width: 8),
               Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1273,6 +1413,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         'res' => ResPanel(s: s, map: this),
         'pois' => PoisPanel(s: s, map: this),
         'rd' => RdPanel(s: s, map: this, rd: rd),
+        'hyd' => s.hyBtn ? HydPanel(s: s, map: this, openPrefs: _openPrefs) : null,
+        'vx' => s.vx.on ? VoicePanel(s: s, map: this) : null,
         _ => null,
       };
 
@@ -1310,7 +1452,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     if (s.mustChange) return _MustChange(s: s, onLogout: () => _logout(byServer: false));
     final w = MediaQuery.of(context).size.width, narrow = w < 760;
     final pw = _panelWidget(), note = _note();
-    final prov = mapProviders[s.base]!;
+    final prov = s.prov;
     return PopScope(
         canPop: _panel == null && !_picking,
         onPopInvokedWithResult: (did, _) {
@@ -1343,6 +1485,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                       },
                       onMapEvent: (e) {
                         if (e is MapEventRotate || e is MapEventRotateEnd) setState(() => _rot = mc.camera.rotation);
+                        if (e is MapEventMoveEnd || e is MapEventFlingAnimationEnd || e is MapEventDoubleTapZoomEnd || e is MapEventScrollWheelZoom) _geoSync();
                         final hand = e.source == MapEventSource.onDrag || e.source == MapEventSource.onMultiFinger || e.source == MapEventSource.doubleTap || e.source == MapEventSource.doubleTapHold || e.source == MapEventSource.scrollWheel;
                         if (hand && e is MapEventMoveStart) {
                           if (!_homeBusy) _homeDone = true;
@@ -1351,9 +1494,17 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         }
                       }),
                   children: [
-                    TileLayer(urlTemplate: prov.$2, userAgentPackageName: 'ch.swiftwaterrescue.app', maxNativeZoom: prov.$4, maxZoom: 19),
+                    // Grundkarte (Issue #106), nur in ihrer Abdeckung
+                    TileLayer(
+                        key: ValueKey('base_${prov.k}'),
+                        urlTemplate: prov.url,
+                        subdomains: prov.sub.isEmpty ? const ['a', 'b', 'c'] : prov.sub,
+                        tileBounds: prov.bounds,
+                        userAgentPackageName: 'ch.swiftwaterrescue.app',
+                        maxNativeZoom: prov.nat,
+                        maxZoom: 19),
                     ..._layers(context),
-                    RichAttributionWidget(attributions: [TextSourceAttribution(prov.$3), if (_airOn && _air?['src'] is Map) TextSourceAttribution(js(jm(_air!['src'])['name']))]),
+                    RichAttributionWidget(attributions: [TextSourceAttribution(prov.attrText), if (_airOn && _air?['src'] is Map) TextSourceAttribution(js(jm(_air!['src'])['name']))]),
                   ]),
               _topBar(),
               if (!s.ready && s.fatal == null) const Center(child: CircularProgressIndicator()),
@@ -1377,12 +1528,17 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                       if (_camOpen) Padding(padding: const EdgeInsets.only(right: 8), child: _camMenu()),
                       _buttons(),
                     ]))),
-              if (note != null)
+              // Hinweis zum Suchgebiet unten links; die Sprechtaste (Funk, Issue #113) steht links darüber, der Hinweis bleibt an seinem Platz
+              if (note != null || (pw == null && voiceFab(context, s.vx) != null))
                 Positioned(
                     left: 10,
                     right: (pw != null && !narrow) ? 412 : 70,
                     bottom: 24,
-                    child: SafeArea(child: Align(alignment: Alignment.bottomLeft, child: note))),
+                    child: SafeArea(
+                        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      if (pw == null && voiceFab(context, s.vx) != null) ...[voiceFab(context, s.vx)!, const SizedBox(height: 8)],
+                      if (note != null) Align(alignment: Alignment.bottomLeft, child: note),
+                    ]))),
               if (pw != null)
                 Positioned(
                     right: 0,
@@ -1390,6 +1546,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                     bottom: 0,
                     width: narrow ? w : 400,
                     child: Material(elevation: 8, child: SafeArea(left: false, child: pw))),
+              if (voiceBar(context, s.vx) != null && !(narrow && pw != null))
+                Positioned(left: 10, right: (pw != null && !narrow) ? 412 : 10, top: 0, child: SafeArea(child: Padding(padding: const EdgeInsets.only(top: 64), child: Align(alignment: Alignment.topCenter, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: voiceBar(context, s.vx)))))),
               if (s.alarm != null) _alarm(s.alarm!),
             ])));
   }
