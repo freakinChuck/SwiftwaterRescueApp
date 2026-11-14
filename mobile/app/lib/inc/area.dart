@@ -70,7 +70,7 @@ class NetSlot {
 
 class _Ctx {
   _Ctx(this.posts, this.segs);
-  final List<({LatLng p, String cut})> posts; // cut = Text, wo das Gebiet endet («am Posten …», «an «Wehr» (Flusssperrung)»)
+  final List<({LatLng p, String cut, double r})> posts; // r = Radius in m (3 = auf den Wasserlauf gesetzt, _snapPost), cut = Text, wo das Gebiet endet («am Posten …», «an «Wehr» (Flusssperrung)»)
   final List<_Seg> segs; // Flusssperren als Linien bzw. Ränder von Bereichen (Issue #182)
   final done = <String, double>{};
   String? cut;
@@ -102,6 +102,27 @@ class _Seg {
   return (posts: posts, segs: segs);
 }
 
+/// Posten und Punkt-Sperren auf den nächsten Wasserlauf setzen (r = 3 m, snapPost in common.js): sonst beendet ein Punkt nahe einer
+/// Verzweigung beide Arme, er gilt aber nur für den Arm, an dem er steht. Weiter als 120 m von jedem Wasserlauf bleibt er, wie er ist.
+({LatLng p, String cut, double r}) _snapPost(RiverNet net, LatLng q, String cut) {
+  const ky = 111320.0;
+  final kx = ky * math.cos(deg2rad(q.latitude));
+  var bd = 120.0;
+  LatLng? bp;
+  for (final w in net.ways) {
+    final g = w.geometry;
+    for (var j = 1; j < g.length; j++) {
+      final a = g[j - 1], b = g[j], ax = (a.longitude - q.longitude) * kx, ay = (a.latitude - q.latitude) * ky, dx = (b.longitude - a.longitude) * kx, dy = (b.latitude - a.latitude) * ky, l = dx * dx + dy * dy;
+      final t = l == 0 ? 0.0 : (-(ax * dx + ay * dy) / l).clamp(0.0, 1.0).toDouble(), ox = ax + t * dx, oy = ay + t * dy, d = math.sqrt(ox * ox + oy * oy);
+      if (d < bd) {
+        bd = d;
+        bp = LatLng(a.latitude + (b.latitude - a.latitude) * t, a.longitude + (b.longitude - a.longitude) * t);
+      }
+    }
+  }
+  return bp == null ? (p: q, cut: cut, r: 120.0) : (p: bp, cut: cut, r: 3.0);
+}
+
 /// erste Strecke, die a → b schneidet, bzw. erster Posten (< 120 m) zwischen a und b: (t = Anteil auf a → b, cut)
 ({double t, String cut})? _hit(_Ctx ctx, LatLng a, LatLng b) {
   ({double t, String cut})? best;
@@ -119,7 +140,7 @@ class _Seg {
     final t = -(ax * mx + ay * my) / l;
     if (t <= 0 || t > 1) continue;
     final ox = ax + t * mx, oy = ay + t * my;
-    if (math.sqrt(ox * ox + oy * oy) < 120 && (best == null || t < best.t)) best = (t: t, cut: q.cut);
+    if (math.sqrt(ox * ox + oy * oy) < q.r && (best == null || t < best.t)) best = (t: t, cut: q.cut);
   }
   return best;
 }
@@ -132,7 +153,7 @@ List<List<LatLng>>? _follow(RiverNet net, Way w, int k, double rem, Set<int> see
   seen = {...seen, w.id};
   bool post(LatLng p) {
     for (final q in ctx.posts) {
-      if (geoDist(p, q.p) < 120) {
+      if (geoDist(p, q.p) < q.r) {
         ctx.cut = q.cut;
         return true;
       }
@@ -208,7 +229,7 @@ RiverArea? riverArea(RiverNet net, LatLng i, double d, List<({LatLng p, String n
     }
   }
   if (best == null || bd > snapM) return null;
-  final sc = _stopCtx(stops), r = RiverArea(), ctx = _Ctx([...posts.map((q) => (p: q.p, cut: 'am Posten ${q.name}')), ...sc.posts], sc.segs);
+  final sc = _stopCtx(stops), r = RiverArea(), ctx = _Ctx([...posts.map((q) => _snapPost(net, q.p, 'am Posten ${q.name}')), ...sc.posts.map((q) => _snapPost(net, q.p, q.cut))], sc.segs);
   for (final pts in _follow(net, best.w, best.k, d, {}, ctx) ?? <List<LatLng>>[]) {
     if (pts.length < 2) continue;
     var len = 0.0;

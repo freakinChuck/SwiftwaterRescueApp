@@ -144,7 +144,7 @@ async function overpassNet(r,body,put){try{return await api(r,body)}catch(e){con
 // ctx.done verhindert, dass derselbe Einstieg (Weg, Knoten) mehrfach verfolgt wird, wenn Arme wieder zusammenfliessen.
 function riverFollow(net,w,k,rem,seen,ctx){const key=w.id+':'+k;if((ctx.done.get(key)??-1)>=rem)return null;ctx.done.set(key,rem);
   const pts=[w.geometry[k]],out=[],last=w.geometry.length-1;seen=new Set(seen).add(w.id);
-  const post=p=>{const po=ctx.posts.find(q=>geoDist(p,q)<120);if(po)ctx.cut=po.cut||'am Posten '+po.name;return!!po};
+  const post=p=>{const po=ctx.posts.find(q=>geoDist(p,q)<(q.r||120));if(po)ctx.cut=po.cut||'am Posten '+po.name;return!!po};
   const sub=(e,r)=>{const s=riverFollow(net,e.w,e.k,r,seen,ctx);return s?s.map(b=>pts.concat(b.slice(1))):[]};
   if(post(pts[0]))return[pts];
   for(let j=k;j<last;j++){
@@ -165,7 +165,13 @@ function segHit(segs,a,b){if(!segs||!segs.length)return null;let best=null;const
     const t=((q.a.lon-a.lon)*ey-(q.a.lat-a.lat)*ex)/den,u=((q.a.lon-a.lon)*dy-(q.a.lat-a.lat)*dx)/den;if(t>1e-9&&t<=1&&u>=0&&u<=1&&(!best||t<best.t))best={t,cut:q.cut}});return best}
 // erster Posten bzw. Punkt-Sperre (< 120 m) zwischen zwei Punkten des Flusslaufs (Issue #182: die Punkte liegen in OSM teils Hunderte Meter auseinander)
 function postHit(posts,a,b){let best=null;const ky=111320;(posts||[]).forEach(q=>{const kx=ky*Math.cos(q.lat*Math.PI/180),ax=(a.lon-q.lon)*kx,ay=(a.lat-q.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy;if(!l)return;
-  const t=-(ax*dx+ay*dy)/l;if(t<=0||t>1)return;if(Math.hypot(ax+t*dx,ay+t*dy)<120&&(!best||t<best.t))best={t,cut:q.cut||'am Posten '+q.name}});return best}
+  const t=-(ax*dx+ay*dy)/l;if(t<=0||t>1)return;if(Math.hypot(ax+t*dx,ay+t*dy)<(q.r||120)&&(!best||t<best.t))best={t,cut:q.cut||'am Posten '+q.name}});return best}
+// Posten und Punkt-Sperren auf den nächsten Wasserlauf setzen (r = 3 m): sonst beendet ein Punkt nahe einer Verzweigung beide Arme,
+// er gilt aber nur für den Arm, an dem er steht. Weiter als 120 m von jedem Wasserlauf bleibt er, wie er ist.
+function snapPost(net,q){const ky=111320,kx=ky*Math.cos(q.lat*Math.PI/180);let bd=120,bp=null;
+  net.ways.forEach(w=>{const g=w.geometry;for(let j=1;j<g.length;j++){const a=g[j-1],b=g[j],ax=(a.lon-q.lon)*kx,ay=(a.lat-q.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy,
+    t=l?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l)):0,d=Math.hypot(ax+t*dx,ay+t*dy);if(d<bd){bd=d;bp={lat:a.lat+(b.lat-a.lat)*t,lon:a.lon+(b.lon-a.lon)*t}}}});
+  return bp?Object.assign({},q,bp,{r:3}):q}
 // Abstand von p zur Strecke a → b in Metern (eben gerechnet)
 const segDist=(a,b,p)=>{const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180),ax=(a.lon-p.lon)*kx,ay=(a.lat-p.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l)):0;return Math.hypot(ax+t*dx,ay+t*dy)};
 function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/180),P=pts.map(p=>C.project(L.latLng(p.lat,p.lon))),A=[],B=[];
@@ -174,7 +180,7 @@ function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/
 // Suchgebiet ab PLS (i) über die Driftdistanz D, endet am ersten Posten (posts: [{lat,lon,name}]) bzw. an der ersten Flusssperre (stops); null = kein Gewässer nahe der PLS
 function riverArea(net,i,D,posts,stops){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
   if(!best||bd>SNAP_M)return null;const r={lines:[],polys:[],cutBy:null,maxLen:0};
-  const sc=stopCtx(stops),ctx={posts:posts.concat(sc.posts),segs:sc.segs,done:new Map(),cut:null};
+  const sc=stopCtx(stops),ctx={posts:posts.concat(sc.posts).map(q=>snapPost(net,q)),segs:sc.segs,done:new Map(),cut:null};
   (riverFollow(net,best.w,best.k,D,new Set(),ctx)||[]).forEach(pts=>{
     if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=geoDist(pts[j-1],pts[j]);r.maxLen=Math.max(r.maxLen,len);
     r.lines.push(pts);r.polys.push(corridor(pts,BANK_M))});
