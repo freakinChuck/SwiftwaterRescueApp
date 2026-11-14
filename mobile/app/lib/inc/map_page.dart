@@ -915,12 +915,13 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         final kids = vehKids(s, ji(r['id'])), all = [r, ...kids];
         return Marker(
             point: llOf(r)!,
-            width: 150,
-            height: 30,
+            width: 60.0 + 70 * all.length,
+            height: 38,
+            alignment: Alignment.topCenter, // Spitze unten am Standort
             child: GestureDetector(
                 onTap: () => _sheet(all.map((v) => js(v['name'])).join(' + '), vehSheetLines(s, r, kids),
                     lat: jd(r['lat']), lon: jd(r['lon']), actions: (c) => [for (final v in all) ...vehBtns(context, s, v, before: () => Navigator.pop(c))]),
-                child: Center(child: vehChip(s, r, kids))));
+                child: Align(alignment: Alignment.bottomCenter, child: vehChip(s, r, kids))));
       }).toList()));
     }
     if (i == null) {

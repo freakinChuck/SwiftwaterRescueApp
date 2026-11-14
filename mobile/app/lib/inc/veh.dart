@@ -1,6 +1,7 @@
 // Fahrzeuge mit BLE-Beacons (Issue #177) in der nativen Einsatz-App, Gegenstück zu vehDraw/vehPop/vehFold/vehLoadDlg in web/index.html und common.js.
 // st.veh vom Server ({kinds, list, hints, stale_min, can_link}, null = für diese Person nicht sichtbar). Ketten (Verbund: Anhänger am Zugfahrzeug,
 // Boot auf dem Anhänger) als ein Marker beim obersten Fahrzeug. Verladen/abladen dürfen alle Teilnehmenden und die Einsatzleitung, ohne Einsatz die Verwaltung.
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -134,25 +135,38 @@ List<Widget> vehBtns(BuildContext context, IncStore s, J v, {VoidCallback? befor
   ];
 }
 
-/// Marker einer Kette: Farbe des obersten Fahrzeugs, aufgenommene als Zeichen daran, blass ohne neuere Sichtung
+/// Marker einer Kette: je Fahrzeug ein eigenes Feld (Farbe, Symbol, Kürzel), mit Spitze unten über dem Standort
+/// (wie vehIconHtml im Web), damit Personen und Standorte am selben Ort ihn nicht verdecken; blass ohne neuere Sichtung
 Widget vehChip(IncStore s, J root, List<J> kids) {
-  final col = js(root['color']).isEmpty ? const Color(0xFF335C67) : hexColor(root['color']);
-  final fg = fgOn(col);
+  Widget seg(J v) {
+    final col = js(v['color']).isEmpty ? const Color(0xFF335C67) : hexColor(v['color']);
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(6)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(js(vehKind(s, v)['sym']), style: const TextStyle(fontSize: 15)),
+          if (js(v['abbr']).isNotEmpty) Text(' ${js(v['abbr'])}', style: TextStyle(color: fgOn(col), fontSize: 11, fontWeight: FontWeight.bold)),
+        ]));
+  }
+
+  final all = [root, ...kids];
   return Opacity(
       opacity: vehStale(s, root) ? .5 : 1,
-      child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-          decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white, width: 2), boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 3)]),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(js(vehKind(s, root)['sym']), style: const TextStyle(fontSize: 15)),
-            if (js(root['abbr']).isNotEmpty) Text(' ${js(root['abbr'])}', style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.bold)),
-            for (final k in kids)
-              Container(
-                  margin: const EdgeInsets.only(left: 2),
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(4)),
-                  child: Text(js(vehKind(s, k)['sym']), style: const TextStyle(fontSize: 12))),
-          ])));
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white, width: 2), boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 3)]),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              for (var i = 0; i < all.length; i++) ...[if (i > 0) const SizedBox(width: 2), seg(all[i])],
+            ])),
+        CustomPaint(size: const Size(12, 7), painter: _VehTip()),
+      ]));
+}
+
+class _VehTip extends CustomPainter {
+  @override
+  void paint(Canvas c, Size z) => c.drawPath(ui.Path()..moveTo(0, 0)..lineTo(z.width, 0)..lineTo(z.width / 2, z.height)..close(), Paint()..color = Colors.white);
+  @override
+  bool shouldRepaint(covariant CustomPainter o) => false;
 }
 
 /// Zeilen fürs Info-Blatt einer Kette (Fahrzeug, Art, Verbund, gesehen, an Bord)

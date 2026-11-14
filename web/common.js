@@ -85,12 +85,14 @@ function vehRootOf(list,v){let r=v,i=0;while(r&&r.carrier_id!=null&&i++<20){cons
 function vehKids(list,id){const o=[],add=i=>list.filter(x=>x.carrier_id===i).forEach(x=>{if(!o.includes(x)){o.push(x);add(x.id)}});add(id);return o}
 const vehStale=(V,v,now)=>v.seen_at==null||((now||Date.now()/1000)-v.seen_at)>((V&&V.stale_min)||30)*60;
 function vehAgo(ts,now){if(ts==null)return'noch nie gesehen';const s=Math.max(0,Math.round((now||Date.now()/1000)-ts));return s<60?'gerade eben':s<3600?`vor ${Math.round(s/60)} min`:s<86400?`vor ${Math.floor(s/3600)} h ${Math.round(s%3600/60)} min`:'am '+fmtDT(ts)}
-function vehIconHtml(V,root,kids,stale){const k=vehKind(V,root);return `<div class="vehk${stale?' old':''}" style="--c:${esc(root.color||'#335c67')}"><span class="s">${k.sym}</span>${root.abbr?`<span class="a">${esc(root.abbr)}</span>`:''}${kids.map(x=>`<span class="kid" title="${esc(x.name)}">${vehKind(V,x).sym}</span>`).join('')}</div>`}
+// je Fahrzeug der Kette ein eigenes Feld (Farbe, Symbol, Kürzel); der Marker steht über dem Standort (Spitze unten), damit Personen und Standorte am selben Ort ihn nicht verdecken
+function vehIconHtml(V,root,kids,stale){const seg=v=>`<span class="sg" style="--c:${esc(v.color||'#335c67')}" title="${esc(v.name)}"><span class="s">${vehKind(V,v).sym}</span>${v.abbr?`<span class="a">${esc(v.abbr)}</span>`:''}</span>`;
+  return `<div class="vehk${stale?' old':''}" style="--c:${esc(root.color||'#335c67')}">${[root,...kids].map(seg).join('')}</div>`}
 // Marker je Kette in eine Ebene; pop(root, kids) liefert den Inhalt des Popups (ohne: nur Tooltip)
 function vehDraw(layer,V,now,pop,scale){layer.clearLayers();if(!V)return;const l=V.list||[];
   l.filter(v=>v.carrier_id==null||!l.some(x=>x.id===v.carrier_id)).filter(v=>v.lat!=null).forEach(r=>{const kids=vehKids(l,r.id);
-    const m=L.marker([r.lat,r.lon],{icon:L.divIcon({className:'vehw',html:vehIconHtml(V,r,kids,vehStale(V,r,now)),iconSize:[0,0]}),zIndexOffset:900})
-      .bindTooltip(esc([r,...kids].map(x=>x.name).join(' + ')),{direction:'top',offset:[0,-14]});if(pop)m.bindPopup(()=>pop(r,kids));m.addTo(layer)})}
+    const m=L.marker([r.lat,r.lon],{icon:L.divIcon({className:'vehw',html:vehIconHtml(V,r,kids,vehStale(V,r,now)),iconSize:[0,0]}),zIndexOffset:1500})
+      .bindTooltip(esc([r,...kids].map(x=>x.name).join(' + ')),{direction:'top',offset:[0,-34]});if(pop)m.bindPopup(()=>pop(r,kids));m.addTo(layer)})}
 /* ---------- Helikopter / Luftlage (Issue #73): Anzeige in Einsatz-App, öffentlicher Ansicht und Replay ---------- */
 // Daten vom Server (incident/air, public/air, air in incident/replay): hex, cs, reg, type, desc, cat (A7 = Helikopter), lat, lon, alt (ft), gnd, gs (kt), trk, vr (ft/min), at, rescue, pls_m, trail [[ts, lat, lon, alt]]
 const AIR_STALE_S=20,AIR_GAP_S=60; // ältere Positionen blass; im Replay längere Lücken nicht interpolieren
