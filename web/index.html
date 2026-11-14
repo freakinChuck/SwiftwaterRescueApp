@@ -237,9 +237,8 @@ $('#joinBan').onclick=joinOpen;const an=$('#areaNote');an.onclick=()=>{if(an.cla
   $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pfcat){setPlaceCat([+t.dataset.pfcat],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.pfv)setPoiHidden(['f'+t.dataset.pfv],!t.checked);else if(t.dataset.pfgrp)setPoiHidden((st.places||[]).map(f=>'f'+f.id),!t.checked);else if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>t.dataset.pgrp==='all'||p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
   $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.pf)setPplFold(b.dataset.pf);else if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f);else if(b.dataset.pi)pinfoShow(b.dataset.pi)};
   map=L.map('map',{zoomControl:false,rotate:true,touchRotate:true,rotateControl:false}).setView([46.8,8.2],8);L.control.zoom({position:'bottomright'}).addTo(map);addCompass();
-  // Grundkarte: Auswahl im Fenster «Ansicht» (setBase), pro Gerät gemerkt (sw_base)
-  baseLayers={};Object.entries(MAP_PROVIDERS).forEach(([k,P])=>baseLayers[k]=L.tileLayer(P.url,{attribution:P.attr,maxZoom:P.maxZoom}));
-  let sv=null;try{sv=localStorage.getItem('sw_base')}catch(e){}baseKey=MAP_PROVIDERS[sv]?sv:DEFAULT_BASE;baseLayers[baseKey].addTo(map);
+  // Grundkarte: Auswahl im Fenster «Ansicht» (setBase); Anbieter vom Server (Issue #106), ohne Einsatz gemerkt in sw_base, im Einsatz je Einsatz (baseSync)
+  mapsSet(me.maps,me.map_def);baseLayers={};baseKey=null;baseInc=null;baseSync();
   // Nachrichten-Markierungen als eigene, ausblendbare Ebene (Fenster «Ansicht» oder Häkchen im Nachrichten-Fenster, pro Gerät gemerkt)
   msgLayer=L.layerGroup();msgLayerKey='';if(mmVisible())msgLayer.addTo(map);poiLayer=L.layerGroup().addTo(map);poiKey='';resLayer=L.layerGroup().addTo(map);resKey='';
   airLayer=L.layerGroup().addTo(map);airLayer._air=new Map();airData=null;map.on('rotate',()=>airRot(map,airLayer)); // Helikopter (Issue #73)
@@ -372,7 +371,18 @@ const viewCats=()=>VIEW.filter(v=>v[0]==='air'?!!(st&&st.air):(!v[2]||feat(v[2])
 const homeCats=()=>{const c=VIEW.filter(([k])=>k==='place'?feat('place')&&(st.places||[]).length:k==='air'?!!st.air_home:k==='hydro'?feat('hydro')&&hyMine().length:false);return c.length?c:null};
 function setVis(keys,on){keys.forEach(k=>{if(k==='mm')setMmVisible(on,true);else on?viewHide.delete(k):viewHide.add(k)});try{localStorage.setItem('sw_view',JSON.stringify([...viewHide]))}catch(e){}
   drawMap();autoFit();airPoll();const hs=$('#hydShow');if(hs)hs.checked=vis('hydro');const b=$('#viewBox');if(b)b.querySelectorAll('[data-vk]').forEach(c=>c.checked=vis(c.dataset.vk));const i=$('#airInfo');if(i)i.innerHTML=airInfo()}
-function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(baseLayers[baseKey]);baseKey=k;baseLayers[k].addTo(map);try{localStorage.setItem('sw_base',k)}catch(e){}}
+// im Einsatz gilt die Wahl bis zum Einsatzende (sw_base_<Einsatz>), ohne Einsatz sw_base
+function setBase(k){if(!MAP_PROVIDERS[k]||k===baseKey)return;map.removeLayer(baseLayers[baseKey]);baseKey=k;baseLayers[k].addTo(map);try{localStorage.setItem(baseInc?'sw_base_'+baseInc:'sw_base',k)}catch(e){}}
+// Kartenanbieter (Issue #106): Liste aus incident/state (maps, map_def = Standard des Einsatztyps bzw. ohne Einsatz der globale). Beim ersten Mal in einem Einsatz
+// die eigene Wahl für diesen Einsatz, sonst die Standardkarte des Typs; ohne Einsatz sw_base. Nicht mehr erlaubte Karten fallen auf den Standard zurück.
+let baseInc=null;
+function baseSync(){if(!map)return;const inc=st&&st.incident?st.incident.id:0,ch=st&&st.maps?mapsSet(st.maps,st.map_def):false;
+  if(!ch&&inc===baseInc&&baseKey&&MAP_PROVIDERS[baseKey])return;let k;
+  if(inc===baseInc&&MAP_PROVIDERS[baseKey])k=baseKey;else k=baseSaved(inc?'sw_base_'+inc:'sw_base'); // im Einsatz ohne eigene Wahl: DEFAULT_BASE = Standard des Einsatztyps
+  if(st&&baseInc!==inc)try{Object.keys(localStorage).forEach(x=>{if(/^sw_base_\d+$/.test(x)&&x!=='sw_base_'+inc)localStorage.removeItem(x)})}catch(e){} // Wahl beendeter Einsätze verwerfen
+  baseInc=inc;if(ch||!baseLayers[k]){if(baseKey&&baseLayers[baseKey])map.removeLayer(baseLayers[baseKey]);baseLayers=mapBases();baseKey=null}
+  if(k!==baseKey){if(baseKey&&baseLayers[baseKey])map.removeLayer(baseLayers[baseKey]);baseKey=k;baseLayers[k].addTo(map)}
+  const b=$('#viewBox');if(ch&&b&&!b.hidden)viewBox(true)}
 function viewBox(on){const b=$('#viewBox');if(!b)return;on=on===undefined?b.hidden:on;b.hidden=!on;$('#bView').setAttribute('aria-expanded',on);if(!on)return;
   b.innerHTML=viewHtml(baseKey,st&&st.incident?viewCats():st?homeCats():null,vis)+(airOn()?`<div class="mut" id="airInfo" style="margin-top:.5rem;font-size:.8rem">${airInfo()}</div>`:'');viewPlaceCats()}
 // Kategorien fester Standorte im Fenster «Ansicht» unter «Feste Standorte» (nur wenn es welche mit Kategorie gibt)
@@ -1051,7 +1061,7 @@ let timer;async function poll(){try{const nx=await api(`incident/state&since=${l
     else{if(st&&st.incident){const k=kindOf(st.incident).name,lv=st.level||'crit';if((st.alarm!==false||st.me)&&notify(k.toUpperCase()+' BEENDET',k+' beendet.','e:'+st.incident.id,st.end_level||(lv==='none'?'low':lv)))toggleSheet(true)}st=nx;lastIncId=null;stop()}
     saveLast();setOffline(false);if(bootOff){bootOff=false;return render()} // offline gestartet: jetzt alles frisch laden
     paint()}catch(e){if(e instanceof TypeError)setOffline(true);console.error('Poll',e)}} // TypeError = keine Verbindung (fetch)
-function paint(){if(st&&st.incident)creating=false;updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderHyd();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
+function paint(){if(st&&st.incident)creating=false;baseSync();updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderHyd();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
 /* ---------- Offline (Issue #67) ---------- */
 // Letzter Stand pro Gerät in localStorage: sw_last = {at, uid, st (mit allen Nachrichten)}, sw_boot = {uid, me, roles, modes}. Ohne Verbindung zeigt die App
 // diesen Stand mit einem Hinweis oben (Zeitpunkt der letzten Verbindung) und versucht es bei jedem Polling weiter. Aktionen schlagen offline fehl (Meldung in fail).
