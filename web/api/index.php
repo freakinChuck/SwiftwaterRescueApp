@@ -157,6 +157,8 @@ foreach ([
   "CREATE TABLE IF NOT EXISTS voice_channels(id $ai, name $tx, sort INT DEFAULT 0, hear TEXT, speak TEXT, plans INT DEFAULT 0, active INT DEFAULT 1)",
   "CREATE TABLE IF NOT EXISTS voice_guests(id $ai, incident_id INT, token $tx, label $tx, channel_id INT, speak INT DEFAULT 0, created BIGINT, created_by INT NULL, opened_at BIGINT NULL, removed BIGINT NULL)",
   "CREATE TABLE IF NOT EXISTS voice_conf(incident_id INT, ident $tx, channel_id INT, user_id INT NULL, guest_id INT NULL, name $tx, joined BIGINT, seen BIGINT, PRIMARY KEY(incident_id, ident))",
+  // von der Einsatzleitung in der Konferenz eines Kanals stumm geschaltet (ident wie voice_conf), gilt bis zur Aufhebung bzw. zum Einsatzende, auch nach erneutem Beitritt
+  "CREATE TABLE IF NOT EXISTS voice_mute(incident_id INT, channel_id INT, ident $tx, by_user INT NULL, at BIGINT, PRIMARY KEY(incident_id, channel_id, ident))",
   "CREATE TABLE IF NOT EXISTS inc_hydro(id $ai, incident_id INT, phase $tx, ts BIGINT, station $tx, name $tx, water $tx, lat DOUBLE, lon DOUBLE, dist INT NULL, flow DOUBLE NULL, height DOUBLE NULL, level DOUBLE NULL, temp DOUBLE NULL, danger INT NULL, at BIGINT NULL)",
 ] as $s) $db->exec($s);
 // Migrationen für ältere Installationen (schlagen bei vorhandenen Spalten still fehl)
@@ -502,7 +504,7 @@ function navDefault() { $a = navApps(); $d = setting('nav_default', 'google'); r
 const FEATURE_ROUTES = ['incident/mark' => 'res', 'incident/mark/remove' => 'res', 'incident/rescuee/save' => 'res', 'incident/rescuee/locate' => 'res', 'incident/rescuee/rescued' => 'res', 'incident/rescuee/remove' => 'res',
                         'incident/message' => 'msg', 'incident/message/unmark' => 'msg', 'incident/poi' => 'poi', 'incident/poi/remove' => 'poi',
                         'incident/external/save' => 'ext', 'incident/external/remove' => 'ext', 'incident/public' => 'pub', 'incident/record' => 'rec', 'incident/event' => 'area',
-                        'incident/voice' => 'voice', 'incident/voice/join' => 'voice', 'incident/voice/conf' => 'voice', 'incident/voice/channels' => 'voice', 'incident/voice/guest/save' => 'voice', 'incident/voice/guest/remove' => 'voice'];
+                        'incident/voice' => 'voice', 'incident/voice/join' => 'voice', 'incident/voice/conf' => 'voice', 'incident/voice/mute' => 'voice', 'incident/voice/channels' => 'voice', 'incident/voice/guest/save' => 'voice', 'incident/voice/guest/remove' => 'voice'];
 const OVERPASS_KEEP_S = 7 * 86400; // abgelaufene Einträge so lange als Rückfall behalten, falls Overpass nicht erreichbar ist
 /* ---------- Anonymisierung in Stufen, einstellbar und automatisch (Issue #87) ---------- */
 // Stufen in dieser Reihenfolge: [Bezeichnung, Beschreibung, endgültig]. Einstellung anon_cfg je Stufe: on = angeboten (aus: weder von Hand noch automatisch),
@@ -1368,8 +1370,12 @@ function voiceRows($incId, $where, $args, $anon = false) { global $db;
 function voiceConfList($incId) { global $db, $now; $id = (int)$incId;
   $s = $db->prepare("SELECT * FROM voice_conf WHERE incident_id=? AND seen<?"); $s->execute([$id, $now - VOICE_STALE_S]);
   foreach ($s->fetchAll() as $c) { $d = $db->prepare("DELETE FROM voice_conf WHERE incident_id=? AND ident=? AND seen<?"); $d->execute([$id, $c['ident'], $now - VOICE_STALE_S]); if ($d->rowCount()) voiceConfLog($id, $c, false); }
-  $s = $db->prepare("SELECT channel_id ch,ident,user_id,guest_id,name,joined FROM voice_conf WHERE incident_id=? ORDER BY joined"); $s->execute([$id]);
-  return array_map(fn($c) => ints($c, ['ch', 'user_id', 'guest_id', 'joined']), $s->fetchAll()); }
+  $s = $db->prepare("SELECT c.channel_id ch,c.ident,c.user_id,c.guest_id,c.name,c.joined,CASE WHEN m.ident IS NULL THEN 0 ELSE 1 END muted FROM voice_conf c LEFT JOIN voice_mute m ON m.incident_id=c.incident_id AND m.channel_id=c.channel_id AND m.ident=c.ident WHERE c.incident_id=? ORDER BY c.joined"); $s->execute([$id]);
+  return array_map(fn($c) => ints($c, ['ch', 'user_id', 'guest_id', 'joined', 'muted']), $s->fetchAll()); }
+// stumm geschaltet (voice_mute): Token ohne Senderecht; Stummschalten und Aufheben ändern das Recht im Raum sofort (UpdateParticipant)
+function voiceMuted($incId, $ch, $ident) { global $db; $s = $db->prepare("SELECT 1 FROM voice_mute WHERE incident_id=? AND channel_id=? AND ident=?"); $s->execute([(int)$incId, (int)$ch, $ident]); $r = (bool)$s->fetchColumn(); $s->closeCursor(); return $r; }
+function voiceLkPerm($incId, $ch, $ident, $pub) { if (!voiceLkReady()) return; $rm = voiceRoom($incId, $ch);
+  after(function () use ($rm, $ident, $pub) { voiceLkApi('UpdateParticipant', ['room' => $rm, 'identity' => $ident, 'permission' => ['canSubscribe' => true, 'canPublish' => (bool)$pub, 'canPublishData' => false, 'canPublishSources' => ['MICROPHONE']]], ['room' => $rm, 'roomAdmin' => true]); }); }
 function voiceChName($ch) { global $db; $s = $db->prepare("SELECT name FROM voice_channels WHERE id=?"); $s->execute([(int)$ch]); $n = $s->fetchColumn(); $s->closeCursor(); return $n === false ? 'Kanal' : $n; }
 function voiceConfLog($incId, $c, $in) { global $db, $now; $t = ($in ? 'tritt der Konferenz «' : 'verlässt die Konferenz «') . voiceChName($c['channel_id']) . '»' . ($in ? ' bei' : '');
   $db->prepare("INSERT INTO incident_log(incident_id,ts,user_id,kind,text,actor) VALUES(?,?,?,?,?,?)")->execute([(int)$incId, $now, $c['user_id'] ?? null, 'conf', $t, ($c['user_id'] ?? null) === null ? $c['name'] : null]); }
@@ -1494,8 +1500,8 @@ if (strncmp($route, 'guest/', 6) === 0) {
     if (!$v || !($p = voicePath($v)) || !is_file($p)) fail('Aufnahme nicht gefunden', 404);
     header('Content-Type: ' . $v['mime']); header('Content-Length: ' . filesize($p)); header('Cache-Control: private, max-age=86400'); readfile($p); exit; }
   if ($route === 'guest/voice/join') { if (!$conf) fail('Die Live-Konferenz ist nicht eingerichtet.', 403);
-    $gsp = $g['speak'] && voiceKind($inc)['guest_speak'] ? 1 : 0;
-    out(['url' => voiceCfg()['lk']['url'], 'token' => voiceLkToken(voiceRoom($inc['id'], $ch), 'g' . $g['id'], $gl, $gsp), 'room' => voiceRoom($inc['id'], $ch), 'speak' => $gsp]); }
+    $gsp = $g['speak'] && voiceKind($inc)['guest_speak'] ? 1 : 0; $gm = voiceMuted($inc['id'], $ch, 'g' . $g['id']) ? 1 : 0;
+    out(['url' => voiceCfg()['lk']['url'], 'token' => voiceLkToken(voiceRoom($inc['id'], $ch), 'g' . $g['id'], $gl, $gsp && !$gm), 'room' => voiceRoom($inc['id'], $ch), 'speak' => $gsp, 'muted' => $gm]); }
   fail('Unbekannte Route', 404);
 }
 
@@ -3146,11 +3152,28 @@ switch ($route) {
  case 'incident/voice/join': // Zugang zur Live-Konferenz eines Kanals (LiveKit): url, token; senden nur mit Sprechrecht
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz'); if (!voiceConfOn($inc)) fail('Die Live-Konferenz ist für diesen Einsatz nicht verfügbar', 403);
   $ch = (int)($in['ch'] ?? 0); $c = array_values(array_filter(voiceMine($inc), fn($x) => $x['id'] === $ch))[0] ?? null; if (!$c) fail('Diesen Kanal hörst du nicht', 403);
-  out(['url' => voiceCfg()['lk']['url'], 'token' => voiceLkToken(voiceRoom($inc['id'], $ch), 'u' . $uid, voiceAnonName($inc, $uid), $c['speak']), 'room' => voiceRoom($inc['id'], $ch), 'speak' => $c['speak']]); // Name im Medienserver ohne Personendaten (auch Externe sind im Raum); die App zeigt die Namen aus voice_conf
+  $vm = voiceMuted($inc['id'], $ch, 'u' . $uid) ? 1 : 0;
+  out(['url' => voiceCfg()['lk']['url'], 'token' => voiceLkToken(voiceRoom($inc['id'], $ch), 'u' . $uid, voiceAnonName($inc, $uid), $c['speak'] && !$vm), 'room' => voiceRoom($inc['id'], $ch), 'speak' => $c['speak'], 'muted' => $vm]); // Name im Medienserver ohne Personendaten (auch Externe sind im Raum); die App zeigt die Namen aus voice_conf
  case 'incident/voice/conf': // Anwesenheit in der Konferenz melden: ch = verbunden mit diesem Kanal, 0 = verlassen (Log «tritt der Konferenz bei / verlässt sie»)
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz'); $ch = (int)($in['ch'] ?? 0);
   if ($ch && (!voiceConfOn($inc) || !in_array($ch, array_column(voiceMine($inc), 'id'), true))) fail('Diesen Kanal hörst du nicht', 403);
   voiceConfSet($inc, 'u' . $uid, $uid, null, $me['name'], $ch); out(['ok' => true]);
+ case 'incident/voice/mute': // Einsatzleitung: jemanden in der Konferenz eines Kanals stumm schalten (on 1) bzw. die Stummschaltung aufheben (on 0); ident u<User-ID> bzw. g<Gast-ID>
+  $inc = activeIncident(); if (!$inc || !canManage($inc)) fail('Nur die Einsatzleitung kann in der Konferenz stumm schalten', 403);
+  $ch = (int)($in['ch'] ?? 0); $ident = (string)($in['ident'] ?? ''); $on = !empty($in['on']);
+  if (!preg_match('/^[ug]\d+$/', $ident) || !in_array($ch, array_column(voiceIncCh($inc), 'id'), true)) fail('Ungültige Angaben');
+  if ($ident === 'u' . $uid) fail('Dich selbst schaltest du über «Mikrofon offen» stumm.');
+  $s = $db->prepare("SELECT name FROM voice_conf WHERE incident_id=? AND ident=?"); $s->execute([$inc['id'], $ident]); $nm = $s->fetchColumn(); $s->closeCursor();
+  if ($nm === false && $ident[0] === 'u') { $s = $db->prepare("SELECT name FROM users WHERE id=?"); $s->execute([(int)substr($ident, 1)]); $nm = $s->fetchColumn(); $s->closeCursor(); }
+  if ($nm === false) $nm = $ident[0] === 'u' ? 'Einsatzkraft' : 'Externe';
+  if ($on) $db->prepare(($my ? 'REPLACE' : 'INSERT OR REPLACE') . " INTO voice_mute(incident_id,channel_id,ident,by_user,at) VALUES(?,?,?,?,?)")->execute([$inc['id'], $ch, $ident, $uid, $now]);
+  else $db->prepare("DELETE FROM voice_mute WHERE incident_id=? AND channel_id=? AND ident=?")->execute([$inc['id'], $ch, $ident]);
+  // Senderecht nach dem Aufheben: wie beim Beitritt (Sprechrecht im Kanal bzw. des Links)
+  $pub = false; if (!$on) { if ($ident[0] === 'u') { $x = array_values(array_filter(voiceMine($inc, (int)substr($ident, 1)), fn($c) => $c['id'] === $ch))[0] ?? null; $pub = $x && $x['speak']; }
+    else { $s = $db->prepare("SELECT speak FROM voice_guests WHERE id=? AND incident_id=?"); $s->execute([(int)substr($ident, 1), $inc['id']]); $pub = (int)$s->fetchColumn() && voiceKind($inc)['guest_speak']; $s->closeCursor(); } }
+  voiceLkPerm($inc['id'], $ch, $ident, $pub);
+  logev($inc['id'], $uid, 'conf', ($on ? 'schaltet ' : 'hebt die Stummschaltung von ') . $nm . ($on ? ' in der Konferenz «' : ' in der Konferenz «') . voiceChName($ch) . ($on ? '» stumm' : '» auf'));
+  out(['ok' => true]);
  case 'incident/voice/channels': // Einsatzleitung: Kanäle dieses Einsatzes (ids), null = wie beim Einsatztyp
   $inc = activeIncident(); if (!$inc || !canManage($inc)) fail('Nur die Einsatzleitung kann die Kanäle anpassen', 403);
   $all = array_column(voiceChannels(), 'id');

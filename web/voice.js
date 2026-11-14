@@ -66,7 +66,7 @@ const vxQueued=()=>(vxLs('sw_vxq_'+VX.key)||[]).length;
 // Sprechtaste: gedrückt halten (loslassen = senden, zur Seite wischen = verwerfen) oder, mit «Antippen» (sw_vxtap), antippen zum Starten und Stoppen; Leertaste auf dem Knopf
 const vxTap=()=>!!vxLs('sw_vxtap');
 function vxPttBind(btn,getCh){if(!btn)return;let x0=0,id=null;
-  const start=()=>{const ch=getCh();if(ch==null)return toast('Kein Kanal zum Sprechen gewählt.','info');vxRecStart(ch)};
+  const start=()=>{const ch=getCh();if(ch==null)return toast('Kein Kanal zum Sprechen gewählt.','info');VX.recBtn=btn.id;vxRecStart(ch)}; // recBtn: welche Taste leuchtet
   btn.oncontextmenu=e=>e.preventDefault();
   // Loslassen auch ausserhalb des Knopfs (Finger verrutscht, Knopf neu gezeichnet): Zeiger am Dokument verfolgen, solange gesprochen wird
   const mv=e=>{if(id!==e.pointerId||!VX.rec)return;const d=Math.abs(e.clientX-x0)>80;if(d!==!!VX.rec.drop){VX.rec.drop=d;VX.io.change()}};
@@ -81,20 +81,35 @@ function vxLoadLk(){if(window.LivekitClient)return Promise.resolve();if(VX.lkLoa
   return VX.lkLoad=new Promise((ok,no)=>{const s=document.createElement('script');s.src=LK_URL;s.onload=()=>ok();s.onerror=()=>{VX.lkLoad=null;no(new Error('LiveKit konnte nicht geladen werden'))};document.head.appendChild(s)})}
 // beitreten (verlässt eine andere Konferenz); stumm, Senden über die Sprechtaste oder «Mikrofon offen»
 async function vxConfJoin(ch){if(VX.conf&&VX.conf.ch===ch)return;if(VX.conf)await vxConfLeave();vxUnlock();
-  const c=VX.conf={ch,since:Math.floor(Date.now()/1000),state:'connecting',speak:false,open:false,mic:false,speakers:new Set(),peers:[]};VX.io.change();
-  try{await vxLoadLk();const j=await VX.io.join(ch);if(VX.conf!==c)return;c.speak=!!j.speak;const LK=window.LivekitClient;
+  const c=VX.conf={ch,since:Math.floor(Date.now()/1000),state:'connecting',speak:false,may:false,muted:false,open:false,mic:false,speakers:new Set(),mics:new Set(),peers:[],me:''};VX.io.change();
+  try{await vxLoadLk();const j=await VX.io.join(ch);if(VX.conf!==c)return;c.may=!!j.speak;c.muted=!!j.muted;c.speak=c.may&&!c.muted;const LK=window.LivekitClient;
     const room=c.room=new LK.Room({adaptiveStream:false,dynacast:false,audioCaptureDefaults:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
-    const peers=()=>{c.peers=[...room.remoteParticipants.values()].map(p=>({id:p.identity,name:p.name||p.identity}));VX.io.change()};
+    // wer verbunden ist und wer das Mikrofon offen hat (eigenes und das der anderen; Sprechen selbst über ActiveSpeakersChanged)
+    const peers=()=>{c.peers=[...room.remoteParticipants.values()].map(p=>({id:p.identity,name:p.name||p.identity}));
+      c.mics=new Set([room.localParticipant,...room.remoteParticipants.values()].filter(p=>{const pub=p.getTrackPublication&&p.getTrackPublication(LK.Track.Source.Microphone);return pub&&!pub.isMuted&&(p!==room.localParticipant||c.mic)}).map(p=>p.identity));VX.io.change()};
     room.on(LK.RoomEvent.TrackSubscribed,t=>{if(t.kind==='audio'){const el=t.attach();el.dataset.vx='1';el.hidden=true;document.body.appendChild(el)}})
       .on(LK.RoomEvent.TrackUnsubscribed,t=>t.detach().forEach(el=>el.remove()))
       .on(LK.RoomEvent.ActiveSpeakersChanged,sp=>{c.speakers=new Set(sp.map(p=>p.identity));VX.io.change()})
       .on(LK.RoomEvent.ParticipantConnected,peers).on(LK.RoomEvent.ParticipantDisconnected,peers)
+      .on(LK.RoomEvent.TrackPublished,peers).on(LK.RoomEvent.TrackUnpublished,peers).on(LK.RoomEvent.TrackMuted,peers).on(LK.RoomEvent.TrackUnmuted,peers).on(LK.RoomEvent.LocalTrackPublished,peers).on(LK.RoomEvent.LocalTrackUnpublished,peers)
+      // Einsatzleitung schaltet stumm bzw. hebt auf (Senderecht im Raum, incident/voice/mute)
+      .on(LK.RoomEvent.ParticipantPermissionsChanged,(prev,p)=>{if(p!==room.localParticipant)return;const can=!!(p.permissions&&p.permissions.canPublish);c.muted=c.may&&!can;c.speak=can;if(!can){c.open=false;c.mic=false;if(VX.rec&&VX.rec.ch===c.ch)vxConfMic(false)}peers()})
       .on(LK.RoomEvent.Reconnecting,()=>{c.state='reconnecting';VX.io.change()}).on(LK.RoomEvent.Reconnected,()=>{c.state='on';VX.io.change()})
       .on(LK.RoomEvent.Disconnected,()=>{if(VX.conf===c){VX.conf=null;VX.io.conf&&VX.io.conf(0);VX.io.change()}});
     await room.connect(j.url,j.token,{autoSubscribe:true});await room.startAudio().catch(()=>{});
-    if(VX.conf!==c){room.disconnect();return}c.state='on';peers();VX.io.conf&&VX.io.conf(ch)}
+    if(VX.conf!==c){room.disconnect();return}c.state='on';c.me=room.localParticipant.identity;peers();VX.io.conf&&VX.io.conf(ch)}
   catch(e){if(VX.conf===c)VX.conf=null;VX.io.change();toast('Konferenz: '+(e&&e.message||e),'err')}}
 async function vxConfLeave(){const c=VX.conf;if(!c)return;VX.conf=null;try{if(c.room)await c.room.disconnect()}catch(e){}document.querySelectorAll('audio[data-vx]').forEach(el=>el.remove());VX.io.conf&&VX.io.conf(0);VX.io.change()}
-async function vxConfMic(on){const c=VX.conf;if(!c||!c.room||!c.speak)return;try{await c.room.localParticipant.setMicrophoneEnabled(!!on);c.mic=!!on}catch(e){toast('Mikrofon: '+(e&&e.message||e),'err')}VX.io.change()}
+async function vxConfMic(on){const c=VX.conf;if(!c||!c.room||(on&&!c.speak))return;try{await c.room.localParticipant.setMicrophoneEnabled(!!on);c.mic=!!on}catch(e){toast('Mikrofon: '+(e&&e.message||e),'err')}
+  if(c.mic)c.mics.add(c.me);else c.mics.delete(c.me);VX.io.change()}
 function vxConfOpen(on){const c=VX.conf;if(!c)return;c.open=!!on;vxConfMic(on)}
+// Stand vom Server (conf_list): stumm geschaltet; das Senderecht selbst ändert der Medienserver (ParticipantPermissionsChanged)
+function vxConfMuted(m){const c=VX.conf;if(!c||c.muted===!!m)return;c.muted=!!m;if(m){c.speak=false;c.open=false;if(c.mic)vxConfMic(false)}
+  else if(c.may){const pm=c.room&&c.room.localParticipant.permissions;c.speak=!pm||!!pm.canPublish}VX.io.change()}
 const vxSpeaking=id=>!!(VX.conf&&VX.conf.speakers.has(id));
+const vxConfSync=list=>{const c=VX.conf;if(!c||!c.me)return;const x=(list||[]).find(y=>y.ident===c.me&&y.ch===c.ch);if(x)vxConfMuted(x.muted)}; // nach jedem Abruf
+// Zustand einer Person in der Konferenz als Text: spricht, Mikrofon offen, stumm geschaltet (Einsatzleitung), hört zu
+const vxConfState=x=>vxSpeaking(x.ident)?'spricht':x.muted?'stumm geschaltet':vxMicOpen(x.ident)?'Mikrofon offen':'hört zu';
+const vxMicOpen=id=>!!(VX.conf&&VX.conf.mics.has(id));
+// wer gerade spricht (ohne mich), für die Anzeige auf der Karte
+const vxTalkers=()=>VX.conf?[...VX.conf.speakers].filter(i=>i!==VX.conf.me):[];
