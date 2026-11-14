@@ -90,8 +90,11 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 
 /* Fahrzeuge (Issue #177): Kette als ein Marker, Farbe des obersten Fahrzeugs, aufgenommene als Zeichen daran; blass ohne neuere Sichtung */
 .vehw{background:none;border:0}
-.vehk{position:absolute;transform:translate(-50%,calc(-100% - 7px));display:flex;align-items:stretch;background:#fff;border:2px solid #fff;border-radius:8px;gap:2px;white-space:nowrap;box-shadow:0 1px 4px #0008}
-.vehk::after{content:'';position:absolute;left:50%;bottom:-9px;margin-left:-6px;border:6px solid transparent;border-top:7px solid #fff;border-bottom:0}
+.vehg{position:absolute;transform:translate(-50%,calc(-100% - 7px));display:flex;flex-direction:column;align-items:center;gap:3px;background:#fff;border:2px solid #fff;border-radius:8px;box-shadow:0 1px 4px #0008}
+.vehg::after{content:'';position:absolute;left:50%;bottom:-9px;margin-left:-6px;border:6px solid transparent;border-top:7px solid #fff;border-bottom:0}
+.vehg.multi{padding:2px;gap:4px} /* mehrere Ketten getrennt am selben Ort: untereinander, je mit Rand */
+.vehg.multi .vehk{outline:1px dashed #9aa;outline-offset:1px;border-radius:6px}
+.vehk{display:flex;align-items:stretch;gap:2px;white-space:nowrap}
 .vehk .sg{display:flex;align-items:center;gap:3px;background:var(--c,#335c67);color:#fff;padding:1px 5px;font-size:15px;line-height:20px;border-radius:6px}
 .vehk .a{font-weight:700;font-size:11px;letter-spacing:.02em}
 .vehk.old{opacity:.5}

@@ -911,17 +911,20 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     // Fahrzeuge (Issue #177): je Kette ein Marker beim obersten Fahrzeug, auch ohne Einsatz (Sichtbarkeit bestimmt der Server)
     if (s.vis('veh') && vehOf(s) != null) {
       out.add(MarkerLayer(
-          markers: vehRoots(s).where((r) => llOf(r) != null).map((r) {
-        final kids = vehKids(s, ji(r['id'])), all = [r, ...kids];
+          markers: vehGroups(s).map((g) {
+        // getrennt am selben Ort stehende Ketten untereinander in einem Marker
+        final r = g.first, cs = [for (final x in g) (x, vehKids(s, ji(x['id'])))], all = [for (final c in cs) ...[c.$1, ...c.$2]];
+        final n = cs.map((c) => 1 + c.$2.length).reduce((a, b) => a > b ? a : b);
         return Marker(
             point: llOf(r)!,
-            width: 60.0 + 70 * all.length,
-            height: 38,
+            width: 60.0 + 70 * n,
+            height: 14.0 + 28 * g.length,
             alignment: Alignment.topCenter, // Spitze unten am Standort
             child: GestureDetector(
-                onTap: () => _sheet(all.map((v) => js(v['name'])).join(' + '), vehSheetLines(s, r, kids),
+                onTap: () => _sheet(cs.map((c) => [c.$1, ...c.$2].map((v) => js(v['name'])).join(' + ')).join(' · '),
+                    [for (final c in cs) ...vehSheetLines(s, c.$1, c.$2), if (g.length > 1) 'Getrennt am selben Ort'],
                     lat: jd(r['lat']), lon: jd(r['lon']), actions: (c) => [for (final v in all) ...vehBtns(context, s, v, before: () => Navigator.pop(c))]),
-                child: Align(alignment: Alignment.bottomCenter, child: vehChip(s, r, kids))));
+                child: Align(alignment: Alignment.bottomCenter, child: vehGroupChip(s, g))));
       }).toList()));
     }
     if (i == null) {

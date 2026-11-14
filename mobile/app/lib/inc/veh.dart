@@ -152,14 +152,43 @@ Widget vehChip(IncStore s, J root, List<J> kids) {
   final all = [root, ...kids];
   return Opacity(
       opacity: vehStale(s, root) ? .5 : 1,
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white, width: 2), boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 3)]),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              for (var i = 0; i < all.length; i++) ...[if (i > 0) const SizedBox(width: 2), seg(all[i])],
-            ])),
-        CustomPaint(size: const Size(12, 7), painter: _VehTip()),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        for (var i = 0; i < all.length; i++) ...[if (i > 0) const SizedBox(width: 2), seg(all[i])],
       ]));
+}
+
+/// Ketten, die getrennt am selben Ort stehen (höchstens [vehNearM]), teilen sich einen Marker (wie vehGroups im Web)
+const vehNearM = 25.0;
+List<List<J>> vehGroups(IncStore s) {
+  const d = Distance();
+  final gs = <List<J>>[];
+  for (final r in vehRoots(s).where((r) => llOf(r) != null)) {
+    final g = gs.where((g) => d(llOf(g.first)!, llOf(r)!) <= vehNearM).firstOrNull;
+    g != null ? g.add(r) : gs.add([r]);
+  }
+  return gs;
+}
+
+/// Marker einer Gruppe: je Kette eine Zeile untereinander (mehrere gestrichelt umrandet), mit Spitze unten am Standort
+Widget vehGroupChip(IncStore s, List<J> g) {
+  final multi = g.length > 1;
+  return Column(mainAxisSize: MainAxisSize.min, children: [
+    Container(
+        padding: EdgeInsets.all(multi ? 2 : 0),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white, width: 2), boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 3)]),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          for (var i = 0; i < g.length; i++) ...[
+            if (i > 0) const SizedBox(height: 4),
+            multi
+                ? Container(
+                    padding: const EdgeInsets.all(1),
+                    decoration: BoxDecoration(border: Border.all(color: const Color(0xFF99AAAA)), borderRadius: BorderRadius.circular(7)),
+                    child: vehChip(s, g[i], vehKids(s, ji(g[i]['id']))))
+                : vehChip(s, g[i], vehKids(s, ji(g[i]['id']))),
+          ],
+        ])),
+    CustomPaint(size: const Size(12, 7), painter: _VehTip()),
+  ]);
 }
 
 class _VehTip extends CustomPainter {
