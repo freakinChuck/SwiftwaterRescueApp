@@ -1170,7 +1170,7 @@ function vehDlg(v){const c=vehD.cfg,own=v.cap!=null,capRows=kid=>{const k=vehD.k
   d.firstElementChild.classList.add('wide');extStyleBind(d);$('#veC',d).onchange=capDraw;$('#veK',d).onchange=capDraw;capDraw()}
 function vehPosDlg(v){let ll=v.lat!=null?[v.lat,v.lon]:null,m=null,mk=null;
   const d=dlg(`Standort von «${v.name}»`,`<div class="mut">Für Fahrzeuge, die gerade kein Handy sieht (z. B. im Magazin), oder zum Testen ohne Beacon. Verladene Fahrzeuge ziehen mit.</div><label class="mut">Koordinaten<input id="vpC" value="${ll?esc(fmtC(ll[0],ll[1],'wgs84')):''}" placeholder="LV95 2'635'600 / 1'245'500 oder WGS84 47.36, 7.91"></label><div id="vpM" class="pickmap"></div>`,
-    async x=>{const p=parseC($('#vpC',x).value);if(!p)throw new Error('Koordinaten angeben oder auf die Karte klicken');await api('vehicle/pos',{id:v.id,lat:p[0],lon:p[1]});loadVeh()});
+    async x=>{const p=parseC($('#vpC',x).value);if(!p)throw new Error('Koordinaten angeben oder auf die Karte klicken');await api('vehicle/pos',{id:v.id,lat:p.lat,lon:p.lon});loadVeh()});
   m=addBases(L.map($('#vpM',d)).setView(ll||[46.8,8.2],ll?15:8));const set=p=>{ll=p;mk?mk.setLatLng(p):mk=L.marker(p).addTo(m)};if(ll)set(ll);
   m.on('click',e=>{set([e.latlng.lat,e.latlng.lng]);$('#vpC',d).value=fmtC(e.latlng.lat,e.latlng.lng,'wgs84')});setTimeout(()=>m.invalidateSize(),50)}
 function vehLinkDlg(v){const by=Object.fromEntries(vehD.vehicles.map(x=>[x.id,x])),inV=c=>{let r=c,i=0;while(r&&r.carrier_id!=null&&i++<20){if(r.carrier_id===v.id)return true;r=by[r.carrier_id]}return false};

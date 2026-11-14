@@ -1962,6 +1962,8 @@ function vehKinds($all = true) { global $db; $r = [];
 function vehRow($v) { $v = floats(ints($v, ['id', 'kind_id', 'major', 'minor', 'active', 'sort', 'seen_at', 'seen_inc', 'seen_rssi', 'seen_uid', 'own_at', 'carrier_id', 'carrier_at', 'carrier_manual', 'lone_n', 'trip_at', 'fast_at', 'cap_max']), ['lat', 'lon', 'acc', 'own_lat', 'own_lon', 'trip_lat', 'trip_lon']);
   $v['cap'] = $v['cap'] === null ? null : vehCarries($v['cap']); return $v; }
 function vehAll() { global $db; return array_map('vehRow', $db->query("SELECT * FROM vehicles ORDER BY " . SORT_ORDER)->fetchAll()); }
+// Fahrzeuge, die in Einsätzen vorkommen (Sichtungen oder Verbund im Einsatz, als Fahrzeug oder Träger): nicht löschbar, nur deaktivierbar
+function vehUsed() { global $db; return array_map('intval', $db->query("SELECT vehicle_id FROM vehicle_seen UNION SELECT vehicle_id FROM veh_links WHERE incident_id IS NOT NULL UNION SELECT carrier_id FROM veh_links WHERE incident_id IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN)); }
 function vehById() { $o = []; foreach (vehAll() as $v) $o[$v['id']] = $v; return $o; }
 function vehCap($v, $kb) { return $v['cap'] ?? (array)($kb[$v['kind_id']]['carries'] ?? []); } // Höchstzahlen {Art-ID: Anzahl|null}
 function vehCapMax($v, $kb) { return $v['cap'] !== null ? ($v['cap_max'] ?? null) : ($kb[$v['kind_id']]['carry_max'] ?? null); } // insgesamt höchstens (null = nur je Art)
@@ -4608,7 +4610,7 @@ switch ($route) {
   foreach (vehKinds() as $k) { $ca = (array)$k['carries']; if (array_key_exists((string)$kid, $ca)) { unset($ca[(string)$kid]); $db->prepare("UPDATE veh_kinds SET carries=? WHERE id=?")->execute([json_encode((object)$ca), $k['id']]); } }
   out(['ok' => true]);
  case 'vehicles': need('cfg_map'); // Verwaltung: alle Fahrzeuge (auch deaktivierte), Arten, Einstellung
-  $s = $db->query("SELECT DISTINCT vehicle_id FROM vehicle_seen UNION SELECT DISTINCT vehicle_id FROM veh_links"); $used = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN));
+  $used = vehUsed();
   out(['vehicles' => array_map(fn($v) => array_diff_key($v, array_flip(['seen_uid', 'own_lat', 'own_lon', 'lone_n', 'trip_lat', 'trip_lon', 'trip_at', 'fast_at'])) + ['deletable' => in_array($v['id'], $used, true) ? 0 : 1], vehAll()),
     'kinds' => vehKinds(), 'icons' => VEH_ICONS, 'cfg' => beaconCfg(), 'num' => BEACON_NUM, 'app' => VEH_APP, 'home_vis' => VEH_HOME, 'feat' => (object)array_map(fn($f) => ['veh' => $f['veh'], 'vehp' => $f['vehp']], featuresAll())]);
  case 'vehicle/save': need('cfg_map'); // Fahrzeug: name, descr, kind_id, abbr, color, uuid ('' = Standard-UUID), major, minor (0–65535), cap (null = wie die Art), cap_max (nur mit cap: insgesamt, leer = nur je Art), active
@@ -4632,8 +4634,9 @@ switch ($route) {
   sortMove('vehicles', "SELECT id FROM vehicles WHERE kind_id=" . (int)$v['kind_id'] . " ORDER BY " . SORT_ORDER, [], $v['id'], (int)($in['dir'] ?? 1)); out(['ok' => true]);
  case 'vehicle/remove': need('cfg_map'); // löschen nur ohne Sichtungen und Verbund in Einsätzen, sonst deaktivieren
   $v = vehById()[(int)($in['id'] ?? 0)] ?? fail('Fahrzeug nicht gefunden', 404);
-  $s = $db->prepare("SELECT (SELECT COUNT(*) FROM vehicle_seen WHERE vehicle_id=?) + (SELECT COUNT(*) FROM veh_links WHERE vehicle_id=? OR carrier_id=?)"); $s->execute([$v['id'], $v['id'], $v['id']]);
-  if ($s->fetchColumn()) fail('Das Fahrzeug kommt in Einsätzen vor. Deaktiviere es stattdessen.');
+  if (in_array($v['id'], vehUsed(), true)) fail('Das Fahrzeug kommt in Einsätzen vor. Deaktiviere es stattdessen.');
+  // Verbund ausserhalb von Einsätzen (z. B. in der Verwaltung gesetzt) zählt nicht und wird mit gelöscht
+  $db->prepare("DELETE FROM veh_links WHERE vehicle_id=? OR carrier_id=?")->execute([$v['id'], $v['id']]); $db->prepare("DELETE FROM veh_cand WHERE a=? OR b=?")->execute([$v['id'], $v['id']]);
   $db->prepare("UPDATE vehicles SET carrier_id=NULL, carrier_at=NULL, carrier_manual=0 WHERE carrier_id=?")->execute([$v['id']]); $db->prepare("DELETE FROM vehicles WHERE id=?")->execute([$v['id']]);
   out(['ok' => true]);
  case 'vehicle/link': need('cfg_map'); // Verbund in der Verwaltung von Hand setzen; im laufenden Einsatz mit Log
