@@ -1397,12 +1397,17 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                       if (_camOpen) Padding(padding: const EdgeInsets.only(right: 8), child: _camMenu()),
                       _buttons(),
                     ]))),
-              if (note != null)
+              // Hinweis zum Suchgebiet unten links; die Sprechtaste (Funk, Issue #113) steht links darüber, der Hinweis bleibt an seinem Platz
+              if (note != null || (pw == null && voiceFab(context, s.vx) != null))
                 Positioned(
                     left: 10,
                     right: (pw != null && !narrow) ? 412 : 70,
                     bottom: 24,
-                    child: SafeArea(child: Align(alignment: Alignment.bottomLeft, child: note))),
+                    child: SafeArea(
+                        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      if (pw == null && voiceFab(context, s.vx) != null) ...[voiceFab(context, s.vx)!, const SizedBox(height: 8)],
+                      if (note != null) Align(alignment: Alignment.bottomLeft, child: note),
+                    ]))),
               if (pw != null)
                 Positioned(
                     right: 0,
@@ -1410,8 +1415,6 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                     bottom: 0,
                     width: narrow ? w : 400,
                     child: Material(elevation: 8, child: SafeArea(left: false, child: pw))),
-              if (pw == null && voiceFab(context, s.vx) != null)
-                Positioned(left: 0, right: 0, bottom: 18, child: SafeArea(child: Center(child: voiceFab(context, s.vx)!))),
               if (voiceBar(context, s.vx) != null && !(narrow && pw != null))
                 Positioned(left: 10, right: (pw != null && !narrow) ? 412 : 10, top: 0, child: SafeArea(child: Padding(padding: const EdgeInsets.only(top: 64), child: Align(alignment: Alignment.topCenter, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: voiceBar(context, s.vx)))))),
               if (s.alarm != null) _alarm(s.alarm!),

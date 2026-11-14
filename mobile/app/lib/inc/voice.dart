@@ -62,9 +62,14 @@ class VoiceStore extends ChangeNotifier {
   int confSince = 0;
   String confState = ''; // connecting | on | reconnecting
   bool confSpeak = false, confOpen = false, confMic = false, _wasConf = false;
-  Set<String> speakers = {};
-  int? spk; // gewählter Sprechkanal
-  int? ch; // Kanal im Fenster
+  bool confMay = false, confMuted = false; // Sprechrecht im Kanal; von der Einsatzleitung stumm geschaltet (incident/voice/mute)
+  Set<String> speakers = {}, mics = {}; // wer spricht (ActiveSpeakers), wer das Mikrofon offen hat
+  String confMe = ''; // eigene Kennung im Raum (u<User-ID>)
+  String? recBtn; // welche Sprechtaste gedrückt ist (nur sie leuchtet)
+  // Durchsagen und Konferenz getrennt: in der Konferenz «A» sein und Durchsagen in «B» senden
+  int? spk; // Kanal der Sprechtaste auf der Karte (Durchsage)
+  int? ch; // Kanal der Durchsagen im Fenster
+  int? cc; // Kanal der Konferenz im Fenster
 
   J? get v => s.st?['voice'] is Map ? jm(s.st!['voice']) : null;
   bool get on => s.inc != null && v != null && s.feat('voice') && chs.isNotEmpty;
@@ -132,6 +137,11 @@ class VoiceStore extends ChangeNotifier {
       }
     }
     if (room != null && (!confAvail || !chs.any((c) => ji(c['id']) == confCh))) await confLeave();
+    if (room != null && confMe.isNotEmpty) {
+      final x = jl(vo['conf_list']).where((y) => js(y['ident']) == confMe && ji(y['ch']) == confCh).firstOrNull;
+      if (x != null) _setMuted(jb(x['muted']));
+    }
+    if (!chs.any((c) => ji(c['id']) == cc)) cc = confCh ?? ji((chs.where((c) => ji(c['id']) == _sp!.getInt('vx_cc')).firstOrNull ?? chs.firstOrNull)?['id']);
     if (!speakChs.any((c) => ji(c['id']) == spk)) spk = ji((speakChs.where((c) => ji(c['id']) == _sp!.getInt('vx_spk')).firstOrNull ?? speakChs.firstOrNull)?['id']);
     if (!chs.any((c) => ji(c['id']) == ch)) ch = ji((chs.where((c) => ji(c['id']) == spk).firstOrNull ?? chs.firstOrNull)?['id']);
     unawaited(_flush());
@@ -165,7 +175,24 @@ class VoiceStore extends ChangeNotifier {
 
   void setSpk(int id) {
     spk = id;
+    ch = id;
     _sp?.setInt('vx_spk', id);
+    notifyListeners();
+  }
+
+  /// Kanal der Durchsagen im Fenster; mit Sprechrecht auch der Kanal der Sprechtaste auf der Karte
+  void setCh(int id) {
+    ch = id;
+    if (speakChs.any((c) => ji(c['id']) == id)) {
+      spk = id;
+      _sp?.setInt('vx_spk', id);
+    }
+    markHeard(id);
+  }
+
+  void setCc(int id) {
+    cc = id;
+    _sp?.setInt('vx_cc', id);
     notifyListeners();
   }
 
@@ -229,9 +256,10 @@ class VoiceStore extends ChangeNotifier {
   }
 
   // ---------- Aufnahme ----------
-  Future<void> recStart(int c) async {
+  Future<void> recStart(int c, {String? btn}) async {
     if (recording || recBusy) return;
     recBusy = true;
+    recBtn = btn;
     try {
       await _pl?.pause();
       playing = null;
@@ -361,13 +389,35 @@ class VoiceStore extends ChangeNotifier {
     try {
       final j = await s.api.call('incident/voice/join', body: {'ch': c});
       if (confCh != c) return;
-      confSpeak = jb(j['speak']);
+      confMay = jb(j['speak']);
+      confMuted = jb(j['muted']);
+      confSpeak = confMay && !confMuted;
       final r = room = lk.Room(roomOptions: const lk.RoomOptions(adaptiveStream: false, dynacast: false, defaultAudioCaptureOptions: lk.AudioCaptureOptions(echoCancellation: true, noiseSuppression: true, autoGainControl: true)));
       final ls = _ls = r.createListener();
       ls
         ..on<lk.ActiveSpeakersChangedEvent>((e) {
           speakers = e.speakers.map((p) => p.identity).toSet();
           notifyListeners();
+        })
+        ..on<lk.ParticipantConnectedEvent>((_) => _peers())
+        ..on<lk.ParticipantDisconnectedEvent>((_) => _peers())
+        ..on<lk.TrackPublishedEvent>((_) => _peers())
+        ..on<lk.TrackUnpublishedEvent>((_) => _peers())
+        ..on<lk.TrackMutedEvent>((_) => _peers())
+        ..on<lk.TrackUnmutedEvent>((_) => _peers())
+        ..on<lk.LocalTrackPublishedEvent>((_) => _peers())
+        ..on<lk.LocalTrackUnpublishedEvent>((_) => _peers())
+        // Einsatzleitung schaltet stumm bzw. hebt auf: Senderecht im Raum
+        ..on<lk.ParticipantPermissionsUpdatedEvent>((e) {
+          if (e.participant != r.localParticipant) return;
+          final can = e.permissions.canPublish;
+          confMuted = confMay && !can;
+          confSpeak = can;
+          if (!can) {
+            confOpen = false;
+            confMic = false;
+          }
+          _peers();
         })
         ..on<lk.RoomReconnectingEvent>((_) {
           confState = 'reconnecting';
@@ -389,6 +439,10 @@ class VoiceStore extends ChangeNotifier {
         await lk.AudioManager.instance.setSpeakerOutputPreferred(true);
       } catch (_) {}
       confState = 'on';
+      confMe = r.localParticipant?.identity ?? '';
+      cc = c;
+      _sp?.setInt('vx_cc', c);
+      _peers();
       unawaited(s.api.call('incident/voice/conf', body: {'ch': c}).catchError((_) => <String, dynamic>{}));
     } catch (e) {
       s.toast('Konferenz: ${e is ApiError ? e.message : e}', 'err');
@@ -405,7 +459,10 @@ class VoiceStore extends ChangeNotifier {
     confState = '';
     confMic = false;
     confOpen = false;
+    confMuted = false;
+    confMe = '';
     speakers = {};
+    mics = {};
     await _ls?.dispose();
     _ls = null;
     try {
@@ -420,15 +477,61 @@ class VoiceStore extends ChangeNotifier {
 
   Future<void> confMicSet(bool on) async {
     final r = room;
-    if (r == null || !confSpeak) return;
+    if (r == null || (on && !confSpeak)) return;
     try {
       await r.localParticipant?.setMicrophoneEnabled(on);
       confMic = on;
     } catch (e) {
       s.toast('Mikrofon: $e', 'err');
     }
+    _peers();
+  }
+
+  /// wer das Mikrofon offen hat (eigenes nur, solange es offen ist)
+  void _peers() {
+    final r = room;
+    if (r == null) return;
+    mics = {
+      ...r.remoteParticipants.values.where((p) => p.isMicrophoneEnabled()).map((p) => p.identity),
+      if (confMic && r.localParticipant != null) r.localParticipant!.identity,
+    };
     notifyListeners();
   }
+
+  /// Stand vom Server (conf_list): stumm geschaltet; das Senderecht selbst ändert der Medienserver
+  void _setMuted(bool m) {
+    if (confMuted == m) return;
+    confMuted = m;
+    if (m) {
+      confSpeak = false;
+      confOpen = false;
+      if (confMic) unawaited(confMicSet(false));
+    } else if (confMay) {
+      confSpeak = room?.localParticipant?.permissions.canPublish ?? true;
+    }
+    notifyListeners();
+  }
+
+  /// Einsatzleitung: Person in der Konferenz stumm schalten bzw. aufheben
+  Future<void> mute(int c, String ident, bool on) async {
+    try {
+      await s.api.call('incident/voice/mute', body: {'ch': c, 'ident': ident, 'on': on ? 1 : 0});
+      unawaited(s.poll());
+    } on ApiError catch (e) {
+      s.toast(e.message, 'err');
+    }
+  }
+
+  bool micOpen(String ident) => mics.contains(ident);
+  List<String> get talkers => speakers.where((i) => i != confMe).toList();
+  String confName(String ident) => js((jl(v?['conf_list']).where((x) => js(x['ident']) == ident).firstOrNull ?? {'name': 'Jemand'})['name']);
+  String confStateOf(J x) => speaking(js(x['ident']))
+      ? 'spricht'
+      : jb(x['muted'])
+          ? 'stumm geschaltet'
+          : micOpen(js(x['ident']))
+              ? 'Mikrofon offen'
+              : 'hört zu';
 
   void setOpen(bool on) {
     confOpen = on;
@@ -447,37 +550,41 @@ class VoiceStore extends ChangeNotifier {
   }
 }
 
-/// Sprechtaste: gedrückt halten (zur Seite wischen = verwerfen) oder, mit «Antippen» im Profil, antippen zum Starten und Stoppen
+/// Sprechtaste: gedrückt halten (zur Seite wischen = verwerfen) oder, mit «Antippen» im Profil, antippen zum Starten und Stoppen.
+/// id: welche Taste (nur die gedrückte leuchtet); live: Taste der Konferenz (grüner Rand)
 class PttButton extends StatelessWidget {
-  const PttButton({super.key, required this.vx, required this.ch, this.size = 64});
+  const PttButton({super.key, required this.vx, required this.ch, required this.id, this.size = 64, this.live = false});
   final VoiceStore vx;
   final int? Function() ch;
+  final String id;
   final double size;
+  final bool live;
   @override
   Widget build(BuildContext context) {
-    final rec = vx.recording, drop = rec && vx.recDrop;
+    final rec = vx.recording && vx.recBtn == id, drop = rec && vx.recDrop, open = live && vx.confMic && !rec;
     final b = Container(
         width: size,
         height: size,
         decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: drop ? const Color(0xFF5C6B73) : (rec ? accRed : appBlue),
-            border: Border.all(color: Colors.white, width: 2.5),
+            color: drop ? const Color(0xFF5C6B73) : (rec ? accRed : (open ? const Color(0xFF1F6B45) : appBlue)),
+            border: Border.all(color: live ? okGreen : Colors.white, width: 2.5),
             boxShadow: [BoxShadow(color: rec && !drop ? accRed.withValues(alpha: .35) : Colors.black54, blurRadius: rec ? 18 : 8, spreadRadius: rec ? 6 : 0)]),
         child: Icon(Icons.mic, color: Colors.white, size: size * .45));
     void start() {
       final c = ch();
       if (c == null) return vx.s.toast('Kein Kanal zum Sprechen gewählt.', 'info');
-      vx.recStart(c);
+      vx.recStart(c, btn: id);
     }
 
+    final lbl = live ? 'Live in der Konferenz sprechen' : 'Sprechtaste Durchsage';
     if (vx.tap) {
-      return Semantics(button: true, label: 'Sprechtaste', child: GestureDetector(onTap: () => rec ? vx.recStop() : start(), child: b));
+      return Semantics(button: true, label: lbl, child: GestureDetector(onTap: () => vx.recording ? vx.recStop() : start(), child: b));
     }
     double x0 = 0;
     return Semantics(
         button: true,
-        label: 'Sprechtaste',
+        label: lbl,
         child: Listener(
             onPointerDown: (e) {
               x0 = e.position.dx;
@@ -490,61 +597,95 @@ class PttButton extends StatelessWidget {
   }
 }
 
-String _recTxt(VoiceStore vx) => vx.recording ? (vx.recDrop ? 'Loslassen = verwerfen' : 'Aufnahme ${vx.recS} s / ${vx.maxS} s') : (vx.tap ? 'Antippen zum Sprechen' : 'Gedrückt halten zum Sprechen');
+String _recTxt(VoiceStore vx) => vx.recording && vx.recBtn != 'conf' && vx.recBtn != 'mapc'
+    ? (vx.recDrop ? 'Loslassen = verwerfen' : 'Aufnahme ${vx.recS} s / ${vx.maxS} s')
+    : (vx.tap ? 'Antippen zum Sprechen' : 'Gedrückt halten zum Sprechen');
+String _liveTxt(VoiceStore vx) => vx.recording && vx.recBtn == 'conf'
+    ? (vx.recDrop ? 'Loslassen = verwerfen' : 'Du sprichst live · ${vx.recS} s')
+    : (vx.tap ? 'Antippen = live sprechen' : 'Gedrückt halten = live sprechen');
 
-/// Sprechtaste unten in der Mitte der Karte mit Kanalwahl (vxFab)
+Widget _pill(String t, {Color? bg, Color fg = Colors.white}) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+    decoration: BoxDecoration(color: bg ?? Colors.black.withValues(alpha: .7), borderRadius: BorderRadius.circular(10)),
+    child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: fg, fontSize: 11, fontWeight: bg != null ? FontWeight.bold : FontWeight.normal)));
+
+/// Sprechtasten links unten über dem Hinweis zum Suchgebiet (vxFab): Durchsage mit Kanal darunter; in der Konferenz darüber die Live-Taste
 Widget? voiceFab(BuildContext c, VoiceStore vx) {
-  if (!vx.on || vx.speakChs.isEmpty || !vx.pttMap) return null;
-  return Column(mainAxisSize: MainAxisSize.min, children: [
-    if (vx.speakChs.length > 1)
-      Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(color: Colors.black.withValues(alpha: .7), borderRadius: BorderRadius.circular(16)),
-          child: DropdownButton<int>(
-              value: vx.spk,
-              isDense: true,
-              underline: const SizedBox(),
-              dropdownColor: appBlue,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              items: vx.speakChs.map((c) => DropdownMenuItem(value: ji(c['id']), child: Text(js(c['name'])))).toList(),
-              onChanged: vx.recording ? null : (v) => v == null ? null : vx.setSpk(v))),
-    const SizedBox(height: 6),
-    PttButton(vx: vx, ch: () => vx.spk, size: 72),
-    const SizedBox(height: 4),
-    Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(color: Colors.black.withValues(alpha: .7), borderRadius: BorderRadius.circular(10)),
-        child: Text(_recTxt(vx), style: const TextStyle(color: Colors.white, fontSize: 11))),
-  ]);
+  final live = vx.room != null && vx.confState == 'on' && vx.confSpeak;
+  if (!vx.on || (vx.speakChs.isEmpty && !live) || !vx.pttMap) return null;
+  return SizedBox(
+      width: 92,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (live) ...[
+          _pill('LIVE', bg: okGreen, fg: const Color(0xFF06210F)),
+          const SizedBox(height: 3),
+          PttButton(vx: vx, ch: () => vx.confSpeak ? vx.confCh : null, id: 'mapc', size: 50, live: true),
+          const SizedBox(height: 3),
+          _pill(vx.chName(vx.confCh)),
+          const SizedBox(height: 10),
+        ],
+        if (vx.speakChs.isNotEmpty) ...[
+          PttButton(vx: vx, ch: () => vx.spk, id: 'map', size: 64),
+          const SizedBox(height: 4),
+          if (vx.speakChs.length > 1)
+            Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: .7), borderRadius: BorderRadius.circular(14)),
+                child: DropdownButton<int>(
+                    value: vx.spk,
+                    isDense: true,
+                    isExpanded: true,
+                    underline: const SizedBox(),
+                    dropdownColor: appBlue,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    items: vx.speakChs.map((c) => DropdownMenuItem(value: ji(c['id']), child: Text(js(c['name']), overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: vx.recording ? null : (v) => v == null ? null : vx.setSpk(v)))
+          else
+            _pill(vx.chName(vx.spk)),
+        ],
+      ]));
 }
 
-/// Leiste oben: laufende Wiedergabe bzw. Aufnahme
+/// Leiste oben: laufende Wiedergabe, Aufnahme bzw. wer gerade live in der Konferenz spricht
 Widget? voiceBar(BuildContext c, VoiceStore vx) {
   final it = vx.playing == null ? null : vx.items[vx.playing];
-  if (!vx.on || (it == null && !vx.recording)) return null;
-  final rec = vx.recording;
+  final rec = vx.recording, tk = vx.room != null && !rec && it == null ? vx.talkers : <String>[];
+  if (!vx.on || (it == null && !rec && tk.isEmpty)) return null;
+  final live = rec && vx.room != null && vx.confCh == vx.recCh;
   return Material(
       color: const Color(0xF216323F),
       borderRadius: BorderRadius.circular(8),
       elevation: 6,
       child: Container(
-          decoration: BoxDecoration(border: Border(left: BorderSide(color: rec ? accRed : const Color(0xFF1D7FD1), width: 4))),
+          decoration: BoxDecoration(border: Border(left: BorderSide(color: rec ? accRed : (tk.isNotEmpty ? okGreen : const Color(0xFF1D7FD1)), width: 4))),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Row(children: [
-            Text(rec ? '●' : '🔊', style: TextStyle(fontSize: 20, color: rec ? accRed : Colors.white)),
+            if (tk.isNotEmpty) _pill('LIVE', bg: okGreen, fg: const Color(0xFF06210F)) else Text(rec ? '●' : '🔊', style: TextStyle(fontSize: 20, color: rec ? accRed : Colors.white)),
             const SizedBox(width: 8),
             Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text(rec ? '${vx.recDrop ? 'Aufnahme wird verworfen' : 'Du sprichst'} · Kanal «${vx.chName(vx.recCh)}»' : js(it!['name']),
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              Text(rec ? '${vx.recS} s · Loslassen = senden, zur Seite wischen = verwerfen' : 'Kanal «${vx.chName(ji(it!['ch']))}» · ${vxDur(jn(it['dur']))}${vx.queue.isNotEmpty ? ' · noch ${vx.queue.length}' : ''}',
+              Text(
+                  rec
+                      ? '${vx.recDrop ? 'Aufnahme wird verworfen' : 'Du sprichst'} · ${live ? 'live in der Konferenz' : 'Durchsage'} «${vx.chName(vx.recCh)}»'
+                      : tk.isNotEmpty
+                          ? '🔊 ${tk.map(vx.confName).join(', ')}'
+                          : js(it!['name']),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text(
+                  rec
+                      ? '${vx.recS} s · Loslassen = senden, zur Seite wischen = verwerfen'
+                      : tk.isNotEmpty
+                          ? '${tk.length > 1 ? 'sprechen' : 'spricht'} · Konferenz «${vx.chName(vx.confCh)}»'
+                          : 'Durchsage «${vx.chName(ji(it!['ch']))}» · ${vxDur(jn(it['dur']))}${vx.queue.isNotEmpty ? ' · noch ${vx.queue.length}' : ''}',
                   style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ])),
-            if (!rec) IconButton(onPressed: vx.stop, icon: const Icon(Icons.stop, color: Colors.white), tooltip: 'Wiedergabe beenden'),
+            if (it != null && !rec) IconButton(onPressed: vx.stop, icon: const Icon(Icons.stop, color: Colors.white), tooltip: 'Wiedergabe beenden'),
           ])));
 }
 
-/// Seitenfenster «Funk»: Register Durchsagen und Live-Konferenz, Kanäle, Verlauf, Sprechtaste
+/// Seitenfenster «Funk»: Register Live-Konferenz (Standard, sofern eingerichtet) und Durchsagen, je mit eigener Kanalwahl
 class VoicePanel extends StatefulWidget {
   const VoicePanel({super.key, required this.s, required this.map});
   final IncStore s;
@@ -554,7 +695,7 @@ class VoicePanel extends StatefulWidget {
 }
 
 class _VoicePanelState extends State<VoicePanel> {
-  String _tab = 'ann';
+  String? _tab; // null = Konferenz, sofern eingerichtet
   final _sc = ScrollController();
   int _last = -1;
 
@@ -595,59 +736,108 @@ class _VoicePanelState extends State<VoicePanel> {
         ]));
   }
 
+  /// Kanalwahl als Auswahlliste (statt einer langen Zeile mit Knöpfen)
+  Widget _chSel(String label, int? val, List<DropdownMenuItem<int>> items, ValueChanged<int> on, {Widget? trailing}) => Padding(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Expanded(
+            child: InputDecorator(
+                decoration: InputDecoration(labelText: label, isDense: true, border: const OutlineInputBorder(), contentPadding: const EdgeInsets.fromLTRB(10, 6, 6, 6)),
+                child: DropdownButtonHideUnderline(child: DropdownButton<int>(value: val, isDense: true, isExpanded: true, items: items, onChanged: (v) => v == null ? null : on(v))))),
+        if (trailing != null) ...[const SizedBox(width: 8), trailing],
+      ]));
+
   Widget _conf(BuildContext c) {
-    final s = widget.s, cl = jl(vx.v?['conf_list']).where((x) => ji(x['ch']) == vx.ch).toList(), inC = vx.confCh == vx.ch && vx.room != null || vx.confCh == vx.ch && vx.confState == 'connecting';
+    final s = widget.s, cid = vx.cc, all = jl(vx.v?['conf_list']), cl = all.where((x) => ji(x['ch']) == cid).toList();
+    final inC = vx.confCh == cid && (vx.room != null || vx.confState == 'connecting'), lead = vx.v?['all_ch'] != null, tk = cl.where((x) => vx.speaking(js(x['ident']))).toList();
     final ids = cl.map((x) => js(x['ident'])).toSet();
     Widget who(J x) {
-      final p = s.participants.where((q) => ji(q['user_id']) == ji(x['user_id'])).firstOrNull, r = s.roleOf(p?['role_id']), me0 = ji(x['user_id']) == s.uid;
-      return ListTile(
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-          leading: avatar({'name': js(x['name'])}, r: 16, border: vx.speaking(js(x['ident'])) || (me0 && vx.confMic) ? okGreen : hexColor(r?['color'])),
-          title: Text('${js(x['name'])}${me0 ? ' (ich)' : ''}'),
-          subtitle: Text('${r != null ? js(r['name']) : (x['guest_id'] != null ? 'Extern' : 'Ohne Spezialrolle')}${me0 && inC ? (vx.confMic ? ' · Mikrofon offen' : ' · stumm') : ''}'),
-          trailing: vx.speaking(js(x['ident'])) ? const Icon(Icons.mic, color: okGreen) : null);
+      final p = s.participants.where((q) => ji(q['user_id']) == ji(x['user_id'])).firstOrNull, r = s.roleOf(p?['role_id']), me0 = ji(x['user_id']) == s.uid, ident = js(x['ident']);
+      final sk = vx.speaking(ident), mu = jb(x['muted']), st = inC ? vx.confStateOf(x) : (mu ? 'stumm geschaltet' : 'verbunden');
+      return Container(
+          decoration: BoxDecoration(color: sk ? okGreen.withValues(alpha: .12) : null, borderRadius: BorderRadius.circular(6)),
+          child: ListTile(
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+              leading: avatar({'name': js(x['name'])}, r: 16, border: sk ? okGreen : hexColor(r?['color'])),
+              title: Text('${js(x['name'])}${me0 ? ' (ich)' : ''}'),
+              subtitle: Text.rich(TextSpan(children: [
+                TextSpan(text: '${r != null ? js(r['name']) : (x['guest_id'] != null ? 'Extern' : 'Ohne Spezialrolle')} · '),
+                TextSpan(text: st, style: TextStyle(color: sk ? okGreen : (mu ? const Color(0xFFFFB4A6) : null))),
+              ])),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (sk) const Icon(Icons.volume_up, color: okGreen),
+                if (lead && !me0)
+                  TextButton(
+                      onPressed: cid == null ? null : () => vx.mute(cid, ident, !mu),
+                      style: mu ? TextButton.styleFrom(foregroundColor: const Color(0xFFFFB4A6)) : null,
+                      child: Text(mu ? 'Aufheben' : 'Stumm')),
+              ])));
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [if (inC) const Chip2('LIVE', color: okGreen), if (inC) const SizedBox(width: 6), Expanded(child: Text('Konferenz «${vx.chName(vx.ch)}» · ${cl.length} verbunden', style: const TextStyle(fontWeight: FontWeight.bold)))]),
-            Mut(inC
-                ? (vx.confState == 'connecting'
-                    ? 'Verbinde …'
-                    : vx.confState == 'reconnecting'
-                        ? 'Verbindung unterbrochen, verbinde neu …'
+    final stt = inC
+        ? (vx.confState == 'connecting'
+            ? 'Verbinde …'
+            : vx.confState == 'reconnecting'
+                ? 'Verbindung unterbrochen, verbinde neu …'
+                : tk.isNotEmpty
+                    ? '🔊 ${tk.map((x) => js(x['ident']) == vx.confMe ? 'Du' : js(x['name'])).join(', ')} ${tk.length > 1 ? 'sprechen' : 'spricht'}'
+                    : vx.confMuted
+                        ? '🔇 Von der Einsatzleitung stumm geschaltet'
                         : vx.confSpeak
-                            ? 'Verbunden · Senden über die Sprechtaste oder «Mikrofon offen»'
+                            ? (vx.confMic ? 'Dein Mikrofon ist offen' : 'Du hörst zu · zum Sprechen die Live-Taste halten')
                             : 'Verbunden · in diesem Kanal nur zuhören')
-                : 'Echtzeit über den Medienserver. Wer nicht verbunden ist, erhält die Durchsagen.'),
+        : '${cl.length} verbunden${vx.confCh != null ? ' · du bist in «${vx.chName(vx.confCh)}»' : ''}';
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _chSel(
+          'Kanal der Konferenz',
+          cid,
+          vx.chs.map((x) {
+            final id = ji(x['id'])!, k = all.where((y) => ji(y['ch']) == id).length;
+            return DropdownMenuItem(value: id, child: Text('${js(x['name'])}${vx.confCh == id ? ' ● verbunden' : k > 0 ? ' ($k)' : ''}', overflow: TextOverflow.ellipsis));
+          }).toList(),
+          vx.setCc),
+      Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+          child: Row(children: [
+            if (inC && vx.confState == 'on') ...[const Chip2('LIVE', color: okGreen), const SizedBox(width: 6)],
+            Expanded(child: Text(stt, style: TextStyle(fontWeight: tk.isNotEmpty || vx.confMuted ? FontWeight.bold : null, color: tk.isNotEmpty ? okGreen : (inC && vx.confMuted ? const Color(0xFFFFB4A6) : null)))),
           ])),
+      const Divider(height: 1),
       Expanded(
-          child: ListView(padding: const EdgeInsets.symmetric(horizontal: 12), children: [
+          child: ListView(padding: const EdgeInsets.symmetric(horizontal: 8), children: [
         ...cl.map(who),
+        if (cl.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Mut('Noch niemand verbunden.')),
         ...s.participants.where((p) => p['left_at'] == null && p['mode'] != 'declined' && !ids.contains('u${p['user_id']}')).map((p) => Opacity(
             opacity: .55,
-            child: ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: avatar(p, r: 16), title: Text(js(p['name'])), subtitle: const Text('nicht in der Konferenz · erhält Durchsagen')))),
+            child: ListTile(dense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 4), leading: avatar(p, r: 16), title: Text(js(p['name'])), subtitle: const Text('nicht in der Konferenz · erhält Durchsagen')))),
       ])),
       Container(
           decoration: BoxDecoration(border: Border(top: BorderSide(color: Theme.of(c).dividerColor))),
           padding: const EdgeInsets.all(10),
           child: inC
               ? Row(children: [
-                  if (vx.confSpeak) PttButton(vx: vx, ch: () => vx.ch, size: 56),
-                  if (vx.confSpeak) const SizedBox(width: 8),
-                  if (vx.confSpeak) Expanded(child: SwitchListTile(dense: true, contentPadding: EdgeInsets.zero, title: const Text('Mikrofon offen'), value: vx.confOpen, onChanged: vx.setOpen)) else const Spacer(),
+                  if (vx.confSpeak) ...[
+                    PttButton(vx: vx, ch: () => vx.confSpeak ? vx.confCh : null, id: 'conf', size: 56, live: true),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                      Text(_liveTxt(vx), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Row(children: [SizedBox(height: 32, child: Switch(value: vx.confOpen, onChanged: vx.setOpen)), const Text('Mikrofon offen')]),
+                    ])),
+                  ] else
+                    const Spacer(),
                   OutlinedButton(onPressed: vx.confLeave, child: const Text('Verlassen')),
                 ])
-              : FilledButton(onPressed: vx.ch == null ? null : () => vx.confJoin(vx.ch!), child: Text('Konferenz «${vx.chName(vx.ch)}» beitreten'))),
+              : FilledButton(
+                  onPressed: cid == null || vx.confState == 'connecting' ? null : () => vx.confJoin(cid),
+                  child: Text(vx.confState == 'connecting' ? 'Verbinde …' : (vx.confCh != null ? 'Zu «${vx.chName(cid)}» wechseln' : '«${vx.chName(cid)}» beitreten')))),
     ]);
   }
 
   Widget _build(BuildContext context) {
     if (!vx.on) return Column(children: [PanelHead('Funk', onClose: () => widget.map.openPanel(null)), const Padding(padding: EdgeInsets.all(12), child: Mut('Kein Funk in diesem Einsatz.'))]);
-    final tab = vx.confAvail ? _tab : 'ann', its = vx.list(vx.ch), chs = vx.chs, cur = chs.where((c) => ji(c['id']) == vx.ch).firstOrNull;
+    final tab = vx.confAvail ? (_tab ?? 'conf') : 'ann', its = vx.list(vx.ch), chs = vx.chs, cur = chs.where((c) => ji(c['id']) == vx.ch).firstOrNull, n = vx.unheard(null);
     final hi = its.isEmpty ? 0 : ji(its.last['id'])!;
     if (tab == 'ann' && hi != _last) {
       _last = hi;
@@ -656,30 +846,31 @@ class _VoicePanelState extends State<VoicePanel> {
       });
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      PanelHead('🎙 Funk', onClose: () => widget.map.openPanel(null), actions: [
-        const Mut('Mithören', size: 12),
-        Switch(value: vx.listen, onChanged: vx.setListen),
-      ]),
-      SizedBox(
-          height: 44,
-          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 8), children: [
-            if (vx.confAvail) ...[
-              _chip('Durchsagen', tab == 'ann', () => setState(() => _tab = 'ann')),
-              _chip('Live-Konferenz${vx.room != null ? ' ●' : ''}', tab == 'conf', () => setState(() => _tab = 'conf')),
-              const SizedBox(width: 10),
-            ],
-            ...chs.map((c) {
-              final id = ji(c['id'])!, u = tab == 'ann' ? vx.unheard(id) : 0;
-              return _chip('${js(c['name'])}${u > 0 ? ' ($u)' : ''}${vx.confCh == id ? ' ●' : ''}', vx.ch == id, () {
-                vx.ch = id;
-                vx.markHeard(id);
-              });
-            }),
-          ])),
-      const Divider(height: 1),
+      PanelHead('🎙 Funk', onClose: () => widget.map.openPanel(null)),
+      if (vx.confAvail)
+        Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+            child: SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(value: 'conf', label: Text(vx.room != null ? '● Live-Konferenz' : 'Live-Konferenz')),
+                  ButtonSegment(value: 'ann', label: Text(n > 0 ? 'Durchsagen ($n)' : 'Durchsagen')),
+                ],
+                selected: {tab},
+                onSelectionChanged: (x) => setState(() => _tab = x.first))),
       if (tab == 'conf')
         Expanded(child: _conf(context))
       else ...[
+        _chSel(
+            'Kanal der Durchsagen',
+            vx.ch,
+            chs.map((c) {
+              final id = ji(c['id'])!, u = vx.unheard(id);
+              return DropdownMenuItem(value: id, child: Text('${js(c['name'])}${u > 0 ? ' ($u neu)' : ''}${jb(c['speak']) ? '' : ' – nur hören'}', overflow: TextOverflow.ellipsis));
+            }).toList(),
+            vx.setCh,
+            trailing: Column(mainAxisSize: MainAxisSize.min, children: [SizedBox(height: 30, child: Switch(value: vx.listen, onChanged: vx.setListen)), const Mut('Mithören', size: 11)])),
+        const Divider(height: 1),
         Expanded(
             child: its.isEmpty
                 ? const Padding(padding: EdgeInsets.all(12), child: Mut('Noch keine Durchsagen in diesem Kanal.'))
@@ -692,26 +883,24 @@ class _VoicePanelState extends State<VoicePanel> {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
             child: cur != null && jb(cur['speak'])
                 ? Row(children: [
-                    PttButton(vx: vx, ch: () => vx.ch, size: 60),
+                    PttButton(vx: vx, ch: () => vx.ch, id: 'ann', size: 60),
                     const SizedBox(width: 12),
                     Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(_recTxt(vx), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Mut('Kanal «${js(cur['name'])}» · höchstens ${vx.maxS} s${vx.pend > 0 ? ' · wird gesendet …' : ''}${vx.confCh == vx.ch ? ' · geht auch live in die Konferenz' : ''}', size: 12),
+                      Mut('Durchsage «${js(cur['name'])}» · höchstens ${vx.maxS} s${vx.pend > 0 ? ' · wird gesendet …' : ''}${vx.confCh == vx.ch ? ' · geht auch live in die Konferenz' : ''}', size: 12),
                     ])),
                   ])
                 : Mut(cur == null ? 'Kein Kanal.' : 'In diesem Kanal darfst du nur zuhören.')),
-        CheckboxListTile(
-            dense: true,
-            controlAffinity: ListTileControlAffinity.leading,
-            title: const Text('Sprechtaste auf der Karte'),
-            value: vx.pttMap,
-            onChanged: (v) => vx.setPref('vx_ptt', v == true)),
       ],
+      CheckboxListTile(
+          dense: true,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: const Text('Sprechtaste auf der Karte'),
+          value: vx.pttMap,
+          onChanged: (v) => vx.setPref('vx_ptt', v == true)),
     ]);
   }
-
-  Widget _chip(String t, bool sel, VoidCallback f) => Padding(padding: const EdgeInsets.only(right: 6), child: ChoiceChip(label: Text(t), selected: sel, onSelected: (_) => f()));
 }
 
 /// Register «Leitung»: Kanäle des Einsatzes und Links für Externe (funk.html?k=)
