@@ -184,7 +184,7 @@ foreach (['inc_kinds' => ["snd $tx NULL", "msg_lvl $tx NULL", "end_lvl $tx NULL"
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Fahrzeuge (Issue #177): participants.veh_id = im Fahrzeug (veh_at = zuletzt stark gesehen, veh_cand = Kandidat aus dem letzten Scan), track.veh_id = im Fahrzeug bei der Meldung,
 // users.beacon = Fahrzeuge auch ausserhalb von Einsätzen melden (freiwillig)
-foreach (['participants' => ['veh_id INT NULL', 'veh_at BIGINT NULL', 'veh_cand INT NULL'], 'track' => ['veh_id INT NULL'], 'users' => ['beacon INT DEFAULT 0'], 'veh_kinds' => ['carry_max INT NULL'], 'vehicles' => ['cap_max INT NULL']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
+foreach (['participants' => ['veh_id INT NULL', 'veh_at BIGINT NULL', 'veh_cand INT NULL'], 'track' => ['veh_id INT NULL'], 'users' => ['beacon INT DEFAULT 0'], 'veh_kinds' => ['carry_max INT NULL'], 'vehicles' => ['cap_max INT NULL', 'deleted INT DEFAULT 0']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 try { $db->exec("CREATE INDEX vehicle_seen_inc ON vehicle_seen(incident_id,ts)"); } catch (Throwable $e) {}
 // Standardarten beim ersten Aufruf (Sperre über die Zeile veh_mig wie bei den Einsatztypen): Zug-/Personenfahrzeug nimmt 1 Anhänger auf, Anhänger 1 Boot
 if (!$db->query("SELECT COUNT(*) c FROM veh_kinds")->fetch()['c']) {
@@ -1961,10 +1961,11 @@ function vehKinds($all = true) { global $db; $r = [];
   return $r; }
 function vehRow($v) { $v = floats(ints($v, ['id', 'kind_id', 'major', 'minor', 'active', 'sort', 'seen_at', 'seen_inc', 'seen_rssi', 'seen_uid', 'own_at', 'carrier_id', 'carrier_at', 'carrier_manual', 'lone_n', 'trip_at', 'fast_at', 'cap_max']), ['lat', 'lon', 'acc', 'own_lat', 'own_lon', 'trip_lat', 'trip_lon']);
   $v['cap'] = $v['cap'] === null ? null : vehCarries($v['cap']); return $v; }
-function vehAll() { global $db; return array_map('vehRow', $db->query("SELECT * FROM vehicles ORDER BY " . SORT_ORDER)->fetchAll()); }
-// Fahrzeuge, die in Einsätzen vorkommen (Sichtungen oder Verbund im Einsatz, als Fahrzeug oder Träger): nicht löschbar, nur deaktivierbar
+// $del: auch gelöschte (nur fürs Replay, sie bleiben dort mit Name und Art)
+function vehAll($del = false) { global $db; return array_map('vehRow', $db->query("SELECT * FROM vehicles" . ($del ? '' : ' WHERE COALESCE(deleted,0)=0') . " ORDER BY " . SORT_ORDER)->fetchAll()); }
+// Fahrzeuge, die in Einsätzen vorkommen (Sichtungen oder Verbund im Einsatz, als Fahrzeug oder Träger): Löschen markiert sie nur als gelöscht
 function vehUsed() { global $db; return array_map('intval', $db->query("SELECT vehicle_id FROM vehicle_seen UNION SELECT vehicle_id FROM veh_links WHERE incident_id IS NOT NULL UNION SELECT carrier_id FROM veh_links WHERE incident_id IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN)); }
-function vehById() { $o = []; foreach (vehAll() as $v) $o[$v['id']] = $v; return $o; }
+function vehById($del = false) { $o = []; foreach (vehAll($del) as $v) $o[$v['id']] = $v; return $o; }
 function vehCap($v, $kb) { return $v['cap'] ?? (array)($kb[$v['kind_id']]['carries'] ?? []); } // Höchstzahlen {Art-ID: Anzahl|null}
 function vehCapMax($v, $kb) { return $v['cap'] !== null ? ($v['cap_max'] ?? null) : ($kb[$v['kind_id']]['carry_max'] ?? null); } // insgesamt höchstens (null = nur je Art)
 // Platz auf dem Träger für ein Fahrzeug der Art $kid: -1 = nimmt diese Art nicht auf, PHP_INT_MAX = unbegrenzt, sonst freie Plätze ($except zählt nicht mit);
@@ -2108,7 +2109,7 @@ function vehReplay($id) { global $db; $s = $db->prepare("SELECT vehicle_id,ts,la
   $s = $db->prepare("SELECT vehicle_id,carrier_id,from_at,to_at FROM veh_links WHERE incident_id=? OR (from_at<=(SELECT COALESCE(ended_at, 9999999999) FROM incidents WHERE id=?) AND (to_at IS NULL OR to_at>=(SELECT alarm_at FROM incidents WHERE id=?))) ORDER BY from_at,id"); $s->execute([$id, $id, $id]);
   $links = array_map(fn($r) => [(int)$r['vehicle_id'], (int)$r['carrier_id'], (int)$r['from_at'], $r['to_at'] === null ? null : (int)$r['to_at']], $s->fetchAll());
   $ids = array_unique(array_merge(array_column($pts, 0), array_column($links, 0), array_column($links, 1))); if (!$ids) return null;
-  $by = vehById(); $kinds = array_column(vehKinds(), null, 'id'); $vs = [];
+  $by = vehById(true); $kinds = array_column(vehKinds(), null, 'id'); $vs = [];
   foreach ($ids as $v) if (isset($by[$v])) $vs[] = ['id' => $v, 'kind_id' => $by[$v]['kind_id'], 'name' => $by[$v]['name'], 'abbr' => $by[$v]['abbr'], 'color' => $by[$v]['color']];
   return ['kinds' => array_values(array_map('vehKindPub', array_filter($kinds, fn($k) => in_array($k['id'], array_column($vs, 'kind_id'), true)))), 'list' => $vs, 'pts' => $pts, 'links' => $links]; }
 function exPlan($inc) { global $db; if (empty($inc['plan_id'])) return null; $s = $db->prepare("SELECT * FROM ex_plans WHERE id=?"); $s->execute([(int)$inc['plan_id']]); return $s->fetch() ?: null; }
@@ -4604,14 +4605,14 @@ switch ($route) {
   out(['ok' => true]);
  case 'veh/kind/move': need('cfg_map'); sortMove('veh_kinds', "SELECT id FROM veh_kinds ORDER BY " . SORT_ORDER, [], (int)($in['id'] ?? 0), (int)($in['dir'] ?? 1)); out(['ok' => true]);
  case 'veh/kind/remove': need('cfg_map'); // nur ohne Fahrzeuge dieser Art; aus den carries der übrigen entfernt
-  $kid = (int)($in['id'] ?? 0); $s = $db->prepare("SELECT COUNT(*) FROM vehicles WHERE kind_id=?"); $s->execute([$kid]);
+  $kid = (int)($in['id'] ?? 0); $s = $db->prepare("SELECT COUNT(*) FROM vehicles WHERE kind_id=? AND COALESCE(deleted,0)=0"); $s->execute([$kid]);
   if ($s->fetchColumn()) fail('Es gibt Fahrzeuge dieser Art. Deaktiviere die Art stattdessen oder ordne die Fahrzeuge zuerst einer anderen Art zu.');
   $db->prepare("DELETE FROM veh_kinds WHERE id=?")->execute([$kid]);
   foreach (vehKinds() as $k) { $ca = (array)$k['carries']; if (array_key_exists((string)$kid, $ca)) { unset($ca[(string)$kid]); $db->prepare("UPDATE veh_kinds SET carries=? WHERE id=?")->execute([json_encode((object)$ca), $k['id']]); } }
   out(['ok' => true]);
  case 'vehicles': need('cfg_map'); // Verwaltung: alle Fahrzeuge (auch deaktivierte), Arten, Einstellung
   $used = vehUsed();
-  out(['vehicles' => array_map(fn($v) => array_diff_key($v, array_flip(['seen_uid', 'own_lat', 'own_lon', 'lone_n', 'trip_lat', 'trip_lon', 'trip_at', 'fast_at'])) + ['deletable' => in_array($v['id'], $used, true) ? 0 : 1], vehAll()),
+  out(['vehicles' => array_map(fn($v) => array_diff_key($v, array_flip(['seen_uid', 'own_lat', 'own_lon', 'lone_n', 'trip_lat', 'trip_lon', 'trip_at', 'fast_at'])) + ['used' => in_array($v['id'], $used, true) ? 1 : 0], vehAll()),
     'kinds' => vehKinds(), 'icons' => VEH_ICONS, 'cfg' => beaconCfg(), 'num' => BEACON_NUM, 'app' => VEH_APP, 'home_vis' => VEH_HOME, 'feat' => (object)array_map(fn($f) => ['veh' => $f['veh'], 'vehp' => $f['vehp']], featuresAll())]);
  case 'vehicle/save': need('cfg_map'); // Fahrzeug: name, descr, kind_id, abbr, color, uuid ('' = Standard-UUID), major, minor (0–65535), cap (null = wie die Art), cap_max (nur mit cap: insgesamt, leer = nur je Art), active
   $old = null; if (!empty($in['id'])) { $old = vehById()[(int)$in['id']] ?? fail('Fahrzeug nicht gefunden', 404); }
@@ -4631,14 +4632,16 @@ switch ($route) {
   else $db->prepare("INSERT INTO vehicles(name,descr,kind_id,abbr,color,uuid,major,minor,cap,active,cap_max) VALUES(?,?,?,?,?,?,?,?,?,?,?)")->execute($row);
   out(['ok' => true]);
  case 'vehicle/move': need('cfg_map'); $v = vehById()[(int)($in['id'] ?? 0)] ?? fail('Fahrzeug nicht gefunden', 404); // innerhalb seiner Art
-  sortMove('vehicles', "SELECT id FROM vehicles WHERE kind_id=" . (int)$v['kind_id'] . " ORDER BY " . SORT_ORDER, [], $v['id'], (int)($in['dir'] ?? 1)); out(['ok' => true]);
- case 'vehicle/remove': need('cfg_map'); // löschen nur ohne Sichtungen und Verbund in Einsätzen, sonst deaktivieren
-  $v = vehById()[(int)($in['id'] ?? 0)] ?? fail('Fahrzeug nicht gefunden', 404);
-  if (in_array($v['id'], vehUsed(), true)) fail('Das Fahrzeug kommt in Einsätzen vor. Deaktiviere es stattdessen.');
-  // Verbund ausserhalb von Einsätzen (z. B. in der Verwaltung gesetzt) zählt nicht und wird mit gelöscht
-  $db->prepare("DELETE FROM veh_links WHERE vehicle_id=? OR carrier_id=?")->execute([$v['id'], $v['id']]); $db->prepare("DELETE FROM veh_cand WHERE a=? OR b=?")->execute([$v['id'], $v['id']]);
-  $db->prepare("UPDATE vehicles SET carrier_id=NULL, carrier_at=NULL, carrier_manual=0 WHERE carrier_id=?")->execute([$v['id']]); $db->prepare("DELETE FROM vehicles WHERE id=?")->execute([$v['id']]);
-  out(['ok' => true]);
+  sortMove('vehicles', "SELECT id FROM vehicles WHERE COALESCE(deleted,0)=0 AND kind_id=" . (int)$v['kind_id'] . " ORDER BY " . SORT_ORDER, [], $v['id'], (int)($in['dir'] ?? 1)); out(['ok' => true]);
+ case 'vehicle/remove': need('cfg_map'); // löschen; kommt es in Einsätzen vor (Sichtungen, Verbund im Einsatz), nur als gelöscht markiert, damit Replay und Log stimmen
+  $v = vehById()[(int)($in['id'] ?? 0)] ?? fail('Fahrzeug nicht gefunden', 404); $db->beginTransaction();
+  // laufenden Verbund lösen: als Fahrzeug und als Träger
+  $db->prepare("UPDATE veh_links SET to_at=? WHERE (vehicle_id=? OR carrier_id=?) AND to_at IS NULL")->execute([$now, $v['id'], $v['id']]); $db->prepare("DELETE FROM veh_cand WHERE a=? OR b=?")->execute([$v['id'], $v['id']]);
+  $db->prepare("UPDATE vehicles SET carrier_id=NULL, carrier_at=NULL, carrier_manual=0 WHERE carrier_id=?")->execute([$v['id']]);
+  $db->prepare("UPDATE participants SET veh_id=NULL WHERE veh_id=?")->execute([$v['id']]); $db->prepare("UPDATE participants SET veh_cand=NULL WHERE veh_cand=?")->execute([$v['id']]);
+  if (in_array($v['id'], vehUsed(), true)) $db->prepare("UPDATE vehicles SET deleted=1, active=0, carrier_id=NULL, carrier_at=NULL, carrier_manual=0 WHERE id=?")->execute([$v['id']]);
+  else { $db->prepare("DELETE FROM veh_links WHERE vehicle_id=? OR carrier_id=?")->execute([$v['id'], $v['id']]); $db->prepare("DELETE FROM vehicles WHERE id=?")->execute([$v['id']]); }
+  $db->commit(); out(['ok' => true]);
  case 'vehicle/link': need('cfg_map'); // Verbund in der Verwaltung von Hand setzen; im laufenden Einsatz mit Log
   $inc = activeIncident(); vehLinkSet((int)($in['id'] ?? 0), isset($in['carrier']) && $in['carrier'] !== null ? (int)$in['carrier'] : null, true, $uid, $inc && feature($inc, 'veh') ? $inc : null); out(['ok' => true]);
  case 'vehicle/pos': need('cfg_map'); // Standort von Hand setzen (z. B. Magazin, Test ohne Beacon)
