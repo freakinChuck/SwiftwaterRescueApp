@@ -289,9 +289,18 @@ async function changesDlg(since,quiet){let r;try{r=await api('changes')}catch(e)
 // Nach einem Update einmal «Was ist neu» mit den Versionen seit der zuletzt gesehenen (pro Gerät, sw_seenver); beim allerersten Öffnen nur merken
 function whatsNew(v){if(!v||!v.version||v.version==='0.0.0')return;let seen='';try{seen=localStorage.getItem('sw_seenver')||'';localStorage.setItem('sw_seenver',v.version)}catch(e){return}
   if(seen&&verCmp(v.version,seen)>0)changesDlg(seen,true)}
+/* ---------- Organisation (Issue #123) ---------- */
+// Logo (= Logo des After Action Review) und Name der Organisation, o = me.org_info bzw. Route org ({name, logo}; logo = Stand, ändert die Adresse)
+const orgLogo=o=>o&&o.logo?`${API}?r=org/logo&v=${encodeURIComponent(o.logo)}`:'';
+function orgMark(o,cls,fb){const n=(o&&o.name)||fb||'',u=orgLogo(o);if(!n&&!u)return'';
+  return`<span class="org${cls?' '+cls:''}">${u?`<img src="${u}" alt="${n?'':'Logo der Organisation'}" onerror="this.remove()">`:''}${n?`<span class="orgn">${esc(n)}</span>`:''}</span>`}
+// Links auf Impressum, Lizenzen und Datenschutz (Fusszeilen der Verwaltung und des Menüs der Einsatz-App)
+const legalLinks=()=>[['impressum','Impressum'],['lizenzen','Lizenzen'],['datenschutz','Datenschutz']].map(([h,l])=>`<a href="legal.html#${h}" target="_blank" rel="noopener">${l}</a>`).join(' · ');
 /* ---------- Anmeldung ---------- */
-function loginView(el,title,done){el.innerHTML=`<div class="card"><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="index.html?demo">🎓 Demo ausprobieren (ohne Anmeldung)</a><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
-  fetch(`${API}?r=version`).then(r=>r.json()).then(v=>{const e=$('#lgVer');if(e&&v.version)e.textContent='Version '+verTxt(v)}).catch(()=>{}); // Version auch ohne Anmeldung (Issue #175)
+function loginView(el,title,done){el.innerHTML=`<div class="card"><div id="lgOrg"></div><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="index.html?demo">🎓 Demo ausprobieren (ohne Anmeldung)</a><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
+  // Organisation mit Logo (Issue #123) und Version (Issue #175) ohne Anmeldung; ältere Server ohne Route org: nur die Version
+  fetch(`${API}?r=org`).then(r=>r.ok?r.json():fetch(`${API}?r=version`).then(r=>r.json()).then(v=>({version:v}))).then(o=>{const e=$('#lgVer'),g=$('#lgOrg'),v=o.version;
+    if(e&&v&&v.version)e.textContent='Version '+verTxt(v);if(g&&!DEMO)g.innerHTML=orgMark(o,'orgbig')}).catch(()=>{});
   const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 /* ---------- Dialoge ---------- */

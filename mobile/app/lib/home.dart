@@ -11,6 +11,7 @@ import 'demo_ui.dart';
 import 'main.dart';
 import 'monitor.dart';
 import 'notify.dart';
+import 'org.dart';
 import 'push.dart';
 import 'sounds.dart';
 import 'service.dart';
@@ -58,6 +59,7 @@ class _HomeState extends State<HomePage> {
   Map<String, String> _push = {};
   Map<String, LocStat> _loc = {};
   final Map<String, Map> _ver = {}; // Version je Konto (Route version, ohne Anmeldung): Hinweis «Bitte App aktualisieren» (Issue #175)
+  final Map<String, Map> _org = {}; // Organisation mit Logo je Konto (Route org, ohne Anmeldung, Issue #123)
   bool _newShown = false;
   Timer? _t;
   StreamSubscription? _sub;
@@ -108,6 +110,9 @@ class _HomeState extends State<HomePage> {
       try {
         final v = await Api(a.base).call('version', timeout: const Duration(seconds: 10));
         _ver[a.id] = v;
+      } catch (_) {}
+      try {
+        _org[a.id] = await Api(a.base).call('org', timeout: const Duration(seconds: 10)); // Logo der Organisation (Issue #123), ältere Server ohne Route
       } catch (_) {}
     }
     if (mounted) setState(() {});
@@ -232,6 +237,7 @@ class _HomeState extends State<HomePage> {
           padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
+              if (orgLogoUrl(a.base, _org[a.id]) != null) Padding(padding: const EdgeInsets.only(right: 12), child: OrgLogo(a.base, _org[a.id], h: 44, maxW: 96)),
               Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(a.label, style: th.textTheme.titleMedium),

@@ -51,7 +51,7 @@ const fOn=k=>{const f=D&&(D.features||[]).find(x=>x.k===k);return!f||Object.valu
 
 function impressum(){const c=(D&&D.cfg)||{},F=[['org','Organisation'],['addr','Adresse'],['contact','Kontakt'],['resp','Verantwortlich'],['hosting','Hosting']];
   const rows=F.filter(([k])=>c[k]).map(([k,l])=>`<dt>${l}</dt><dd>${esc(c[k])}</dd>`).join('');
-  return`<h2>Impressum</h2>
+  return`<h2>Impressum</h2>${D&&D.org_info&&D.org_info.logo?`<div style="margin:.4rem 0 .8rem">${orgMark({logo:D.org_info.logo},'orgbig')}</div>`:''}
   <div class="lgc">${rows?`<dl>${rows}</dl>`:`<div class="mut">Die betreibende Organisation hat noch keine Angaben hinterlegt (Verwaltung → Rechtliches → «Impressum & Datenschutz»).</div>`}
   ${c.note?`<p class="pre">${esc(c.note)}</p>`:''}${D&&D.updated?`<div class="mut">Angaben zuletzt geändert am ${new Date(D.updated*1000).toLocaleDateString('de-CH')}</div>`:''}${D&&D.version?`<div class="mut">Version ${esc(verTxt(D.version))}</div>`:''}</div>
   <h3>Zweck</h3>

@@ -12,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'accounts.dart';
 import 'api.dart';
 import 'monitor.dart';
+import 'notify.dart';
 import 'sounds.dart';
 
 const _apiKey = String.fromEnvironment('FCM_API_KEY');
@@ -59,6 +60,14 @@ Future<void> _show(RemoteMessage m) async {
   final a = await accountFor(d);
   if (a == null || !a.active) return;
   final tag = '${d['tag'] ?? 'sw'}';
+  // Einsatzende (Issue #174): zuerst die Meldungen des Einsatzes zurücknehmen; rt = nur zurücknehmen, nichts Neues zeigen
+  if (d['end'] != null) {
+    await cancelIncNotes(a.id);
+    if (d['rt'] == '1') {
+      await markTag(a.id, tag); // die Überwachung meldet das Ende dann nicht noch einmal
+      return;
+    }
+  }
   await report(a, tag, '${d['t'] ?? m.notification?.title ?? 'Swiftwater Rescue'}', '${d['b'] ?? m.notification?.body ?? ''}', _lvl(d),
       kind: int.tryParse('${d['kind'] ?? ''}'), ksnd: d['ksnd'] as String?);
 }

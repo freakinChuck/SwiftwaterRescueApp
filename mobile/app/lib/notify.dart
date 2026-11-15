@@ -139,6 +139,19 @@ Future<void> showNote(String acc, String tag, String title, String body, String 
   await notes.show(id: noteId(acc, tag), title: title, body: body, notificationDetails: NotificationDetails(android: android, iOS: ios), payload: acc);
 }
 
+/// Einsatzende (Issue #174): alle Meldungen des Kontos zum Einsatz schliessen (Alarm i:, Nachrichten m:, Durchsagen v:, Entfernen k:;
+/// es läuft nur ein Einsatz gleichzeitig) und den Weckton beenden. Meldungen, die iOS selbst über APNs zeigt, ersetzt dort der Server (collapse-id).
+Future<void> cancelIncNotes(String acc) async {
+  await initNotes();
+  await alarmStop();
+  try {
+    for (final n in await notes.getActiveNotifications()) {
+      final t = n.tag ?? '';
+      if (RegExp(r'^[imkv]:').hasMatch(t) && n.id == noteId(acc, t)) await notes.cancel(id: n.id!, tag: t);
+    }
+  } catch (_) {}
+}
+
 Future<void> cancelNote(String acc, String tag) async {
   if (tag.startsWith('i:')) await alarmStop(); // Alarm quittiert: Weckton aus
   await notes.cancel(id: noteId(acc, tag), tag: tag);

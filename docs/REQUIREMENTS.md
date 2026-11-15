@@ -273,6 +273,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - Kritischer Alarm trotz «Nicht stören»/Lautlos (braucht native App) (**Grenze**).
 - Push auf iPhone/iPad nur als installierte App ab iOS 16.4 (**Grenze**).
 - **PW-04** – In der nativen App zeigt die Web-App keinen Web-Push und kein «App installieren»; Benachrichtigungen kommen über die App (#108).
+- **PW-06** – Beim Einsatzende werden die Meldungen des Einsatzes (Alarm, Nachrichten, Durchsagen) auf den Geräten zurückgenommen statt nur eine neue Meldung zu senden: Teilnehmende erhalten «beendet» gemäss der Stufe des Einsatztyps anstelle des Alarms (Stufe «Keine» = nur zurücknehmen), übrige Alarmierte nur die Rücknahme; ein noch nicht zugestellter Alarm wird schon beim Push-Dienst ersetzt. Android zeigt dabei nichts Neues, Web-Push und iOS ersetzen den Alarm still durch «beendet» (Browser verlangen bei jedem Push eine Anzeige) (#174).
 
 ## 20. Verwaltung (VW)
 
@@ -283,6 +284,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **VW-05** – Passwort ändern, Abmelden und Impressum stehen in der Kopfzeile der Verwaltung in einem Konto-Menü mit dem Namen der Person (#128).
 - **VW-06** – Technisches Applikationslog in der Verwaltung (Kategorie «System», eigenes Recht): Ereignisse (Anmeldungen, Einsätze starten und beenden, geänderte Benutzer, Rollen, Gruppen und Einstellungen, automatische Anonymisierung, jeder Push-Versand mit Anzahl Empfänger und Geräte), Warnungen (fehlgeschlagene Anmeldungen, Datenquellen ohne Antwort, abgelehnte oder nicht gesendete Push-Nachrichten, App-Push nicht eingerichtet, fehlgeschlagene AI-Anfragen, PHP-Warnungen) und Fehler (Serverfehler, Abbrüche, Skriptfehler im Browser und in der App-WebView); filterbar nach Stufe, Bereich und Text, neueste zuerst, automatisch aktualisierbar, Export als CSV; ohne Passwörter, Schlüssel und Einsatzinhalte (#139).
 - **VW-07** – Das Applikationslog wird nach einer einstellbaren Frist gelöscht (1–365 Tage, Standard 30); die Datenschutzerklärung nennt sie (#139).
+- **VW-08** – Kopfzeile der Verwaltung und von «Meine Einsätze» mit Logo und Name der Organisation; Fusszeile mit Organisation, Impressum, Lizenzen, Datenschutz, Version und «Was ist neu» (#123).
 
 ## 21. AI-Assistent (AI)
 
@@ -303,6 +305,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **RC-03** – Lizenzen und Nutzungsbedingungen aller verwendeten Bibliotheken, Daten und Dienste mit Quellenangabe; Datenquellen gemäss den aktuellen Einstellungen (aktive Overpass-Server, PostGIS, PostGIS-API, Helikopter-Quellen, BAFU-Hydrodaten, eingeschaltete Kartenanbieter je Einsatztyp) (#102, #106, #125, #131). Die Datenschutzerklärung nennt die Fahrzeuge (Beacons, Zuordnung «im Fahrzeug», freiwillige Meldungen ausserhalb von Einsätzen) und die Nutzung von Bluetooth (#177).
 - **RC-04** – Datenschutzerklärung nach DSG: bearbeitete Daten, Speicherort, Aufbewahrung und Anonymisierungsfristen gemäss den aktuellen Einstellungen (je aktivem Einsatztyp), Empfänger, Weitergabe an Dritte gemäss eingeschalteten Funktionen und Kartenanbietern, Speicher im Gerät, Rechte der betroffenen Personen (#102).
 - **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
+- **RC-06** – Logo und Name der Organisation sind in der App präsent: Anmeldung, Kopfzeile des Menüs der Einsatz-App, Fusszeile des Menüs (mit Impressum, Lizenzen, Datenschutz), Profil (Karte «Rechtliches»), Verwaltung, öffentliche Ansicht, Impressum und Kontenliste der nativen App. Logo = Logo des After Action Review (Auswertung → «After Action Review einrichten»), Name aus «Rechtliches», sonst der des Review; auf hellem Grund, damit es gut sichtbar ist (#123).
 
 
 ## 23. Native Apps (NT)
