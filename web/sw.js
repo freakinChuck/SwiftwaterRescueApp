@@ -48,6 +48,7 @@ self.addEventListener('notificationclick',e=>{e.notification.close();const inc=/
   if(/^f:/.test(e.notification.tag||''))return e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>c.url.includes('admin.html'));
     if(c&&'navigate'in c)return c.navigate(new URL('admin.html#meine',self.registration.scope).href).then(w=>(w||c).focus()).catch(()=>c.focus());return self.clients.openWindow('admin.html#meine')}));
   e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>new URL(c.url).pathname.endsWith('/')||c.url.includes('index.html'));
-    if(c){if(inc)c.postMessage({sw:'focus'});return c.focus()}
-    return self.clients.openWindow(((e.notification.data&&e.notification.data.url)||'./')+(inc?'?fokus=1':''))}))});
+    const iid=(/^i:(\d+)$/.exec(e.notification.tag||'')||[])[1]; // Alarm: diesen Einsatz anzeigen (parallele Einsätze, Issue #167)
+    if(c){if(inc)c.postMessage({sw:'focus',inc:iid?+iid:0});return c.focus()}
+    return self.clients.openWindow(((e.notification.data&&e.notification.data.url)||'./')+(inc?'?fokus=1'+(iid?'&inc='+iid:''):''))}))});
 // Push-Dienst hat das Abonnement erneuert: neu beim Server anmelden geht hier nicht (kein Token); die App meldet es beim nächsten Start neu an (pushSync)

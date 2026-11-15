@@ -1298,7 +1298,7 @@ const MAIL_WHERE = ['subject' => 'Nur im Betreff', 'all' => 'Im Betreff oder im 
 const MAIL_HIST = 30;   // so viele zuletzt verarbeitete E-Mails im Verlauf der Verwaltung
 const MAIL_MAX = 20;    // höchstens so viele neue E-Mails je Abruf
 const MAIL_BYTES = 262144; // von jeder E-Mail nur der Anfang (Kopf und Text, Anhänge interessieren nicht)
-const MAIL_RES = ['start' => 'Einsatz gestartet', 'busy' => 'Einsatz läuft bereits (im Log vermerkt)', 'nomatch' => 'Kein Schlüsselwort', 'sender' => 'Absender nicht erlaubt', 'auth' => 'Absender nicht bestätigt (SPF/DKIM/DMARC)',
+const MAIL_RES = ['start' => 'Einsatz gestartet', 'busy' => 'Einsatz dieses Typs läuft bereits (im Log vermerkt)', 'nomatch' => 'Kein Schlüsselwort', 'sender' => 'Absender nicht erlaubt', 'auth' => 'Absender nicht bestätigt (SPF/DKIM/DMARC)',
   'old' => 'Zu alt', 'dup' => 'Schon verarbeitet', 'nogroup' => 'Keine aufbietbaren Personen', 'err' => 'Fehler'];
 function mailCfg($v = null) { if ($v === null) $v = json_decode(setting('mail_in', ''), true); $v = is_array($v) ? $v : []; $c = MAIL_DEFAULT;
   foreach (['host', 'user', 'folder'] as $k) if (is_string($v[$k] ?? null)) $c[$k] = mb_substr(trim($v[$k]), 0, 200);
@@ -1412,8 +1412,8 @@ function mailHandle($raw, $src) { global $db, $now; $c = mailCfg(); $m = mailPar
   if (!$res) { $k = $hit['kind']; $e['kind'] = $k['id']; $e['word'] = $hit['word'];
     $msg = $m['subject'] !== '' ? $m['subject'] : 'Alarm per E-Mail'; if ($c['body'] && $m['text'] !== '') $msg .= ' – ' . preg_replace('/\s+/u', ' ', $m['text']);
     $msg = mb_substr($msg, 0, 1000);
-    try { $db->beginTransaction(); $act = activeIncident();
-      if ($act) { logev((int)$act['id'], null, 'mail', 'Alarm-E-Mail eingegangen (' . $k['name'] . ', von ' . $m['from'] . '), kein neuer Einsatz, weil bereits einer läuft: ' . $msg); $res = 'busy'; $e['inc'] = (int)$act['id']; }
+    try { $db->beginTransaction(); $act = array_values(array_filter(runningIncidents(), fn($r) => (int)$r['kind_id'] === (int)$k['id']))[0] ?? null; // Issue #167: parallel möglich, nur ein laufender desselben Typs gilt als derselbe Alarm
+      if ($act) { logev((int)$act['id'], null, 'mail', 'Alarm-E-Mail eingegangen (' . $k['name'] . ', von ' . $m['from'] . '), kein neuer Einsatz, weil bereits einer dieses Typs läuft: ' . $msg); $res = 'busy'; $e['inc'] = (int)$act['id']; }
       else { $r = mailStart($k, $hit['rule'], $msg, $c['pls'] ? mailCoord($m['subject'] . "\n" . $m['text']) : null, $m, $c); $res = $r ? 'start' : 'nogroup'; if ($r) $e['inc'] = $r; }
       $db->commit(); }
     catch (Throwable $x) { if ($db->inTransaction()) $db->rollBack(); $res = 'err'; alog('err', 'mail', 'E-Mail-Alarm: Start fehlgeschlagen: ' . $x->getMessage(), ['file' => basename($x->getFile()), 'line' => $x->getLine()]); } }
@@ -2381,7 +2381,42 @@ function canMessage($inc) {
   $s = $db->prepare("SELECT can_message FROM roles WHERE id=?"); $s->execute([$p['role_id']]); $r = $s->fetch();
   return !$r || (bool)(int)$r['can_message'];
 }
-function activeIncident() { global $db; return $db->query("SELECT * FROM incidents WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1")->fetch() ?: null; }
+// Parallele Einsätze (Issue #167): mehrere Einsätze können gleichzeitig laufen. Das Gerät wählt den angezeigten mit dem Header X-Inc (selInc);
+// ohne Wahl (ältere Geräte, native App) bzw. bei beendetem gewähltem: der Einsatz, an dem man teilnimmt, sonst der neuste, den man sehen darf, sonst der neuste.
+// Standortmeldungen gehen immer an den Einsatz, an dem man teilnimmt (man kann einen anderen ansehen). Eine Person nimmt höchstens an einem teil (incident/join).
+function runningIncidents() { global $db; return $db->query("SELECT * FROM incidents WHERE ended_at IS NULL ORDER BY id DESC")->fetchAll(); }
+function myRunning() { global $db, $uid; if (!$uid) return null; $s = $db->prepare("SELECT i.* FROM incidents i JOIN participants p ON p.incident_id=i.id AND p.user_id=? WHERE i.ended_at IS NULL AND p.mode<>'declined' AND p.left_at IS NULL ORDER BY i.id DESC LIMIT 1"); $s->execute([$uid]); $r = $s->fetch() ?: null; $s->closeCursor(); return $r; }
+function selInc() { $v = (string)($_SERVER['HTTP_X_INC'] ?? ''); return ctype_digit($v) ? (int)$v : 0; }
+function activeIncident() { global $uid, $route;
+  $rs = runningIncidents(); if (count($rs) < 2) return $rs[0] ?? null;
+  if (in_array($route, ['incident/location', 'beacon/report'], true) && ($m = myRunning())) return $m;
+  if ($id = selInc()) foreach ($rs as $r) if ((int)$r['id'] === $id) return $r;
+  if ($m = myRunning()) return $m;
+  if ($uid) foreach ($rs as $r) if (incAllowed($r)) return $r;
+  return $rs[0]; }
+// Laufende Einsätze für die Auswahl im Gerät (incident/state, incidents): nur die, die man sehen darf; mine = nimmt teil, alarm = alarmiert (wie alarmed())
+function incList() { global $me; $o = [];
+  foreach (runningIncidents() as $r) { if (!incAllowed($r)) continue; $p = part((int)$r['id']); $k = kindOf($r);
+    $o[] = ['id' => (int)$r['id'], 'message' => (int)$r['txt_anon'] ? '' : $r['message'], 'alarm_at' => (int)$r['alarm_at'], 'kind_id' => (int)$r['kind_id'], 'kind_name' => $k['name'], 'kind_color' => $k['color'], 'sec' => incSec($r),
+      'mine' => $p && $p['mode'] !== 'declined' && $p['left_at'] === null ? 1 : 0, 'joined' => $p ? 1 : 0, 'alarm' => alarmed($r) ? 1 : 0, 'ex_lead' => exLead($r) ? 1 : 0,
+      'level' => alarmLvl($r, $me['exercise_mode']), 'end_level' => noteLvl($r, 'end')]; }
+  return $o; }
+// Lage der übrigen laufenden Einsätze für die Karte (incident/state mit oth=1, others): nur lesend, ohne Nachrichten und Suchgebiet;
+// PLS, Markierungen/Bereiche/Linien, Rettlinge mit Standort, Externe und Einsatzkräfte mit Standort, je nach den Funktionen des Einsatztyps
+function incOther($r) { global $db; $id = (int)$r['id']; $F = features($r['kind_id']); $res = incRes($r);
+  $pois = []; if ($F['poi']) { $s = $db->prepare("SELECT id,kind,name,color,pts,sym FROM pois WHERE incident_id=? AND removed IS NULL ORDER BY id"); $s->execute([$id]);
+    $pois = array_map(fn($p) => symRow(array_merge(ints($p, ['id']), ['pts' => json_decode($p['pts'], true) ?: []])), $s->fetchAll()); }
+  $s = $db->prepare("SELECT p.user_id,p.role_id,p.lat,p.lon,u.name FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=? AND p.mode<>'declined' AND p.left_at IS NULL AND p.lat IS NOT NULL"); $s->execute([$id]);
+  return ['id' => $id, 'pls' => plsSources($r, $res), 'pois' => $pois,
+    'res' => array_values(array_map(fn($x) => ['id' => (int)$x['id'], 'name' => $x['name'], 'lat' => (float)$x['lat'], 'lon' => (float)$x['lon'], 'rescued' => $x['rescued_at'] !== null ? 1 : 0], array_filter($res, fn($x) => $x['lat'] !== null))),
+    'ext' => $F['ext'] ? array_values(array_map(fn($x) => ['id' => (int)$x['id'], 'name' => $x['name'], 'abbr' => $x['abbr'] ?? null, 'color' => $x['color'] ?? null, 'lat' => (float)$x['lat'], 'lon' => (float)$x['lon']], array_filter(incExternals($id), fn($x) => $x['lat'] !== null))) : [],
+    'ppl' => array_map(fn($p) => ['id' => (int)$p['user_id'], 'name' => $p['name'], 'role_id' => $p['role_id'] === null ? null : (int)$p['role_id'], 'lat' => (float)$p['lat'], 'lon' => (float)$p['lon']], $s->fetchAll())]; }
+// eigene Teilnahme an einem laufenden Einsatz (Standort teilen, auch wenn ein anderer angezeigt wird)
+function myIncPub() { $m = myRunning(); if (!$m) return null; $p = part((int)$m['id']); return ['id' => (int)$m['id'], 'mode' => $p['mode'], 'message' => $m['message'], 'kind_name' => kindOf($m)['name']]; }
+// vorbereitete Planungen, die diese Person starten darf (nur die eingetragene Leitung), auch während ein anderer Einsatz läuft
+function exStartable() { global $db, $uid;
+  return array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null],
+    array_values(array_filter($db->query("SELECT id,title,leads,invite,kind_id,doc FROM ex_plans WHERE active=1 AND incident_id IS NULL ORDER BY title")->fetchAll(), fn($p) => in_array($uid, exLeads($p), true)))); }
 // Rettling ohne Namen (Issue #86, Sichtungen in Übungen): «Unbekannter Rettling», fortlaufend, falls es schon unbekannte gibt
 function unknownName($incId) { global $db;
   $s = $db->prepare("SELECT COUNT(*) c FROM rescuees WHERE incident_id=? AND name LIKE 'Unbekannter Rettling%'"); $s->execute([$incId]); $n = (int)$s->fetch()['c'];
@@ -3349,7 +3384,6 @@ switch ($route) {
  case 'incident/start':
   $kind = kindStart($in); $kid = $kind['id']; need($kind['perm']); // Recht je Einsatztyp (Issue #63, #90)
   if (!kindMember($kind)) fail('Du bist in keiner Einsatzgruppe, die bei «' . $kind['name'] . '» aufbietbar ist', 403);
-  if (activeIncident()) fail('Es läuft bereits ein Einsatz');
   if (trim($in['message'] ?? '') === '') fail('Die Meldung ist Pflicht');
   $at = !empty($in['alarm_at']) ? (int)$in['alarm_at'] : $now;
   if ($at > $now + 60) fail('Der Alarmeingang darf nicht in der Zukunft liegen');
@@ -3385,8 +3419,9 @@ switch ($route) {
   out(['id' => $nid]);
 
  case 'incident/state': // Polling-Endpunkt: ?since=<letzte Nachrichten-ID>
-  $inc = activeIncident();
-  if ($inc && $inc['plan_id'] !== null) { exAuto($inc); $inc = activeIncident(); } // fällige automatische Freigaben
+  $inc = activeIncident(); $xa = 0;
+  foreach (runningIncidents() as $r) if ($r['plan_id'] !== null) { exAuto($r); $xa = 1; } // fällige automatische Freigaben, aller laufenden (Issue #167)
+  if ($xa) $inc = activeIncident();
   $blocked = $inc && !incAllowed($inc); // nicht aufgeboten (Issue #90): nur ein Hinweis, keine Daten
   if (!$inc || $blocked) {
     $last = $db->query("SELECT id,ended_at FROM incidents WHERE ended_at IS NOT NULL ORDER BY id DESC LIMIT 1")->fetch();
@@ -3395,7 +3430,7 @@ switch ($route) {
     // feste Standorte auch ohne Einsatz (Änderungswunsch #96): die aktiven permanenten, solange die Funktion für einen der Einsatztypen an ist
     $fpl = array_filter(featuresAll(), fn($f) => $f['place']) ? array_values(array_map(fn($r) => array_diff_key($r, ['active' => 1]), array_filter(placesOf(null), fn($r) => $r['active']))) : [];
     if ($blocked) $xp = [];
-    out(['incident' => null, 'fb_open' => count(array_filter(fbMine($uid), fn($x) => !$x['answered'])), 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
+    out(['incident' => null, 'incidents' => [], 'my_inc' => null, 'fb_open' => count(array_filter(fbMine($uid), fn($x) => !$x['answered'])), 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
   }
   $inc['id'] = (int)$inc['id']; $inc['plan_id'] = $inc['plan_id'] === null ? null : (int)$inc['plan_id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc = kindAdd($inc); $inc['kind'] = kindPub(kindOf($inc)); $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
@@ -3467,7 +3502,8 @@ switch ($route) {
       $s = $db->prepare("SELECT id,label,channel_id ch,speak,token,created,opened_at FROM voice_guests WHERE incident_id=? AND removed IS NULL ORDER BY id"); $s->execute([$id]);
       $vo['guest_links'] = $vk['guests'] ? array_map(fn($g) => ints($g, ['id', 'ch', 'speak', 'created', 'opened_at']), $s->fetchAll()) : []; } }
   unset($inc['voice_ch'], $inc['voice_anon']);
-  out(['incident' => $inc, 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
+  $il = incList(); $oth = isset($_GET['oth']) && count($il) > 1 ? array_values(array_map('incOther', array_filter(runningIncidents(), fn($r) => (int)$r['id'] !== $id && in_array((int)$r['id'], array_column($il, 'id'), true)))) : [];
+  out(['incident' => $inc, 'incidents' => $il, 'others' => $oth, 'my_inc' => myIncPub(), 'start_plans' => exStartable(), 'kinds' => kindsPub(), 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
        'participants' => array_map(function ($p) use ($pg, $F) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; if ($pg) $p['groups'] = $pg['m'][(int)$p['user_id']] ?? []; if (!$F['vehp'] || !$F['veh']) unset($p['veh_id']); return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at', 'veh_id']); }, $ps->fetchAll()),
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
        'air' => airAllowed($inc) ? 1 : 0, 'air_inc' => airCfg()['on'] ? (airInc($inc) ? 1 : 0) : null, 'ex_lead' => $xl, 'ex_title' => $inc['plan_id'] && ($xl || planner()) ? (exPlan($inc)['title'] ?? null) : null, 'plan' => $inc['plan_id'] && $inc['kind']['sec'] && ($xp0 = exPlan($inc)) ? ['title' => $xp0['title'], 'doc' => json_decode((string)$xp0['doc'], true) ?: null] : null, // Einsatzplan eines geplanten Sekundäreinsatzes (Issue #164), für alle
@@ -3515,6 +3551,11 @@ switch ($route) {
   if ($mode !== 'declined' && (!$m || !(int)$m['active'])) fail('Ungültige Auswahl');
   if ($m && (int)$m['sec'] !== incSec($inc)) fail('Diese Einrückoption gilt nicht für diese Art von Einsatz'); // Issue #164: eigene Einrückoptionen für Sekundäreinsätze
   $prev = part($inc['id']);
+  // Parallele Einsätze (Issue #167): höchstens an einem teilnehmen; der Beitritt verlässt den anderen (das Gerät fragt vorher nach)
+  if ($mode !== 'declined') foreach (runningIncidents() as $o) if ((int)$o['id'] !== (int)$inc['id'] && isActivePart((int)$o['id'])) {
+    $db->prepare("UPDATE participants SET left_at=?, role_id=NULL WHERE incident_id=? AND user_id=?")->execute([$now, $o['id'], $uid]);
+    logev((int)$o['id'], $uid, 'leave', 'hat den Einsatz verlassen (wechselt zu «' . kindOf($inc)['name'] . '»: ' . mb_substr((string)$inc['message'], 0, 80) . ')');
+    if (!exLead($o)) voiceKick((int)$o['id'], 'u' . $uid); }
   $db->prepare($my ? "INSERT INTO participants(incident_id,user_id,mode) VALUES(?,?,?) ON DUPLICATE KEY UPDATE mode=VALUES(mode), left_at=NULL"
                    : "INSERT INTO participants(incident_id,user_id,mode) VALUES(?,?,?) ON CONFLICT(incident_id,user_id) DO UPDATE SET mode=excluded.mode, left_at=NULL")->execute([$inc['id'], $uid, $mode]);
   // Option ohne Standortfreigabe (z. B. Koordinator KP Rück): bisherigen Standort von der Karte nehmen
@@ -3985,7 +4026,6 @@ switch ($route) {
 
  /* ---------- Vorbereitete Übungen (Issue #29) ---------- */
  case 'ex/start': // vorbereitete Übung starten: nur die Übungsleitung dieser Übung (auch Administratoren und Übungsleiter nur, wenn sie eingetragen sind); Alarm mit der Aufgebotsmeldung, ohne PLS (kommt über die Freigabe)
-  if (activeIncident()) fail('Es läuft bereits ein Einsatz');
   $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)($in['id'] ?? 0)]); $p = $s->fetch();
   if (!$p || $p['incident_id'] !== null) fail('Diese Übung ist nicht mehr startbar', 404);
   if (!in_array($uid, exLeads($p), true)) fail('Nur die Übungsleitung dieser Übung kann sie starten', 403);
@@ -4639,7 +4679,7 @@ switch ($route) {
   if (!$u) fail('Benutzer nicht gefunden', 404);
   $db->prepare("UPDATE users SET active=?" . ($a ? '' : ', token=NULL') . " WHERE id=?")->execute([$a, $id]);
   if (!$a) foreach (['push_subs', 'sessions', 'push_native'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]); // keine Push-Nachrichten mehr an deaktivierte Personen, Apps abgemeldet (Issue #108)
-  if (!$a && ($inc = activeIncident())) { // aus laufendem Einsatz austragen
+  if (!$a) foreach (runningIncidents() as $inc) { // aus laufenden Einsätzen austragen (Issue #167: alle)
     $p = part($inc['id'], $id);
     if ($p && $p['left_at'] === null && $p['mode'] !== 'declined') {
       $db->prepare("UPDATE participants SET left_at=?, role_id=NULL WHERE incident_id=? AND user_id=?")->execute([$now, $inc['id'], $id]);
@@ -4726,7 +4766,7 @@ switch ($route) {
   $id = (int)($in['id'] ?? 0); $ac = array_key_exists('active', $in) ? (empty($in['active']) ? 0 : 1) : 1;
   if ($id && !isset(kinds()[$id])) fail('Einsatztyp nicht gefunden', 404);
   if (!$ac && !array_filter(kindsActive(), fn($k) => $k['id'] !== $id)) fail('Mindestens ein Einsatztyp muss aktiv bleiben');
-  if ($id && !$ac && ($r = activeIncident()) && (int)$r['kind_id'] === $id) fail('Es läuft gerade ein Einsatz dieses Typs');
+  if ($id && !$ac && array_filter(runningIncidents(), fn($r) => (int)$r['kind_id'] === $id)) fail('Es läuft gerade ein Einsatz dieses Typs');
   $s = $db->prepare("SELECT COUNT(*) c FROM inc_kinds WHERE name=? AND id<>? AND deleted=0"); $s->execute([$nm, $id]); if ($s->fetch()['c']) fail('Einen Einsatztyp mit diesem Namen gibt es schon');
   $vals = [$nm, $col, $in['alarm'], empty($in['mode_up']) ? 0 : 1, empty($in['persons']) ? 0 : 1, empty($in['open_all']) ? 0 : 1, empty($in['plans']) ? 0 : 1, json_encode($goff), json_encode($gdef), $ac];
   $rec = array_key_exists('rec', $in) ? (empty($in['rec']) ? 0 : 1) : null; // fehlt = unverändert bzw. von der Vorlage
@@ -4756,7 +4796,7 @@ switch ($route) {
  case 'kind/delete': need('cfg_inc'); // löschen (Issue #90): die Zeile bleibt als gelöscht, bisherige Einsätze behalten Name, Farbe, Funktionen und Fristen; vorbereitete Übungen wechseln beim Start auf einen anderen Typ
   $id = (int)($in['id'] ?? 0); $k = kinds()[$id] ?? null; if (!$k || $k['deleted']) fail('Einsatztyp nicht gefunden', 404);
   if (!array_filter(kindsActive(), fn($x) => $x['id'] !== $id)) fail('Mindestens ein Einsatztyp muss aktiv bleiben');
-  if (($r = activeIncident()) && (int)$r['kind_id'] === $id) fail('Es läuft gerade ein Einsatz dieses Typs');
+  if (array_filter(runningIncidents(), fn($r) => (int)$r['kind_id'] === $id)) fail('Es läuft gerade ein Einsatz dieses Typs');
   $db->prepare("UPDATE inc_kinds SET deleted=1, active=0 WHERE id=?")->execute([$id]);
   out(['ok' => true]);
  case 'kind/order': need('cfg_inc');
@@ -4882,7 +4922,7 @@ switch ($route) {
       $db->prepare("UPDATE inc_kinds SET feat_off=? WHERE id=?")->execute([json_encode($o), $id]); }
     $KINDS = null;
     // laufender Einsatz: Aufzeichnung beenden bzw. öffentlichen Link ungültig machen, wenn die Funktion für seinen Typ jetzt aus ist
-    if ($inc = activeIncident()) {
+    foreach (runningIncidents() as $inc) {
       if ((int)$inc['record'] && !feature($inc, 'rec')) { setRec((int)$inc['id'], 0); logev($inc['id'], $uid, 'rec', 'beendet die Aufzeichnung (Funktion in der Verwaltung ausgeschaltet)'); }
       if ($inc['public_token'] !== null && !feature($inc, 'pub')) { $db->prepare("UPDATE incidents SET public_token=NULL WHERE id=?")->execute([$inc['id']]); logev($inc['id'], $uid, 'pub', 'schaltet die öffentliche Ansicht aus (Funktion in der Verwaltung ausgeschaltet)'); }
     }

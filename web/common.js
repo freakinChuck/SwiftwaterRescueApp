@@ -10,7 +10,9 @@ const swNative=(h,...a)=>{try{const w=window.flutter_inappwebview;if(w&&w.callHa
 // Datei herunterladen; in der WebView der App (kein Download von blob:) übernimmt die App die Datei (Handler swSave: Name, Typ, Base64)
 function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHandler){const r=new FileReader();r.onload=()=>swNative('swSave',name,blob.type||'application/octet-stream',String(r.result).split(',')[1]||'');r.readAsDataURL(blob);return}
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download=name;document.body.appendChild(l);l.click();setTimeout(()=>{URL.revokeObjectURL(l.href);l.remove()},3000)}
-async function api(r,body){const o={headers:{'X-Token':token||''}};if(body){o.method='POST';o.body=JSON.stringify(body)}
+// Parallele Einsätze (Issue #167): INC_SEL = in der Einsatz-App angezeigter Einsatz, geht als X-Inc mit (0 = der Server wählt; Verwaltung, öffentliche Ansicht)
+let INC_SEL=0;
+async function api(r,body){const o={headers:{'X-Token':token||''}};if(INC_SEL)o.headers['X-Inc']=String(INC_SEL);if(body){o.method='POST';o.body=JSON.stringify(body)}
   const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
 // Applikationslog (Issue #139): Skriptfehler an den Server melden (nur angemeldet, höchstens 5 je Seitenaufruf, gleiche Meldung einmal; der Server begrenzt zusätzlich).
