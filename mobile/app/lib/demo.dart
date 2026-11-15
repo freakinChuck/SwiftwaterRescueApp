@@ -61,7 +61,8 @@ const _feat = {
   'geo': 0,
   'veh': 1,
   'vehp': 1,
-}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server
+  'call': 0,
+}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server, Direktanruf (#44) keine echten Nummern
 _J _kind(int id, String name, String color, String alarm, String an, int modeUp, int rec) => {
   'id': id,
   'name': name,
@@ -422,7 +423,7 @@ class Demo {
     };
   }
 
-  _J _featOf(_J? k) => {..._feat, if (k?['features'] is Map) ...Map<String, dynamic>.from(k!['features'] as Map), 'pub': 0, 'geo': 0};
+  _J _featOf(_J? k) => {..._feat, if (k?['features'] is Map) ...Map<String, dynamic>.from(k!['features'] as Map), 'pub': 0, 'geo': 0, 'call': 0};
   _J get _featAll => {for (final k in _ks) '${k['id']}': _featOf(k)};
   // Flusssperren (Issue #182, wie incStops): feste Standorte mit einer Eigenschaft der Wirkung stop, solange berücksichtigt und nicht ausgenommen
   List<_J> _props = [];

@@ -122,6 +122,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EK-07** – Der eigene Standort ist immer gesondert auf der Karte sichtbar (blauer Punkt mit Genauigkeitskreis), auch ohne laufenden Einsatz; ausgeblendet nur, solange man an einem laufenden Einsatz bzw. einer Übung mit einer Einrückoption ohne Standortfreigabe teilnimmt (#118).
 - **EK-08** – Im Einsatz erscheint man selbst nur als blauer Punkt, nicht zusätzlich mit dem eigenen Personen-Icon; ohne Standort des Geräts steht der Punkt am zuletzt gemeldeten Standort (#96).
 - **EK-09** – Personeninfo: Antippen einer Einsatzkraft (auch Externe) auf der Karte öffnet ein Infofenster mit Profilbild, Name, Spezialrolle, Einrückoption, allen Einsatzgruppen, Standort, «Folgen» und Navigation; ebenso «Info» im Fenster «Einsatzkräfte». Es blockiert nichts, fährt mit der Position der Person mit und schliesst über ✕, Antippen der leeren Karte oder wenn die Person den Einsatz verlässt. Als Funktion je Einsatztyp ausschaltbar; ausgeschaltet fragt das Antippen wie bisher nach der Navigation (#105).
+- **EK-10** – Direktanruf: Jede Person kann eine Telefonnummer hinterlegen (im Profil, sofern die Verwaltung das erlaubt, sonst über die Benutzerverwaltung). Im laufenden Einsatz steht sie bei den Einsatzkräften (Fenster «Einsatzkräfte» und Personeninfo), «Anrufen» öffnet die Telefon-App. In der Verwaltung einstellbar: Nummer anzeigen, Knopf «Anrufen», sichtbar für alle Teilnehmenden oder nur die Einsatzleitung; als Funktion je Einsatztyp ausschaltbar. Nur bei Personen, die teilnehmen, nur für Teilnehmende; nicht in der öffentlichen Ansicht, im Replay und im Demo (#44).
 
 ## 7. Externe Einsatzkräfte (EX)
 
@@ -207,7 +208,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo, Geodaten-Ebene, Funk, Fahrzeuge, Personen im Fahrzeug (#35, #79, #96, #125, #105, #182, #113, #177).
+- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo, Geodaten-Ebene, Funk, Fahrzeuge, Personen im Fahrzeug, Direktanruf (#35, #79, #96, #125, #105, #182, #113, #177, #44).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
 

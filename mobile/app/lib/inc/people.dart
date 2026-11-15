@@ -299,12 +299,13 @@ class _PeoplePanelState extends State<PeoplePanel> {
     return _entry(
       lead: _mk(p),
       title: '${js(p['name'])}${me ? ' (du)' : ''}',
-      lines: ['${js(s.modeOf(js(p['mode']))['name'])} · ${has ? 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}' : 'kein Standort'}', ?vehOfPerson(s, p), if (cs.isNotEmpty) cs],
+      lines: ['${js(s.modeOf(js(p['mode']))['name'])} · ${has ? 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}' : 'kein Standort'}', ?vehOfPerson(s, p), ?telTxt(s, p), if (cs.isNotEmpty) cs],
       buttons: [
         if (has) smallBtn('Zentrieren', () => _center(p)),
         if (has && uid != null) smallBtn(f ? 'Folgt' : 'Folgen', () => _follow(uid), primary: f),
         ?_infoBtn(p),
         ?nav,
+        ?telBtn(s, p),
       ],
       trailing: mgr,
     );

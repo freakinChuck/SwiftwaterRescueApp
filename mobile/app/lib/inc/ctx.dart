@@ -248,6 +248,32 @@ Widget? navBtn(IncStore s, dynamic lat, dynamic lon, String name, {String? label
       : OutlinedButton(onPressed: () => navGo(s, a, b, name), child: Text('🧭 $label'));
 }
 
+/// Direktanruf (Issue #44): Nummer nur, wenn der Server sie liefert (Funktion «call», Einstellung phone_cfg: show = anzeigen, call = Knopf); nie bei einem selbst
+String telOf(IncStore s, J p) {
+  final c = s.st?['phone_cfg'];
+  if (c is! Map || ji(p['user_id']) == null || ji(p['user_id']) == s.uid) return '';
+  return js(p['phone']);
+}
+
+/// Zeile «📞 Nummer» (nur mit show)
+String? telTxt(IncStore s, J p) {
+  final n = telOf(s, p);
+  return n.isNotEmpty && ji((s.st?['phone_cfg'] as Map)['show']) == 1 ? '📞 $n' : null;
+}
+
+/// Knopf «📞 Anrufen» (nur mit call), öffnet die Telefon-App
+Widget? telBtn(IncStore s, J p) {
+  final n = telOf(s, p);
+  if (n.isEmpty || ji((s.st?['phone_cfg'] as Map)['call']) != 1) return null;
+  return smallBtn('📞 Anrufen', () async {
+    try {
+      if (!await launchUrl(Uri(scheme: 'tel', path: n.replaceAll(RegExp(r'[^0-9+]'), '')))) s.toast('Telefon-App nicht verfügbar', 'err');
+    } catch (_) {
+      s.toast('Telefon-App nicht verfügbar', 'err');
+    }
+  });
+}
+
 /// Seite der Web-App (Verwaltung, Meine Einsätze, Rechtliches) in der App öffnen, angemeldet mit dem Konto (web.dart)
 void openWeb(BuildContext context, IncStore s, String page) {
   if (s.demo) return s.toast('Im Demo-Modus gibt es keine Seiten des Servers (Verwaltung, Meine Einsätze, Rechtliches).', 'info');
