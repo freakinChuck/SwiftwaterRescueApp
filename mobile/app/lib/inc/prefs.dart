@@ -259,6 +259,50 @@ class _PrefsPageState extends State<PrefsPage> {
                     ])));
   }
 
+  // Direktanruf (Issue #44): eigene Telefonnummer, nur wenn die Verwaltung ihn eingeschaltet hat (me.phone_cfg); self 0 = nur anzeigen
+  bool _telOn(J me) {
+    final c = me['phone_cfg'];
+    return !s.demo && c is Map && (ji(c['show']) == 1 || ji(c['call']) == 1) && s.feat('call');
+  }
+
+  List<Widget> _tel(J me) {
+    final c = me['phone_cfg'] as Map, self = ji(c['self']) == 1, n = js(me['phone']);
+    final w = js(c['who']) == 'lead' ? 'die Einsatzleitung' : 'alle, die den Einsatz angenommen haben,';
+    return [
+      _h5('Telefonnummer'),
+      Row(children: [
+        Expanded(child: n.isEmpty ? const Mut('keine hinterlegt') : Text(n)),
+        if (self) smallBtn(n.isEmpty ? 'Erfassen' : 'Ändern', _telEdit),
+      ]),
+      Mut('Im laufenden Einsatz sehen $w sie bei den Einsatzkräften${ji(c['call']) == 1 ? ' und können dich direkt anrufen' : ''}.${self ? '' : ' Ändern über die Verwaltung.'}', size: 12),
+    ];
+  }
+
+  Future<void> _telEdit() async {
+    final t = TextEditingController(text: js(s.me?['phone']));
+    final v = await showDialog<String>(
+        context: context,
+        builder: (d) => AlertDialog(
+                title: const Text('Telefonnummer'),
+                content: SizedBox(
+                    width: 420,
+                    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      TextField(
+                          controller: t,
+                          keyboardType: TextInputType.phone,
+                          autofillHints: const [AutofillHints.telephoneNumber],
+                          maxLength: 30,
+                          decoration: const InputDecoration(labelText: 'Für den Direktanruf im Einsatz', hintText: '+41 79 123 45 67')),
+                      const Mut('Leer lassen, wenn du nicht angerufen werden willst.', size: 12),
+                    ])),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(d), child: const Text('Abbrechen')),
+                  FilledButton(onPressed: () => Navigator.pop(d, t.text.trim()), child: const Text('Speichern')),
+                ]));
+    if (v == null) return;
+    await _set({'phone': v});
+  }
+
   Future<void> _sessRemove(J r) async {
     if (!await confirmDlg(context, 'App auf diesem Gerät abmelden? Sie erhält danach keine Alarme mehr.', ok: 'Abmelden', danger: true)) return;
     try {
@@ -448,6 +492,7 @@ class _PrefsPageState extends State<PrefsPage> {
             OutlinedButton(
                 onPressed: () => Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst), child: const Text('Konten / Server wechseln')),
           ])),
+      if (_telOn(me)) ..._tel(me),
       if (_sess.isNotEmpty) ...[
         _h5('Angemeldete Apps'),
         ..._sess.map((r) => Padding(

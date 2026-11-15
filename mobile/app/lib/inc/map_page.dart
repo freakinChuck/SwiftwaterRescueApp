@@ -630,7 +630,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     final g = ext ? <J>[] : gids.map((id) => gs.where((x) => ji(x['id']) == id).firstOrNull).whereType<J>().toList(); // alle Gruppen, unabhängig von «Farbe beim Namen»
     final sub = [r != null ? js(r['name']) : 'Ohne Spezialrolle', ext ? 'Externe Einsatzkraft' : js(s.modeOf(js(p['mode']))['name'])].where((x) => x.isNotEmpty).join(' · ');
     final loc = [ext ? 'Fester Standort' : 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}', s.fc(p['lat'], p['lon'])].where((x) => x.isNotEmpty).join(' · ');
-    final nav = navBtn(s, p['lat'], p['lon'], js(p['name']));
+    final nav = navBtn(s, p['lat'], p['lon'], js(p['name'])), tel = ext ? null : telBtn(s, p), telT = ext ? null : telTxt(s, p);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
       Row(children: [
         ext ? _personMk(p, ext: true) : avatar(p, r: 22, border: _roleCol(p)),
@@ -661,6 +661,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         ])))
                     .toList())),
       if (ext && js(p['descr']).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(js(p['descr']))),
+      if (telT != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(telT)),
       Padding(padding: const EdgeInsets.only(top: 4), child: Mut(loc)),
       if (!ext || nav != null)
         Padding(
@@ -668,6 +669,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
             child: Wrap(spacing: 6, runSpacing: 4, children: [
               if (!ext && uid != null) smallBtn(f ? 'Folgt' : 'Folgen', () => follow(f ? null : uid), primary: f),
               ?nav,
+              ?tel,
             ])),
     ]);
   }

@@ -197,7 +197,7 @@ foreach (['inc_kinds' => ["snd $tx NULL", "msg_lvl $tx NULL", "end_lvl $tx NULL"
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Fahrzeuge (Issue #177): participants.veh_id = im Fahrzeug (veh_at = zuletzt stark gesehen, veh_cand = Kandidat aus dem letzten Scan), track.veh_id = im Fahrzeug bei der Meldung,
 // users.beacon = Fahrzeuge auch ausserhalb von Einsätzen melden (freiwillig)
-foreach (['participants' => ['veh_id INT NULL', 'veh_at BIGINT NULL', 'veh_cand INT NULL'], 'track' => ['veh_id INT NULL'], 'users' => ['beacon INT DEFAULT 0'], 'veh_kinds' => ['carry_max INT NULL'], 'vehicles' => ['cap_max INT NULL', 'deleted INT DEFAULT 0']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
+foreach (['participants' => ['veh_id INT NULL', 'veh_at BIGINT NULL', 'veh_cand INT NULL'], 'track' => ['veh_id INT NULL'], 'users' => ['beacon INT DEFAULT 0', 'phone TEXT NULL'], 'veh_kinds' => ['carry_max INT NULL'], 'vehicles' => ['cap_max INT NULL', 'deleted INT DEFAULT 0']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 try { $db->exec("CREATE INDEX vehicle_seen_inc ON vehicle_seen(incident_id,ts)"); } catch (Throwable $e) {}
 // Standardarten beim ersten Aufruf (Sperre über die Zeile veh_mig wie bei den Einsatztypen): Zug-/Personenfahrzeug nimmt 1 Anhänger auf, Anhänger 1 Boot
 if (!$db->query("SELECT COUNT(*) c FROM veh_kinds")->fetch()['c']) {
@@ -393,7 +393,7 @@ function sndApns($k) { return $k && $k !== 'system' && preg_match('/^[a-z0-9_]{1
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func', 'sym' => 'cfg_inc',
-  'coord_sys' => 'cfg_map', 'place_near_km' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'maps' => 'cfg_map', 'map_kinds' => 'cfg_map', 'applog_days' => 'applog', 'app_min' => 'versions', 'beacon' => 'cfg_map']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
+  'coord_sys' => 'cfg_map', 'place_near_km' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'maps' => 'cfg_map', 'map_kinds' => 'cfg_map', 'applog_days' => 'applog', 'app_min' => 'versions', 'beacon' => 'cfg_map', 'phone' => 'cfg_func']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
@@ -599,9 +599,21 @@ function aarIn($in) { $old = aarCfg(); $s = fn($v, $n) => mb_substr(trim(preg_re
   return ['title' => $s($in['title'] ?? '', 120) ?: AAR_DEFAULT['title'], 'org' => $s($in['org'] ?? '', 120), 'seq' => $seq, 'auto' => $a, 'dl' => $d, 'fields' => $f,
     'fb' => isset($in['fb']) && is_array($in['fb']) ? fbIn($in['fb'], $old['fb']) : $old['fb']]; }
 const FEATURES = ['area' => 'Suchgebiet', 'res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
-                  'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)', 'place' => 'Feste Standorte', 'hydro' => 'Pegel & Abfluss (BAFU)', 'pinfo' => 'Personeninfo (Infofenster beim Antippen einer Einsatzkraft)', 'geo' => 'Geodaten-Ebene (Objekte am Gewässer aus OpenStreetMap, zuschaltbar)', 'voice' => 'Funk (Durchsagen und Live-Konferenz)', 'veh' => 'Fahrzeuge (BLE-Beacons)', 'vehp' => 'Personen im Fahrzeug (Zuordnung über die Beacons)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
+                  'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)', 'place' => 'Feste Standorte', 'hydro' => 'Pegel & Abfluss (BAFU)', 'pinfo' => 'Personeninfo (Infofenster beim Antippen einer Einsatzkraft)', 'geo' => 'Geodaten-Ebene (Objekte am Gewässer aus OpenStreetMap, zuschaltbar)', 'voice' => 'Funk (Durchsagen und Live-Konferenz)', 'veh' => 'Fahrzeuge (BLE-Beacons)', 'vehp' => 'Personen im Fahrzeug (Zuordnung über die Beacons)', 'call' => 'Direktanruf (Telefonnummer der Einsatzkräfte)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
 // Navigations-Apps (Funktion «nav»): in der Verwaltung einzeln ausschaltbar (nav_off), Standard nav_default, pro Person users.nav_app
 const NAV_APPS = ['google' => 'Google Maps', 'apple' => 'Apple Karten', 'waze' => 'Waze', 'geo' => 'Andere App (nur Android: Auswahl der Karten-Apps)'];
+// Direktanruf (Issue #44): Telefonnummer je Person (users.phone), im Einsatz bei den Einsatzkräften (Funktion «call»). Einstellung phone: show = Nummer anzeigen,
+// call = Knopf «Anrufen» (tel:), who = wer sie sieht (all = alle Teilnehmenden, lead = nur die Einsatzleitung), self = jede Person pflegt die eigene Nummer im Profil. Beides aus = nichts.
+const PHONE_DEFAULT = ['show' => 0, 'call' => 0, 'who' => 'all', 'self' => 1];
+const PHONE_WHO = ['all' => 'Alle, die den Einsatz angenommen haben', 'lead' => 'Nur die Einsatzleitung'];
+function phoneIn($v) { $d = PHONE_DEFAULT; if (!is_array($v)) $v = []; $r = [];
+  foreach (['show', 'call', 'self'] as $k) $r[$k] = array_key_exists($k, $v) ? (int)!empty($v[$k]) : $d[$k];
+  $r['who'] = isset($v['who']) && is_string($v['who']) && isset(PHONE_WHO[$v['who']]) ? $v['who'] : $d['who']; return $r; }
+function phoneCfg() { return phoneIn(json_decode(setting('phone', ''), true)); }
+function phoneNorm($v) { $v = trim(preg_replace('/\s+/', ' ', (string)$v)); if ($v === '') return null; // erlaubt: Ziffern, +, Leerzeichen, - / ( ) .
+  if (mb_strlen($v) > 30 || !preg_match('#^\+?[0-9 ()/.\-]+$#', $v) || preg_match_all('/[0-9]/', $v) < 3) fail('Ungültige Telefonnummer'); return $v; }
+function phoneSee($inc) { $c = phoneCfg(); if (!$c['show'] && !$c['call'] || !feature($inc, 'call')) return false; // Nummern im Einsatz sichtbar?
+  return canManage($inc) || $c['who'] === 'all' && isActivePart((int)$inc['id']); }
 function navApps() { $off = json_decode(setting('nav_off', '[]'), true) ?: []; $a = array_values(array_diff(array_keys(NAV_APPS), $off)); return $a ?: ['google']; } // eingeschaltete, mindestens eine
 // Einsatzsymbole für Markierungen (Issue #146): Dateien img/sym/<Schlüssel>.svg; Schlüssel = <Set>-<Name>, Set = Teil vor dem Bindestrich.
 // Sets: sz = Signaturen aus dem «Behelf Einsatzführung Feuerwehr, Sanität und Polizei» des Kantons Schwyz (S. 6–7), sw = eigene Symbole der App.
@@ -1755,6 +1767,7 @@ if ($route === 'legal') {
     'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color']], $ks)),
     'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'on' => (object)array_map(fn($f) => $f[$k], $fk)], array_keys(FEATURES)),
     'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120'), 'postgis' => pgReady() ? 1 : 0, 'pgapi' => pgaReady() ? 1 : 0, 'order' => array_values(array_filter(waterOrder(), fn($k) => waterReady()[$k]))],
+    'phone' => phoneCfg(), // Direktanruf (Issue #44)
     'geo_linked' => (int)$db->query("SELECT COUNT(*) FROM places WHERE src_ref IS NOT NULL AND active=1")->fetchColumn(), // aus OpenStreetMap übernommene feste Standorte (Issue #182)
     'hydro' => (object)array_map(fn($f) => $f['hydro'], $fk), // Pegel & Abfluss (Issue #125) je Einsatztyp
     'hydro_src' => array_values(array_map(fn($k) => ['k' => $k] + HYDRO_SOURCES[$k], array_keys(array_filter(hydroCfg()['src'])))), // eingeschaltete Quellen in der Reihenfolge des Vorrangs
@@ -1848,7 +1861,7 @@ if (strncmp($route, 'guest/', 6) === 0) {
 }
 
 $tok = (string)($_SERVER['HTTP_X_TOKEN'] ?? ''); $sid = null; // $sid = Gerätesitzung der nativen App (Issue #108), null = Anmeldung über users.token (Browser)
-$ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.nav_app,u.place_view,u.ai_modes,u.hydro,u.beacon';
+$ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.nav_app,u.place_view,u.ai_modes,u.hydro,u.beacon,u.phone';
 $me = null; if ($tok !== '') { $st = $db->prepare("SELECT $ucols FROM users u WHERE u.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor(); } // Lesezugriff sofort beenden, nicht erst am Ende des Requests
 if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_seen, s.app_ver FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor();
   if ($me) { $sid = (int)$me['sid']; if ((int)$me['last_seen'] < $now - 600) $db->prepare("UPDATE sessions SET last_seen=? WHERE id=?")->execute([$now, $sid]);
@@ -3237,7 +3250,7 @@ try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog
 try { if (!$me['must_change']) geoAuto(); } catch (Throwable $e) { alog('err', 'geo', 'Abgleich der Geodaten: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // Abgleich übernommener Standorte mit der Quelle (Issue #182), täglich im Nachlauf
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 switch ($route) {
- case 'me': out(['me' => $me + mapsFor(null) + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid)]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': out(['me' => $me + mapsFor(null) + ['phone_cfg' => phoneCfg(), 'coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid)]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message', 'can_voice', 'sec']), $db->query("SELECT id,name,color,is_lead,is_post,can_message,can_voice,sec FROM roles WHERE active=1 ORDER BY id")->fetchAll())); // sec: Spezialrolle für Sekundäreinsätze (Issue #164)
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen); sec: Einrückoption für Sekundäreinsätze (Issue #164)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts', 'sec']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts,sec FROM modes ORDER BY id")->fetchAll()));
@@ -3471,8 +3484,8 @@ switch ($route) {
     if ($u->rowCount()) after(function () use ($id) { global $db; if (!hydroLog($id, 'start')) $db->prepare("UPDATE incidents SET hydro_s=? WHERE id=?")->execute([-time(), $id]); }); }
   unset($inc['hydro_s']);
   $inc['stop_on'] = (int)($inc['stop_on'] ?? 1); $inc['stop_off'] = stopOff($inc); $ipl = incPlaces($inc); // Flusssperren (Issue #182)
-  $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,p.veh_id,u.name,u.photo FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
-  $ps->execute([$id]);
+  $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,p.veh_id,u.name,u.photo,u.phone FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
+  $ps->execute([$id]); $phSee = phoneSee($inc); // Direktanruf (Issue #44): Telefonnummern nur gemäss Einstellung phone
   $isP = isActivePart($id);
   $msgs = []; $msgMarks = [];
   // Lesen: alle, die den Einsatz angenommen haben; mit Einstellung msg_read_all auch alle anderen angemeldeten Personen
@@ -3532,7 +3545,8 @@ switch ($route) {
   unset($inc['voice_ch'], $inc['voice_anon']);
   $il = incList(); $oth = isset($_GET['oth']) && count($il) > 1 ? array_values(array_map('incOther', array_filter(runningIncidents(), fn($r) => (int)$r['id'] !== $id && in_array((int)$r['id'], array_column($il, 'id'), true)))) : [];
   out(['incident' => $inc, 'incidents' => $il, 'others' => $oth, 'my_inc' => myIncPub(), 'start_plans' => exStartable(), 'kinds' => kindsPub(), 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
-       'participants' => array_map(function ($p) use ($pg, $F) { foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; if ($pg) $p['groups'] = $pg['m'][(int)$p['user_id']] ?? []; if (!$F['vehp'] || !$F['veh']) unset($p['veh_id']); return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at', 'veh_id']); }, $ps->fetchAll()),
+       'phone_cfg' => $phSee ? ['show' => phoneCfg()['show'], 'call' => phoneCfg()['call']] : null, // Direktanruf (Issue #44): null = keine Nummern
+       'participants' => array_map(function ($p) use ($pg, $F, $phSee) { if (!$phSee || $p['phone'] === null || $p['left_at'] !== null || $p['mode'] === 'declined') unset($p['phone']); /* nur aktive Teilnahmen */ foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; if ($pg) $p['groups'] = $pg['m'][(int)$p['user_id']] ?? []; if (!$F['vehp'] || !$F['veh']) unset($p['veh_id']); return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at', 'veh_id']); }, $ps->fetchAll()),
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
        'air' => airAllowed($inc) ? 1 : 0, 'air_inc' => airCfg()['on'] ? (airInc($inc) ? 1 : 0) : null, 'ex_lead' => $xl, 'ex_title' => $inc['plan_id'] && ($xl || planner()) ? (exPlan($inc)['title'] ?? null) : null, 'plan' => $inc['plan_id'] && $inc['kind']['sec'] && ($xp0 = exPlan($inc)) ? ['title' => $xp0['title'], 'doc' => json_decode((string)$xp0['doc'], true) ?: null] : null, // Einsatzplan eines geplanten Sekundäreinsatzes (Issue #164), für alle
  'ex_injects' => $inc['plan_id'] && ($xl || planner()) ? exInjects((int)$inc['plan_id']) : [],
@@ -4612,6 +4626,7 @@ switch ($route) {
   out(['ok' => true]);
  case 'me/settings': // nur übergebene Werte ändern. exercise_mode: Übungen wie scharfe Einsätze kritisch alarmieren; coord_sys: '' = Standard der Verwaltung, none = ausblenden
   if (isset($in['exercise_mode'])) $db->prepare("UPDATE users SET exercise_mode=? WHERE id=?")->execute([empty($in['exercise_mode']) ? 0 : 1, $uid]);
+  if (array_key_exists('phone', $in)) { if (!phoneCfg()['self']) fail('Die Telefonnummer pflegt die Verwaltung', 403); $db->prepare("UPDATE users SET phone=? WHERE id=?")->execute([phoneNorm($in['phone'] ?? ''), $uid]); } // Direktanruf (Issue #44), '' = entfernen
   if (isset($in['beacon'])) $db->prepare("UPDATE users SET beacon=? WHERE id=?")->execute([empty($in['beacon']) ? 0 : 1, $uid]); // Fahrzeuge ausserhalb von Einsätzen melden (Issue #177, freiwillig)
   if (isset($in['coord_sys'])) {
     $c = (string)$in['coord_sys']; if ($c !== '' && $c !== 'none' && !in_array($c, COORDS, true)) fail('Unbekanntes Koordinatensystem'); // none = Koordinaten ausblenden (nur persönlich)
@@ -4643,7 +4658,7 @@ switch ($route) {
   $ug = []; foreach ($db->query("SELECT m.user_id,m.group_id FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id WHERE g.active=1 ORDER BY g.pos, g.name")->fetchAll() as $x) $ug[(int)$x['user_id']][] = (int)$x['group_id']; // Einsatzgruppen (Issue #90)
   $an = absNow(); // laufende Abwesenheit (Issue #91)
   $used = usersUsed(); // deletable = nie angemeldet, in keinen Daten, nicht man selbst (Issue #63)
-  out(array_map(fn($r) => ints($r, ['id', 'active', 'exercise_mode', 'must_change', 'last_login']) + ['uroles' => $ur[(int)$r['id']] ?? [], 'groups' => $ug[(int)$r['id']] ?? [], 'absent' => $an[(int)$r['id']] ?? null, 'editable' => ($e = userEditable((int)$r['id'])) ? 1 : 0, 'deletable' => $e && $r['last_login'] === null && !isset($used[(int)$r['id']]) && (int)$r['id'] !== $uid ? 1 : 0], $db->query("SELECT id,username,name,photo,active,exercise_mode,must_change,last_login FROM users ORDER BY active DESC, name")->fetchAll())); // photo: Profilbild für die Benutzerliste (kleine Data-URL)
+  out(array_map(fn($r) => ints($r, ['id', 'active', 'exercise_mode', 'must_change', 'last_login']) + ['uroles' => $ur[(int)$r['id']] ?? [], 'groups' => $ug[(int)$r['id']] ?? [], 'absent' => $an[(int)$r['id']] ?? null, 'editable' => ($e = userEditable((int)$r['id'])) ? 1 : 0, 'deletable' => $e && $r['last_login'] === null && !isset($used[(int)$r['id']]) && (int)$r['id'] !== $uid ? 1 : 0], $db->query("SELECT id,username,name,photo,phone,active,exercise_mode,must_change,last_login FROM users ORDER BY active DESC, name")->fetchAll())); // photo: Profilbild für die Benutzerliste (kleine Data-URL)
  case 'user/save': need('users'); // anlegen oder Name/Benutzerrollen ändern: uroles = Liste der Rollen-IDs (nicht übergeben = unverändert)
   $nm = trim($in['name'] ?? ''); $id = (int)($in['id'] ?? 0);
   if ($id) needUserEditable($id);
@@ -4664,6 +4679,7 @@ switch ($route) {
     catch (PDOException $e) { fail('Benutzername existiert bereits'); }
     $id = (int)$db->lastInsertId();
   }
+  if (array_key_exists('phone', $in)) $db->prepare("UPDATE users SET phone=? WHERE id=?")->execute([phoneNorm($in['phone'] ?? ''), $id]); // Direktanruf (Issue #44), fehlt = unverändert
   if ($new !== $old || !isset($in['id'])) {
     $db->beginTransaction();
     $db->prepare("DELETE FROM user_uroles WHERE user_id=?")->execute([$id]);
@@ -4835,7 +4851,7 @@ switch ($route) {
     if (isset($in['sec'])) $db->prepare("UPDATE roles SET sec=? WHERE id=?")->execute([secIn($in['sec']), $in['id']]); } // Kategorie (Issue #164), fehlt = unverändert
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message,can_voice,is_post,sec) VALUES(?,?,?,?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1), (int)($in['can_voice'] ?? 1), (int)($in['is_post'] ?? 0), secIn($in['sec'] ?? 0)]);
   out(['ok' => true]);
- case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'place_near_km' => placeNearKm(), 'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans'], 'map_off' => $k['map_off'], 'map_def' => $k['map_def']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
+ case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'place_near_km' => placeNearKm(), 'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans'], 'map_off' => $k['map_off'], 'map_def' => $k['map_def']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'phone' => phoneCfg(), 'phone_who' => PHONE_WHO, 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
    'maps' => mapsCfg(), 'map_default' => MAP_DEFAULT, 'map_own' => mapOwn(), 'map_sources' => array_map(fn($k) => mapPub($k) + array_intersect_key(MAP_SOURCES[$k], array_flip(['site', 'terms', 'lic', 'area', 'note', 'def'])), array_keys(MAP_SOURCES)), // Kartenanbieter (Issue #106)
    'air' => airCfg(), 'air_default' => AIR_DEFAULT + array_map(fn($x) => $x[0], AIR_NUM), 'air_num' => AIR_NUM, 'air_filters' => AIR_FILTERS, 'air_app' => AIR_APP, 'air_sources' => array_map(fn($s) => ['name' => $s['name'], 'site' => $s['site'], 'note' => $s['note']], AIR_SOURCES),
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
@@ -4877,6 +4893,7 @@ switch ($route) {
     setSetting('legal', json_encode($v, JSON_UNESCAPED_UNICODE)); setSetting('legal_at', (string)time()); }
   if (isset($in['air'])) setSetting('air', json_encode(airIn($in['air']), JSON_UNESCAPED_UNICODE)); // Helikopter (Issue #73)
   if (isset($in['beacon'])) setSetting('beacon', json_encode(beaconIn($in['beacon']))); // Fahrzeuge (Issue #177)
+  if (isset($in['phone'])) setSetting('phone', json_encode(phoneIn(array_merge(phoneCfg(), (array)$in['phone'])))); // Direktanruf (Issue #44)
   if (isset($in['hydro'])) { setSetting('hydro', json_encode(hydroIn($in['hydro']))); @unlink(__DIR__ . '/data/hydro/bafu.json'); } // Quellen geändert: neu abrufen // Pegel & Abfluss (Issue #125)
   if (isset($in['postgis'])) { // Gewässernetz aus PostGIS (Issue #131): Passwort nur, wenn angegeben (leer = behalten), pass_clear = entfernen
     $v = pgIn($in['postgis']); $pw = $in['postgis']['pass'] ?? '';

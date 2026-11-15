@@ -185,7 +185,7 @@ const NAV=[
   ['Personen',[['benutzer','sU','Benutzer',loadUsers],['benutzerrollen','sUR','Benutzerrollen',loadURoles],['einsatzgruppen','sG','Einsatzgruppen',loadGroups],['abwesenheiten','sAb','Abwesenheiten',loadAbs],['ausbildung','sSk','Ausbildung',loadSkills]]],
   ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt],['symbole','sSy','Einsatzsymbole',loadSym]]],
   ['Planungen',[['planungen','sEx','Planungen',loadEx]]],
-  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['ai','sAi','AI-Assistent',loadAi]]],
+  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['direktanruf','sTel','Direktanruf',loadTel],['ai','sAi','AI-Assistent',loadAi]]],
   ['Karte & Daten',[['karten','sMp','Kartenanbieter',loadMaps],['koordinaten','sC','Koordinaten',loadCoords],['geoquellen','sO','Geodaten-Quellen',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['geodaten','sGeo','Geodaten übernehmen',loadGeo],['fahrzeuge','sVeh','Fahrzeuge',loadVeh]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
@@ -193,7 +193,7 @@ const NAV=[
   ['System',[['applog','sAL','Applikationslog',loadAppLog],['versionen','sVer','Versionen',loadVer]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',ausbildung:'skills',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',planungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',funk:'cfg_conn',applog:'applog',versionen:'versions'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',ausbildung:'skills',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',planungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',direktanruf:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',funk:'cfg_conn',applog:'applog',versionen:'versions'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -257,10 +257,11 @@ async function loadUsers(){const el=$('#sU');let gs;try{[users,uroles,gs]=await 
     <div class="mut">Wer sich noch nie angemeldet hat, kann gelöscht werden; alle anderen werden deaktiviert: Sie können sich nicht mehr anmelden, ihre Einsatzdaten bleiben erhalten.</div>`;
   // Startpasswort nach dem Speichern nicht in einer Meldung anzeigen (Issue #59): es steht vorher im Feld und kann dort kopiert werden
   $('#uA').onclick=()=>{const d=dlg('Neuer Benutzer',`<div class="jtwo"><label class="mut">Name<input id="uf" autocomplete="off"></label><label class="mut">Benutzername<input id="un" autocomplete="off" autocapitalize="off" spellcheck="false"></label></div>
+      <label class="mut">Telefonnummer (optional, für den Direktanruf im Einsatz)<input id="uT" type="tel" autocomplete="off" maxlength="30"></label>
       ${pwField('up','Startpasswort')}
       <div class="mut">Die Person muss es bei der ersten Anmeldung ändern. Gib es vor dem Anlegen weiter, danach wird es nicht mehr angezeigt.</div>
       ${roleChecks(null)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du nicht vergeben.</div>`,
-      async d=>{const nm=$('#uf',d).value.trim()||$('#un',d).value.trim();await api('user/save',{username:$('#un',d).value,name:$('#uf',d).value,password:$('#up',d).value,uroles:roleVal(d)});toast(`Benutzer «${nm}» angelegt.`,'ok');loadUsers()},'Benutzer anlegen');
+      async d=>{const nm=$('#uf',d).value.trim()||$('#un',d).value.trim();await api('user/save',{username:$('#un',d).value,name:$('#uf',d).value,password:$('#up',d).value,phone:$('#uT',d).value,uroles:roleVal(d)});toast(`Benutzer «${nm}» angelegt.`,'ok');loadUsers()},'Benutzer anlegen');
     d.firstElementChild.classList.add('mid');roleWire(d);pwWire(d)};
   const U=id=>users.find(x=>x.id==id);
   el.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>absDialog(null,[U(b.dataset.ab)],loadUsers));
@@ -268,8 +269,8 @@ async function loadUsers(){const el=$('#sU');let gs;try{[users,uroles,gs]=await 
   const uq=$('#uQ');if(uq){const cs=[...el.querySelectorAll('.inc.usr')],ks=[...ua,...ud].map(key);uq.oninput=()=>{const q=uq.value.trim().toLowerCase();let n=0;
     cs.forEach((c,i)=>{c.hidden=!!q&&!ks[i].includes(q);if(!c.hidden)n++});const d=el.querySelector('.lgd');if(d&&q&&d.querySelector('.inc.usr:not([hidden])'))d.open=true;$('#uQn').hidden=n>0}}
   el.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.e),self=u.id===me.id;
-    const d=dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label>${roleChecks(u)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Systemadministrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
-      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,uroles:roleVal(d)});toast('Gespeichert.');if(self)me=(await api('me')).me;loadUsers()});d.firstElementChild.classList.add('mid');roleWire(d)});
+    const d=dlg('Benutzer bearbeiten',`<label class="mut">Name<input id="eN" value="${esc(u.name)}"></label><label class="mut">Telefonnummer (für den Direktanruf im Einsatz, leer = keine)<input id="eT" type="tel" autocomplete="off" maxlength="30" value="${esc(u.phone||'')}"></label>${roleChecks(u)}<div class="mut">Die Person erhält alle Rechte aller gewählten Rollen. Rollen mit Rechten, die du selbst nicht hast, kannst du weder vergeben noch entziehen${self?'; die eigene Rolle Systemadministrator bleibt':''}. Die Rechte je Rolle stehen unter «Benutzerrollen».</div>`,
+      async d=>{await api('user/save',{id:u.id,name:$('#eN',d).value,phone:$('#eT',d).value,uroles:roleVal(d)});toast('Gespeichert.');if(self)me=(await api('me')).me;loadUsers()});d.firstElementChild.classList.add('mid');roleWire(d)});
   el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.p);
     const d=dlg('Passwort zurücksetzen – '+u.name,`<div class="mut">${esc(u.name)} wird abgemeldet und muss bei der nächsten Anmeldung ein eigenes Passwort setzen.</div>${pwField('eP','Neues Startpasswort')}<div class="mut">Gib es vor dem Zurücksetzen weiter, es wird danach nicht mehr angezeigt.</div>`,
       async d=>{await api('user/password',{id:u.id,password:$('#eP',d).value});toast(`Passwort von ${u.name} zurückgesetzt.`,'ok');loadUsers()},'Zurücksetzen');pwWire(d)});
@@ -913,6 +914,16 @@ async function loadNav(){const el=$('#sNv');let s;try{s=await api('settings')}ca
     if(c.dataset.na)p={nav_off:[...el.querySelectorAll('[data-na]')].filter(x=>!x.checked).map(x=>x.dataset.na)};
     else if(c.id==='nvD')p={nav_default:c.value};else return;
     el.querySelectorAll('input,select').forEach(x=>x.disabled=true);api('settings/save',p).catch(fail).finally(loadNav)}}
+/* ---------- Direktanruf (Issue #44): Telefonnummer der Einsatzkräfte anzeigen und anrufen ---------- */
+async function loadTel(){const el=$('#sTel');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Direktanruf</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
+  const c=s.phone||{},w=s.phone_who||{},ck=(k,t)=>`<label class="row" style="align-items:center"><input type="checkbox" data-tk="${k}" ${c[k]?'checked':''}> <span>${t}</span></label>`;
+  el.innerHTML=`<h2>Direktanruf</h2><div class="mut">Im laufenden Einsatz stehen bei den Einsatzkräften (Fenster «Einsatzkräfte» und Personeninfo) ihre Telefonnummern; «Anrufen» öffnet die Telefon-App des Geräts. Ob die Funktion je Einsatztyp angeboten wird, steht unter «Funktionen» («Direktanruf»). Sind beide Häkchen aus, ist der Direktanruf ganz aus.</div>
+    ${ck('show','Telefonnummer anzeigen')}${ck('call','Knopf «Anrufen»')}
+    <label class="mut">Sichtbar für<select id="tlW">${Object.entries(w).map(([k,v])=>`<option value="${esc(k)}" ${k===c.who?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    ${ck('self','Jede Person pflegt die eigene Nummer im Profil (sonst nur über «Benutzer»)')}
+    <div class="mut">Die Nummer erscheint nur bei Personen, die den Einsatz angenommen haben und noch dabei sind, und nur für Personen, die selbst teilnehmen (bzw. die Einsatzleitung). Nicht in der öffentlichen Ansicht und nicht im Replay. Die Nummern erfasst man unter Personen → «Benutzer».</div>`;
+  el.onchange=e=>{const t=e.target;let p;if(t.dataset.tk)p={[t.dataset.tk]:t.checked?1:0};else if(t.id==='tlW')p={who:t.value};else return;
+    el.querySelectorAll('input,select').forEach(x=>x.disabled=true);api('settings/save',{phone:p}).then(()=>toast('Gespeichert.','ok')).catch(fail).finally(loadTel)}}
 /* ---------- Einsatzsymbole (Issue #146): Sets und einzelne Symbole für Markierungen ein-/ausschalten, Markierungen ohne Symbol erlauben ---------- */
 // Einstellung sym (settings/save, Recht cfg_inc): sets, off, free; gilt sofort für neue Markierungen, bestehende behalten ihr Symbol
 async function loadSym(){const el=$('#sSy');let s;try{s=await api('settings')}catch(e){el.innerHTML='<h2>Einsatzsymbole</h2><div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>';return}
