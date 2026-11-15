@@ -1,0 +1,128 @@
+# Im Einsatz
+
+## Das Menü {#menu}
+
+Das Menü ☰ zeigt oben den Einsatz: Meldung, Alarmzeit, Alarmstufe, PLS, Fliessgeschwindigkeit und ob der Einsatz aufgezeichnet wird oder öffentlich sichtbar ist. Darunter liegen Register:
+
+| Register | Inhalt |
+|---|---|
+| Einsatz | Teilnahme, Mein Einsatz, Fliessgeschwindigkeit, Pegel & Abfluss, Werkzeuge, AI-Assistent |
+| Leitung | nur für die Einsatzleitung, siehe [Einsatzleitung](#leitung) |
+| Übung | nur für die Übungsleitung, siehe [Übungen](#planung/freigabe) |
+| Log | Einsatzlog live |
+| Info | deine Rechte in diesem Einsatz, Person, Server, Version |
+
+![Register «Einsatz»](img/menu-einsatz.jpg)
+![Register «Info» mit den eigenen Rechten](img/menu-info.jpg)
+
+Beim Öffnen steht das Menü immer auf «Einsatz» (für die Übungsleitung auf «Übung»).
+
+## Einsatzkräfte {#einsatzkraefte}
+
+Der Kartenknopf **Einsatzkräfte** öffnet die Liste aller Teilnehmenden, gruppiert nach Spezialrolle, darunter die externen Einsatzkräfte und die Fahrzeuge. Je Person siehst du Einrückoption, Alter des Standorts und Koordinaten.
+
+![Liste der Einsatzkräfte](img/einsatzkraefte.jpg)
+
+- **Zentrieren** schiebt die Karte zur Person, **Folgen** hält sie im Bild.
+- **ℹ Info** zeigt Profilbild, Spezialrolle, Einrückoption und Einsatzgruppen. Dasselbe Fenster öffnet sich beim Antippen einer Einsatzkraft auf der Karte.
+- 🧭 übergibt den Standort an deine [Navigations-App](#einsatz/navigation).
+- Die Gruppen lassen sich auf- und zuklappen; das Gerät merkt es sich.
+
+Die Einsatzleitung kann hier Spezialrollen ändern, Personen aus dem Einsatz entfernen und [externe Einsatzkräfte](#leitung/externe) erfassen.
+
+## Nachrichten {#nachrichten}
+
+Der Kartenknopf **Nachrichten** öffnet den Verlauf. Alle, die den Einsatz angenommen haben, sehen alle Nachrichten. Die Empfänger bestimmen nur, wer benachrichtigt wird; an dich gerichtete Nachrichten sind markiert. Die rote Zahl am Knopf zeigt Ungelesenes.
+
+![Nachrichten](img/nachrichten.jpg)
+
+1. Text eingeben.
+2. Optional Empfänger wählen (nach Spezialrolle gruppiert). Ohne Auswahl werden alle benachrichtigt.
+3. Optional **Als Markierung auf der Karte**: am eigenen Standort oder an einem Punkt, den du danach auf der Karte antippst.
+4. **Senden**.
+
+Nachrichten speichern deinen Standort, sofern du ihn teilst. Markierungen von Nachrichten erscheinen als eigene Kategorie auf der Karte; entfernen kann sie die sendende Person oder die Einsatzleitung. Wer senden darf, legt die Verwaltung je Spezialrolle fest.
+
+## Rettlinge {#rettlinge}
+
+Der Kartenknopf **Rettlinge** zeigt die gesuchten Personen in drei Gruppen: **Vermisst** (ohne Standort), **Standort bekannt** und **Gerettet**. Die rote Zahl zählt die nicht geretteten.
+
+![Rettlinge](img/rettlinge.jpg)
+
+- **+ Rettling erfassen**: Name und Beschreibung. Ohne Namen heisst er «Unbekannter Rettling».
+- **📍 Fundort**: am eigenen Standort oder auf der Karte gewählt. Es gilt der zuletzt gemeldete Fundort.
+- **Gerettet** bzw. **Zurücknehmen**.
+- **Suchgebiet** (bei vermissten): Kamerafokus auf sein Teilgebiet.
+- **⋯** klappt weitere Knöpfe auf: Fundort zurücksetzen, **PLS setzen** (eigener PLS für diesen Rettling), Bearbeiten und, für die Einsatzleitung, Entfernen.
+
+Erfassen, Fundort melden und «gerettet» melden dürfen alle, die den Einsatz angenommen haben.
+
+## Markierungen {#markierungen}
+
+Der Kartenknopf **Markierungen** zeigt drei Gruppen:
+
+- **Point last seen (PLS)**: der PLS des Einsatzes und die PLS der Rettlinge. Blasse PLS zählen nicht mehr fürs Suchgebiet (Rettling gefunden).
+- **Lage**: Markierungen, Bereiche und Linien der Einsatzleitung.
+- **Feste Standorte**: Orte der Organisation wie Bootseinwasserungen oder Magazine, mit Suchgebiet aufgeteilt in «Im Einsatzgebiet» und «Ausserhalb».
+
+![Markierungen](img/markierungen.jpg)
+
+Mit den Häkchen blendest du einzelne Einträge oder ganze Gruppen auf der Karte aus; **Zeigen** schiebt die Karte hin. Neue Markierungen, Bereiche und Linien setzt die Einsatzleitung (siehe [Lage zeichnen](#leitung/lage)).
+
+## Fliessgeschwindigkeit {#fliessgeschwindigkeit}
+
+Im Register «Einsatz» setzen alle Teilnehmenden die **Fliessgeschwindigkeit** in m/s. Daraus berechnet die App die Länge des Suchgebiets. Die Messstationen beim PLS (siehe unten) helfen bei der Einschätzung.
+
+## Flussdistanz {#flussdistanz}
+
+Das Werkzeug **Flussdistanz** misst die Distanz zwischen zwei Punkten entlang des Gewässers. Du findest es als Kartenknopf und im Menü unter «Werkzeuge», auch ohne Einsatz.
+
+1. Kartenknopf **Flussdistanz** antippen.
+2. Startpunkt A auf der Karte antippen.
+3. Zielpunkt B antippen.
+
+Die App setzt beide Punkte aufs nächste Gewässer und zeigt die Distanz entlang des Gewässers und in Luftlinie, die Fliessrichtung, die Treibzeit mit der Fliessgeschwindigkeit des Einsatzes (ohne Einsatz gibst du sie ein) und die Dauer für einige Vergleichsgeschwindigkeiten. Passiert der Weg ein Wehr oder eine andere Gefahrenstelle, steht das ebenfalls dabei. Höchstens 50 km Luftlinie.
+
+## Navigation {#navigation}
+
+Der Knopf 🧭 bei Einsatzkräften, Rettlingen, PLS, Markierungen, festen Standorten und Messstationen übergibt das Ziel an deine Navigations-App (Google Maps, Apple Karten, Waze oder eine andere App). Welche App, wählst du im [Profil](#profil/anzeige). Hat ein fester Standort mehrere Navigationspunkte (zum Beispiel Zufahrten), wählst du einen aus.
+
+Marker ohne Popup (Einsatzkräfte, PLS) fragen beim Antippen kurz nach, damit sich die Navigations-App nicht aus Versehen öffnet.
+
+## Messstationen {#messstationen}
+
+Der Kartenknopf **Messstationen** zeigt Pegel, Abfluss und Wassertemperatur der BAFU-Messstationen:
+
+- **Beim PLS**: die nächsten Stationen, mit den Werten bei Einsatzbeginn und den aktuellen.
+- **Meine Messstationen**: deine eigene Auswahl, auch ohne Einsatz (im [Profil](#profil/messstationen)).
+
+![Messstationen](img/messstationen.jpg)
+
+Die Marker auf der Karte sind nach der Gefahrenstufe eingefärbt. Die Werte zu Beginn und am Ende eines Einsatzes stehen im Einsatzlog.
+
+## Funk {#funk}
+
+Ist der Funk eingerichtet, öffnet der Kartenknopf **Funk** zwei Register:
+
+- **Live-Konferenz**: Sprechfunk in Echtzeit in einem Kanal. **Beitreten** und **Verlassen** gibt es auch direkt auf der Karte links unten. Mit der Live-Taste sprichst du, solange du sie hältst; «Mikro offen» lässt das Mikrofon offen.
+- **Durchsagen**: Sprachnachrichten. Taste gedrückt halten, sprechen, loslassen. Andere hören die Durchsage sofort oder später; sie steht mit ▶ im Log und, falls eingerichtet, auch als Text.
+
+Welche Kanäle du hörst und wo du sprechen darfst, hängt von deiner Spezialrolle und der Einsatzleitung ab. Die Einsatzleitung kann Personen stummschalten. Im Profil stellst du ein, ob Durchsagen automatisch abgespielt werden («Mithören»).
+
+## Fahrzeuge {#fahrzeuge}
+
+Fahrzeuge mit einem Bluetooth-Beacon erscheinen auf der Karte, sobald die native App eines Teilnehmenden sie sieht. Die Liste steht im Fenster «Einsatzkräfte» unter «Fahrzeuge»: wer darin sitzt, was verladen ist (Boot auf dem Anhänger) und wo es zuletzt gesehen wurde. Verladen und abladen geht über das Popup des Fahrzeugs.
+
+## Einsatzlog {#log}
+
+Das Register **Log** zeigt den Ablauf des Einsatzes: Beitritte, Spezialrollen, Fahrten («fährt von A nach B»), Nachrichten im Volltext, Markierungen, Rettlinge, Messwerte und mehr. **Gross-Modus** zeigt das Log bildschirmfüllend, zum Beispiel auf einem Bildschirm im Kommandoposten.
+
+![Register «Log»](img/menu-log.jpg)
+
+## AI-Assistent {#ai}
+
+Hat deine Organisation den AI-Assistenten eingerichtet, findest du im Register «Einsatz» **✨ Lagezusammenfassung** und **✨ Frage stellen**. Der Assistent macht nur Vorschläge; übernommen wird nichts automatisch. Ob er auf Abruf oder begleitend arbeitet, stellst du im [Profil](#profil/ai) ein.
+
+## Werkzeuge {#werkzeuge}
+
+Unter «Werkzeuge» im Menü stehen die [Flussdistanz](#einsatz/flussdistanz) und, je nach Rechten, weitere Hilfsmittel. Sie funktionieren auch ohne laufenden Einsatz.

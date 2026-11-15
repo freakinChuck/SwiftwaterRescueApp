@@ -153,3 +153,5 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .orgn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .org.orgbig{display:flex;flex-direction:column;gap:.5rem;text-align:center}.org.orgbig img{height:auto;max-height:110px;max-width:240px;padding:6px 10px;border-radius:8px}.org.orgbig .orgn{white-space:normal;font-weight:600;font-size:1.05rem}
 .legalf{font-size:.8rem;color:var(--mut)}.legalf a{color:#8ec5ff}
+/* Bedienungsanleitung (Issue #37): Knopf ? zur passenden Stelle */
+button.hlp{font-weight:700;min-width:2rem;padding:.3rem .55rem}

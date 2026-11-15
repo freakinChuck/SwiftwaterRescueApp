@@ -297,7 +297,7 @@ function orgMark(o,cls,fb){const n=(o&&o.name)||fb||'',u=orgLogo(o);if(!n&&!u)re
 // Links auf Impressum, Lizenzen und Datenschutz (Fusszeilen der Verwaltung und des Menüs der Einsatz-App)
 const legalLinks=()=>[['impressum','Impressum'],['lizenzen','Lizenzen'],['datenschutz','Datenschutz']].map(([h,l])=>`<a href="legal.html#${h}" target="_blank" rel="noopener">${l}</a>`).join(' · ');
 /* ---------- Anmeldung ---------- */
-function loginView(el,title,done){el.innerHTML=`<div class="card"><div id="lgOrg"></div><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="index.html?demo">🎓 Demo ausprobieren (ohne Anmeldung)</a><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
+function loginView(el,title,done){el.innerHTML=`<div class="card"><div id="lgOrg"></div><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="index.html?demo">🎓 Demo ausprobieren (ohne Anmeldung)</a><a class="mut lglk" href="hilfe.html" target="_blank" rel="noopener">📖 Bedienungsanleitung</a><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
   // Organisation mit Logo (Issue #123) und Version (Issue #175) ohne Anmeldung; ältere Server ohne Route org: nur die Version
   fetch(`${API}?r=org`).then(r=>r.ok?r.json():fetch(`${API}?r=version`).then(r=>r.json()).then(v=>({version:v}))).then(o=>{const e=$('#lgVer'),g=$('#lgOrg'),v=o.version;
     if(e&&v&&v.version)e.textContent='Version '+verTxt(v);if(g&&!DEMO)g.innerHTML=orgMark(o,'orgbig')}).catch(()=>{});
@@ -391,6 +391,9 @@ async function vplay(id,b){if(vplayA&&vplayId===id&&!vplayA.paused){vplayA.pause
   try{if(b)b.textContent='…';const u=URL.createObjectURL(await voiceBlob(id,VPLAY_Q));vplayA=vplayA||new Audio();vplayA.pause();vplayA.src=u;vplayId=id;
     vplayA.onended=vplayA.onpause=()=>{document.querySelectorAll(`[data-vplay="${id}"]`).forEach(x=>x.textContent='▶')};await vplayA.play();document.querySelectorAll(`[data-vplay="${id}"]`).forEach(x=>x.textContent='❚❚')}
   catch(e){if(b)b.textContent='▶';toast(e.message,'err')}}
+// Bedienungsanleitung (Issue #37): hilfe('kapitel/anker') öffnet hilfe.html an der Stelle, Knöpfe mit data-hlp
+function hilfe(k){window.open('hilfe.html'+(k?'#'+k:''),'_blank','noopener')}
+document.addEventListener('click',e=>{const h=e.target.closest('[data-hlp]');if(h){e.preventDefault();e.stopPropagation();hilfe(h.dataset.hlp)}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-vplay]');if(b){e.preventDefault();vplay(+b.dataset.vplay,b)}});
 // anon (Issue #54, Verwaltung): async on => Fassung laden (anonymisiert oder nicht), dann Knopf «Anonym» in der Kopfzeile
 function openBigLog(title,get,live,anon){big={title,get,live,anon,anonOn:false,desc:true,filter:'all',cache:[]};let o=$('#bigLog');if(o)o.remove();

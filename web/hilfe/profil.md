@@ -1,0 +1,60 @@
+# Profil und Einstellungen
+
+Der Knopf 👤 in der Kopfzeile des Menüs öffnet dein **Profil** mit allen persönlichen Einstellungen. «← Zurück» oder die Zurück-Taste des Geräts schliesst es.
+
+![Profil](img/profil.jpg)
+
+## Konto {#konto}
+
+Name, Benutzername und deine Einsatzgruppen. Hier änderst du dein **Profilbild** und dein **Passwort** und meldest dich **ab**. Abmelden löscht den auf dem Gerät gemerkten Stand. Unter **Angemeldete Apps** siehst du die Geräte, auf denen die native App mit deinem Konto angemeldet ist, und kannst sie abmelden.
+
+## Alarmierung {#alarmierung}
+
+- **Einsatzfähigkeit**: ob du zurzeit alarmiert wirst (siehe unten).
+- **Übungsmodus**: Bei Einsatztypen, die das vorsehen (zum Beispiel Übungen), wirst du wie bei einem kritischen Alarm alarmiert.
+- **Push-Benachrichtigungen** ein- oder ausschalten und eine Probe senden.
+- **App installieren**, falls der Browser das anbietet.
+
+## Abwesenheit {#abwesenheit}
+
+Mit **+ Abwesenheit erfassen** meldest du dich für einen Zeitraum ab (Ferien, Krankheit) oder setzt deine Einsatzfähigkeit aus. «Bis» leer bedeutet bis auf Weiteres. Während einer Abwesenheit:
+
+- wirst du nicht alarmiert (kein Push),
+- siehst du Einsätze trotzdem und kannst freiwillig teilnehmen,
+- zeigt das Menü den Hinweis ⏸.
+
+Laufende Abwesenheiten beendest du mit **Beenden**, geplante entfernst du. Die Verwaltung kann Abwesenheiten auch für dich erfassen.
+
+## Anzeige {#anzeige}
+
+- **Koordinatensystem**: LV95 (Standard), LV03, WGS84 dezimal oder in Grad/Minuten/Sekunden, oder Koordinaten ausblenden.
+- **Navigations-App** für den Knopf 🧭: Google Maps, Apple Karten, Waze oder eine andere App.
+
+## Messstationen {#messstationen}
+
+In der Karte **Pegel & Abfluss** stellst du deine eigenen Messstationen zusammen (bis 20). Suche nach Gewässer oder Ort, ↑ verschiebt, ✕ entfernt. Sie erscheinen im Fenster [Messstationen](#einsatz/messstationen), auch ohne Einsatz.
+
+## Funk {#funk}
+
+- **Mithören**: neue Durchsagen sofort abspielen, solange die App offen ist.
+- Bedienung der Sprechtaste: halten oder antippen zum Starten und Stoppen.
+
+## AI-Assistent {#ai}
+
+Je Funktion des AI-Assistenten wählst du, wie weit er dich unterstützt: aus, **auf Abruf** (Knopf ✨) oder **begleitend** (der Vorschlag liegt beim Öffnen bereit). Mehr als die Verwaltung erlaubt, ist nicht möglich.
+
+## Fahrzeuge {#fahrzeuge}
+
+Werden die Fahrzeuge auch ausserhalb von Einsätzen verfolgt, gibst du hier deine Zustimmung, dass die native App Beacons in deiner Nähe meldet. Mit dem nötigen Recht lernst du hier ein neues Beacon ein.
+
+## Ausbildung {#ausbildung}
+
+Die Karte **Ausbildung** zeigt deine Ausbildungen und Fähigkeiten mit Gültigkeit: gültig, läuft bald ab, abgelaufen oder fehlend (Pflicht). Ist es erlaubt, erfasst du einen Abschluss selbst. Ausstehendes meldet auch ein Hinweis im Menü.
+
+## Version {#version}
+
+Die Karte **Version** zeigt die Version der App und des Servers. **Was ist neu** listet die Änderungen der letzten Versionen. Nach einem Update erscheint diese Liste einmal von selbst.
+
+## Rechtliches {#rechtliches}
+
+Links zur Bedienungsanleitung, zum Impressum, zu den Lizenzen und zur Datenschutzerklärung der Organisation.
