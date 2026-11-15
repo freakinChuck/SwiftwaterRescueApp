@@ -240,12 +240,15 @@ class _IncMenuState extends State<IncMenu> {
   List<Widget> _noInc(BuildContext c) {
     final ks = _kindsNow(), ka = ks.where((k) => jb(k['can'])).toList(), ng = ks.where((k) => jb(k['no_grp'])).toList();
     // Sekundäreinsätze (Issue #164): eigene Karte, starten ohne Alarm
-    final nk = ka.where((k) => !jb(k['sec'])).toList(), sk = ka.where((k) => jb(k['sec'])).toList();
-    final xps = jl(s.st?['ex_plans']), xpe = xps.where((p) => !jb(p['sec'])).toList(), xpz = xps.where((p) => jb(p['sec'])).toList();
+    // Kategorie: 0 Primäreinsatz, 1 Sekundäreinsatz (ohne Alarm), 2 Freies Ereignis (Alarmstufe je Typ)
+    int cat(J k) => ji(k['sec']) ?? 0;
+    final nk = ka.where((k) => cat(k) == 0).toList(), sk = ka.where((k) => cat(k) == 1).toList(), fk = ka.where((k) => cat(k) == 2).toList();
+    final xps = jl(s.st?['ex_plans']);
+    const xpk = ['Übung', 'Sekundäreinsatz, ohne Alarm', 'Freies Ereignis'];
     return [
       MCard(title: 'Kein aktiver Einsatz', children: [
         if (nk.isEmpty)
-          Mut('Du darfst ${sk.isNotEmpty ? 'keine Einsätze mit Alarm' : 'keine Einsätze'} starten${ng.isNotEmpty || sk.isNotEmpty ? '' : ' (Benutzerrolle)'}. Bei einem Alarm erscheint er hier.'),
+          Mut('Du darfst ${sk.isNotEmpty || fk.isNotEmpty ? 'keine Primäreinsätze' : 'keine Einsätze'} starten${ng.isNotEmpty || sk.isNotEmpty || fk.isNotEmpty ? '' : ' (Benutzerrolle)'}. Bei einem Alarm erscheint er hier.'),
         if (ng.isNotEmpty)
           Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -262,31 +265,23 @@ class _IncMenuState extends State<IncMenu> {
         ], buttons: [
           for (final k in sk) OutlinedButton(onPressed: () => _startKind(c, k), child: Text('${js(k['name'])} starten')),
         ]),
-      if (xpe.isNotEmpty)
-        MCard(title: 'Vorbereitete Übungen (${xpe.length})', children: [
-          for (final p in xpe)
+      if (fk.isNotEmpty)
+        MCard(title: 'Freie Ereignisse', children: const [], buttons: [
+          for (final k in fk) OutlinedButton(onPressed: () => _startKind(c, k), child: Text('${js(k['name'])} starten')),
+        ]),
+      // Planungen (Issue #29, #164): vorbereitete Übungen, geplante Sekundäreinsätze und freie Ereignisse
+      if (xps.isNotEmpty)
+        MCard(title: 'Planungen (${xps.length})', children: [
+          for (final p in xps)
             Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(children: [
-                  Expanded(child: Text(js(p['title']))),
-                  smallBtn('Übung starten', _busy.contains('xs${p['id']}') ? null : () => _exStart(c, p), primary: true),
+                  Expanded(child: Text('${js(p['title'])} · ${xpk[(ji(p['sec']) ?? 0).clamp(0, 2)]}${p['at'] != null ? ' · ${fmtDT(jn(p['at']))}' : ''}')),
+                  smallBtn('Starten', _busy.contains('xs${p['id']}') ? null : () => _exStart(c, p), primary: true),
                 ])),
           const Padding(
               padding: EdgeInsets.only(top: 4),
-              child: Mut(
-                  'Startet die Übung mit der vorbereiteten Aufgebotsmeldung. Du leitest sie als Übungsleitung: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
-        ]),
-      // geplante Sekundäreinsätze (Feedback zu #164): ohne Alarm, mit Einsatzplan
-      if (xpz.isNotEmpty)
-        MCard(title: 'Geplante Sekundäreinsätze (${xpz.length})', children: [
-          for (final p in xpz)
-            Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(children: [
-                  Expanded(child: Text('${js(p['title'])}${p['at'] != null ? ' · ${fmtDT(jn(p['at']))}' : ''}')),
-                  smallBtn('Starten', _busy.contains('xs${p['id']}') ? null : () => _exStart(c, p), primary: true),
-                ])),
-          const Padding(padding: EdgeInsets.only(top: 4), child: Mut('Startet ohne Alarm mit dem Einsatzplan; die Aufgebotenen sehen den Einsatz und treten selbst bei. Du leitest ihn.')),
+              child: Mut('Startet mit der vorbereiteten Meldung (Sekundäreinsätze ohne Alarm). Du leitest: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
         ]),
       ?hydroCard(c, s, map, widget.openPrefs),
       ?_tools(),
@@ -315,9 +310,9 @@ class _IncMenuState extends State<IncMenu> {
   }
 
   Future<void> _exStart(BuildContext c, J p) async {
-    final sec = jb(p['sec']);
-    if (!await confirmDlg(c, sec ? 'Sekundäreinsatz «${js(p['title'])}» jetzt starten? Niemand wird alarmiert.' : 'Übung «${js(p['title'])}» jetzt starten? ${jb(p['invited']) ? 'Die aufgebotenen Personen werden' : 'Alle werden'} alarmiert.',
-        ok: sec ? 'Starten' : 'Übung starten')) {
+    final sec = ji(p['sec']) == 1;
+    if (!await confirmDlg(c, sec ? 'Sekundäreinsatz «${js(p['title'])}» jetzt starten? Niemand wird alarmiert.' : '«${js(p['title'])}» jetzt starten? ${jb(p['invited']) ? 'Die aufgebotenen Personen werden' : 'Alle werden'} gemäss Alarmstufe alarmiert.',
+        ok: 'Starten')) {
       return;
     }
     final r = await _run('xs${p['id']}', 'ex/start', {'id': p['id']});
@@ -398,7 +393,7 @@ class _IncMenuState extends State<IncMenu> {
     final st = s.st!, k = s.kindOf(i), kind = jm(i['kind']);
     final secs = s.now - (jn(i['alarm_at']) ?? s.now), rec = ji(i['record']) ?? 0;
     final lvl = st['level'] == 'crit' && kind['alarm'] != 'crit' ? 'Kritisch (Übungsmodus)' : js(kind['alarm_name']);
-    final sec = jb(kind['sec']), par = i['parent'] is Map ? jm(i['parent']) : null; // Sekundäreinsatz, Folgeeinsatz (Issue #164)
+    final sec = ji(kind['sec']) == 1, free = ji(kind['sec']) == 2, par = i['parent'] is Map ? jm(i['parent']) : null; // Sekundäreinsatz, freies Ereignis, Folgeeinsatz (Issue #164)
     return MCard(children: [
       Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 6, runSpacing: 4, children: [
         Chip2(k.name, color: hexColor(k.color)),
@@ -407,6 +402,7 @@ class _IncMenuState extends State<IncMenu> {
       const SizedBox(height: 6),
       Mkv([
         (sec ? 'Beginn' : 'Alarm', '${fmtDT(jn(i['alarm_at']))} · vor ${(secs / 60).round()} min'),
+        ('Art', free ? 'Freies Ereignis' : ''),
         sec ? ('Art', 'Sekundäreinsatz (ohne Alarm)') : ('Alarmstufe', lvl),
         ('Folgeeinsatz zu', par == null ? '' : '${js(par['kind_name'])} vom ${fmtDT(jn(par['alarm_at']))}${js(par['message']).isNotEmpty ? ': ${js(par['message'])}' : ''}'),
         ('PLS', i['lat'] != null ? s.fc(i['lat'], i['lon']) : ''),
@@ -441,10 +437,10 @@ class _IncMenuState extends State<IncMenu> {
     final act = s.iModes.where((x) => jb(x['active'])).toList();
     String mLabel(J x) => '${js(x['name'])}${jb(x['share_location']) ? '' : ' (ohne Standort)'}';
     if (s.exLead) {
-      final ks = jb(jm(i['kind'])['sec']);
-      out.add(MCard(title: ks ? 'Leitung' : 'Übungsleitung', children: [
+      final ks = (ji(jm(i['kind'])['sec']) ?? 0).clamp(0, 2);
+      out.add(MCard(title: ks > 0 ? 'Leitung' : 'Übungsleitung', children: [
         Text.rich(TextSpan(children: [
-          TextSpan(text: 'Du leitest ${ks ? 'diesen geplanten Sekundäreinsatz' : 'diese Übung'}${js(st['ex_title']).isNotEmpty ? ' «${js(st['ex_title'])}»' : ''}. ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: 'Du leitest ${const ['diese Übung', 'diesen geplanten Sekundäreinsatz', 'dieses geplante freie Ereignis'][ks]}${js(st['ex_title']).isNotEmpty ? ' «${js(st['ex_title'])}»' : ''}. ', style: const TextStyle(fontWeight: FontWeight.bold)),
           TextSpan(
               text:
                   'Rechte der Einsatzleitung, du wirst nicht alarmiert. Die Elemente gibst du im Register «Übung» frei.${joined ? ' Du nimmst zusätzlich als Einsatzkraft teil.' : ' Du kannst zusätzlich als Einsatzkraft teilnehmen:'}'),
@@ -1278,7 +1274,7 @@ class _StartPageState extends State<_StartPage> {
 
   @override
   Widget build(BuildContext context) {
-    final k = d.k, sec = jb(k['sec']), alarm = sec ? 'none' : js(k['alarm']);
+    final k = d.k, sec = ji(k['sec']) == 1, alarm = sec ? 'none' : js(k['alarm']);
     final o = d.opts, kid = '${ji(k['id'])}';
     final st = jm(o?['start']), allowed = st[kid] == null ? null : _ints(st[kid]);
     return Scaffold(
