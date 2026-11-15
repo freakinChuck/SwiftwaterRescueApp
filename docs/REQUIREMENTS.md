@@ -421,3 +421,10 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **AU-03** – Stand je Fähigkeit: gültig (mit Ablaufdatum), läuft bald ab (innerhalb der Vorwarnung), abgelaufen, fehlt (Pflicht) oder nicht erfasst (#117).
 - **AU-04** – Jede Person sieht ihre Ausbildungen im Profil der Einsatz-App (Web und nativ) und erhält im Menü ohne Einsatz einen Hinweis, wenn eine abgelaufen ist, bald abläuft oder eine Pflicht-Ausbildung fehlt (#117).
 - **AU-05** – Verwaltung → Personen → «Ausbildung» (Recht «Ausbildung verwalten»): Übersicht Personen × Fähigkeiten mit farbigem Stand, Suche, Filter nach Einsatzgruppe und «nur mit Handlungsbedarf», CSV-Export, Ausbildungen je Person erfassen und entfernen, Katalog der Fähigkeiten (#117).
+
+## 31. Bedienungsanleitung (BA)
+
+- **BA-01** – Eine Bedienungsanleitung für Einsatzkräfte, Einsatzleitung, Übungsleitung und Verwaltung steht ohne Anmeldung in der App bereit (`hilfe.html`), gegliedert in Kapitel: Erste Schritte, Alarm und Teilnahme, Karte, Im Einsatz, Einsatzleitung, Übungen und Planungen, Profil, Auswertung, Verwaltung, native App. Inhaltsverzeichnis mit Abschnitten, Suche über alle Kapitel, vorheriges/nächstes Kapitel, druckbar, am Handy und am Computer lesbar (#37).
+- **BA-02** – Die Kapitel sind Markdown-Dateien (`hilfe/*.md`) mit Bildschirmfotos aus dem Demo-Modus; die Fotos entstehen reproduzierbar mit einem Skript (#37).
+- **BA-03** – Kontextbezogene Links: Knopf «?» in der Kopfzeile des Menüs (je nach Register bzw. ohne Einsatz), in den Seitenfenstern Einsatzkräfte, Rettlinge, Nachrichten, Funk, Markierungen und Messstationen, im Profil und in der Verwaltung je Bereich bzw. in «Meine Einsätze»; dazu Links bei der Anmeldung, im Profil (Karte «Rechtliches», auch nativ) und im Konto-Menü der Verwaltung (#37).
+- **BA-04** – Die Anleitung wird bei jeder Änderung der Bedienung nachgeführt (Text und, wo nötig, Bildschirmfotos) (#37).
