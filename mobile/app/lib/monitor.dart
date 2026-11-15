@@ -142,10 +142,12 @@ Future<AccState> pollOne(Account a) async {
       j.addAll({'inc': id, 'since': since, 'joined': joined, 'title': '${inc['message'] ?? ''}', 'kind': kind, 'color': inc['kind_color'], 'level': lvl, 'end_level': el});
     } else {
       if (st.inc != null && (st.alarmed || st.joined)) {
+        // Issue #174: Alarm und übrige Meldungen des Einsatzes zurücknehmen; «beendet» erhalten nur Teilnehmende
+        await cancelIncNotes(a.id);
         final k = st.kind.isEmpty ? 'Einsatz' : st.kind;
         final l = (st.j['level'] as String?) ?? 'normal';
         final el = (st.j['end_level'] as String?) ?? (l == 'none' || l == 'low' ? 'low' : 'normal');
-        if (el != 'none') await report(a, 'e:${st.inc}', '${_up(k)} BEENDET', '$k beendet.', el);
+        if (el != 'none' && st.joined) await report(a, 'e:${st.inc}', '${_up(k)} BEENDET', '$k beendet.', el);
       }
       for (final k in ['inc', 'joined', 'alarmed', 'title', 'kind', 'color', 'level', 'end_level', 'vsee']) {
         j.remove(k);
