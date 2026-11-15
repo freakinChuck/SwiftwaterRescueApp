@@ -349,14 +349,16 @@ const SK_ST={ok:['gültig','ok'],warn:['läuft bald ab','warn'],exp:['abgelaufen
 const skD=ts=>ts?new Date(ts*1000).toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
 const skDay=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10),skTs=v=>v?Math.floor(new Date(v+'T12:00').getTime()/1000)||0:0; // Datum = Mittag Ortszeit
 // Gültigkeit in Worten (exp none|months|year, n)
-function skValid(k){if(k.exp==='months')return k.n%12?`${k.n} Monate`:(k.n===12?'1 Jahr':`${k.n/12} Jahre`);if(k.exp==='year')return k.n===1?'bis Ende des Kalenderjahres':k.n===2?'bis Ende des Folgejahres':`bis Ende des ${k.n}. Kalenderjahres`;return'unbegrenzt'}
+function skValid(k){if(k.exp==='months')return k.n%12?`${k.n} Monate`:(k.n===12?'1 Jahr':`${k.n/12} Jahre`);if(k.exp==='year')return!k.n?'bis Ende des Kalenderjahres':k.n===1?'bis Ende des Folgejahres':`bis Ende des ${k.n}. Folgejahres`;return'unbegrenzt'} // n: 0 = laufendes Jahr, 1 = Folgejahr …
+// Pflicht für wen (req_grp null = alle, für die sie gilt); gn = Name einer Gruppe aus der ID
+function skReqTxt(k,gn){return!k.req||k.req_grp==null?'':' für '+(k.req_grp.length?k.req_grp.map(gn).join(', '):'niemand')}
 const skChip=x=>`<span class="skchip sk-${SK_ST[x.state][1]}">${SK_ST[x.state][0]}${x.exp?(x.state==='exp'?' seit ':' bis ')+skD(x.exp):''}</span>`;
 // Zusammenfassung aus me.skills {exp, warn, miss}; leer = alles in Ordnung
 function skSum(s){if(!s)return'';const t=[];s.exp&&t.push(s.exp+' abgelaufen');s.warn&&t.push(s.warn+' läuft bald ab');s.miss&&t.push(s.miss+(s.miss>1?' Pflicht-Ausbildungen fehlen':' Pflicht-Ausbildung fehlt'));return t.join(', ')}
 // Liste der Fähigkeiten einer Person (Route me/skills): adm = Recht skills, uid = Person, my = eigene Benutzer-ID (eigene, selbst erfasste Einträge entfernbar)
 function skRows(items,adm,my,uid){if(!items.length)return'<div class="mut">Für dich ist keine Ausbildung hinterlegt.</div>';
   return items.map(x=>{const k=x.skill,ed=adm||(uid===my&&k.self);
-    return`<div class="skrow"><div class="skh"><b>${esc(k.name)}</b>${k.cat?` <span class="mut">${esc(k.cat)}</span>`:''}${k.req?' <span class="mut" title="Pflicht">★</span>':''} ${skChip(x)}</div>
+    return`<div class="skrow"><div class="skh"><b>${esc(k.name)}</b>${k.cat?` <span class="mut">${esc(k.cat)}</span>`:''}${(x.req??k.req)?' <span class="mut" title="Pflicht">★</span>':''} ${skChip(x)}</div>
       <div class="mut skm">${x.done?'Zuletzt '+skD(x.done)+(x.note?' – '+esc(x.note):''):'Noch keine Ausbildung erfasst'} · Gültigkeit ${esc(skValid(k))}${k.descr?'<br>'+esc(k.descr):''}</div>
       <div class="row skb">${ed?`<button data-ska="${k.id}">${x.done?'+ Auffrischung erfassen':'+ Ausbildung erfassen'}</button>`:(!x.done||x.state!=='ok'?'<span class="mut">Erfasst die Verwaltung.</span>':'')}
       ${x.hist.length?`<details><summary>Verlauf (${x.hist.length})</summary>${x.hist.map(e=>`<div class="skh2">${skD(e.done_at)}${e.note?' – '+esc(e.note):''} <span class="mut">${e.created_by!==uid&&e.by_name?'erfasst von '+esc(e.by_name):''}</span>${adm||(e.created_by===my&&uid===my&&k.self)?` <button data-skx="${e.id}" title="Eintrag entfernen" aria-label="Eintrag entfernen">✕</button>`:''}</div>`).join('')}</details>`:''}</div></div>`}).join('')}

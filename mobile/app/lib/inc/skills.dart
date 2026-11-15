@@ -23,12 +23,12 @@ String _d(num? ts) {
 
 /// Gültigkeit in Worten (skValid)
 String skValid(J k) {
-  final n = ji(k['n']) ?? 1;
+  final n = ji(k['n']) ?? 0; // Kalenderjahre: 0 = laufendes, 1 = Folgejahr …
   switch (js(k['exp'])) {
     case 'months':
       return n % 12 != 0 ? '$n Monate' : (n == 12 ? '1 Jahr' : '${n ~/ 12} Jahre');
     case 'year':
-      return n == 1 ? 'bis Ende des Kalenderjahres' : (n == 2 ? 'bis Ende des Folgejahres' : 'bis Ende des $n. Kalenderjahres');
+      return n == 0 ? 'bis Ende des Kalenderjahres' : (n == 1 ? 'bis Ende des Folgejahres' : 'bis Ende des $n. Folgejahres');
   }
   return 'unbegrenzt';
 }
@@ -116,7 +116,7 @@ class _SkillPrefsState extends State<SkillPrefs> {
         Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           Text(js(k['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
           if (js(k['cat']).isNotEmpty) Mut(js(k['cat'])),
-          if (jb(k['req'])) const Mut('★'),
+          if (jb(x['req'] ?? k['req'])) const Mut('★'), // req je Person (Pflicht je Einsatzgruppe)
           Chip2('${st.$1}${exp != null ? (x['state'] == 'exp' ? ' seit ' : ' bis ') + _d(exp) : ''}', color: st.$2),
         ]),
         const SizedBox(height: 2),
