@@ -1,6 +1,15 @@
 {
   "versions": [
     {
+      "version": "1.1.0",
+      "date": "2026-11-15",
+      "items": [
+        "Organisation mit Logo in der App, Meldungen beim Einsatzende zurücknehmen (#123, #174) (#200)",
+        "Parallele Einsätze (Issue #167) (#201)",
+        "Parallele Einsätze in der nativen App (Issue #167) (#202)"
+      ]
+    },
+    {
       "version": "1.0.0",
       "date": "2026-11-15",
       "items": [
