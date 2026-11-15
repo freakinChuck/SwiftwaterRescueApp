@@ -167,8 +167,8 @@ class _IncMenuState extends State<IncMenu> {
   }
 
   String _absTxt(J a) {
-    final u = jn(a['until_at']);
-    return '${a['kind'] == 'sus' ? 'ausgesetzt' : 'abwesend'} ${u == null ? 'bis auf Weiteres' : 'bis ${fmtDT(u)}'}';
+    final u = jn(a['until_at']) ?? jn(a['until']);
+    return '${absWord(a)}${u == null ? (a['kind'] == 'rule' ? '' : ' bis auf Weiteres') : ' bis ${fmtDT(u)}'}';
   }
 
   // Hinweis für ältere Apps (Issue #175): Mindestversion des Servers bzw. höhere API-Stufe; «Später» blendet ihn 7 Tage aus

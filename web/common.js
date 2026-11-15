@@ -345,9 +345,11 @@ function showCopy(title,text){const d=dlg(title,`<input readonly value="${esc(te
 /* ---------- Abwesenheiten (Issue #91): abwesend bzw. Einsatzfähigkeit ausgesetzt = nicht aufgeboten, kein Alarm; laufende Einsätze bleiben sichtbar ---------- */
 const ABS_KIND={abs:'Abwesend',sus:'Einsatzfähigkeit ausgesetzt'};
 const absDT=ts=>new Date(ts*1000).toLocaleString('de-CH',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-const absUntil=a=>a.until!=null||a.until_at!=null?'bis '+absDT(a.until??a.until_at):'bis auf Weiteres';
 // a = laufende Abwesenheit {kind, until, note} (me.absent, users[].absent, my_abs)
-const absChip=a=>a?`<span class="abschip" title="${esc(ABS_KIND[a.kind]||ABS_KIND.abs)} ${esc(absUntil(a))}${a.note?' – '+esc(a.note):''}">⏸ ${esc(a.kind==='sus'?'ausgesetzt':'abwesend')} ${esc(absUntil(a))}</span>`:'';
+// kind rule = regelmässige Einsatzzeiten (Issue #180): why on = ausserhalb der Einsatzzeiten, off = regelmässig ausgesetzt; until = wieder einsatzfähig ab
+const absWord=a=>a.kind==='rule'?(a.why==='on'?'ausserhalb Einsatzzeit':'regelmässig ausgesetzt'):a.kind==='sus'?'ausgesetzt':'abwesend';
+const absUntil=a=>a.until!=null||a.until_at!=null?'bis '+absDT(a.until??a.until_at):a.kind==='rule'?'':'bis auf Weiteres';
+const absChip=a=>a?`<span class="abschip" title="${esc(a.kind==='rule'?'Regelmässige Einsatzzeiten: '+absWord(a):ABS_KIND[a.kind]||ABS_KIND.abs)} ${esc(absUntil(a))}${a.note?' – '+esc(a.note):''}">⏸ ${esc(absWord(a))} ${esc(absUntil(a))}</span>`:'';
 const absLocal=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16),absTs=v=>v?Math.floor(new Date(v).getTime()/1000)||0:0;
 // Liste der Einträge (Route absences) mit Entfernen; who = Namen zeigen
 function absRows(rs,who){return rs.length?rs.map(a=>`<div class="absrow"><span><b>${esc(ABS_KIND[a.kind]||ABS_KIND.abs)}</b>${who?' · '+esc(a.name)+(typeof gdots==='function'?gdots(a.user_id):''):''}<br><small class="mut">${a.now?'seit':'ab'} ${esc(absDT(a.from_at))}, ${esc(absUntil(a))}${a.note?' · '+esc(a.note):''}${who&&a.created_by!==a.user_id&&a.by_name?' · erfasst von '+esc(a.by_name):''}</small></span><span class="row" style="margin:0;flex:0 0 auto"><button data-abe="${a.id}">Ändern</button><button data-abx="${a.id}" aria-label="Eintrag entfernen">${a.now?'Beenden':'Entfernen'}</button></span></div>`).join(''):'<div class="mut">Keine Einträge.</div>'}
@@ -367,6 +369,32 @@ function absDialog(a,people,done){const now=Date.now()/1000,mo=new Date();mo.set
 // Klicks einer Liste aus absRows: rs = Einträge, people/done wie absDialog
 function absBind(el,rs,done){el.querySelectorAll('[data-abe]').forEach(b=>b.onclick=()=>absDialog(rs.find(a=>a.id===+b.dataset.abe),null,done));
   el.querySelectorAll('[data-abx]').forEach(b=>b.onclick=async()=>{const a=rs.find(x=>x.id===+b.dataset.abx);if(!await ask(a.now?'Eintrag jetzt beenden?':'Eintrag entfernen?'))return;try{await api('absence/remove',{id:a.id});toast(a.now?'Beendet.':'Entfernt.','ok');done&&done()}catch(e){fail(e)}})}
+/* ---------- Regelmässige Einsatzzeiten (Issue #180): je Wochentag und Uhrzeit; on = Einsatzzeit (ausserhalb aller nicht einsatzfähig), off = regelmässig ausgesetzt ---------- */
+// days = Bitmaske (1 = Montag … 64 = Sonntag), t_from/t_to = Minuten ab Mitternacht (Zeit Zürich), t_to <= t_from = über Mitternacht, gleich = ganzer Tag
+const RULE_MODE={on:'Einsatzzeit',off:'Regelmässig ausgesetzt'},WD=['Mo','Di','Mi','Do','Fr','Sa','So'];
+const ruleHm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'),ruleMin=v=>{const[h,m]=String(v||'').split(':').map(Number);return h*60+(m||0)};
+function ruleDays(d){if(d===127)return'täglich';if(d===31)return'Mo–Fr';if(d===96)return'Sa, So';return WD.filter((x,i)=>d>>i&1).join(', ')}
+const ruleTime=r=>r.t_from===r.t_to?'ganzer Tag':ruleHm(r.t_from)+'–'+ruleHm(r.t_to)+(r.t_to<r.t_from?' (über Mitternacht)':'');
+const ruleTxt=r=>ruleDays(r.days)+', '+ruleTime(r);
+// Liste der Regeln (Route avail/rules); who = Namen zeigen
+function ruleRows(rs,who){return rs.length?rs.map(r=>`<div class="absrow"><span><b>${esc(RULE_MODE[r.mode])}</b>${who?' · '+esc(r.name)+(typeof gdots==='function'?gdots(r.user_id):''):''}<br><small class="mut">${esc(ruleTxt(r))}${r.note?' · '+esc(r.note):''}</small></span><span class="row" style="margin:0;flex:0 0 auto"><button data-rle="${r.id}">Ändern</button><button data-rlx="${r.id}" aria-label="Regel entfernen">Entfernen</button></span></div>`).join(''):'<div class="mut">Keine regelmässigen Einsatzzeiten.</div>'}
+const RULE_HINT='Einsatzzeit: Hast du solche Regeln, wirst du nur in diesen Zeiten alarmiert. Regelmässig ausgesetzt: in diesen Zeiten kein Alarm (z. B. Arbeit). Wirkt wie eine Abwesenheit; laufende Einsätze bleiben sichtbar.';
+// Dialog erfassen/ändern: r = bestehende Regel oder null; people/done wie absDialog
+function ruleDialog(r,people,done){const dy=r?r.days:31;
+  const d=dlg(r?'Regel ändern':'Regelmässige Einsatzzeit erfassen',`${people&&!r?`<label class="mut">Person<select id="rlU">${people.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select></label>`:''}
+    <label class="mut">Art<select id="rlM">${Object.entries(RULE_MODE).map(([k,v])=>`<option value="${k}" ${(r?r.mode:'off')===k?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="mut">${esc(RULE_HINT)}</div>
+    <div class="mut">Wochentage</div><div class="wdrow">${WD.map((w,i)=>`<button type="button" class="wdb" data-wd="${i}" aria-pressed="${!!(dy>>i&1)}">${w}</button>`).join('')}</div>
+    <div class="row"><button type="button" data-wq="31">Mo–Fr</button><button type="button" data-wq="96">Sa, So</button><button type="button" data-wq="127">Täglich</button></div>
+    <div class="row"><label class="mut">Von<input id="rlF" type="time" value="${ruleHm(r?r.t_from:7*60)}"></label><label class="mut">Bis<input id="rlT" type="time" value="${ruleHm(r?r.t_to:17*60)}"></label></div>
+    <div class="mut">«Bis» vor «Von» = über Mitternacht (zählt zum gewählten Tag), gleiche Zeit = ganzer Tag.</div>
+    <label class="mut">Bemerkung (optional)<input id="rlN" maxlength="200" value="${esc(r&&r.note||'')}" placeholder="z. B. Arbeit, Pikett"></label>`,async d=>{
+    const days=[...d.querySelectorAll('[data-wd]')].reduce((s,b)=>s|(b.getAttribute('aria-pressed')==='true'?1<<+b.dataset.wd:0),0);
+    await api('avail/rule/save',{id:r?r.id:undefined,user_id:people&&!r?+$('#rlU',d).value:undefined,mode:$('#rlM',d).value,days,from:ruleMin($('#rlF',d).value),to:ruleMin($('#rlT',d).value),note:$('#rlN',d).value});toast('Gespeichert.','ok');done&&done()});
+  d.querySelectorAll('[data-wd]').forEach(b=>b.onclick=()=>b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')!=='true'));
+  d.querySelectorAll('[data-wq]').forEach(b=>b.onclick=()=>d.querySelectorAll('[data-wd]').forEach(x=>x.setAttribute('aria-pressed',!!(+b.dataset.wq>>+x.dataset.wd&1))));return d}
+function ruleBind(el,rs,done){el.querySelectorAll('[data-rle]').forEach(b=>b.onclick=()=>ruleDialog(rs.find(r=>r.id===+b.dataset.rle),null,done));
+  el.querySelectorAll('[data-rlx]').forEach(b=>b.onclick=async()=>{if(!await ask('Regel entfernen?'))return;try{await api('avail/rule/remove',{id:+b.dataset.rlx});toast('Entfernt.','ok');done&&done()}catch(e){fail(e)}})}
 // Eigenes Passwort ändern; forced = nach Zurücksetzen durch die Verwaltung (nur Abmelden als Alternative)
 function pwDialog(forced,done){
   dlg('Passwort ändern',`${forced?'<div class="mut">Dein Passwort wurde neu gesetzt. Bitte vergib jetzt ein eigenes Passwort.</div>':''}

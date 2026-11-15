@@ -25,6 +25,26 @@ Mit **+ Abwesenheit erfassen** meldest du dich für einen Zeitraum ab (Ferien, K
 
 Laufende Abwesenheiten beendest du mit **Beenden**, geplante entfernst du. Die Verwaltung kann Abwesenheiten auch für dich erfassen.
 
+## Regelmässige Einsatzzeiten {#einsatzzeiten}
+
+Unter **Alarmierung → Regelmässige Einsatzzeiten** legst du je Wochentag und Uhrzeit fest, wann du alarmiert werden willst. **+ Regel erfassen** bietet zwei Arten:
+
+- **Regelmässig ausgesetzt**: In diesen Zeiten wirst du nicht alarmiert, zum Beispiel Mo–Fr 07:00–17:00 während der Arbeit.
+- **Einsatzzeit**: Sobald du mindestens eine Einsatzzeit hast, wirst du nur noch in deinen Einsatzzeiten alarmiert, zum Beispiel Pikett Sa, So 00:00–00:00 (gleiche Zeit = ganzer Tag).
+
+Liegt «Bis» vor «Von», gilt die Regel über Mitternacht; die Stunden nach Mitternacht zählen zum gewählten Tag (Fr 20:00–02:00 = Freitagabend bis Samstag 02:00). Die Regeln wirken wie eine Abwesenheit: kein Aufgebot-Alarm, laufende Einsätze bleiben sichtbar und du kannst freiwillig beitreten. Oben bei der Einsatzfähigkeit siehst du, ob du gerade «regelmässig ausgesetzt» oder «ausserhalb Einsatzzeit» bist und ab wann du wieder alarmiert wirst. Höchstens 20 Regeln je Person; die Verwaltung kann sie auch für dich erfassen.
+
+## Kalender {#kalender}
+
+Der Kalender (**📅 Kalender** unter «Werkzeuge» im Menü, im Profil bei den Einsatzzeiten oder in der Kopfzeile der Verwaltung) zeigt alles mit Datum an einem Ort:
+
+- deine Abwesenheiten und regelmässigen Einsatzzeiten,
+- Einsätze, an denen du teilgenommen hast (mit dem Recht «Statistik» alle),
+- geplante Übungen und Einsätze aus dem Übungsplan, mit deiner Anmeldung (Übungsleiter sehen alle Planungen mit Datum),
+- Ausbildungen, die ablaufen.
+
+Oben wechselst du den Monat (‹ Heute ›), zwischen **Monat** und **Liste** und blendest Kategorien ein und aus. Ein Tag antippen zeigt seine Einträge. Mit dem Recht «Abwesenheiten verwalten» wählst du «Alle Personen» und siehst die Abwesenheiten und Einsatzzeiten aller. Deine Wahl merkt sich das Gerät.
+
 ## Anzeige {#anzeige}
 
 - **Koordinatensystem**: LV95 (Standard), LV03, WGS84 dezimal oder in Grad/Minuten/Sekunden, oder Koordinaten ausblenden.

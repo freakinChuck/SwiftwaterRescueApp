@@ -143,6 +143,9 @@ foreach ([
  // Abwesenheiten und ausgesetzte Einsatzfähigkeit (Issue #91): kind abs = abwesend, sus = Einsatzfähigkeit ausgesetzt (gleiche Wirkung: nicht aufgeboten, kein Alarm,
  // laufende Einsätze bleiben sichtbar, freiwillig beitreten erlaubt); until_at NULL = bis auf Weiteres; removed 1 = entfernt
  "CREATE TABLE IF NOT EXISTS absences(id $ai, user_id INT, from_at BIGINT, until_at BIGINT NULL, kind $tx, note TEXT NULL, created_by INT, created_at BIGINT, removed INT DEFAULT 0)",
+ // Regelmässige Einsatzzeiten (Issue #180): mode on = Einsatzzeit (hat eine Person solche Regeln, ist sie ausserhalb aller nicht einsatzfähig), off = regelmässig ausgesetzt;
+ // days = Wochentage als Bitmaske (1 = Montag … 64 = Sonntag), t_from/t_to = Minuten ab Mitternacht (Zeit Zürich; t_to <= t_from = über Mitternacht, gleich = 24 h)
+ "CREATE TABLE IF NOT EXISTS avail_rules(id $ai, user_id INT, mode $tx, days INT, t_from INT, t_to INT, note TEXT NULL, created_by INT, created_at BIGINT, removed INT DEFAULT 0)",
  // Einsatztypen (Issue #90, ersetzen die feste Unterscheidung scharf/Übung): perm = Recht zum Starten (inc_start, ex_start, start_<id>), alarm = Alarmstufe (ALARM_LEVELS),
  // mode_up = Personen mit Übungsmodus kritisch alarmieren, rec/air = Vorauswahl Aufzeichnung/Helikopter, feat_off = ausgeschaltete Funktionen, grp_off = nicht aufbietbare Gruppen (Neues ist also aufbietbar),
  // grp_def = vorausgewählte Gruppen, persons = Einzelpersonen aufbietbar, open_all = auch Nicht-Aufgebotene sehen den Einsatz, plans = vorbereitete Übungen erlaubt;
@@ -2245,11 +2248,31 @@ function alarmed($inc) { global $uid; if (exLead($inc) || incAbsent($inc, $uid))
 function incAllowed($inc) { global $uid; $k = kindOf($inc); if (($k['open_all'] && kindMember($k)) || (int)($inc['open_join'] ?? 0) || (int)$inc['created_by'] === $uid || can('inc_lead') || exLead($inc)) return true;
   $v = incInvite($inc); if ($v === null || in_array($uid, $v, true)) return true; $p = part((int)$inc['id']); return $p && $p['mode'] !== 'declined'; }
 // Abwesenheiten (Issue #91): abwesende Personen werden beim Aufbieten nicht alarmiert (incidents.inv_absent), bleiben aber im Aufgebot (sehen den Einsatz, dürfen beitreten)
-function absentIds() { global $db, $now; $s = $db->prepare("SELECT DISTINCT a.user_id FROM absences a JOIN users u ON u.id=a.user_id WHERE a.removed=0 AND u.active=1 AND a.from_at<=? AND (a.until_at IS NULL OR a.until_at>?)"); $s->execute([$now, $now]); return array_map('intval', array_column($s->fetchAll(), 'user_id')); }
+function absentIds() { global $db, $now; $s = $db->prepare("SELECT DISTINCT a.user_id FROM absences a JOIN users u ON u.id=a.user_id WHERE a.removed=0 AND u.active=1 AND a.from_at<=? AND (a.until_at IS NULL OR a.until_at>?)"); $s->execute([$now, $now]);
+  return array_values(array_unique(array_merge(array_map('intval', array_column($s->fetchAll(), 'user_id')), ruleAbsentIds()))); } // dazu regelmässige Einsatzzeiten (Issue #180)
+// Regelmässige Einsatzzeiten (Issue #180), siehe Tabelle avail_rules
+const RULE_MAX = 20; // je Person
+function availRules($u = null) { global $db; $s = $db->prepare("SELECT r.*,u.name FROM avail_rules r JOIN users u ON u.id=r.user_id WHERE r.removed=0 AND u.active=1" . ($u ? ' AND r.user_id=?' : '') . " ORDER BY u.name, r.mode, r.t_from, r.id"); $s->execute($u ? [(int)$u] : []);
+  return array_map(fn($r) => ints($r, ['id', 'user_id', 'days', 't_from', 't_to', 'created_by', 'created_at']), $s->fetchAll()); }
+function rulesBy($rs) { $r = []; foreach ($rs as $x) $r[$x['user_id']][] = $x; return $r; }
+// Regel trifft zum Zeitpunkt t zu (Zeit Zürich); über Mitternacht zählt der Teil nach Mitternacht zum Vortag der Regel
+function ruleHit($r, $t) { $d = (new DateTime('@' . $t))->setTimezone(new DateTimeZone('Europe/Zurich')); $wd = (int)$d->format('N') - 1; $m = (int)$d->format('G') * 60 + (int)$d->format('i');
+  $on = fn($w) => ($r['days'] >> (($w + 7) % 7)) & 1; $f = $r['t_from']; $to = $r['t_to'];
+  return $f < $to ? $on($wd) && $m >= $f && $m < $to : ($on($wd) && $m >= $f) || ($on($wd - 1) && $m < $to); }
+// rs = Regeln einer Person: ausgesetzt (off) trifft zu oder es gibt Einsatzzeiten (on) und keine trifft zu
+function ruleAbsent($rs, $t) { $on = false; foreach ($rs as $r) { if ($r['mode'] === 'off' && ruleHit($r, $t)) return 'off'; if ($r['mode'] === 'on') $on = true; }
+  if (!$on) return null; foreach ($rs as $r) if ($r['mode'] === 'on' && ruleHit($r, $t)) return null; return 'on'; }
+function ruleAbsentIds() { global $now; $r = []; foreach (rulesBy(availRules()) as $u => $rs) if (ruleAbsent($rs, $now)) $r[] = (int)$u; return $r; }
+// nächster Zeitpunkt, ab dem die Person nach den Regeln wieder einsatzfähig ist (höchstens 8 Tage voraus, sonst null)
+function ruleNext($rs, $t) { $tz = new DateTimeZone('Europe/Zurich'); $c = []; $d0 = (new DateTime('@' . $t))->setTimezone($tz); $d0->setTime(0, 0);
+  for ($i = -1; $i <= 8; $i++) { $d = (clone $d0)->modify(($i >= 0 ? '+' : '') . $i . ' days'); foreach ($rs as $r) foreach ([$r['t_from'], $r['t_to']] as $m) { $x = (clone $d)->setTime(intdiv($m % 1440, 60), $m % 60)->getTimestamp() + ($m === 1440 ? 86400 : 0); if ($x > $t) $c[$x] = 1; } }
+  ksort($c); foreach (array_keys($c) as $x) if (!ruleAbsent($rs, $x)) return $x; return null; }
 function incAbsent($inc, $u) { return in_array($u, array_map('intval', json_decode($inc['inv_absent'] ?? '[]', true) ?: []), true); }
 // laufende Abwesenheit je Person: kind, until (NULL = bis auf Weiteres; bei mehreren die längste), note
 function absNow($u = null) { global $db, $now; $s = $db->prepare("SELECT user_id,kind,until_at,note FROM absences WHERE removed=0 AND from_at<=? AND (until_at IS NULL OR until_at>?)" . ($u ? ' AND user_id=' . (int)$u : '') . " ORDER BY until_at IS NULL, until_at"); $s->execute([$now, $now]);
-  $r = []; foreach ($s->fetchAll() as $a) $r[(int)$a['user_id']] = ['kind' => $a['kind'], 'until' => $a['until_at'] === null ? null : (int)$a['until_at'], 'note' => $a['note']]; return $r; }
+  $r = []; foreach ($s->fetchAll() as $a) $r[(int)$a['user_id']] = ['kind' => $a['kind'], 'until' => $a['until_at'] === null ? null : (int)$a['until_at'], 'note' => $a['note']];
+  foreach (rulesBy(availRules($u)) as $id => $rs) if (!isset($r[$id]) && ($w = ruleAbsent($rs, $now))) $r[$id] = ['kind' => 'rule', 'why' => $w, 'until' => ruleNext($rs, $now), 'note' => null]; // regelmässig (Issue #180): why on = ausserhalb der Einsatzzeiten, off = regelmässig ausgesetzt
+  return $r; }
 function absText($n) { return $n === 1 ? '1 Person abwesend, nicht alarmiert' : "$n Personen abwesend, nicht alarmiert"; }
 // Ausbildungskontrolle (Issue #117)
 const SKILL_EXP = ['none' => 'Unbegrenzt gültig', 'months' => 'Gültig für eine Anzahl Monate', 'year' => 'Gültig bis Ende Kalenderjahr'];
@@ -4575,6 +4598,49 @@ switch ($route) {
   $s = $db->prepare("SELECT * FROM absences WHERE id=? AND removed=0"); $s->execute([(int)($in['id'] ?? 0)]); $a = $s->fetch(); if (!$a) fail('Eintrag nicht gefunden', 404);
   if ((int)$a['user_id'] !== $uid) need('avail');
   $db->prepare("UPDATE absences SET removed=1 WHERE id=?")->execute([(int)$a['id']]); out(['ok' => true]);
+ /* ---------- Regelmässige Einsatzzeiten (Issue #180): eigene immer, die anderer Personen mit avail ---------- */
+ case 'avail/rules': // eigene; user=<id> oder all=1 mit avail; now = Stand jetzt (null, on = ausserhalb der Einsatzzeiten, off = ausgesetzt)
+  $all = !empty($_GET['all']); $u = (int)($_GET['user'] ?? 0) ?: $uid; if ($all || $u !== $uid) need('avail');
+  $rs = availRules($all ? null : $u); $st = []; foreach (rulesBy($rs) as $id => $x) $st[$id] = ruleAbsent($x, $now);
+  out(['rules' => $rs, 'now' => $all ? (object)$st : ($st[$u] ?? null)]);
+ case 'avail/rule/save': // id (ändern), user_id (andere nur mit avail), mode on|off, days (Bitmaske 1–127), from/to (Minuten 0–1439), note
+  $id = (int)($in['id'] ?? 0); $old = null;
+  if ($id) { $s = $db->prepare("SELECT * FROM avail_rules WHERE id=? AND removed=0"); $s->execute([$id]); $old = $s->fetch(); if (!$old) fail('Eintrag nicht gefunden', 404); }
+  $u = $old ? (int)$old['user_id'] : ((int)($in['user_id'] ?? 0) ?: $uid); if ($u !== $uid) need('avail');
+  $s = $db->prepare("SELECT id FROM users WHERE id=? AND active=1"); $s->execute([$u]); if (!$s->fetch()) fail('Unbekannte oder deaktivierte Person');
+  $md = ($in['mode'] ?? '') === 'on' ? 'on' : 'off'; $dy = (int)($in['days'] ?? 0); if ($dy < 1 || $dy > 127) fail('Mindestens einen Wochentag wählen');
+  $f = (int)($in['from'] ?? -1); $t = (int)($in['to'] ?? -1); if ($f < 0 || $f > 1439 || $t < 0 || $t > 1439) fail('Ungültige Uhrzeit');
+  $nt = mb_substr(trim((string)($in['note'] ?? '')), 0, 200); $nt = $nt === '' ? null : $nt;
+  if (!$old && count(availRules($u)) >= RULE_MAX) fail('Höchstens ' . RULE_MAX . ' Regeln je Person');
+  if ($old) $db->prepare("UPDATE avail_rules SET mode=?,days=?,t_from=?,t_to=?,note=? WHERE id=?")->execute([$md, $dy, $f, $t, $nt, $id]);
+  else { $db->prepare("INSERT INTO avail_rules(user_id,mode,days,t_from,t_to,note,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)")->execute([$u, $md, $dy, $f, $t, $nt, $uid, $now]); $id = (int)$db->lastInsertId(); }
+  out(['ok' => true, 'id' => $id]);
+ case 'avail/rule/remove': // id
+  $s = $db->prepare("SELECT * FROM avail_rules WHERE id=? AND removed=0"); $s->execute([(int)($in['id'] ?? 0)]); $a = $s->fetch(); if (!$a) fail('Eintrag nicht gefunden', 404);
+  if ((int)$a['user_id'] !== $uid) need('avail');
+  $db->prepare("UPDATE avail_rules SET removed=1 WHERE id=?")->execute([(int)$a['id']]); out(['ok' => true]);
+ /* ---------- Kalender (Issue #181): alle terminlichen Angaben eines Zeitraums ---------- */
+ case 'calendar': // from, to (Unix-Zeit, höchstens 100 Tage); all=1 = Abwesenheiten und Einsatzzeiten aller Personen (Recht avail)
+  $f = (int)($_GET['from'] ?? 0); $t = (int)($_GET['to'] ?? 0); if ($f <= 0 || $t <= $f || $t - $f > 100 * 86400) fail('Ungültiger Zeitraum');
+  $all = !empty($_GET['all']); if ($all) need('avail');
+  $s = $db->prepare("SELECT a.id,a.user_id,a.from_at,a.until_at,a.kind,a.note,u.name FROM absences a JOIN users u ON u.id=a.user_id WHERE a.removed=0 AND u.active=1 AND a.from_at<? AND (a.until_at IS NULL OR a.until_at>?)" . ($all ? '' : ' AND a.user_id=?') . " ORDER BY a.from_at, u.name");
+  $s->execute($all ? [$t, $f] : [$t, $f, $uid]); $abs = array_map(fn($a) => ints($a, ['id', 'user_id', 'from_at', 'until_at']), $s->fetchAll());
+  // Einsätze: mit Recht stats alle, sonst die eigenen Teilnahmen (nicht abgelehnt); Alarmmeldung mit stats, sonst gemäss my_runs (anon wie «Meine Einsätze»), laufende ohne
+  $st = can('stats'); $mr = myRuns();
+  $s = $db->prepare("SELECT i.id,i.message,i.alarm_at,i.ended_at,i.kind_id,i.txt_anon,(SELECT COUNT(*) FROM participants p WHERE p.incident_id=i.id AND p.user_id=? AND p.mode<>'declined') mine FROM incidents i WHERE i.alarm_at<? AND (i.ended_at IS NULL OR i.ended_at>?) ORDER BY i.alarm_at");
+  $s->execute([$uid, $t, $f]);
+  $incs = []; foreach ($s->fetchAll() as $r) { $r = kindAdd(ints($r, ['id', 'alarm_at', 'ended_at', 'kind_id', 'mine', 'txt_anon'])); if (!$st && !$r['mine']) continue; $r['mine'] = $r['mine'] ? 1 : 0;
+    if (!$st) $r['message'] = $mr === 'off' || $r['txt_anon'] || $r['ended_at'] === null ? null : ($mr === 'anon' ? anonText($r['message'], anonCtx($r['id'], $uid)) : $r['message']);
+    unset($r['txt_anon']); $incs[] = $r; }
+  // geplante Übungen und Einsätze: Übungsplan (exSched), für Übungsleiter dazu alle Planungen mit Datum
+  $kp = fn($k) => $k ? ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color']] : null;
+  $pl = []; foreach (exSched() as $p) if ($p['at'] !== null && $p['at'] < $t && ($p['end'] ?? $p['at']) >= $f) $pl[$p['id']] = ['id' => $p['id'], 'title' => $p['title'], 'kind' => $p['kind'], 'at' => $p['at'], 'end' => $p['end'], 'loc' => $p['loc'], 'running' => $p['running'], 'sched' => 1, 'su' => $p['su'] ? ['mine' => $p['su']['mine']['status'] ?? null, 'open' => $p['su']['open'], 'may' => $p['su']['may']] : null];
+  if (planner()) { $s = $db->prepare("SELECT id,title,kind_id,plan_at,plan_end,plan_loc,sched,incident_id FROM ex_plans WHERE active=1 AND plan_at IS NOT NULL AND plan_at<? AND COALESCE(plan_end,plan_at)>=?"); $s->execute([$t, $f]);
+    foreach ($s->fetchAll() as $p) if (!isset($pl[(int)$p['id']])) $pl[(int)$p['id']] = ['id' => (int)$p['id'], 'title' => $p['title'], 'kind' => $kp(kinds()[(int)$p['kind_id']] ?? null), 'at' => (int)$p['plan_at'], 'end' => $p['plan_end'] === null ? null : (int)$p['plan_end'], 'loc' => $p['plan_loc'], 'running' => $p['incident_id'] !== null ? 1 : 0, 'sched' => (int)$p['sched'], 'su' => null]; }
+  $pl = array_values($pl); usort($pl, fn($a, $b) => $a['at'] <=> $b['at']);
+  // Ausbildung (Issue #117): eigene Fähigkeiten, die im Zeitraum ablaufen
+  $sk = []; foreach (skillMine($uid) as $x) if ($x['exp'] !== null && $x['exp'] >= $f && $x['exp'] < $t) $sk[] = ['name' => $x['skill']['name'], 'exp' => $x['exp'], 'state' => $x['state']];
+  out(['abs' => $abs, 'rules' => availRules($all ? null : $uid), 'incs' => $incs, 'plans' => $pl, 'skills' => $sk, 'all' => $all ? 1 : 0]);
  // Ausbildungskontrolle (Issue #117)
  case 'me/skills': // eigene Fähigkeiten mit Stand und Verlauf; user=<id> mit Recht skills
   $u = (int)($_GET['user'] ?? 0) ?: $uid; if ($u !== $uid) need('skills');
@@ -4706,7 +4772,7 @@ switch ($route) {
   if (!$u) fail('Benutzer nicht gefunden', 404);
   if ($u['last_login'] !== null || isset(usersUsed()[$id])) fail('Diese Person hat sich schon angemeldet oder kommt in Einsatzdaten vor; bitte deaktivieren');
   $db->beginTransaction();
-  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'sessions', 'push_native', 'user_skills', 'ex_signups', 'fb_ans'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
+  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'avail_rules', 'sessions', 'push_native', 'user_skills', 'ex_signups', 'fb_ans'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
   $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
   foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
     $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));

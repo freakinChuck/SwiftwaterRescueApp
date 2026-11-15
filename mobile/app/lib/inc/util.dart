@@ -140,3 +140,10 @@ LatLng centerOf(List<LatLng> pts) {
 }
 
 double deg2rad(double d) => d * math.pi / 180;
+
+/// Wort zum Stand (absWord): Abwesenheit bzw. regelmässige Einsatzzeiten (Issue #180)
+String absWord(J a) => js(a['kind']) == 'rule'
+    ? (js(a['why']) == 'on' ? 'ausserhalb Einsatzzeit' : 'regelmässig ausgesetzt')
+    : js(a['kind']) == 'sus'
+        ? 'ausgesetzt'
+        : 'abwesend';
