@@ -608,6 +608,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         if (o != null) {
           final k = kindOf(o).name, lv = js(st?['level']).isEmpty ? 'crit' : js(st!['level']);
           final el = js(st?['end_level']).isNotEmpty ? js(st!['end_level']) : (lv == 'none' ? 'low' : lv); // Issue #168
+          unawaited(cancelIncNotes(acc.id, (o['id'] as num?)?.toInt())); // Issue #174, nur dieser Einsatz (#167): Meldungen des Einsatzes zurücknehmen
           if (el != 'none' && (st?['alarm'] != false || st?['me'] != null)) notify('${k.toUpperCase()} BEENDET', '$k beendet.', 'e:${o['id']}', el);
         }
         st = nx;

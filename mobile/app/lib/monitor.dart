@@ -145,11 +145,13 @@ Future<AccState> pollOne(Account a) async {
       if (vx != null) j['vsee'] = v;
       j.addAll({'inc': id, 'since': since, 'joined': joined, 'title': '${inc['message'] ?? ''}', 'kind': kind, 'color': inc['kind_color'], 'level': lvl, 'end_level': el});
     } else {
+      // Issue #174: Alarm und übrige Meldungen des Einsatzes zurücknehmen; «beendet» erhalten nur Teilnehmende
+      if (st.inc != null && (st.alarmed || st.joined)) await cancelIncNotes(a.id, st.inc);
       if (il == null && st.inc != null && (st.alarmed || st.joined)) {
         final k = st.kind.isEmpty ? 'Einsatz' : st.kind;
         final l = (st.j['level'] as String?) ?? 'normal';
         final el = (st.j['end_level'] as String?) ?? (l == 'none' || l == 'low' ? 'low' : 'normal');
-        if (el != 'none') await report(a, 'e:${st.inc}', '${_up(k)} BEENDET', '$k beendet.', el);
+        if (el != 'none' && st.joined) await report(a, 'e:${st.inc}', '${_up(k)} BEENDET', '$k beendet.', el);
       }
       for (final k in ['inc', 'joined', 'alarmed', 'title', 'kind', 'color', 'level', 'end_level', 'vsee']) {
         j.remove(k);
@@ -183,6 +185,7 @@ Future<void> _watchAll(Account a, AccState st, Map<String, dynamic> j, List<Map>
   if (st.init) {
     for (final p in prev) {
       if (p['a'] != true || il.any((x) => x['id'] == p['id'])) continue;
+      await cancelIncNotes(a.id, (p['id'] as num?)?.toInt()); // Issue #174, nur die Meldungen dieses Einsatzes
       final k = '${p['k'] ?? 'Einsatz'}';
       await report(a, 'e:${p['id']}', '${_up(k)} BEENDET', '$k beendet.', (p['el'] as String?) ?? 'normal');
     }
