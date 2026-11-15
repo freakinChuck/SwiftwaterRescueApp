@@ -378,7 +378,7 @@ function drawMsgMarks(){if(!msgLayer)return;const mm=(st&&st.incident&&st.msg_ma
   mm.forEach(x=>L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="mmk">✉</div>',iconSize:[30,30],iconAnchor:[2,32]}),zIndexOffset:900})
     .bindTooltip(esc(x.from_name)+': '+esc(x.text.length>40?x.text.slice(0,40)+'…':x.text))
     .bindPopup(`<div class="mmpop"><b>${esc(x.from_name)}</b><span class="t">Nachricht · ${fmtT(x.created)}</span>${esc(x.text)}${navBtn(x.lat,x.lon,'Markierung von '+x.from_name,'Navigieren')}${canUnmark(x)?`<br><button data-mm="${x.id}">Markierung entfernen</button>`:''}</div>`).addTo(msgLayer))}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-mm]');if(!b)return;if(!confirm('Kartenmarkierung dieser Nachricht entfernen? Die Nachricht selbst bleibt erhalten.'))return;
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-mm]');if(!b)return;if(!await ask('Kartenmarkierung dieser Nachricht entfernen? Die Nachricht selbst bleibt erhalten.'))return;
   api('incident/message/unmark',{id:+b.dataset.mm}).then(()=>{map.closePopup();poll()}).catch(fail)});
 // Punkt auf der Karte wählen (z. B. Markierung ohne eigenen Standort); Hinweis unten über #areaNote
 // Punktwahl (pickPoint, Bereich zeichnen, Flussdistanz): Marker, Bereiche usw. lassen Klicks zur Karte durch, damit überall gewählt werden kann
@@ -535,7 +535,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
     const freeH=fk.length?mcard('Freie Ereignisse',`<div class="mbtns">${fk.map(k=>`<button data-nk="${k.id}">${esc(k.name)} starten</button>`).join('')}</div>`):'';
     s.innerHTML=pushNag()+absH+fbH+skNote()+mcard('Kein aktiver Einsatz',(nk.length?`<div class="mbtns">${nk.map((k,i)=>`<button ${i?'':'class="pri"'} data-nk="${k.id}">${esc(k.name)} starten</button>`).join('')}</div>`:`<div class="mut">Du darfst ${sk.length||fk.length?'keine Primäreinsätze':'keine Einsätze'} starten${ng.length||sk.length||fk.length?'':' (Benutzerrolle)'}. Bei einem Alarm erscheint er hier.</div>`)+(ng.length?`<div class="mut">${esc(ng.map(k=>'«'+k.name+'»').join(', '))}: Du bist in keiner Einsatzgruppe, die dafür aufbietbar ist.</div>`:''))+secH+freeH+xsec+ssec+hydroCard()+tools+footInfo();
     s.querySelectorAll('[data-nk]').forEach(b=>b.onclick=()=>newView(+b.dataset.nk));bindTools();bindPush();bindAbs();bindHydro(s);bindSched(s);
-    s.querySelectorAll('[data-xs]').forEach(b=>b.onclick=()=>{const p=xps.find(x=>x.id===+b.dataset.xs);if(confirm(p.sec===1?`Sekundäreinsatz «${p.title}» jetzt starten? Niemand wird alarmiert.`:`«${p.title}» jetzt starten? ${p.invited?'Die aufgebotenen Personen werden':'Alle werden'} gemäss Alarmstufe alarmiert.`))api('ex/start',{id:p.id}).then(r=>setSel(r&&r.id)).catch(fail)});return}
+    s.querySelectorAll('[data-xs]').forEach(b=>b.onclick=async()=>{const p=xps.find(x=>x.id===+b.dataset.xs);if(await ask(p.sec===1?`Sekundäreinsatz «${p.title}» jetzt starten? Niemand wird alarmiert.`:`«${p.title}» jetzt starten? ${p.invited?'Die aufgebotenen Personen werden':'Alle werden'} gemäss Alarmstufe alarmiert.`))api('ex/start',{id:p.id}).then(r=>setSel(r&&r.id)).catch(fail)});return}
   const i=st.incident,m=st.me,joined=m&&!m.left_at&&m.mode!=='declined',secs=st.now-i.alarm_at,xOpen=(st.ex_injects||[]).filter(j=>!j.released).length;
   const tabs=[['main','Einsatz'],st.can_manage&&['lead','Leitung'],(st.ex_lead||(st.ex_injects||[]).length)&&['ex','Übung'+(xOpen?` <span class="cnt n">${xOpen}</span>`:'')],st.log&&['log','Log'],['info','Info']].filter(Boolean);
   if(secReset){secReset=false;menuTab=st.ex_lead?'ex':'main'}
@@ -582,23 +582,23 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   s.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{menuTab=b.dataset.mt;s.querySelectorAll('[data-mt]').forEach(x=>x.setAttribute('aria-selected',x===b));s.querySelectorAll('.mtab').forEach(p=>p.hidden=p.id!=='mtp-'+menuTab);s.scrollTop=0});
   bindPush();bindTools();bindMarks();bindHydro(s);vxLeadBind();bindStartMore(s);if($('#bAiSit'))$('#bAiSit').onclick=()=>{const r=aiSitR.id===i.id?aiSitR.r:null;aiSitR.r=null;toggleSheet(false);aiPanel({title:'Lagezusammenfassung',req:{fn:'sit',id:i.id},pre:r,chat:aiCh})};if($('#bAiQ'))$('#bAiQ').onclick=()=>{toggleSheet(false);aiPanel({title:'Frage zum Einsatz',req:{fn:'sit',id:i.id},chatOnly:true})};if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
-  s.querySelectorAll('[data-xr]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xr);
+  s.querySelectorAll('[data-xr]').forEach(b=>b.onclick=async()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xr);
     if(j.ago==null){exRelAt(j);return} // kein vorbereiteter Zeitpunkt: die Übungsleitung gibt ihn jetzt an
-    if(confirm(`«${j.label}» freigeben?\n\n${exWhat(j)}${j.msg?'\nMeldung an alle: '+j.msg:''}`)){b.disabled=true;api('ex/release',{id:j.id}).then(poll).catch(e=>{b.disabled=false;fail(e)})}});
+    if(await ask(`«${j.label}» freigeben?\n\n${exWhat(j)}${j.msg?'\nMeldung an alle: '+j.msg:''}`)){b.disabled=true;api('ex/release',{id:j.id}).then(poll).catch(e=>{b.disabled=false;fail(e)})}});
   s.querySelectorAll('[data-xz]').forEach(b=>b.onclick=()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xz);exShow(j)});
   if(joined){if($('#rs'))$('#rs').onchange=e=>{e.target.blur();api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail)};$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;selfDraw();draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});selfDraw();draw()})};
   }
   if(st.can_flow)$('#bFl').onclick=()=>api('incident/flow',{flow_ms:+$('#fl').value}).then(poll).catch(fail);
-  if(st.can_manage){if($('#bInv'))$('#bInv').onclick=invAdd;if($('#openJ'))$('#openJ').onchange=e=>{const c=e.target;c.blur();if(c.checked&&!confirm('Allen den Beitritt erlauben? Alle Personen sehen den Einsatz dann und können ihn annehmen (ohne Alarm).')){c.checked=false;return}api('incident/open',{on:c.checked?1:0}).then(poll).catch(x=>{fail(x);poll()})};
-    $('#bEnd').onclick=()=>confirm('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail);
+  if(st.can_manage){if($('#bInv'))$('#bInv').onclick=invAdd;if($('#openJ'))$('#openJ').onchange=async e=>{const c=e.target;c.blur();if(c.checked&&!await ask('Allen den Beitritt erlauben? Alle Personen sehen den Einsatz dann und können ihn annehmen (ohne Alarm).')){c.checked=false;return}api('incident/open',{on:c.checked?1:0}).then(poll).catch(x=>{fail(x);poll()})};
+    $('#bEnd').onclick=async()=>await ask('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail);
     $('#bPls').onclick=()=>plsPick('PLS des Einsatzes',i.lat!=null?i.pls_at:i.alarm_at,(lat,lon,at)=>api('incident/pls',{lat,lon,at}));
-    if($('#bPlsX'))$('#bPlsX').onclick=()=>confirm('PLS des Einsatzes entfernen? Rettlinge ohne eigenen PLS haben dann kein Suchgebiet mehr.')&&api('incident/pls',{clear:1}).then(poll).catch(fail);
+    if($('#bPlsX'))$('#bPlsX').onclick=async()=>await ask('PLS des Einsatzes entfernen? Rettlinge ohne eigenen PLS haben dann kein Suchgebiet mehr.')&&api('incident/pls',{clear:1}).then(poll).catch(fail);
     if($('#stopOn'))$('#stopOn').onchange=e=>{const c=e.target;c.blur();api('incident/stops',{on:c.checked?1:0}).then(poll).catch(x=>{fail(x);poll()})}; // Flusssperren (Issue #182)
     if($('#airInc'))$('#airInc').onchange=e=>{const c=e.target;c.blur();api('incident/air/set',{on:c.checked?1:0}).then(poll).catch(x=>{fail(x);poll()})}; // Helikopter je Einsatz (Issue #73)
     $('#sheet').querySelectorAll('[data-rec]').forEach(b=>b.onclick=()=>{b.disabled=true;api('incident/record',{action:b.dataset.rec}).then(poll).catch(e=>{b.disabled=false;fail(e)})});
     // Öffentliche Ansicht ein/aus, anonym (Namen ausblenden) und mit Einsatzprotokoll (Issue #54); Häkchen verlieren den Fokus, damit das Menü wieder neu gezeichnet wird
-    ['pubOn','pubAnon','pubLog'].forEach(k=>{const c=$('#'+k);if(c)c.onchange=()=>{c.blur();if(k==='pubOn'&&c.checked&&!confirm('Öffentliche Ansicht einschalten?\n\nWer den Link hat, sieht ohne Anmeldung die Karte mit den Standorten der Einsatzkräfte, Markierungen, Bereichen und Rettlingen'+($('#pubLog').checked?', dazu das Einsatzprotokoll mit den Nachrichten':' (keine Nachrichten, kein Einsatzlog)')+'.')){c.checked=false;return}
+    ['pubOn','pubAnon','pubLog'].forEach(k=>{const c=$('#'+k);if(c)c.onchange=async()=>{c.blur();if(k==='pubOn'&&c.checked&&!await ask('Öffentliche Ansicht einschalten?\n\nWer den Link hat, sieht ohne Anmeldung die Karte mit den Standorten der Einsatzkräfte, Markierungen, Bereichen und Rettlingen'+($('#pubLog').checked?', dazu das Einsatzprotokoll mit den Nachrichten':' (keine Nachrichten, kein Einsatzlog)')+'.')){c.checked=false;return}
       api('incident/public',k==='pubOn'?{on:c.checked}:k==='pubAnon'?{anon:c.checked}:{log:c.checked}).then(poll).catch(e=>{fail(e);poll()})}});
     if($('#bPubCp'))$('#bPubCp').onclick=()=>{const t=$('#pubUrl');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>toast('Link kopiert.')).catch(()=>{try{document.execCommand('copy');toast('Link kopiert.')}catch(e){}})}}}
 // Übungsleitung (Issue #29): vorbereitete Elemente der Übung, erst nach der Freigabe für alle sichtbar und fürs Suchgebiet relevant
@@ -630,7 +630,7 @@ function pubSec(i){const u=i.public&&i.public_token?pubUrl(i.public_token):'';
   return `<label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubOn" ${i.public?'checked':''}> Zuschauen ohne Anmeldung erlauben</label><label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubAnon" ${i.public_anon?'checked':''}> Anonym: Namen ausblenden (nur Spezialrolle bzw. Einrückoption)</label><label style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0"><input type="checkbox" id="pubLog" ${i.public_log?'checked':''}> Einsatzprotokoll zeigen (live, mit Nachrichten; anonym wie die Ansicht)</label>
     ${u?`<div class="row"><input id="pubUrl" readonly value="${esc(u)}" aria-label="Link zur öffentlichen Ansicht" onfocus="this.select()"><button id="bPubCp">Link kopieren</button><a class="btn" href="${esc(u)}" target="_blank" rel="noopener">Öffnen</a></div>`:''}<div class="mut">Sichtbar sind Karte, Standorte, Markierungen, Bereiche und Rettlinge${i.public_log?', dazu das Einsatzprotokoll mit den Nachrichten':', keine Nachrichten und kein Einsatzlog'}. Ausschalten macht den Link ungültig.</div>`}
 function sendPos(p){lastPos=p;lastSent=Date.now();api('incident/location',p).then(()=>{locStatus='Standort wird geteilt ('+new Date().toLocaleTimeString('de-CH')+')'}).catch(e=>{locStatus='Standort senden fehlgeschlagen: '+e.message})}
-async function join(mode){const o=st&&st.my_inc,i=st&&st.incident;if(mode!=='declined'&&o&&i&&o.id!==i.id&&!confirm(`Du nimmst an «${o.kind_name}: ${o.message}» teil. Diesen Einsatz annehmen und den anderen verlassen?`))return;try{await api('incident/join',{mode});if(mode!=='declined'){track();menuTab='main'}await poll();if(mode!=='declined')focusArea()}catch(e){fail(e)}} // danach zurück aufs Einsatzgebiet
+async function join(mode){const o=st&&st.my_inc,i=st&&st.incident;if(mode!=='declined'&&o&&i&&o.id!==i.id&&!await ask(`Du nimmst an «${o.kind_name}: ${o.message}» teil. Diesen Einsatz annehmen und den anderen verlassen?`))return;try{await api('incident/join',{mode});if(mode!=='declined'){track();menuTab='main'}await poll();if(mode!=='declined')focusArea()}catch(e){fail(e)}} // danach zurück aufs Einsatzgebiet
 // Abstand zur nächsten Gewässerachse im geladenen Gewässernetz (Meter), Infinity ohne Daten
 function waterDist(p){const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);let best=Infinity;
   [...nets.values()].flatMap(n=>n.ways||[]).forEach(w=>{const g=w.geometry;for(let j=1;j<g.length;j++){const ax=(g[j-1].lon-p.lon)*kx,ay=(g[j-1].lat-p.lat)*ky,dx=(g[j].lon-g[j-1].lon)*kx,dy=(g[j].lat-g[j-1].lat)*ky,L=dx*dx+dy*dy,t=L?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L)):0;best=Math.min(best,Math.hypot(ax+t*dx,ay+t*dy))}});return best}
@@ -800,10 +800,10 @@ function editExt(id){const e=extOf(id)||{name:'',descr:'',role_id:null};
       const body={id:id||undefined,name,descr,role_id,...extStyleVal(d)};
       if(id){await api('incident/external/save',body);await extGo();if(pick)extPlace(body);return}
       extPlace({...body,manual:1})},id?'Speichern':'Weiter');extStyleBind(d)}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-xc],[data-xe],[data-xd]');if(!b)return;const d=b.dataset,id=+(d.xc||d.xe||d.xd),x=extOf(id);
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-xc],[data-xe],[data-xd]');if(!b)return;const d=b.dataset,id=+(d.xc||d.xe||d.xd),x=extOf(id);
   if(d.xe!==undefined)return id?editExt(id):addExt();if(!x)return;
   if(d.xc){stopFollow();map.panTo([x.lat,x.lon]);if(narrow())togglePanel('people',false);return}
-  if(d.xd&&confirm(`Externe Einsatzkraft «${x.name}» für alle entfernen?`))api('incident/external/remove',{id}).then(poll).catch(fail)});
+  if(d.xd&&await ask(`Externe Einsatzkraft «${x.name}» für alle entfernen?`))api('incident/external/remove',{id}).then(poll).catch(fail)});
 function toggleFollow(id){if(followId===id)return stopFollow();followId=id;endAuto();followNow();if(narrow())togglePanel('people',false);else renderPeople()}
 const msgIds=m=>{try{return(JSON.parse(m.recipients)||[]).map(Number)}catch(e){return[]}};
 const msgForMe=m=>!m.recipients||msgIds(m).includes(me.id); // Benachrichtigung nur für markierte Empfänger
@@ -1030,8 +1030,8 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-pnav]');if
 const placeInfo=f=>[f.descr,f.pts?placeShape(f)+fcs(f.lat,f.lon,', Mitte ',''):fcs(f.lat,f.lon,'','')].filter(Boolean).join(' · ');
 function showPoi(id){const p=(st.pois||[]).find(x=>x.id===id);if(!p)return;stopFollow();if(poiHide.has(id))setPoiHidden([id],false);const vk=poiVk(p);if(!vis(vk))setVis([vk],true);
   if(p.kind!=='point')map.fitBounds(L.latLngBounds(p.pts),FITPAD);else map.panTo(p.pts[0]);if(narrow())togglePanel('pois',false)}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-pdel]');if(!b)return;const p=((st&&st.pois)||[]).find(x=>x.id==b.dataset.pdel);
-  if(!p||!confirm(`${({area:'Bereich',line:'Linie'})[p.kind]||'Markierung'} «${p.name}» für alle entfernen?`))return;api('incident/poi/remove',{id:p.id}).then(()=>{map.closePopup();poll()}).catch(fail)});
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-pdel]');if(!b)return;const p=((st&&st.pois)||[]).find(x=>x.id==b.dataset.pdel);
+  if(!p||!await ask(`${({area:'Bereich',line:'Linie'})[p.kind]||'Markierung'} «${p.name}» für alle entfernen?`))return;api('incident/poi/remove',{id:p.id}).then(()=>{map.closePopup();poll()}).catch(fail)});
 // Neu (nur Einsatzleitung): Bezeichnung und Farbe (bei Markierungen optional ein Symbol), danach Punkt antippen bzw. Eckpunkte/Punkte der Linie zeichnen
 // Markierungen mit Einsatzsymbol (Issue #146): Auswahl aus me.symbols (in der Verwaltung eingeschaltete), gruppiert nach Set und Kategorie, mit Suche;
 // «Ohne Symbol» (Fahne mit Farbe) nur, solange die Verwaltung es erlaubt (me.sym_free). Ohne eigene Bezeichnung gilt der Name des Symbols.
@@ -1233,18 +1233,18 @@ const dtLocal=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOSt
 // iOS ignoriert user-scalable=no: Zoom der Seite per Zwei-Finger-Geste unterdrücken (Leaflet zoomt die Karte über touchstart/touchmove, nicht über gesture*)
 ['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 const resOf=id=>((st&&st.rescuees)||[]).find(x=>x.id===id);
-document.addEventListener('click',e=>{const g=e.target.closest('[data-rfo]');if(g)return setResFold(g.dataset.rfo);const b=e.target.closest('[data-rf],[data-rm],[data-rc],[data-rr],[data-rg],[data-re],[data-rd],[data-rpls],[data-rsa]');if(!b)return;const d=b.dataset,id=+(d.rf||d.rm||d.rc||d.rr||d.rg||d.re||d.rd||d.rpls||d.rsa),r=resOf(id);
+document.addEventListener('click',async e=>{const g=e.target.closest('[data-rfo]');if(g)return setResFold(g.dataset.rfo);const b=e.target.closest('[data-rf],[data-rm],[data-rc],[data-rr],[data-rg],[data-re],[data-rd],[data-rpls],[data-rsa]');if(!b)return;const d=b.dataset,id=+(d.rf||d.rm||d.rc||d.rr||d.rg||d.re||d.rd||d.rpls||d.rsa),r=resOf(id);
   if(d.re!==undefined)return editRes(id);if(!r)return;
   if(d.rm){resMore.has(id)?resMore.delete(id):resMore.add(id);return renderRes()}
   if(d.rf)return resFound(r);
-  if(d.rc){if(!confirm(`Fundort von «${r.name}» zurücksetzen? Der Rettling gilt dann wieder als vermisst.`))return;return api('incident/rescuee/locate',{id,clear:1}).then(poll).catch(fail)}
+  if(d.rc){if(!await ask(`Fundort von «${r.name}» zurücksetzen? Der Rettling gilt dann wieder als vermisst.`))return;return api('incident/rescuee/locate',{id,clear:1}).then(poll).catch(fail)}
   if(d.rpls)return resPlsPick(id,r.name,r.descr||'');
   if(d.rsa){fitArea(resPart(r));if(narrow())togglePanel('res',false);return}
   if(d.rg){stopFollow();map.panTo([r.lat,r.lon]);if(narrow())togglePanel('res',false);return}
-  if(d.rr){const v=+d.v;if(!confirm(v?`«${r.name}» als gerettet melden?`:`«Gerettet» bei «${r.name}» zurücknehmen?`))return;return api('incident/rescuee/rescued',{id,rescued:v}).then(()=>{map.closePopup();poll()}).catch(fail)}
-  if(d.rd&&confirm(`Rettling «${r.name}» für alle entfernen?`))api('incident/rescuee/remove',{id}).then(poll).catch(fail)});
+  if(d.rr){const v=+d.v;if(!await ask(v?`«${r.name}» als gerettet melden?`:`«Gerettet» bei «${r.name}» zurücknehmen?`))return;return api('incident/rescuee/rescued',{id,rescued:v}).then(()=>{map.closePopup();poll()}).catch(fail)}
+  if(d.rd&&await ask(`Rettling «${r.name}» für alle entfernen?`))api('incident/rescuee/remove',{id}).then(poll).catch(fail)});
 function bindMarks(){
-  document.querySelectorAll('#sheet [data-kick]').forEach(x=>x.onclick=()=>{const n=x.dataset.n;confirm(n+' aus dem Einsatz entfernen?')&&api('incident/kick',{user_id:+x.dataset.kick}).then(poll).catch(fail)});
+  document.querySelectorAll('#sheet [data-kick]').forEach(x=>x.onclick=async()=>{const n=x.dataset.n;await ask(n+' aus dem Einsatz entfernen?')&&api('incident/kick',{user_id:+x.dataset.kick}).then(poll).catch(fail)});
   document.querySelectorAll('#sheet [data-mr]').forEach(x=>x.onclick=()=>api('incident/mark/remove',{id:+x.dataset.mr}).then(poll).catch(fail));
   // Einsatzleitung: Spezialrolle einer Einsatzkraft umstellen
   document.querySelectorAll('#sheet [data-rset]').forEach(x=>x.onchange=()=>{x.blur();api('incident/role/set',{user_id:+x.dataset.rset,role_id:+x.value||null}).then(poll).catch(e=>{fail(e);poll()})})}
@@ -1269,7 +1269,7 @@ const XPKS=['Übung','Sekundäreinsatz, ohne Alarm','Freies Ereignis'];
 function startMore(){if(!st||!st.incident||DEMO)return'';const ka=kindsNow().filter(k=>k.can),xp=st.start_plans||[];if(!ka.length&&!xp.length)return'';
   return mcard('Weiteren Einsatz starten',`<div class="mut">Läuft parallel zu den übrigen Einsätzen. Teilnehmen kann man nur an einem Einsatz gleichzeitig.</div>${ka.length?`<div class="mbtns">${ka.map(k=>`<button data-nk="${k.id}">${esc(k.name)} starten</button>`).join('')}</div>`:''}${xp.map(p=>`<div class="mli"><span>${esc(p.title)}<small class="mut"> · ${XPKS[p.sec||0]}${p.at?' · '+esc(fmtDT(p.at)):''}</small></span><button data-xs="${p.id}">Starten</button></div>`).join('')}`)}
 function bindStartMore(s){s.querySelectorAll('#mtp-main [data-nk]').forEach(b=>b.onclick=()=>newView(+b.dataset.nk));
-  s.querySelectorAll('#mtp-main [data-xs]').forEach(b=>b.onclick=()=>{const p=(st.start_plans||[]).find(x=>x.id===+b.dataset.xs);if(p&&confirm(p.sec===1?`Sekundäreinsatz «${p.title}» jetzt starten? Niemand wird alarmiert.`:`«${p.title}» jetzt starten? ${p.invited?'Die aufgebotenen Personen werden':'Alle werden'} gemäss Alarmstufe alarmiert.`))api('ex/start',{id:p.id}).then(r=>setSel(r&&r.id)).catch(fail)})}
+  s.querySelectorAll('#mtp-main [data-xs]').forEach(b=>b.onclick=async()=>{const p=(st.start_plans||[]).find(x=>x.id===+b.dataset.xs);if(p&&await ask(p.sec===1?`Sekundäreinsatz «${p.title}» jetzt starten? Niemand wird alarmiert.`:`«${p.title}» jetzt starten? ${p.invited?'Die aufgebotenen Personen werden':'Alle werden'} gemäss Alarmstufe alarmiert.`))api('ex/start',{id:p.id}).then(r=>setSel(r&&r.id)).catch(fail)})}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-isw]');if(!b)return;if(map)map.closePopup();setSel(+b.dataset.isw)});
 // Karte: Lage der übrigen Einsätze, je Einsatz ein-/ausblendbar (Fenster «Ansicht», ausgeblendete in sw_othhide)
 let othKey='';
@@ -1420,9 +1420,9 @@ function vxLeadBind(){const v=st.voice;if(!v)return;
       ${v.guest_speak?'<label class="row" style="align-items:center"><input type="checkbox" id="vgS"> <span>darf auch sprechen</span></label>':'<div class="mut">Externe hören nur zu (Einstellung des Einsatztyps).</div>'}`,
     async d=>{const lb=$('#vgL',d).value,r=await api('incident/voice/guest/save',{label:lb,ch:+$('#vgC',d).value,speak:$('#vgS',d)&&$('#vgS',d).checked?1:0});vxShare(r.token,lb);poll()},'Erstellen');
   document.querySelectorAll('[data-vgl]').forEach(b=>b.onclick=()=>{const g=v.guest_links.find(x=>x.id==b.dataset.vgl);if(g)vxShare(g.token,g.label)});
-  document.querySelectorAll('[data-vgx]').forEach(b=>b.onclick=()=>{const g=v.guest_links.find(x=>x.id==b.dataset.vgx);if(g&&confirm(`Link für «${g.label}» entfernen? Er funktioniert danach nicht mehr.`))api('incident/voice/guest/remove',{id:g.id}).then(poll).catch(fail)})}
+  document.querySelectorAll('[data-vgx]').forEach(b=>b.onclick=async()=>{const g=v.guest_links.find(x=>x.id==b.dataset.vgx);if(g&&await ask(`Link für «${g.label}» entfernen? Er funktioniert danach nicht mehr.`))api('incident/voice/guest/remove',{id:g.id}).then(poll).catch(fail)})}
 async function vxShare(t,label){const u=vxGuestUrl(t);if(navigator.share&&matchMedia('(pointer:coarse)').matches){try{await navigator.share({title:'Funk für Externe',text:'Funk «'+label+'»',url:u});return}catch(e){if(e&&e.name==='AbortError')return}}
-  try{await navigator.clipboard.writeText(u);toast('Link kopiert: '+u,'ok')}catch(e){prompt('Link für Externe (kopieren):',u)}}
+  try{await navigator.clipboard.writeText(u);toast('Link kopiert: '+u,'ok')}catch(e){showCopy('Link für Externe',u)}}
 /* ---------- Offline (Issue #67) ---------- */
 // Letzter Stand pro Gerät in localStorage: sw_last = {at, uid, st (mit allen Nachrichten)}, sw_boot = {uid, me, roles, modes}. Ohne Verbindung zeigt die App
 // diesen Stand mit einem Hinweis oben (Zeitpunkt der letzten Verbindung) und versucht es bei jedem Polling weiter. Aktionen schlagen offline fehl (Meldung in fail).
@@ -1518,7 +1518,7 @@ function absMine(){const el=$('#absMine');if(!el)return;api('absences').then(rs=
 // Angemeldete Apps im Profil (Issue #108): Gerätesitzungen der nativen Apps, nur angezeigt, wenn es welche gibt; die eigene lässt sich hier nicht entfernen (dafür Abmelden)
 function sessMine(){const el=$('#sessMine');if(!el)return;api('me/sessions').then(rs=>{if(!el.isConnected)return;
   el.innerHTML=rs.length?`<h5>Angemeldete Apps</h5>${rs.map(r=>`<div class="row" style="align-items:center;justify-content:space-between;margin:.2rem 0"><span><b>${esc(r.device)}</b>${r.platform?' · '+esc({android:'Android',ios:'iOS'}[r.platform]||r.platform):''}${r.cur?' · <i>dieses Gerät</i>':''}<br><span class="mut">angemeldet ${esc(fmtDT(r.created))} · zuletzt ${esc(fmtDT(r.last_seen))}</span></span>${r.cur?'':`<button data-sess="${r.id}">Entfernen</button>`}</div>`).join('')}`:'';
-  el.querySelectorAll('[data-sess]').forEach(b=>b.onclick=async()=>{if(!confirm('App auf diesem Gerät abmelden? Sie erhält danach keine Alarme mehr.'))return;try{await api('me/session/remove',{id:+b.dataset.sess});toast('App abgemeldet');sessMine()}catch(e){fail(e)}})}).catch(()=>{})}
+  el.querySelectorAll('[data-sess]').forEach(b=>b.onclick=async()=>{if(!await ask('App auf diesem Gerät abmelden? Sie erhält danach keine Alarme mehr.'))return;try{await api('me/session/remove',{id:+b.dataset.sess});toast('App abgemeldet');sessMine()}catch(e){fail(e)}})}).catch(()=>{})}
 // Ausbildungskontrolle (Issue #117): Hinweis im Menü ohne Einsatz (me.skills = Anzahl abgelaufen/bald/fehlende Pflicht), Liste im Profil
 function skNote(){const t=!DEMO&&skSum(me&&me.skills);return t?`<div class="absnote sknote"><span class="skchip sk-${me.skills.exp?'exp':'warn'}">Ausbildung</span><button data-skp>Ansehen</button><div class="mut">${esc(t)}.</div></div>`:''}
 function skMine(){const el=$('#skMine');if(!el)return;api('me/skills').then(r=>{if(!el.isConnected)return;el.innerHTML=skRows(r.items,can('skills'),me.id,me.id);skBind(el,r.items,me.id,'',skDone)}).catch(()=>{if(el.isConnected)el.innerHTML='<div class="mut">Ausbildung nicht verfügbar (keine Verbindung).</div>'})}

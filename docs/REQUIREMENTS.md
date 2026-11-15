@@ -24,6 +24,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **RB-10** – Auslieferung per Skript aus einem eingecheckten Git-Stand, mit Syntaxprüfung auf dem Server; Konfiguration und Datenbank werden nie überschrieben (AG).
 - **RB-11** – Test-, Entwicklungs- und Produktivsystem sind an unterschiedlich umrandeten App-Symbolen erkennbar (#56).
 - **RB-12** – Übersichtliche Ordnerstruktur im Repository: Web-App und API in einem eigenen Ordner, der dem Webroot auf dem Server entspricht (Adressen bleiben gleich), daneben Platz für künftige native Apps, Dokumentation und Skripte (#109).
+- **RB-13** – Rückfragen erscheinen überall (Einsatz-App, Verwaltung, «Meine Einsätze») als eigener Dialog im Stil der App statt als Fenster des Browsers: Frage hervorgehoben, Erklärung darunter, Knopf mit der Handlung («Entfernen», «Beenden» …), bei Entfernen/Löschen rot, dazu «Abbrechen»; Escape und Klick daneben brechen ab. Hinweise bleiben kurze Meldungen ohne Klick (VW-03) (#104).
 
 ## 2. Anmeldung und Konto (KO)
 

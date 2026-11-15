@@ -292,7 +292,7 @@ function dirtyWire(box){if(!box||box._dw)return;box._dw=1; // einmal je Abschnit
 const dirtyNow=()=>!!document.querySelector('main section:not([hidden]) .sbar.dirty');
 let curHash=location.hash;
 window.addEventListener('beforeunload',e=>{if(dirtyNow()){e.preventDefault();e.returnValue=''}});
-window.addEventListener('hashchange',()=>{if(dirtyNow()&&!confirm('Ungespeicherte Änderungen in diesem Bereich verwerfen?')){history.replaceState(null,'',curHash||'#');return}curHash=location.hash; // Issue #95
+window.addEventListener('hashchange',async()=>{if(dirtyNow()&&!await ask('Ungespeicherte Änderungen in diesem Bereich verwerfen?')){history.replaceState(null,'',curHash||'#');return}curHash=location.hash; // Issue #95
   if(me&&myMode()!==MY)start();else showNav();window.scrollTo(0,0)}); // Wechsel zwischen Verwaltung und Meine Einsätze baut die Seite neu auf
 /* ---------- Benutzer ---------- */
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
@@ -334,8 +334,8 @@ async function loadUsers(){const el=$('#sU');let gs;try{[users,uroles,gs]=await 
       async d=>{await api('user/password',{id:u.id,password:$('#eP',d).value});toast(`Passwort von ${u.name} zurückgesetzt.`,'ok');loadUsers()},'Zurücksetzen');pwWire(d)});
   el.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.x);
     dlg('Benutzer löschen',`<div>«${esc(u.name)}» (${esc(u.username)}) hat sich noch nie angemeldet und wird endgültig gelöscht.</div>`,async()=>{await api('user/delete',{id:u.id});toast(`Benutzer «${u.name}» gelöscht.`,'ok');loadUsers()},'Löschen')});
-  el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.d);
-    if(confirm(u.name+' deaktivieren?\n\nDie Person wird abgemeldet, aus einem laufenden Einsatz ausgetragen und kann sich nicht mehr anmelden. Einsatzdaten bleiben erhalten.'))api('user/active',{id:u.id,active:0}).then(loadUsers).catch(fail)});
+  el.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{const u=U(b.dataset.d);
+    if(await ask(u.name+' deaktivieren?\n\nDie Person wird abgemeldet, aus einem laufenden Einsatz ausgetragen und kann sich nicht mehr anmelden. Einsatzdaten bleiben erhalten.'))api('user/active',{id:u.id,active:0}).then(loadUsers).catch(fail)});
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>api('user/active',{id:+b.dataset.a,active:1}).then(loadUsers).catch(fail))}
 // Personenauswahl (Übungsleitung, Aufgebotene, Mitglieder von Einsatzgruppen): Suchfeld mit Trefferliste statt Häkchen pro Person, damit es auch mit vielen Benutzern übersichtlich bleibt
 // us = Benutzerliste, x = Präfix der Element-IDs (#<x>s Auswahl, #<x>q Suchfeld, #<x>r Treffer), sel = Auswahl, skip = zusätzlich nicht wählbar; liefert die aktuelle Auswahl
@@ -372,8 +372,8 @@ let urGs=[];async function loadURoles(){const el=$('#sUR');try{[uroles,urGs]=awa
     if(m)v.grp_ids=m.value==='all'?null:[...d.querySelectorAll('[data-qg]')].filter(c=>c.checked).map(c=>+c.dataset.qg);return v};
   if($('#urA'))$('#urA').onclick=()=>dlg('Neue Benutzerrolle',form(null),async d=>{await api('urole/save',val(d,null));toast('Benutzerrolle angelegt.');loadURoles()},'Anlegen').firstElementChild.classList.add('mid');
   el.querySelectorAll('[data-ue]').forEach(b=>b.onclick=()=>{const r=UR(+b.dataset.ue);dlg('Benutzerrolle bearbeiten',form(r),async d=>{await api('urole/save',val(d,r));toast('Gespeichert.');me=(await api('me')).me;loadURoles()}).firstElementChild.classList.add('mid')});
-  el.querySelectorAll('[data-ux]').forEach(b=>b.onclick=()=>{const r=UR(+b.dataset.ux);
-    if(confirm(`Benutzerrolle «${r.name}» entfernen?${r.users?`\n\n${r.users} ${r.users===1?'Person verliert':'Personen verlieren'} die Rechte dieser Rolle (sofern keine andere Rolle sie gibt).`:''}`))api('urole/remove',{id:r.id}).then(async()=>{me=(await api('me')).me;loadURoles()}).catch(fail)})}
+  el.querySelectorAll('[data-ux]').forEach(b=>b.onclick=async()=>{const r=UR(+b.dataset.ux);
+    if(await ask(`Benutzerrolle «${r.name}» entfernen?${r.users?`\n\n${r.users} ${r.users===1?'Person verliert':'Personen verlieren'} die Rechte dieser Rolle (sofern keine andere Rolle sie gibt).`:''}`))api('urole/remove',{id:r.id}).then(async()=>{me=(await api('me')).me;loadURoles()}).catch(fail)})}
 /* ---------- Einsatzgruppen (Issue #90) ---------- */
 // Gruppen mit Mitgliedern; beim Start eines Einsatzes werden Gruppen aufgeboten. Aufbietbar und vorausgewählt stehen je Einsatztyp
 // Neue Gruppe: zufällige Farbe aus einer gut unterscheidbaren Liste, die noch keine Gruppe hat (sonst irgendeine zufällige)
@@ -406,8 +406,8 @@ async function loadGroups(){const el=$('#sG');let gs,us;try{[gs,us]=await Promis
   el.querySelectorAll('[data-ge]').forEach(b=>b.onclick=()=>edit(gs.find(g=>g.id==b.dataset.ge)));
   el.querySelectorAll('[data-gu],[data-gd]').forEach(b=>b.onclick=()=>{const ids=moveIds(act,+(b.dataset.gu||b.dataset.gd),b.dataset.gu?-1:1);if(ids)api('group/order',{ids}).then(loadGroups).catch(fail)});
   // Löschen ist immer möglich: Einsätze behalten den Namen, Einsatztypen, Übungen und Benutzerrollen verlieren die Gruppe
-  el.querySelectorAll('[data-gx]').forEach(b=>b.onclick=()=>{const g=gs.find(x=>x.id==b.dataset.gx);
-    if(confirm(`Einsatzgruppe «${g.name}» endgültig löschen?\n\nDie Mitgliedschaften gehen verloren. Einsatztypen, vorbereitete Übungen und Benutzerrollen verlieren die Gruppe; bisherige Einsätze behalten den Namen im Aufgebot. Nur zeitweise ausblenden: «Bearbeiten» → «Aktiv» ausschalten.`))api('group/delete',{id:g.id}).then(()=>{toast('Einsatzgruppe gelöscht.');loadGroups()}).catch(fail)})}
+  el.querySelectorAll('[data-gx]').forEach(b=>b.onclick=async()=>{const g=gs.find(x=>x.id==b.dataset.gx);
+    if(await ask(`Einsatzgruppe «${g.name}» endgültig löschen?\n\nDie Mitgliedschaften gehen verloren. Einsatztypen, vorbereitete Übungen und Benutzerrollen verlieren die Gruppe; bisherige Einsätze behalten den Namen im Aufgebot. Nur zeitweise ausblenden: «Bearbeiten» → «Aktiv» ausschalten.`))api('group/delete',{id:g.id}).then(()=>{toast('Einsatzgruppe gelöscht.');loadGroups()}).catch(fail)})}
 /* ---------- Abwesenheiten (Issue #91) ---------- */
 // alle laufenden und künftigen Abwesenheiten bzw. ausgesetzten Einsatzfähigkeiten; erfassen für jede aktive Person
 async function loadAbs(){const el=$('#sAb');let rs,us;try{[rs,us]=await Promise.all([api('absences&all=1'),api('users')])}catch(e){return secErr(el,'Abwesenheiten',e)}
@@ -467,7 +467,7 @@ async function loadSkills(){const el=$('#sSk');let c,m;try{[c,m]=await Promise.a
   $('#skA').onclick=()=>edit({});
   el.querySelectorAll('[data-ske]').forEach(b=>b.onclick=()=>edit(all.find(k=>k.id===+b.dataset.ske)));
   el.querySelectorAll('[data-skm]').forEach(b=>b.onclick=()=>api('skill/move',{id:+b.dataset.skm,dir:+b.dataset.d}).then(loadSkills).catch(fail));
-  el.querySelectorAll('[data-skr]').forEach(b=>b.onclick=()=>{const k=all.find(x=>x.id===+b.dataset.skr);if(confirm(`Fähigkeit «${k.name}» entfernen?\n\nOhne erfasste Ausbildungen wird sie gelöscht, sonst nur deaktiviert (die Einträge bleiben erhalten).`))api('skill/remove',{id:k.id}).then(r=>{toast(r.kept?'Deaktiviert, die Einträge bleiben.':'Gelöscht.','ok');loadSkills()}).catch(fail)})}
+  el.querySelectorAll('[data-skr]').forEach(b=>b.onclick=async()=>{const k=all.find(x=>x.id===+b.dataset.skr);if(await ask(`Fähigkeit «${k.name}» entfernen?\n\nOhne erfasste Ausbildungen wird sie gelöscht, sonst nur deaktiviert (die Einträge bleiben erhalten).`))api('skill/remove',{id:k.id}).then(r=>{toast(r.kept?'Deaktiviert, die Einträge bleiben.':'Gelöscht.','ok');loadSkills()}).catch(fail)})}
 /* ---------- Technisches Applikationslog (Issue #139) ---------- */
 // Neueste zuerst, Filter Stufe/Bereich/Text pro Gerät gemerkt (sw_alf), «Automatisch aktualisieren» holt alle 10 s nur die neuen (after), «Ältere laden» blättert (before).
 let alF=(()=>{try{return JSON.parse(localStorage.getItem('sw_alf')||'{}')||{}}catch(e){return{}}})(),alD=null,alT=null,alOpen=new Set();
@@ -564,8 +564,8 @@ if($('#tS',d))$('#tS',d).value=f?.snd||'';if(f){$('#tLm',d).value=f.msg_lvl||'no
   $('#tA').onclick=()=>edit({});
   el.querySelectorAll('[data-te]').forEach(b=>b.onclick=()=>edit(ts.find(t=>t.id==b.dataset.te)));
   el.querySelectorAll('[data-tu],[data-td]').forEach(b=>b.onclick=()=>{const ids=moveIds(act,+(b.dataset.tu||b.dataset.td),b.dataset.tu?-1:1);if(ids)api('kind/order',{ids}).then(loadTypes).catch(fail)});
-  el.querySelectorAll('[data-tx]').forEach(b=>b.onclick=()=>{const t=ts.find(x=>x.id==b.dataset.tx);
-    if(confirm(`Einsatztyp «${t.name}» löschen?\n\nBisherige Einsätze behalten Name, Farbe und Fristen der Anonymisierung. Nur zeitweise ausblenden: «Bearbeiten» → «Aktiv» ausschalten.`))api('kind/delete',{id:t.id}).then(()=>{toast('Einsatztyp gelöscht.');loadTypes()}).catch(fail)})}
+  el.querySelectorAll('[data-tx]').forEach(b=>b.onclick=async()=>{const t=ts.find(x=>x.id==b.dataset.tx);
+    if(await ask(`Einsatztyp «${t.name}» löschen?\n\nBisherige Einsätze behalten Name, Farbe und Fristen der Anonymisierung. Nur zeitweise ausblenden: «Bearbeiten» → «Aktiv» ausschalten.`))api('kind/delete',{id:t.id}).then(()=>{toast('Einsatztyp gelöscht.');loadTypes()}).catch(fail)})}
 /* ---------- Einrückoptionen (Auswahl beim Annehmen eines Einsatzes) ---------- */
 // Kategorie Primär-/Sekundäreinsatz (Feedback zu #164): Einrückoptionen und Spezialrollen gelten je für eine Kategorie
 const SECCAT=[[0,'Primäreinsätze'],[1,'Sekundäreinsätze'],[2,'Freie Ereignisse']],secCatSel=(id,v)=>`<select id="${id}" aria-label="Kategorie" style="flex:0 0 auto;width:auto">${SECCAT.map(([c,h])=>`<option value="${c}" ${(v||0)===c?'selected':''}>${h}</option>`).join('')}</select>`;
@@ -706,7 +706,7 @@ async function loadPlaces(){const el=$('#sPl');let fs,pr,sg;try{[fs,plCats,pr,sg
   $('#fPA').onclick=()=>propDlg({});
   el.querySelectorAll('[data-fpe2]').forEach(b=>b.onclick=()=>propDlg(pr.props.find(p=>p.id==b.dataset.fpe2)));
   el.querySelectorAll('[data-fpm]').forEach(b=>b.onclick=()=>api('place/prop/move',{id:+b.dataset.fpm,dir:+b.dataset.d}).then(loadPlaces).catch(fail));
-  el.querySelectorAll('[data-fpr2]').forEach(b=>b.onclick=()=>{const p=pr.props.find(x=>x.id==b.dataset.fpr2),n=fs.filter(f=>(f.props||[]).includes(p.id)).length;if(confirm(`Eigenschaft «${p.name}» entfernen?${n?` Sie wird auch bei ${n} Standort${n>1?'en':''} entfernt. Deaktivieren behält die Zuordnung.`:''}`))api('place/prop/remove',{id:p.id}).then(loadPlaces).catch(fail)});
+  el.querySelectorAll('[data-fpr2]').forEach(b=>b.onclick=async()=>{const p=pr.props.find(x=>x.id==b.dataset.fpr2),n=fs.filter(f=>(f.props||[]).includes(p.id)).length;if(await ask(`Eigenschaft «${p.name}» entfernen?${n?` Sie wird auch bei ${n} Standort${n>1?'en':''} entfernt. Deaktivieren behält die Zuordnung.`:''}`))api('place/prop/remove',{id:p.id}).then(loadPlaces).catch(fail)});
   // Abweichungen zur Quelle: übernehmen (Lage, optional Name), behalten, Verknüpfung lösen
   el.querySelectorAll('[data-gr]').forEach(b=>b.onclick=()=>api('geo/resolve',{id:+b.dataset.gr,action:b.dataset.a,name:b.dataset.n?1:0}).then(()=>{toast('Gespeichert','ok');loadPlaces()}).catch(fail));
   // Kategorien: anlegen (mit Standard), umbenennen, Standard direkt per Häkchen, entfernen (Standorte bleiben, ohne Kategorie)
@@ -715,12 +715,12 @@ async function loadPlaces(){const el=$('#sPl');let fs,pr,sg;try{[fs,plCats,pr,sg
   $('#fCA').onclick=()=>catDlg({});
   const nk=$('#fNkS');if(nk)nk.onclick=()=>api('settings/save',{place_near_km:+$('#fNk').value}).then(()=>{toast('Gespeichert. Gilt in der Einsatz-App ab der nächsten Aktualisierung.','ok');loadPlaces()}).catch(fail);
   el.querySelectorAll('[data-fce]').forEach(b=>b.onclick=()=>catDlg(plCats.find(c=>c.id==b.dataset.fce)));
-  el.querySelectorAll('[data-fcr]').forEach(b=>b.onclick=()=>{const c=plCats.find(x=>x.id==b.dataset.fcr),n=fs.filter(f=>f.cat_id===c.id).length;if(confirm(`Kategorie «${c.name}» entfernen?${n?` Ihre ${n} Standort${n>1?'e':''} bleiben und gelten danach als «Ohne Kategorie».`:''}`))api('place/cat/remove',{id:c.id}).then(loadPlaces).catch(fail)});
+  el.querySelectorAll('[data-fcr]').forEach(b=>b.onclick=async()=>{const c=plCats.find(x=>x.id==b.dataset.fcr),n=fs.filter(f=>f.cat_id===c.id).length;if(await ask(`Kategorie «${c.name}» entfernen?${n?` Ihre ${n} Standort${n>1?'e':''} bleiben und gelten danach als «Ohne Kategorie».`:''}`))api('place/cat/remove',{id:c.id}).then(loadPlaces).catch(fail)});
   // Reihenfolge: gilt so auch in der Einsatz-App (Fenster «Ansicht» und «Markierungen»)
   el.querySelectorAll('[data-fcm]').forEach(b=>b.onclick=()=>api('place/cat/move',{id:+b.dataset.fcm,dir:+b.dataset.d}).then(loadPlaces).catch(fail));
   el.querySelectorAll('[data-fm]').forEach(b=>b.onclick=()=>api('place/move',{id:+b.dataset.fm,dir:+b.dataset.d}).then(loadPlaces).catch(fail));
   el.querySelectorAll('[data-fe]').forEach(b=>b.onclick=()=>placeDlg(fs.find(f=>f.id==b.dataset.fe),null,fs,loadPlaces));
-  el.querySelectorAll('[data-fr]').forEach(b=>b.onclick=()=>{const f=fs.find(x=>x.id==b.dataset.fr);if(confirm(`Standort «${f.name}» endgültig entfernen? Deaktivieren (Bearbeiten) blendet ihn nur aus.`))api('place/remove',{id:f.id}).then(loadPlaces).catch(fail)})}
+  el.querySelectorAll('[data-fr]').forEach(b=>b.onclick=async()=>{const f=fs.find(x=>x.id==b.dataset.fr);if(await ask(`Standort «${f.name}» endgültig entfernen? Deaktivieren (Bearbeiten) blendet ihn nur aus.`))api('place/remove',{id:f.id}).then(loadPlaces).catch(fail)})}
 /* ---------- Funk & Konferenz (Issue #113, Konnektivität): Medienserver (LiveKit), Kanäle, Sprechrecht, Transkription, je Einsatztyp Konferenz, Aufbewahrung und Links für Externe ---------- */
 // voice/cfg liefert Einstellung, Kanäle (alle, auch deaktivierte), Rollen, Einrückoptionen, Einsatztypen; gespeichert wird alles zusammen über voice/cfg/save (Secret und Schlüssel nur, wenn eingegeben)
 let vxD=null,vxChE=[];
@@ -772,8 +772,8 @@ function vxDraw(){const el=$('#sVx'),s=vxD,c=s.cfg,kb=n=>(n/1048576).toFixed(1).
   $('#vSv').onclick=e=>{e.target.disabled=true;save().catch(fail).finally(()=>{if(e.target.isConnected)e.target.disabled=false})};
   $('#vLkT').onclick=async()=>{const o=$('#vLkR');o.textContent='Speichere und teste …';try{await api('voice/cfg/save',body());const r=await api('voice/test',{what:'lk'});o.textContent=`✓ Medienserver erreichbar (${r.ms} ms, ${r.rooms} offene Räume)`}catch(x){o.textContent='✗ '+x.message}};
   $('#vTrT').onclick=async()=>{const o=$('#vTrR');o.textContent='Speichere und teste …';try{await api('voice/cfg/save',body());const r=await api('voice/test',{what:'tr'});o.textContent=`✓ Transkription funktioniert (${esc(r.host)}, ${r.ms} ms)`}catch(x){o.textContent='✗ '+x.message}};
-  if($('#vLkX'))$('#vLkX').onclick=()=>confirm('Secret des Medienservers entfernen? Die Live-Konferenz geht danach nicht mehr.')&&save({lk_secret:'',lk_secret_clear:1}).catch(fail);
-  if($('#vTrX'))$('#vTrX').onclick=()=>confirm('Schlüssel des Transkriptionsdienstes entfernen?')&&save({tr_key:'',tr_key_clear:1}).catch(fail);
+  if($('#vLkX'))$('#vLkX').onclick=async()=>await ask('Secret des Medienservers entfernen? Die Live-Konferenz geht danach nicht mehr.')&&save({lk_secret:'',lk_secret_clear:1}).catch(fail);
+  if($('#vTrX'))$('#vTrX').onclick=async()=>await ask('Schlüssel des Transkriptionsdienstes entfernen?')&&save({tr_key:'',tr_key_clear:1}).catch(fail);
   el.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{const i=+b.dataset.cm,j=i+ +b.dataset.d;vxD.cfg=cfg();[vxChE[i],vxChE[j]]=[vxChE[j],vxChE[i]];vxDirty=true;vxDraw()});
   const edit=i=>{const z=i==null?{name:'',hear:['all'],speak:['all'],plans:0,active:1}:vxChE[i],M=VXM();
     dlg(i==null?'Neuer Kanal':'Kanal bearbeiten',`<label class="mut">Name<input id="zN" value="${esc(z.name)}" maxlength="60"></label>
@@ -860,7 +860,7 @@ async function loadGeo(){const el=$('#sGeo'),pq=new URLSearchParams(location.has
     el.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>one(geoIt.get(b.dataset.go)));
     el.querySelectorAll('[data-ge]').forEach(b=>b.onclick=()=>edit(b.dataset.ge));
     $('#gMrg').onclick=()=>merge(sel.map(r=>geoIt.get(r)));
-    $('#gImp').onclick=async e=>{const its=sel.map(r=>geoIt.get(r));if(!confirm(`${its.length} Objekte als feste Standorte${plan?' der Übung «'+plan.title+'»':''} übernehmen? Kategorie, Eigenschaften, Kürzel und Farbe gemäss den Vorgaben je Objektart, Name und Beschreibung als Vorschlag. Alles lässt sich danach bearbeiten.`))return;
+    $('#gImp').onclick=async e=>{const its=sel.map(r=>geoIt.get(r));if(!await ask(`${its.length} Objekte als feste Standorte${plan?' der Übung «'+plan.title+'»':''} übernehmen? Kategorie, Eigenschaften, Kürzel und Farbe gemäss den Vorgaben je Objektart, Name und Beschreibung als Vorschlag. Alles lässt sich danach bearbeiten.`))return;
       e.target.disabled=true;try{await api('geo/import',{plan_id:planId,items:its.map(it=>({...it,name:geoNm(it),descr:geoDescr(it),cat_id:c[it.kind].cat_id,props:c[it.kind].props,abbr:asPt(it)?c[it.kind].abbr:'',color:c[it.kind].color,shape:c[it.kind].shape,src:it}))});toast(its.length+' Standorte übernommen','ok');geoSel.clear();loadGeo()}catch(x){fail(x);e.target.disabled=false}}};
   el.querySelectorAll('[data-gkf]').forEach(i=>i.onchange=()=>{i.checked?kf.add(i.dataset.gkf):kf.delete(i.dataset.gkf);try{localStorage.setItem('sw_geof',JSON.stringify([...kf]))}catch(e){}draw()});
   // Suche: alle Kacheln im Ausschnitt, je zwei gleichzeitig; schon geladene stammen aus diesem Seitenaufruf
@@ -932,12 +932,12 @@ async function loadMail(){const el=$('#sMail');try{mailD=await api('mail/cfg')}c
     try{const r=await api('mail/test',{cfg:val(),pass:$('#mPw').value});o.innerHTML=r.ok?`✓ Angemeldet in ${r.ms} ms, Ordner «${esc(r.folder)}» mit ${r.exists} E-Mails. Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}catch(x){o.textContent='✗ '+x.message}b.disabled=false};
   $('#mPo').onclick=async e=>{const b=e.target;b.disabled=true;$('#mR').textContent='Wird abgerufen …';
     try{const r=await api('mail/poll',{});$('#mR').innerHTML=r.ok?(r.init?'✓ Stand des Postfachs gemerkt; ab jetzt eingehende E-Mails werden verarbeitet.':`✓ ${r.n===1?'1 neue E-Mail':r.n+' neue E-Mails'}${r.res.length?': '+esc(r.res.map(x=>s.res[x]||x).join(', ')):''}`):'✗ '+esc(r.err||'Fehler');if(r.n)loadMail()}catch(x){$('#mR').textContent='✗ '+x.message}b.disabled=false};
-  if($('#mPx'))$('#mPx').onclick=()=>{if(confirm('Gespeichertes Passwort des Postfachs entfernen?'))api('mail/cfg/save',{cfg:val(),pass_clear:1}).then(loadMail).catch(fail)};
+  if($('#mPx'))$('#mPx').onclick=async()=>{if(await ask('Gespeichertes Passwort des Postfachs entfernen?'))api('mail/cfg/save',{cfg:val(),pass_clear:1}).then(loadMail).catch(fail)};
   el.querySelectorAll('[data-cp]').forEach(b=>b.onclick=()=>{const i=$('#'+b.dataset.cp);i.select();(navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).then(()=>toast('Kopiert','ok')).catch(()=>{document.execCommand('copy');toast('Kopiert','ok')})});
-  $('#mKey').onclick=()=>{if(confirm('Neuen Schlüssel erzeugen? Cron-Job und Webhook müssen danach die neue Adresse verwenden.'))api('mail/key/new',{}).then(()=>{toast('Neuer Schlüssel erzeugt','ok');loadMail()}).catch(fail)};
+  $('#mKey').onclick=async()=>{if(await ask('Neuen Schlüssel erzeugen? Cron-Job und Webhook müssen danach die neue Adresse verwenden.'))api('mail/key/new',{}).then(()=>{toast('Neuer Schlüssel erzeugt','ok');loadMail()}).catch(fail)};
   $('#mxGo').onclick=async()=>{const o=$('#mxR');try{const r=await api('mail/check',{cfg:val(),from:$('#mxF').value,subject:$('#mxS').value,text:$('#mxT').value});
     o.innerHTML=r.kind?`✓ Würde «${esc(r.kind.name)}» starten (${r.word?`Schlüsselwort «${esc(r.word)}»`:'ohne Schlüsselwort'})${r.pls?', PLS '+esc(fmtC(r.pls[0],r.pls[1],'lv95')):', ohne PLS'}.${r.auth?' Dazu muss der Mailserver den Absender bestätigen.':''}<br>Meldung: ${esc(r.message)}`:'✗ '+esc(r.text)}catch(x){o.textContent='✗ '+x.message}};
-  if($('#mHx'))$('#mHx').onclick=()=>{if(confirm('Verlauf der E-Mails leeren?'))api('mail/hist/clear',{}).then(loadMail).catch(fail)}}
+  if($('#mHx'))$('#mHx').onclick=async()=>{if(await ask('Verlauf der E-Mails leeren?'))api('mail/hist/clear',{}).then(loadMail).catch(fail)}}
 /* ---------- Impressum & Datenschutz (Issue #102): Angaben der betreibenden Organisation für legal.html ---------- */
 async function loadLegal(){const el=$('#sLg');let s;try{s=await api('legal')}catch(e){return secErr(el,'Impressum & Datenschutz',e)}
   const F=[['org','Organisation (Betreiberin der App)',0,'z. B. Wasserrettung Musterstadt'],['addr','Adresse',1,'Strasse, PLZ Ort'],['contact','Kontakt',1,'E-Mail, Telefon'],['resp','Verantwortliche Person',0,''],['privacy','Kontakt für Datenschutzfragen',1,'leer = wie Kontakt'],['hosting','Hosting',1,'z. B. cyon AG, Basel (Schweiz)'],['note','Zusatztext Impressum',2,'erscheint unter den Angaben im Impressum'],['privacy_note','Zusatztext Datenschutz',2,'erscheint am Ende der Datenschutzerklärung']],c=s.cfg||{};
@@ -1073,11 +1073,11 @@ function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000
   $('#aiPv').onchange=()=>{pull();drawAi()};
   el.querySelectorAll('[data-mx]').forEach(x=>x.onchange=()=>{const[r,f]=x.dataset.mx.split('|');((c.matrix[r]=c.matrix[r]||{})[f]=c.matrix[r][f]||{})[X]=x.value});
   // Freigabe und Datenschutz dieses Typs auf alle anderen Einsatztypen übertragen (nur Funktionen, die es dort gibt)
-  $('#aiAll')&&($('#aiAll').onclick=()=>{pull();if(!confirm('Freigabe und Datenschutz von «'+(kx?kx.name:'')+'» für alle Einsatztypen übernehmen? Gespeichert wird erst mit «Speichern».'))return;
+  $('#aiAll')&&($('#aiAll').onclick=async()=>{pull();if(!await ask('Freigabe und Datenschutz von «'+(kx?kx.name:'')+'» für alle Einsatztypen übernehmen? Gespeichert wird erst mit «Speichern».'))return;
     for(const k of s.kinds){const id=String(k.id);if(id===X)continue;c.anon[id]=c.anon[X];c.round_loc[id]=c.round_loc[X];
       for(const r of Object.keys(c.matrix))for(const f of Object.keys(c.matrix[r]))if((s.ctx[f]||[]).includes(id)&&c.matrix[r][f][X]!=null)c.matrix[r][f][id]=c.matrix[r][f][X]}
     drawAi();toast('Übernommen, bitte speichern.','info')});
-  $('#aiSv').onclick=async()=>{pull();const p=Object.assign({},c),k=$('#aiK').value.trim();if(k)p.key=k;if($('#aiKc')&&$('#aiKc').checked){if(!confirm('API-Schlüssel löschen?'+(c.provider==='anthropic'?' Der AI-Assistent steht danach niemandem mehr zur Verfügung.':'')))return;p.key_clear=1;if(c.provider==='anthropic')p.on=0}
+  $('#aiSv').onclick=async()=>{pull();const p=Object.assign({},c),k=$('#aiK').value.trim();if(k)p.key=k;if($('#aiKc')&&$('#aiKc').checked){if(!await ask('API-Schlüssel löschen?'+(c.provider==='anthropic'?' Der AI-Assistent steht danach niemandem mehr zur Verfügung.':'')))return;p.key_clear=1;if(c.provider==='anthropic')p.on=0}
     $('#aiSv').disabled=true;try{const r=await api('ai/cfg/save',p);toast(r.ready?'Gespeichert. Der AI-Assistent ist eingerichtet.':'Gespeichert.');me=(await api('me')).me;loadAi()}catch(e){fail(e);$('#aiSv').disabled=false}};
   $('#aiT').onclick=async()=>{const b=$('#aiT'),o=$('#aiTr');b.disabled=true;o.textContent='Teste die gespeicherte Einstellung …';
     try{const r=await api('ai/test',{});o.innerHTML=`✓ Antwort in ${n(r.ms)} ms von <b>${esc(r.model)}</b>: «${esc(r.text)}»${r.tokens?` · ${n(r.tokens)} Tokens`:''}`}catch(e){o.innerHTML=`<span class="aierr">⚠ ${esc(e.message)}</span>`}b.disabled=false}}
@@ -1118,7 +1118,7 @@ function drawMaps(){const el=$('#sMp'),c=mpC,ks=mpS.kinds||[];
     if(b.dataset.mu)mv(+b.dataset.mu,-1);else if(b.dataset.md)mv(+b.dataset.md,1);
     else if(b.dataset.mt)mpTest(b.dataset.mt,b);
     else if(b.id==='mpRl')loadMaps();
-    else if(b.id==='mpDf'){if(confirm('Standard wiederherstellen (noch nicht gespeichert)? Die Einstellungen je Einsatztyp bleiben.')){c.order=mpS.map_sources.map(x=>x.k);c.on=mpS.map_sources.filter(x=>x.def).map(x=>x.k);c.def=mpS.map_default;drawMaps()}}
+    else if(b.id==='mpDf'){if(await ask('Standard wiederherstellen (noch nicht gespeichert)? Die Einstellungen je Einsatztyp bleiben.')){c.order=mpS.map_sources.map(x=>x.k);c.on=mpS.map_sources.filter(x=>x.def).map(x=>x.k);c.def=mpS.map_default;drawMaps()}}
     else if(b.id==='mpSv'){if(!c.on.length)return toast('Mindestens ein Kartenanbieter muss eingeschaltet bleiben.','err');
       const mk={};ks.forEach(t=>{const o=mpK[t.id];mk[t.id]={off:o.off.filter(k=>c.on.includes(k)),def:o.def&&c.on.includes(o.def)?o.def:null}});
       const bad=ks.find(t=>!c.on.some(k=>!mk[t.id].off.includes(k)));if(bad)return toast(`Für «${bad.name}» muss mindestens ein Kartenanbieter eingeschaltet bleiben.`,'err');
@@ -1182,8 +1182,8 @@ function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?n
     else if(b.dataset.at){const o=$('#at_'+b.dataset.at);b.disabled=true;o.textContent='Wird abgefragt …';
       try{const r=await api('air/test',{src:b.dataset.at});o.innerHTML=r.ok?`✓ Antwort in ${r.ms} ms: ${r.total} Luftfahrzeuge im Umkreis von 220 km um die Mitte der Schweiz, davon ${r.heli.length} Helikopter${r.heli.length?': '+r.heli.map(h=>esc((h.rescue?h.rescue+' ':'')+(h.cs||h.reg||h.hex))+(h.alt!=null?` (${h.alt?h.alt+' ft':'am Boden'})`:'')).join(', '):''}.`:`✗ Keine gültige Antwort nach ${r.ms} ms${r.status&&r.status.err?': '+esc(r.status.err):''}.`}catch(x){o.textContent='✗ '+x.message}b.disabled=false}
     else if(b.id==='aRl')loadAir();
-    else if(b.id==='aDf'){if(confirm('Standardeinstellungen für Helikopter wiederherstellen (noch nicht gespeichert)?')){airC=JSON.parse(JSON.stringify(s.air_default));drawAir()}}
-    else if(b.id==='aSv'){if(!c.src.length&&!confirm('Keine Datenquelle eingeschaltet: Es werden keine Helikopter angezeigt. Trotzdem speichern?'))return;
+    else if(b.id==='aDf'){if(await ask('Standardeinstellungen für Helikopter wiederherstellen (noch nicht gespeichert)?')){airC=JSON.parse(JSON.stringify(s.air_default));drawAir()}}
+    else if(b.id==='aSv'){if(!c.src.length&&!await ask('Keine Datenquelle eingeschaltet: Es werden keine Helikopter angezeigt. Trotzdem speichern?'))return;
       c.rescue=c.rescue.filter(x=>x.k.trim()||x.n.trim());b.disabled=true;
       api('settings/save',{air:{...c,rescue:c.rescue},air_kinds:airK}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.');loadAir()}).catch(x=>{fail(x);b.disabled=false})}}}
 /* ---------- Geodaten-Quellen: Reihenfolge, PostGIS, PostGIS-API, Overpass-Server, Haltedauer ---------- */
@@ -1206,14 +1206,14 @@ async function loadOp(){const el=$('#sO');let s,os;try{[s,os]=await Promise.all(
   if(s.postgis)pgBind();
   if(s.pgapi)pgaBind();
   if(s.water_order)drawWOrd(s);
-  $('#opSr').onclick=()=>{if(confirm('Statistik der Overpass-Server zurücksetzen?'))api('overpass/stats/reset',{}).then(loadOp).catch(fail)};
+  $('#opSr').onclick=async()=>{if(await ask('Statistik der Overpass-Server zurücksetzen?'))api('overpass/stats/reset',{}).then(loadOp).catch(fail)};
   $('#opA').onclick=()=>{const u=$('#opN').value.trim();if(!/^https:\/\/[^/?#@]+\//i.test(u))return toast('Bitte eine vollständige https-Adresse angeben, z. B. https://overpass-api.de/api/interpreter','err');
     if(!opUrls.includes(u))opUrls.push(u);$('#opN').value='';drawOpList();markDirty($('#opUs').closest('.sbar'))};
   $('#opN').onkeydown=e=>{if(e.key==='Enter')$('#opA').click()};
-  $('#opUs').onclick=()=>{if(!opUrls.length)return toast('Mindestens ein Server ist nötig. «Standard wiederherstellen» setzt die vorgegebene Liste.','err');
-    if(opUrls.every(u=>opOff.includes(u))&&!confirm('Alle Server sind ausgeschaltet. Overpass wird dann nicht mehr abgefragt. Trotzdem speichern?'))return;
+  $('#opUs').onclick=async()=>{if(!opUrls.length)return toast('Mindestens ein Server ist nötig. «Standard wiederherstellen» setzt die vorgegebene Liste.','err');
+    if(opUrls.every(u=>opOff.includes(u))&&!await ask('Alle Server sind ausgeschaltet. Overpass wird dann nicht mehr abgefragt. Trotzdem speichern?'))return;
     api('settings/save',{overpass_on:$('#opOn').checked?1:0,overpass_ttl:$('#opT').value,overpass_urls:opUrls,overpass_off:opOff.filter(u=>opUrls.includes(u))}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.','ok');loadOp()}).catch(fail)};
-  $('#opUd').onclick=()=>{if(confirm('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[],overpass_off:[]}).then(()=>{toast('Gespeichert.');loadOp()}).catch(fail)};
+  $('#opUd').onclick=async()=>{if(await ask('Vorgegebene Liste wiederherstellen?\n\n'+opDef.join('\n')))api('settings/save',{overpass_urls:[],overpass_off:[]}).then(()=>{toast('Gespeichert.');loadOp()}).catch(fail)};
   drawOpList()}
 // Reihenfolge der Quellen fürs Gewässernetz (water_order): ↑/↓, sofort gespeichert; nicht eingerichtete überspringt der Server
 let wOrd=[];
@@ -1236,7 +1236,7 @@ function pgaBind(){const v=()=>({on:$('#paOn').checked?1:0,url:$('#paU').value.t
   $('#paTs').onclick=async e=>{const b=e.target,o=$('#paR');b.disabled=true;o.textContent='Wird getestet …';
     try{const r=await api('pgapi/test',{cfg:v()});o.innerHTML=r.ok?`✓ Erreichbar in ${r.health_ms} ms${r.version?' (Version '+esc(r.version)+')':''}, Layer ${esc(r.geom)} mit SRID ${r.srid}${r.max?', höchstens '+r.max.toLocaleString('de-CH')+' je Antwort':''}. Beispiel 5 km um Bern: ${r.ways} Wege in ${r.query_ms} ms${r.names.length?' ('+esc(r.names.join(', '))+')':''}.${r.warn?' ⚠ '+esc(r.warn)+'.':''} Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}
     catch(x){o.textContent='✗ '+x.message}b.disabled=false};
-  if($('#paKx'))$('#paKx').onclick=()=>{if(confirm('Gespeicherten API-Key der PostGIS-API entfernen?'))api('settings/save',{pgapi:{...v(),key:'',key_clear:1}}).then(loadOp).catch(fail)}}
+  if($('#paKx'))$('#paKx').onclick=async()=>{if(await ask('Gespeicherten API-Key der PostGIS-API entfernen?'))api('settings/save',{pgapi:{...v(),key:'',key_clear:1}}).then(loadOp).catch(fail)}}
 // PostGIS als Hauptquelle (Issue #131): Verbindung (Passwort nie angezeigt, leer = behalten), Test mit Beispielabfrage um Bern
 function pgHtml(s){const p=s.postgis;if(!p)return'';
   return`<div class="scard"><h3>PostGIS-Datenbank (direkt)</h3><div class="mut">Eigene PostgreSQL-Datenbank mit PostGIS und dem Gewässernetz aus OpenStreetMap (Auszug der Schweiz von Geofabrik; Einrichtung und wöchentliche Aktualisierung mit den Skripten in <code>scripts/postgis/</code>). Der Webserver verbindet sich direkt mit ihr. Wann sie gefragt wird, bestimmt die Reihenfolge oben.</div>
@@ -1252,7 +1252,7 @@ function pgBind(){const v=()=>({on:$('#pgOn').checked?1:0,host:$('#pgH').value.t
   $('#pgTs').onclick=async e=>{const b=e.target,o=$('#pgR');b.disabled=true;o.textContent='Wird getestet …';
     try{const r=await api('postgis/test',{cfg:v()});o.innerHTML=r.ok?`✓ Verbunden in ${r.connect_ms} ms (PostGIS ${esc(r.postgis)}), Tabelle mit rund ${r.rows.toLocaleString('de-CH')} Gewässern. Beispiel 5 km um Bern: ${r.ways} Wege in ${r.query_ms} ms${r.names.length?' ('+esc(r.names.join(', '))+')':''}. Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}
     catch(x){o.textContent='✗ '+x.message}b.disabled=false};
-  if($('#pgWx'))$('#pgWx').onclick=()=>{if(confirm('Gespeichertes Passwort für PostGIS entfernen?'))api('settings/save',{postgis:{...v(),pass:'',pass_clear:1}}).then(loadOp).catch(fail)}}
+  if($('#pgWx'))$('#pgWx').onclick=async()=>{if(await ask('Gespeichertes Passwort für PostGIS entfernen?'))api('settings/save',{postgis:{...v(),pass:'',pass_clear:1}}).then(loadOp).catch(fail)}}
 // Statistik je Server (Issue #45): Versuche vom Server (Hosting) und direkt vom Gerät (Rückfall), Abfragen aus dem Zwischenspeicher zählen nicht; PostGIS (Issue #131) als eigene Zeile «postgis»
 function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',SP={postgis:'<b>PostGIS</b> (eigene Datenbank)',pgapi:'<b>PostGIS-API</b>'},
     us=[...Object.keys(SP).filter(k=>os.rows.some(r=>r.url===k)),...urls,...[...new Set(os.rows.map(r=>r.url))].filter(u=>!SP[u]&&!urls.includes(u))];
@@ -1304,8 +1304,8 @@ async function loadVeh(){const el=$('#sVeh');try{vehD=await api('vehicles')}catc
   el.onclick=async e=>{const b=e.target.closest('button');if(!b)return;const x=b.dataset;
     try{if(x.vkm)await api('veh/kind/move',{id:+x.vkm,dir:+x.d}).then(loadVeh);else if(x.vm)await api('vehicle/move',{id:+x.vm,dir:+x.d}).then(loadVeh);
       else if(x.vke)vehKindDlg(d.kinds.find(k=>k.id===+x.vke));else if(x.ve)vehDlg(by[+x.ve]);else if(x.vp)vehPosDlg(by[+x.vp]);else if(x.vl)vehLinkDlg(by[+x.vl]);
-      else if(x.vkr){if(confirm('Fahrzeugart entfernen?'))await api('veh/kind/remove',{id:+x.vkr}).then(loadVeh)}
-      else if(x.vr){const v=by[+x.vr];if(confirm(`«${v.name}» löschen? Das lässt sich nicht rückgängig machen.${v.used?' Replay und Einsatzlog bisheriger Einsätze zeigen es weiterhin.':''}`))await api('vehicle/remove',{id:v.id}).then(()=>{toast(`«${v.name}» gelöscht`,'ok');loadVeh()})}}catch(er){fail(er)}}}
+      else if(x.vkr){if(await ask('Fahrzeugart entfernen?'))await api('veh/kind/remove',{id:+x.vkr}).then(loadVeh)}
+      else if(x.vr){const v=by[+x.vr];if(await ask(`«${v.name}» löschen? Das lässt sich nicht rückgängig machen.${v.used?' Replay und Einsatzlog bisheriger Einsätze zeigen es weiterhin.':''}`))await api('vehicle/remove',{id:v.id}).then(()=>{toast(`«${v.name}» gelöscht`,'ok');loadVeh()})}}catch(er){fail(er)}}}
 function vehKindDlg(k){const ks=vehD.kinds.filter(x=>x.id!==k.id),ca=k.carries||{};
   dlg(k.id?'Fahrzeugart bearbeiten':'Neue Fahrzeugart',`<label class="mut">Name<input id="vkN" maxlength="60" value="${esc(k.name||'')}" placeholder="z. B. Kommandofahrzeug"></label>
     <label class="mut">Symbol<select id="vkI">${Object.entries(vehD.icons).map(([i,s])=>`<option value="${i}" ${i===k.icon?'selected':''}>${s}</option>`).join('')}</select></label>
@@ -1518,18 +1518,18 @@ un=id=>(us.find(u=>u.id===id)||{}).name||'?',stat=p=>p.incident_id==null?['vorbe
   const fOth=p=>exPlaces(p,fp).concat(p.injects.filter(j=>j.lat!=null));
   el.querySelectorAll('[data-fpa]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.fpa);placeDlg({},p.id,fOth(p),loadEx)});
   el.querySelectorAll('[data-fpe]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p);placeDlg(p.own_places.find(f=>f.id==b.dataset.fpe),p.id,fOth(p),loadEx)});
-  el.querySelectorAll('[data-fpr]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p),f=p.own_places.find(x=>x.id==b.dataset.fpr);if(confirm(`Standort «${f.name}» aus der Übung entfernen?`))api('place/remove',{id:f.id}).then(loadEx).catch(fail)});
+  el.querySelectorAll('[data-fpr]').forEach(b=>b.onclick=async()=>{const p=P(b.dataset.p),f=p.own_places.find(x=>x.id==b.dataset.fpr);if(await ask(`Standort «${f.name}» aus der Übung entfernen?`))api('place/remove',{id:f.id}).then(loadEx).catch(fail)});
   el.querySelectorAll('[data-pe]').forEach(b=>b.onclick=()=>editP(P(b.dataset.pe)));
   el.querySelectorAll('[data-ja]').forEach(b=>b.onclick=()=>editJ(P(b.dataset.ja),{}));
   el.querySelectorAll('[data-ji]').forEach(b=>b.onclick=()=>{const p=P(b.dataset.p);editJ(p,p.injects.find(j=>j.id===+b.dataset.ji))});
-  el.querySelectorAll('[data-jr]').forEach(b=>b.onclick=()=>confirm('Element entfernen?')&&api('ex/inject/remove',{id:+b.dataset.jr}).then(loadEx).catch(fail));
+  el.querySelectorAll('[data-jr]').forEach(b=>b.onclick=async()=>await ask('Element entfernen?')&&api('ex/inject/remove',{id:+b.dataset.jr}).then(loadEx).catch(fail));
   el.querySelectorAll('[data-pai]').forEach(b=>b.onclick=()=>{const p=ps.find(x=>x.id===+b.dataset.pai);if(p)aiPlan(p,fp)});
   el.querySelectorAll('[data-pc]').forEach(b=>b.onclick=()=>api('ex/plan/copy',{id:+b.dataset.pc}).then(loadEx).catch(fail));
-  el.querySelectorAll('[data-pz]').forEach(b=>b.onclick=()=>confirm('Übung «'+P(b.dataset.pz).title+'» zurücksetzen? Sie ist danach wieder vorbereitet und alle Elemente sind nicht freigegeben. Log und Replay der bisherigen Durchführung bleiben erhalten.'+(P(b.dataset.pz).public_token?' Der öffentliche Link zeigt wieder die Warteseite.':''))&&api('ex/plan/reset',{id:+b.dataset.pz}).then(loadEx).catch(fail));
+  el.querySelectorAll('[data-pz]').forEach(b=>b.onclick=async()=>await ask('Übung «'+P(b.dataset.pz).title+'» zurücksetzen? Sie ist danach wieder vorbereitet und alle Elemente sind nicht freigegeben. Log und Replay der bisherigen Durchführung bleiben erhalten.'+(P(b.dataset.pz).public_token?' Der öffentliche Link zeigt wieder die Warteseite.':''))&&api('ex/plan/reset',{id:+b.dataset.pz}).then(loadEx).catch(fail));
   // Log und Replay der Durchführungen
   el.querySelectorAll('[data-xl]').forEach(b=>b.onclick=()=>openLog(b.dataset.xl,'Übungslog – '+P(b.dataset.p).title,false,false,(P(b.dataset.p).runs||[]).find(r=>r.id==b.dataset.xl)));
   el.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.rp));
-  el.querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>confirm('Übung «'+P(b.dataset.pr).title+'» entfernen?'+(P(b.dataset.pr).incident_id==null?' Der vorbereitete öffentliche Link wird ungültig.':''))&&api('ex/plan/remove',{id:+b.dataset.pr}).then(loadEx).catch(fail))}
+  el.querySelectorAll('[data-pr]').forEach(b=>b.onclick=async()=>await ask('Übung «'+P(b.dataset.pr).title+'» entfernen?'+(P(b.dataset.pr).incident_id==null?' Der vorbereitete öffentliche Link wird ungültig.':''))&&api('ex/plan/remove',{id:+b.dataset.pr}).then(loadEx).catch(fail))}
 // Funktion für einen Einsatztyp mit vorbereiteten Übungen eingeschaltet (aus me.kinds), z. B. Aufzeichnung
 const features=k=>{const l=((me&&me.kinds)||[]).filter(x=>x.plans);return !l.length||l.some(x=>x.features[k]!==0)};
 /* ---------- Einsatzstatistik und Einsatzlog (getrennt nach Einsatztyp) ---------- */
@@ -1570,8 +1570,8 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
   el.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>aarDl(+b.dataset.ap,'pdf',X(b.dataset.ap).message));
   el.querySelectorAll('[data-aarc]').forEach(b=>b.onclick=()=>aarArchGet(+b.dataset.aarc));
   el.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>openReplay(+b.dataset.rp));
-  el.querySelectorAll('[data-rpd]').forEach(b=>b.onclick=()=>{const x=X(b.dataset.rpd);
-    if(confirm(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Markierungen, Bereiche und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
+  el.querySelectorAll('[data-rpd]').forEach(b=>b.onclick=async()=>{const x=X(b.dataset.rpd);
+    if(await ask(`Aufzeichnung von «${x.message}» löschen?\n\nDie Standortverläufe werden endgültig gelöscht, das Replay ist danach nicht mehr möglich. Einsatzlog, Nachrichten, Markierungen, Bereiche und Rettlinge bleiben erhalten.${x.ended_at?'':'\n\nDer Einsatz läuft noch: die Aufzeichnung wird damit beendet.'}`))
       api('incident/replay/delete',{id:x.id}).then(loadStats).catch(fail)})}
 /* ---------- Statistik pro Person (Issue #87): wer wie viele Einsätze, Zeiten, Kilometer; je Einsatz, über alle oder je Zeitraum ---------- */
 // Daten: stats/people (eine Zeile je Teilnahme) und stats (Einsätze für die Auswahl); ausgewertet wird hier, Filter pro Gerät gemerkt (sw_psf)
@@ -1687,11 +1687,11 @@ async function aarEdit(id,row){let x;try{x=await api('aar/get&id='+id);await aar
   d.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.af!=null)dirty=true});
   // Speichern: bleibt offen; Schliessen fragt bei ungespeicherten Angaben nach
   const ok=$('[data-ok]',d);ok.onclick=async()=>{if(ok.disabled)return;ok.disabled=true;try{await api('aar/save',{id,data:collect()});dirty=false;chg=true;toast('After Action Review gespeichert.','ok')}catch(e){fail(e)}finally{ok.disabled=false}};
-  $('[data-x]',d).onclick=()=>{if(dirty&&!confirm('Ungespeicherte Angaben verwerfen?'))return;d.remove();if(chg)loadStats()};
+  $('[data-x]',d).onclick=async()=>{if(dirty&&!await ask('Ungespeicherte Angaben verwerfen?'))return;d.remove();if(chg)loadStats()};
   // Speichern und freigeben (Recht aar_rel), Nicht relevant (erfasste Angaben bleiben gespeichert)
-  if(can('aar_rel'))aarBtn(d,'Speichern und freigeben','',async()=>{if(!confirm('Speichern und freigeben?\n\nDas Review ist danach abgeschlossen und gesperrt, und alle Teilnehmenden sehen es unter «Meine Einsätze» (Namen gemäss «Einsicht für Einsatzkräfte»). Offene Feedback-Anfragen enden. Zum Ändern muss die Freigabe zurückgenommen werden.'))return false;
+  if(can('aar_rel'))aarBtn(d,'Speichern und freigeben','',async()=>{if(!await ask('Speichern und freigeben?\n\nDas Review ist danach abgeschlossen und gesperrt, und alle Teilnehmenden sehen es unter «Meine Einsätze» (Namen gemäss «Einsicht für Einsatzkräfte»). Offene Feedback-Anfragen enden. Zum Ändern muss die Freigabe zurückgenommen werden.'))return false;
     await api('aar/save',{id,data:collect()});await api('aar/status',{id,status:1});toast('After Action Review freigegeben.','ok');loadStats()});
-  if(x.status!==2)aarBtn(d,'Nicht relevant','sec',async()=>{if(!confirm('Als nicht relevant markieren?\n\nEs zählt dann nicht mehr als offen. Die Angaben im Formular werden gespeichert, das Review lässt sich jederzeit wieder erfassen.'))return false;
+  if(x.status!==2)aarBtn(d,'Nicht relevant','sec',async()=>{if(!await ask('Als nicht relevant markieren?\n\nEs zählt dann nicht mehr als offen. Die Angaben im Formular werden gespeichert, das Review lässt sich jederzeit wieder erfassen.'))return false;
     await api('aar/save',{id,data:collect()});await api('aar/status',{id,status:2});toast('Als nicht relevant markiert.','ok');loadStats()});
   // Aufbau: Karte = linke Spalte (Formular) + rechte Spalte (Register)
   const card=d.firstElementChild,left=document.createElement('div'),side=document.createElement('div');left.className='aarwl';side.className='aarwr';
@@ -1727,7 +1727,7 @@ function aarSide(el,x,id,row,changed){const i=x.inc;let tab='inc',fb=null,q='';t
     const wr=$('[data-wr]',el);if(wr)wr.onclick=()=>openReplay(id);
     const qi=$('#awQ',el);if(qi)qi.oninput=()=>{q=qi.value.trim().toLowerCase();const p=qi.selectionStart;draw();const n=$('#awQ',el);n.focus();n.setSelectionRange(p,p)};
     const rq=$('#fbRq',el);if(rq)rq.onclick=async()=>{if(rq.disabled)return;rq.disabled=true;try{const r=await api('aar/fb/request',{id,days:+$('#fbRd',el).value,note:$('#fbRn',el).value});fb=r;changed();toast(r.sent?`${r.sent} ${r.sent===1?'Person':'Personen'} benachrichtigt.`:'Alle haben bereits geantwortet; Frist neu gesetzt.','ok');draw()}catch(e){fail(e);rq.disabled=false}};
-    const rc=$('#fbRc',el);if(rc)rc.onclick=async()=>{if(!confirm('Feedback abschliessen?\n\nEs sind danach keine weiteren Antworten möglich. Erneut anfordern öffnet es wieder.'))return;try{fb=await api('aar/fb/close',{id});draw()}catch(e){fail(e)}}};
+    const rc=$('#fbRc',el);if(rc)rc.onclick=async()=>{if(!await ask('Feedback abschliessen?\n\nEs sind danach keine weiteren Antworten möglich. Erneut anfordern öffnet es wieder.'))return;try{fb=await api('aar/fb/close',{id});draw()}catch(e){fail(e)}}};
   const load=()=>api('aar/fb&id='+id).then(r=>{fb=r;if(el.isConnected)draw()}).catch(e=>{fb={on:0,req:null,answers:[],fields:[],people:0};draw();fail(e)});
   draw();load()}
 // AI-Assistent (Issue #111) bei der Übungsvorbereitung: Hinweise und vorgeschlagene Elemente, die sich per Auswahl direkt erstellen lassen.
@@ -1802,7 +1802,7 @@ function aarImgEdit(d,x,id,fid,changed,ta){const el=$(`[data-aimg="${fid}"]`,d);
       +`<div class="row"><button class="${ta?'sec':''}" data-aia ${ta?'title="Bild an der Cursorstelle einfügen (auch aus der Zwischenablage)"':''}>${ta?'+ Bild einfügen':'+ Bilder hinzufügen'}</button><input type="file" accept="image/*" multiple hidden></div>${ta?(L.length?'<small>Im Dokument steht das Bild dort, wo im Text seine Marke steht (verschieben durch Ausschneiden und Einfügen). Ohne Marke kommt es ans Ende des Textes. Bilder werden sofort gespeichert.</small>':''):'<small>Bilder werden sofort gespeichert und auf höchstens 1600 Pixel verkleinert.</small>'}`;
     el.querySelectorAll('[data-ain]').forEach(b=>b.onclick=()=>aarIns(ta,`[Bild ${b.dataset.ain}]`));
     el.querySelectorAll('[data-aic]').forEach(c=>c.onchange=()=>{const m=x.imgs.find(m=>m.id==c.dataset.aic);api('aar/img/save',{img:m.id,caption:c.value}).then(()=>{m.caption=c.value;changed()}).catch(fail)});
-    el.querySelectorAll('[data-aix]').forEach(b=>b.onclick=()=>{if(!confirm('Bild entfernen?'))return;api('aar/img/remove',{img:+b.dataset.aix}).then(()=>{x.imgs=x.imgs.filter(m=>m.id!=b.dataset.aix);d.querySelectorAll('textarea[data-af]').forEach(t=>t.value=t.value.split(`[Bild ${b.dataset.aix}]`).join(''));changed();draw()}).catch(fail)});
+    el.querySelectorAll('[data-aix]').forEach(b=>b.onclick=async()=>{if(!await ask('Bild entfernen?'))return;api('aar/img/remove',{img:+b.dataset.aix}).then(()=>{x.imgs=x.imgs.filter(m=>m.id!=b.dataset.aix);d.querySelectorAll('textarea[data-af]').forEach(t=>t.value=t.value.split(`[Bild ${b.dataset.aix}]`).join(''));changed();draw()}).catch(fail)});
     const fi=$('input[type=file]',el);$('[data-aia]',el).onclick=()=>fi.click();
     fi.onchange=()=>{const fs=[...fi.files];if(fs.length)add(fs)}};
   draw()}
@@ -1819,9 +1819,9 @@ async function aarShow(id,my){const o={log:aarLogOn(my),anon:false};let x;const 
   const draw=()=>$('#avD',d).innerHTML=aarHtml(aarModel(x,o),logo);draw();
   if(anonOk)$('#avA',d).onchange=async e=>{o.anon=e.target.checked;try{x=await get();await aarImgs(x,my);draw()}catch(er){fail(er)}};
   for(const [k,l] of [['docx','Word'],['pdf','PDF']])if(my?myB[k]:aarDlOk(k,x.status===1?'rel':x.status===2?'nr':'wip'))aarBtn(d,l,'',async()=>{await aarMake(x,k,o);return false});
-  if(!my&&can('aar_rel')&&x.status===1)aarBtn(d,'Freigabe zurücknehmen','sec',async()=>{if(!confirm('Freigabe zurücknehmen?\n\nDas Review ist wieder in Arbeit, bearbeitbar und für die Teilnehmenden nicht mehr sichtbar.'))return false;
+  if(!my&&can('aar_rel')&&x.status===1)aarBtn(d,'Freigabe zurücknehmen','sec',async()=>{if(!await ask('Freigabe zurücknehmen?\n\nDas Review ist wieder in Arbeit, bearbeitbar und für die Teilnehmenden nicht mehr sichtbar.'))return false;
     await api('aar/status',{id,status:0});toast('Freigabe zurückgenommen.','ok');loadStats()});
-  if(!my&&can('aar_rel')&&x.status!==1)aarBtn(d,'Freigeben','',async()=>{if(!confirm('Freigeben?\n\nDas Review ist danach abgeschlossen und gesperrt, und alle Teilnehmenden sehen es unter «Meine Einsätze».'))return false;
+  if(!my&&can('aar_rel')&&x.status!==1)aarBtn(d,'Freigeben','',async()=>{if(!await ask('Freigeben?\n\nDas Review ist danach abgeschlossen und gesperrt, und alle Teilnehmenden sehen es unter «Meine Einsätze».'))return false;
     await api('aar/status',{id,status:1});toast('After Action Review freigegeben.','ok');loadStats()})}
 // Dokumentmodell als HTML (Ansicht)
 function aarHtml(B,logo){const tb=(h,rows)=>`<div class="tw"><table>${h?`<thead><tr>${h.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>`:''}<tbody>${rows.map(r=>`<tr>${r.map((c,n)=>`<td${!h&&!n?' class="mut"':''} style="white-space:pre-wrap">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -2008,7 +2008,7 @@ async function loadAarCfg(){const el=$('#sAarC');try{aarC=await api('aar/cfg')}c
   const qmv=(n,k)=>{const x=fbCur();[x.fields[n],x.fields[n+k]]=[x.fields[n+k],x.fields[n]];fbSave(x).catch(fail)};
   el.querySelectorAll('[data-qm]').forEach(b=>b.onclick=()=>qmv(+b.dataset.qm,+b.dataset.d));
   el.querySelectorAll('[data-qe]').forEach(b=>b.onclick=()=>{const n=+b.dataset.qe;aarField(FB.fields[n],f=>{const x=fbCur();x.fields[n]=f;return fbSave(x)},aarC.fbtypes)});
-  el.querySelectorAll('[data-qx]').forEach(b=>b.onclick=()=>{const n=+b.dataset.qx;if(confirm(`Frage «${FB.fields[n].label}» entfernen?\n\nBereits abgegebene Antworten bleiben gespeichert, erscheinen aber nicht mehr.`)){const x=fbCur();x.fields.splice(n,1);fbSave(x).catch(fail)}});
+  el.querySelectorAll('[data-qx]').forEach(b=>b.onclick=async()=>{const n=+b.dataset.qx;if(await ask(`Frage «${FB.fields[n].label}» entfernen?\n\nBereits abgegebene Antworten bleiben gespeichert, erscheinen aber nicht mehr.`)){const x=fbCur();x.fields.splice(n,1);fbSave(x).catch(fail)}});
   $('#fbA').onclick=()=>aarField(null,f=>{const x=fbCur();x.fields.push(f);return fbSave(x)},aarC.fbtypes);
   $('#acS').onclick=()=>save({...cur(),title:$('#acT').value,org:$('#acO').value}).catch(fail);
   el.querySelectorAll('[data-aa]').forEach(c=>c.onchange=()=>{const x=cur();x.auto[c.dataset.aa]=c.checked?1:0;save(x).catch(fail)});
@@ -2016,12 +2016,12 @@ async function loadAarCfg(){const el=$('#sAarC');try{aarC=await api('aar/cfg')}c
   const mv=(n,k)=>{const x=cur();[x.fields[n],x.fields[n+k]]=[x.fields[n+k],x.fields[n]];save(x).catch(fail)};
   el.querySelectorAll('[data-fm]').forEach(b=>b.onclick=()=>mv(+b.dataset.fm,+b.dataset.d));
   el.querySelectorAll('[data-fe]').forEach(b=>b.onclick=()=>{const n=+b.dataset.fe;aarField(C.fields[n],f=>{const x=cur();x.fields[n]=f;return save(x)})});
-  el.querySelectorAll('[data-fx]').forEach(b=>b.onclick=()=>{const n=+b.dataset.fx,f=C.fields[n];
-    if(confirm(`Feld «${f.label}» entfernen?\n\nEs verschwindet aus Formular und Dokument. Bereits erfasste Angaben bleiben gespeichert, erscheinen aber nicht mehr.`)){const x=cur();x.fields.splice(n,1);save(x).catch(fail)}});
+  el.querySelectorAll('[data-fx]').forEach(b=>b.onclick=async()=>{const n=+b.dataset.fx,f=C.fields[n];
+    if(await ask(`Feld «${f.label}» entfernen?\n\nEs verschwindet aus Formular und Dokument. Bereits erfasste Angaben bleiben gespeichert, erscheinen aber nicht mehr.`)){const x=cur();x.fields.splice(n,1);save(x).catch(fail)}});
   $('#acA').onclick=()=>aarField(null,f=>{const x=cur();x.fields.push(f);return save(x)});
   $('#acL').onclick=()=>$('#acLf').click();
   $('#acLf').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{await api('aar/logo',{logo:await aarImg(f)});toast('Logo gespeichert.','ok');loadAarCfg()}catch(x){fail(x)}};
-  if($('#acLx'))$('#acLx').onclick=()=>{if(confirm('Logo entfernen?'))api('aar/logo',{logo:null}).then(loadAarCfg).catch(fail)}}
+  if($('#acLx'))$('#acLx').onclick=async()=>{if(await ask('Logo entfernen?'))api('aar/logo',{logo:null}).then(loadAarCfg).catch(fail)}}
 function aarField(f,done,T=aarC.types){const neu=!f;f=f||{type:'area',label:'',hint:''};
   const d=dlg(neu?'Neues Feld':'Feld bearbeiten',`<label class="mut">Bezeichnung<input id="afL" value="${esc(f.label)}" maxlength="150"></label>
     <label class="mut">Art<select id="afT">${Object.entries(T).map(([k,l])=>`<option value="${k}" ${k===f.type?'selected':''}>${esc(l)}</option>`).join('')}</select></label>
@@ -2115,7 +2115,7 @@ const anonDays=v=>v==null?'nie':v===0?'beim Einsatzende':v+(v===1?' Tag':' Tage'
 async function anonApply(incs,steps,D){const fin=steps.filter(k=>D.steps.find(s=>s.key===k).final),nm=k=>D.steps.find(s=>s.key===k).name;
   const n=steps.map(k=>[k,incs.filter(x=>anonTodoJ(x,k)).length]).filter(([,c])=>c);
   if(!n.length){toast('Bei den gewählten Einsätzen ist mit diesen Stufen nichts mehr zu tun.','info');return false}
-  if(!confirm(`${incs.length===1?'«'+incs[0].message+'»':incs.length+' Einsätze'} anonymisieren:\n\n${n.map(([k,c])=>'• '+nm(k)+(incs.length>1?` (${c} Einsätze)`:'')).join('\n')}${fin.length?'\n\n'+fin.filter(k=>n.some(([j])=>j===k)).map(nm).join(', ')+': lässt sich nicht rückgängig machen.':''}${n.some(([k])=>k!=='track')?'\n\nNicht freigegebene After Action Reviews sind danach nicht mehr möglich.':''}`))return false;
+  if(!await ask(`${incs.length===1?'«'+incs[0].message+'»':incs.length+' Einsätze'} anonymisieren:\n\n${n.map(([k,c])=>'• '+nm(k)+(incs.length>1?` (${c} Einsätze)`:'')).join('\n')}${fin.length?'\n\n'+fin.filter(k=>n.some(([j])=>j===k)).map(nm).join(', ')+': lässt sich nicht rückgängig machen.':''}${n.some(([k])=>k!=='track')?'\n\nNicht freigegebene After Action Reviews sind danach nicht mehr möglich.':''}`))return false;
   const r=await api('anon/apply',{ids:incs.map(x=>x.id),steps});toast(`Anonymisiert: ${r.incidents} ${r.incidents===1?'Einsatz':'Einsätze'}`,'ok');return true}
 let anonD=null,anonSel=new Set(),anonF=(()=>{try{return Object.assign({art:'all',per:'all',from:'',to:'',st:[]},JSON.parse(localStorage.getItem('sw_anf')||'{}'))}catch(e){return{art:'all',per:'all',from:'',to:'',st:[]}}})();
 async function loadAnon(){const el=$('#sAnon');try{anonD=await api('anon/cfg')}catch(e){return secErr(el,'Anonymisierung',e)}
@@ -2150,7 +2150,7 @@ function renderAnon(){const el=$('#sAnon'),D=anonD,C=D.cfg,f=anonF,[a,b]=psRange
   el.querySelectorAll('[data-i]').forEach(c=>c.onchange=()=>{c.checked?anonSel.add(+c.dataset.i):anonSel.delete(+c.dataset.i);renderAnon()});
   el.querySelectorAll('.anSt').forEach(c=>c.onchange=()=>{anonF.st=[...el.querySelectorAll('.anSt:checked')].map(x=>x.value);re()});
   $('#anGo').onclick=async e=>{e.target.disabled=true;try{if(await anonApply(sel,st,D))anonSel.clear();await loadAnon()}catch(x){fail(x);renderAnon()}};
-  if($('#anUndo'))$('#anUndo').onclick=async e=>{const l=sel.filter(x=>x.view_anon);if(!confirm(`Anonymisierte Anzeige bei ${l.length===1?'«'+l[0].message+'»':l.length+' Einsätzen'} aufheben?\n\nLog, Replay und After Action Review zeigen danach wieder Namen, soweit sie nicht endgültig anonymisiert sind.`))return;
+  if($('#anUndo'))$('#anUndo').onclick=async e=>{const l=sel.filter(x=>x.view_anon);if(!await ask(`Anonymisierte Anzeige bei ${l.length===1?'«'+l[0].message+'»':l.length+' Einsätzen'} aufheben?\n\nLog, Replay und After Action Review zeigen danach wieder Namen, soweit sie nicht endgültig anonymisiert sind.`))return;
     e.target.disabled=true;try{const r=await api('anon/undo',{ids:l.map(x=>x.id)});toast(`Aufgehoben: ${r.incidents} ${r.incidents===1?'Einsatz':'Einsätze'}`,'ok');await loadAnon()}catch(x){fail(x);renderAnon()}};
   $('#anDef').onclick=()=>{el.querySelectorAll('.anst').forEach(d=>{const s=D.steps.find(x=>x.key===d.dataset.k);if(!s||!s.def)return;$('.anOn',d).checked=true;d.querySelectorAll('.anD').forEach(i=>{if(s.def[i.dataset.kk]!==undefined)i.value=s.def[i.dataset.kk]})});toast('Vorgaben eingesetzt, noch nicht gespeichert','info')};
   $('#anSave').onclick=async e=>{const cfg={},v=i=>i.value.trim();
@@ -2158,7 +2158,7 @@ function renderAnon(){const el=$('#sAnon'),D=anonD,C=D.cfg,f=anonF,[a,b]=psRange
     for(const c of Object.values(cfg))for(const t of Object.values(c.days))if(t!==''&&!(/^\d+$/.test(t)&&+t<=36500))return toast('Tage: ganze Zahl von 0 bis 36500 oder leer (nie).','err');
     // Rückfrage, wenn eine neue oder kürzere Frist schon bestehende Einsätze betrifft (Anwendung bei der nächsten Prüfung)
     const hit=D.steps.map(s=>{const c=cfg[s.key];if(!c.on)return null;const n=D.incidents.filter(x=>{const d=c.days[x.kind_id];return d!==undefined&&d!==''&&x.ended_at<=now-+d*86400&&anonTodoJ(x,s.key)}).length;return n?`• ${s.name}: ${n} ${n===1?'Einsatz':'Einsätze'}${s.final?' (endgültig)':''}`:null}).filter(Boolean);
-    if(hit.length&&!confirm('Mit diesen Fristen werden bei der nächsten Prüfung (innert weniger Minuten) automatisch anonymisiert:\n\n'+hit.join('\n')+'\n\nSpeichern?'))return;
+    if(hit.length&&!await ask('Mit diesen Fristen werden bei der nächsten Prüfung (innert weniger Minuten) automatisch anonymisiert:\n\n'+hit.join('\n')+'\n\nSpeichern?'))return;
     e.target.disabled=true;try{await api('anon/cfg/save',{cfg});toast('Gespeichert','ok');await loadAnon()}catch(x){fail(x);e.target.disabled=false}}}
 // einzelner Einsatz aus der Einsatzstatistik: angebotene Stufen mit Stand, endgültige nach Rückfrage
 async function anonDlg(x){let D;try{D=await api('anon/cfg')}catch(e){return fail(e)}const i=D.incidents.find(y=>y.id===x.id);if(!i)return toast('Nur beendete Einsätze lassen sich anonymisieren.','err');
@@ -2171,7 +2171,7 @@ async function anonDlg(x){let D;try{D=await api('anon/cfg')}catch(e){return fail
     async d=>{const st=[...d.querySelectorAll('.anS:checked:not(:disabled)')].map(c=>c.value);if(!st.length)throw new Error('Bitte mindestens eine Stufe wählen.');
       if(!await anonApply([i],st,D))throw new Error('Abgebrochen.');loadStats()},'Anwenden');
   dA.firstElementChild.classList.add('anond');
-  const u=$('#anU');if(u)u.onclick=async()=>{if(!confirm('Anonymisierte Anzeige aufheben? Log, Replay und After Action Review zeigen danach wieder Namen, soweit sie nicht endgültig anonymisiert sind. Ein bereits gesichertes After Action Review bleibt nur als PDF verfügbar.'))return;
+  const u=$('#anU');if(u)u.onclick=async()=>{if(!await ask('Anonymisierte Anzeige aufheben? Log, Replay und After Action Review zeigen danach wieder Namen, soweit sie nicht endgültig anonymisiert sind. Ein bereits gesichertes After Action Review bleibt nur als PDF verfügbar.'))return;
     try{await api('anon/undo',{ids:[i.id]});toast('Aufgehoben','ok');u.closest('.dlg').remove();loadStats()}catch(e){fail(e)}}}
 /* ---------- Replay eines aufgezeichneten Einsatzes ---------- */
 // Zeitachse aus den gespeicherten Daten: Standortverläufe (track), Rettlinge (rtrack, created/removed/rescued_at), Positionen & Bereiche (created/removed), Nachrichten-Markierungen (created/unmarked), Log
