@@ -2,7 +2,7 @@
   "versions": [
     {
       "version": "0.1.0",
-      "date": "2026-11-13",
+      "date": "2026-11-15",
       "items": [
         "Erste Version mit Versionsnummer: Die Version steht in der Web-App, in der Verwaltung, bei der Anmeldung und in der App (Issue #175).",
         "«Was ist neu» zeigt nach einem Update die Änderungen seit der zuletzt gesehenen Version.",
