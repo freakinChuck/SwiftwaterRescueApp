@@ -16,6 +16,7 @@ import '../notify.dart';
 import '../push.dart';
 import '../sounds.dart';
 import '../sys.dart';
+import '../org.dart';
 import '../version.dart';
 import 'ctx.dart';
 import 'hydro.dart';
@@ -717,8 +718,11 @@ class _PrefsPageState extends State<PrefsPage> {
         OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#impressum'), child: const Text('Impressum')),
         OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#lizenzen'), child: const Text('Lizenzen')),
         OutlinedButton(onPressed: () => openWeb(context, s, 'legal.html#datenschutz'), child: const Text('Datenschutz')),
-      ], children: const [
-        Mut('Wer die App betreibt, welche Daten sie speichert und welche Lizenzen gelten.'),
+      ], children: [
+        if (!s.demo && orgLogoUrl(s.acc.base, s.me?['org_info']) != null)
+          Padding(padding: const EdgeInsets.only(bottom: 8), child: OrgLogo(s.acc.base, s.me?['org_info'], h: 72, maxW: 220)), // Issue #123
+        if (!s.demo && js(jm(s.me?['org_info'])['name']).isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(js(jm(s.me?['org_info'])['name']), style: const TextStyle(fontWeight: FontWeight.bold))),
+        const Mut('Wer die App betreibt, welche Daten sie speichert und welche Lizenzen gelten.'),
       ]);
 
   @override

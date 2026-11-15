@@ -148,3 +148,8 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 #demoBadge{position:fixed;z-index:1200;top:calc(env(safe-area-inset-top) + 3.7rem);left:.75rem;background:#7b1fa2;color:#fff;border:2px solid #fff;border-radius:999px;padding:.1rem .7rem;font-weight:700;font-size:.75rem;letter-spacing:.08em;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:pointer;min-height:0}
 .demoDlg .card{max-width:34rem}
 .pre{white-space:pre-wrap}
+/* Organisation mit Logo (Issue #123): Logo auf hellem Grund, damit auch dunkle Logos auf dem dunklen Hintergrund gut sichtbar sind */
+.org{display:inline-flex;align-items:center;gap:.45rem;min-width:0;vertical-align:middle}.org img{height:1.9em;max-width:7em;object-fit:contain;background:#fff;border-radius:5px;padding:2px 4px;flex:0 0 auto}
+.orgn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.org.orgbig{display:flex;flex-direction:column;gap:.5rem;text-align:center}.org.orgbig img{height:auto;max-height:110px;max-width:240px;padding:6px 10px;border-radius:8px}.org.orgbig .orgn{white-space:normal;font-weight:600;font-size:1.05rem}
+.legalf{font-size:.8rem;color:var(--mut)}.legalf a{color:#8ec5ff}

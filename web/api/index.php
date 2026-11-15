@@ -1731,6 +1731,18 @@ const LEGAL_FIELDS = ['org' => [120, 'Organisation'], 'addr' => [400, 'Adresse']
 function legalCfg() { $v = json_decode(setting('legal', ''), true); $v = is_array($v) ? $v : []; $r = [];
   foreach (LEGAL_FIELDS as $k => [$n]) $r[$k] = is_string($v[$k] ?? null) ? mb_substr(trim($v[$k]), 0, $n) : '';
   return $r; }
+/* ---------- Organisation und Logo in der App (Issue #123) ---------- */
+// Logo = Logo des After Action Review (Einstellung aar_logo, Verwaltung → «After Action Review einrichten»), Name = Organisation aus «Rechtliches»,
+// sonst die des AAR. Ohne Anmeldung (Anmeldeseite, öffentliche Ansicht, Kontenliste der App): org liefert Name und Stand des Logos (logo = Kurzwert
+// zum Neuladen, null = keines), org/logo das Bild selbst (zwischenspeicherbar, die Adresse ändert sich mit dem Stand).
+function orgInfo() { $l = (string)setting('aar_logo', ''); $n = legalCfg()['org']; if ($n === '') $n = trim((string)(json_decode((string)setting('aar_cfg', ''), true)['org'] ?? ''));
+  return ['name' => mb_substr($n, 0, 120), 'logo' => $l !== '' ? substr(sha1($l), 0, 12) : null]; }
+if ($route === 'org') out(orgInfo() + ['version' => verPub()]);
+if ($route === 'org/logo') { $l = (string)setting('aar_logo', '');
+  if (!preg_match('~^data:(image/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$~', $l, $m) || ($b = base64_decode($m[2], true)) === false) { http_response_code(404); exit; }
+  $et = '"' . substr(sha1($l), 0, 16) . '"'; header('ETag: ' . $et); header('Cache-Control: public, max-age=86400');
+  if (trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $et) { http_response_code(304); exit; }
+  header('Content-Type: ' . $m[1]); header('Content-Length: ' . strlen($b)); header('X-Content-Type-Options: nosniff'); echo $b; exit; }
 if ($route === 'legal') {
   // Funktionen und Anonymisierungsfristen je aktivem Einsatztyp (Issue #90): kinds = Spalten, on/days = {Typ-ID: Wert}
   $air = airCfg(); $ks = kindsActive(); $fk = array_map(fn($k) => features($k['id']), $ks);
@@ -1739,7 +1751,7 @@ if ($route === 'legal') {
   $aiOn = !empty($ai['on']) && trim((string)($ai['model'] ?? '')) !== '' && ($aiPv === 'anthropic' ? (string)setting('ai_key', '') !== '' : $aiU !== '');
   $aiP = fn($p) => (object)array_map(fn($k) => is_array($ai[$p] ?? null) ? (int)($ai[$p][(string)$k['id']] ?? 1) : (int)($ai[$p] ?? 1), $ks);
   out(['ai' => ['on' => $aiOn ? 1 : 0, 'host' => $aiOn ? ($aiPv === 'anthropic' && $aiU === '' ? 'api.anthropic.com' : (string)(parse_url($aiU, PHP_URL_HOST) ?: '')) : '', 'anon' => $aiP('anon'), 'round_loc' => $aiP('round_loc')],
-    'cfg' => legalCfg(), 'updated' => (int)setting('legal_at', '0'), 'version' => verPub(),
+    'cfg' => legalCfg(), 'org_info' => orgInfo(), 'updated' => (int)setting('legal_at', '0'), 'version' => verPub(),
     'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color']], $ks)),
     'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'on' => (object)array_map(fn($f) => $f[$k], $fk)], array_keys(FEATURES)),
     'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120'), 'postgis' => pgReady() ? 1 : 0, 'pgapi' => pgaReady() ? 1 : 0, 'order' => array_values(array_filter(waterOrder(), fn($k) => waterReady()[$k]))],
@@ -2517,7 +2529,7 @@ function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) re
     $body = pushEncrypt(json_encode($m, JSON_UNESCAPED_UNICODE), $sub['p256dh'], $sub['auth']); if ($body === null) continue;
     $h = curl_init($sub['endpoint']);
     curl_setopt_array($h, CURL_CA + [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4,
-      CURLOPT_HTTPHEADER => ['Content-Type: application/octet-stream', 'Content-Encoding: aes128gcm', 'TTL: ' . (!empty($m['crit']) ? 3600 : 600), 'Urgency: high', 'Topic: ' . substr(preg_replace('/[^A-Za-z0-9_-]/', '_', (string)($m['tag'] ?? 'sw')), 0, 32), 'Authorization: vapid t=' . $jwt[$aud] . ', k=' . vapid()['pub']]]);
+      CURLOPT_HTTPHEADER => ['Content-Type: application/octet-stream', 'Content-Encoding: aes128gcm', 'TTL: ' . (!empty($m['crit']) ? 3600 : 600), 'Urgency: high', 'Topic: ' . substr(preg_replace('/[^A-Za-z0-9_-]/', '_', (string)($m['rp'] ?? $m['tag'] ?? 'sw')), 0, 32), 'Authorization: vapid t=' . $jwt[$aud] . ', k=' . vapid()['pub']]]);
     curl_multi_add_handle($mh, $h); $hs[] = [$h, (int)$sub['id']]; }
   do { $st = curl_multi_exec($mh, $run); if ($run) curl_multi_select($mh, 1); } while ($run && $st === CURLM_OK);
   $wok = 0; $wgone = 0;
@@ -2565,14 +2577,16 @@ function appBase() { $d = str_replace('\\', '/', dirname(dirname($_SERVER['SCRIP
 function fcmMsg($tok, $pf, $u, $m, $snd = null) { $tag = (string)($m['tag'] ?? 'sw'); $cr = !empty($m['crit']); $sy = !empty($m['stay']); $si = !empty($m['silent']);
   $d = ['t' => (string)($m['t'] ?? ''), 'b' => mb_substr((string)($m['b'] ?? ''), 0, 1000), 'tag' => $tag, 'crit' => $cr ? '1' : '0', 'stay' => $sy ? '1' : '0', 'silent' => $si ? '1' : '0', 'srv' => appBase(), 'uid' => (string)$u];
   if (isset($m['kind'])) { $d['kind'] = (string)$m['kind']; $d['ksnd'] = (string)($m['ksnd'] ?? ''); }
+  if (isset($m['end'])) { $d['end'] = (string)$m['end']; $d['rt'] = empty($m['rt']) ? '0' : '1'; } // Einsatzende (Issue #174): Meldungen des Einsatzes schliessen
+  $rp = (string)($m['rp'] ?? $tag); // ersetzt diese Meldung (z. B. den Alarm), auch eine noch nicht zugestellte
   $o = ['token' => $tok, 'data' => $d];
-  if ($pf !== 'ios') $o['android'] = ['priority' => 'HIGH', 'ttl' => $cr ? '3600s' : '600s', 'collapse_key' => $tag];
+  if ($pf !== 'ios') $o['android'] = ['priority' => 'HIGH', 'ttl' => $cr ? '3600s' : '600s', 'collapse_key' => $rp];
   if ($pf !== 'android') { $aps = ['alert' => ['title' => $d['t'], 'body' => $d['b']], 'thread-id' => $tag];
     if ($cr) $aps += ['sound' => ['critical' => 1, 'name' => sndApns(sndIn(json_decode((string)$snd, true))[$d['kind'] ?? ''] ?? ($m['ksnd'] ?? null)), 'volume' => 1.0], 'interruption-level' => 'critical'];
     elseif ($sy) $aps += ['sound' => 'default', 'interruption-level' => 'time-sensitive'];
     elseif ($si) $aps += ['interruption-level' => 'passive'];
     else $aps['sound'] = 'default';
-    $o['apns'] = ['headers' => ['apns-priority' => $si ? '5' : '10', 'apns-push-type' => 'alert', 'apns-collapse-id' => substr($tag, 0, 64)], 'payload' => ['aps' => $aps]]; }
+    $o['apns'] = ['headers' => ['apns-priority' => $si ? '5' : '10', 'apns-push-type' => 'alert', 'apns-collapse-id' => substr($rp, 0, 64)], 'payload' => ['aps' => $aps]]; }
   return ['message' => $o]; }
 // Anfragen an FCM in $mh einreihen; Rückgabe [[handle, push_native.id], …]
 function fcmQueue($mh, $q, $ids) { global $db, $cfg;
@@ -2604,6 +2618,20 @@ function pushAlarm($inc, $skip, $only = null) { global $db; if (!pushOk() && !fc
     $l = alarmLvl($inc, (int)$u['exercise_mode']); if ($l === 'none') continue;
     $k = kindOf($inc); // kind/ksnd: Ton kritischer Alarme in der App (Issue #171)
     pushTo([$id], ['t' => mb_strtoupper($k['name']), 'b' => $inc['message'], 'tag' => 'i:' . $inc['id'], 'kind' => $k['id'], 'ksnd' => $k['snd'] ?? null] + pushLvl($l)); } }
+// Einsatzende (Issue #174): Meldungen des Einsatzes zurücknehmen statt nur eine neue zu senden. end = Einsatz (das Gerät schliesst die Meldungen
+// i:, m:, v:, k: dieses Einsatzes), rp = Schlüssel, den die Meldung ersetzt (iOS apns-collapse-id, Android collapse_key, Web Topic: ein noch nicht
+// zugestellter Alarm wird schon beim Push-Dienst ersetzt), rt = nur zurücknehmen. Teilnehmende ($pt) erhalten «beendet» gemäss end_lvl (none = nur
+// zurücknehmen), übrige Alarmierte (wie pushAlarm: aufgeboten, nicht abwesend, nicht Übungsleitung, Stufe nicht «Keine») nur die Rücknahme.
+// Android zeigt bei rt nichts; Web-Push muss immer etwas anzeigen (sonst sperren Browser das Abo) und iOS ersetzt den Alarm: dort still «beendet».
+function pushEnd($inc, $pt) { global $db; if (!pushOk() && !fcmOk()) return;
+  $k = kindOf($inc); $id = (int)$inc['id']; $el = noteLvl($inc, 'end'); $pt = array_map('intval', $pt);
+  $m = ['t' => mb_strtoupper($k['name']) . ' BEENDET', 'b' => $k['name'] . ' beendet.', 'tag' => 'e:' . $id, 'end' => $id, 'rp' => 'i:' . $id];
+  pushTo($pt, $el !== 'none' ? $m + pushLvl($el) : $m + ['rt' => 1] + pushLvl('low'));
+  $iv = incInvite($inc); $p = exPlan($inc); $lead = $p ? exLeads($p) : []; $rt = [];
+  foreach ($db->query("SELECT id,exercise_mode FROM users WHERE active=1")->fetchAll() as $u) { $x = (int)$u['id'];
+    if (in_array($x, $pt, true) || in_array($x, $lead, true) || ($iv !== null && !in_array($x, $iv, true)) || incAbsent($inc, $x) || $x === (int)($inc['created_by'] ?? 0) || alarmLvl($inc, (int)$u['exercise_mode']) === 'none') continue;
+    $rt[] = $x; }
+  pushTo($rt, ['b' => $k['name'] . ' beendet, der Alarm ist nicht mehr aktuell.', 'rt' => 1] + $m + pushLvl('low')); }
 function logev($incId, $userId, $kind, $text) { global $db, $now; $db->prepare("INSERT INTO incident_log(incident_id,ts,user_id,kind,text) VALUES(?,?,?,?,?)")->execute([$incId, $now, $userId, $kind, $text]); }
 function hav($a, $b, $c, $d) { $p1 = deg2rad($a); $p2 = deg2rad($c); $dp = $p2 - $p1; $dl = deg2rad($d - $b); $x = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 12742000 * asin(min(1, sqrt($x))); }
 function avg($a) { $a = array_values(array_filter($a, fn($x) => $x !== null)); return $a ? round(array_sum($a) / count($a), 1) : null; }
@@ -3174,7 +3202,7 @@ try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog
 try { if (!$me['must_change']) geoAuto(); } catch (Throwable $e) { alog('err', 'geo', 'Abgleich der Geodaten: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // Abgleich übernommener Standorte mit der Quelle (Issue #182), täglich im Nachlauf
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 switch ($route) {
- case 'me': out(['me' => $me + mapsFor(null) + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid)]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': out(['me' => $me + mapsFor(null) + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid)]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message', 'can_voice', 'sec']), $db->query("SELECT id,name,color,is_lead,is_post,can_message,can_voice,sec FROM roles WHERE active=1 ORDER BY id")->fetchAll())); // sec: Spezialrolle für Sekundäreinsätze (Issue #164)
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen); sec: Einrückoption für Sekundäreinsätze (Issue #164)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts', 'sec']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts,sec FROM modes ORDER BY id")->fetchAll()));
@@ -3980,7 +4008,7 @@ switch ($route) {
   if (feature($inc, 'hydro')) { $hid = (int)$inc['id']; after(fn() => hydroLog($hid, 'end')); } // Pegel und Abfluss am Einsatzende (Issue #125), nach der Antwort
   $fc = aarCfg()['fb']; if ($fc['on'] && in_array((int)kindOf($inc)['id'], $fc['kinds'], true) && fbPeople($inc['id'])) { $fn = fbRequest($inc, $fc['days'], null, null); alog('info', 'inc', 'Einsatzfeedback automatisch angefordert', ['id' => (int)$inc['id'], 'n' => $fn]); } // Issue #103
   $s = $db->prepare("SELECT user_id FROM participants WHERE incident_id=? AND mode<>'declined' AND left_at IS NULL AND user_id<>?"); $s->execute([$inc['id'], $uid]);
-  $pt = array_column($s->fetchAll(), 'user_id'); if (($el = noteLvl($inc, 'end')) !== 'none') pushTo($pt, ['t' => mb_strtoupper(kindOf($inc)['name']) . ' BEENDET', 'b' => kindOf($inc)['name'] . ' beendet.', 'tag' => 'e:' . $inc['id']] + pushLvl($el));
+  pushEnd($inc, array_column($s->fetchAll(), 'user_id')); // Issue #174: Meldungen des Einsatzes auf den Geräten zurücknehmen, Teilnehmende erhalten «beendet» anstelle des Alarms
   out(['ok' => true]);
 
  /* ---------- Vorbereitete Übungen (Issue #29) ---------- */

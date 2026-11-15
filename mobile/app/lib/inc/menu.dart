@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../org.dart';
 import '../version.dart';
 import 'ctx.dart';
 import 'hydro.dart';
@@ -135,6 +136,7 @@ class _IncMenuState extends State<IncMenu> {
                     child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Row(children: [
+                          if (!s.demo) Padding(padding: const EdgeInsets.only(right: 8), child: OrgLogo(s.acc.base, me?['org_info'])), // Issue #123
                           Flexible(
                               child: Text(s.acc.label.isEmpty ? 'Swiftwater Rescue' : s.acc.label,
                                   maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(c).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
@@ -220,7 +222,9 @@ class _IncMenuState extends State<IncMenu> {
 
   List<(String, String)> _infoRows() {
     final me = s.me ?? {};
+    final org = s.demo ? '' : js(jm(me['org_info'])['name']);
     return [
+      if (org.isNotEmpty) ('Organisation', org), // Issue #123
       ('Angemeldet', '${js(me['name'])} (${js(me['username'])}) · ${_roleNames()}${jb(me['exercise_mode']) ? ' · Übungsmodus an' : ''}'),
       ('Server', s.acc.base.replaceFirst(RegExp(r'^https?://'), '')),
     ];
@@ -238,18 +242,21 @@ class _IncMenuState extends State<IncMenu> {
       ));
     }
     if (s.inc == null) rows.addAll(_infoRows());
-    if (rows.isEmpty) return const SizedBox.shrink();
     final t = Theme.of(c);
+    // Impressum, Lizenzen, Datenschutz wie in der Fusszeile der Verwaltung (Issue #123)
+    Widget lk(String h, String l) => InkWell(onTap: () => openWeb(c, s, 'legal.html#$h'), child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Text(l, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.primary))));
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: rows
-              .map((r) => Padding(
+              .map<Widget>((r) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 1.5),
                   child: Text.rich(TextSpan(children: [TextSpan(text: '${r.$1}: ', style: const TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: r.$2)]),
                       style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant))))
-              .toList()),
+              .followedBy([
+            Wrap(spacing: 14, children: [lk('impressum', 'Impressum'), lk('lizenzen', 'Lizenzen'), lk('datenschutz', 'Datenschutz')]),
+          ]).toList()),
     );
   }
 

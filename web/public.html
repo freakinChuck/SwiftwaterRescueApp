@@ -26,13 +26,14 @@ html,body{height:100%}body{display:flex;flex-direction:column}
 .pl{padding:.3rem 0 .3rem .5rem;border-left:4px solid;border-bottom:1px solid var(--line);font-size:.85rem;overflow-wrap:anywhere}.pl .t{color:var(--mut);margin-right:.35rem}
 @media(max-width:760px){#pbBody{flex-direction:column}#pbSide{width:auto;height:38%;border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
-<div id="pbHead"><h1 id="pbTitle">Öffentliche Ansicht</h1><span id="pbTime" class="mut"></span><button id="pbAuto" aria-pressed="false" hidden title="Karte zeigt laufend alle sichtbaren aktiven Positionen und folgt ihnen">Auto-Übersicht</button></div>
+<div id="pbHead"><span id="pbOrg"></span><h1 id="pbTitle">Öffentliche Ansicht</h1><span id="pbTime" class="mut"></span><button id="pbAuto" aria-pressed="false" hidden title="Karte zeigt laufend alle sichtbaren aktiven Positionen und folgt ihnen">Auto-Übersicht</button></div>
 <div id="pbBody"><div id="pbWait" hidden></div><div id="pbMap"><div id="pbFollow" hidden><span></span> <button title="Folgen beenden">✕</button></div><button id="pbView" aria-expanded="false" aria-controls="viewBox" aria-label="Ansicht: Grundkarte und Kartenelemente" title="Ansicht: Grundkarte und Kartenelemente ein- und ausblenden"></button><div id="viewBox" hidden></div></div><aside id="pbSide"></aside></div>
 <script src="common.js?v=0"></script>
 <script>
 // Daten über die Route public/state (ohne Anmeldung); Aktualisierung alle 5 s.
 // Suchgebiet wie in der Einsatz-App (riverArea in common.js), Gewässernetz über public/net (gleicher Server-Cache).
 const K=new URLSearchParams(location.search).get('k')||'';
+fetch(`${API}?r=org`).then(r=>r.ok?r.json():null).then(o=>{if(o)$('#pbOrg').innerHTML=orgMark(o)}).catch(()=>{}); // Organisation mit Logo (Issue #123)
 let map=null,lay=null,bases={},baseKey=null,ps=null,cs='lv95',timer=null,fitted=false,followId=null,areaInfo='';const nets=new Map();
 const ago=ts=>{const s=Math.max(0,ps.now-ts);return s<60?'vor '+s+' s':s<3600?'vor '+Math.round(s/60)+' min':'vor '+Math.floor(s/3600)+' h'};
 function stopWith(t,b){clearInterval(timer);$('#pbBody').innerHTML=`<div id="pbMsg" class="card"><h2>${esc(t)}</h2><div class="mut">${esc(b)}</div></div>`;map=null}

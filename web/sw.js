@@ -36,9 +36,13 @@ self.addEventListener('fetch',e=>{const q=e.request;if(q.method!=='GET')return;c
 /* ---------- Web-Push ---------- */
 // Payload vom Server: t (Titel), b (Text), tag (wie die Quittierschlüssel der App: i:<Einsatz>, m:<Nachricht>, e:<Einsatz>), crit (kritischer Alarm), stay (bleibt stehen), silent (ohne Ton und Vibration)
 // Ist die App sichtbar im Vordergrund, zeigt sie die Meldung selbst (Polling); sonst die Systembenachrichtigung.
+// Einsatzende (Issue #174): end = Einsatz, zuerst alle Meldungen des Einsatzes schliessen (i:, m:, v:, k:; es läuft nur einer gleichzeitig), dann die
+// Meldung «beendet» zeigen; rt = nur zurücknehmen (Alarmierte ohne Teilnahme), still. Web-Push muss immer etwas anzeigen, sonst sperren Browser das Abo.
+const incNotesClose=()=>self.registration.getNotifications().then(ns=>ns.forEach(n=>{if(/^[imkv]:/.test(n.tag||''))n.close()})).catch(()=>{});
 self.addEventListener('push',e=>{let m={};try{m=e.data?e.data.json():{}}catch(_){m={t:'Swiftwater Rescue',b:e.data?e.data.text():''}}
-  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{
+  e.waitUntil((m.end?incNotesClose():Promise.resolve()).then(()=>self.clients.matchAll({type:'window',includeUncontrolled:true})).then(cs=>{
     if(cs.some(c=>c.visibilityState==='visible'&&c.focused))return;
+    if(m.rt)return self.registration.showNotification(m.t||'Swiftwater Rescue',{body:m.b||'',tag:m.tag||undefined,silent:true,icon:'img/icon-192.png',badge:'img/badge-96.png',data:{url:'./'}});
     return self.registration.showNotification(m.t||'Swiftwater Rescue',{body:m.b||'',tag:m.tag||undefined,renotify:true,requireInteraction:!!(m.crit||m.stay),
       ...(m.silent?{silent:true}:{vibrate:m.crit?[600,200,600,200,600,200,600]:[200]}),icon:'img/icon-192.png',badge:'img/badge-96.png',data:{url:'./'}})}))}); // silent und vibrate zusammen wirft einen Fehler
 // Klick: offene App in den Vordergrund holen, sonst öffnen. Alarm (i:), Nachricht (m:) und Entfernen (k:) gehören zum laufenden Einsatz:

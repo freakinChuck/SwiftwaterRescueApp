@@ -7,7 +7,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
 body{min-height:100dvh}
-header{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10}header h1{font-size:1.15rem;margin:0;flex:1 1 12rem}
+header{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10}header h1{font-size:1.15rem;margin:0;flex:1 1 12rem}header .orghd img{height:2.2rem}header .orghd .orgn{font-weight:600}@media(max-width:900px){header .orghd .orgn{display:none}}
+#aFoot{display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;justify-content:center;padding:.8rem 1rem calc(.8rem + env(safe-area-inset-bottom));border-top:1px solid var(--line);margin-top:1.5rem}
 #wrap.my{grid-template-columns:minmax(0,1fr);max-width:900px} /* Meine Einsätze: ohne Navigation */
 #wrap{max-width:1300px;margin:0 auto;padding:1rem;display:grid;grid-template-columns:13rem minmax(0,1fr);gap:1.2rem;align-items:start} /* minmax: breite Tabellen scrollen in .tw statt die Seite zu verbreitern */
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:1.2rem}main>section[hidden]{display:none}
@@ -165,17 +166,17 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   whatsNew(me.version); // nach einem Update einmal «Was ist neu» (Issue #175)
   if(!nav().length&&me.my_runs==='off'&&location.hash!=='#meine'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Deine Benutzerrollen geben dir keinen Zugriff auf die Verwaltung.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   MY=myMode();VPLAY_Q=MY?'&my=1':'';const adm=nav().length>0; // VPLAY_Q: Durchsagen im Log abspielen (Funk, Issue #113)
-  if(MY){a.innerHTML=`<header><h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}${userMenu()}</header>
-    <div id="wrap" class="my"><main><section id="sMy"><h2>Meine Einsätze</h2><div class="mut">Wird geladen …</div></section></main></div>`;
-    userMenuWire();
+  if(MY){a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}${userMenu()}</header>
+    <div id="wrap" class="my"><main><section id="sMy"><h2>Meine Einsätze</h2><div class="mut">Wird geladen …</div></section></main></div>${adminFoot()}`;
+    userMenuWire();footWire();
     if(adm)$('#bVw').onclick=e=>{e.preventDefault();location.hash='einsatzlog'};
     document.title='Swiftwater Rescue – Meine Einsätze';return loadMy()}
-  a.innerHTML=`<header><h1>Swiftwater Rescue – Verwaltung</h1><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine" title="Log und Replay deiner eigenen Einsätze, wie für Einsatzkräfte ohne Verwaltungsrechte">📋 Meine Einsätze</a>':''}${userMenu()}</header>
+  a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Verwaltung</h1><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine" title="Log und Replay deiner eigenen Einsätze, wie für Einsatzkräfte ohne Verwaltungsrechte">📋 Meine Einsätze</a>':''}${userMenu()}</header>
     <div id="wrap"><nav id="nav" aria-label="Bereiche der Verwaltung"><select id="navSel" aria-label="Bereich wählen">${nav().map(([g,its])=>`<optgroup label="${esc(g)}">${its.map(([k,,l])=>`<option value="${k}">${esc(l)}</option>`).join('')}</optgroup>`).join('')}</select>
     <div class="navl">${navItems().length>8?'<input type="search" id="navQ" placeholder="Bereich suchen …" aria-label="Bereich der Verwaltung suchen" autocomplete="off">':''}${nav().map(([g,its])=>its.length===1?`<div class="ngw one" data-g="${esc(g)}">${navLink(its[0],g)}</div>`
       :`<div class="ngw" data-g="${esc(g)}"><button type="button" class="ng" aria-expanded="false"><span class="ni" aria-hidden="true">${NAV_ICON[g]||'•'}</span><span class="nl">${esc(g)}</span><span class="nc">${its.length}</span><span class="chev" aria-hidden="true">›</span></button><div class="ngi">${its.map(it=>navLink(it)).join('')}</div></div>`).join('')}<div class="mut nq0" hidden>Kein Bereich gefunden.</div></div></nav>
-    <main>${navItems().map(([k,id,l])=>`<section id="${id}" hidden><h2>${esc(l)}</h2><div class="mut">Wird geladen …</div></section>`).join('')}</main></div>`;
-  userMenuWire();navWire();
+    <main>${navItems().map(([k,id,l])=>`<section id="${id}" hidden><h2>${esc(l)}</h2><div class="mut">Wird geladen …</div></section>`).join('')}</main></div>${adminFoot()}`;
+  userMenuWire();navWire();footWire();
   $('#navSel').onchange=e=>{location.hash=e.target.value};showNav()}
 /* ---------- Navigation (Issue #32) ---------- */
 // Kategorien mit Unterpunkten: [Kategorie, [[Hash, Abschnitt-ID, Bezeichnung, Laden]]]. Neue Einstellungen hier als Unterpunkt aufnehmen.
@@ -212,6 +213,10 @@ function navWire(){const n=$('#nav'),s=navOGet();n.querySelectorAll('.ngw:not(.o
   q.onkeydown=e=>{if(e.key==='Enter'){const a=[...n.querySelectorAll('.navl a')].find(a=>!a.hidden&&!a.closest('.ngw').hidden);if(a){location.hash=a.dataset.k;q.value='';q.oninput();q.blur()}}else if(e.key==='Escape'){q.value='';q.oninput()}}}
 // Konto-Menü in der Kopfzeile (Issue #128): Name, Passwort ändern, Abmelden, Impressum
 const userMenu=()=>`<div class="um"><button id="bUm" aria-expanded="false" aria-haspopup="menu" aria-controls="umL" title="Konto">👤 <span>${esc(me.name)}</span> ▾</button><div id="umL" role="menu" hidden><div class="mut">${esc(me.username)}</div><button id="bPw" role="menuitem">Passwort ändern</button><button id="bOut" role="menuitem">Abmelden</button><button id="bChg" role="menuitem">Was ist neu</button><a class="mut" href="legal.html" target="_blank" rel="noopener" role="menuitem">Impressum · Datenschutz</a>${me.version?`<div class="mut">Version ${esc(verTxt(me.version))}</div>`:''}</div></div>`;
+// Organisation mit Logo in der Kopfzeile und Fusszeile mit Impressum, Lizenzen, Datenschutz, Version (Issue #123)
+const orgHd=()=>orgMark(me.org_info,'orghd');
+const adminFoot=()=>`<footer id="aFoot" class="legalf">${me.org_info&&me.org_info.name?`<span>© ${esc(me.org_info.name)}</span>`:''}<span>${legalLinks()}</span>${me.version?`<span>Swiftwater Rescue ${esc(verTxt(me.version))}</span>`:''}<a href="#" id="fChg">Was ist neu</a></footer>`;
+function footWire(){const c=$('#fChg');if(c)c.onclick=e=>{e.preventDefault();changesDlg()}}
 let umDoc=false;
 function userMenuWire(){const b=$('#bUm'),l=$('#umL'),set=o=>{l.hidden=!o;b.setAttribute('aria-expanded',o)};b.onclick=e=>{e.stopPropagation();set(l.hidden)};
   if(!umDoc){umDoc=true;document.addEventListener('click',e=>{const m=$('#umL');if(m&&!e.target.closest('.um')){m.hidden=true;$('#bUm').setAttribute('aria-expanded',false)}})}
@@ -1879,7 +1884,7 @@ async function loadAarCfg(){const el=$('#sAarC');try{aarC=await api('aar/cfg')}c
   el.innerHTML=`<h2>After Action Review einrichten</h2><div class="mut">Gilt für alle Reviews. Das Dokument beginnt mit den Einsatzdaten, dann folgen die Felder in dieser Reihenfolge und danach die Listen.</div>
     <h3>Dokument</h3><div class="jtwo"><label class="mut">Titel<input id="acT" value="${esc(C.title)}" maxlength="120"></label><label class="mut">Organisation (unter dem Titel)<input id="acO" value="${esc(C.org)}" maxlength="120"></label></div>
     <div class="row"><button class="pri" id="acS">Speichern</button></div>
-    <h3>Logo</h3><div class="row aarrow" style="align-items:center">${aarC.logo?`<img src="${aarC.logo}" alt="Logo" class="aarlogo">`:'<span class="mut">Kein Logo</span>'}<button id="acL">${aarC.logo?'Anderes Bild wählen':'Bild wählen'}</button>${aarC.logo?'<button class="sec" id="acLx">Entfernen</button>':''}<input type="file" id="acLf" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></div>
+    <h3>Logo</h3><div class="mut">Das Logo der Organisation steht auch in der App: Anmeldung, Menü der Einsatz-App, Kopfzeile der Verwaltung, öffentliche Ansicht, Impressum und Kontenliste der App (Issue #123).</div><div class="row aarrow" style="align-items:center">${aarC.logo?`<img src="${aarC.logo}" alt="Logo" class="aarlogo">`:'<span class="mut">Kein Logo</span>'}<button id="acL">${aarC.logo?'Anderes Bild wählen':'Bild wählen'}</button>${aarC.logo?'<button class="sec" id="acLx">Entfernen</button>':''}<input type="file" id="acLf" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></div>
     <div class="mut">Optional, erscheint oben rechts im Dokument. PNG, JPEG, WebP oder SVG; es wird auf höchstens 800 Pixel verkleinert.</div>
     <h3>Mitgelieferte Abschnitte</h3>${Object.entries(aarC.auto).map(([k,l])=>`<label class="chk"><input type="checkbox" data-aa="${k}" ${C.auto[k]?'checked':''}> ${esc(l)}</label>`).join('')}
     <div class="mut">Gilt für die Ansicht, Word und PDF; beim Herunterladen wird nicht mehr danach gefragt. Die Listen erscheinen nur, wenn es im Einsatz solche gibt.</div>
