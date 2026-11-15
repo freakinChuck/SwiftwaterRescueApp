@@ -1188,6 +1188,7 @@ class Demo {
         'kinds': _ks,
         'features': _featAll,
         'ex_plans': [],
+        'ex_sched': [], // Übungsplan (Issue #169): im Demo keine vorbereiteten Übungen
         'veh': _ks.any((k) => _featOf(k)['veh'] == 1) ? _vehOut(null) : null,
         ..._mapsOut,
         ..._placeOut,

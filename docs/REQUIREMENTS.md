@@ -248,6 +248,9 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **UE-04** – Die Übungsleitung hat die Rechte der Einsatzleitung, wird nicht alarmiert und kann zusätzlich teilnehmen (#29).
 - **UE-05** – Nur Aufgebotene (Einsatzgruppen und Einzelpersonen) werden alarmiert; teilnehmen dürfen alle gemäss EI-17 (#29, #90).
 - **UE-06** – Gestartete Übungen sind gesperrt, können kopiert und nach dem Ende zurückgesetzt werden; alle Durchführungen mit Log und Replay (#29).
+- **UE-07** – Übungsplan: Vorbereitete Übungen können mit Beginn, optionalem Ende, Ort und Angaben im Übungsplan erscheinen; alle Angemeldeten sehen ihn in der Einsatz-App (ohne Aufgebotsmeldung), laufende bis zum Ende, nie gestartete bis 12 h nach dem Ende (#169).
+- **UE-08** – Anmeldung zu geplanten Übungen: je Übung ein-/ausschaltbar, für alle oder nur für Mitglieder gewählter Einsatzgruppen, mit optionalem Anmeldeschluss; Antwort «nehme teil» oder «nehme nicht teil» mit Bemerkung, änderbar bis Schluss bzw. Start. Übungsleitung und Übungsleiter sehen die Antworten mit Namen, die übrigen die Anzahl (#169).
+- **UE-09** – Optional werden beim Start die Angemeldeten alarmiert (zusätzlich zum Aufgebot, ohne Auswahl nur sie); Zurücksetzen löscht die Anmeldungen, Kopieren übernimmt die Angaben ohne Anmeldungen und blendet die Kopie im Plan aus (#169).
 
 ## 19. PWA, Push und Offline (PW)
 
