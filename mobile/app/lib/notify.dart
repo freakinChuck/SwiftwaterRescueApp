@@ -101,7 +101,7 @@ Future<bool> _pushShows(String acc, String tag) async {
   }
 }
 
-/// Meldung zeigen. lvl: crit|high|normal|low; payload = Konto-ID (Antippen öffnet das Konto).
+/// Meldung zeigen. lvl: crit|high|normal|low; payload = «Konto-ID|Schlüssel» (Antippen öffnet das Konto, bei `i:<Einsatz>` diesen Einsatz, Issue #167).
 /// kind/ksnd: Einsatztyp und dessen Vorgabe für den Ton (kritisch, Issue #171); snd: Ton fest vorgeben (Probe im Profil).
 Future<void> showNote(String acc, String tag, String title, String body, String lvl, {String? sub, int? kind, String? ksnd, String? snd}) async {
   await initNotes();
@@ -136,7 +136,7 @@ Future<void> showNote(String acc, String tag, String title, String body, String 
       interruptionLevel: crit ? InterruptionLevel.critical : (high ? InterruptionLevel.timeSensitive : (low ? InterruptionLevel.passive : InterruptionLevel.active)),
       sound: crit && sndKnown(tone) ? sndFile(tone) : null, // aus Library/Sounds (sounds.dart)
       criticalSoundVolume: crit ? 1.0 : null);
-  await notes.show(id: noteId(acc, tag), title: title, body: body, notificationDetails: NotificationDetails(android: android, iOS: ios), payload: acc);
+  await notes.show(id: noteId(acc, tag), title: title, body: body, notificationDetails: NotificationDetails(android: android, iOS: ios), payload: '$acc|$tag');
 }
 
 Future<void> cancelNote(String acc, String tag) async {

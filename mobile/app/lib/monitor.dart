@@ -2,6 +2,8 @@
 // Nachrichten an mich und das Einsatzende als Benachrichtigung des Geräts. Läuft unter Android im Vordergrunddienst (service.dart),
 // unter iOS nur, solange die App offen ist (im Hintergrund übernimmt Push, push.dart).
 // Stand je Konto in SharedPreferencesAsync (ohne Zwischenspeicher, damit Dienst und Oberfläche dasselbe sehen).
+// Parallele Einsätze (Issue #167): ohne X-Inc liefert der Server den Einsatz, an dem man teilnimmt (sonst den neusten); Nachrichten und
+// Durchsagen gelten diesem. Alarme und Ende meldet die Überwachung für alle laufenden aus incidents (Stand incs), ältere Server wie bisher.
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -109,6 +111,8 @@ Future<AccState> pollOne(Account a) async {
     j['at'] = DateTime.now().millisecondsSinceEpoch;
     final inc = r['incident'] as Map?;
     j['blocked'] = r['blocked'] == 1;
+    final il = r['incidents'] is List ? (r['incidents'] as List).whereType<Map>().toList() : null;
+    if (il != null) await _watchAll(a, st, j, il, r['kinds']);
     if (inc != null) {
       final id = (inc['id'] as num).toInt();
       final lvl = (r['level'] as String?) ?? 'crit';
@@ -118,7 +122,7 @@ Future<AccState> pollOne(Account a) async {
       if (st.inc != id) {
         // neuer Einsatz: alarmieren, sofern aufgeboten (alarm) und noch nicht angenommen; früheren Stand vergessen
         j['alarmed'] = r['alarm'] != false;
-        if (r['alarm'] != false && !joined) {
+        if (il == null && r['alarm'] != false && !joined) {
           await report(a, 'i:$id', _up(kind), '${inc['message'] ?? ''}', lvl, kind: (inc['kind_id'] as num?)?.toInt(), ksnd: (inc['kind'] as Map?)?['snd'] as String?);
         }
       }
@@ -141,7 +145,7 @@ Future<AccState> pollOne(Account a) async {
       if (vx != null) j['vsee'] = v;
       j.addAll({'inc': id, 'since': since, 'joined': joined, 'title': '${inc['message'] ?? ''}', 'kind': kind, 'color': inc['kind_color'], 'level': lvl, 'end_level': el});
     } else {
-      if (st.inc != null && (st.alarmed || st.joined)) {
+      if (il == null && st.inc != null && (st.alarmed || st.joined)) {
         final k = st.kind.isEmpty ? 'Einsatz' : st.kind;
         final l = (st.j['level'] as String?) ?? 'normal';
         final el = (st.j['end_level'] as String?) ?? (l == 'none' || l == 'low' ? 'low' : 'normal');
@@ -164,6 +168,34 @@ Future<AccState> pollOne(Account a) async {
   j['tags'] = (await accState(a.id)).tags; // report() hat sie inzwischen ergänzt
   await _saveState(a.id, j);
   return AccState(j);
+}
+
+/// Alarme und Ende aller laufenden Einsätze (incidents, Issue #167) melden; Stand je Einsatz in incs (a = alarmiert oder teilgenommen).
+Future<void> _watchAll(Account a, AccState st, Map<String, dynamic> j, List<Map> il, dynamic kinds) async {
+  final ks = kinds is List ? kinds.whereType<Map>().toList() : const <Map>[];
+  for (final x in il) {
+    final id = (x['id'] as num?)?.toInt();
+    if (id == null || x['alarm'] != 1 || x['joined'] == 1) continue;
+    final kid = (x['kind_id'] as num?)?.toInt(), k = ks.where((y) => (y['id'] as num?)?.toInt() == kid).firstOrNull;
+    await report(a, 'i:$id', _up('${x['kind_name'] ?? 'Einsatz'}'), '${x['message'] ?? ''}', (x['level'] as String?) ?? 'crit', kind: kid, ksnd: k?['snd'] as String?);
+  }
+  final prev = ((st.j['incs'] as List?) ?? []).whereType<Map>();
+  if (st.init) {
+    for (final p in prev) {
+      if (p['a'] != true || il.any((x) => x['id'] == p['id'])) continue;
+      final k = '${p['k'] ?? 'Einsatz'}';
+      await report(a, 'e:${p['id']}', '${_up(k)} BEENDET', '$k beendet.', (p['el'] as String?) ?? 'normal');
+    }
+  }
+  j['incs'] = [
+    for (final x in il)
+      {
+        'id': x['id'],
+        'a': x['alarm'] == 1 || x['mine'] == 1 || prev.any((p) => p['id'] == x['id'] && p['a'] == true),
+        'k': x['kind_name'],
+        'el': x['end_level'],
+      }
+  ];
 }
 
 /// Alle aktiven, angemeldeten Konten parallel abfragen. Rückgabe: Anzahl überwachter Konten.

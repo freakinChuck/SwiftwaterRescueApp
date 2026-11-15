@@ -13,6 +13,7 @@ import 'service.dart';
 import 'sounds.dart';
 import 'sys.dart';
 import 'inc/map_page.dart';
+import 'inc/store.dart' show IncStore;
 import 'accounts.dart';
 import 'beacon.dart';
 import 'demo.dart';
@@ -22,7 +23,8 @@ final navKey = GlobalKey<NavigatorState>();
 
 /// Einsatz-App eines Kontos öffnen (aus der Liste, nach dem Antippen einer Meldung oder einer Push-Nachricht).
 /// focus: aus einer Meldung geöffnet, die Einsatz-App zeigt das Einsatzgebiet (IncPage.focusReq).
-Future<void> openAccount(String id, {bool focus = false}) async {
+/// tag: Schlüssel der Meldung; bei einem Alarm (`i:<Einsatz>`) zeigt die Einsatz-App diesen Einsatz (parallele Einsätze, Issue #167).
+Future<void> openAccount(String id, {bool focus = false, String? tag}) async {
   if (id == demoId) return openDemo(); // Meldung aus dem Demo-Modus angetippt (Issue #74)
   final l = await Accounts.load();
   final a = l.where((x) => x.id == id).firstOrNull;
@@ -32,6 +34,8 @@ Future<void> openAccount(String id, {bool focus = false}) async {
     nav.push(MaterialPageRoute(builder: (_) => LoginPage(relogin: a)));
     return;
   }
+  final ii = int.tryParse(RegExp(r'^i:(\d+)$').firstMatch(tag ?? '')?.group(1) ?? '');
+  if (ii != null) IncStore.selReq.value = (id, ii);
   if (focus) IncPage.focusReq.value = id;
   await prefs.setString('last_acc', id); // zuletzt verwendetes Backend, beim nächsten Start wieder geöffnet (Issue #166)
   // bereits offen: nicht doppelt öffnen
@@ -58,12 +62,18 @@ Future<void> openDemo([String? mode]) async {
 
 String? _pendingOpen;
 
+/// Meldung angetippt: payload «Konto-ID|Schlüssel» (ältere Meldungen nur die Konto-ID)
+Future<void> _openNote(String? p) async {
+  if (p == null || p.isEmpty) return;
+  final i = p.indexOf('|');
+  await openAccount(i < 0 ? p : p.substring(0, i), focus: true, tag: i < 0 ? null : p.substring(i + 1));
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initNotes(onTap: (r) {
     alarmStop(); // Meldung angetippt: Weckton aus
-    final p = r.payload;
-    if (p != null && p.isNotEmpty) openAccount(p, focus: true);
+    _openNote(r.payload);
   });
   final start = await notes.getNotificationAppLaunchDetails();
   if (start?.didNotificationLaunchApp == true) _pendingOpen = start!.notificationResponse?.payload;
@@ -94,12 +104,12 @@ class _AppState extends State<SwiftwaterApp> with WidgetsBindingObserver {
     await requestNotePerms();
     await syncService();
     // nach der Anmeldung für Push erneut prüfen, ob der Vordergrunddienst noch nötig ist (Issue #179)
-    unawaited(initPush((id) => openAccount(id, focus: true)).then((_) => syncService()));
+    unawaited(initPush((id, tag) => openAccount(id, focus: true, tag: tag)).then((_) => syncService()));
     final l = await Accounts.load();
     final p = _pendingOpen;
     _pendingOpen = null;
     if (p != null && p.isNotEmpty) {
-      await openAccount(p, focus: true);
+      await _openNote(p);
     } else {
       // zuletzt verwendetes Backend (Issue #166), sonst bei nur einem Konto dieses; abgemeldete führen zur Kontenliste
       final last = await prefs.getString('last_acc');

@@ -72,7 +72,7 @@ Future<void> pushBackground(RemoteMessage m) async {
 }
 
 /// Beim Start: Firebase einrichten, Nachrichten im Vordergrund selbst anzeigen, Antippen öffnet das Konto (onOpen).
-Future<void> initPush(void Function(String accId) onOpen) async {
+Future<void> initPush(void Function(String accId, String tag) onOpen) async {
   if (!await _initFirebase()) return;
   FirebaseMessaging.onBackgroundMessage(pushBackground);
   FirebaseMessaging.onMessage.listen(_show);
@@ -80,7 +80,7 @@ Future<void> initPush(void Function(String accId) onOpen) async {
     final a = await accountFor(m.data);
     if (a != null) {
       await markTag(a.id, '${m.data['tag'] ?? ''}');
-      onOpen(a.id);
+      onOpen(a.id, '${m.data['tag'] ?? ''}');
     }
   }
 

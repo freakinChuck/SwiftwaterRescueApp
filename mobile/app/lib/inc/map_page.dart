@@ -931,6 +931,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       _selfLayer(out);
       return out;
     }
+    _othLayers(out); // übrige laufende Einsätze (Issue #167), unter der Lage des angezeigten
     // Suchgebiet
     final a = s.area;
     if (a != null && s.vis('area')) {
@@ -1142,6 +1143,84 @@ class _IncPageState extends State<IncPage> implements MapCtl {
             ]);
   }
 
+  // ---------- Parallele Einsätze (Issue #167, drawOthers in index.html) ----------
+  /// Lage der übrigen laufenden Einsätze: blass, Rand in der Farbe des Einsatztyps; Antippen → «Diesen Einsatz anzeigen»
+  void _othLayers(List<Widget> out) {
+    final os = s.others.where((o) => !s.othHide.contains(ji(o['id']))).toList();
+    if (os.isEmpty) return;
+    final polys = <Polygon>[], lines = <Polyline>[], mks = <Marker>[];
+    String ini(dynamic n) {
+      final t = js(n).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).map((w) => w[0]).take(3).join().toUpperCase();
+      return t.isEmpty ? '?' : t;
+    }
+    for (final o in os) {
+      final id = ji(o['id'])!, x = s.incOf(id) ?? {}, col = hexColor(js(x['kind_color']).isEmpty ? '#888888' : x['kind_color']);
+      final nm = '${js(x['kind_name']).isEmpty ? 'Einsatz' : js(x['kind_name'])}${js(x['message']).isNotEmpty ? ': ${js(x['message'])}' : ''}';
+      void tap(String t, LatLng p) => _sheet(t, [nm], lat: p.latitude, lon: p.longitude, actions: (c) => [
+            OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(c);
+                  s.setSel(id);
+                },
+                child: const Text('Diesen Einsatz anzeigen')),
+          ]);
+      Widget chip(String t, {bool sq = false}) => Opacity(
+          opacity: .8,
+          child: Container(
+              constraints: const BoxConstraints(minWidth: 22),
+              height: 22,
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(sq ? 3 : 11), border: Border.all(color: col, width: 3)),
+              child: Text(t, style: const TextStyle(color: Color(0xFF333333), fontSize: 10, fontWeight: FontWeight.bold))));
+      void mk(LatLng p, Widget w, String t) => mks.add(Marker(point: p, width: 44, height: 26, child: GestureDetector(onTap: () => tap(t, p), child: Center(child: w))));
+      for (final p in jl(o['pls'])) {
+        final ll = llOf(p);
+        if (ll == null) continue;
+        mk(
+            ll,
+            Opacity(
+                opacity: .6,
+                child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(color: col, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
+                    child: const Center(child: Icon(Icons.close, size: 12, color: Colors.white)))),
+            'PLS');
+      }
+      for (final p in jl(o['pois'])) {
+        final pts = poiPts(p), k = js(p['kind']), name = js(p['name']).isNotEmpty ? js(p['name']) : (js(p['sym_name']).isNotEmpty ? js(p['sym_name']) : 'Markierung');
+        if (pts.isEmpty) continue;
+        if (k == 'area' && pts.length > 2) {
+          polys.add(Polygon(points: pts, color: col.withValues(alpha: .06), borderColor: col, borderStrokeWidth: 2, pattern: StrokePattern.dashed(segments: const [4, 4])));
+          final c = poiPt(p);
+          if (c != null) mks.add(Marker(point: c, width: 30, height: 30, child: GestureDetector(onTap: () => tap(name, c), behavior: HitTestBehavior.translucent, child: const SizedBox())));
+        } else if (k == 'line' && pts.length > 1) {
+          lines.add(Polyline(points: pts, color: col.withValues(alpha: .7), strokeWidth: 3, pattern: StrokePattern.dashed(segments: const [4, 6])));
+          final c = poiPt(p);
+          if (c != null) mks.add(Marker(point: c, width: 30, height: 30, child: GestureDetector(onTap: () => tap(name, c), behavior: HitTestBehavior.translucent, child: const SizedBox())));
+        } else {
+          mk(pts.first, chip('⚑'), name);
+        }
+      }
+      for (final r in jl(o['res'])) {
+        final ll = llOf(r);
+        if (ll != null) mk(ll, chip(jb(r['rescued']) ? '✓' : 'R'), 'Rettling ${js(r['name'])}');
+      }
+      for (final r in jl(o['ext'])) {
+        final ll = llOf(r);
+        if (ll != null) mk(ll, chip(js(r['abbr']).isNotEmpty ? js(r['abbr']) : ini(r['name']), sq: true), '${js(r['name'])} (extern)');
+      }
+      for (final p in jl(o['ppl'])) {
+        final ll = llOf(p);
+        if (ll != null) mk(ll, chip(ini(p['name'])), js(p['name']));
+      }
+    }
+    if (lines.isNotEmpty) out.add(PolylineLayer(polylines: lines));
+    if (polys.isNotEmpty) out.add(PolygonLayer(polygons: polys));
+    if (mks.isNotEmpty) out.add(MarkerLayer(markers: mks));
+  }
+
   // ---------- Fenster «Ansicht» ----------
   void _viewBox() {
     showModalBottomSheet(
@@ -1178,6 +1257,20 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                               OutlinedButton(onPressed: () => s.setVis(cats.map((v) => v.$1), true), child: const Text('Alle einblenden')),
                               OutlinedButton(onPressed: () => s.setVis(cats.map((v) => v.$1), false), child: const Text('Alle ausblenden')),
                             ]),
+                        ],
+                        // übrige laufende Einsätze (Issue #167, othView), je Einsatz ein-/ausblendbar
+                        if (s.others.isNotEmpty) ...[
+                          const Divider(),
+                          Text('Weitere Einsätze', style: Theme.of(c).textTheme.titleSmall),
+                          for (final o in s.others)
+                            CheckboxListTile(
+                                dense: true,
+                                value: !s.othHide.contains(ji(o['id'])),
+                                onChanged: (v) => s.setOthHide(ji(o['id'])!, v != true),
+                                title: Text.rich(TextSpan(children: [
+                                  WidgetSpan(alignment: PlaceholderAlignment.middle, child: Chip2(js(s.incOf(ji(o['id']))?['kind_name']), color: hexColor(s.incOf(ji(o['id']))?['kind_color']))),
+                                  TextSpan(text: ' ${js(s.incOf(ji(o['id']))?['message'])}'),
+                                ]))),
                         ],
                         if (_airOn) Padding(padding: const EdgeInsets.only(top: 8), child: Mut(_airInfo(), size: 12)),
                       ])));
