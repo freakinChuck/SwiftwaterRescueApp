@@ -3,6 +3,8 @@
 // jedes Konto, das am laufenden Einsatz teilnimmt (AccState.joined aus monitor.dart). Läuft dort, wo pollAll läuft: unter Android im
 // Vordergrunddienst (service.dart), unter iOS in der App (im Hintergrund weiter, solange die Ortung läuft).
 // Im Hintergrund braucht es «Immer zulassen» (ACCESS_BACKGROUND_LOCATION bzw. iOS «Immer»), sonst kommen nur Positionen bei offener App.
+// Parallele Einsätze (Issue #167): pollOne fragt ohne X-Inc, der Server liefert dann den Einsatz, an dem man teilnimmt; AccState.inc ist also
+// der eigene, und incident/location geht serverseitig immer an ihn, auch wenn die Einsatz-App einen anderen zeigt.
 // Antwortet der Server mit shared:false (Einrückoption ohne Standort) oder lehnt er ab (Einsatz beendet), ruht das Konto für diesen Einsatz.
 // Das Gewässernetz lädt das Gerät hier nur, wenn ein Boot (Fahrzeug, Issue #177) in der Nähe ist; sonst ist water 0, Fahrten mit einem Boot
 // ohne Beacon können also als Fahrt im Log erscheinen.

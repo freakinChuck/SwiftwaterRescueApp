@@ -45,6 +45,10 @@ class Api {
   Api(this.base, [this.token]);
   final String base;
   String? token;
+
+  /// Parallele Einsätze (Issue #167): in der Einsatz-App angezeigter Einsatz, geht als X-Inc mit (0 = der Server wählt: der eigene, sonst der neuste).
+  /// Nur die Einsatz-App (IncStore) setzt ihn; Überwachung und Standortdienst fragen ohne.
+  int inc = 0;
   static final _client = http.Client();
 
   Uri uri(String route, [Map<String, String>? q]) => Uri.parse('${base}api/index.php').replace(queryParameters: {'r': route, ...?q});
@@ -52,7 +56,7 @@ class Api {
   Future<Map<String, dynamic>> call(String route, {Map<String, dynamic>? body, Map<String, String>? query, Duration timeout = const Duration(seconds: 20)}) async {
     if (isDemoBase(base)) return Demo.i.call(route, body: body, query: query); // Demo-Modus (Issue #74): kein Netz
     // X-App-Version (Issue #175): der Server führt die Version je Gerätesitzung nach (Verwaltung → System → «Versionen»)
-    final h = {'X-Token': token ?? '', 'User-Agent': appUa, 'X-App-Version': appVerHeader, if (body != null) 'Content-Type': 'application/json'};
+    final h = {'X-Token': token ?? '', 'User-Agent': appUa, 'X-App-Version': appVerHeader, if (inc > 0) 'X-Inc': '$inc', if (body != null) 'Content-Type': 'application/json'};
     http.Response r;
     try {
       r = body != null

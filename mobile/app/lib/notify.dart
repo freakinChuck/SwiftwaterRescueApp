@@ -101,7 +101,7 @@ Future<bool> _pushShows(String acc, String tag) async {
   }
 }
 
-/// Meldung zeigen. lvl: crit|high|normal|low; payload = Konto-ID (Antippen öffnet das Konto).
+/// Meldung zeigen. lvl: crit|high|normal|low; payload = «Konto-ID|Schlüssel» (Antippen öffnet das Konto, bei `i:<Einsatz>` diesen Einsatz, Issue #167).
 /// kind/ksnd: Einsatztyp und dessen Vorgabe für den Ton (kritisch, Issue #171); snd: Ton fest vorgeben (Probe im Profil).
 Future<void> showNote(String acc, String tag, String title, String body, String lvl, {String? sub, int? kind, String? ksnd, String? snd}) async {
   await initNotes();
@@ -136,20 +136,29 @@ Future<void> showNote(String acc, String tag, String title, String body, String 
       interruptionLevel: crit ? InterruptionLevel.critical : (high ? InterruptionLevel.timeSensitive : (low ? InterruptionLevel.passive : InterruptionLevel.active)),
       sound: crit && sndKnown(tone) ? sndFile(tone) : null, // aus Library/Sounds (sounds.dart)
       criticalSoundVolume: crit ? 1.0 : null);
-  await notes.show(id: noteId(acc, tag), title: title, body: body, notificationDetails: NotificationDetails(android: android, iOS: ios), payload: acc);
+  await notes.show(id: noteId(acc, tag), title: title, body: body, notificationDetails: NotificationDetails(android: android, iOS: ios), payload: '$acc|$tag');
 }
 
 /// Einsatzende (Issue #174): alle Meldungen des Kontos zum Einsatz schliessen (Alarm i:, Nachrichten m:, Durchsagen v:, Entfernen k:;
 /// es läuft nur ein Einsatz gleichzeitig) und den Weckton beenden. Meldungen, die iOS selbst über APNs zeigt, ersetzt dort der Server (collapse-id).
-Future<void> cancelIncNotes(String acc) async {
+/// Meldungen eines beendeten Einsatzes zurücknehmen (Issue #174). Mit inc (parallele Einsätze, Issue #167) nur Alarm `i:<inc>` und «entfernt» `k:<inc>:…`
+/// dieses Einsatzes; Nachrichten (m:) und Durchsagen (v:) tragen keinen Einsatz und gehen mit. Der Weckton endet nur, wenn dessen Alarm dabei war.
+Future<void> cancelIncNotes(String acc, [int? inc]) async {
   await initNotes();
-  await alarmStop();
+  final re = inc == null ? RegExp(r'^[imkv]:') : RegExp('^(i:$inc\$|k:$inc:|[mv]:)');
+  var stop = inc == null;
   try {
     for (final n in await notes.getActiveNotifications()) {
       final t = n.tag ?? '';
-      if (RegExp(r'^[imkv]:').hasMatch(t) && n.id == noteId(acc, t)) await notes.cancel(id: n.id!, tag: t);
+      if (re.hasMatch(t) && n.id == noteId(acc, t)) {
+        if (t == 'i:$inc') stop = true;
+        await notes.cancel(id: n.id!, tag: t);
+      }
     }
-  } catch (_) {}
+  } catch (_) {
+    stop = true;
+  }
+  if (stop) await alarmStop();
 }
 
 Future<void> cancelNote(String acc, String tag) async {

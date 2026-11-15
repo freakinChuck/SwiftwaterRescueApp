@@ -62,7 +62,7 @@ Future<void> _show(RemoteMessage m) async {
   final tag = '${d['tag'] ?? 'sw'}';
   // Einsatzende (Issue #174): zuerst die Meldungen des Einsatzes zurücknehmen; rt = nur zurücknehmen, nichts Neues zeigen
   if (d['end'] != null) {
-    await cancelIncNotes(a.id);
+    await cancelIncNotes(a.id, int.tryParse('${d['end']}'));
     if (d['rt'] == '1') {
       await markTag(a.id, tag); // die Überwachung meldet das Ende dann nicht noch einmal
       return;
@@ -81,7 +81,7 @@ Future<void> pushBackground(RemoteMessage m) async {
 }
 
 /// Beim Start: Firebase einrichten, Nachrichten im Vordergrund selbst anzeigen, Antippen öffnet das Konto (onOpen).
-Future<void> initPush(void Function(String accId) onOpen) async {
+Future<void> initPush(void Function(String accId, String tag) onOpen) async {
   if (!await _initFirebase()) return;
   FirebaseMessaging.onBackgroundMessage(pushBackground);
   FirebaseMessaging.onMessage.listen(_show);
@@ -89,7 +89,7 @@ Future<void> initPush(void Function(String accId) onOpen) async {
     final a = await accountFor(m.data);
     if (a != null) {
       await markTag(a.id, '${m.data['tag'] ?? ''}');
-      onOpen(a.id);
+      onOpen(a.id, '${m.data['tag'] ?? ''}');
     }
   }
 

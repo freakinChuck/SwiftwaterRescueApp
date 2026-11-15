@@ -1,6 +1,7 @@
 // Seitenmenü (☰) der nativen Einsatz-App (Gegenstück zu draw() in web/index.html, Issue #129): Kopfzeile mit Profil, Meine Einsätze und
 // Verwaltung; im Einsatz Kopf mit den wichtigsten Angaben und Register Einsatz/Leitung/Übung/Log/Info; ohne Einsatz «… starten» je
 // Einsatztyp (Startformular mit Aufgebot), vorbereitete Übungen und Werkzeuge. Unten «Mein Standort» in LV95 und WGS84 Grad/Min/Sek.
+// Parallele Einsätze (Issue #167): Karte «Laufende Einsätze» über den Registern (incSwitch), «Weiteren Einsatz starten» im Register «Einsatz» (startMore).
 // MCard (ctx.dart) zeigt «buttons» unter «children»; die Reihenfolge der Argumente folgt der Anzeige.
 // ignore_for_file: sort_child_properties_last
 import 'package:flutter/material.dart';
@@ -263,7 +264,7 @@ class _IncMenuState extends State<IncMenu> {
   // ---------- ohne Einsatz ----------
   List<J> _kindsNow() {
     final st = s.st;
-    if (st != null && st['incident'] == null && st['kinds'] is List) return jl(st['kinds']);
+    if (st != null && st['kinds'] is List) return jl(st['kinds']); // seit Issue #167 auch im Einsatz (weiteren starten)
     return jl(s.me?['kinds']);
   }
 
@@ -428,6 +429,7 @@ class _IncMenuState extends State<IncMenu> {
     }
     final r = await _run('xs${p['id']}', 'ex/start', {'id': p['id']});
     if (r != null && mounted) setState(() => _tabInc = null); // Register neu wählen (Übungsleitung: «Übung»)
+    if (r != null && ji(r['id']) != null) await s.setSel(ji(r['id'])!); // gestartete Planung anzeigen (Issue #167)
   }
 
   /// Startformular als eigene Seite; für den PLS auf der Karte schliesst sie sich kurz und öffnet sich danach wieder
@@ -469,7 +471,7 @@ class _IncMenuState extends State<IncMenu> {
       _ => _main(c, i),
     };
     return CustomScrollView(slivers: [
-      SliverPadding(padding: const EdgeInsets.symmetric(horizontal: 12), sliver: SliverList.list(children: [...top, _head(c, i)])),
+      SliverPadding(padding: const EdgeInsets.symmetric(horizontal: 12), sliver: SliverList.list(children: [...top, ?_incSwitch(c), _head(c, i)])),
       SliverPersistentHeader(pinned: true, delegate: _TabsDelegate(_tabBar(c, tabs))),
       SliverPadding(padding: const EdgeInsets.fromLTRB(12, 4, 12, 12), sliver: SliverList.list(children: [...content, _foot(c)])),
     ]);
@@ -645,17 +647,71 @@ class _IncMenuState extends State<IncMenu> {
     }
     final hy = hydroCard(c, s, map, widget.openPrefs); // Pegel & Abfluss (Issue #165)
     if (hy != null) out.add(hy);
+    final sm = _startMore(c);
+    if (sm != null) out.add(sm);
     final t = _tools();
     if (t != null) out.add(t);
     return out;
   }
 
   Future<void> _join(J x) async {
+    // Parallele Einsätze (Issue #167): man nimmt höchstens an einem teil, der Server verlässt den anderen
+    final o = s.myInc, i = s.inc;
+    if (o != null && i != null && ji(o['id']) != ji(i['id']) &&
+        !await confirmDlg(context, 'Du nimmst an «${js(o['kind_name'])}: ${js(o['message'])}» teil. Diesen Einsatz annehmen und den anderen verlassen?', ok: 'Annehmen')) {
+      return;
+    }
     final r = await _run('join', 'incident/join', {'mode': x['code']});
     if (r != null && mounted) {
       setState(() => _tab = 'main');
       map.focusArea(); // zurück aufs Einsatzgebiet
     }
+  }
+
+  // ---------- Parallele Einsätze (Issue #167) ----------
+  /// Auswahl, sobald mehr als ein Einsatz läuft (incSwitch)
+  Widget? _incSwitch(BuildContext c) {
+    final il = s.incidents;
+    if (il.length < 2) return null;
+    final cur = ji(s.inc?['id']);
+    return MCard(title: 'Laufende Einsätze (${il.length})', children: [
+      for (final x in il)
+        Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(children: [
+              Expanded(
+                  child: Text.rich(TextSpan(children: [
+                WidgetSpan(alignment: PlaceholderAlignment.middle, child: Chip2(js(x['kind_name']), color: hexColor(x['kind_color']))),
+                TextSpan(text: ' ${js(x['message']).isEmpty ? '–' : js(x['message'])}', style: TextStyle(fontWeight: ji(x['id']) == cur ? FontWeight.w600 : null)),
+                TextSpan(
+                    text:
+                        ' · ${fmtDT(jn(x['alarm_at']))}${jb(x['mine']) ? ' · du nimmst teil' : jb(x['ex_lead']) ? ' · Übungsleitung' : jb(x['alarm']) && !jb(x['joined']) ? ' · alarmiert' : ''}',
+                    style: TextStyle(fontSize: 12, color: Theme.of(c).colorScheme.onSurfaceVariant, fontWeight: jb(x['alarm']) && !jb(x['joined']) && !jb(x['mine']) ? FontWeight.bold : null)),
+              ]))),
+              const SizedBox(width: 6),
+              ji(x['id']) == cur ? const Mut('angezeigt') : smallBtn('Anzeigen', () => s.setSel(ji(x['id'])!)),
+            ])),
+    ]);
+  }
+
+  /// im Einsatz: weiteren Einsatz bzw. eine Planung starten, läuft parallel (startMore)
+  Widget? _startMore(BuildContext c) {
+    if (s.demo || s.st?['start_plans'] == null) return null; // Demo und ältere Server: nur ein Einsatz
+    final ka = _kindsNow().where((k) => jb(k['can'])).toList(), xp = jl(s.st?['start_plans']);
+    if (ka.isEmpty && xp.isEmpty) return null;
+    const xpk = ['Übung', 'Sekundäreinsatz, ohne Alarm', 'Freies Ereignis'];
+    return MCard(title: 'Weiteren Einsatz starten', children: [
+      const Mut('Läuft parallel zu den übrigen Einsätzen. Teilnehmen kann man nur an einem Einsatz gleichzeitig.'),
+      for (final p in xp)
+        Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(children: [
+              Expanded(child: Text('${js(p['title'])} · ${xpk[(ji(p['sec']) ?? 0).clamp(0, 2)]}${p['at'] != null ? ' · ${fmtDT(jn(p['at']))}' : ''}')),
+              smallBtn('Starten', _busy.contains('xs${p['id']}') ? null : () => _exStart(c, p)),
+            ])),
+    ], buttons: [
+      for (final k in ka) OutlinedButton(onPressed: () => _startKind(c, k), child: Text('${js(k['name'])} starten')),
+    ]);
   }
 
   void _setFlow() {
@@ -1327,8 +1383,13 @@ class _StartPageState extends State<_StartPage> {
     }
     setState(() => _busy = true);
     try {
-      await s.api.call('incident/start', body: body);
-      await s.poll();
+      final r = await s.api.call('incident/start', body: body);
+      // neuen Einsatz anzeigen (parallele Einsätze, Issue #167)
+      if (ji(r['id']) != null && !s.demo) {
+        await s.setSel(ji(r['id'])!);
+      } else {
+        await s.poll();
+      }
       if (mounted) Navigator.pop(context, 'ok');
     } catch (e) {
       s.fail(e);

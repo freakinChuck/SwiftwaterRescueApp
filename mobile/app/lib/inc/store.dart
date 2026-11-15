@@ -3,6 +3,9 @@
 // Suchgebiet (area.dart), Standort teilen mit Erkennung «auf dem Gewässer» und «Suchgebiet erreicht» (incident/event).
 // Solange die Seite sichtbar ist, meldet ein Herzschlag (setForeground) das Konto als offen: Überwachung (monitor.dart) und
 // Standortdienst (track.dart) bleiben dann für dieses Konto still, die Seite teilt selbst. Pausiert die App, übernehmen sie wieder.
+// Parallele Einsätze (Issue #167, wie incWatch/setSel in index.html): Api.inc (X-Inc) wählt den angezeigten Einsatz (incsel_<Konto>),
+// incident/state mit oth=1 liefert incidents (alle sichtbaren laufenden), others (Lage der übrigen) und my_inc (eigene Teilnahme).
+// Man nimmt höchstens an einem teil; der Standort geht immer an den eigenen (der Server wählt ihn bei incident/location selbst).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -150,6 +153,99 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   /// Funk & Konferenz (Issue #113): Durchsagen, Mithören, Live-Konferenz (voice.dart)
   late final VoiceStore vx = VoiceStore(this);
 
+  // ---------- Parallele Einsätze (Issue #167) ----------
+  /// Wunsch von aussen (Antippen einer Alarmmeldung, openAccount): (Konto, Einsatz) anzeigen
+  static final selReq = ValueNotifier<(String, int)?>(null);
+  int _selGen = 0; // Wahl geändert: laufende Abfrage verwerfen
+  bool _again = false;
+  List<J>? _incPrev; // laufende Einsätze der letzten Abfrage (Ende der übrigen melden)
+  Set<int> othHide = {}; // ausgeblendete übrige Einsätze (oth_hide_<Konto>, wie sw_othhide)
+
+  /// alle laufenden Einsätze, die man sehen darf (leer bei älteren Servern und im Demo)
+  List<J> get incidents => jl(st?['incidents']);
+
+  /// Lage der übrigen laufenden Einsätze für die Karte (nur im Einsatz)
+  List<J> get others => inc == null ? <J>[] : jl(st?['others']);
+
+  /// Eintrag eines laufenden Einsatzes aus incidents
+  J? incOf(int? id) => incidents.where((x) => ji(x['id']) == id).firstOrNull;
+
+  /// Server mit parallelen Einsätzen? (liefert my_inc, auch als null)
+  bool get _par => st != null && st!.containsKey('my_inc');
+
+  /// eigene Teilnahme an einem laufenden Einsatz (id, mode, message, kind_name); ältere Server und Demo: nach me
+  J? get myInc {
+    if (_par) return st!['my_inc'] is Map ? jm(st!['my_inc']) : null;
+    return joined ? {'id': inc!['id'], 'mode': myPart!['mode'], 'message': inc!['message'], 'kind_name': kindOf(inc!).name} : null;
+  }
+
+  int? get myIncId => ji(myInc?['id']);
+
+  /// angezeigter Einsatz ist nicht der eigene (man nimmt an einem anderen teil)
+  bool get otherShown => inc != null && myIncId != null && myIncId != ji(inc!['id']);
+
+  /// angezeigten Einsatz wählen (setSel); 0 = der Server wählt
+  Future<void> setSel(int id) async {
+    if (api.inc == id && ji(inc?['id']) == id) return;
+    api.inc = id;
+    _sp?.setInt('incsel_${acc.id}', id);
+    _selGen++;
+    if (_polling) {
+      _again = true;
+      return;
+    }
+    await poll();
+  }
+
+  void _onSelReq() {
+    final r = selReq.value;
+    if (r == null || r.$1 != acc.id) return;
+    selReq.value = null;
+    unawaited(setSel(r.$2));
+  }
+
+  void setOthHide(int id, bool hide) {
+    hide ? othHide.add(id) : othHide.remove(id);
+    _sp?.setStringList('oth_hide_${acc.id}', othHide.map((e) => '$e').toList());
+    notifyListeners();
+  }
+
+  /// Alarme und Ende der übrigen Einsätze melden (der angezeigte wie bisher); true = neu alarmiert ohne eigene Teilnahme, Anzeige gewechselt
+  bool _incWatch(J nx) {
+    if (nx['incidents'] is! List) return false;
+    final il = jl(nx['incidents']), cur = nx['incident'] is Map ? (ji(jm(nx['incident'])['id']) ?? 0) : 0;
+    var sw = false;
+    if (cur != 0 && api.inc != cur) {
+      api.inc = cur; // gewählter beendet bzw. erste Abfrage: der Server hat gewählt
+      _sp?.setInt('incsel_${acc.id}', cur);
+    }
+    final nme = nx['me'] is Map ? jm(nx['me']) : null, inNow = nme != null && nme['left_at'] == null && nme['mode'] != 'declined';
+    for (final x in il) {
+      final id = ji(x['id']) ?? 0, k = '${x['kind_name'] ?? 'Einsatz'}';
+      if (id == cur || !jb(x['alarm']) || jb(x['joined']) || _acked.contains('i:$id')) continue;
+      final lv = js(x['level']).isEmpty ? 'crit' : js(x['level']);
+      if (lv == 'none') continue;
+      final kd = jl(nx['kinds']).where((y) => ji(y['id']) == ji(x['kind_id'])).firstOrNull;
+      notify(k.toUpperCase(), js(x['message']), 'i:$id', lv, kind: ji(x['kind_id']), ksnd: kd?['snd'] as String?);
+      if (!sw && nx['my_inc'] == null && !inNow) {
+        sw = true;
+        api.inc = id;
+        _sp?.setInt('incsel_${acc.id}', id);
+      }
+    }
+    final p = _incPrev, oid = ji(inc?['id']);
+    if (p != null) {
+      for (final x in p) {
+        final id = ji(x['id']);
+        if (il.any((y) => ji(y['id']) == id) || id == cur || (cur == 0 && id == oid)) continue;
+        final el = js(x['end_level']).isEmpty ? 'normal' : js(x['end_level']), k = '${x['kind_name'] ?? 'Einsatz'}';
+        if (jb(x['alarm']) || jb(x['mine'])) notify('${k.toUpperCase()} BEENDET', '$k beendet.', 'e:$id', el);
+      }
+    }
+    _incPrev = il;
+    return sw;
+  }
+
   // ---------- Hilfen ----------
   int get uid => ji(me?['id']) ?? acc.uid;
   J? get inc => st?['incident'] is Map ? jm(st!['incident']) : null;
@@ -221,6 +317,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _sp = await SharedPreferences.getInstance();
     _loadView();
+    api.inc = demo ? 0 : (_sp!.getInt('incsel_${acc.id}') ?? 0);
+    othHide = (_sp!.getStringList('oth_hide_${acc.id}') ?? []).map(int.tryParse).whereType<int>().toSet();
+    selReq.addListener(_onSelReq);
+    _onSelReq();
     try {
       final a = await accState(acc.id);
       _acked.addAll((_sp!.getStringList('ack_${acc.id}') ?? []));
@@ -351,7 +451,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       base = _hasMap(sv) ? sv! : mapDef; // im Einsatz ohne eigene Wahl: Standard des Einsatztyps
     }
     if (st != null && _baseInc != id) {
-      for (final k in _sp?.getKeys().where((k) => k.startsWith('v_base_${acc.id}_') && k != 'v_base_${acc.id}_$id').toList() ?? <String>[]) {
+      for (final k in _sp?.getKeys().where((k) => k.startsWith('v_base_${acc.id}_') && k != 'v_base_${acc.id}_$id' && !incidents.any((x) => k == 'v_base_${acc.id}_${x['id']}')).toList() ?? <String>[]) {
         _sp?.remove(k); // Wahl beendeter Einsätze verwerfen
       }
     }
@@ -459,8 +559,15 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> poll() async {
     if (_polling || closed || mustChange) return;
     _polling = true;
+    final g = _selGen;
     try {
-      final nx = await api.call('incident/state', query: {'since': '$_lastMsg', ...vx.query()});
+      var nx = await api.call('incident/state', query: {'since': '$_lastMsg', ...vx.query(), 'oth': '1'});
+      if (g != _selGen) {
+        _again = true; // Wahl inzwischen geändert: diese Antwort gilt nicht mehr
+        return;
+      }
+      // neu alarmiert zu einem anderen Einsatz ohne eigene Teilnahme: diesen anzeigen
+      if (_incWatch(nx)) nx = await api.call('incident/state', query: {'since': '0', ...vx.query(), 'oth': '1'});
       _askBt(nx);
       final i = nx['incident'] is Map ? jm(nx['incident']) : null;
       if (i != null) {
@@ -487,24 +594,26 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           if (_msgInit && cr != 'none' && ji(m['from_user']) != uid && inNow && msgForMe(m)) notify('Nachricht von ${js(m['from_name'])}', js(m['text']), 'm:$mid', cr);
         }
         _msgInit = true;
-        final was = myPart;
+        final was = ji(inc?['id']) == id ? myPart : null; // nur derselbe Einsatz (parallele Einsätze: Anzeige gewechselt)
         if (was != null && was['left_at'] == null && was['mode'] != 'declined' && nm != null && nm['left_at'] != null && !selfLeft) {
           notify('AUS EINSATZ ENTFERNT', 'Die Einsatzleitung hat dich aus dem Einsatz entfernt.', 'k:$id:${nm['left_at']}', kr);
         }
         st = nx;
         unawaited(vx.onState(nx));
-        if (!_joinedSeen && inNow) _trackNow(); // angenommen: Teilen im Hintergrund sofort vorbereiten, nicht erst beim nächsten Polling
-        _joinedSeen = inNow;
+        final mine = myIncId; // Issue #167: Teilnahme an irgendeinem laufenden Einsatz
+        if (_joinedSeen != mine && mine != null) _trackNow(); // angenommen: Teilen im Hintergrund sofort vorbereiten, nicht erst beim nächsten Polling
+        _joinedSeen = mine;
       } else {
         final o = inc;
         if (o != null) {
           final k = kindOf(o).name, lv = js(st?['level']).isEmpty ? 'crit' : js(st!['level']);
           final el = js(st?['end_level']).isNotEmpty ? js(st!['end_level']) : (lv == 'none' ? 'low' : lv); // Issue #168
-          unawaited(cancelIncNotes(acc.id)); // Issue #174: Meldungen des Einsatzes zurücknehmen
+          unawaited(cancelIncNotes(acc.id, (o['id'] as num?)?.toInt())); // Issue #174, nur dieser Einsatz (#167): Meldungen des Einsatzes zurücknehmen
           if (el != 'none' && (st?['alarm'] != false || st?['me'] != null)) notify('${k.toUpperCase()} BEENDET', '$k beendet.', 'e:${o['id']}', el);
         }
         st = nx;
         unawaited(vx.onState(nx));
+        _joinedSeen = null;
         _lastIncId = null;
         msgs.clear();
         _lastMsg = 0;
@@ -533,12 +642,16 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       debugPrint('Poll $e');
     } finally {
       _polling = false;
+      if (_again && !closed) {
+        _again = false;
+        scheduleMicrotask(poll); // Wahl während der Abfrage geändert (setSel)
+      }
     }
     if (!closed) notifyListeners();
   }
 
   bool selfLeft = false; // selbst ausgetreten: keine Meldung «entfernt»
-  bool _joinedSeen = false;
+  int? _joinedSeen; // Einsatz, an dem man zuletzt teilnahm
 
   /// Stand des Kontos für die Überwachung sofort nachführen und das Teilen im Hintergrund starten (Issue #183). Vorher geschah das erst
   /// beim nächsten Polling der App (Standard 15 s); unter iOS ist dieses im Hintergrund gestoppt, wer annahm und gleich sperrte, teilte nie.
@@ -548,7 +661,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   void _trackNow() {
     if (demo) return;
     if (Platform.isAndroid) {
-      unawaited(setJoined(acc.id, ji(inc?['id']), true).then((_) => syncService()).catchError((Object e) => debugPrint('Dienst $e')));
+      unawaited(setJoined(acc.id, myIncId, true).then((_) => syncService()).catchError((Object e) => debugPrint('Dienst $e')));
       return;
     }
     unawaited(pollOne(acc).then((_) => Tracker.sync()).catchError((Object e) => debugPrint('Tracker $e')));
@@ -716,11 +829,12 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   // ---------- eigener Standort ----------
   /// Im Einsatz mit Einrückoption ohne Standortfreigabe: kein blauer Punkt, keine Abfrage (selfHidden)
   bool get selfHidden {
-    final m = myPart;
-    return inc != null && m != null && m['left_at'] == null && m['mode'] != 'declined' && !shares(js(m['mode']));
+    final m = myInc; // Issue #167: nach der eigenen Teilnahme, auch wenn ein anderer Einsatz angezeigt wird
+    return m != null && !shares(js(m['mode']));
   }
 
-  bool get sharing => joined && shares(js(myPart?['mode']));
+  /// teilt den Standort: nach der eigenen Teilnahme, auch wenn ein anderer Einsatz angezeigt wird (Issue #167)
+  bool get sharing => myInc != null && shares(js(myInc!['mode']));
 
   LatLng? get selfPartPos {
     if (inc == null) return null;
@@ -788,14 +902,15 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         'lon': p.longitude,
         'beacons': ?bs,
         if (manualPos == null && devPos != null) 'acc': devPos!.accuracy,
-        'water': waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()) < waterM ? 1 : 0,
+        // Gewässer nur, wenn der angezeigte Einsatz der eigene ist (sonst ist das Gewässernetz eines anderen geladen, Issue #167)
+        'water': !otherShown && waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()) < waterM ? 1 : 0,
         'manual': manualPos != null ? 1 : 0
       });
       locStatus = 'Standort wird geteilt (${fmtT(DateTime.now().millisecondsSinceEpoch / 1000)})';
-      if (!demo) unawaited(locResult(acc, ji(inc?['id'])));
+      if (!demo) unawaited(locResult(acc, myIncId));
     } catch (e) {
       locStatus = 'Standort senden fehlgeschlagen: $e';
-      if (!demo) unawaited(locResult(acc, ji(inc?['id']), err: e is ApiError ? e.message : '$e'));
+      if (!demo) unawaited(locResult(acc, myIncId, err: e is ApiError ? e.message : '$e'));
     }
     _checkArea();
   }
@@ -839,6 +954,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     closed = true;
+    selReq.removeListener(_onSelReq);
     WidgetsBinding.instance.removeObserver(this);
     _poll?.cancel();
     _fg?.cancel();
