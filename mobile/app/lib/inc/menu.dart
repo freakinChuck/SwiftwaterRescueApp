@@ -200,6 +200,15 @@ class _IncMenuState extends State<IncMenu> {
         ]),
       ]);
 
+  // Kalender (Issue #181): ohne Einsatz über dem Übungsplan, öffnet admin.html#kalender; nicht im Demo
+  Widget? _calCard(BuildContext c) => s.demo
+      ? null
+      : MCard(title: 'Kalender', children: [
+          const Mut('Abwesenheiten, regelmässige Einsatzzeiten, Einsätze, geplante Übungen und ablaufende Ausbildungen auf einen Blick.'),
+        ], buttons: [
+          OutlinedButton(onPressed: () => openWeb(c, s, 'admin.html#kalender'), child: const Text('📅 Kalender öffnen')),
+        ]);
+
   // ---------- Werkzeuge und Fusszeile ----------
   Widget? _tools() {
     if (!s.feat('rd')) return null;
@@ -314,6 +323,7 @@ class _IncMenuState extends State<IncMenu> {
               padding: EdgeInsets.only(top: 4),
               child: Mut('Startet mit der vorbereiteten Meldung (Sekundäreinsätze ohne Alarm). Du leitest: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
         ]),
+      ?_calCard(c),
       ?_sched(c),
       ?hydroCard(c, s, map, widget.openPrefs),
       ?_tools(),

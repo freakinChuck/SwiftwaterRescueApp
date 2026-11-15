@@ -36,7 +36,7 @@ Liegt «Bis» vor «Von», gilt die Regel über Mitternacht; die Stunden nach Mi
 
 ## Kalender {#kalender}
 
-Der Kalender (**📅 Kalender** unter «Werkzeuge» im Menü, im Profil bei den Einsatzzeiten oder in der Kopfzeile der Verwaltung) zeigt alles mit Datum an einem Ort:
+Der Kalender (Karte **Kalender** im Menü ohne Einsatz, über dem Übungsplan, im Profil bei den Einsatzzeiten oder in der Kopfzeile der Verwaltung) zeigt alles mit Datum an einem Ort:
 
 - deine Abwesenheiten und regelmässigen Einsatzzeiten,
 - Einsätze, an denen du teilgenommen hast (mit dem Recht «Statistik» alle),
