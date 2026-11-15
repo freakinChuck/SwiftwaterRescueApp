@@ -40,7 +40,7 @@ Der Kalender (Karte **Kalender** im Menü ohne Einsatz, über dem Übungsplan, i
 
 - deine Abwesenheiten und regelmässigen Einsatzzeiten,
 - Einsätze, an denen du teilgenommen hast (mit dem Recht «Statistik» alle),
-- geplante Übungen und Einsätze aus dem Übungsplan, mit deiner Anmeldung (Übungsleiter sehen alle Planungen mit Datum),
+- geplante Übungen und Einsätze aus dem Übungsplan; ist die Anmeldung offen, meldest du dich direkt dort an oder ab (**Ich nehme teil**, **Ich nehme nicht teil**, **Zurückziehen**). Übungsleiter sehen alle Planungen mit Datum und öffnen sie mit **Öffnen** in der Verwaltung,
 - Ausbildungen, die ablaufen.
 
 Oben wechselst du den Monat (‹ Heute ›), zwischen **Monat** und **Liste** und blendest Kategorien ein und aus. Ein Tag antippen zeigt seine Einträge. Mit dem Recht «Abwesenheiten verwalten» wählst du «Alle Personen» und siehst die Abwesenheiten und Einsatzzeiten aller. Deine Wahl merkt sich das Gerät.

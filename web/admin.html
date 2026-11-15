@@ -450,14 +450,16 @@ function calItems(){const D=CAL.data,[s,e]=calRange(),te=calTs(e),now=Date.now()
   D.incs.forEach(i=>out.push({c:'inc',col:i.kind_color||'#ff4d2e',f:i.alarm_at,t:i.ended_at??Math.max(now,i.alarm_at+60),open:i.ended_at==null?1:0,tt:(i.kind_name||'Einsatz')+(i.message?': '+i.message:''),sub:(i.ended_at==null?'läuft':'')+(i.mine?(i.ended_at==null?' · ':'')+'mit dir':''),
     href:i.ended_at==null?'./':can('stats')?'#einsatzlog':i.mine&&me.my_runs!=='off'?'#meine':null}));
   D.plans.forEach(p=>{const su=p.su,st=su&&su.mine==='yes'?'angemeldet':su&&su.mine==='no'?'abgemeldet':su&&su.open&&su.may?'Anmeldung offen':'';
-    out.push({c:'plan',col:p.kind&&p.kind.color||'#1d7fd1',f:p.at,t:p.end??p.at+7200,tt:(p.kind?p.kind.name+': ':'')+p.title,sub:[p.loc,p.running?'läuft':'',st,p.sched?'':'nicht im Übungsplan'].filter(Boolean).join(' · '),href:planner()?'#planungen':'./',dash:1})});
+    out.push({c:'plan',col:p.kind&&p.kind.color||'#1d7fd1',f:p.at,t:p.end??p.at+7200,tt:(p.kind?p.kind.name+': ':'')+p.title,sub:[p.loc,p.running?'läuft':'',st,su&&su.mine&&su.note?su.note:'',su&&su.open&&su.may&&su.until?'Anmeldeschluss '+fmtDT(su.until):'',p.sched?'':'nicht im Übungsplan'].filter(Boolean).join(' · '),
+      // Öffnen nur für Übungsleiter (Planungen der Verwaltung); Anmelden direkt hier (ex/signup wie im Übungsplan der Einsatz-App)
+      href:planner()?'#planungen':null,su:su&&su.open&&su.may?{id:p.id,mine:su.mine}:null,dash:1})});
   D.skills.forEach(k=>out.push({c:'skill',col:'#a78bfa',f:k.exp,t:k.exp,tt:'Ausbildung «'+k.name+'» läuft ab',sub:k.state==='exp'?'abgelaufen':'',href:'./#einstellungen'}));
   const h=calF().hide;return out.filter(x=>!h.includes(x.c)).sort((a,b)=>a.f-b.f||a.c.localeCompare(b.c))}
 const planner=()=>can('ex_plan');
 // Einträge eines Tages mit Zeitangabe für diesen Tag
 function calOn(items,d){const a=calTs(d),b=calTs(calAdd(d,1));return items.filter(x=>x.f<b&&(x.t>a||(x.t===x.f&&x.f>=a))).map(x=>({...x,tl:x.t===x.f?calHm(x.f):x.open?(x.f>=a?'ab '+calHm(x.f):'ganztags'):x.f<=a&&x.t>=b?'ganztags':(x.f<a?'bis '+calHm(x.t):x.t>b?'ab '+calHm(x.f):calHm(x.f)+'–'+calHm(x.t))}))}
 const calEv=x=>`<span class="cev" style="border-color:${esc(x.col)};--c:${esc(x.col)}${x.dash?';border-left-style:dashed':''}" title="${esc(x.tl+' · '+x.tt+(x.sub?' · '+x.sub:''))}">${x.tl!=='ganztags'?esc(x.tl.replace(/–.*/,''))+' ':''}${esc(x.tt)}</span>`;
-const calLi=x=>`<div class="cli" style="border-color:${esc(x.col)}${x.dash?';border-left-style:dashed':''}"><span class="t">${esc(x.tl)}</span><span style="flex:1"><b>${esc(x.tt)}</b>${x.sub?`<br><small class="mut">${esc(x.sub)}</small>`:''}</span>${x.href?`<a class="btn" href="${esc(x.href)}">Öffnen</a>`:''}</div>`;
+const calLi=x=>`<div class="cli" style="border-color:${esc(x.col)}${x.dash?';border-left-style:dashed':''}"><span class="t">${esc(x.tl)}</span><span style="flex:1"><b>${esc(x.tt)}</b>${x.sub?`<br><small class="mut">${esc(x.sub)}</small>`:''}</span>${x.su?`<span class="row" style="margin:0;flex:0 0 auto">${x.su.mine!=='yes'?`<button class="pri" data-csu="${x.su.id}" data-v="yes">Ich nehme teil</button>`:''}${x.su.mine!=='no'?`<button data-csu="${x.su.id}" data-v="no">Ich nehme nicht teil</button>`:''}${x.su.mine?`<button data-csu="${x.su.id}" data-v="">Zurückziehen</button>`:''}</span>`:''}${x.href?`<a class="btn" href="${esc(x.href)}">Öffnen</a>`:''}</div>`;
 const calDN=d=>d.toLocaleDateString('de-CH',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 function calDraw(){const el=$('#sCal');if(!el||!CAL.data)return;const f=calF(),[s,e]=calRange(),items=calItems(),td=calDay(new Date()),mon=CAL.m.getMonth();
   const days=[];for(let d=s;d<e;d=calAdd(d,1))days.push(d);
@@ -476,6 +478,9 @@ function calDraw(){const el=$('#sCal');if(!el||!CAL.data)return;const f=calF(),[
   $('#calVm').onclick=()=>{calFSet({...calF(),view:'m'});calDraw()};$('#calVl').onclick=()=>{calFSet({...calF(),view:'l'});calDraw()};
   if($('#calA'))$('#calA').onchange=e=>{calFSet({...calF(),all:+e.target.value});calLoad()};
   el.querySelectorAll('[data-cc]').forEach(c=>c.onchange=()=>{const g=calF(),k=c.dataset.cc;calFSet({...g,hide:c.checked?g.hide.filter(x=>x!==k):[...g.hide,k]});calDraw()});
+  // Anmeldung zu geplanten Übungen (Issue #169) direkt im Kalender, mit optionaler Bemerkung wie in der Einsatz-App
+  el.querySelectorAll('[data-csu]').forEach(b=>b.onclick=()=>{const v=b.dataset.v,go=note=>api('ex/signup',{id:+b.dataset.csu,status:v,note}).then(()=>{toast(v==='yes'?'Angemeldet':v==='no'?'Abgemeldet':'Antwort zurückgezogen','ok');return calLoad()}).catch(fail);
+    if(!v)return go('');dlg(v==='yes'?'Ich nehme teil':'Ich nehme nicht teil','<label class="mut">Bemerkung (optional)<input id="suN" maxlength="200" placeholder="z. B. komme etwas später"></label>',d=>go($('#suN',d).value))});
   el.querySelectorAll('[data-cd]').forEach(c=>{const go=()=>{CAL.sel=new Date(+c.dataset.cd);if(CAL.sel.getMonth()!==mon){CAL.m=new Date(CAL.sel.getFullYear(),CAL.sel.getMonth(),1);calLoad()}else calDraw();setTimeout(()=>{const x=$('#calSel');x&&x.scrollIntoView({block:'nearest'})},30)};
     c.onclick=go;c.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();go()}}})}
 /* ---------- Ausbildungskontrolle (Issue #117) ---------- */
