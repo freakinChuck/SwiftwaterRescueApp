@@ -6,6 +6,13 @@ Die Verwaltung öffnest du mit ⚙ in der Kopfzeile des Menüs. Sie läuft am be
 
 Oben rechts: **Zur Einsatz-App**, **Meine Einsätze** und das Konto-Menü (Passwort ändern, Abmelden, Impressum, Version).
 
+Alle Bereiche sind gleich aufgebaut:
+
+- Einträge stehen als Karten untereinander, die Knöpfe immer in derselben Reihenfolge: eigene Aktionen, **Bearbeiten**, ↑/↓ für die Reihenfolge und zuletzt **Entfernen** bzw. **Deaktivieren**.
+- Oben steht **+ Neu …**, bei längeren Listen daneben eine Suche.
+- Deaktivierte Einträge stehen zugeklappt unter **Deaktiviert (N)**.
+- In Einstellungen speichert **Speichern** die ganze Karte. Nach einer Änderung steht daneben «Ungespeicherte Änderungen»; wechselst du den Bereich, fragt die Verwaltung nach. Was mit «wird sofort gespeichert» bezeichnet ist (z. B. die Funktionen je Einsatztyp), gilt ohne Speichern.
+
 > Rechte gelten immer auch auf dem Server. Was die Verwaltung ausblendet, kann man auch auf anderem Weg nicht ändern.
 
 ## Personen {#personen}
