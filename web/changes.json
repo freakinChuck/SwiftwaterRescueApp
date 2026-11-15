@@ -1,6 +1,19 @@
 {
   "versions": [
     {
+      "version": "1.1.1",
+      "date": "2026-11-15",
+      "items": [
+        "Direktanruf: Telefonnummer der Einsatzkräfte (Issue #44) (#204)",
+        "Bedienungsanleitung in der App mit Kontexthilfe (Issue #37) (#205)",
+        "Verwaltung einheitlich gestaltet (Issue #95) (#206)",
+        "Native App: graue Karte beim Öffnen behoben (#207)",
+        "Eigener Dialog für Rückfragen statt Browserfenster (Issue #104) (#208)",
+        "Regelmässige Einsatzzeiten und Kalender (Issue #180, #181) (#209)",
+        "Datenschutzauszug je Person und Datenexport der Organisation (Issue #199) (#210)"
+      ]
+    },
+    {
       "version": "1.1.0",
       "date": "2026-11-15",
       "items": [
