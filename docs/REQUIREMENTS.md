@@ -18,7 +18,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **RB-04** – Oberfläche, Texte und Meldungen auf Deutsch in Schweizer Rechtschreibung (AG).
 - **RB-05** – Die Datenbank wird beim ersten Aufruf automatisch angelegt und bei Updates automatisch migriert (AG).
 - **RB-06** – Berechtigungen werden immer auf dem Server geprüft; die Oberfläche blendet nur aus (AG).
-- **RB-07** – Nur ein aktiver Einsatz gleichzeitig (**Grenze**).
+- **RB-07** – entfallen: Mehrere Einsätze können parallel laufen (EI-34) (#167).
 - **RB-08** – Nach einem Update laden alle Geräte die neue Version (kein Mischstand aus alten und neuen Dateien) (#19).
 - **RB-09** – Zugangsdaten werden nie ins Repository eingecheckt (AG).
 - **RB-10** – Auslieferung per Skript aus einem eingecheckten Git-Stand, mit Syntaxprüfung auf dem Server; Konfiguration und Datenbank werden nie überschrieben (AG).
@@ -87,6 +87,10 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EI-31** – Sekundäreinsätze lassen sich planen wie vorbereitete Übungen (Typ mit «Planung erlaubt»), mit Einsatzplan (geplanter Beginn, Treffpunkt, Auftrag und Ziel, Aufträge «wer macht was», weitere Angaben) und Bezug auf einen früheren oder laufenden Einsatz samt Wahl, was beim Start übernommen wird (PLS, Fliessgeschwindigkeit, vermisste Rettlinge). Die Leitung startet ihn in der Einsatz-App ohne Alarm; der Einsatzplan steht für alle Teilnehmenden im Menü.
 - **EI-32** – Dritte Kategorie «Freies Ereignis» (z. B. Veranstaltung, Bereitschaft): Alarmstufe frei wählbar wie bei Primäreinsätzen, Bezug auf einen früheren Einsatz wie bei Sekundäreinsätzen, eigene Einrückoptionen und Spezialrollen (angelegt: «Vor Ort», «Unterstützung (ohne Standort)», «Leitung Ereignis»; Rollen Ereignisleitung, Posten), planbar mit Einsatzplan. In der Einsatz-App eigene Startkarte «Freie Ereignisse».
 - **EI-33** – Die Verwaltung nennt vorbereitete Übungen und geplante Einsätze gemeinsam «Planungen» (Kategorie und Bereich «Planungen»); die Einsatz-App zeigt sie ohne Einsatz in einer Karte «Planungen».
+- **EI-34** – Mehrere Einsätze können parallel laufen; ein weiterer Einsatz (bzw. eine Planung) lässt sich auch starten, während einer läuft (#167).
+- **EI-35** – Laufen mehrere Einsätze, wählt man im Menü (Karte «Laufende Einsätze») den angezeigten; die Wahl bleibt auf dem Gerät gemerkt. Ohne Wahl zeigt die App den Einsatz, an dem man teilnimmt, sonst den neusten, den man sehen darf. Ein neuer Alarm zu einem anderen Einsatz wird gemeldet; nimmt man an keinem teil, wechselt die Anzeige dorthin. Das Antippen einer Alarmmeldung zeigt deren Einsatz (#167).
+- **EI-36** – Man nimmt höchstens an einem Einsatz gleichzeitig teil: Wer einen anderen annimmt, verlässt nach Rückfrage den bisherigen (Log «hat den Einsatz verlassen (wechselt zu …)»). Der Standort geht immer an den Einsatz, an dem man teilnimmt, auch wenn man einen anderen ansieht (#167).
+- **EI-37** – Die Lage der übrigen laufenden Einsätze (PLS, Markierungen, Bereiche, Linien, Rettlinge mit Standort, Externe, Einsatzkräfte mit Standort) steht blass in der Farbe ihres Einsatztyps auf der Karte, je Einsatz im Fenster «Ansicht» ein- und ausblendbar; ein Popup führt zum Einsatz (#167).
 
 ## 5. Karte (KA)
 
@@ -343,7 +347,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **EM-03** – Nur E-Mails von je Einsatztyp erlaubten Absendern (Adressen oder Domains, Domains inklusive Subdomains) lösen aus; optional nur, wenn der eigene Mailserver den Absender bestätigt (SPF, DKIM oder DMARC «pass») (#65).
 - **EM-04** – Gestartet wird ohne Person (im Log «System», mit Absender) mit Alarmstufe, Aufzeichnung und Helikoptern gemäss Einsatztyp; Meldung = Betreff (optional mit Text), Alarmeingang = Datum der E-Mail; Aufgebot = die beim Typ aufbietbaren Einsatzgruppen oder eine Auswahl davon, Abwesende werden nicht alarmiert (#65).
 - **EM-05** – Koordinaten in der E-Mail (LV95, LV03, WGS84 dezimal, auch in Kartenlinks) werden optional zum PLS (#65).
-- **EM-06** – Läuft bereits ein Einsatz, startet keiner; die E-Mail wird im Log des laufenden Einsatzes vermerkt. Zu alte E-Mails (einstellbar, Standard 30 min), doppelte und solche, die schon vor dem Einrichten im Postfach lagen, lösen nie aus (#65).
+- **EM-06** – Läuft bereits ein Einsatz desselben Einsatztyps, startet keiner; die E-Mail wird in seinem Log vermerkt (Einsätze anderer Typen laufen parallel, #167). Zu alte E-Mails (einstellbar, Standard 30 min), doppelte und solche, die schon vor dem Einrichten im Postfach lagen, lösen nie aus (#65).
 - **EM-07** – Eingang über ein IMAP-Postfach (SSL/TLS, STARTTLS), abgerufen bei Anfragen offener Apps in einstellbarem Abstand und über einen Cron-Job des Hostings, oder über einen Webhook mit der rohen E-Mail; Cron-Job und Webhook mit geheimem, erneuerbarem Schlüssel (#65).
 - **EM-08** – Alle Einstellungen in der Verwaltung unter der neuen Kategorie «Konnektivität» (eigenes Recht «Konnektivität einstellen»): Postfach mit Verbindungstest und «Jetzt abrufen», Regeln je Einsatztyp, Prüfen einer Beispiel-E-Mail ohne Start, Verlauf der letzten 30 E-Mails mit Ergebnis; Passwort wird nie angezeigt (#65).
 
