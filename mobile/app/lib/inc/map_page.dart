@@ -880,7 +880,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       }).toList()));
     }
     // Geodaten-Ebene (Issue #182): grau, gestrichelt, Kürzel der Objektart
-    final gi = geo.items(mc.camera);
+    // mc.camera erst nach onMapReady: beim ersten Aufbau ist die Karte noch nicht gezeichnet, der Zugriff wirft und die Seite bleibt grau
+    final gi = _mapReady ? geo.items(mc.camera) : const <J>[];
     if (gi.isNotEmpty) {
       const gc = Color(0xFF5C677D);
       final gl = gi.where((it) => it['pts'] is List && jb(it['line'])).toList(), ga = gi.where((it) => it['pts'] is List && !jb(it['line'])).toList();
