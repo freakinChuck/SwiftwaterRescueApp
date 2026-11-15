@@ -79,7 +79,7 @@ class _IncMenuState extends State<IncMenu> {
     final abs = st?['my_abs'] is Map ? jm(st!['my_abs']) : null;
     if (abs != null) top.add(_absNote(c, abs));
     final sk = s.demo || i != null ? '' : skSumText(s.me?['skills']); // Ausbildung (Issue #117), nur ohne Einsatz
-    if (sk.isNotEmpty)
+    if (sk.isNotEmpty) {
       top.add(MCard(children: [
         Row(children: [
           Expanded(child: Text('Ausbildung: $sk', style: const TextStyle(fontWeight: FontWeight.w600))),
@@ -89,6 +89,7 @@ class _IncMenuState extends State<IncMenu> {
           }),
         ]),
       ]));
+    }
     final un = _updLater ? null : updateNote(s.me?['version'] is Map ? jm(s.me!['version']) : null, js(s.me?['app_min']));
     if (un != null) top.add(_updNote(un));
     Widget body;
