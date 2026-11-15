@@ -172,6 +172,19 @@ Personendaten beendeter Einsätze in Stufen entfernen: Anzeige anonymisieren, Sp
 
 Angaben der Organisation für Impressum und Datenschutzerklärung. Die Seite «Impressum, Lizenzen & Datenschutz» ergänzt sie mit dem aktuellen Stand der Einstellungen.
 
+### Datenschutzauszug {#datenschutzauszug}
+
+Für Auskunftsbegehren nach dem Datenschutzgesetz. Zwei getrennte Rechte, beide in der Gruppe «Datenschutz» der Benutzerrollen; der Systemadministrator hat sie immer.
+
+- **Auszug je Person** (Recht «Datenschutzauszug je Person erstellen»): Person wählen (auch deaktivierte), dann «PDF erstellen» oder «ZIP erstellen». Das PDF enthält Konto und Einstellungen, Rollen und Gruppen, angemeldete Geräte, Abwesenheiten, Einsatzzeiten, Ausbildung, Planungen, Teilnahmen mit letztem Standort, Einträge im Einsatzlog, gesendete und empfangene Nachrichten, Durchsagen, Einsatzfeedback, Erfasstes, Nutzung des AI-Assistenten und das Applikationslog. Das ZIP enthält zusätzlich alle Daten als JSON und CSV, den Standortverlauf als GeoJSON, das Profilbild und die eigenen Sprachaufnahmen.
+- **Datenexport der Organisation** (Recht «Datenexport der Organisation erstellen»): «Übersicht als PDF» listet alle Tabellen mit Anzahl Zeilen und alle Personen; «ZIP erstellen» enthält je Tabelle eine JSON- und eine CSV-Datei, auf Wunsch auch die Sprachaufnahmen und die gesicherten After Action Reviews.
+
+> Passwörter, Schlüssel und Zugangstoken sind nie enthalten. Der Auszug entsteht im Browser und wird nirgends gespeichert; jeder erstellte Auszug steht im **Verlauf** (wer, wann, welche Person, welches Format).
+
+> ! Ein Auszug enthält Namen, Standorte und Inhalte. Nur sicher an die berechtigte Person weitergeben.
+
+Einsätze, deren Teilnahmen anonymisiert und vom Konto gelöst wurden, sind der Person nicht mehr zugeordnet und fehlen deshalb im Auszug.
+
 ## Konnektivität {#konnektivitaet}
 
 ### E-Mail-Alarm {#emailalarm}
