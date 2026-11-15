@@ -103,7 +103,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
         context: context,
         builder: (d) => SimpleDialog(title: Text('Spezialrolle von ${js(p['name'])}'), children: [
               _roleOpt(d, null, 'Keine Spezialrolle', null, cur == null),
-              for (final r in s.roles) _roleOpt(d, ji(r['id']), js(r['name']), hexColor(r['color']), cur == ji(r['id'])),
+              for (final r in s.iRoles) _roleOpt(d, ji(r['id']), js(r['name']), hexColor(r['color']), cur == ji(r['id'])),
             ]));
     if (r == null || r.$1 == cur) return;
     await s.act('incident/role/set', {'user_id': uid, 'role_id': r.$1});
@@ -201,12 +201,12 @@ class _PeoplePanelState extends State<PeoplePanel> {
         TextField(controller: n, maxLength: 80, autofocus: id == null, decoration: InputDecoration(labelText: 'Name', hintText: 'z. B. Feuerwehr, Posten Brücke', errorText: err.isEmpty ? null : err)),
         TextField(controller: de, maxLength: 500, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Beschreibung (Organisation, Funkkanal, Telefon …)')),
         DropdownButtonFormField<int?>(
-            initialValue: role,
+            initialValue: s.iRoles.any((r) => ji(r['id']) == role) ? role : null,
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Spezialrolle'),
             items: [
               const DropdownMenuItem<int?>(value: null, child: Text('Keine Spezialrolle')),
-              for (final r in s.roles)
+              for (final r in s.iRoles)
                 DropdownMenuItem<int?>(
                     value: ji(r['id']),
                     child: Row(children: [Icon(Icons.circle, size: 12, color: hexColor(r['color'])), const SizedBox(width: 6), Flexible(child: Text(js(r['name']), overflow: TextOverflow.ellipsis))])),

@@ -248,11 +248,17 @@ class _IncMenuState extends State<IncMenu> {
   }
 
   List<Widget> _noInc(BuildContext c) {
-    final ks = _kindsNow(), nk = ks.where((k) => jb(k['can'])).toList(), ng = ks.where((k) => jb(k['no_grp'])).toList();
+    final ks = _kindsNow(), ka = ks.where((k) => jb(k['can'])).toList(), ng = ks.where((k) => jb(k['no_grp'])).toList();
+    // Sekundäreinsätze (Issue #164): eigene Karte, starten ohne Alarm
+    // Kategorie: 0 Primäreinsatz, 1 Sekundäreinsatz (ohne Alarm), 2 Freies Ereignis (Alarmstufe je Typ)
+    int cat(J k) => ji(k['sec']) ?? 0;
+    final nk = ka.where((k) => cat(k) == 0).toList(), sk = ka.where((k) => cat(k) == 1).toList(), fk = ka.where((k) => cat(k) == 2).toList();
     final xps = jl(s.st?['ex_plans']);
+    const xpk = ['Übung', 'Sekundäreinsatz, ohne Alarm', 'Freies Ereignis'];
     return [
       MCard(title: 'Kein aktiver Einsatz', children: [
-        if (nk.isEmpty) Mut('Du darfst keine Einsätze starten${ng.isNotEmpty ? '' : ' (Benutzerrolle)'}. Bei einem Alarm erscheint er hier.'),
+        if (nk.isEmpty)
+          Mut('Du darfst ${sk.isNotEmpty || fk.isNotEmpty ? 'keine Primäreinsätze' : 'keine Einsätze'} starten${ng.isNotEmpty || sk.isNotEmpty || fk.isNotEmpty ? '' : ' (Benutzerrolle)'}. Bei einem Alarm erscheint er hier.'),
         if (ng.isNotEmpty)
           Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -263,24 +269,55 @@ class _IncMenuState extends State<IncMenu> {
               ? FilledButton(onPressed: () => _startKind(c, nk[n]), child: Text('${js(nk[n]['name'])} starten'))
               : OutlinedButton(onPressed: () => _startKind(c, nk[n]), child: Text('${js(nk[n]['name'])} starten')),
       ]),
+      if (sk.isNotEmpty)
+        MCard(title: 'Sekundäreinsätze', children: [
+          const Mut('Starten ohne Alarm: Die Aufgebotenen sehen den Einsatz in der App und treten selbst bei. Alle Funktionen stehen zur Verfügung.'),
+        ], buttons: [
+          for (final k in sk) OutlinedButton(onPressed: () => _startKind(c, k), child: Text('${js(k['name'])} starten')),
+        ]),
+      if (fk.isNotEmpty)
+        MCard(title: 'Freie Ereignisse', children: const [], buttons: [
+          for (final k in fk) OutlinedButton(onPressed: () => _startKind(c, k), child: Text('${js(k['name'])} starten')),
+        ]),
+      // Planungen (Issue #29, #164): vorbereitete Übungen, geplante Sekundäreinsätze und freie Ereignisse
       if (xps.isNotEmpty)
-        MCard(title: 'Vorbereitete Übungen (${xps.length})', children: [
+        MCard(title: 'Planungen (${xps.length})', children: [
           for (final p in xps)
             Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(children: [
-                  Expanded(child: Text(js(p['title']))),
-                  smallBtn('Übung starten', _busy.contains('xs${p['id']}') ? null : () => _exStart(c, p), primary: true),
+                  Expanded(child: Text('${js(p['title'])} · ${xpk[(ji(p['sec']) ?? 0).clamp(0, 2)]}${p['at'] != null ? ' · ${fmtDT(jn(p['at']))}' : ''}')),
+                  smallBtn('Starten', _busy.contains('xs${p['id']}') ? null : () => _exStart(c, p), primary: true),
                 ])),
           const Padding(
               padding: EdgeInsets.only(top: 4),
-              child: Mut(
-                  'Startet die Übung mit der vorbereiteten Aufgebotsmeldung. Du leitest sie als Übungsleitung: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
+              child: Mut('Startet mit der vorbereiteten Meldung (Sekundäreinsätze ohne Alarm). Du leitest: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
         ]),
       ?_sched(c),
       ?hydroCard(c, s, map, widget.openPrefs),
       ?_tools(),
     ];
+  }
+
+  /// Einsatzplan eines geplanten Sekundäreinsatzes (Feedback zu #164), für alle Teilnehmenden
+  Widget _planCard(J p) {
+    final d = p['doc'] is Map ? jm(p['doc']) : <String, dynamic>{}, ts = jl(d['tasks']);
+    Widget h(String t) => Padding(padding: const EdgeInsets.only(top: 8, bottom: 2), child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold)));
+    final kv = <(String, String)>[if (d['at'] != null) ('Geplanter Beginn', fmtDT(jn(d['at']))), if (js(d['meet']).isNotEmpty) ('Treffpunkt', js(d['meet']))];
+    final empty = kv.isEmpty && js(d['goal']).isEmpty && ts.isEmpty && js(d['info']).isEmpty;
+    return MCard(title: 'Einsatzplan${js(p['title']).isNotEmpty ? ' «${js(p['title'])}»' : ''}', children: [
+      if (kv.isNotEmpty) Mkv(kv),
+      if (js(d['goal']).isNotEmpty) ...[h('Auftrag und Ziel'), SelectableText(js(d['goal']))],
+      if (ts.isNotEmpty) ...[
+        h('Aufträge'),
+        for (final t in ts)
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text.rich(TextSpan(children: [TextSpan(text: '${js(t['who'])}: ', style: const TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: js(t['task']))]))),
+      ],
+      if (js(d['info']).isNotEmpty) ...[h('Weitere Angaben'), SelectableText(js(d['info']))],
+      if (empty) const Mut('Kein Einsatzplan erfasst.'),
+    ]);
   }
 
   // Übungsplan (Issue #169): wie schedCard in index.html, Daten aus ex_sched (ohne Einsatz)
@@ -364,8 +401,9 @@ class _IncMenuState extends State<IncMenu> {
   }
 
   Future<void> _exStart(BuildContext c, J p) async {
-    if (!await confirmDlg(c, 'Übung «${js(p['title'])}» jetzt starten? ${jb(p['invited']) ? 'Die aufgebotenen Personen werden' : 'Alle werden'} alarmiert.',
-        ok: 'Übung starten')) {
+    final sec = ji(p['sec']) == 1;
+    if (!await confirmDlg(c, sec ? 'Sekundäreinsatz «${js(p['title'])}» jetzt starten? Niemand wird alarmiert.' : '«${js(p['title'])}» jetzt starten? ${jb(p['invited']) ? 'Die aufgebotenen Personen werden' : 'Alle werden'} gemäss Alarmstufe alarmiert.',
+        ok: 'Starten')) {
       return;
     }
     final r = await _run('xs${p['id']}', 'ex/start', {'id': p['id']});
@@ -446,6 +484,7 @@ class _IncMenuState extends State<IncMenu> {
     final st = s.st!, k = s.kindOf(i), kind = jm(i['kind']);
     final secs = s.now - (jn(i['alarm_at']) ?? s.now), rec = ji(i['record']) ?? 0;
     final lvl = st['level'] == 'crit' && kind['alarm'] != 'crit' ? 'Kritisch (Übungsmodus)' : js(kind['alarm_name']);
+    final sec = ji(kind['sec']) == 1, free = ji(kind['sec']) == 2, par = i['parent'] is Map ? jm(i['parent']) : null; // Sekundäreinsatz, freies Ereignis, Folgeeinsatz (Issue #164)
     return MCard(children: [
       Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 6, runSpacing: 4, children: [
         Chip2(k.name, color: hexColor(k.color)),
@@ -453,8 +492,10 @@ class _IncMenuState extends State<IncMenu> {
       ]),
       const SizedBox(height: 6),
       Mkv([
-        ('Alarm', '${fmtDT(jn(i['alarm_at']))} · vor ${(secs / 60).round()} min'),
-        ('Alarmstufe', lvl),
+        (sec ? 'Beginn' : 'Alarm', '${fmtDT(jn(i['alarm_at']))} · vor ${(secs / 60).round()} min'),
+        ('Art', free ? 'Freies Ereignis' : ''),
+        sec ? ('Art', 'Sekundäreinsatz (ohne Alarm)') : ('Alarmstufe', lvl),
+        ('Folgeeinsatz zu', par == null ? '' : '${js(par['kind_name'])} vom ${fmtDT(jn(par['alarm_at']))}${js(par['message']).isNotEmpty ? ': ${js(par['message'])}' : ''}'),
         ('PLS', i['lat'] != null ? s.fc(i['lat'], i['lon']) : ''),
         ('Fliessgeschw.', i['flow_ms'] != null ? '${i['flow_ms']} m/s' : ''),
       ]),
@@ -484,12 +525,13 @@ class _IncMenuState extends State<IncMenu> {
                 child: const Text('✨ Lagezusammenfassung')),
           ])));
     }
-    final act = s.modes.where((x) => jb(x['active'])).toList();
+    final act = s.iModes.where((x) => jb(x['active'])).toList();
     String mLabel(J x) => '${js(x['name'])}${jb(x['share_location']) ? '' : ' (ohne Standort)'}';
     if (s.exLead) {
-      out.add(MCard(title: 'Übungsleitung', children: [
+      final ks = (ji(jm(i['kind'])['sec']) ?? 0).clamp(0, 2);
+      out.add(MCard(title: ks > 0 ? 'Leitung' : 'Übungsleitung', children: [
         Text.rich(TextSpan(children: [
-          TextSpan(text: 'Du leitest diese Übung${js(st['ex_title']).isNotEmpty ? ' «${js(st['ex_title'])}»' : ''}. ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: 'Du leitest ${const ['diese Übung', 'diesen geplanten Sekundäreinsatz', 'dieses geplante freie Ereignis'][ks]}${js(st['ex_title']).isNotEmpty ? ' «${js(st['ex_title'])}»' : ''}. ', style: const TextStyle(fontWeight: FontWeight.bold)),
           TextSpan(
               text:
                   'Rechte der Einsatzleitung, du wirst nicht alarmiert. Die Elemente gibst du im Register «Übung» frei.${joined ? ' Du nimmst zusätzlich als Einsatzkraft teil.' : ' Du kannst zusätzlich als Einsatzkraft teilnehmen:'}'),
@@ -508,6 +550,7 @@ class _IncMenuState extends State<IncMenu> {
         for (final x in act) FilledButton(onPressed: _busy.contains('join') ? null : () => _join(x), child: Text('Einsatz annehmen\n${mLabel(x)}', textAlign: TextAlign.center)),
       ]));
     }
+    if (st['plan'] is Map) out.add(_planCard(jm(st['plan'])));
     if (joined && m != null) {
       final sh = s.shares(js(m['mode'])), lm = s.leadMode(js(m['mode']));
       out.add(MCard(title: 'Mein Einsatz', children: [
@@ -608,7 +651,7 @@ class _IncMenuState extends State<IncMenu> {
 
   /// Auswahl der Spezialrolle (roleSel), null = keine
   Widget _roleSel(int? cur, void Function(int?) onChanged, {String? label}) {
-    final ids = s.roles.map((r) => ji(r['id'])).toSet();
+    final ids = s.iRoles.map((r) => ji(r['id'])).toSet();
     return DropdownButtonFormField<int?>(
       key: ValueKey('rs$cur'),
       initialValue: ids.contains(cur) ? cur : null,
@@ -616,7 +659,7 @@ class _IncMenuState extends State<IncMenu> {
       decoration: InputDecoration(labelText: label, isDense: true),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('Keine Spezialrolle')),
-        ...s.roles.map((r) => DropdownMenuItem<int?>(value: ji(r['id']), child: Text(js(r['name']), overflow: TextOverflow.ellipsis))),
+        ...s.iRoles.map((r) => DropdownMenuItem<int?>(value: ji(r['id']), child: Text(js(r['name']), overflow: TextOverflow.ellipsis))),
       ],
       onChanged: (v) {
         if (v != cur) onChanged(v);
@@ -1177,6 +1220,8 @@ class _StartDraft {
   final msg = TextEditingController(), pls = TextEditingController();
   bool rec, air;
   DateTime? at; // Alarmeingang, null = jetzt
+  int? parent; // Sekundäreinsatz (Issue #164): Folgeeinsatz zu, null = kein Bezug
+  final take = <String>{'pls', 'flow', 'res'};
   J? opts; // start/options
   bool optsLoaded = false;
   final inv = _Inv();
@@ -1250,6 +1295,7 @@ class _StartPageState extends State<_StartPage> {
       'message': d.msg.text,
       if (p != null) ...{'lat': p.latitude, 'lon': p.longitude},
       if (d.at != null) 'alarm_at': d.at!.millisecondsSinceEpoch ~/ 1000,
+      if (d.parent != null) ...{'parent_id': d.parent, for (final t in _takes) 'take_$t': 1},
     };
     if (d.opts != null && jl(d.opts!['groups']).isNotEmpty) {
       final v = d.inv.get();
@@ -1272,16 +1318,64 @@ class _StartPageState extends State<_StartPage> {
 
   bool get _recOn => jm(d.k['features'])['rec'] != 0;
 
+  J? get _par => d.parent == null ? null : jl(d.opts?['parents']).where((p) => ji(p['id']) == d.parent).firstOrNull;
+  List<(String, String)> get _takeOpts {
+    final p = _par;
+    if (p == null) return [];
+    final n = ji(p['missing']) ?? 0;
+    return [
+      if (jb(p['pls'])) ('pls', 'PLS übernehmen (mit dem ursprünglichen Zeitpunkt, falls unten keiner eingegeben ist)'),
+      if (jb(p['flow'])) ('flow', 'Fliessgeschwindigkeit übernehmen'),
+      if (n > 0) ('res', n == 1 ? 'Den vermissten Rettling übernehmen' : 'Die $n vermissten Rettlinge übernehmen'),
+    ];
+  }
+
+  Iterable<String> get _takes => _takeOpts.map((t) => t.$1).where(d.take.contains);
+
+  /// Folgeeinsatz zu einem beendeten Einsatz der letzten 30 Tage (start/options liefert parents)
+  List<Widget> _parPick() {
+    final ps = jl(d.opts?['parents']), ref = ji(d.k['ref']) ?? 1; // 0 kein Bezug, 1 optional, 2 Pflicht
+    if (!jb(d.k['sec']) || ref == 0) return [];
+    if (ps.isEmpty) return ref == 2 ? [const SizedBox(height: 10), const Mut('Dieser Einsatztyp verlangt einen Bezug, es gibt aber keinen früheren Einsatz der letzten 30 Tage.')] : [];
+    if (ref == 2 && d.parent == null) d.parent = ji(ps.first['id']);
+    return [
+      const SizedBox(height: 10),
+      DropdownButtonFormField<int?>(
+          isExpanded: true,
+          initialValue: d.parent,
+          decoration: InputDecoration(labelText: ref == 2 ? 'Folgeeinsatz zu' : 'Folgeeinsatz zu (optional)', isDense: true),
+          items: [
+            if (ref != 2) const DropdownMenuItem<int?>(value: null, child: Text('– kein Bezug –')),
+            for (final p in ps)
+              DropdownMenuItem<int?>(
+                  value: ji(p['id']),
+                  child: Text('${js(p['kind_name'])} vom ${fmtDT(jn(p['alarm_at']))}: ${js(p['message'])}', overflow: TextOverflow.ellipsis)),
+          ],
+          onChanged: (v) => setState(() => d.parent = v)),
+      if (_par != null && _takeOpts.isEmpty) const Padding(padding: EdgeInsets.only(top: 4), child: Mut('Nichts zu übernehmen (kein PLS, keine vermissten Rettlinge).')),
+      for (final t in _takeOpts)
+        CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: d.take.contains(t.$1),
+            onChanged: (v) => setState(() => v == true ? d.take.add(t.$1) : d.take.remove(t.$1)),
+            title: Text(t.$2)),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final k = d.k, alarm = js(k['alarm']);
+    final k = d.k, sec = ji(k['sec']) == 1, alarm = sec ? 'none' : js(k['alarm']);
     final o = d.opts, kid = '${ji(k['id'])}';
     final st = jm(o?['start']), allowed = st[kid] == null ? null : _ints(st[kid]);
     return Scaffold(
       appBar: AppBar(title: Text('${js(k['name'])} starten')),
       body: StatefulBuilder(
         builder: (c, ss) => ListView(padding: const EdgeInsets.all(16), children: [
-          Mut('Alarmstufe ${js(k['alarm_name'])}${jb(k['mode_up']) && alarm != 'crit' ? ' (kritisch bei Personen mit Übungsmodus)' : ''}.'),
+          Mut(sec
+              ? 'Sekundäreinsatz ohne Alarm: Die Aufgebotenen werden nicht alarmiert, sehen den Einsatz aber in der App und treten selbst bei.'
+              : 'Alarmstufe ${js(k['alarm_name'])}${jb(k['mode_up']) && alarm != 'crit' ? ' (kritisch bei Personen mit Übungsmodus)' : ''}.'),
+          ..._parPick(),
           const SizedBox(height: 10),
           TextField(controller: d.msg, minLines: 2, maxLines: 5, autofocus: true, decoration: const InputDecoration(labelText: 'Meldung', border: OutlineInputBorder())),
           const SizedBox(height: 10),
@@ -1318,7 +1412,7 @@ class _StartPageState extends State<_StartPage> {
           Row(children: [
             Expanded(
                 child: Text.rich(TextSpan(children: [
-              const TextSpan(text: 'Alarmeingang: ', style: TextStyle(fontWeight: FontWeight.w600)),
+              TextSpan(text: sec ? 'Beginn: ' : 'Alarmeingang: ', style: const TextStyle(fontWeight: FontWeight.w600)),
               TextSpan(text: d.at == null ? 'jetzt (Standard)' : fmtDT(d.at!.millisecondsSinceEpoch / 1000)),
             ]))),
             TextButton(onPressed: _pickAt, child: const Text('Ändern')),
