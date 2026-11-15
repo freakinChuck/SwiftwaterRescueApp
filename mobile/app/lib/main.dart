@@ -14,6 +14,7 @@ import 'sounds.dart';
 import 'sys.dart';
 import 'inc/map_page.dart';
 import 'accounts.dart';
+import 'beacon.dart';
 import 'demo.dart';
 import 'demo_ui.dart' show demoSource;
 
@@ -67,6 +68,7 @@ Future<void> main() async {
   final start = await notes.getNotificationAppLaunchDetails();
   if (start?.didNotificationLaunchApp == true) _pendingOpen = start!.notificationResponse?.payload;
   await configureService();
+  Beacons.listen(); // iOS: Sichtungen der Fahrzeuge melden, wenn das System die App weckt (Issue #177)
   runApp(const SwiftwaterApp());
 }
 
