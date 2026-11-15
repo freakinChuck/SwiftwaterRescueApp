@@ -24,7 +24,7 @@ const cErrSkip=r=>!r||r.data||(r instanceof TypeError&&/fetch|network|load faile
 window.addEventListener('error',e=>{if(!e.message||cErrSkip(e.error))return;clientErr(e.message,{src:String(e.filename||'').split('/').pop().split('?')[0],line:e.lineno,col:e.colno,stack:e.error&&e.error.stack?String(e.error.stack).slice(0,1500):undefined})});
 window.addEventListener('unhandledrejection',e=>{const r=e.reason;if(cErrSkip(r))return;clientErr('Unbehandelt: '+(r&&r.message||r),{stack:r&&r.stack?String(r.stack).slice(0,1500):undefined})});
 // Kurze Hinweise statt alert(): ohne Klick, verschwinden von selbst (Dauer nach Textlänge), Antippen schliesst sofort.
-// kind: 'ok' (grün, Standard), 'info' (blau), 'err' (rot, länger sichtbar). Rückfragen (confirm) bleiben Dialoge.
+// kind: 'ok' (grün, Standard), 'info' (blau), 'err' (rot, länger sichtbar). Rückfragen über ask() (Issue #104), nie confirm()/prompt().
 function toast(t,kind='ok'){t=String(t==null?'':t);let c=document.getElementById('tsts');
   if(!c){c=document.createElement('div');c.id='tsts';document.body.appendChild(c)}
   const d=document.createElement('div');d.className='tst '+kind;d.setAttribute('role',kind==='err'?'alert':'status');d.textContent=t;
@@ -321,6 +321,27 @@ function dlg(title,body,save,okText='Speichern',xText='Abbrechen',onX){const d=d
   d.querySelector('[data-x]').onclick=()=>{d.remove();onX&&onX()};
   // während des Speicherns gesperrt: ein zweiter Klick schickte sonst dieselbe Anfrage nochmals (z. B. Anonymisieren doppelt)
   const ok=d.querySelector('[data-ok]');ok.onclick=async()=>{if(ok.disabled)return;ok.disabled=true;try{await save(d);d.remove()}catch(e){fail(e)}finally{ok.disabled=false}};return d}
+// Rückfrage statt confirm() (Issue #104): if(!await ask('Frage?\n\nErklärung'))return; liefert true/false.
+// Bis zur Leerzeile bzw. zum ersten «?» = Frage (fett), Rest = Erklärung. Knopf = Verb am Ende der Frage («… entfernen?» → «Entfernen»), sonst «OK»;
+// rot bei Entfernen, Löschen, Beenden usw. o: {ok: Knopftext, x: Abbrechen-Text, danger: true|false}. Escape, Klick daneben = Abbrechen.
+const ASK_RED=/^(entfernen|löschen|beenden|deaktivieren|zurücksetzen|leeren|verwerfen|anonymisieren|abmelden|zurücknehmen|aufheben)$/i;
+function ask(text,o={}){return new Promise(res=>{text=String(text==null?'':text);const k=/\n\n|\?\s+(?=\S)/.exec(text),q=k?text.slice(0,k.index+(k[0][0]==='?'?1:0)):text,more=k?text.slice(k.index+k[0].length):'';
+  const v=(/([A-Za-zÄÖÜäöüß]+en)\?$/.exec((q.match(/^[^?]*\?/)||[''])[0])||[])[1],ok=o.ok||(v?v[0].toUpperCase()+v.slice(1):'OK'),red=o.danger!=null?o.danger:ASK_RED.test(v||'');
+  const prev=document.activeElement,d=document.createElement('div');d.className='dlg ask';d.setAttribute('role','alertdialog');d.setAttribute('aria-modal','true');
+  const id='ask'+Date.now();d.setAttribute('aria-labelledby',id+'q');if(more)d.setAttribute('aria-describedby',id+'m');
+  d.innerHTML=`<div class="card"><p class="askq" id="${id}q">${esc(q)}</p>${more?`<p class="mut askm" id="${id}m">${esc(more)}</p>`:''}<div class="row"><button class="${red?'pri':'okb'}" data-ok>${esc(ok)}</button><button data-x>${esc(o.x||'Abbrechen')}</button></div></div>`;
+  const bs=[...d.querySelectorAll('button')],end=r=>{document.removeEventListener('keydown',key,true);d.remove();
+    if(prev&&prev.tagName==='BUTTON'&&prev.isConnected)try{prev.focus({preventScroll:true})}catch(e){} res(r)};
+  // Escape vor allen anderen Tastenkürzeln (schliesst sonst Fenster, Replay …); Tab bleibt im Dialog
+  const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();end(false)}
+    else if(e.key==='Tab'){e.preventDefault();bs[(bs.indexOf(document.activeElement)+1)%bs.length].focus()}
+    else if(e.key===' '&&!bs.includes(document.activeElement))e.preventDefault()};
+  document.addEventListener('keydown',key,true);bs[0].onclick=()=>end(true);bs[1].onclick=()=>end(false);
+  d.onclick=e=>{if(e.target===d)end(false)};document.body.appendChild(d);bs[red?1:0].focus()})}
+// Text zum Kopieren zeigen, wenn die Zwischenablage nicht geht (statt prompt())
+function showCopy(title,text){const d=dlg(title,`<input readonly value="${esc(text)}" aria-label="${esc(title)}">`,async()=>{const f=$('input',d);f.select();
+  try{await navigator.clipboard.writeText(text)}catch(e){if(!document.execCommand('copy'))throw new Error('Kopieren nicht möglich. Bitte den Text markieren und von Hand kopieren.')}toast('Kopiert.','ok')},'Kopieren','Schliessen');
+  const f=$('input',d);f.focus();f.select()}
 /* ---------- Abwesenheiten (Issue #91): abwesend bzw. Einsatzfähigkeit ausgesetzt = nicht aufgeboten, kein Alarm; laufende Einsätze bleiben sichtbar ---------- */
 const ABS_KIND={abs:'Abwesend',sus:'Einsatzfähigkeit ausgesetzt'};
 const absDT=ts=>new Date(ts*1000).toLocaleString('de-CH',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -345,7 +366,7 @@ function absDialog(a,people,done){const now=Date.now()/1000,mo=new Date();mo.set
     $('#abT',d).value=q==='x'?'':absLocal(q==='m'?Math.max(mo.getTime()/1000,fr+3600):fr+7*86400)});return d}
 // Klicks einer Liste aus absRows: rs = Einträge, people/done wie absDialog
 function absBind(el,rs,done){el.querySelectorAll('[data-abe]').forEach(b=>b.onclick=()=>absDialog(rs.find(a=>a.id===+b.dataset.abe),null,done));
-  el.querySelectorAll('[data-abx]').forEach(b=>b.onclick=async()=>{const a=rs.find(x=>x.id===+b.dataset.abx);if(!confirm(a.now?'Eintrag jetzt beenden?':'Eintrag entfernen?'))return;try{await api('absence/remove',{id:a.id});toast(a.now?'Beendet.':'Entfernt.','ok');done&&done()}catch(e){fail(e)}})}
+  el.querySelectorAll('[data-abx]').forEach(b=>b.onclick=async()=>{const a=rs.find(x=>x.id===+b.dataset.abx);if(!await ask(a.now?'Eintrag jetzt beenden?':'Eintrag entfernen?'))return;try{await api('absence/remove',{id:a.id});toast(a.now?'Beendet.':'Entfernt.','ok');done&&done()}catch(e){fail(e)}})}
 // Eigenes Passwort ändern; forced = nach Zurücksetzen durch die Verwaltung (nur Abmelden als Alternative)
 function pwDialog(forced,done){
   dlg('Passwort ändern',`${forced?'<div class="mut">Dein Passwort wurde neu gesetzt. Bitte vergib jetzt ein eigenes Passwort.</div>':''}
@@ -377,7 +398,7 @@ function skEntryDlg(k,uid,uname,done){dlg(k.name+(uname?' – '+uname:''),`<labe
     <label class="mut">Bemerkung (optional)<input id="skN" maxlength="300" placeholder="z. B. Kurs, Ort, Ausbildner"></label><div class="mut">Gültigkeit: ${esc(skValid(k))}${k.exp!=='none'?`, Vorwarnung ${k.warn} Tage vorher`:''}</div>`,
     async d=>{const t=skTs($('#skD',d).value);if(!t)throw new Error('Datum fehlt');await api('skill/entry/save',{user_id:uid,skill_id:k.id,done:t,note:$('#skN',d).value});toast('Ausbildung erfasst.','ok');done()})}
 function skBind(el,items,uid,uname,done){el.querySelectorAll('[data-ska]').forEach(b=>b.onclick=()=>skEntryDlg(items.find(x=>x.skill.id===+b.dataset.ska).skill,uid,uname,done));
-  el.querySelectorAll('[data-skx]').forEach(b=>b.onclick=()=>{if(confirm('Diesen Eintrag entfernen?'))api('skill/entry/remove',{id:+b.dataset.skx}).then(()=>{toast('Eintrag entfernt.','ok');done()}).catch(fail)})}
+  el.querySelectorAll('[data-skx]').forEach(b=>b.onclick=async()=>{if(await ask('Diesen Eintrag entfernen?'))api('skill/entry/remove',{id:+b.dataset.skx}).then(()=>{toast('Eintrag entfernt.','ok');done()}).catch(fail)})}
 /* ---------- Einsatzlog im Gross-Modus ---------- */
 let big=null;
 const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],voice:['Funk',['voice','conf','voiceguest','voicech']],poi:['Markierungen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub','anon','air']]};
