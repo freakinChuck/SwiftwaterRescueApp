@@ -24,6 +24,7 @@ Native Apps für Android und iOS (Issue #108), gebaut mit Flutter in `mobile/app
 
   **Ton kritischer Alarme** (Issue #171): im Profil, Karte «Alarmierung», je Backend und Einsatztyp wählbar (Signalhörner, Sirenen, Melodien, Ton des Systems) mit «▶ Probe»; ohne eigene Wahl gilt die Vorgabe des Einsatztyps (Verwaltung → «Einsatztypen»). Die Töne liegen in `assets/sounds/` (erzeugt mit `python3 scripts/sounds/gen.py`, braucht numpy; neue Töne zusätzlich in `lib/sounds.dart` und `ALARM_SOUNDS` in `web/api/index.php` eintragen und `_ver` in `sounds.dart` erhöhen). Android spielt die Datei als Wecker in Schleife, iOS einmal (höchstens 30 s) aus `Library/Sounds`, auch bei Push (der Server nennt den Ton über `push_native.snd`).
 - **Standort:** Ist die Einsatz-App offen, teilt sie den Standort selbst (`inc/store.dart`, mit «auf dem Gewässer» aus dem geladenen Gewässernetz). Sonst teilt ihn im Einsatz der Hintergrund (`track.dart`, alle 5 s bei Bewegung, sonst alle 15 s), bis man austritt oder der Einsatz endet. Bei gesperrtem Bildschirm braucht es dafür «Immer zulassen» (Android: der Dienst läuft dann zusätzlich als Standort-Dienst, sonst erhält er ab Android 14 keine Positionen); die App fragt einmal danach und zeigt den Stand in ihren Einstellungen. Im Hintergrund kennt die App kein Gewässernetz: Positionen gelten dort nie als «auf dem Gewässer». Unter iOS gibt es in geolocator nur einen Positionsstrom; wer ihn zuerst öffnet, bestimmt die Einstellungen. Einsatz-App und Hintergrund nutzen deshalb dieselben (`locSettings`, mit `allowBackgroundLocationUpdates`), sonst stoppte iOS die Ortung beim Sperren (Issue #183). Den Stand je Konto (zuletzt gesendet, Fehler) zeigt die Kontenliste (`LocStat`, `trk_<id>`); Fehler der Ortung, Ablehnungen des Servers und Störungen ab 1 min meldet die App ins Applikationslog (`applog/client`, ohne Koordinaten).
+- **Fahrzeuge (Issue #177):** Beacons der Fahrzeuge (iBeacon) erkennt `beacon.dart` über das Plugin `sw_sys`: im Einsatz kurze Scans, deren Ergebnis mit der Standortmeldung mitgeht; ausserhalb von Einsätzen (nur mit Zustimmung im Profil) sucht das Betriebssystem selbst (Android: Scan über `PendingIntent` mit Hardware-Filter, iOS: Region Monitoring, braucht Standort «Immer»). Android fragt dafür «Geräte in der Nähe» (`BLUETOOTH_SCAN`) an, iOS nutzt CoreLocation ohne eigene Bluetooth-Berechtigung. Zum Testen ohne Beacon genügt ein zweites Handy, das ein iBeacon sendet (z. B. «Beacon Simulator»).
 
 | | Android | iOS |
 |---|---|---|
@@ -62,6 +63,7 @@ In den Einstellungen der App gibt es dazu Folgendes:
 | `service.dart` | Android-Vordergrunddienst, nur wenn nötig (`serviceNeeded`); während einer Funk-Konferenz mit Typ `microphone` |
 | `push.dart` | Firebase Cloud Messaging (optional) |
 | `sys.dart` | Akku-Optimierung, Standortberechtigung (auch «Immer»), App-Einstellungen, Weckton (Android über das Plugin `packages/sw_sys`, auch im Dienst) |
+| `beacon.dart`, `inc/veh.dart` | Fahrzeuge mit BLE-Beacons: Scans und Meldungen, Anzeige auf der Karte und im Fenster «Einsatzkräfte» |
 
 ## Bauen
 

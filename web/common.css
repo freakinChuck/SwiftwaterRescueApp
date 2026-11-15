@@ -87,6 +87,25 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .aisc .aith{max-height:min(58dvh,640px)}
 @media(min-width:901px){.aisc>.aichat{border-top:0;padding-top:0}.aisc{border-left:1px solid var(--line);padding-left:1rem}.aiwide:has(.aisc){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
 .aidp{display:grid;gap:.35rem}.aidp label.chk{align-items:flex-start}.aidp label.chk input{margin-top:.15rem}
+
+/* Fahrzeuge (Issue #177): Kette als ein Marker, Farbe des obersten Fahrzeugs, aufgenommene als Zeichen daran; blass ohne neuere Sichtung */
+.vehw{background:none;border:0}
+.vehg{position:absolute;transform:translate(-50%,calc(-100% - 7px));display:flex;flex-direction:column;align-items:center;gap:3px;background:#fff;border:2px solid #fff;border-radius:8px;box-shadow:0 1px 4px #0008}
+.vehg::after{content:'';position:absolute;left:50%;bottom:-9px;margin-left:-6px;border:6px solid transparent;border-top:7px solid #fff;border-bottom:0}
+.vehg.multi{padding:2px;gap:4px} /* mehrere Ketten getrennt am selben Ort: untereinander, je mit Rand */
+.vehg.multi .vehk{outline:1px dashed #9aa;outline-offset:1px;border-radius:6px}
+.vehk{display:flex;align-items:stretch;gap:2px;white-space:nowrap}
+.vehk .sg{display:flex;align-items:center;gap:3px;background:var(--c,#335c67);color:#fff;padding:1px 5px;font-size:15px;line-height:20px;border-radius:6px}
+.vehk .a{font-weight:700;font-size:11px;letter-spacing:.02em}
+.vehk.old{opacity:.5}
+.vehrow{display:grid;grid-template-columns:1.6rem minmax(0,1fr);column-gap:.5rem;row-gap:.25rem;align-items:start;padding:.4rem 0;border-top:1px solid #ffffff14}
+.vehrow.kid{padding-left:1.4rem}
+.vehrow .s{font-size:1.2rem;text-align:center;line-height:1.4}
+.vehrow .nm{min-width:0;overflow-wrap:anywhere}
+.vehrow .pa{grid-column:2;display:flex;flex-wrap:wrap;gap:.3rem}.vehrow .pa:empty{display:none} /* Knöpfe klein unter dem Text */
+.vehrow .pa button{padding:.2rem .5rem;font-size:.8rem;min-height:0;line-height:1.3}.vehrow .pa button[data-vc]{font-size:1.05rem;padding:.05rem .5rem}.vehrow .pa button[data-vc]+button{font-size:1rem;padding:.1rem .45rem}
+.vehrow small{display:block;opacity:.75}
+.vehhint{background:#5a4300;border-radius:6px;padding:.35rem .5rem;margin:.3rem 0;font-size:.85rem}
 /* Funk & Konferenz (Issue #113): Durchsagen, Sprechtaste, Live-Konferenz; gemeinsam für die Einsatz-App (index.html) und die Gastseite (funk.html) */
 .vxw{display:inline-flex;align-items:center;gap:2px;height:22px;flex:0 1 auto;overflow:hidden}.vxw i{display:block;width:3px;border-radius:2px;background:#4b6f80}.vxw.on i{background:#8ec5ff}
 .vxtabs{display:flex;gap:.35rem;padding:.45rem .7rem;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}.vxtabs::-webkit-scrollbar{display:none}

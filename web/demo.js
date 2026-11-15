@@ -23,7 +23,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   try{Object.defineProperty(window,'localStorage',{configurable:true,get:()=>store})}catch(e){console.warn('Demo: localStorage nicht umgeleitet',e)}
   const now=()=>Math.floor(Date.now()/1000);
   // ---------- feste Daten ----------
-  let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1,geo:0}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server
+  let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1,geo:0,veh:1,vehp:1}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server
   let KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'high',alarm_name:'Hoch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT},
                {id:2,name:'Übung',color:'#1d7fd1',alarm:'normal',alarm_name:'Normal',mode_up:1,msg_lvl:'normal',end_lvl:'normal',rec:1,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT}];
   let ROLES=[{id:1,name:'Einsatzleitung',color:'#d62828',is_lead:1,is_post:0,can_message:1},{id:2,name:'Rettungsboot',color:'#1d7fd1',is_lead:0,is_post:0,can_message:1},
@@ -83,7 +83,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
       hydro:hy&&A(hy.stations),ext:A(ex)?ex.filter(x=>x.active).map(({active,...x})=>x):null}}
   function applyOrg(){const o=S&&S.mode==='leer'&&S.org;if(!o)return;if(o.places&&o.places.length&&o.kinds)o.kinds.forEach(k=>{k.features={...k.features,place:1}});if(o.kinds)KINDS=o.kinds;if(o.roles)ROLES=o.roles;if(o.modes)MODES=o.modes;if(o.places)PLACES=o.places;
     if(o.place_cats)PLACE_CATS=o.place_cats;if(o.hydro)HYDRO=o.hydro;if(o.ext)EXT_T=o.ext;if(Array.isArray(o.cfg.symbols))SYMS=o.cfg.symbols;if(o.version)VER=o.version}
-  const orgStart=()=>loadOrg().then(o=>{if(o&&S.mode==='leer'&&!S.inc){S.org=o;Object.assign(S.me,o.me);applyOrg();save()}});
+  const orgStart=()=>loadOrg().then(o=>{if(o&&S.mode==='leer'&&!S.inc){S.org=o;Object.assign(S.me,o.me);applyOrg();S.veh=null;save()}});
   // Flusssperren (Issue #182, wie incStops): feste Standorte mit einer Eigenschaft der Wirkung stop, solange berücksichtigt und nicht ausgenommen
   const props=()=>S.org&&S.org.place_props||[];
   const stops=i=>{const K=kindOf(i),eff=props().filter(p=>p.effect==='stop');if(!featOf(K).area||!featOf(K).place||!(i.stop_on??1)||!eff.length)return[];
@@ -159,7 +159,10 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     [540,102,i=>{const r=I().res[0];if(r&&!r.removed){rescue(102,r,true,i);addMsg(102,'Person geborgen, ansprechbar, stark unterkühlt. Übergabe an den Rettungsdienst bei der Einwasserung Reusszopf.',{ts:i})}}],
     [560,106,i=>addMsg(106,'Decken und Wärmepacks beim KP bereit.',{ts:i})],
     [620,101,i=>addMsg(101,'Danke allen. Rettling dem Rettungsdienst übergeben. Rückzug zum Stützpunkt, Material kontrollieren.',{ts:i})],
-    [1200,101,i=>{if(!S.lead&&I())endInc(101,i)}]];
+    [1200,101,i=>{if(!S.lead&&I())endInc(101,i)}],
+    // Fahrzeuge (Issue #177): Einsatzleitung im Kommandofahrzeug, Boot 1 mit Bus und Anhänger zur Einwasserung, dort abgeladen, nach der Rettung wieder verladen
+    [20,101,i=>vehCrew(101,4)],[40,102,i=>vehCrew(102,1)],[345,102,i=>{vehAt(102,i);vehSet(vById(3),null,null,true,i);vehCrew(102,3);vehCrew(103,3)}],
+    [650,102,i=>{vehAt(102,i);vehCrew(103,null);vehCrew(102,1);vehSet(vById(3),vById(2),null,true,i)}]];
   // ---------- eigener Einsatz: simulierte Einsatzkräfte nehmen an und fahren zum PLS ----------
   // Mit Vorgaben der Organisation (loadOrg) deren Spezialrollen und Einrückoptionen: 1 = Einsatzleitung, 4 = Posten, 2/3 = übrige
   const rl=n=>{if(!S.org)return n;const L=ROLES.find(r=>r.is_lead),Q=ROLES.find(r=>r.is_post),o=ROLES.filter(r=>r!==L&&r!==Q);const r=n===1?L:n===4?Q:n===2?o[0]:o[1]||o[0];return r?r.id:null};
@@ -169,7 +172,8 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     [60,104,i=>addPart(104,mc('base'),i)],[63,104,i=>setRole(104,rl(3),i)],[90,102,i=>addMsg(102,'Boot wird am Stützpunkt vorbereitet, ETA ca. 8 min.',{ts:i})],
     [100,105,i=>addPart(105,mc('direct'),i)],[103,105,i=>setRole(105,rl(4),i)],[130,106,i=>addPart(106,mc('logistics'),i)],
     [220,101,i=>addMsg(101,'Vor Ort beim PLS. Bitte Standort teilen und Suchgebiet gemäss Karte absuchen.',{ts:i})],
-    [320,105,i=>addMsg(105,'Posten flussabwärts bezogen.',{ts:i})]];
+    [320,105,i=>addMsg(105,'Posten flussabwärts bezogen.',{ts:i})],
+    [15,101,i=>vehCrew(101,4)],[25,102,i=>vehCrew(102,1)],[300,102,i=>{vehAt(102,i);vehSet(vById(3),null,null,true,i);vehCrew(102,3)}]]; // Fahrzeuge (Issue #177): Boot beim Ziel abgeladen
   // Wegpunkte relativ zum Bezugspunkt (PLS, sonst Standort der Person): Versatz [Ost, Nord] in Metern, Ankunft in s nach dem Start
   const GEN_ROUTE={101:[15,[-2600,1800],[-60,40],220],102:[25,[3100,2400],[120,-90],280],103:[45,[-1800,-2600],[130,-80],300],104:[60,[2200,-3000],[260,180],330],105:[100,[-3500,-900],[-700,-500],330],106:[130,[1500,3300],[-40,70],360]};
   const anchor=i=>i.lat!=null?[i.lat,i.lon]:(i.res.find(r=>r.pls_lat!=null)?[i.res.find(r=>r.pls_lat!=null).pls_lat,i.res.find(r=>r.pls_lat!=null).pls_lon]:(part()&&part().lat!=null?[part().lat,part().lon]:null));
@@ -181,9 +185,10 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   function simRun(t,init){const i=I();if(!i||i.ended_at)return;if(!S.sim&&!init)return;const steps=i.script==='bsp'?BSP:GEN,rel=t-i.t0;
     for(let k=0;k<steps.length;k++){const[at,uid,fn]=steps[k];if(i.done[k]||rel<at)continue;i.done[k]=1;const p=part(uid);if(p&&p.kicked)continue;fn(i.t0+at);if(!I())return}i.parts.forEach(p=>{if(p.user_id===ME_ID||p.left_at!=null||p.mode==='declined')return;const md=mode(p.mode);if(md&&!md.share_location)return;
       const ll=posAt(route(i,p.user_id),rel);if(!ll)return;const w=Math.sin(t/23+p.user_id)*4,v=Math.cos(t/31+p.user_id)*4;const q=off(ll,w,v);p.lat=+q[0].toFixed(7);p.lon=+q[1].toFixed(7);p.loc_at=t});
+    vehSim(i,t);
     // Antworten auf eigene Nachrichten
     S.reply=(S.reply||[]).filter(r=>{if(r.at>t)return true;if(I()&&active(r.uid))addMsg(r.uid,r.text,{ts:r.at,to:[ME_ID]});return false})}
-  function endInc(uid,t){const i=I();if(!i)return;if(i.record)i.record=0;i.ended_at=t||now();logev(uid,'end','hat den Einsatz beendet',t);S.last={id:i.id,ended_at:i.ended_at};S.inc=null}
+  function endInc(uid,t){const i=I();if(!i)return;VS().forEach(v=>{v.inc=0});if(i.record)i.record=0;i.ended_at=t||now();logev(uid,'end','hat den Einsatz beendet',t);S.last={id:i.id,ended_at:i.ended_at};S.inc=null}
   // Rega-Helikopter über dem Suchgebiet (Beispieldaten) bzw. über dem Bezugspunkt (eigener Einsatz)
   function heli(t){const i=I();if(!i||!i.air)return[];const rel=t-i.t0,a=i.script==='bsp'?{c:P.find,from:380,to:660}:{c:anchor(i),from:150,to:480};if(!a.c||rel<a.from-60||rel>a.to+80)return[];
     const at=x=>{const r=x-i.t0;let ll,trk,alt;if(r<a.from){const f=(r-a.from+60)/60;ll=off(a.c,6000*(1-f)+600,9000*(1-f));trk=214;alt=2600-1000*f}
@@ -192,6 +197,40 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     const [ll,trk,alt]=at(t),pl=i.lat!=null?hav(i.lat,i.lon,ll[0],ll[1]):null;
     return[{hex:'4b0d3e',cs:'RGA3',reg:'HB-ZRD',type:'EC45',desc:'Airbus H145 (Demo)',cat:'A7',lat:ll[0],lon:ll[1],alt,gnd:0,gs:rel>=a.from&&rel<=a.to?60:110,trk,vr:0,at:t,rescue:'Rega',pls_m:pl==null?null:Math.round(pl),near:null,
       trail:[60,45,30,15].map(d=>t-d).filter(x=>x-i.t0>=a.from-60).map(x=>{const[q,,h]=at(x);return[x,+q[0].toFixed(6),+q[1].toFixed(6),h]})}]}
+
+  // ---------- Fahrzeuge (Issue #177, wie vehState/vehLinkSet/vehRoom im Server) ----------
+  // Fiktive Fahrzeuge mit Beacons beim Stützpunkt bzw. beim ersten festen Standort der Organisation. Die Simulation setzt Einsatzkräfte in Fahrzeuge
+  // (p.veh_id; echt erkennt das die native App über die Beacons); ein Fahrzeug mit Besatzung fährt mit ihr, verladene Fahrzeuge mit dem Träger.
+  const VKINDS=[{id:1,name:'Zug-/Personenfahrzeug',sym:'🚐',persons:1,water:0,carries:{2:1},carry_max:null},{id:2,name:'Anhänger',sym:'⛓',persons:0,water:0,carries:{3:1},carry_max:null},
+    {id:3,name:'Boot',sym:'⛵',persons:1,water:1,carries:{},carry_max:null}];
+  const vehHome=()=>{const f=PLACES.find(p=>p.active!==0&&p.plan_id==null&&p.lat!=null);return f?[f.lat,f.lon]:P.sp};
+  function vehFresh(){const h=vehHome(),t=now()-3600,v=(id,k,name,abbr,color,descr,c,e,n)=>{const q=off(h,e,n);
+      return{id,kind_id:k,name,descr,abbr,color,lat:+q[0].toFixed(7),lon:+q[1].toFixed(7),acc:15,seen_at:t,inc:0,carrier_id:c,carrier_manual:0}};
+    return[v(1,1,'Bus 1','B1','#1d7fd1','Mannschaftsbus mit Anhängerkupplung (Demo)',null,10,8),v(2,2,'Anhänger 1','A1','#1d7fd1','Bootsanhänger (Demo)',1,10,8),
+      v(3,3,'Boot 1','RB1','#1d7fd1','Rettungsboot (Demo)',2,10,8),v(4,1,'Kommandofahrzeug','KDO','#d62828','Fahrzeug der Einsatzleitung (Demo)',null,-12,-6)]}
+  const VS=()=>S.veh||(S.veh=vehFresh()),vById=id=>VS().find(v=>v.id===id),vKind=v=>VKINDS.find(k=>k.id===v.kind_id)||VKINDS[0];
+  const vRoot=v=>{let r=v,n=0;while(r.carrier_id!=null&&vById(r.carrier_id)&&n++<20)r=vById(r.carrier_id);return r};
+  const vTree=v=>{const o=[v];for(let k=0;k<o.length&&k<50;k++)VS().forEach(x=>{if(x.carrier_id===o[k].id&&!o.includes(x))o.push(x)});return o};
+  // freie Plätze für die Art kid auf c: -1 = nimmt sie nicht auf; die Gesamtzahl (carry_max) begrenzt über alle Arten
+  function vRoom(c,kid,ex){const cap=vKind(c).carries;if(!(kid in cap))return -1;const on=VS().filter(x=>x.carrier_id===c.id&&x.id!==ex),m=cap[kid],t=vKind(c).carry_max;
+    const r=m==null?1e9:m-on.filter(x=>x.kind_id===kid).length;return t==null?r:Math.min(r,t-on.length)}
+  function vMove(v,ll,t,i){vTree(vRoot(v)).forEach(x=>{if(i&&!x.inc){x.inc=1;logev(null,'veh',`«${x.name}» gesehen (${f5(ll[0])}, ${f5(ll[1])})`,t)}x.lat=+ll[0].toFixed(7);x.lon=+ll[1].toFixed(7);x.acc=10;x.seen_at=t})}
+  // Verbund setzen bzw. lösen (c null), Texte wie vehLinkText im Server
+  function vehSet(v,c,uid,auto,t){if(!v||v.carrier_id===(c?c.id:null))return;const old=v.carrier_id!=null?vById(v.carrier_id):null,hang=x=>!!vKind(x).persons,a=`«${v.name}»`;
+    v.carrier_id=c?c.id:null;v.carrier_manual=c&&!auto?1:0;
+    if(c){vTree(v).forEach(x=>{x.lat=c.lat;x.lon=c.lon;x.seen_at=c.seen_at});if(I())I().parts.forEach(p=>{if(p.veh_id===v.id)p.veh_id=null})}
+    if(!I())return;const by=auto?null:uid;
+    if(old)logev(by,'veh',auto?`${a} von «${old.name}» ${hang(old)?'abgehängt':'abgeladen'} (automatisch)`:hang(old)?`hängt ${a} von «${old.name}» ab`:`lädt ${a} von «${old.name}» ab`,t);
+    if(c)logev(by,'veh',auto?`${a} ${hang(c)?'an':'auf'} «${c.name}» ${hang(c)?'angehängt':'verladen'} (automatisch)`:hang(c)?`hängt ${a} an «${c.name}» an`:`verlädt ${a} auf «${c.name}»`,t)}
+  const vehCrew=(uid,vid)=>{const p=part(uid);if(p)p.veh_id=vid};
+  // Fahrzeug der Person an den Ort der Person zum Zeitpunkt t (Schritte laufen auch rückwirkend, z. B. nach Neuladen)
+  const vehAt=(uid,t)=>{const i=I(),p=part(uid),v=p&&p.veh_id!=null&&vById(p.veh_id),ll=v&&posAt(route(i,uid),t-i.t0);if(ll&&v.carrier_id==null)vMove(v,ll,t,i)};
+  // Fahrzeuge mit Besatzung fahren mit ihr (Kette beim obersten Fahrzeug)
+  function vehSim(i,t){if(!featOf(kindOf(i)).veh)return;i.parts.forEach(p=>{if(p.veh_id==null||p.left_at!=null||p.mode==='declined'||p.lat==null)return;const v=vById(p.veh_id);if(v&&v.carrier_id==null)vMove(v,[p.lat,p.lon],t,i)})}
+  function vehOut(i){const l=VS(),crew=v=>i?i.parts.filter(p=>p.veh_id===v.id&&p.left_at==null&&p.mode!=='declined').map(p=>p.user_id):[];
+    return{kinds:VKINDS,list:l.map(v=>{const room={};Object.entries(vKind(v).carries).forEach(([k,m])=>{room[k]={n:l.filter(x=>x.carrier_id===v.id&&x.kind_id===+k).length,max:m}});
+      return{id:v.id,kind_id:v.kind_id,name:v.name,descr:v.descr,abbr:v.abbr,color:v.color,lat:v.lat,lon:v.lon,acc:v.acc,seen_at:v.seen_at,inc:i&&v.inc?1:0,carrier_id:v.carrier_id,carrier_manual:v.carrier_manual,
+        room,room_all:{n:l.filter(x=>x.carrier_id===v.id).length,max:vKind(v).carry_max},crew:crew(v)}}),hints:[],stale_min:30,can_link:i&&(active()||canManage())?1:0}}
 
   // ---------- Antworten ----------
   const kindPub=k=>({...k});
@@ -212,7 +251,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     return hs.map(h=>{const d=Math.round(hav(a[0],a[1],h.lat,h.lon));return{phase:'start',ts:t,station:h.id,name:h.name,water:h.water,lat:h.lat,lon:h.lon,dist:i.script==='bsp'||S.org?d:null,at:t-300,danger:h.danger,
       v:{flow:h.flow,height:h.height,level:h.level,temp:h.temp,danger:h.danger}}})}
   function state(qs){const t=now();simRun(t);const i=I(),me=S.me;
-    if(!i)return{incident:null,air_home:0,my_abs:absNow(),blocked:0,last_ended:S.last,places:PLACES,place_cats:PLACE_CATS,kinds:KINDS,features:featAll(),ex_plans:[],ex_sched:[],...mapsOut(),...placeOut()};
+    if(!i)return{incident:null,air_home:0,my_abs:absNow(),blocked:0,last_ended:S.last,places:PLACES,place_cats:PLACE_CATS,kinds:KINDS,features:featAll(),ex_plans:[],ex_sched:[],veh:KINDS.some(k=>featOf(k).veh)?vehOut(null):null,...mapsOut(),...placeOut()};
     const K=kindOf(i),since=+qs.get('since')||0,mgr=canManage(),act=active(),res=i.res.filter(r=>!r.removed).map(r=>({...r,loc_name:r.loc_by?uname(r.loc_by):null,rescued_name:r.rescued_by?uname(r.rescued_by):null}));
     res.forEach(r=>delete r.removed);
     const inc={id:i.id,message:i.message,lat:i.lat,lon:i.lon,alarm_at:i.alarm_at,ended_at:null,flow_ms:i.flow_ms,created_by:i.created_by,is_exercise:K.plans?1:0,record:i.record,recorded:i.recorded,public_anon:1,
@@ -222,11 +261,11 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
       rescuees:res,externals:i.ext.filter(e=>!e.removed).map(({removed,manual,...e})=>({...e,by_name:uname(e.created_by)})),places:PLACES,place_cats:PLACE_CATS,...placeOut(),stops:stops(i),
       ext_templates:mgr?EXT_T:[],
       ext_inc_templates:mgr?[...new Map(i.ext.filter(e=>e.manual).reverse().map(e=>[e.name.toLowerCase(),{name:e.name,descr:e.descr,role_id:e.role_id,abbr:e.abbr,color:e.color}])).values()]:[],
-      sources:sources(i,res),participants:i.parts.map(p=>({user_id:p.user_id,mode:p.mode,role_id:p.role_id,lat:p.lat,lon:p.lon,loc_at:p.loc_at,left_at:p.left_at,name:uname(p.user_id),photo:p.user_id===ME_ID?me.photo:null,groups:p.user_id===ME_ID?[1]:(SIM[p.user_id]||{}).g||[]})),
+      sources:sources(i,res),participants:i.parts.map(p=>({user_id:p.user_id,mode:p.mode,role_id:p.role_id,lat:p.lat,lon:p.lon,loc_at:p.loc_at,left_at:p.left_at,name:uname(p.user_id),photo:p.user_id===ME_ID?me.photo:null,groups:p.user_id===ME_ID?[1]:(SIM[p.user_id]||{}).g||[],...(featOf(K).veh&&featOf(K).vehp?{veh_id:p.veh_id??null}:{})})),
       groups:GROUPS,marks:[],messages:canRead?i.msgs.filter(m=>m.id>since).map(m=>({id:m.id,from_user:m.from_user,text:m.text,created:m.created,recipients:m.recipients,lat:m.lat,lon:m.lon,mark_lat:m.mark_lat,mark_lon:m.mark_lon,from_name:uname(m.from_user)})):[],
       msg_marks:canRead?i.msgs.filter(m=>m.mark).map(m=>({id:m.id,from_user:m.from_user,text:m.text,created:m.created,lat:m.mark_lat,lon:m.mark_lon,from_name:uname(m.from_user)})):[],
       me:part()?{...part()}:null,is_lead:isLead(),can_manage:mgr,ai:null,can_flow:act||mgr,can_message:act||mgr,can_read_messages:canRead,critical:lvl==='crit',level:lvl,msg_level:K.msg_lvl,end_level:K.end_lvl,
-      alarm:i.created_by!==ME_ID,absent:0,my_abs:absNow(),features:featOf(K),air:i.air?1:0,air_inc:i.air?1:0,ex_lead:false,ex_title:null,ex_injects:[],log:act||mgr?logRows(i):null,hydro:hydroInc(i),...mapsOut(),now:t}}
+      alarm:i.created_by!==ME_ID,absent:0,my_abs:absNow(),features:featOf(K),air:i.air?1:0,air_inc:i.air?1:0,ex_lead:false,ex_title:null,ex_injects:[],log:act||mgr?logRows(i):null,hydro:hydroInc(i),veh:featOf(K).veh?vehOut(i):null,...mapsOut(),now:t}}
   // Overpass: wie der Server ohne Antwort (502 mit fertiger Abfrage), das Gerät fragt dann direkt (overpassNet in common.js); Ergebnisse bleiben bis zum Neuladen im Speicher
   const OPC=new Map(),opKey=b=>JSON.stringify(b.around||b.bbox||null);
   async function realOverpass(b){if(!REAL_TOK||REAL_TOK==='demo')return null;
@@ -303,6 +342,11 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     'incident/open':b=>{needLead();I().open_join=b.on?1:0;return{ok:true}},
     'incident/invite/add':()=>fail('Im Demo-Modus sind bereits alle Personen aufgeboten.'),
     'incident/air/set':b=>{needLead();const on=b.on?1:0;if(on!==I().air){I().air=on;logev(ME_ID,'air',on?'schaltet die Helikopter ein':'schaltet die Helikopter aus')}return{ok:true}},
+    'incident/vehicle/link':b=>{const i=needInc();if(!featOf(kindOf(i)).veh)fail('Die Funktion «Fahrzeuge» ist ausgeschaltet',403);needPart('Nur Personen, die am Einsatz teilnehmen');
+      const v=vById(+b.id)||fail('Fahrzeug nicht gefunden',404),c=b.carrier==null?null:vById(+b.carrier)||fail('Träger nicht gefunden',404);
+      if(c){if(vTree(v).includes(c))fail(`«${c.name}» wird selbst von «${v.name}» getragen`);if(v.carrier_id!==c.id){const r=vRoom(c,v.kind_id,v.id);
+        if(r<0)fail(`«${c.name}» kann «${vKind(v).name}» nicht aufnehmen`);if(r<1)fail(`«${c.name}» ist voll`)}}
+      vehSet(v,c,ME_ID,false,now());return{ok:true}},
     'incident/air':()=>{const i=needInc(),t=now();return{air:heli(t),at:t,src:{name:'Demo (simuliert)',site:''},err:null,radius_km:15,now:t}},
     'air/home':()=>fail('Helikopter ohne Einsatz gibt es im Demo-Modus nicht.',403),
     'incident/end':()=>{needLead('Nur die Einsatzleitung kann den Einsatz beenden');endInc(ME_ID);return{ok:true}},

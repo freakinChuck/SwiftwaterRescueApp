@@ -59,6 +59,8 @@ const _feat = {
   'hydro': 1,
   'pinfo': 1,
   'geo': 0,
+  'veh': 1,
+  'vehp': 1,
 }; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server
 _J _kind(int id, String name, String color, String alarm, String an, int modeUp, int rec) => {
   'id': id,
@@ -406,6 +408,7 @@ class Demo {
     for (final k in ['name', 'photo', 'coord_sys', 'nav_app', 'place_view', 'hydro', 'exercise_mode']) {
       if (me.containsKey(k)) _me[k] = me[k];
     }
+    _veh = null;
     org = {
       'name': '${me['org'] ?? ''}',
       'cfg': {
@@ -654,6 +657,9 @@ class Demo {
   void _endInc(int uid, [int? t]) {
     final i = _inc;
     if (i == null) return;
+    for (final v in _vs) {
+      v['inc'] = 0;
+    }
     i.record = 0;
     i.endedAt = t ?? _now();
     _logev(uid, 'end', 'hat den Einsatz beendet', t);
@@ -716,6 +722,21 @@ class Demo {
     _Step(1200, 101, (d, t) {
       if (!d.lead && d._inc != null) d._endInc(101, t);
     }),
+    // Fahrzeuge (Issue #177): Einsatzleitung im Kommandofahrzeug, Boot 1 mit Bus und Anhänger zur Einwasserung, dort abgeladen, nach der Rettung wieder verladen
+    _Step(20, 101, (d, t) => d._vehCrew(101, 4)),
+    _Step(40, 102, (d, t) => d._vehCrew(102, 1)),
+    _Step(345, 102, (d, t) {
+      d._vehAt(102, t);
+      d._vehSet(d._vById(3), null, null, true, t);
+      d._vehCrew(102, 3);
+      d._vehCrew(103, 3);
+    }),
+    _Step(650, 102, (d, t) {
+      d._vehAt(102, t);
+      d._vehCrew(103, null);
+      d._vehCrew(102, 1);
+      d._vehSet(d._vById(3), d._vById(2), null, true, t);
+    }),
   ];
   static final _gen = <_Step>[
     _Step(15, 101, (d, t) => d._addPart(101, d._mc('direct'), t)),
@@ -733,6 +754,14 @@ class Demo {
     _Step(130, 106, (d, t) => d._addPart(106, d._mc('logistics'), t)),
     _Step(220, 101, (d, t) => d._addMsg(101, 'Vor Ort beim PLS. Bitte Standort teilen und Suchgebiet gemäss Karte absuchen.', ts: t)),
     _Step(320, 105, (d, t) => d._addMsg(105, 'Posten flussabwärts bezogen.', ts: t)),
+    // Fahrzeuge (Issue #177): Boot beim Ziel abgeladen
+    _Step(15, 101, (d, t) => d._vehCrew(101, 4)),
+    _Step(25, 102, (d, t) => d._vehCrew(102, 1)),
+    _Step(300, 102, (d, t) {
+      d._vehAt(102, t);
+      d._vehSet(d._vById(3), null, null, true, t);
+      d._vehCrew(102, 3);
+    }),
   ];
 
   /// Bezugspunkt eines eigenen Einsatzes: PLS, sonst PLS eines Rettlings, sonst eigener Standort
@@ -797,11 +826,180 @@ class Demo {
       p['lon'] = double.parse(q[1].toStringAsFixed(7));
       p['loc_at'] = t;
     }
+    _vehSim(i, t);
     _reply.removeWhere((r) {
       if ((r['at'] as int) > t) return false;
       if (_inc != null && _active(r['uid'] as int)) _addMsg(r['uid'] as int, '${r['text']}', ts: r['at'] as int, to: [_meId]);
       return true;
     });
+  }
+
+  // ---------- Fahrzeuge (Issue #177, wie vehState/vehLinkSet/vehRoom im Server und vehOut in web/demo.js) ----------
+  // Fiktive Fahrzeuge mit Beacons beim Stützpunkt bzw. beim ersten festen Standort der Organisation. Die Simulation setzt Einsatzkräfte in Fahrzeuge
+  // (veh_id; echt erkennt das die App über die Beacons); ein Fahrzeug mit Besatzung fährt mit ihr, verladene Fahrzeuge mit dem Träger.
+  static const _vKinds = <_J>[
+    {
+      'id': 1,
+      'name': 'Zug-/Personenfahrzeug',
+      'sym': '🚐',
+      'persons': 1,
+      'water': 0,
+      'carries': {'2': 1},
+      'carry_max': null,
+    },
+    {
+      'id': 2,
+      'name': 'Anhänger',
+      'sym': '⛓',
+      'persons': 0,
+      'water': 0,
+      'carries': {'3': 1},
+      'carry_max': null,
+    },
+    {'id': 3, 'name': 'Boot', 'sym': '⛵', 'persons': 1, 'water': 1, 'carries': <String, dynamic>{}, 'carry_max': null},
+  ];
+  List<_J>? _veh;
+  List<_J> get _vs => _veh ??= _vehFresh();
+  List<_J> _vehFresh() {
+    final f = _ps.where((p) => p['active'] != 0 && p['plan_id'] == null && _fin(p['lat']) && _fin(p['lon'])).firstOrNull;
+    final _P h = f != null ? [_d(f['lat']), _d(f['lon'])] : [_sp[0], _sp[1]];
+    final t = _now() - 3600;
+    _J v(int id, int k, String name, String abbr, String color, String descr, int? c, num e, num n) {
+      final q = _off(h, e, n);
+      return {
+        'id': id, 'kind_id': k, 'name': name, 'descr': descr, 'abbr': abbr, 'color': color, //
+        'lat': double.parse(q[0].toStringAsFixed(7)), 'lon': double.parse(q[1].toStringAsFixed(7)), 'acc': 15.0, 'seen_at': t, 'inc': 0, 'carrier_id': c, 'carrier_manual': 0,
+      };
+    }
+
+    return [
+      v(1, 1, 'Bus 1', 'B1', '#1d7fd1', 'Mannschaftsbus mit Anhängerkupplung (Demo)', null, 10, 8),
+      v(2, 2, 'Anhänger 1', 'A1', '#1d7fd1', 'Bootsanhänger (Demo)', 1, 10, 8),
+      v(3, 3, 'Boot 1', 'RB1', '#1d7fd1', 'Rettungsboot (Demo)', 2, 10, 8),
+      v(4, 1, 'Kommandofahrzeug', 'KDO', '#d62828', 'Fahrzeug der Einsatzleitung (Demo)', null, -12, -6),
+    ];
+  }
+
+  _J? _vById(int? id) => id == null ? null : _vs.where((v) => v['id'] == id).firstOrNull;
+  _J _vKind(_J v) => _vKinds.firstWhere((k) => k['id'] == v['kind_id'], orElse: () => _vKinds.first);
+  Map<String, dynamic> _vCap(_J v) => Map<String, dynamic>.from(_vKind(v)['carries'] as Map);
+  _J _vRoot(_J v) {
+    var r = v;
+    for (var n = 0; n < 20 && r['carrier_id'] != null && _vById(r['carrier_id'] as int) != null; n++) {
+      r = _vById(r['carrier_id'] as int)!;
+    }
+    return r;
+  }
+
+  List<_J> _vTree(_J v) {
+    final o = [v];
+    for (var k = 0; k < o.length && k < 50; k++) {
+      for (final x in _vs) {
+        if (x['carrier_id'] == o[k]['id'] && !o.contains(x)) o.add(x);
+      }
+    }
+    return o;
+  }
+
+  /// freie Plätze für die Art kid auf c: -1 = nimmt sie nicht auf; die Gesamtzahl (carry_max) begrenzt über alle Arten
+  int _vRoom(_J c, int kid, int ex) {
+    final cap = _vCap(c);
+    if (!cap.containsKey('$kid')) return -1;
+    final on = _vs.where((x) => x['carrier_id'] == c['id'] && x['id'] != ex).toList(), m = cap['$kid'], t = _vKind(c)['carry_max'];
+    final r = m == null ? 1 << 30 : (m as int) - on.where((x) => x['kind_id'] == kid).length;
+    return t == null ? r : math.min(r, (t as int) - on.length);
+  }
+
+  void _vMove(_J v, _P ll, int t, _Inc? i) {
+    for (final x in _vTree(_vRoot(v))) {
+      if (i != null && x['inc'] != 1) {
+        x['inc'] = 1;
+        _logev(null, 'veh', '«${x['name']}» gesehen (${_f5(ll[0])}, ${_f5(ll[1])})', t);
+      }
+      x['lat'] = double.parse(ll[0].toStringAsFixed(7));
+      x['lon'] = double.parse(ll[1].toStringAsFixed(7));
+      x['acc'] = 10.0;
+      x['seen_at'] = t;
+    }
+  }
+
+  /// Verbund setzen bzw. lösen (c null), Texte wie vehLinkText im Server
+  void _vehSet(_J? v, _J? c, int? uid, bool auto, int t) {
+    if (v == null || v['carrier_id'] == c?['id']) return;
+    final old = _vById(v['carrier_id'] as int?), a = '«${v['name']}»';
+    bool hang(_J x) => _vKind(x)['persons'] == 1;
+    v['carrier_id'] = c?['id'];
+    v['carrier_manual'] = c != null && !auto ? 1 : 0;
+    if (c != null) {
+      for (final x in _vTree(v)) {
+        x['lat'] = c['lat'];
+        x['lon'] = c['lon'];
+        x['seen_at'] = c['seen_at'];
+      }
+      for (final p in _inc?.parts ?? const <_J>[]) {
+        if (p['veh_id'] == v['id']) p['veh_id'] = null;
+      }
+    }
+    if (_inc == null) return;
+    final by = auto ? null : uid;
+    if (old != null) {
+      _logev(
+        by,
+        'veh',
+        auto ? '$a von «${old['name']}» ${hang(old) ? 'abgehängt' : 'abgeladen'} (automatisch)' : (hang(old) ? 'hängt $a von «${old['name']}» ab' : 'lädt $a von «${old['name']}» ab'),
+        t,
+      );
+    }
+    if (c != null) {
+      _logev(
+        by,
+        'veh',
+        auto ? '$a ${hang(c) ? 'an' : 'auf'} «${c['name']}» ${hang(c) ? 'angehängt' : 'verladen'} (automatisch)' : (hang(c) ? 'hängt $a an «${c['name']}» an' : 'verlädt $a auf «${c['name']}»'),
+        t,
+      );
+    }
+  }
+
+  void _vehCrew(int uid, int? vid) => _part(uid)?['veh_id'] = vid;
+
+  /// Fahrzeug der Person an den Ort der Person zum Zeitpunkt t (Schritte laufen auch rückwirkend, z. B. nach einer Pause)
+  void _vehAt(int uid, int t) {
+    final i = _inc, p = _part(uid), v = _vById(p?['veh_id'] as int?);
+    if (i == null || v == null || v['carrier_id'] != null) return;
+    final ll = _posAt(_route(i, uid), t - i.t0);
+    if (ll != null) _vMove(v, ll, t, i);
+  }
+
+  /// Fahrzeuge mit Besatzung fahren mit ihr (Kette beim obersten Fahrzeug)
+  void _vehSim(_Inc i, int t) {
+    if (_featOf(_kindOf(i))['veh'] != 1) return;
+    for (final p in i.parts) {
+      if (p['veh_id'] == null || p['left_at'] != null || p['mode'] == 'declined' || p['lat'] == null) continue;
+      final v = _vById(p['veh_id'] as int);
+      if (v != null && v['carrier_id'] == null) _vMove(v, [_d(p['lat']), _d(p['lon'])], t, i);
+    }
+  }
+
+  _J _vehOut(_Inc? i) {
+    final l = _vs;
+    return {
+      'kinds': _vKinds,
+      'list': l.map((v) {
+        final room = {
+          for (final e in _vCap(v).entries) e.key: {'n': l.where((x) => x['carrier_id'] == v['id'] && '${x['kind_id']}' == e.key).length, 'max': e.value},
+        };
+        return {
+          ...v,
+          'inc': i != null && v['inc'] == 1 ? 1 : 0,
+          'room': room,
+          'room_all': {'n': l.where((x) => x['carrier_id'] == v['id']).length, 'max': _vKind(v)['carry_max']},
+          'crew': i == null ? <int>[] : i.parts.where((p) => p['veh_id'] == v['id'] && p['left_at'] == null && p['mode'] != 'declined').map((p) => p['user_id'] as int).toList(),
+        };
+      }).toList(),
+      'hints': [],
+      'stale_min': 30,
+      'can_link': i != null && (_active() || _canManage()) ? 1 : 0,
+    };
   }
 
   /// Rega-Helikopter über dem Suchgebiet (Beispieldaten) bzw. über dem Bezugspunkt (eigener Einsatz)
@@ -990,6 +1188,7 @@ class Demo {
         'features': _featAll,
         'ex_plans': [],
         'ex_sched': [], // Übungsplan (Issue #169): im Demo keine vorbereiteten Übungen
+        'veh': _ks.any((k) => _featOf(k)['veh'] == 1) ? _vehOut(null) : null,
         ..._mapsOut,
         ..._placeOut,
         'now': t,
@@ -1098,6 +1297,7 @@ class Demo {
           'name': _uname(u),
           'photo': u == _meId ? _me['photo'] : null,
           'groups': u == _meId ? [1] : (_simGroups[u] ?? const []),
+          if (_featOf(_kindOf(i))['veh'] == 1 && _featOf(_kindOf(i))['vehp'] == 1) 'veh_id': p['veh_id'],
         };
       }).toList(),
       'groups': _groups,
@@ -1142,6 +1342,7 @@ class Demo {
       'ex_injects': [],
       'log': act || mgr ? _logRows(i) : null,
       'hydro': _hydroInc(i),
+      'veh': _featOf(_kindOf(i))['veh'] == 1 ? _vehOut(i) : null,
       'now': t,
     };
   }
@@ -1531,6 +1732,21 @@ class Demo {
           i.air = on;
           _logev(_meId, 'air', on == 1 ? 'schaltet die Helikopter ein' : 'schaltet die Helikopter aus');
         }
+        return {'ok': true};
+      case 'incident/vehicle/link':
+        if (_featOf(_kindOf(_needInc()))['veh'] != 1) _fail('Die Funktion «Fahrzeuge» ist ausgeschaltet', 403);
+        _needPart('Nur Personen, die am Einsatz teilnehmen');
+        final v = _vById(_fin(b['id']) ? _d(b['id']).toInt() : null) ?? _fail('Fahrzeug nicht gefunden', 404);
+        final c = b['carrier'] == null ? null : (_vById(_fin(b['carrier']) ? _d(b['carrier']).toInt() : null) ?? _fail('Träger nicht gefunden', 404));
+        if (c != null) {
+          if (_vTree(v).contains(c)) _fail('«${c['name']}» wird selbst von «${v['name']}» getragen');
+          if (v['carrier_id'] != c['id']) {
+            final r = _vRoom(c, v['kind_id'] as int, v['id'] as int);
+            if (r < 0) _fail('«${c['name']}» kann «${_vKind(v)['name']}» nicht aufnehmen');
+            if (r < 1) _fail('«${c['name']}» ist voll');
+          }
+        }
+        _vehSet(v, c, _meId, false, t);
         return {'ok': true};
       case 'incident/air':
         _needInc();
