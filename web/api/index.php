@@ -28,7 +28,7 @@ set_exception_handler(function ($e) { global $db;
 // Nie Passwörter, Schlüssel oder Inhalte von Einsätzen ins Log, nur Kennungen und technische Angaben.
 const APPLOG_LVL = ['info' => 'Ereignis', 'warn' => 'Warnung', 'err' => 'Fehler'];
 const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
-  'push' => 'Push', 'overpass' => 'Geodaten-Quellen', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'voice' => 'Funk & Konferenz', 'geo' => 'Geodaten Ã¼bernehmen', 'veh' => 'Fahrzeuge', 'client' => 'Browser & App'];
+  'push' => 'Push', 'overpass' => 'Geodaten-Quellen', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'voice' => 'Funk & Konferenz', 'geo' => 'Geodaten übernehmen', 'veh' => 'Fahrzeuge', 'dsar' => 'Datenschutz', 'client' => 'Browser & App'];
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
 // Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
@@ -381,6 +381,8 @@ const PERMS = [
   'geo' => ['Verwaltung', 'Geodaten übernehmen und abgleichen', 'Objekte am Gewässer (Wehre, Kraftwerke, Brücken …) aus OpenStreetMap als feste Standorte übernehmen, auch in vorbereitete Übungen, und Abweichungen zur Quelle prüfen und übernehmen'],
   'versions' => ['System', 'Versionen einsehen und einstellen', 'Ausgelieferte Version des Servers, Versionen der angemeldeten Apps und Mindestversion der App (Hinweis «Bitte App aktualisieren»)'],
   'applog' => ['System', 'Applikationslog einsehen', 'Technisches Applikationslog mit Ereignissen, Warnungen und Fehlern des Servers und der Geräte; Aufbewahrung einstellen'],
+  'dsar' => ['Datenschutz', 'Datenschutzauszug je Person erstellen', 'Auskunft über alle gespeicherten Daten einer Person (Auskunftsbegehren nach Datenschutzgesetz) als PDF und als ZIP mit den Daten in maschinenlesbarer Form, mit Namen und Standorten'],
+  'dsar_org' => ['Datenschutz', 'Datenexport der Organisation erstellen', 'Alle Daten der Organisation als ZIP (je Tabelle JSON und CSV, auf Wunsch mit Sprachaufnahmen und gesicherten After Action Reviews) und eine Übersicht als PDF; ohne Passwörter, Schlüssel und Zugangstoken'],
 ];
 // Alarmstufen der Einsatztypen (Issue #90), von stark nach schwach: Schlüssel => [Bezeichnung, Erklärung]; Einsatz-App und Service Worker setzen sie um
 // Töne für kritische Alarme in der nativen App (Issue #171), gleicher Katalog wie alarmSounds in mobile/app/lib/sounds.dart (Dateien alarm_<Schlüssel>.wav
@@ -3263,6 +3265,105 @@ if (strncmp($route, 'incident/', 9) === 0 && !in_array($route, ['incident/start'
 // Einrückoption ohne Standortfreigabe: Standortmeldungen werden nicht gespeichert (serverseitig erzwungen)
 if ($route === 'incident/location' && ($inc = activeIncident()) && ($p = part($inc['id'])) && !modeShares($p['mode'])) out(['ok' => true, 'shared' => false]);
 
+/* ---------- Datenschutzauszug (Issue #199) ---------- */
+// Auskunft je Person (Recht dsar, Auskunftsrecht nach DSG) und Datenexport der ganzen Organisation (Recht dsar_org). Der Server liefert die Daten,
+// PDF und ZIP entstehen im Browser (wie das After Action Review). Nie dabei: Passwörter, Schlüssel und Zugangstoken (DSAR_HIDE, DSAR_SECRET).
+// Jeder Auszug steht im Verlauf (Einstellung dsar_hist, höchstens DSAR_HIST) und im Applikationslog, ohne Inhalte.
+const DSAR_HIST = 200;
+const DSAR_SECRET = ['ai_key', 'mail_in_key', 'mail_in_pass', 'pgapi_key', 'postgis_pass', 'vapid', 'voice_lk_secret', 'voice_tr_key']; // Einstellungen: Wert wird nie ausgegeben
+const DSAR_HIDE = ['users' => ['pass_hash', 'token'], 'sessions' => ['token'], 'push_subs' => ['endpoint', 'p256dh', 'auth'], 'push_native' => ['token'], 'voice_guests' => ['token'], 'incidents' => ['public_token'], 'ex_plans' => ['public_token']];
+// Tabellen des Datenexports: Tabelle => [Bezeichnung, Sortierung]. Neue Tabellen hier aufnehmen (sonst fehlen sie im Export). Nicht dabei: ai_cache (Zwischenspeicher der AI-Antworten),
+// veh_cand (Zwischenstand des automatischen Verbunds), aar_arch_part (gesicherte PDFs, als eigene Dateien über dsar/file).
+const DSAR_TABLES = ['users' => ['Personen', 'id'], 'uroles' => ['Benutzerrollen', 'id'], 'user_uroles' => ['Zuweisung der Benutzerrollen', 'user_id,urole_id'], 'sessions' => ['Gerätesitzungen', 'id'],
+  'push_subs' => ['Web-Push-Abonnements', 'id'], 'push_native' => ['Push der Apps', 'id'], 'inc_groups' => ['Einsatzgruppen', 'id'], 'inc_group_members' => ['Mitglieder der Einsatzgruppen', 'group_id,user_id'],
+  'absences' => ['Abwesenheiten', 'id'], 'avail_rules' => ['Regelmässige Einsatzzeiten', 'id'], 'skills' => ['Fähigkeiten (Ausbildung)', 'id'], 'user_skills' => ['Ausbildung je Person', 'id'],
+  'inc_kinds' => ['Einsatztypen', 'id'], 'modes' => ['Einrückoptionen', 'id'], 'roles' => ['Spezialrollen', 'id'], 'incidents' => ['Einsätze', 'id'], 'participants' => ['Teilnahmen', 'id'],
+  'incident_log' => ['Einsatzlog', 'id'], 'messages' => ['Nachrichten', 'id'], 'track' => ['Aufzeichnung (Standortverlauf)', 'id'], 'rec_periods' => ['Aufgezeichnete Zeiträume', 'id'],
+  'air_track' => ['Aufzeichnung Luftfahrzeuge', 'id'], 'rescuees' => ['Rettlinge', 'id'], 'rescuee_marks' => ['Frühere Rettling-Markierungen', 'id'], 'externals' => ['Externe Einsatzkräfte', 'id'],
+  'pois' => ['Markierungen, Bereiche und Linien', 'id'], 'inc_hydro' => ['Pegel und Abfluss im Einsatz', 'id'], 'voice' => ['Durchsagen (Funk)', 'id'], 'voice_channels' => ['Funkkanäle', 'id'],
+  'voice_guests' => ['Funk-Links für Externe', 'id'], 'voice_conf' => ['Anwesenheit in der Konferenz', 'incident_id,ident'], 'voice_mute' => ['Stummschaltungen', 'incident_id,channel_id,ident'],
+  'ex_plans' => ['Planungen (vorbereitete Übungen)', 'id'], 'ex_injects' => ['Elemente der Planungen', 'id'], 'ex_signups' => ['Anmeldungen zu Übungen', 'id'], 'ext_templates' => ['Vorlagen externe Einsatzkräfte', 'id'],
+  'places' => ['Feste Standorte', 'id'], 'place_cats' => ['Kategorien fester Standorte', 'id'], 'place_props' => ['Eigenschaften fester Standorte', 'id'], 'place_nav' => ['Navigationspunkte', 'id'],
+  'veh_kinds' => ['Fahrzeugarten', 'id'], 'vehicles' => ['Fahrzeuge', 'id'], 'vehicle_seen' => ['Sichtungen der Fahrzeuge', 'id'], 'veh_links' => ['Verbund der Fahrzeuge', 'id'],
+  'aar' => ['After Action Reviews', 'incident_id'], 'aar_img' => ['Bilder der After Action Reviews', 'id'], 'aar_arch' => ['Gesicherte After Action Reviews', 'incident_id'], 'aar_arch_img' => ['Bilder gesicherter Reviews', 'incident_id,img_id'],
+  'fb_req' => ['Anfragen Einsatzfeedback', 'incident_id'], 'fb_ans' => ['Antworten Einsatzfeedback', 'id'], 'ai_usage' => ['Nutzung AI-Assistent', 'id'], 'app_log' => ['Applikationslog', 'id'],
+  'overpass_stats' => ['Statistik Geodaten-Quellen', 'url,src'], 'settings' => ['Einstellungen', 'k']];
+const DSAR_PAGE = 2000; const DSAR_BYTES = 3000000; // Zeilen bzw. Zeichen je Abfrage des Exports (Bilder als Data-URL sind gross)
+function dsarHist($kind, $uid2 = null, $what = '') { global $uid, $me, $now; $h = json_decode((string)setting('dsar_hist', ''), true); $h = is_array($h) ? $h : [];
+  array_unshift($h, ['at' => $now, 'by' => $uid, 'by_name' => $me['name'], 'kind' => $kind, 'user' => $uid2, 'what' => $what]);
+  setSetting('dsar_hist', json_encode(array_slice($h, 0, DSAR_HIST), JSON_UNESCAPED_UNICODE));
+  alog('info', 'dsar', $kind === 'org' ? 'Datenexport der Organisation erstellt' : 'Datenschutzauszug erstellt', array_filter(['user' => $uid2, 'what' => $what])); }
+function dsarQ($sql, $p = []) { global $db; try { $s = $db->prepare($sql); $s->execute($p); return $s->fetchAll(); } catch (Throwable $e) { return []; } } // fehlende Tabellen älterer Installationen = leer
+function dsarJ($v) { $j = is_string($v) ? json_decode($v, true) : null; return $j === null ? $v : $j; }
+// Alle zu einer Person gespeicherten Daten, gegliedert wie das PDF. Einsätze mit gelösten Teilnahmen (Stufe parts) sind der Person nicht mehr zugeordnet.
+function dsarUser($id) { global $db;
+  $u = dsarQ("SELECT * FROM users WHERE id=?", [$id])[0] ?? null; if (!$u) fail('Person nicht gefunden', 404);
+  $photo = (string)($u['photo'] ?? ''); foreach (array_merge(DSAR_HIDE['users'], ['photo', 'is_admin', 'is_planner']) as $k) unset($u[$k]);
+  foreach (['place_view', 'ai_modes', 'hydro'] as $k) if (isset($u[$k])) $u[$k] = dsarJ($u[$k]);
+  $nm = []; foreach (dsarQ("SELECT id,name FROM users") as $r) $nm[(int)$r['id']] = $r['name'];
+  $who = fn($x) => $x === null ? null : ($nm[(int)$x] ?? ((int)$x > 0 ? 'Person ' . (int)$x : null));
+  $mode = []; foreach (dsarQ("SELECT code,name FROM modes") as $r) $mode[$r['code']] = $r['name']; $mode['declined'] = 'abgelehnt';
+  $role = []; foreach (dsarQ("SELECT id,name FROM roles") as $r) $role[(int)$r['id']] = $r['name'];
+  $incs = []; foreach (dsarQ("SELECT p.*,i.message,i.alarm_at,i.ended_at,i.kind_id,i.is_exercise,i.txt_anon FROM participants p JOIN incidents i ON i.id=p.incident_id WHERE p.user_id=? ORDER BY i.alarm_at", [$id]) as $p) { $k = kindOf($p);
+    $incs[] = ['incident_id' => (int)$p['incident_id'], 'kind' => $k['name'], 'alarm_at' => (int)$p['alarm_at'], 'ended_at' => $p['ended_at'] === null ? null : (int)$p['ended_at'], 'message' => (int)$p['txt_anon'] ? null : $p['message'],
+      'mode' => $mode[$p['mode']] ?? $p['mode'], 'role' => $p['role_id'] === null ? null : ($role[(int)$p['role_id']] ?? null), 'left_at' => $p['left_at'] === null ? null : (int)$p['left_at'],
+      'lat' => $p['lat'] === null ? null : (float)$p['lat'], 'lon' => $p['lon'] === null ? null : (float)$p['lon'], 'loc_at' => $p['loc_at'] === null ? null : (int)$p['loc_at'], 'vehicle_id' => isset($p['veh_id']) ? ($p['veh_id'] === null ? null : (int)$p['veh_id']) : null]; }
+  $tn = []; foreach (dsarQ("SELECT incident_id, COUNT(*) n FROM track WHERE user_id=? GROUP BY incident_id", [$id]) as $r) $tn[(int)$r['incident_id']] = (int)$r['n'];
+  foreach ($incs as &$x) $x['track_n'] = $tn[$x['incident_id']] ?? 0; unset($x);
+  $recv = []; foreach (dsarQ("SELECT id,incident_id,from_user,from_label,text,recipients,created FROM messages WHERE recipients LIKE ? AND from_user<>?", ['%' . $id . '%', $id]) as $m)
+    if (in_array($id, array_map('intval', json_decode((string)$m['recipients'], true) ?: []), true)) $recv[] = ['incident_id' => (int)$m['incident_id'], 'created' => (int)$m['created'], 'from' => $who($m['from_user']) ?? $m['from_label'], 'text' => $m['text']];
+  $plans = []; foreach (dsarQ("SELECT id,title,leads,invite,created_by,plan_at,incident_id FROM ex_plans WHERE active=1") as $p) { $w = [];
+    if (in_array($id, array_map('intval', json_decode((string)$p['leads'], true) ?: []), true)) $w[] = 'Übungsleitung';
+    if (in_array($id, array_map('intval', json_decode((string)$p['invite'], true) ?: []), true)) $w[] = 'aufgeboten';
+    if ((int)$p['created_by'] === $id) $w[] = 'erstellt';
+    if ($w) $plans[] = ['id' => (int)$p['id'], 'title' => $p['title'], 'as' => implode(', ', $w), 'plan_at' => $p['plan_at'] === null ? null : (int)$p['plan_at']]; }
+  $created = [];
+  foreach (['rescuees' => 'Rettling', 'externals' => 'Externe Einsatzkraft', 'pois' => 'Markierung/Bereich/Linie'] as $t => $l) foreach (dsarQ("SELECT incident_id,name,created FROM $t WHERE created_by=?", [$id]) as $r) $created[] = ['what' => $l, 'incident_id' => (int)$r['incident_id'], 'name' => $r['name'], 'at' => (int)$r['created']];
+  foreach (dsarQ("SELECT incident_id,lat,lon,ts FROM rescuee_marks WHERE user_id=?", [$id]) as $r) $created[] = ['what' => 'Rettling-Markierung', 'incident_id' => (int)$r['incident_id'], 'name' => round((float)$r['lat'], 5) . ', ' . round((float)$r['lon'], 5), 'at' => (int)$r['ts']];
+  foreach (dsarQ("SELECT incident_id,updated FROM aar WHERE updated_by=?", [$id]) as $r) $created[] = ['what' => 'After Action Review zuletzt bearbeitet', 'incident_id' => (int)$r['incident_id'], 'name' => '', 'at' => (int)$r['updated']];
+  foreach (dsarQ("SELECT incident_id,caption,created FROM aar_img WHERE created_by=?", [$id]) as $r) $created[] = ['what' => 'Bild im After Action Review', 'incident_id' => (int)$r['incident_id'], 'name' => (string)$r['caption'], 'at' => (int)$r['created']];
+  usort($created, fn($a, $b) => $a['at'] <=> $b['at']);
+  $fbF = []; foreach ((array)(fbCfg(json_decode((string)setting('aar_cfg', ''), true)['fb'] ?? null)['fields'] ?? []) as $f) $fbF[$f['id']] = $f['label'];
+  $ch = []; foreach (dsarQ("SELECT id,name FROM voice_channels") as $r) $ch[(int)$r['id']] = $r['name'];
+  $sk = []; foreach (dsarQ("SELECT id,name FROM skills") as $r) $sk[(int)$r['id']] = $r['name'];
+  $rows = fn($sql, $map) => array_map($map, dsarQ($sql, [$id]));
+  $t = fn($v) => $v === null ? null : (int)$v;
+  return ['user' => $u, 'photo' => str_starts_with($photo, 'data:image/') ? $photo : null,
+    'uroles' => array_column(userRoles($id), 'name'),
+    'groups' => array_column(dsarQ("SELECT g.name FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id WHERE m.user_id=? ORDER BY g.pos,g.name", [$id]), 'name'),
+    'sessions' => $rows("SELECT * FROM sessions WHERE user_id=? ORDER BY created", fn($r) => ['device' => $r['device'], 'platform' => $r['platform'], 'app_ver' => $r['app_ver'] ?? null, 'created' => $t($r['created']), 'last_seen' => $t($r['last_seen'])]),
+    'push' => array_merge($rows("SELECT created,endpoint FROM push_subs WHERE user_id=?", fn($r) => ['kind' => 'Web-Push', 'service' => (string)parse_url((string)$r['endpoint'], PHP_URL_HOST), 'created' => $t($r['created'])]),
+      $rows("SELECT created,platform FROM push_native WHERE user_id=?", fn($r) => ['kind' => 'App', 'service' => $r['platform'] === 'ios' ? 'Apple Push (über Firebase)' : 'Firebase Cloud Messaging', 'created' => $t($r['created'])])),
+    'absences' => $rows("SELECT * FROM absences WHERE user_id=? ORDER BY from_at", fn($r) => ['kind' => $r['kind'] === 'sus' ? 'Einsatzfähigkeit ausgesetzt' : 'Abwesend', 'from_at' => $t($r['from_at']), 'until_at' => $t($r['until_at']), 'note' => $r['note'], 'by' => $who($r['created_by']), 'created_at' => $t($r['created_at']), 'removed' => (int)$r['removed']]),
+    'rules' => $rows("SELECT * FROM avail_rules WHERE user_id=? ORDER BY id", fn($r) => ['mode' => $r['mode'] === 'off' ? 'regelmässig ausgesetzt' : 'Einsatzzeit', 'days' => implode(', ', array_values(array_filter(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'], fn($d, $n) => (int)$r['days'] & (1 << $n), ARRAY_FILTER_USE_BOTH))),
+      'from' => sprintf('%02d:%02d', intdiv((int)$r['t_from'], 60), (int)$r['t_from'] % 60), 'to' => sprintf('%02d:%02d', intdiv((int)$r['t_to'], 60), (int)$r['t_to'] % 60), 'note' => $r['note'], 'by' => $who($r['created_by']), 'created_at' => $t($r['created_at']), 'removed' => (int)$r['removed']]),
+    'skills' => $rows("SELECT * FROM user_skills WHERE user_id=? ORDER BY done_at", fn($r) => ['skill' => $sk[(int)$r['skill_id']] ?? '?', 'done_at' => $t($r['done_at']), 'note' => $r['note'], 'by' => $who($r['created_by']), 'created_at' => $t($r['created_at']), 'removed' => (int)$r['removed']]),
+    'signups' => $rows("SELECT s.*,p.title FROM ex_signups s LEFT JOIN ex_plans p ON p.id=s.plan_id WHERE s.user_id=? ORDER BY s.at", fn($r) => ['plan' => $r['title'], 'status' => $r['status'] === 'yes' ? 'nimmt teil' : 'nimmt nicht teil', 'note' => $r['note'], 'at' => $t($r['at'])]),
+    'plans' => $plans, 'incidents' => $incs,
+    'log' => $rows("SELECT incident_id,ts,kind,text FROM incident_log WHERE user_id=? ORDER BY ts", fn($r) => ['incident_id' => (int)$r['incident_id'], 'ts' => (int)$r['ts'], 'kind' => $r['kind'], 'text' => $r['text']]),
+    'messages' => $rows("SELECT * FROM messages WHERE from_user=? ORDER BY created", fn($r) => ['incident_id' => (int)$r['incident_id'], 'created' => (int)$r['created'], 'text' => $r['text'], 'to' => $r['recipients'] === null ? 'alle' : implode(', ', array_map(fn($x) => $who($x) ?? '?', json_decode((string)$r['recipients'], true) ?: [])),
+      'lat' => $r['lat'] === null ? null : (float)$r['lat'], 'lon' => $r['lon'] === null ? null : (float)$r['lon'], 'mark' => (int)$r['mark'] ? [(float)$r['mark_lat'], (float)$r['mark_lon']] : null]),
+    'received' => $recv,
+    'track' => $rows("SELECT * FROM track WHERE user_id=? ORDER BY incident_id,ts", fn($r) => ['incident_id' => (int)$r['incident_id'], 'ts' => (int)$r['ts'], 'lat' => (float)$r['lat'], 'lon' => (float)$r['lon'], 'vehicle_id' => isset($r['veh_id']) && $r['veh_id'] !== null ? (int)$r['veh_id'] : null]),
+    'voice' => $rows("SELECT * FROM voice WHERE user_id=? ORDER BY rec_at", fn($r) => ['id' => (int)$r['id'], 'incident_id' => (int)$r['incident_id'], 'rec_at' => (int)$r['rec_at'], 'dur_s' => round((int)$r['dur_ms'] / 1000, 1), 'channel' => $ch[(int)$r['channel_id']] ?? null,
+      'transcript' => $r['transcript'], 'audio' => ($p = voicePath($r)) && is_file($p) ? 1 : 0, 'mime' => $r['mime']]),
+    'feedback' => $rows("SELECT * FROM fb_ans WHERE user_id=? ORDER BY created", function ($r) use ($fbF, $t) { $d = json_decode((string)$r['data'], true) ?: []; $o = [];
+      foreach ($d as $k => $v) $o[] = [$fbF[$k] ?? $k, is_scalar($v) ? (string)$v : json_encode($v, JSON_UNESCAPED_UNICODE)]; return ['incident_id' => (int)$r['incident_id'], 'created' => $t($r['created']), 'updated' => $t($r['updated']), 'answers' => $o]; }),
+    'created' => $created,
+    'ai' => $rows("SELECT fn, COUNT(*) n, SUM(tokens) tokens, MIN(ts) first, MAX(ts) last FROM ai_usage WHERE user_id=? GROUP BY fn", fn($r) => ['fn' => $r['fn'], 'n' => (int)$r['n'], 'tokens' => (int)$r['tokens'], 'first' => $t($r['first']), 'last' => $t($r['last'])]),
+    'vehicles' => $rows("SELECT id,name,seen_at FROM vehicles WHERE seen_uid=?", fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'seen_at' => $t($r['seen_at'])]),
+    'applog' => $rows("SELECT at,lvl,cat,msg,route FROM app_log WHERE user_id=? ORDER BY at DESC LIMIT 5000", fn($r) => ['at' => (int)$r['at'], 'lvl' => $r['lvl'], 'cat' => APPLOG_CATS[$r['cat']] ?? $r['cat'], 'msg' => $r['msg'], 'route' => $r['route']]),
+  ]; }
+// Rahmen der Auszüge: Organisation, Logo, Aufbewahrung (Anonymisierung, Applikationslog), wer und wann
+function dsarMeta() { global $me, $now; $l = (string)setting('aar_logo', ''); $lg = legalCfg();
+  return ['at' => $now, 'by' => $me['name'], 'org' => orgInfo()['name'], 'legal' => array_intersect_key($lg, array_flip(['org', 'addr', 'contact', 'privacy'])), 'logo' => str_starts_with($l, 'data:image/') ? $l : null,
+    'applog_days' => applogDays(), 'version' => verInfo()['full']]; }
+function dsarTable($t) { if (!isset(DSAR_TABLES[$t])) fail('Unbekannte Tabelle'); return $t; }
+function dsarRow($t, $r) { foreach (DSAR_HIDE[$t] ?? [] as $k) if (array_key_exists($k, $r)) $r[$k] = $r[$k] === null ? null : '(entfernt)';
+  if ($t === 'settings' && in_array($r['k'], DSAR_SECRET, true)) $r['v'] = $r['v'] === null || $r['v'] === '' ? $r['v'] : '(entfernt)';
+  if ($t === 'settings' && $r['k'] === 'mail_in_uid') $r['v'] = '(technisch)';
+  return $r; }
+
 // ausgeschaltete Funktionen serverseitig sperren (FEATURE_ROUTES)
 if (array_key_exists($route, FEATURE_ROUTES) && ($inc = activeIncident()) && !feature($inc, FEATURE_ROUTES[$route]))
   fail('Die Funktion «' . FEATURES[FEATURE_ROUTES[$route]] . '» ist für «' . kindOf($inc)['name'] . '» ausgeschaltet', 403);
@@ -4927,6 +5028,32 @@ switch ($route) {
      'pgapi' => pgaCfg() + ['key_set' => setting('pgapi_key', '') !== '' ? 1 : 0, 'curl' => function_exists('curl_init') ? 1 : 0, 'ready' => pgaReady() ? 1 : 0], 'pgapi_default' => PGA_DEFAULT, // PostGIS-API, ohne Key
      'water_order' => waterOrder(), 'water_src' => WATER_SRC, 'water_ready' => waterReady()] : [])); // Reihenfolge der Quellen fürs Gewässernetz // PostGIS (Issue #131), ohne Passwort
  /* ---------- Technisches Applikationslog (Issue #139) ---------- */
+ /* Datenschutzauszug (Issue #199): Daten liefert der Server, PDF und ZIP entstehen im Browser; jeder Abruf eines Auszugs steht im Verlauf */
+ case 'dsar/cfg': need('dsar', 'dsar_org'); $h = json_decode((string)setting('dsar_hist', ''), true);
+  out(['people' => can('dsar') ? array_map(fn($r) => ints($r, ['id', 'active']), $db->query("SELECT id,name,username,active FROM users ORDER BY active DESC, name")->fetchAll()) : [],
+    'hist' => is_array($h) ? $h : [], 'user' => can('dsar') ? 1 : 0, 'org' => can('dsar_org') ? 1 : 0]);
+ case 'dsar/user': need('dsar'); $id = (int)($in['id'] ?? 0); $d = dsarUser($id);
+  $f = in_array($in['fmt'] ?? '', ['pdf', 'zip'], true) ? $in['fmt'] : 'pdf'; dsarHist('user', $id, $f);
+  out(['meta' => dsarMeta(), 'name' => $d['user']['name'], 'data' => $d]);
+ case 'dsar/org': need('dsar_org'); $tb = [];
+  foreach (DSAR_TABLES as $t => [$l]) { try { $n = (int)$db->query("SELECT COUNT(*) FROM $t")->fetchColumn(); } catch (Throwable $e) { $n = null; } $tb[] = ['t' => $t, 'label' => $l, 'n' => $n]; }
+  $f = in_array($in['fmt'] ?? '', ['pdf', 'zip'], true) ? $in['fmt'] : 'pdf'; dsarHist('org', null, $f . (!empty($in['voice']) ? '+voice' : '') . (!empty($in['arch']) ? '+arch' : ''));
+  out(['meta' => dsarMeta(), 'tables' => $tb, 'hidden' => DSAR_HIDE, 'secret' => DSAR_SECRET, 'skipped' => ['ai_cache' => 'Zwischenspeicher der AI-Antworten', 'veh_cand' => 'Zwischenstand des automatischen Fahrzeugverbunds', 'aar_arch_part' => 'gesicherte PDFs, als eigene Dateien'],
+    'people' => array_map(fn($r) => ints($r, ['id', 'active', 'last_login']), $db->query("SELECT id,name,username,active,last_login FROM users ORDER BY name")->fetchAll()),
+    'voice' => array_map(fn($r) => ints($r, ['id', 'incident_id']), array_values(array_filter(dsarQ("SELECT id,incident_id,file,mime FROM voice WHERE file IS NOT NULL ORDER BY id"), fn($v) => ($p = voicePath($v)) && is_file($p)))),
+    'arch' => array_map(fn($r) => ints($r, ['incident_id', 'pdf_at']), dsarQ("SELECT incident_id,pdf_at,pdf_name FROM aar_arch WHERE pdf_at IS NOT NULL ORDER BY incident_id"))]);
+ case 'dsar/org/table': need('dsar_org'); $t = dsarTable((string)($in['t'] ?? '')); $o = max(0, (int)($in['o'] ?? 0));
+  $s = $db->prepare("SELECT * FROM $t ORDER BY " . DSAR_TABLES[$t][1] . " LIMIT " . DSAR_PAGE . " OFFSET $o"); $s->execute(); $rows = []; $b = 0;
+  while ($r = $s->fetch()) { $r = dsarRow($t, $r); $rows[] = $r; $b += strlen((string)json_encode($r, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR)); if ($b > DSAR_BYTES) break; }
+  $s->closeCursor(); out(['rows' => $rows, 'next' => count($rows) === DSAR_PAGE || $b > DSAR_BYTES ? $o + count($rows) : null]);
+ case 'dsar/file': // Datei zum Auszug (kein JSON): kind voice = Durchsage (dsar oder dsar_org), arch = gesichertes PDF eines After Action Review (dsar_org)
+  $k = (string)($_GET['kind'] ?? ''); $id = (int)($_GET['id'] ?? 0);
+  if ($k === 'voice') { need('dsar', 'dsar_org'); $v = dsarQ("SELECT * FROM voice WHERE id=?", [$id])[0] ?? null; if (!$v || !($p = voicePath($v)) || !is_file($p)) fail('Die Aufnahme gibt es nicht mehr', 404);
+    header('Content-Type: ' . ($v['mime'] ?: 'application/octet-stream')); header('Content-Length: ' . filesize($p)); readfile($p); exit; }
+  if ($k === 'arch') { need('dsar_org'); $a = dsarQ("SELECT pdf_parts FROM aar_arch WHERE incident_id=? AND pdf_at IS NOT NULL", [$id])[0] ?? null; if (!$a) fail('Kein gesichertes PDF', 404);
+    header('Content-Type: application/pdf'); $s = $db->prepare("SELECT data FROM aar_arch_part WHERE incident_id=? AND n=?");
+    for ($n = 0; $n < (int)$a['pdf_parts']; $n++) { $s->execute([$id, $n]); echo base64_decode((string)$s->fetchColumn()); $s->closeCursor(); } exit; }
+  fail('Unbekannte Datei');
  case 'applog': need('applog'); // neueste zuerst; lvl = mindestens diese Stufe (warn = Warnungen und Fehler), cat, q (Text, Route, Angaben), before = ältere als diese ID, after = neuere (Aktualisieren)
   $w = []; $p = [];
   $lv = (string)($in['lvl'] ?? ''); if ($lv === 'warn') $w[] = "l.lvl IN ('warn','err')"; elseif ($lv === 'err') $w[] = "l.lvl='err'"; elseif ($lv === 'info') $w[] = "l.lvl='info'";

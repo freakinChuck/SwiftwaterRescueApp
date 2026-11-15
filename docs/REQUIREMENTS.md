@@ -316,6 +316,9 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **RC-05** – Die Angaben der Organisation (Name, Adresse, Kontakt, Verantwortliche, Datenschutzkontakt, Hosting, Zusatztexte) stellt die Verwaltung ein (Kategorie «Rechtliches», Recht «Impressum & Datenschutz einstellen») (#102).
 - **RC-06** – Logo und Name der Organisation sind in der App präsent: Anmeldung, Kopfzeile des Menüs der Einsatz-App, Fusszeile des Menüs (mit Impressum, Lizenzen, Datenschutz), Profil (Karte «Rechtliches»), Verwaltung, öffentliche Ansicht, Impressum und Kontenliste der nativen App. Logo = Logo des After Action Review (Auswertung → «After Action Review einrichten»), Name aus «Rechtliches», sonst der des Review; auf hellem Grund, damit es gut sichtbar ist (#123).
 
+- **RC-07** – Datenschutzauszug je Person (Auskunftsbegehren nach DSG): alle zu einer Person gespeicherten Daten lesbar als PDF und maschinenlesbar als ZIP (JSON, CSV, Standortverlauf als GeoJSON, Profilbild, eigene Sprachaufnahmen); nur mit dem eigenen Recht «Datenschutzauszug je Person erstellen» (#199).
+- **RC-08** – Datenexport der Organisation: alle Daten der App als ZIP (je Tabelle JSON und CSV, optional Sprachaufnahmen und gesicherte After Action Reviews) und eine Übersicht als PDF; ohne Passwörter, Schlüssel und Zugangstoken; nur mit dem eigenen Recht «Datenexport der Organisation erstellen» (#199).
+- **RC-09** – Jeder Auszug und Export wird mit Zeitpunkt, erstellender Person, betroffener Person und Format im Verlauf festgehalten (höchstens 200 Einträge) und im Applikationslog protokolliert (#199).
 
 ## 23. Native Apps (NT)
 

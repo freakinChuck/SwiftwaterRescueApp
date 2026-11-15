@@ -105,7 +105,7 @@ details.fbmy{display:block;margin:.4rem 0}details.fbmy>*+*{margin-top:.4rem}labe
 #sMail label.chk{display:flex;flex-direction:row;align-items:center;gap:.4rem}#sMail .mut>label.chk{display:inline-flex}#sMail label.chk input{margin:0;flex:none}#sMail label.chk .gdot{margin:0;flex:none} /* E-Mail-Alarm: Farbpunkt auf der Zeile des Häkchens */
 .pgf{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.4rem 1rem;max-width:46rem;margin:.5rem 0}.pgf label{display:flex;flex-direction:column;gap:.25rem;margin:0}.pgf input,.pgf select{margin:0;width:100%;box-sizing:border-box}
 #sMp .mpr.off{opacity:.65}#sMp .mpb{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:.3rem 0}#sMp .mpb button{flex:0 0 auto;width:auto;min-width:2.4rem;padding:.3rem .7rem;margin:0}#sMp .mpb label{margin-right:auto!important}#sMp .chip{font-size:.72rem;padding:.05rem .4rem;border-radius:.6rem;background:var(--chip,rgba(127,127,127,.18))}#sMp .mpimg{width:96px;height:96px;vertical-align:middle;border-radius:4px;margin-left:.4rem}#sMp table.mpk{border-collapse:collapse}#sMp table.mpk td,#sMp table.mpk th{padding:.25rem .5rem;text-align:center;border-bottom:1px solid rgba(127,127,127,.25)}#sMp table.mpk td:first-child,#sMp table.mpk th:first-child{text-align:left}#sMp .tblw{overflow-x:auto}
-#sO label.chk,#sHy label.chk,#sVeh label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
+#sO label.chk,#sHy label.chk,#sVeh label.chk,#sDs label.chk{display:flex;align-items:center;gap:.5rem;margin:.4rem 0} /* AI-Assistent: je Häkchen eine Zeile */
 #sVeh label.mut{display:flex;flex-direction:column;gap:.2rem;margin:.5rem 0;max-width:36rem} #sVeh #bcU,#sVeh #bcUs{width:100%} #sVeh .row>button{flex:0 0 auto} /* Fahrzeuge (Issue #177) */
 #sAi .aiflds{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:.6rem;margin:.4rem 0 .6rem}#sAi .aifld{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem;margin:.4rem 0}#sAi .aiflds .aifld{margin:0}#sAi .aifld>label:first-child,#sAi .aifld>b{font-weight:600}#sAi .aifld input,#sAi .aifld select{margin:0;width:100%}#sAi .aifld .h{color:var(--mut);font-size:.82rem}#sAi .aifld label.chk{margin:.1rem 0}
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
@@ -201,12 +201,12 @@ const NAV=[
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['direktanruf','sTel','Direktanruf',loadTel],['ai','sAi','AI-Assistent',loadAi]]],
   ['Karte & Daten',[['karten','sMp','Kartenanbieter',loadMaps],['koordinaten','sC','Koordinaten',loadCoords],['geoquellen','sO','Geodaten-Quellen',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['geodaten','sGeo','Geodaten übernehmen',loadGeo],['fahrzeuge','sVeh','Fahrzeuge',loadVeh]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
-  ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal]]],
+  ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal],['datenschutzauszug','sDs','Datenschutzauszug',loadDsar]]],
   ['Konnektivität',[['emailalarm','sMail','E-Mail-Alarm',loadMail],['funk','sVx','Funk & Konferenz',loadVoice]]],
   ['System',[['applog','sAL','Applikationslog',loadAppLog],['versionen','sVer','Versionen',loadVer]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',ausbildung:'skills',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',planungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',direktanruf:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',emailalarm:'cfg_conn',funk:'cfg_conn',applog:'applog',versionen:'versions'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',ausbildung:'skills',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',planungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',direktanruf:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',datenschutzauszug:['dsar','dsar_org'],emailalarm:'cfg_conn',funk:'cfg_conn',applog:'applog',versionen:'versions'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -1014,6 +1014,108 @@ async function loadLegal(){const el=$('#sLg');let s;try{s=await api('legal')}cat
     ${sbar('lgSv','Speichern','<a class="btn" href="legal.html" target="_blank" rel="noopener">Seite ansehen</a>')}`;dirtyWire(el);
   $('#lgSv').onclick=()=>{const v={};F.forEach(([k])=>v[k]=$('#lg_'+k).value);$('#lgSv').disabled=true;
     api('settings/save',{legal:v}).then(()=>{toast('Gespeichert','ok');loadLegal()}).catch(e=>{$('#lgSv').disabled=false;fail(e)})}}
+/* ---------- Datenschutzauszug (Issue #199) ---------- */
+// Auszug je Person (Recht dsar) und Datenexport der Organisation (Recht dsar_org). Der Server liefert die Daten (dsar/user, dsar/org, dsar/org/table, dsar/file),
+// PDF (aarPdf, jsPDF mit AutoTable) und ZIP (JSZip) entstehen hier im Browser. Jeder Auszug steht im Verlauf.
+const dsT=ts=>ts?new Date(ts*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
+const dsD=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
+const dsFn=s=>String(s||'').replace(/[^\p{L}\p{N}]+/gu,'_').replace(/^_+|_+$/g,'').slice(0,40)||'Auszug';
+const dsC=(la,lo)=>la==null?'–':fmtC(la,lo,me.coord_sys&&me.coord_sys!=='none'?me.coord_sys:me.coord_default||'lv95')+` (WGS84 ${(+la).toFixed(5)}, ${(+lo).toFixed(5)})`;
+const dsV=v=>v==null||v===''?'–':typeof v==='object'?JSON.stringify(v):String(v);
+// CSV wie die übrigen Exporte (Semikolon, UTF-8 mit BOM); Spalten = alle vorkommenden Schlüssel
+const dsCsv=rows=>{const ks=[...new Set(rows.flatMap(r=>Object.keys(r)))],q=v=>'"'+(v==null?'':typeof v==='object'?JSON.stringify(v):String(v)).replace(/"/g,'""')+'"';
+  return'﻿'+[ks.map(q).join(';'),...rows.map(r=>ks.map(k=>q(r[k])).join(';'))].join('\r\n')};
+const dsImg=s=>new Promise(ok=>{if(!s)return ok(null);const im=new Image(),png=s.startsWith('data:image/png');im.onload=()=>ok({src:s,w:im.naturalWidth||1,h:im.naturalHeight||1,fmt:png?'PNG':'JPEG',ext:png?'png':'jpg'});im.onerror=()=>ok(null);im.src=s});
+const dsExt=m=>({'audio/mp4':'m4a','audio/m4a':'m4a','audio/x-m4a':'m4a','audio/aac':'aac','audio/webm':'webm','audio/ogg':'ogg','audio/mpeg':'mp3','audio/wav':'wav'})[String(m||'').split(';')[0]]||'bin';
+async function dsFile(kind,id){const r=await fetch(`${API}?r=dsar/file&kind=${kind}&id=${id}`,{headers:{'X-Token':token||''}});if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'HTTP '+r.status)}return r.blob()}
+const dsSay=t=>{const p=$('#dsP');if(p)p.textContent=t};
+// Rahmen beider Dokumente: Organisation, Ersteller, Zeitpunkt
+const dsHead=(m,title,sub)=>[{t:'title',x:title},{t:'sub',x:sub},{t:'kv',rows:[['Organisation',m.org||'–'],...(m.legal.addr?[['Adresse',m.legal.addr]]:[]),...(m.legal.privacy||m.legal.contact?[['Kontakt Datenschutz',m.legal.privacy||m.legal.contact]]:[]),['Erstellt am',dsT(m.at)],['Erstellt von',m.by],['Stand der Software',m.version]]}];
+// PDF-Modell des Auszugs je Person: alle Abschnitte, leere fehlen; der Standortverlauf nur als Anzahl je Einsatz (vollständig im ZIP)
+function dsUserModel(x,photo){const d=x.data,u=d.user,m=x.meta,B=dsHead(m,'Datenschutzauszug',`${u.name} (${u.username})`),il={};
+  d.incidents.forEach(i=>il[i.incident_id]=`#${i.incident_id} ${dsT(i.alarm_at)} ${i.kind}`);const iL=id=>il[id]||'#'+id;
+  B.push({t:'p',x:'Dieser Auszug enthält alle Daten, die die App zu dieser Person gespeichert hat (Auskunft nach dem Datenschutzgesetz). Die Daten in maschinenlesbarer Form stehen im ZIP (JSON und CSV). Passwörter und Zugangstoken werden nicht ausgegeben.'});
+  const sec=(h,head,w,rows)=>{if(rows.length)B.push({t:'h',x:`${h} (${rows.length})`},{t:'table',head,w,rows})};
+  B.push({t:'h',x:'Konto und persönliche Einstellungen'});if(photo)B.push({t:'img',...photo,cap:'Profilbild'});
+  B.push({t:'kv',rows:[['Name',u.name],['Benutzername',u.username],['Status',u.active?'aktiv':'deaktiviert'],['Telefon',u.phone||'–'],['Letzte Anmeldung',u.last_login?dsT(u.last_login):u.last_login===0?'unbekannt (vor der Erfassung)':'nie'],
+    ['Passwort ändern beim nächsten Login',u.must_change?'ja':'nein'],['Übungsmodus',u.exercise_mode?'ein':'aus'],['Koordinatensystem',u.coord_sys||'Standard'],['Navigations-App',u.nav_app||'Standard'],
+    ['Fahrzeuge ausserhalb von Einsätzen melden',u.beacon?'ja':'nein'],['Eigene Messstationen',dsV(u.hydro)],['AI-Assistent',dsV(u.ai_modes)],['Anzeige feste Standorte',dsV(u.place_view)],
+    ['Benutzerrollen',d.uroles.join(', ')||'–'],['Einsatzgruppen',d.groups.join(', ')||'–']]});
+  sec('Angemeldete Geräte (Apps)',['Gerät','Plattform','Version','Angemeldet','Zuletzt gesehen'],[1400,800,800,1000,1000],d.sessions.map(s=>[s.device||'–',s.platform||'–',s.app_ver||'–',dsT(s.created),dsT(s.last_seen)]));
+  sec('Push-Benachrichtigungen',['Art','Dienst','Angemeldet'],[1200,2400,1400],d.push.map(p=>[p.kind,p.service||'–',dsT(p.created)]));
+  sec('Abwesenheiten',['Art','Von','Bis','Bemerkung','Erfasst'],[1000,800,800,1300,1100],d.absences.map(a=>[a.kind+(a.removed?' (entfernt)':''),dsT(a.from_at),a.until_at?dsT(a.until_at):'bis auf Weiteres',a.note||'–',`${dsT(a.created_at)} ${a.by||''}`]));
+  sec('Regelmässige Einsatzzeiten',['Art','Tage','Zeit','Bemerkung','Erfasst'],[1000,1000,700,1200,1100],d.rules.map(r=>[r.mode+(r.removed?' (entfernt)':''),r.days,`${r.from}–${r.to}`,r.note||'–',`${dsT(r.created_at)} ${r.by||''}`]));
+  sec('Ausbildung',['Fähigkeit','Datum','Bemerkung','Erfasst'],[1500,800,1500,1200],d.skills.map(s=>[s.skill+(s.removed?' (entfernt)':''),dsT(s.done_at),s.note||'–',`${dsT(s.created_at)} ${s.by||''}`]));
+  sec('Planungen',['Titel','Rolle','Datum'],[2500,1500,1000],d.plans.map(p=>[p.title||'–',p.as,p.plan_at?dsT(p.plan_at):'–']));
+  sec('Anmeldungen zu Übungen',['Übung','Antwort','Bemerkung','Am'],[1800,1000,1200,1000],d.signups.map(s=>[s.plan||'–',s.status,s.note||'–',dsT(s.at)]));
+  sec('Teilnahmen an Einsätzen',['Einsatz','Meldung','Einrückoption / Rolle','Ausgetreten','Letzter Standort','Aufzeichnung'],[900,1000,900,600,1000,600],
+    d.incidents.map(i=>[iL(i.incident_id)+(i.ended_at?'':' (läuft)'),i.message||'–',[i.mode,i.role].filter(Boolean).join(' / ')||'–',i.left_at?dsT(i.left_at):'–',i.lat!=null?`${dsC(i.lat,i.lon)}, ${dsT(i.loc_at)}`:'–',i.track_n?i.track_n+' Punkte':'–']));
+  sec('Einträge im Einsatzlog',['Einsatz','Zeit','Eintrag'],[1100,800,3100],d.log.map(l=>[iL(l.incident_id),dsT(l.ts),l.text]));
+  sec('Gesendete Nachrichten',['Einsatz','Zeit','An','Text','Standort'],[900,700,800,1600,1000],d.messages.map(n=>[iL(n.incident_id),dsT(n.created),n.to,n.text,n.lat!=null?dsC(n.lat,n.lon):'–']));
+  sec('Empfangene Nachrichten (an diese Person gerichtet)',['Einsatz','Zeit','Von','Text'],[1000,800,900,2300],d.received.map(n=>[iL(n.incident_id),dsT(n.created),n.from||'–',n.text]));
+  sec('Durchsagen (Funk)',['Einsatz','Zeit','Kanal','Dauer','Transkript','Aufnahme'],[900,700,700,400,1700,600],d.voice.map(v=>[iL(v.incident_id),dsT(v.rec_at),v.channel||'–',v.dur_s+' s',v.transcript||'–',v.audio?'im ZIP':'gelöscht']));
+  if(d.feedback.length){B.push({t:'h',x:`Einsatzfeedback (${d.feedback.length})`});d.feedback.forEach(f=>B.push({t:'q',x:`${iL(f.incident_id)} · ${dsT(f.updated||f.created)}`},{t:'kv',rows:f.answers.length?f.answers:[['–','keine Angaben']]}))}
+  sec('Erfasst oder bearbeitet',['Was','Einsatz','Bezeichnung','Zeit'],[1400,1100,1500,1000],d.created.map(c=>[c.what,iL(c.incident_id),c.name||'–',dsT(c.at)]));
+  sec('Fahrzeuge (zuletzt von dieser Person gesehen)',['Fahrzeug','Zeit'],[3000,2000],d.vehicles.map(v=>[v.name,dsT(v.seen_at)]));
+  sec('Nutzung des AI-Assistenten',['Funktion','Anfragen','Tokens','Erste','Letzte'],[1200,800,800,1100,1100],d.ai.map(a=>[a.fn,String(a.n),String(a.tokens),dsT(a.first),dsT(a.last)]));
+  sec(`Applikationslog (letzte ${m.applog_days} Tage)`,['Zeit','Stufe','Bereich','Ereignis'],[800,500,900,2800],d.applog.map(l=>[dsT(l.at),l.lvl,l.cat,l.msg]));
+  B.push({t:'note',x:`Nicht enthalten: Einsätze, deren Teilnahmen anonymisiert und vom Konto gelöst wurden (Stufe «Teilnahmen vom Konto lösen»), sind dieser Person nicht mehr zugeordnet. Einträge im Applikationslog werden nach ${m.applog_days} Tagen gelöscht. Erstellt am ${dsT(m.at)} von ${m.by}.`});
+  return B}
+async function dsUser(id,fmt){const b=$(fmt==='zip'?'#dsZ':'#dsF');b.disabled=true;
+  try{dsSay('Daten werden geladen …');const x=await api('dsar/user',{id,fmt}),d=x.data,photo=await dsImg(d.photo),logo=await dsImg(x.meta.logo);
+    dsSay('PDF wird erstellt …');const pdf=await aarPdf(dsUserModel(x,photo),logo,'Datenschutzauszug '+d.user.name),base=`Datenschutzauszug_${dsFn(d.user.name)}_${dsD()}`;
+    if(fmt!=='zip'){aarSave(pdf,base+'.pdf');return}
+    await loadJs(AAR_LIB.zip);const z=new JSZip(),{photo:_,...data}=d;
+    z.file(base+'.pdf',pdf);z.file('daten.json',JSON.stringify({meta:{...x.meta,logo:undefined},data},null,1));
+    Object.entries(data).forEach(([k,v])=>{if(Array.isArray(v)&&v.length&&typeof v[0]==='object')z.file(`csv/${k}.csv`,dsCsv(v))});
+    if(photo)z.file('profilbild.'+photo.ext,photo.src.split(',')[1],{base64:true});
+    if(d.track.length)z.file('standortverlauf.geojson',JSON.stringify({type:'FeatureCollection',features:d.track.map(t=>({type:'Feature',geometry:{type:'Point',coordinates:[t.lon,t.lat]},properties:{incident_id:t.incident_id,ts:t.ts,zeit:new Date(t.ts*1000).toISOString(),vehicle_id:t.vehicle_id}}))}));
+    const vs=d.voice.filter(v=>v.audio);let miss=0;
+    for(const [n,v] of vs.entries()){dsSay(`Durchsagen ${n+1} von ${vs.length} …`);try{z.file(`durchsagen/${v.incident_id}_${v.id}.${dsExt(v.mime)}`,await dsFile('voice',v.id))}catch(e){miss++}}
+    z.file('LIESMICH.txt',`Datenschutzauszug ${d.user.name} (${d.user.username})\r\nErstellt am ${dsT(x.meta.at)} von ${x.meta.by}\r\n\r\n${base}.pdf  lesbare Fassung\r\ndaten.json  alle Daten (Zeiten als Unix-Zeit in Sekunden, Koordinaten WGS84)\r\ncsv/  je Abschnitt eine Tabelle (Semikolon, UTF-8)\r\nstandortverlauf.geojson  aufgezeichnete Standorte\r\nprofilbild  Profilbild\r\ndurchsagen/  eigene Sprachaufnahmen (Einsatz_Aufnahme)${miss?`\r\n\r\n${miss} Aufnahme(n) konnten nicht geladen werden.`:''}\r\n`);
+    dsSay('ZIP wird erstellt …');aarSave(await z.generateAsync({type:'blob',compression:'DEFLATE'}),base+'.zip');if(miss)toast(miss+' Aufnahme(n) fehlen im ZIP.','info')}
+  catch(e){fail(e)}finally{b.disabled=false;dsSay('');loadDsarHist()}}
+// Datenexport der Organisation: Übersicht als PDF, im ZIP je Tabelle JSON und CSV (seitenweise geladen), auf Wunsch Durchsagen und gesicherte After Action Reviews
+async function dsOrg(fmt){const b=$(fmt==='zip'?'#dsOZ':'#dsOF');b.disabled=true;const voice=!!($('#dsOV')||{}).checked,arch=!!($('#dsOA')||{}).checked;
+  try{dsSay('Übersicht wird geladen …');const x=await api('dsar/org',{fmt,voice:voice?1:0,arch:arch?1:0}),m=x.meta,logo=await dsImg(m.logo);
+    const B=dsHead(m,'Datenexport der Organisation',m.org||'Swiftwater Rescue');
+    B.push({t:'p',x:'Übersicht über alle Daten der Organisation in der App. Die Daten selbst stehen im ZIP: je Tabelle eine JSON- und eine CSV-Datei. Passwörter, Schlüssel und Zugangstoken sind entfernt.'},
+      {t:'h',x:'Tabellen'},{t:'table',head:['Tabelle','Inhalt','Zeilen'],w:[1400,2800,800],rows:x.tables.map(t=>[t.t,t.label,t.n==null?'–':String(t.n)])},
+      {t:'h',x:`Personen (${x.people.length})`},{t:'table',head:['Name','Benutzername','Status','Letzte Anmeldung'],w:[1600,1300,800,1300],rows:x.people.map(p=>[p.name,p.username,p.active?'aktiv':'deaktiviert',p.last_login?dsT(p.last_login):'–'])},
+      {t:'h',x:'Nicht enthalten'},{t:'table',head:['Was','Grund'],w:[2000,3000],rows:[...Object.entries(x.hidden).map(([t,c])=>[`${t}: ${c.join(', ')}`,'Zugangsdaten bzw. Token, Wert «(entfernt)»']),
+        [`Einstellungen: ${x.secret.join(', ')}`,'Passwörter und Schlüssel, Wert «(entfernt)»'],...Object.entries(x.skipped).map(([t,l])=>[t,l])]},
+      {t:'note',x:`Sprachaufnahmen: ${x.voice.length} gespeichert${fmt==='zip'?voice?', im ZIP':', nicht im ZIP':''}. Gesicherte After Action Reviews: ${x.arch.length}${fmt==='zip'?arch?', im ZIP':', nicht im ZIP':''}. Erstellt am ${dsT(m.at)} von ${m.by}.`});
+    dsSay('PDF wird erstellt …');const pdf=await aarPdf(B,logo,'Datenexport '+(m.org||'')),base=`Datenexport_${dsFn(m.org||'Organisation')}_${dsD()}`;
+    if(fmt!=='zip'){aarSave(pdf,base+'.pdf');return}
+    await loadJs(AAR_LIB.zip);const z=new JSZip();z.file(base+'.pdf',pdf);let miss=0;
+    for(const [n,t] of x.tables.entries()){if(!t.n)continue;const rows=[];let o=0;
+      while(o!=null){dsSay(`Tabelle ${n+1} von ${x.tables.length}: ${t.label} (${rows.length} von ${t.n}) …`);const r=await api('dsar/org/table',{t:t.t,o});rows.push(...r.rows);o=r.next}
+      z.file(`tabellen/${t.t}.json`,JSON.stringify(rows));z.file(`tabellen/${t.t}.csv`,dsCsv(rows))}
+    if(voice)for(const [n,v] of x.voice.entries()){dsSay(`Durchsagen ${n+1} von ${x.voice.length} …`);try{z.file(`durchsagen/${v.incident_id}/${v.id}.${dsExt(v.mime)}`,await dsFile('voice',v.id))}catch(e){miss++}}
+    if(arch)for(const [n,a] of x.arch.entries()){dsSay(`Gesicherte Reviews ${n+1} von ${x.arch.length} …`);try{z.file(`aar_gesichert/${a.incident_id}_${dsFn(String(a.pdf_name||'AAR').replace(/\.pdf$/i,''))}.pdf`,await dsFile('arch',a.incident_id))}catch(e){miss++}}
+    z.file('LIESMICH.txt',`Datenexport ${m.org||''}\r\nErstellt am ${dsT(m.at)} von ${m.by}, Stand der Software ${m.version}\r\n\r\n${base}.pdf  Übersicht\r\ntabellen/  je Tabelle JSON und CSV (Semikolon, UTF-8); Zeiten als Unix-Zeit in Sekunden, Koordinaten WGS84\r\n${voice?'durchsagen/  Sprachaufnahmen je Einsatz\r\n':''}${arch?'aar_gesichert/  vor dem Anonymisieren gesicherte After Action Reviews\r\n':''}\r\nPasswörter, Schlüssel und Zugangstoken sind entfernt («(entfernt)»).${miss?`\r\n${miss} Datei(en) konnten nicht geladen werden.`:''}\r\n`);
+    dsSay('ZIP wird erstellt …');aarSave(await z.generateAsync({type:'blob',compression:'DEFLATE'}),base+'.zip');if(miss)toast(miss+' Datei(en) fehlen im ZIP.','info')}
+  catch(e){fail(e)}finally{b.disabled=false;dsSay('');loadDsarHist()}}
+let dsCfg=null;
+async function loadDsarHist(){const el=$('#dsH');if(!el)return;try{dsCfg=await api('dsar/cfg')}catch(e){return}el.innerHTML=dsHistHtml()}
+const dsWhat=w=>{const [f,...x]=String(w||'').split('+'),m={voice:'Durchsagen',arch:'gesicherten Reviews'};return f.toUpperCase()+(x.length?' mit '+x.map(k=>m[k]||k).join(' und '):'')};
+const dsHistHtml=()=>{const h=dsCfg.hist,nm=id=>(dsCfg.people.find(p=>p.id===id)||{}).name||(id?'Person '+id:'');
+  return h.length?`<div class="tw"><table><thead><tr><th>Zeit</th><th>Erstellt von</th><th>Auszug</th><th>Format</th></tr></thead><tbody>${h.map(r=>`<tr><td>${esc(dsT(r.at))}</td><td>${esc(r.by_name||'')}</td><td>${r.kind==='org'?'Datenexport der Organisation':esc('Person: '+nm(r.user))}</td><td>${esc(dsWhat(r.what))}</td></tr>`).join('')}</tbody></table></div>`:empty('Noch keine Auszüge erstellt.')};
+async function loadDsar(){const el=$('#sDs');try{dsCfg=await api('dsar/cfg')}catch(e){return secErr(el,'Datenschutzauszug',e)}const C=dsCfg,P=C.people;
+  const opt=p=>`<option value="${p.id}">${esc(p.name)} (${esc(p.username)})</option>`;
+  el.innerHTML=`<h2>Datenschutzauszug</h2><div class="mut">Für Auskunftsbegehren nach dem Datenschutzgesetz: alle gespeicherten Daten einer Person bzw. der ganzen Organisation, lesbar als PDF und digital als ZIP. Der Auszug enthält Namen, Standorte und Inhalte; er wird im Browser erstellt und nirgends gespeichert. Jeder Auszug steht unten im Verlauf.</div>
+    ${C.user?`<div class="scard" data-nodirty><h3>Auszug je Person</h3>${P.length>6?'<input type="search" id="dsQ" placeholder="Person suchen …" aria-label="Person suchen" autocomplete="off">':''}
+      <label class="mut">Person<select id="dsU">${P.filter(p=>p.active).length?`<optgroup label="Aktiv">${P.filter(p=>p.active).map(opt).join('')}</optgroup>`:''}${P.some(p=>!p.active)?`<optgroup label="Deaktiviert">${P.filter(p=>!p.active).map(opt).join('')}</optgroup>`:''}</select></label>
+      <div class="mut">Konto und Einstellungen, Rollen und Gruppen, Geräte, Abwesenheiten, Einsatzzeiten, Ausbildung, Planungen, Teilnahmen mit Standorten, Einsatzlog, Nachrichten, Durchsagen, Feedback, Erfasstes, AI-Nutzung und Applikationslog. Das ZIP enthält zusätzlich das PDF, alle Daten als JSON und CSV, den Standortverlauf (GeoJSON), das Profilbild und die eigenen Sprachaufnahmen.</div>
+      <div class="row"><button id="dsF">PDF erstellen</button><button id="dsZ">ZIP erstellen</button></div></div>`:''}
+    ${C.org?`<div class="scard" data-nodirty><h3>Datenexport der Organisation</h3><div class="mut">Alle Daten der App: je Tabelle eine JSON- und eine CSV-Datei, dazu eine Übersicht als PDF. Passwörter, Schlüssel und Zugangstoken sind entfernt. Bei vielen Einsätzen mit Aufzeichnung kann das einige Minuten dauern.</div>
+      <label class="chk"><input type="checkbox" id="dsOV"> Sprachaufnahmen einschliessen</label><label class="chk"><input type="checkbox" id="dsOA"> Gesicherte After Action Reviews (PDF, mit allen Namen) einschliessen</label>
+      <div class="row"><button id="dsOF">Übersicht als PDF</button><button id="dsOZ">ZIP erstellen</button></div></div>`:''}
+    <div class="mut" id="dsP" aria-live="polite"></div>
+    <h3>Verlauf</h3><div id="dsH">${dsHistHtml()}</div>`;
+  if(C.user){const q=$('#dsQ'),s=$('#dsU');if(q)q.oninput=()=>{const t=q.value.trim().toLowerCase();let f=null;[...s.options].forEach(o=>{o.hidden=!!t&&!o.textContent.toLowerCase().includes(t);if(!o.hidden&&!f)f=o});if(f&&s.selectedOptions[0]&&s.selectedOptions[0].hidden)s.value=f.value};
+    $('#dsF').onclick=()=>s.value&&dsUser(+s.value,'pdf');$('#dsZ').onclick=()=>s.value&&dsUser(+s.value,'zip')}
+  if(C.org){$('#dsOF').onclick=()=>dsOrg('pdf');$('#dsOZ').onclick=()=>dsOrg('zip')}}
 /* ---------- Koordinatensystem (Standard für alle, pro Person in der Einsatz-App unter «Konto» übersteuerbar) ---------- */
 async function loadCoords(){const el=$('#sC');let s;try{s=await api('settings')}catch(e){return secErr(el,'Koordinaten',e)}
   el.innerHTML=`<h2>Koordinaten</h2><div data-inst><label class="mut">Standard-Koordinatensystem ${instH} für die Anzeige<select id="cS">${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===s.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}</select></label>

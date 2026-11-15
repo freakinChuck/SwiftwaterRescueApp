@@ -189,7 +189,7 @@ function datenschutz(){const c=(D&&D.cfg)||{},an=D?D.anon:[],ks=(D&&D.kinds)||[]
    <li><b>Benachrichtigungen:</b> nur wenn du Push in den Einstellungen einschaltest.</li>
    <li><b>Kamera/Fotos:</b> nur beim Wählen eines Profilbilds oder eines Bildes für ein After Action Review.</li></ul>
   <h3>Deine Rechte</h3>
-  <p>Du kannst Auskunft über deine Daten verlangen sowie deren Berichtigung oder Löschung, soweit keine Aufbewahrungspflichten oder überwiegenden Interessen (z. B. Nachvollziehbarkeit eines Einsatzes) entgegenstehen. Wende dich dazu an ${c.privacy||c.contact?esc(c.privacy||c.contact):'die betreibende Organisation'}.</p>
+  <p>Du kannst Auskunft über deine Daten verlangen (die Organisation erstellt dafür einen Auszug aller zu dir gespeicherten Daten, als PDF und als ZIP) sowie deren Berichtigung oder Löschung, soweit keine Aufbewahrungspflichten oder überwiegenden Interessen (z. B. Nachvollziehbarkeit eines Einsatzes) entgegenstehen. Wende dich dazu an ${c.privacy||c.contact?esc(c.privacy||c.contact):'die betreibende Organisation'}.</p>
   ${c.privacy_note?`<h3>Ergänzungen</h3><p class="pre">${esc(c.privacy_note)}</p>`:''}`}
 
 function draw(){$('#lgMain').innerHTML=`<section id="impressum">${impressum()}</section><section id="lizenzen">${lizenzen()}</section><section id="datenschutz">${datenschutz()}</section>`;show()}
