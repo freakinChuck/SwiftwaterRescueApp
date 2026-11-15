@@ -1178,6 +1178,7 @@ class Demo {
     if (i == null) {
       return {
         'incident': null,
+        'fb_open': 0,
         'air_home': 0,
         'my_abs': _absNow(),
         'blocked': 0,
