@@ -35,6 +35,7 @@ class SwSysPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissi
     private var activity: Activity? = null
     private var binding: ActivityPluginBinding? = null
     private val locResults = mutableListOf<MethodChannel.Result>()
+    private val btResults = mutableListOf<MethodChannel.Result>()
     private var locAsking = false
 
     companion object {
@@ -172,6 +173,9 @@ class SwSysPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissi
         val r = locResults.toList()
         locResults.clear()
         r.forEach { it.success(l) }
+        val b = btResults.toList()
+        btResults.clear()
+        b.forEach { it.success(Beacons.state(ctx)) }
     }
 
     private fun start(i: Intent) {
@@ -214,12 +218,29 @@ class SwSysPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissi
                 result.success(null)
             }
             "alarmActive" -> result.success(player != null)
+            // Fahrzeuge mit BLE-Beacons (Issue #177, Beacons.kt)
+            "btState" -> result.success(Beacons.state(ctx))
+            "requestBluetooth" -> {
+                val a = activity
+                if (Beacons.permitted(ctx) || a == null) result.success(Beacons.state(ctx))
+                else {
+                    btResults.add(result)
+                    if (btResults.size == 1) a.requestPermissions(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) arrayOf(Manifest.permission.BLUETOOTH_SCAN) else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 4713)
+                }
+            }
+            "beaconScan" -> {
+                val uuids = (call.argument<List<String>>("uuids") ?: emptyList())
+                val ms = (call.argument<Int>("ms") ?: 5000).toLong().coerceIn(500, 20000)
+                Beacons.scan(ctx, uuids, ms) { result.success(it) }
+            }
+            "beaconWatch" -> result.success(Beacons.watch(ctx, call.argument<List<String>>("uuids") ?: emptyList()))
+            "beaconPending" -> result.success(Beacons.pending(ctx))
             else -> result.notImplemented()
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray): Boolean {
-        if (requestCode != 4711 && requestCode != 4712) return false
+        if (requestCode != 4711 && requestCode != 4712 && requestCode != 4713) return false
         finishLoc()
         return true
     }

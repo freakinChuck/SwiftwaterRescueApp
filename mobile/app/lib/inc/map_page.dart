@@ -30,6 +30,7 @@ import 'rd.dart';
 import 'res.dart';
 import 'store.dart';
 import 'util.dart';
+import 'veh.dart';
 import 'voice.dart';
 
 const _fitPad = EdgeInsets.fromLTRB(50, 90, 80, 50);
@@ -907,6 +908,25 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (st != null) _sheet(hyName(st), hyPopLines(s, id), lat: jd(st['lat']), lon: jd(st['lon']), actions: (c) => [OutlinedButton(onPressed: () => hyOpenBafu(id), child: const Text('Stationsseite BAFU'))]);
     });
     if (hy != null) out.add(hy);
+    // Fahrzeuge (Issue #177): je Kette ein Marker beim obersten Fahrzeug, auch ohne Einsatz (Sichtbarkeit bestimmt der Server)
+    if (s.vis('veh') && vehOf(s) != null) {
+      out.add(MarkerLayer(
+          markers: vehGroups(s).map((g) {
+        // getrennt am selben Ort stehende Ketten untereinander in einem Marker
+        final r = g.first, cs = [for (final x in g) (x, vehKids(s, ji(x['id'])))], all = [for (final c in cs) ...[c.$1, ...c.$2]];
+        final n = cs.map((c) => 1 + c.$2.length).reduce((a, b) => a > b ? a : b);
+        return Marker(
+            point: llOf(r)!,
+            width: 60.0 + 70 * n,
+            height: 14.0 + 28 * g.length,
+            alignment: Alignment.topCenter, // Spitze unten am Standort
+            child: GestureDetector(
+                onTap: () => _sheet(cs.map((c) => [c.$1, ...c.$2].map((v) => js(v['name'])).join(' + ')).join(' · '),
+                    [for (final c in cs) ...vehSheetLines(s, c.$1, c.$2), if (g.length > 1) 'Getrennt am selben Ort'],
+                    lat: jd(r['lat']), lon: jd(r['lon']), actions: (c) => [for (final v in all) ...vehBtns(context, s, v, before: () => Navigator.pop(c))]),
+                child: Align(alignment: Alignment.bottomCenter, child: vehGroupChip(s, g))));
+      }).toList()));
+    }
     if (i == null) {
       _selfLayer(out);
       return out;
@@ -1134,7 +1154,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
               // ohne Einsatz (homeCats): feste Standorte, persönliche Messstationen und Geodaten-Ebene (Issue #182)
               final cats = s.inc != null
                   ? s.viewCats()
-                  : s.viewCats().where((v) => (v.$1 == 'place' && s.places.isNotEmpty) || (v.$1 == 'hydro' && s.hyMine.isNotEmpty) || v.$1 == 'geo').toList();
+                  : s.viewCats().where((v) => (v.$1 == 'place' && s.places.isNotEmpty) || (v.$1 == 'hydro' && s.hyMine.isNotEmpty) || v.$1 == 'geo' || (v.$1 == 'veh' && vehList(s).any((x) => llOf(x) != null))).toList();
               return SafeArea(
                   child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .75),
@@ -1236,6 +1256,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     final btns = <Widget>[
       if (i != null) _fab('Kamerafokus', const Icon(Icons.center_focus_strong), () => setState(() => _camOpen = !_camOpen), active: s.autoView),
       if (i != null) _fab('Einsatzkräfte', const Icon(Icons.groups), () => _togglePanel('people'), count: _pplCount, countCol: const Color(0xFF546E7A), active: _panel == 'people'),
+      // ohne Einsatz: Fahrzeuge im selben Fenster (Issue #177)
+      if (i == null && vehList(s).isNotEmpty) _fab('Fahrzeuge', const Icon(Icons.directions_car), () => _togglePanel('people'), active: _panel == 'people'),
       if (i != null && s.feat('res')) _fab('Rettlinge', const Text('R', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), () => _togglePanel('res'), count: _resCount, active: _panel == 'res'),
       if (i != null && s.feat('msg')) _fab('Nachrichten', const Icon(Icons.chat), () => _togglePanel('msgs'), count: s.unread, active: _panel == 'msgs'),
       if (s.vx.on) _fab('Funk', const Icon(Icons.mic), () => _togglePanel('vx'), count: s.vx.unheard(null), active: _panel == 'vx'),

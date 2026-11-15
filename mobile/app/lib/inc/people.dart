@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import 'veh.dart';
 
 class PeoplePanel extends StatefulWidget {
   const PeoplePanel({super.key, required this.s, required this.map});
@@ -298,7 +299,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
     return _entry(
       lead: _mk(p),
       title: '${js(p['name'])}${me ? ' (du)' : ''}',
-      lines: ['${js(s.modeOf(js(p['mode']))['name'])} · ${has ? 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}' : 'kein Standort'}', if (cs.isNotEmpty) cs],
+      lines: ['${js(s.modeOf(js(p['mode']))['name'])} · ${has ? 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}' : 'kein Standort'}', ?vehOfPerson(s, p), if (cs.isNotEmpty) cs],
       buttons: [
         if (has) smallBtn('Zentrieren', () => _center(p)),
         if (has && uid != null) smallBtn(f ? 'Folgt' : 'Folgen', () => _follow(uid), primary: f),
@@ -386,13 +387,18 @@ class _PeoplePanelState extends State<PeoplePanel> {
         final ap = _active, xl = s.externals.map((e) => <String, dynamic>{...e, 'ext': 1}).toList();
         final showExt = s.feat('ext') && (xl.isNotEmpty || s.canManage);
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          PanelHead('Einsatzkräfte', onClose: () => map.openPanel(null)),
+          PanelHead(s.inc == null ? 'Fahrzeuge' : 'Einsatzkräfte', onClose: () => map.openPanel(null)),
           Expanded(
               child: s.inc == null
-                  ? const Padding(padding: EdgeInsets.all(12), child: Mut('Kein laufender Einsatz.'))
+                  // ohne Einsatz nur die Fahrzeuge (Issue #177)
+                  ? vehList(s).isEmpty
+                      ? const Padding(padding: EdgeInsets.all(12), child: Mut('Keine Fahrzeuge.'))
+                      : ListView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), children: vehRows(context, s, map))
                   : ListView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), children: [
                       _group('int', 'Einsatzkräfte mit App', ap, 'Noch niemand im Einsatz.', _row),
                       if (showExt) _group('ext', 'Externe Einsatzkräfte', xl, 'Keine erfasst.', _xrow),
+                      if (vehList(s).isNotEmpty) // Fahrzeuge (Issue #177)
+                        FoldGroup(title: 'Fahrzeuge', count: vehList(s).length, open: !_fold.contains('veh'), onToggle: () => _toggleFold('veh'), children: vehRows(context, s, map)),
                       if (s.canManage && s.feat('ext'))
                         Padding(padding: const EdgeInsets.only(top: 10), child: FilledButton(onPressed: _addExt, child: const Text('+ Externe Einsatzkraft'))),
                     ])),

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'accounts.dart';
 import 'api.dart';
+import 'beacon.dart';
 import 'notify.dart';
 import 'track.dart';
 
@@ -180,6 +181,9 @@ Future<int> pollAll({bool track = true}) async {
       await locResult(a, st[a.id]?.inc, err: 'Standort teilen fehlgeschlagen: $e');
     }
   }
+  try {
+    await Beacons.sync(); // Fahrzeuge ausserhalb von Einsätzen (beacon.dart, Issue #177)
+  } catch (_) {}
   return l.length;
 }
 
