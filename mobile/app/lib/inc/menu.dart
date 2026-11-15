@@ -167,8 +167,8 @@ class _IncMenuState extends State<IncMenu> {
   }
 
   String _absTxt(J a) {
-    final u = jn(a['until_at']);
-    return '${a['kind'] == 'sus' ? 'ausgesetzt' : 'abwesend'} ${u == null ? 'bis auf Weiteres' : 'bis ${fmtDT(u)}'}';
+    final u = jn(a['until_at']) ?? jn(a['until']);
+    return '${absWord(a)}${u == null ? (a['kind'] == 'rule' ? '' : ' bis auf Weiteres') : ' bis ${fmtDT(u)}'}';
   }
 
   // Hinweis für ältere Apps (Issue #175): Mindestversion des Servers bzw. höhere API-Stufe; «Später» blendet ihn 7 Tage aus
@@ -199,6 +199,15 @@ class _IncMenuState extends State<IncMenu> {
           smallBtn('Antworten', () => openWeb(context, s, 'admin.html#meine')),
         ]),
       ]);
+
+  // Kalender (Issue #181): ohne Einsatz über dem Übungsplan, öffnet admin.html#kalender; nicht im Demo
+  Widget? _calCard(BuildContext c) => s.demo
+      ? null
+      : MCard(title: 'Kalender', children: [
+          const Mut('Abwesenheiten, regelmässige Einsatzzeiten, Einsätze, geplante Übungen und ablaufende Ausbildungen auf einen Blick.'),
+        ], buttons: [
+          OutlinedButton(onPressed: () => openWeb(c, s, 'admin.html#kalender'), child: const Text('📅 Kalender öffnen')),
+        ]);
 
   // ---------- Werkzeuge und Fusszeile ----------
   Widget? _tools() {
@@ -314,6 +323,7 @@ class _IncMenuState extends State<IncMenu> {
               padding: EdgeInsets.only(top: 4),
               child: Mut('Startet mit der vorbereiteten Meldung (Sekundäreinsätze ohne Alarm). Du leitest: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
         ]),
+      ?_calCard(c),
       ?_sched(c),
       ?hydroCard(c, s, map, widget.openPrefs),
       ?_tools(),

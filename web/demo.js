@@ -356,6 +356,8 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     'absence/save':b=>{const t=now(),from=b.from?Math.max(+b.from,t-60):t,until=b.until!=null&&b.until!==''?+b.until:null;if(until!=null&&until<=Math.max(from,t))fail('«Bis» muss nach «Von» und in der Zukunft liegen');
       const k=['abs','sus'].includes(b.kind)?b.kind:'abs',nt=String(b.note||'').trim().slice(0,200)||null;if(b.id){const a=S.abs.find(x=>x.id===+b.id&&!x.removed)||fail('Eintrag nicht gefunden',404);Object.assign(a,{from_at:from,until_at:until,kind:k,note:nt});return{ok:true,id:a.id}}
       const a={id:S.seq.abs++,user_id:ME_ID,from_at:from,until_at:until,kind:k,note:nt,created_by:ME_ID,created_at:t,removed:0};S.abs.push(a);return{ok:true,id:a.id}},
+    // Regelmässige Einsatzzeiten (Issue #180): im Demo keine
+    'avail/rules':()=>({rules:[],now:null}),'avail/rule/save':()=>fail('Regelmässige Einsatzzeiten gibt es im Demo-Modus nicht.'),
     'absence/remove':b=>{const a=S.abs.find(x=>x.id===+b.id&&!x.removed)||fail('Eintrag nicht gefunden',404);a.removed=1;return{ok:true}},
     'hydro':b=>{const ids=b.ids?b.ids.map(String):HYDRO.map(h=>h.id),t=now();return{stations:HYDRO.filter(h=>ids.includes(h.id)).map(h=>({...h,at:h.at||t-240})),at:t-240,err:null}},
     'overpass':b=>{const k=opKey(b);if(OPC.has(k))return OPC.get(k);const e=new Error('Gewässernetz vom Gerät laden');e.st=502;e.data={error:e.message,query:overpassQ(b),servers:OVERPASS};throw e},

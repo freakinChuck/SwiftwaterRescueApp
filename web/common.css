@@ -156,3 +156,17 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .legalf{font-size:.8rem;color:var(--mut)}.legalf a{color:#8ec5ff}
 /* Bedienungsanleitung (Issue #37): Knopf ? zur passenden Stelle */
 button.hlp{font-weight:700;min-width:2rem;padding:.3rem .55rem}
+/* Regelmässige Einsatzzeiten (Issue #180) */
+.wdrow{display:flex;gap:.3rem;flex-wrap:wrap;margin:.3rem 0}.wdb{min-width:2.6rem;padding:.4rem .5rem}.wdb[aria-pressed=true]{background:var(--ex);border-color:var(--ex);color:#fff}
+/* Kalender (Issue #181) */
+.calbar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.4rem 0}.calbar h3{margin:0 .4rem;min-width:11rem;text-align:center}.calbar .sp{flex:1}
+.calf{display:flex;gap:.3rem .9rem;flex-wrap:wrap;margin:.3rem 0 .6rem}.calf label{display:flex;gap:.35rem;align-items:center;font-size:.88rem}.calf i{display:inline-block;width:.8rem;height:.8rem;border-radius:3px}
+.calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--line);border-top:1px solid var(--line)}
+.calg>div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:6.4rem;padding:.2rem;overflow:hidden;cursor:pointer}
+.calg .wh{min-height:0;cursor:default;text-align:center;font-size:.8rem;color:var(--mut);padding:.25rem;background:var(--panel)}
+.calg .o{opacity:.45}.calg .td .dn{background:var(--ex);color:#fff;border-radius:999px;padding:0 .4rem}.calg .sel{outline:2px solid var(--ex);outline-offset:-2px}
+.calg .dn{font-size:.8rem;font-weight:600;display:inline-block;margin-bottom:.15rem}
+.cev{display:block;font-size:.74rem;line-height:1.25;padding:.05rem .3rem;margin:.08rem 0;border-radius:4px;border-left:4px solid;background:#ffffff10;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cev.more{border:0;background:none;color:var(--mut)}
+.calday{margin-top:.8rem}.calday .cli{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;padding:.45rem .6rem;border-left:5px solid;border-bottom:1px solid var(--line);background:var(--panel);margin:.2rem 0;border-radius:4px}.calday .cli .t{min-width:7.5rem;color:var(--mut);font-size:.88rem}
+@media(max-width:700px){.calg>div{min-height:3.2rem}.cev{font-size:0;height:.45rem;padding:0;margin:.12rem 0;border-left-width:0;background:var(--c)}.cev.more{display:none}.calbar h3{min-width:0;flex:1 1 100%;order:-1}}

@@ -44,7 +44,24 @@ String _absDT(num ts) {
 /// «bis …» bzw. «bis auf Weiteres» (absUntil)
 String _absUntil(J a) {
   final u = jn(a['until']) ?? jn(a['until_at']);
-  return u != null ? 'bis ${_absDT(u)}' : 'bis auf Weiteres';
+  return u != null ? 'bis ${_absDT(u)}' : (js(a['kind']) == 'rule' ? '' : 'bis auf Weiteres');
+}
+
+
+// ---------- Regelmässige Einsatzzeiten (Issue #180, wie ruleTxt in common.js) ----------
+const _ruleMode = {'on': 'Einsatzzeit', 'off': 'Regelmässig ausgesetzt'};
+const _wd = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+String _hm(int m) => '${_p2(m ~/ 60)}:${_p2(m % 60)}';
+String _ruleDays(int d) => d == 127
+    ? 'täglich'
+    : d == 31
+        ? 'Mo–Fr'
+        : d == 96
+            ? 'Sa, So'
+            : [for (var i = 0; i < 7; i++) if (d >> i & 1 == 1) _wd[i]].join(', ');
+String _ruleTxt(J r) {
+  final f = ji(r['t_from']) ?? 0, t = ji(r['t_to']) ?? 0;
+  return '${_ruleDays(ji(r['days']) ?? 0)}, ${f == t ? 'ganzer Tag' : '${_hm(f)}–${_hm(t)}${t < f ? ' (über Mitternacht)' : ''}'}';
 }
 
 class PrefsPage extends StatefulWidget {
@@ -58,6 +75,7 @@ class PrefsPage extends StatefulWidget {
 class _PrefsPageState extends State<PrefsPage> {
   IncStore get s => widget.s;
   List<J>? _abs; // null = wird geladen
+  List<J>? _rules; // regelmässige Einsatzzeiten (Issue #180), null = nicht verfügbar
   bool _absErr = false;
   List<J> _sess = [];
   int? _loc; // Stufe der Standortberechtigung
@@ -159,6 +177,12 @@ class _PrefsPageState extends State<PrefsPage> {
       if (mounted) setState(() => (_abs = r, _absErr = false));
     } catch (_) {
       if (mounted) setState(() => (_abs = [], _absErr = true));
+    }
+    try {
+      final r = jl((await s.api.call('avail/rules'))['rules']);
+      if (mounted) setState(() => _rules = r);
+    } catch (_) {
+      if (mounted) setState(() => _rules = null); // älterer Server
     }
   }
 
@@ -445,6 +469,108 @@ class _PrefsPageState extends State<PrefsPage> {
             }));
   }
 
+  // ---------- Regelmässige Einsatzzeiten (Issue #180, ruleDialog) ----------
+  Future<void> _ruleRemove(J r) async {
+    if (!await confirmDlg(context, 'Regel entfernen?', ok: 'Entfernen', danger: true)) return;
+    try {
+      await s.api.call('avail/rule/remove', body: {'id': r['id']});
+      s.toast('Entfernt.');
+      await _absDone();
+    } catch (e) {
+      s.fail(e);
+    }
+  }
+
+  Future<void> _ruleDialog(J? r) async {
+    var mode = js(r?['mode']).isEmpty ? 'off' : js(r!['mode']);
+    var days = ji(r?['days']) ?? 31;
+    var from = ji(r?['t_from']) ?? 7 * 60, to = ji(r?['t_to']) ?? 17 * 60;
+    final note = TextEditingController(text: js(r?['note']));
+    String? err;
+    var busy = false;
+    await showDialog<void>(
+        context: context,
+        builder: (d) => StatefulBuilder(builder: (d2, ss) {
+              Future<void> pick(bool isFrom) async {
+                final m = isFrom ? from : to;
+                final t = await showTimePicker(context: d2, initialTime: TimeOfDay(hour: m ~/ 60, minute: m % 60));
+                if (t == null) return;
+                ss(() {
+                  if (isFrom) {
+                    from = t.hour * 60 + t.minute;
+                  } else {
+                    to = t.hour * 60 + t.minute;
+                  }
+                });
+              }
+
+              return AlertDialog(
+                  title: Text(r != null ? 'Regel ändern' : 'Regelmässige Einsatzzeit erfassen'),
+                  scrollable: true,
+                  content: SizedBox(
+                      width: 420,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                        DropdownButtonFormField<String>(
+                            initialValue: mode,
+                            decoration: const InputDecoration(labelText: 'Art'),
+                            items: _ruleMode.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                            onChanged: (v) => mode = v ?? 'off'),
+                        const SizedBox(height: 6),
+                        const Mut(
+                            'Einsatzzeit: Hast du solche Regeln, wirst du nur in diesen Zeiten alarmiert. Regelmässig ausgesetzt: in diesen Zeiten kein Alarm (z. B. Arbeit). Wirkt wie eine Abwesenheit; laufende Einsätze bleiben sichtbar.'),
+                        const SizedBox(height: 8),
+                        const Mut('Wochentage'),
+                        Wrap(spacing: 4, runSpacing: 4, children: [
+                          for (var i = 0; i < 7; i++)
+                            FilterChip(label: Text(_wd[i]), selected: days >> i & 1 == 1, showCheckmark: false, onSelected: (_) => ss(() => days ^= 1 << i)),
+                        ]),
+                        const SizedBox(height: 4),
+                        Wrap(spacing: 6, runSpacing: 4, children: [
+                          smallBtn('Mo–Fr', () => ss(() => days = 31)),
+                          smallBtn('Sa, So', () => ss(() => days = 96)),
+                          smallBtn('Täglich', () => ss(() => days = 127)),
+                        ]),
+                        Row(children: [
+                          Expanded(
+                              child: ListTile(
+                                  contentPadding: EdgeInsets.zero, title: const Text('Von'), subtitle: Text(_hm(from)), trailing: const Icon(Icons.schedule), onTap: () => pick(true))),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: ListTile(
+                                  contentPadding: EdgeInsets.zero, title: const Text('Bis'), subtitle: Text(_hm(to)), trailing: const Icon(Icons.schedule), onTap: () => pick(false))),
+                        ]),
+                        const Mut('«Bis» vor «Von» = über Mitternacht (zählt zum gewählten Tag), gleiche Zeit = ganzer Tag.', size: 12),
+                        TextField(controller: note, maxLength: 200, decoration: const InputDecoration(labelText: 'Bemerkung (optional)', hintText: 'z. B. Arbeit, Pikett')),
+                        if (err != null) Text(err!, style: const TextStyle(color: accRed)),
+                      ])),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(d), child: const Text('Abbrechen')),
+                    FilledButton(
+                        onPressed: busy
+                            ? null
+                            : () async {
+                                ss(() => (busy = true, err = null));
+                                try {
+                                  await s.api.call('avail/rule/save', body: {
+                                    if (r != null) 'id': r['id'],
+                                    'mode': mode,
+                                    'days': days,
+                                    'from': from,
+                                    'to': to,
+                                    'note': note.text,
+                                  });
+                                  if (d.mounted) Navigator.pop(d);
+                                  s.toast('Gespeichert.');
+                                  await _absDone();
+                                } catch (e) {
+                                  ss(() => (busy = false, err = '$e'));
+                                }
+                              },
+                        child: const Text('Speichern')),
+                  ]);
+            }));
+  }
+
   // ---------- Standort ----------
   String get _locText => switch (_loc) {
         null => 'Wird geprüft …',
@@ -463,7 +589,7 @@ class _PrefsPageState extends State<PrefsPage> {
 
   Widget _absChip(J? a) {
     if (a == null) return const Chip2('✓ einsatzfähig', color: okGreen);
-    return Chip2('⏸ ${js(a['kind']) == 'sus' ? 'ausgesetzt' : 'abwesend'} ${_absUntil(a)}${js(a['note']).isNotEmpty ? ' – ${a['note']}' : ''}', color: accOrange);
+    return Chip2('⏸ ${absWord(a)} ${_absUntil(a)}${js(a['note']).isNotEmpty ? ' – ${a['note']}' : ''}'.trim(), color: accOrange);
   }
 
   Widget _konto(J me) {
@@ -539,6 +665,29 @@ class _PrefsPageState extends State<PrefsPage> {
               smallBtn(jb(a['now']) ? 'Beenden' : 'Entfernen', () => _absRemove(a)),
             ]))),
         Padding(padding: const EdgeInsets.only(top: 6), child: Align(alignment: Alignment.centerLeft, child: OutlinedButton(onPressed: () => _absDialog(null), child: const Text('+ Abwesenheit erfassen')))),
+      ],
+      if (_rules != null && !s.demo) ...[
+        _h5('Regelmässige Einsatzzeiten'),
+        const Mut('Je Wochentag und Uhrzeit: nur in diesen Zeiten alarmiert werden (Einsatzzeit) oder regelmässig ausgesetzt.', size: 12),
+        if (_rules!.isEmpty) const Mut('Keine regelmässigen Einsatzzeiten.'),
+        ..._rules!.map((r) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(children: [
+              Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(_ruleMode[r['mode']] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Mut('${_ruleTxt(r)}${js(r['note']).isNotEmpty ? ' · ${r['note']}' : ''}', size: 12),
+              ])),
+              smallBtn('Ändern', () => _ruleDialog(r)),
+              const SizedBox(width: 4),
+              smallBtn('Entfernen', () => _ruleRemove(r)),
+            ]))),
+        Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(spacing: 8, runSpacing: 6, children: [
+              OutlinedButton(onPressed: () => _ruleDialog(null), child: const Text('+ Regel erfassen')),
+              OutlinedButton(onPressed: () => openWeb(context, s, 'admin.html#kalender'), child: const Text('📅 Kalender')), // Issue #181
+            ])),
       ],
       _h5('Übungsmodus'),
       SwitchListTile(

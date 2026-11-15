@@ -41,6 +41,8 @@ Gruppen wie «Bootsgruppe» oder «Ufergruppe» mit Farbe und Mitgliedern. Beim 
 
 Laufende und geplante Abwesenheiten aller Personen (Recht «Abwesenheiten verwalten»). Abwesende werden nicht alarmiert.
 
+Darunter stehen die Personen, die nach ihren [regelmässigen Einsatzzeiten](#profil/einsatzzeiten) gerade nicht einsatzfähig sind, und alle Regeln. **+ Regel** erfasst eine Regel für eine Person, **Ändern** und **Entfernen** wirken wie im Profil. Alles zusammen im Kalender: **📅 Kalender** in der Kopfzeile ([Kalender](#profil/kalender)).
+
 ### Ausbildung {#ausbildung}
 
 Katalog der Fähigkeiten (zum Beispiel «Rettungsschwimmer», «Bootsführer») mit Gültigkeit, Vorwarnung, Pflicht je Einsatzgruppe und ob die Person den Abschluss selbst erfasst. Die Übersicht zeigt alle Personen mit dem Stand je Fähigkeit, filterbar nach Einsatzgruppe und «nur mit Handlungsbedarf», mit Export als CSV.

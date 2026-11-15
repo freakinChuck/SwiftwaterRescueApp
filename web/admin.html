@@ -176,14 +176,15 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   mapsSet(me.maps,me.map_def); // Kartenanbieter für die kleinen Karten (Issue #106)
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   whatsNew(me.version); // nach einem Update einmal «Was ist neu» (Issue #175)
+  CALV=false;if(calMode())return calView(a); // Kalender (Issue #181): für alle Angemeldeten
   if(!nav().length&&me.my_runs==='off'&&location.hash!=='#meine'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Deine Benutzerrollen geben dir keinen Zugriff auf die Verwaltung.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
   MY=myMode();VPLAY_Q=MY?'&my=1':'';const adm=nav().length>0; // VPLAY_Q: Durchsagen im Log abspielen (Funk, Issue #113)
-  if(MY){a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}<button id="bHlp" title="Bedienungsanleitung zu diesem Bereich" aria-label="Anleitung">?</button>${userMenu()}</header>
+  if(MY){a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Meine Einsätze</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a><a class="btn" href="#kalender">📅 Kalender</a>${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}<button id="bHlp" title="Bedienungsanleitung zu diesem Bereich" aria-label="Anleitung">?</button>${userMenu()}</header>
     <div id="wrap" class="my"><main><section id="sMy"><h2>Meine Einsätze</h2><div class="mut">Wird geladen …</div></section></main></div>${adminFoot()}`;
     userMenuWire();footWire();
     if(adm)$('#bVw').onclick=e=>{e.preventDefault();location.hash='einsatzlog'};
     document.title='Swiftwater Rescue – Meine Einsätze';return loadMy()}
-  a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Verwaltung</h1><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine" title="Log und Replay deiner eigenen Einsätze, wie für Einsatzkräfte ohne Verwaltungsrechte">📋 Meine Einsätze</a>':''}<button id="bHlp" title="Bedienungsanleitung zu diesem Bereich" aria-label="Anleitung">?</button>${userMenu()}</header>
+  a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Verwaltung</h1><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine" title="Log und Replay deiner eigenen Einsätze, wie für Einsatzkräfte ohne Verwaltungsrechte">📋 Meine Einsätze</a>':''}<a class="btn" href="#kalender" title="Abwesenheiten, Einsatzzeiten, Einsätze und Planungen">📅 Kalender</a><button id="bHlp" title="Bedienungsanleitung zu diesem Bereich" aria-label="Anleitung">?</button>${userMenu()}</header>
     <div id="wrap"><nav id="nav" aria-label="Bereiche der Verwaltung"><select id="navSel" aria-label="Bereich wählen">${nav().map(([g,its])=>`<optgroup label="${esc(g)}">${its.map(([k,,l])=>`<option value="${k}">${esc(l)}</option>`).join('')}</optgroup>`).join('')}</select>
     <div class="navl">${navItems().length>8?'<input type="search" id="navQ" placeholder="Bereich suchen …" aria-label="Bereich der Verwaltung suchen" autocomplete="off">':''}${nav().map(([g,its])=>its.length===1?`<div class="ngw one" data-g="${esc(g)}">${navLink(its[0],g)}</div>`
       :`<div class="ngw" data-g="${esc(g)}"><button type="button" class="ng" aria-expanded="false"><span class="ni" aria-hidden="true">${NAV_ICON[g]||'•'}</span><span class="nl">${esc(g)}</span><span class="nc">${its.length}</span><span class="chev" aria-hidden="true">›</span></button><div class="ngi">${its.map(it=>navLink(it)).join('')}</div></div>`).join('')}<div class="mut nq0" hidden>Kein Bereich gefunden.</div></div></nav>
@@ -231,7 +232,7 @@ const adminFoot=()=>`<footer id="aFoot" class="legalf">${me.org_info&&me.org_inf
 function footWire(){const c=$('#fChg');if(c)c.onclick=e=>{e.preventDefault();changesDlg()}}
 let umDoc=false;
 // Anleitung zum geöffneten Bereich (Issue #37): Abschnitt = Schlüssel in NAV, siehe hilfe/verwaltung.md
-function hlpWire(){const b=$('#bHlp');if(b)b.onclick=()=>{const k=location.hash.slice(1).split('?')[0];hilfe(MY||k==='meine'?'auswertung/meine':k==='planungen'?'planung/vorbereiten':'verwaltung'+(k?'/'+k:''))}}
+function hlpWire(){const b=$('#bHlp');if(b)b.onclick=()=>{const k=location.hash.slice(1).split('?')[0];hilfe(k==='kalender'?'profil/kalender':MY||k==='meine'?'auswertung/meine':k==='planungen'?'planung/vorbereiten':'verwaltung'+(k?'/'+k:''))}}
 function userMenuWire(){hlpWire();const b=$('#bUm'),l=$('#umL'),set=o=>{l.hidden=!o;b.setAttribute('aria-expanded',o)};b.onclick=e=>{e.stopPropagation();set(l.hidden)};
   if(!umDoc){umDoc=true;document.addEventListener('click',e=>{const m=$('#umL');if(m&&!e.target.closest('.um')){m.hidden=true;$('#bUm').setAttribute('aria-expanded',false)}})}
   l.onkeydown=e=>{if(e.key==='Escape'){set(false);b.focus()}};
@@ -293,7 +294,7 @@ const dirtyNow=()=>!!document.querySelector('main section:not([hidden]) .sbar.di
 let curHash=location.hash;
 window.addEventListener('beforeunload',e=>{if(dirtyNow()){e.preventDefault();e.returnValue=''}});
 window.addEventListener('hashchange',async()=>{if(dirtyNow()&&!await ask('Ungespeicherte Änderungen in diesem Bereich verwerfen?')){history.replaceState(null,'',curHash||'#');return}curHash=location.hash; // Issue #95
-  if(me&&myMode()!==MY)start();else showNav();window.scrollTo(0,0)}); // Wechsel zwischen Verwaltung und Meine Einsätze baut die Seite neu auf
+  if(me&&(myMode()!==MY||calMode()!==CALV))start();else showNav();window.scrollTo(0,0)}); // Wechsel zwischen Verwaltung und Meine Einsätze baut die Seite neu auf
 /* ---------- Benutzer ---------- */
 // Startpasswort ohne verwechselbare Zeichen (0/O, 1/l/I)
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
@@ -410,12 +411,78 @@ async function loadGroups(){const el=$('#sG');let gs,us;try{[gs,us]=await Promis
     if(await ask(`Einsatzgruppe «${g.name}» endgültig löschen?\n\nDie Mitgliedschaften gehen verloren. Einsatztypen, vorbereitete Übungen und Benutzerrollen verlieren die Gruppe; bisherige Einsätze behalten den Namen im Aufgebot. Nur zeitweise ausblenden: «Bearbeiten» → «Aktiv» ausschalten.`))api('group/delete',{id:g.id}).then(()=>{toast('Einsatzgruppe gelöscht.');loadGroups()}).catch(fail)})}
 /* ---------- Abwesenheiten (Issue #91) ---------- */
 // alle laufenden und künftigen Abwesenheiten bzw. ausgesetzten Einsatzfähigkeiten; erfassen für jede aktive Person
-async function loadAbs(){const el=$('#sAb');let rs,us;try{[rs,us]=await Promise.all([api('absences&all=1'),api('users')])}catch(e){return secErr(el,'Abwesenheiten',e)}
+async function loadAbs(){const el=$('#sAb');let rs,us,rl;try{[rs,us,rl]=await Promise.all([api('absences&all=1'),api('users'),api('avail/rules&all=1')])}catch(e){return secErr(el,'Abwesenheiten',e)}
+  const rn=Object.entries(rl.now||{}).filter(([,w])=>w).map(([u,w])=>{const r=rl.rules.find(x=>x.user_id===+u);return r?`${nmG(r.name,r.user_id)} <span class="abschip">${esc(w==='on'?'ausserhalb Einsatzzeit':'regelmässig ausgesetzt')}</span>`:''}).filter(Boolean); // Stand jetzt nach den Regeln (Issue #180)
   const now=rs.filter(a=>a.now),fut=rs.filter(a=>!a.now);
   el.innerHTML=`<h2>Abwesenheiten</h2><div class="mut">Abwesende Personen und Personen mit ausgesetzter Einsatzfähigkeit werden nicht aufgeboten und nicht alarmiert. Laufende Einsätze sehen sie trotzdem und können freiwillig beitreten. Jede Person kann ihre eigenen Einträge im Profil der Einsatz-App setzen; in den <a href="#einsatzgruppen">Einsatzgruppen</a> sind Abwesende gekennzeichnet.</div>
     ${newBar('abA','Abwesenheit erfassen')}
-    <h3>Laufend (${now.length})</h3><div id="abNow">${absRows(now,true)}</div><h3>Geplant (${fut.length})</h3><div id="abFut">${absRows(fut,true)}</div>`;
-  $('#abA').onclick=()=>absDialog(null,us.filter(u=>u.active),loadAbs);absBind(el,rs,loadAbs)}
+    <h3>Laufend (${now.length})</h3><div id="abNow">${absRows(now,true)}</div><h3>Geplant (${fut.length})</h3><div id="abFut">${absRows(fut,true)}</div>
+    <h3>Regelmässige Einsatzzeiten (${rl.rules.length})</h3><div class="mut">${esc(RULE_HINT)} Jede Person kann ihre eigenen im Profil der Einsatz-App setzen. Alle Termine zusammen zeigt der <a href="#kalender">Kalender</a>.</div>
+    ${rn.length?`<div class="mut">Jetzt nach den Regeln nicht einsatzfähig: ${rn.join(', ')}</div>`:''}<div class="row"><button id="rlA">+ Regel erfassen</button></div><div id="abRl">${ruleRows(rl.rules,true)}</div>`;
+  $('#abA').onclick=()=>absDialog(null,us.filter(u=>u.active),loadAbs);absBind(el,rs,loadAbs);
+  $('#rlA').onclick=()=>ruleDialog(null,us.filter(u=>u.active),loadAbs);ruleBind(el,rl.rules,loadAbs)}
+/* ---------- Kalender (Issue #181): alle terminlichen Angaben (Abwesenheiten, regelmässige Einsatzzeiten, Einsätze, Planungen, Ausbildung) ---------- */
+// Eigene Ansicht #kalender für alle Angemeldeten (wie «Meine Einsätze» ohne Navigation); mit Recht avail «Alle Personen». Zustand je Gerät in sw_calf.
+const CAL_CATS=[['abs','Abwesenheiten','#d9822b'],['on','Einsatzzeiten','#35c27a'],['off','Regelmässig ausgesetzt','#b0663a'],['inc','Einsätze','#ff4d2e'],['plan','Planungen','#1d7fd1'],['skill','Ausbildung','#a78bfa']];
+const calMode=()=>location.hash.split('?')[0]==='#kalender';
+let CALV=false,CAL={m:null,sel:null,data:null};
+function calF(){let f={};try{f=JSON.parse(localStorage.getItem('sw_calf')||'{}')||{}}catch(e){}return{hide:Array.isArray(f.hide)?f.hide:[],view:f.view==='l'?'l':'m',all:f.all?1:0}}
+function calFSet(f){try{localStorage.setItem('sw_calf',JSON.stringify(f))}catch(e){}}
+const calDay=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate()),calAdd=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n),calTs=d=>Math.floor(d.getTime()/1000);
+const calHm=ts=>new Date(ts*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+function calView(a){CALV=true;MY=false;const adm=nav().length>0;
+  a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Kalender</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine">📋 Meine Einsätze</a>':''}${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}<button id="bHlp" title="Bedienungsanleitung zu diesem Bereich" aria-label="Anleitung">?</button>${userMenu()}</header>
+    <div id="wrap" class="my"><main><section id="sCal"><h2>Kalender</h2><div class="mut">Wird geladen …</div></section></main></div>${adminFoot()}`;
+  userMenuWire();footWire();if(adm)$('#bVw').onclick=e=>{e.preventDefault();location.hash=navItems()[0][0]};
+  document.title='Swiftwater Rescue – Kalender';const t=new Date();CAL.m=new Date(t.getFullYear(),t.getMonth(),1);CAL.sel=calDay(t);calLoad()}
+// Raster: Montag vor dem Monatsersten bis Sonntag nach dem Monatsende
+function calRange(){const m=CAL.m,s=calAdd(m,-((m.getDay()+6)%7)),e0=new Date(m.getFullYear(),m.getMonth()+1,0),e=calAdd(e0,7-((e0.getDay()+6)%7));return[s,e]}
+async function calLoad(){const el=$('#sCal');if(!el)return;const f=calF(),all=f.all&&can('avail')?1:0,[s,e]=calRange();
+  try{CAL.data=await api(`calendar&from=${calTs(s)}&to=${calTs(e)}${all?'&all=1':''}`)}catch(x){return secErr(el,'Kalender',x)}
+  calDraw()}
+// Einträge des Zeitraums: {c Kategorie, col Farbe, f/t Unix-Zeit, tt Titel, sub, href, dash}
+function calItems(){const D=CAL.data,[s,e]=calRange(),te=calTs(e),now=Date.now()/1000,all=!!D.all,out=[];
+  D.abs.forEach(a=>out.push({c:'abs',col:'#d9822b',f:a.from_at,t:a.until_at??te,tt:(ABS_KIND[a.kind]||ABS_KIND.abs)+(all?' · '+a.name:''),sub:(a.until_at==null?'bis auf Weiteres':'')+(a.note?(a.until_at==null?' · ':'')+a.note:''),href:can('avail')?'#abwesenheiten':'./#einstellungen'}));
+  // Regeln je Tag ausgerollt (Zeit des Geräts; Schweiz = Zürich); über Mitternacht bis zum Folgetag
+  for(let d=calAdd(s,-1);d<e;d=calAdd(d,1)){const wd=(d.getDay()+6)%7;D.rules.forEach(r=>{if(!(r.days>>wd&1))return;
+    const f=new Date(d.getFullYear(),d.getMonth(),d.getDate(),Math.floor(r.t_from/60),r.t_from%60),t=r.t_to>r.t_from?new Date(d.getFullYear(),d.getMonth(),d.getDate(),Math.floor(r.t_to/60),r.t_to%60):new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,Math.floor(r.t_to/60),r.t_to%60);
+    out.push({c:r.mode,col:r.mode==='on'?'#35c27a':'#b0663a',f:calTs(f),t:calTs(t),tt:RULE_MODE[r.mode]+(all?' · '+r.name:''),sub:ruleTxt(r)+(r.note?' · '+r.note:''),href:can('avail')?'#abwesenheiten':'./#einstellungen',rule:1})})}
+  D.incs.forEach(i=>out.push({c:'inc',col:i.kind_color||'#ff4d2e',f:i.alarm_at,t:i.ended_at??Math.max(now,i.alarm_at+60),open:i.ended_at==null?1:0,tt:(i.kind_name||'Einsatz')+(i.message?': '+i.message:''),sub:(i.ended_at==null?'läuft':'')+(i.mine?(i.ended_at==null?' · ':'')+'mit dir':''),
+    href:i.ended_at==null?'./':can('stats')?'#einsatzlog':i.mine&&me.my_runs!=='off'?'#meine':null}));
+  D.plans.forEach(p=>{const su=p.su,st=su&&su.mine==='yes'?'angemeldet':su&&su.mine==='no'?'abgemeldet':su&&su.open&&su.may?'Anmeldung offen':'';
+    out.push({c:'plan',col:p.kind&&p.kind.color||'#1d7fd1',f:p.at,t:p.end??p.at+7200,tt:(p.kind?p.kind.name+': ':'')+p.title,sub:[p.loc,p.running?'läuft':'',st,su&&su.mine&&su.note?su.note:'',su&&su.open&&su.may&&su.until?'Anmeldeschluss '+fmtDT(su.until):'',p.sched?'':'nicht im Übungsplan'].filter(Boolean).join(' · '),
+      // Öffnen nur für Übungsleiter (Planungen der Verwaltung); Anmelden direkt hier (ex/signup wie im Übungsplan der Einsatz-App)
+      href:planner()?'#planungen':null,su:su&&su.open&&su.may?{id:p.id,mine:su.mine}:null,dash:1})});
+  D.skills.forEach(k=>out.push({c:'skill',col:'#a78bfa',f:k.exp,t:k.exp,tt:'Ausbildung «'+k.name+'» läuft ab',sub:k.state==='exp'?'abgelaufen':'',href:'./#einstellungen'}));
+  const h=calF().hide;return out.filter(x=>!h.includes(x.c)).sort((a,b)=>a.f-b.f||a.c.localeCompare(b.c))}
+const planner=()=>can('ex_plan');
+// Einträge eines Tages mit Zeitangabe für diesen Tag
+function calOn(items,d){const a=calTs(d),b=calTs(calAdd(d,1));return items.filter(x=>x.f<b&&(x.t>a||(x.t===x.f&&x.f>=a))).map(x=>({...x,tl:x.t===x.f?calHm(x.f):x.open?(x.f>=a?'ab '+calHm(x.f):'ganztags'):x.f<=a&&x.t>=b?'ganztags':(x.f<a?'bis '+calHm(x.t):x.t>b?'ab '+calHm(x.f):calHm(x.f)+'–'+calHm(x.t))}))}
+const calEv=x=>`<span class="cev" style="border-color:${esc(x.col)};--c:${esc(x.col)}${x.dash?';border-left-style:dashed':''}" title="${esc(x.tl+' · '+x.tt+(x.sub?' · '+x.sub:''))}">${x.tl!=='ganztags'?esc(x.tl.replace(/–.*/,''))+' ':''}${esc(x.tt)}</span>`;
+const calLi=x=>`<div class="cli" style="border-color:${esc(x.col)}${x.dash?';border-left-style:dashed':''}"><span class="t">${esc(x.tl)}</span><span style="flex:1"><b>${esc(x.tt)}</b>${x.sub?`<br><small class="mut">${esc(x.sub)}</small>`:''}</span>${x.su?`<span class="row" style="margin:0;flex:0 0 auto">${x.su.mine!=='yes'?`<button class="pri" data-csu="${x.su.id}" data-v="yes">Ich nehme teil</button>`:''}${x.su.mine!=='no'?`<button data-csu="${x.su.id}" data-v="no">Ich nehme nicht teil</button>`:''}${x.su.mine?`<button data-csu="${x.su.id}" data-v="">Zurückziehen</button>`:''}</span>`:''}${x.href?`<a class="btn" href="${esc(x.href)}">Öffnen</a>`:''}</div>`;
+const calDN=d=>d.toLocaleDateString('de-CH',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+function calDraw(){const el=$('#sCal');if(!el||!CAL.data)return;const f=calF(),[s,e]=calRange(),items=calItems(),td=calDay(new Date()),mon=CAL.m.getMonth();
+  const days=[];for(let d=s;d<e;d=calAdd(d,1))days.push(d);
+  const inMon=days.filter(d=>d.getMonth()===mon);if(!CAL.sel||CAL.sel.getMonth()!==mon)CAL.sel=td.getMonth()===mon&&td.getFullYear()===CAL.m.getFullYear()?td:CAL.m;
+  const grid=`<div class="calg">${WD.map(w=>`<div class="wh">${w}</div>`).join('')}${days.map(d=>{const its=calOn(items,d),k=+d;
+    return `<div data-cd="${k}" class="${d.getMonth()!==mon?'o ':''}${k===+td?'td ':''}${k===+CAL.sel?'sel':''}" tabindex="0" aria-label="${esc(calDN(d))}: ${its.length} Einträge"><span class="dn">${d.getDate()}</span>${its.slice(0,4).map(calEv).join('')}${its.length>4?`<span class="cev more">+${its.length-4} weitere</span>`:''}</div>`}).join('')}</div>`;
+  const dayL=d=>{const its=calOn(items,d);return `<h3>${esc(calDN(d))}</h3>${its.length?its.map(calLi).join(''):'<div class="mut">Keine Einträge.</div>'}`};
+  const list=inMon.filter(d=>calOn(items,d).length).map(d=>`<div class="calday">${dayL(d)}</div>`).join('')||'<div class="mut">In diesem Monat gibt es keine Einträge.</div>';
+  el.innerHTML=`<h2>Kalender</h2><div class="mut">Alle Termine an einem Ort: Abwesenheiten und regelmässige Einsatzzeiten${f.all&&can('avail')?' aller Personen':''}, ${can('stats')?'alle Einsätze':'deine Einsätze'}, geplante Übungen und Einsätze sowie ablaufende Ausbildungen. Erfassen und ändern im Profil der Einsatz-App${can('avail')?' bzw. unter <a href="#abwesenheiten">Abwesenheiten</a>':''}.</div>
+    <div class="calbar"><button id="calP" aria-label="Vorheriger Monat">‹</button><h3>${esc(CAL.m.toLocaleDateString('de-CH',{month:'long',year:'numeric'}))}</h3><button id="calN" aria-label="Nächster Monat">›</button><button id="calT">Heute</button><span class="sp"></span>
+      <button id="calVm" aria-pressed="${f.view==='m'}">Monat</button><button id="calVl" aria-pressed="${f.view==='l'}">Liste</button>${can('avail')?`<select id="calA" aria-label="Personen"><option value="0">Nur ich</option><option value="1" ${f.all?'selected':''}>Alle Personen</option></select>`:''}</div>
+    <div class="calf">${CAL_CATS.map(([k,l,c])=>`<label><input type="checkbox" data-cc="${k}" ${f.hide.includes(k)?'':'checked'}><i style="background:${c}"></i>${esc(l)}</label>`).join('')}</div>
+    ${f.view==='m'?grid+`<div class="calday" id="calSel">${dayL(CAL.sel)}</div>`:list}`;
+  const mv=n=>{CAL.m=new Date(CAL.m.getFullYear(),CAL.m.getMonth()+n,1);CAL.sel=null;calLoad()};
+  $('#calP').onclick=()=>mv(-1);$('#calN').onclick=()=>mv(1);$('#calT').onclick=()=>{const t=new Date();CAL.m=new Date(t.getFullYear(),t.getMonth(),1);CAL.sel=calDay(t);calLoad()};
+  $('#calVm').onclick=()=>{calFSet({...calF(),view:'m'});calDraw()};$('#calVl').onclick=()=>{calFSet({...calF(),view:'l'});calDraw()};
+  if($('#calA'))$('#calA').onchange=e=>{calFSet({...calF(),all:+e.target.value});calLoad()};
+  el.querySelectorAll('[data-cc]').forEach(c=>c.onchange=()=>{const g=calF(),k=c.dataset.cc;calFSet({...g,hide:c.checked?g.hide.filter(x=>x!==k):[...g.hide,k]});calDraw()});
+  // Anmeldung zu geplanten Übungen (Issue #169) direkt im Kalender, mit optionaler Bemerkung wie in der Einsatz-App
+  el.querySelectorAll('[data-csu]').forEach(b=>b.onclick=()=>{const v=b.dataset.v,go=note=>api('ex/signup',{id:+b.dataset.csu,status:v,note}).then(()=>{toast(v==='yes'?'Angemeldet':v==='no'?'Abgemeldet':'Antwort zurückgezogen','ok');return calLoad()}).catch(fail);
+    if(!v)return go('');dlg(v==='yes'?'Ich nehme teil':'Ich nehme nicht teil','<label class="mut">Bemerkung (optional)<input id="suN" maxlength="200" placeholder="z. B. komme etwas später"></label>',d=>go($('#suN',d).value))});
+  el.querySelectorAll('[data-cd]').forEach(c=>{const go=()=>{CAL.sel=new Date(+c.dataset.cd);if(CAL.sel.getMonth()!==mon){CAL.m=new Date(CAL.sel.getFullYear(),CAL.sel.getMonth(),1);calLoad()}else calDraw();setTimeout(()=>{const x=$('#calSel');x&&x.scrollIntoView({block:'nearest'})},30)};
+    c.onclick=go;c.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();go()}}})}
 /* ---------- Ausbildungskontrolle (Issue #117) ---------- */
 // Übersicht Personen × Fähigkeiten (Klick auf eine Zeile bzw. Zelle: Ausbildungen der Person), darunter der Katalog der Fähigkeiten; Filter gemerkt in sw_skf
 async function loadSkills(){const el=$('#sSk');let c,m;try{[c,m]=await Promise.all([api('skills/cfg'),api('skills/matrix')])}catch(e){return secErr(el,'Ausbildung',e)}

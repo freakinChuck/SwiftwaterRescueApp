@@ -1798,6 +1798,11 @@ class Demo {
         };
         abs.add(a);
         return {'ok': true, 'id': a['id']};
+      case 'avail/rules': // regelmässige Einsatzzeiten (Issue #180): im Demo keine
+        return {'rules': [], 'now': null};
+      case 'avail/rule/save':
+      case 'avail/rule/remove':
+        _fail('Regelmässige Einsatzzeiten gibt es im Demo-Modus nicht.');
       case 'absence/remove':
         final a = abs.where((x) => '${x['id']}' == '${b['id']}' && x['removed'] == 0).firstOrNull ?? _fail('Eintrag nicht gefunden', 404);
         a['removed'] = 1;
