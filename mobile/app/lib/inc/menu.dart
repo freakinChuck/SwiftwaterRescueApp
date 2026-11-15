@@ -241,7 +241,7 @@ class _IncMenuState extends State<IncMenu> {
     final ks = _kindsNow(), ka = ks.where((k) => jb(k['can'])).toList(), ng = ks.where((k) => jb(k['no_grp'])).toList();
     // Sekundäreinsätze (Issue #164): eigene Karte, starten ohne Alarm
     final nk = ka.where((k) => !jb(k['sec'])).toList(), sk = ka.where((k) => jb(k['sec'])).toList();
-    final xps = jl(s.st?['ex_plans']);
+    final xps = jl(s.st?['ex_plans']), xpe = xps.where((p) => !jb(p['sec'])).toList(), xpz = xps.where((p) => jb(p['sec'])).toList();
     return [
       MCard(title: 'Kein aktiver Einsatz', children: [
         if (nk.isEmpty)
@@ -262,9 +262,9 @@ class _IncMenuState extends State<IncMenu> {
         ], buttons: [
           for (final k in sk) OutlinedButton(onPressed: () => _startKind(c, k), child: Text('${js(k['name'])} starten')),
         ]),
-      if (xps.isNotEmpty)
-        MCard(title: 'Vorbereitete Übungen (${xps.length})', children: [
-          for (final p in xps)
+      if (xpe.isNotEmpty)
+        MCard(title: 'Vorbereitete Übungen (${xpe.length})', children: [
+          for (final p in xpe)
             Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(children: [
@@ -276,14 +276,48 @@ class _IncMenuState extends State<IncMenu> {
               child: Mut(
                   'Startet die Übung mit der vorbereiteten Aufgebotsmeldung. Du leitest sie als Übungsleitung: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
         ]),
+      // geplante Sekundäreinsätze (Feedback zu #164): ohne Alarm, mit Einsatzplan
+      if (xpz.isNotEmpty)
+        MCard(title: 'Geplante Sekundäreinsätze (${xpz.length})', children: [
+          for (final p in xpz)
+            Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(children: [
+                  Expanded(child: Text('${js(p['title'])}${p['at'] != null ? ' · ${fmtDT(jn(p['at']))}' : ''}')),
+                  smallBtn('Starten', _busy.contains('xs${p['id']}') ? null : () => _exStart(c, p), primary: true),
+                ])),
+          const Padding(padding: EdgeInsets.only(top: 4), child: Mut('Startet ohne Alarm mit dem Einsatzplan; die Aufgebotenen sehen den Einsatz und treten selbst bei. Du leitest ihn.')),
+        ]),
       ?hydroCard(c, s, map, widget.openPrefs),
       ?_tools(),
     ];
   }
 
+  /// Einsatzplan eines geplanten Sekundäreinsatzes (Feedback zu #164), für alle Teilnehmenden
+  Widget _planCard(J p) {
+    final d = p['doc'] is Map ? jm(p['doc']) : <String, dynamic>{}, ts = jl(d['tasks']);
+    Widget h(String t) => Padding(padding: const EdgeInsets.only(top: 8, bottom: 2), child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold)));
+    final kv = <(String, String)>[if (d['at'] != null) ('Geplanter Beginn', fmtDT(jn(d['at']))), if (js(d['meet']).isNotEmpty) ('Treffpunkt', js(d['meet']))];
+    final empty = kv.isEmpty && js(d['goal']).isEmpty && ts.isEmpty && js(d['info']).isEmpty;
+    return MCard(title: 'Einsatzplan${js(p['title']).isNotEmpty ? ' «${js(p['title'])}»' : ''}', children: [
+      if (kv.isNotEmpty) Mkv(kv),
+      if (js(d['goal']).isNotEmpty) ...[h('Auftrag und Ziel'), SelectableText(js(d['goal']))],
+      if (ts.isNotEmpty) ...[
+        h('Aufträge'),
+        for (final t in ts)
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text.rich(TextSpan(children: [TextSpan(text: '${js(t['who'])}: ', style: const TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: js(t['task']))]))),
+      ],
+      if (js(d['info']).isNotEmpty) ...[h('Weitere Angaben'), SelectableText(js(d['info']))],
+      if (empty) const Mut('Kein Einsatzplan erfasst.'),
+    ]);
+  }
+
   Future<void> _exStart(BuildContext c, J p) async {
-    if (!await confirmDlg(c, 'Übung «${js(p['title'])}» jetzt starten? ${jb(p['invited']) ? 'Die aufgebotenen Personen werden' : 'Alle werden'} alarmiert.',
-        ok: 'Übung starten')) {
+    final sec = jb(p['sec']);
+    if (!await confirmDlg(c, sec ? 'Sekundäreinsatz «${js(p['title'])}» jetzt starten? Niemand wird alarmiert.' : 'Übung «${js(p['title'])}» jetzt starten? ${jb(p['invited']) ? 'Die aufgebotenen Personen werden' : 'Alle werden'} alarmiert.',
+        ok: sec ? 'Starten' : 'Übung starten')) {
       return;
     }
     final r = await _run('xs${p['id']}', 'ex/start', {'id': p['id']});
@@ -404,12 +438,13 @@ class _IncMenuState extends State<IncMenu> {
                 child: const Text('✨ Lagezusammenfassung')),
           ])));
     }
-    final act = s.modes.where((x) => jb(x['active'])).toList();
+    final act = s.iModes.where((x) => jb(x['active'])).toList();
     String mLabel(J x) => '${js(x['name'])}${jb(x['share_location']) ? '' : ' (ohne Standort)'}';
     if (s.exLead) {
-      out.add(MCard(title: 'Übungsleitung', children: [
+      final ks = jb(jm(i['kind'])['sec']);
+      out.add(MCard(title: ks ? 'Leitung' : 'Übungsleitung', children: [
         Text.rich(TextSpan(children: [
-          TextSpan(text: 'Du leitest diese Übung${js(st['ex_title']).isNotEmpty ? ' «${js(st['ex_title'])}»' : ''}. ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: 'Du leitest ${ks ? 'diesen geplanten Sekundäreinsatz' : 'diese Übung'}${js(st['ex_title']).isNotEmpty ? ' «${js(st['ex_title'])}»' : ''}. ', style: const TextStyle(fontWeight: FontWeight.bold)),
           TextSpan(
               text:
                   'Rechte der Einsatzleitung, du wirst nicht alarmiert. Die Elemente gibst du im Register «Übung» frei.${joined ? ' Du nimmst zusätzlich als Einsatzkraft teil.' : ' Du kannst zusätzlich als Einsatzkraft teilnehmen:'}'),
@@ -428,6 +463,7 @@ class _IncMenuState extends State<IncMenu> {
         for (final x in act) FilledButton(onPressed: _busy.contains('join') ? null : () => _join(x), child: Text('Einsatz annehmen\n${mLabel(x)}', textAlign: TextAlign.center)),
       ]));
     }
+    if (st['plan'] is Map) out.add(_planCard(jm(st['plan'])));
     if (joined && m != null) {
       final sh = s.shares(js(m['mode'])), lm = s.leadMode(js(m['mode']));
       out.add(MCard(title: 'Mein Einsatz', children: [
@@ -528,7 +564,7 @@ class _IncMenuState extends State<IncMenu> {
 
   /// Auswahl der Spezialrolle (roleSel), null = keine
   Widget _roleSel(int? cur, void Function(int?) onChanged, {String? label}) {
-    final ids = s.roles.map((r) => ji(r['id'])).toSet();
+    final ids = s.iRoles.map((r) => ji(r['id'])).toSet();
     return DropdownButtonFormField<int?>(
       key: ValueKey('rs$cur'),
       initialValue: ids.contains(cur) ? cur : null,
@@ -536,7 +572,7 @@ class _IncMenuState extends State<IncMenu> {
       decoration: InputDecoration(labelText: label, isDense: true),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('Keine Spezialrolle')),
-        ...s.roles.map((r) => DropdownMenuItem<int?>(value: ji(r['id']), child: Text(js(r['name']), overflow: TextOverflow.ellipsis))),
+        ...s.iRoles.map((r) => DropdownMenuItem<int?>(value: ji(r['id']), child: Text(js(r['name']), overflow: TextOverflow.ellipsis))),
       ],
       onChanged: (v) {
         if (v != cur) onChanged(v);
@@ -1211,16 +1247,18 @@ class _StartPageState extends State<_StartPage> {
 
   /// Folgeeinsatz zu einem beendeten Einsatz der letzten 30 Tage (start/options liefert parents)
   List<Widget> _parPick() {
-    final ps = jl(d.opts?['parents']);
-    if (!jb(d.k['sec']) || ps.isEmpty) return [];
+    final ps = jl(d.opts?['parents']), ref = ji(d.k['ref']) ?? 1; // 0 kein Bezug, 1 optional, 2 Pflicht
+    if (!jb(d.k['sec']) || ref == 0) return [];
+    if (ps.isEmpty) return ref == 2 ? [const SizedBox(height: 10), const Mut('Dieser Einsatztyp verlangt einen Bezug, es gibt aber keinen früheren Einsatz der letzten 30 Tage.')] : [];
+    if (ref == 2 && d.parent == null) d.parent = ji(ps.first['id']);
     return [
       const SizedBox(height: 10),
       DropdownButtonFormField<int?>(
           isExpanded: true,
           initialValue: d.parent,
-          decoration: const InputDecoration(labelText: 'Folgeeinsatz zu (optional)', isDense: true),
+          decoration: InputDecoration(labelText: ref == 2 ? 'Folgeeinsatz zu' : 'Folgeeinsatz zu (optional)', isDense: true),
           items: [
-            const DropdownMenuItem<int?>(value: null, child: Text('– kein Bezug –')),
+            if (ref != 2) const DropdownMenuItem<int?>(value: null, child: Text('– kein Bezug –')),
             for (final p in ps)
               DropdownMenuItem<int?>(
                   value: ji(p['id']),

@@ -151,6 +151,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   // ---------- Hilfen ----------
   int get uid => ji(me?['id']) ?? acc.uid;
   J? get inc => st?['incident'] is Map ? jm(st!['incident']) : null;
+  /// Kategorie des laufenden Einsatzes (Feedback zu #164): 1 = Sekundäreinsatz; Einrückoptionen und Spezialrollen gelten je für eine Kategorie
+  int get incCat => inc?['kind'] is Map && jb(jm(inc!['kind'])['sec']) ? 1 : 0;
+  List<J> get iModes => modes.where((x) => (jb(x['sec']) ? 1 : 0) == incCat).toList();
+  List<J> get iRoles => roles.where((r) => (jb(r['sec']) ? 1 : 0) == incCat).toList();
   J? get myPart => st?['me'] is Map ? jm(st!['me']) : null;
   num get now => jn(st?['now']) ?? DateTime.now().millisecondsSinceEpoch / 1000;
   bool get joined {
