@@ -37,7 +37,7 @@ const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['au
   'urole/save' => ['user', 'Benutzerrolle gespeichert'], 'urole/remove' => ['user', 'Benutzerrolle entfernt'], 'group/save' => ['user', 'Einsatzgruppe gespeichert'], 'group/delete' => ['user', 'Einsatzgruppe gelöscht'],
   'settings/save' => ['cfg', 'Einstellungen gespeichert'], 'ai/cfg/save' => ['cfg', 'AI-Assistent eingestellt'], 'anon/cfg/save' => ['cfg', 'Anonymisierung eingestellt'], 'aar/cfg/save' => ['cfg', 'After Action Review eingerichtet'],
   'kind/save' => ['cfg', 'Einsatztyp gespeichert'], 'kind/delete' => ['cfg', 'Einsatztyp gelöscht'], 'mode/save' => ['cfg', 'Einrückoption gespeichert'], 'role/save' => ['cfg', 'Spezialrolle gespeichert'],
-  'incident/start' => ['inc', 'Einsatz gestartet'], 'ex/start' => ['inc', 'Vorbereitete Übung gestartet'], 'incident/end' => ['inc', 'Einsatz beendet'],
+  'incident/start' => ['inc', 'Einsatz gestartet'], 'ex/start' => ['inc', 'Vorbereitete Übung gestartet'], 'ex/signup' => ['inc', 'Anmeldung zu einer Übung'], 'incident/end' => ['inc', 'Einsatz beendet'],
   'incident/replay/delete' => ['anon', 'Aufzeichnung gelöscht'], 'anon/apply' => ['anon', 'Anonymisierung angewendet'], 'anon/undo' => ['anon', 'Anonymisierung zurückgenommen'],
   'overpass/stats/reset' => ['overpass', 'Statistik der Geodaten-Quellen zurückgesetzt'], 'voice/cfg/save' => ['voice', 'Funk & Konferenz eingestellt'], 'incident/voice/guest/save' => ['voice', 'Link für Externe erstellt'], 'incident/voice/guest/remove' => ['voice', 'Link für Externe entfernt'], 'mail/cfg/save' => ['mail', 'E-Mail-Alarm eingestellt'], 'mail/key/new' => ['mail', 'Neuer Schlüssel für Cron-Job und Webhook']];
 $ALOG_N = 0;
@@ -129,6 +129,8 @@ foreach ([
  // seen (Rettling gesichtet: neuer PLS für den Rettling aus dem Element ref_id; ref_id NULL = neuer Rettling mit name bzw. unbekannter Rettling ohne name, erfasst bei der Freigabe); ago = Zeitpunkt des PLS in Minuten vor der Freigabe (NULL = Übungsleitung gibt ihn bei der Freigabe ein);
  // ext (neue externe Einsatzkraft: name, descr, role_id, abbr, color; ext_id nach der Freigabe), extdel (entfernt die externe Einsatzkraft aus dem Element ref_id, Standort wie dieses)
  // auto = automatisch freigeben so viele Minuten nach dem Übungsstart (NULL = nur von Hand; released_by NULL = automatisch freigegeben); msg = Meldung, geht bei der Freigabe als Nachricht an alle
+ // Anmeldungen zu vorbereiteten Übungen (Issue #169): je Person und Übung eine Zeile, status yes (nimmt teil) | no (nimmt nicht teil), note = Bemerkung
+ "CREATE TABLE IF NOT EXISTS ex_signups(id $ai, plan_id INT, user_id INT, status $tx, note $tx NULL, at BIGINT)",
  // Einsatzgruppen (Issue #90): pos = Reihenfolge, active 0 = deaktiviert; Mitglieder in inc_group_members; aufbietbar und vorausgewählt je Einsatztyp (inc_kinds)
  // (Tabellennamen nicht «groups»: in MySQL 8 reserviert)
  "CREATE TABLE IF NOT EXISTS inc_groups(id $ai, name $tx, color $tx, pos INT DEFAULT 0, active INT DEFAULT 1)",
@@ -183,7 +185,7 @@ try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec(
 // Sekundäreinsätze (Issue #164): inc_kinds.sec = Kategorie (0 Primäreinsatz, 1 Sekundäreinsatz ohne Alarm, Alarmstufe immer «Keine»), inc_kinds.ref = Bezug auf einen früheren Einsatz
 // (0 kein, 1 optional, 2 Pflicht; 2 = Freies Ereignis: Alarmstufe frei, eigene Einrückoptionen/Spezialrollen, Bezug wie Sekundäreinsatz), incidents.parent_id = Folgeeinsatz zu diesem Einsatz; roles.sec/modes.sec = Spezialrolle bzw. Einrückoption gilt für Sekundäreinsätze;
 // ex_plans.doc = Einsatzplan (JSON, planDocIn), ex_plans.parent_id = Bezug eines geplanten Sekundäreinsatzes
-foreach (['inc_kinds' => ["snd $tx NULL", "msg_lvl $tx NULL", "end_lvl $tx NULL", 'map_off TEXT NULL', 'map_def TEXT NULL', 'sec INT DEFAULT 0', 'ref INT DEFAULT 1'], 'modes' => ['sec INT DEFAULT 0'], 'push_native' => ['snd TEXT NULL'], 'aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1', 'can_voice INT DEFAULT 1', 'sec INT DEFAULT 0'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'pois' => ["sym $tx NULL"], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL', 'line INT DEFAULT 0', 'props TEXT NULL', "src_ref $tx NULL", "src_kind $tx NULL", 'src_data TEXT NULL', 'src_new TEXT NULL', "src_state $tx NULL", 'src_diff TEXT NULL', 'src_at BIGINT NULL', 'src_chk BIGINT NULL'], 'place_cats' => ['sort INT NULL', 'prio INT DEFAULT 0'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL', 'stop_on INT DEFAULT 1', 'stop_off TEXT NULL', 'voice_ch TEXT NULL', 'voice_anon INT DEFAULT 0', 'parent_id INT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL', 'doc TEXT NULL', 'parent_id INT NULL'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_groups' => ['show_name INT DEFAULT 1'], 'inc_hydro' => ['danger INT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
+foreach (['inc_kinds' => ["snd $tx NULL", "msg_lvl $tx NULL", "end_lvl $tx NULL", 'map_off TEXT NULL', 'map_def TEXT NULL', 'sec INT DEFAULT 0', 'ref INT DEFAULT 1'], 'modes' => ['sec INT DEFAULT 0'], 'push_native' => ['snd TEXT NULL'], 'aar' => ['status INT DEFAULT 0', 'rel_at BIGINT NULL', 'rel_by INT NULL'], 'roles' => ['can_message INT DEFAULT 1', 'can_voice INT DEFAULT 1', 'sec INT DEFAULT 0'], 'messages' => ['lat DOUBLE NULL', 'lon DOUBLE NULL', 'mark INT DEFAULT 0', 'mark_lat DOUBLE NULL', 'mark_lon DOUBLE NULL', 'unmarked BIGINT NULL', "from_label $tx NULL", 'to_label TEXT NULL'],'participants' => ["label $tx NULL", 'log_lat DOUBLE NULL', 'log_lon DOUBLE NULL', 'log_at BIGINT NULL', 'fast_at BIGINT NULL'], 'users' => ['is_planner INT DEFAULT 0', 'exercise_mode INT DEFAULT 0', 'must_change INT DEFAULT 0', "coord_sys $tx NULL", "nav_app $tx NULL", 'place_view TEXT NULL', 'ai_modes TEXT NULL', 'hydro TEXT NULL'], 'pois' => ["sym $tx NULL"], 'places' => ['cat_id INT NULL', 'pts TEXT NULL', 'sort INT NULL', 'line INT DEFAULT 0', 'props TEXT NULL', "src_ref $tx NULL", "src_kind $tx NULL", 'src_data TEXT NULL', 'src_new TEXT NULL', "src_state $tx NULL", 'src_diff TEXT NULL', 'src_at BIGINT NULL', 'src_chk BIGINT NULL'], 'place_cats' => ['sort INT NULL', 'prio INT DEFAULT 0'], 'externals' => ['manual INT DEFAULT 0', "abbr $tx NULL", "color $tx NULL"], 'ext_templates' => ["abbr $tx NULL", "color $tx NULL"], 'incidents' => ['is_exercise INT DEFAULT 0', 'record INT DEFAULT 0', 'recorded INT DEFAULT 0', "public_token $tx NULL", 'public_anon INT DEFAULT 1', 'pls_at BIGINT NULL', 'plan_id INT NULL', 'public_log INT DEFAULT 1', 'rp_anon TEXT NULL', 'log_anon INT DEFAULT 0', 'air INT NULL', 'view_anon INT DEFAULT 0', 'txt_anon INT DEFAULT 0', 'part_anon INT DEFAULT 0', 'kind_id INT NULL', 'invite TEXT NULL', 'inv_groups TEXT NULL', 'open_join INT DEFAULT 0', 'inv_absent TEXT NULL', 'hydro_s BIGINT NULL', 'stop_on INT DEFAULT 1', 'stop_off TEXT NULL', 'voice_ch TEXT NULL', 'voice_anon INT DEFAULT 0', 'parent_id INT NULL'], 'incident_log' => ["actor $tx NULL"], 'rescuees' => ['pls_lat DOUBLE NULL', 'pls_lon DOUBLE NULL', 'pls_at BIGINT NULL'], 'ex_plans' => ['invite TEXT NULL', 'grp_ids TEXT NULL', 'kind_id INT NULL', 'places TEXT NULL', 'doc TEXT NULL', 'parent_id INT NULL', 'plan_at BIGINT NULL', 'plan_end BIGINT NULL', 'plan_loc TEXT NULL', 'plan_info TEXT NULL', 'sched INT DEFAULT 0', 'su_on INT DEFAULT 0', 'su_grp TEXT NULL', 'su_until BIGINT NULL', 'su_inv INT DEFAULT 0'], 'uroles' => ['grp_ids TEXT NULL'], 'inc_groups' => ['show_name INT DEFAULT 1'], 'inc_hydro' => ['danger INT NULL'], 'ex_injects' => ['auto INT NULL', 'role_id INT NULL', "abbr $tx NULL", "color $tx NULL", 'ext_id INT NULL']] as $t => $cs)
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Fahrzeuge (Issue #177): participants.veh_id = im Fahrzeug (veh_at = zuletzt stark gesehen, veh_cand = Kandidat aus dem letzten Scan), track.veh_id = im Fahrzeug bei der Meldung,
 // users.beacon = Fahrzeuge auch ausserhalb von Einsätzen melden (freiwillig)
@@ -2151,6 +2153,26 @@ function incAbsent($inc, $u) { return in_array($u, array_map('intval', json_deco
 function absNow($u = null) { global $db, $now; $s = $db->prepare("SELECT user_id,kind,until_at,note FROM absences WHERE removed=0 AND from_at<=? AND (until_at IS NULL OR until_at>?)" . ($u ? ' AND user_id=' . (int)$u : '') . " ORDER BY until_at IS NULL, until_at"); $s->execute([$now, $now]);
   $r = []; foreach ($s->fetchAll() as $a) $r[(int)$a['user_id']] = ['kind' => $a['kind'], 'until' => $a['until_at'] === null ? null : (int)$a['until_at'], 'note' => $a['note']]; return $r; }
 function absText($n) { return $n === 1 ? '1 Person abwesend, nicht alarmiert' : "$n Personen abwesend, nicht alarmiert"; }
+// Übungsplan und Anmeldungen (Issue #169): sched = im Übungsplan aller sichtbar; su_on = Anmeldung offen für Mitglieder von su_grp (JSON, NULL = alle aktiven Personen, [] = niemand),
+// bis su_until (NULL = bis zum Start); su_inv = beim Start die Angemeldeten aufbieten (zusätzlich zur Auswahl, ohne Auswahl nur sie)
+function suGrp($p) { return $p['su_grp'] === null ? null : idsIn(json_decode($p['su_grp'], true) ?: []); }
+function suMay($p, $u) { $g = suGrp($p); return $g === null || in_array($u, grpMembers($g), true); }
+function suOpen($p) { global $now; return (int)$p['su_on'] && $p['incident_id'] === null && ($p['su_until'] === null || $now < (int)$p['su_until']); }
+function suRows($pid) { global $db; $s = $db->prepare("SELECT s.user_id,s.status,s.note,s.at,u.name FROM ex_signups s JOIN users u ON u.id=s.user_id WHERE s.plan_id=? ORDER BY s.status DESC, u.name"); $s->execute([$pid]);
+  return array_map(fn($r) => ints($r, ['user_id', 'at']), $s->fetchAll()); }
+function suYes($pid) { global $db; $s = $db->prepare("SELECT s.user_id FROM ex_signups s JOIN users u ON u.id=s.user_id WHERE s.plan_id=? AND s.status='yes' AND u.active=1"); $s->execute([$pid]); return array_map('intval', array_column($s->fetchAll(), 'user_id')); }
+// Übungsplan für die angemeldete Person: sichtbare, noch nicht beendete Übungen nach Datum (ohne Aufgebotsmeldung, sie soll überraschen); Namen der Angemeldeten nur für Übungsleitung und Übungsleiter
+function exSched() { global $db, $uid, $now;
+  $ps = $db->query("SELECT p.*,i.ended_at FROM ex_plans p LEFT JOIN incidents i ON i.id=p.incident_id WHERE p.active=1 AND p.sched=1 AND i.ended_at IS NULL ORDER BY p.plan_at IS NULL, p.plan_at, p.title")->fetchAll();
+  if (!$ps) return []; $un = []; foreach ($db->query("SELECT id,name FROM users")->fetchAll() as $u) $un[(int)$u['id']] = $u['name']; $gn = array_column(grpRows(), 'name', 'id'); $pl = planner();
+  return array_values(array_filter(array_map(function ($p) use ($un, $gn, $pl, $uid, $now) {
+    if ($p['plan_at'] !== null && (int)($p['plan_end'] ?? $p['plan_at']) < $now - 43200 && $p['incident_id'] === null) return null; // längst vorbei und nie gestartet
+    $k = kinds()[(int)$p['kind_id']] ?? null; $su = suRows((int)$p['id']); $mine = null; foreach ($su as $r) if ($r['user_id'] === $uid) $mine = ['status' => $r['status'], 'note' => $r['note']];
+    $lead = in_array($uid, exLeads($p), true); $g = suGrp($p);
+    return ['id' => (int)$p['id'], 'title' => $p['title'], 'kind' => $k ? ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color']] : null, 'at' => $p['plan_at'] === null ? null : (int)$p['plan_at'], 'end' => $p['plan_end'] === null ? null : (int)$p['plan_end'],
+      'loc' => $p['plan_loc'], 'info' => $p['plan_info'], 'leads' => array_values(array_map(fn($i) => $un[$i] ?? '?', exLeads($p))), 'running' => $p['incident_id'] !== null ? 1 : 0, 'lead' => $lead ? 1 : 0,
+      'su' => (int)$p['su_on'] ? ['open' => suOpen($p) ? 1 : 0, 'may' => suMay($p, $uid) ? 1 : 0, 'until' => $p['su_until'] === null ? null : (int)$p['su_until'], 'groups' => $g === null ? null : array_values(array_filter(array_map(fn($i) => $gn[$i] ?? null, $g))),
+        'mine' => $mine, 'yes' => count(array_filter($su, fn($r) => $r['status'] === 'yes')), 'no' => count(array_filter($su, fn($r) => $r['status'] === 'no')), 'list' => $lead || $pl ? $su : null] : null]; }, $ps))); }
 // Einsatzgruppen (Issue #90)
 function idsIn($v) { return array_values(array_unique(array_filter(array_map('intval', (array)$v), fn($x) => $x > 0))); }
 function qm($a) { return implode(',', array_fill(0, count($a), '?')); }
@@ -3274,7 +3296,7 @@ switch ($route) {
     // feste Standorte auch ohne Einsatz (Änderungswunsch #96): die aktiven permanenten, solange die Funktion für einen der Einsatztypen an ist
     $fpl = array_filter(featuresAll(), fn($f) => $f['place']) ? array_values(array_map(fn($r) => array_diff_key($r, ['active' => 1]), array_filter(placesOf(null), fn($r) => $r['active']))) : [];
     if ($blocked) $xp = [];
-    out(['incident' => null, 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
+    out(['incident' => null, 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
   }
   $inc['id'] = (int)$inc['id']; $inc['plan_id'] = $inc['plan_id'] === null ? null : (int)$inc['plan_id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc = kindAdd($inc); $inc['kind'] = kindPub(kindOf($inc)); $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
@@ -3872,6 +3894,8 @@ switch ($route) {
   // Aufgebot (Issue #90): Gruppen (beim Start aufgelöst) und Einzelpersonen, ohne die Übungsleitung; beides leer = alle beim Typ aufbietbaren Gruppen.
   // Der Einsatztyp kann sich seit dem Vorbereiten geändert haben: Wer nicht zugelassen ist, fällt hier weg. Ohne aktive Einsatzgruppen wie bisher.
   $pg = idsIn(json_decode($p['grp_ids'] ?? '[]', true)); $pi = exInvite($p); $iv = null; $ig = null; $pall = !$pg && $pi === null; $kp = kindPeople($kind);
+  // Angemeldete aufbieten (Issue #169): zusätzlich zur Auswahl, ohne Auswahl nur sie
+  if ((int)$p['su_inv']) { $sy = suYes((int)$p['id']); if ($pall) { $pall = false; $pi = $sy; } else $pi = array_values(array_unique(array_merge($pi ?? [], $sy))); }
   if ($kp !== null) { $kg = kindGroups($kind); $pg = $pall ? $kg : array_values(array_intersect($pg, $kg)); if ($pi !== null) $pi = array_values(array_intersect($pi, $kp)); }
   if ($kp !== null || !$pall) { $iv = array_values(array_diff(array_unique(array_merge(grpMembers($pg), $pi ?? [])), exLeads($p))); $ig = ['g' => $pg, 'p' => $pi ?? []]; }
   $abs = array_values(array_diff($iv === null ? absentIds() : array_intersect(absentIds(), $iv), exLeads($p))); // Abwesende (Issue #91)
@@ -3906,8 +3930,18 @@ switch ($route) {
   $ps = $db->query("SELECT p.*,i.alarm_at,i.ended_at FROM ex_plans p LEFT JOIN incidents i ON i.id=p.incident_id WHERE p.active=1 ORDER BY p.incident_id IS NOT NULL, i.alarm_at DESC, p.title")->fetchAll();
   // Durchführungen (auch vor einem Zurücksetzen) mit Log und Replay
   $rs = []; foreach ($db->query("SELECT id,plan_id,kind_id,alarm_at,ended_at,recorded FROM incidents WHERE plan_id IS NOT NULL ORDER BY alarm_at DESC")->fetchAll() as $r) $rs[(int)$r['plan_id']][] = ints($r, ['id', 'plan_id', 'kind_id', 'alarm_at', 'ended_at', 'recorded']);
-  out(array_map(fn($p) => ['doc' => json_decode((string)$p['doc'], true) ?: null, 'leads' => exLeads($p), 'invite' => exInvite($p), 'grp_ids' => idsIn(json_decode($p['grp_ids'] ?? '[]', true)), 'injects' => exInjects((int)$p['id']), 'places' => placeSel($p), 'own_places' => placesOf((int)$p['id'], true), 'runs' => aiRows($rs[(int)$p['id']] ?? [])] + ints($p, ['id', 'kind_id', 'record', 'public_anon', 'created_by', 'created', 'incident_id', 'alarm_at', 'ended_at', 'parent_id']), $ps));
+  out(array_map(fn($p) => ['doc' => json_decode((string)$p['doc'], true) ?: null, 'leads' => exLeads($p), 'invite' => exInvite($p), 'grp_ids' => idsIn(json_decode($p['grp_ids'] ?? '[]', true)), 'injects' => exInjects((int)$p['id']), 'places' => placeSel($p), 'su_grp' => suGrp($p), 'signups' => suRows((int)$p['id']), 'own_places' => placesOf((int)$p['id'], true), 'runs' => aiRows($rs[(int)$p['id']] ?? [])] + ints($p, ['id', 'kind_id', 'record', 'public_anon', 'created_by', 'created', 'incident_id', 'alarm_at', 'ended_at', 'parent_id', 'plan_at', 'plan_end', 'sched', 'su_on', 'su_until', 'su_inv']), $ps));
  case 'ex/parents': plannerOnly(); out(secParents(true)); // geplante Sekundäreinsätze (Issue #164): Einsätze für den Bezug, auch der laufende
+ case 'ex/signup': // Anmeldung zu einer vorbereiteten Übung (Issue #169): id, status yes|no|'' (zurückziehen), note
+  $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)($in['id'] ?? 0)]); $p = $s->fetch(); $s->closeCursor();
+  if (!$p || !(int)$p['sched'] || !(int)$p['su_on']) fail('Für diese Übung gibt es keine Anmeldung', 404);
+  if (!suOpen($p)) fail($p['incident_id'] !== null ? 'Die Übung läuft bereits' : 'Die Anmeldefrist ist abgelaufen');
+  if (!suMay($p, $uid)) fail('Für diese Übung können sich nur Mitglieder bestimmter Einsatzgruppen anmelden', 403);
+  $stt = (string)($in['status'] ?? ''); if (!in_array($stt, ['yes', 'no', ''], true)) fail('Ungültiger Status');
+  $note = mb_substr(trim((string)($in['note'] ?? '')), 0, 200);
+  $db->prepare("DELETE FROM ex_signups WHERE plan_id=? AND user_id=?")->execute([$p['id'], $uid]);
+  if ($stt !== '') $db->prepare("INSERT INTO ex_signups(plan_id,user_id,status,note,at) VALUES(?,?,?,?,?)")->execute([$p['id'], $uid, $stt, $note === '' ? null : $note, $now]);
+  out(['ok' => true]);
  case 'ex/plan/save': plannerOnly(); // anlegen oder ändern (nur vor dem Start): title, message, leads, invite (null = alle alarmieren), record, public, public_anon
   $title = mb_substr(trim((string)($in['title'] ?? '')), 0, 120); $msg = trim((string)($in['message'] ?? ''));
   if ($title === '') fail('Titel fehlt'); if ($msg === '') fail('Die Aufgebotsmeldung ist Pflicht');
@@ -3938,20 +3972,34 @@ switch ($route) {
       if ((int)$in['parent_id'] !== $op && !in_array((int)$in['parent_id'], array_column(secParents(true), 'id'), true)) fail(
 'Der Einsatz für den Bezug wurde nicht gefunden'); $par = (int)$in['parent_id']; }
     elseif ($kk['ref'] === 2) fail('Dieser Einsatztyp verlangt einen Bezug auf einen früheren Einsatz'); }
+  // Übungsplan und Anmeldung (Issue #169): plan_at/plan_end (Unix-Zeit, end nach Beginn), plan_loc, plan_info, sched, su_on, su_grp (null = alle), su_until, su_inv; fehlt = unverändert
+  $tsIn = fn($k) => ($in[$k] ?? null) === null || $in[$k] === '' ? null : (int)$in[$k];
+  $sch = ['plan_at' => $tsIn('plan_at'), 'plan_end' => $tsIn('plan_end'), 'plan_loc' => mb_substr(trim((string)($in['plan_loc'] ?? '')), 0, 200) ?: null, 'plan_info' => mb_substr(trim((string)($in['plan_info'] ?? '')), 0, 2000) ?: null,
+    'sched' => empty($in['sched']) ? 0 : 1, 'su_on' => empty($in['su_on']) ? 0 : 1, 'su_grp' => ($in['su_grp'] ?? null) === null ? null : json_encode(idsIn($in['su_grp'])), 'su_until' => $tsIn('su_until'), 'su_inv' => empty($in['su_inv']) ? 0 : 1];
+  if ($sch['plan_end'] !== null && ($sch['plan_at'] === null || $sch['plan_end'] < $sch['plan_at'])) fail('Das Ende muss nach dem Beginn liegen');
+  if ($sch['su_on'] && !$sch['sched']) fail('Anmelden geht nur bei Übungen im Übungsplan');
+  if ($sch['su_on'] && $sch['plan_at'] === null) fail('Für die Anmeldung braucht die Übung ein Datum');
+  if ($sch['su_until'] !== null && $sch['plan_at'] !== null && $sch['su_until'] > $sch['plan_at']) fail('Der Anmeldeschluss muss vor dem Beginn liegen');
+  $schSet = array_key_exists('sched', $in);
   if (!empty($in['id'])) {
     $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)$in['id']]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
     if ($p['incident_id'] !== null) fail('Die Übung wurde bereits gestartet');
     $tok = empty($in['public']) ? null : ($p['public_token'] ?? bin2hex(random_bytes(16)));
     $db->prepare("UPDATE ex_plans SET title=?, message=?, leads=?, invite=?, grp_ids=?, record=?, public_token=?, public_anon=?, kind_id=?, places=? WHERE id=?")->execute([$title, $msg, json_encode($leads), $inv, $pgj, $rec, $tok, $anon, $pk ? $pk['id'] : ($p['kind_id'] ?? $pkid), array_key_exists('places', $in) ? $pls : $p['places'], $p['id']]);
     if ($docIn) $db->prepare("UPDATE ex_plans SET doc=?, parent_id=? WHERE id=?")->execute([$doc, $par, $p['id']]);
+    if ($schSet) $db->prepare("UPDATE ex_plans SET " . implode(',', array_map(fn($k) => "$k=?", array_keys($sch))) . " WHERE id=?")->execute([...array_values($sch), $p['id']]);
     out(['ok' => true, 'id' => (int)$p['id']]);
   }
   $db->prepare("INSERT INTO ex_plans(title,message,leads,invite,grp_ids,record,public_token,public_anon,created_by,created,kind_id,places,doc,parent_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute([$title, $msg, json_encode($leads), $inv, $pgj, $rec, empty($in['public']) ? null : bin2hex(random_bytes(16)), $anon, $uid, $now, $pkid, $pls, $doc, $par]);
-  out(['ok' => true, 'id' => (int)$db->lastInsertId()]);
+  $nid = (int)$db->lastInsertId();
+  if ($schSet) $db->prepare("UPDATE ex_plans SET " . implode(',', array_map(fn($k) => "$k=?", array_keys($sch))) . " WHERE id=?")->execute([...array_values($sch), $nid]);
+  out(['ok' => true, 'id' => $nid]);
  case 'ex/plan/copy': plannerOnly(); // als neue, noch nicht gestartete Übung kopieren (mit allen Elementen, nicht freigegeben)
   $s = $db->prepare("SELECT * FROM ex_plans WHERE id=? AND active=1"); $s->execute([(int)($in['id'] ?? 0)]); $p = $s->fetch() ?: fail('Übung nicht gefunden', 404);
   $db->prepare("INSERT INTO ex_plans(kind_id,title,message,leads,invite,grp_ids,record,public_token,public_anon,created_by,created,places,doc,parent_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute([$p['kind_id'], mb_substr('Kopie von ' . $p['title'], 0, 120), $p['message'], $p['leads'], $p['invite'], $p['grp_ids'], $p['record'], $p['public_token'] === null ? null : bin2hex(random_bytes(16)), $p['public_anon'], $uid, $now, $p['places'], $p['doc'], $p['parent_id']]);
   $nid = (int)$db->lastInsertId(); $map = []; $js = exInjects((int)$p['id']);
+  // Übungsplan übernehmen (Issue #169), aber nicht im Plan zeigen, bis Datum und Angaben angepasst sind; Anmeldungen gehören zur alten Übung
+  $db->prepare("UPDATE ex_plans SET plan_at=?, plan_end=?, plan_loc=?, plan_info=?, sched=0, su_on=?, su_grp=?, su_until=?, su_inv=? WHERE id=?")->execute([$p['plan_at'], $p['plan_end'], $p['plan_loc'], $p['plan_info'], $p['su_on'], $p['su_grp'], $p['su_until'], $p['su_inv'], $nid]);
   foreach (placesOf((int)$p['id'], true) as $f) { $db->prepare("INSERT INTO places(plan_id,name,descr,abbr,color,lat,lon,active,cat_id,pts,line,sort,props,src_ref,src_kind,src_data,src_at) VALUES(?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?)")->execute([$nid, $f['name'], $f['descr'], $f['abbr'], $f['color'], $f['lat'], $f['lon'], $f['cat_id'], $f['pts'] ? json_encode($f['pts']) : null, $f['line'], $f['sort'], json_encode($f['props']), $f['src_ref'], $f['src_kind'], $f['src_data'] === null ? null : json_encode($f['src_data'], JSON_UNESCAPED_UNICODE), $f['src_at']]);
     placeNavSet((int)$db->lastInsertId(), array_map(fn($n) => [$n['lat'], $n['lon'], $n['note']], $f['nav'])); } // mit Eigenschaften, Navigationspunkten und Quelle (Issue #182)
   foreach ($js as $j) {
@@ -3968,6 +4016,7 @@ switch ($route) {
   $db->beginTransaction();
   $db->prepare("UPDATE ex_plans SET incident_id=NULL WHERE id=?")->execute([$p['id']]);
   $db->prepare("UPDATE ex_injects SET released=NULL, released_by=NULL, rescuee_id=NULL, ext_id=NULL WHERE plan_id=?")->execute([$p['id']]);
+  $db->prepare("DELETE FROM ex_signups WHERE plan_id=?")->execute([$p['id']]); // Anmeldungen galten der bisherigen Durchführung (Issue #169)
   // der öffentliche Link gilt wieder für die nächste Durchführung (Warteseite), nicht mehr für die beendete
   if ($p['public_token'] !== null) $db->prepare("UPDATE incidents SET public_token=NULL WHERE id=?")->execute([$p['incident_id']]);
   $db->commit();
@@ -4402,7 +4451,7 @@ switch ($route) {
   if (!$u) fail('Benutzer nicht gefunden', 404);
   if ($u['last_login'] !== null || isset(usersUsed()[$id])) fail('Diese Person hat sich schon angemeldet oder kommt in Einsatzdaten vor; bitte deaktivieren');
   $db->beginTransaction();
-  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'sessions', 'push_native'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
+  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'sessions', 'push_native', 'ex_signups'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
   $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
   foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
     $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));
@@ -4486,7 +4535,7 @@ switch ($route) {
   $db->beginTransaction();
   $drop = function ($tbl, $col, $null) use ($db, $id) { foreach ($db->query("SELECT id,$col FROM $tbl WHERE $col IS NOT NULL")->fetchAll() as $x) { $v = json_decode($x[$col], true); if (!is_array($v) || !in_array($id, array_map('intval', $v), true)) continue;
     $db->prepare("UPDATE $tbl SET $col=? WHERE id=?")->execute([json_encode(array_values(array_diff(idsIn($v), [$id]))), $x['id']]); } };
-  $drop('inc_kinds', 'grp_off', 0); $drop('inc_kinds', 'grp_def', 0); $drop('ex_plans', 'grp_ids', 0); $drop('uroles', 'grp_ids', 1);
+  $drop('inc_kinds', 'grp_off', 0); $drop('inc_kinds', 'grp_def', 0); $drop('ex_plans', 'grp_ids', 0); $drop('ex_plans', 'su_grp', 1); $drop('uroles', 'grp_ids', 1);
   foreach ($db->query("SELECT id,inv_groups FROM incidents WHERE inv_groups IS NOT NULL")->fetchAll() as $x) { $v = json_decode($x['inv_groups'], true); if (!in_array($id, idsIn($v['g'] ?? []), true)) continue;
     $v['gn'] = (array)($v['gn'] ?? []); $v['gn'][$id] = $g['name']; $db->prepare("UPDATE incidents SET inv_groups=? WHERE id=?")->execute([json_encode($v), $x['id']]); }
   $db->prepare("DELETE FROM inc_group_members WHERE group_id=?")->execute([$id]); $db->prepare("DELETE FROM inc_groups WHERE id=?")->execute([$id]);

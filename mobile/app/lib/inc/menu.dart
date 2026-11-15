@@ -283,6 +283,7 @@ class _IncMenuState extends State<IncMenu> {
               padding: EdgeInsets.only(top: 4),
               child: Mut('Startet mit der vorbereiteten Meldung (Sekundäreinsätze ohne Alarm). Du leitest: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
         ]),
+      ?_sched(c),
       ?hydroCard(c, s, map, widget.openPrefs),
       ?_tools(),
     ];
@@ -307,6 +308,86 @@ class _IncMenuState extends State<IncMenu> {
       if (js(d['info']).isNotEmpty) ...[h('Weitere Angaben'), SelectableText(js(d['info']))],
       if (empty) const Mut('Kein Einsatzplan erfasst.'),
     ]);
+  }
+
+  // Übungsplan (Issue #169): wie schedCard in index.html, Daten aus ex_sched (ohne Einsatz)
+  final Set<int> _schedOpen = {};
+  String _schedWhen(J x) {
+    if (x['at'] == null) return 'Datum noch offen';
+    final a = tsDate(x['at'] as num), wd = const ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][a.weekday - 1];
+    String p2(int v) => v.toString().padLeft(2, '0');
+    var r = '$wd., ${p2(a.day)}.${p2(a.month)}.${a.year}, ${p2(a.hour)}:${p2(a.minute)}';
+    if (x['end'] != null) {
+      final e = tsDate(x['end'] as num);
+      r += ' bis ${e.year == a.year && e.month == a.month && e.day == a.day ? fmtHM(x['end'] as num) : fmtDT(x['end'] as num)}';
+    }
+    return r;
+  }
+
+  Widget? _sched(BuildContext c) {
+    final xs = jl(s.st?['ex_sched']);
+    if (xs.isEmpty) return null;
+    final ws = <Widget>[];
+    for (final x in xs) {
+      final id = x['id'] as int, u = x['su'] is Map ? jm(x['su']) : null, m = u?['mine'] is Map ? jm(u!['mine']) : null, k = x['kind'] is Map ? jm(x['kind']) : null;
+      final list = u?['list'] is List ? jl(u!['list']) : null;
+      if (ws.isNotEmpty) ws.add(const Divider(height: 16));
+      ws.add(Wrap(spacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        if (k != null) Chip2(js(k['name']), color: hexColor(k['color'])),
+        Text(js(x['title']), style: const TextStyle(fontWeight: FontWeight.w600)),
+        if (jb(x['running'])) const Chip2('läuft', color: accRed),
+      ]));
+      ws.add(Mkv([
+        ('Wann', _schedWhen(x)),
+        ('Ort', js(x['loc'])),
+        ('Leitung', (x['leads'] is List ? x['leads'] as List : const []).join(', ')),
+        if (u != null) ('Anmeldungen', '${u['yes']} nehmen teil${(u['no'] as int? ?? 0) > 0 ? ', ${u['no']} nicht' : ''}'),
+      ]));
+      if (js(x['info']).isNotEmpty) ws.add(Mut(js(x['info'])));
+      if (list != null) {
+        ws.add(InkWell(
+            onTap: () => setState(() => _schedOpen.contains(id) ? _schedOpen.remove(id) : _schedOpen.add(id)),
+            child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Mut('${_schedOpen.contains(id) ? '▾' : '▸'} Wer hat geantwortet?'))));
+        if (_schedOpen.contains(id)) {
+          ws.add(list.isEmpty
+              ? const Mut('Noch niemand')
+              : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  for (final r in list) Mut('${r['status'] == 'yes' ? '✓' : '✗'} ${js(r['name'])}${js(r['note']).isNotEmpty ? ' – ${js(r['note'])}' : ''}'),
+                ]));
+        }
+      }
+      if (u == null) continue;
+      if (!jb(u['may'])) {
+        final gs = (u['groups'] is List ? u['groups'] as List : const []).join(', ');
+        ws.add(Mut('Anmelden können nur Mitglieder von ${gs.isEmpty ? 'bestimmten Einsatzgruppen' : gs}.'));
+        continue;
+      }
+      if (m != null) ws.add(Mut('Deine Antwort: ${m['status'] == 'yes' ? 'Ich nehme teil' : 'Ich nehme nicht teil'}${js(m['note']).isNotEmpty ? ' – ${js(m['note'])}' : ''}'));
+      if (!jb(u['open'])) {
+        ws.add(const Mut('Die Anmeldung ist geschlossen.'));
+        continue;
+      }
+      final busy = _busy.contains('su$id');
+      ws.add(Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Wrap(spacing: 8, runSpacing: 6, children: [
+            smallBtn('Ich nehme teil', busy ? null : () => _signup(c, id, 'yes'), primary: m?['status'] != 'yes'),
+            smallBtn('Ich nehme nicht teil', busy ? null : () => _signup(c, id, 'no')),
+            if (m != null) smallBtn('Zurückziehen', busy ? null : () => _signup(c, id, '')),
+          ])));
+      if (u['until'] != null) ws.add(Mut('Anmeldeschluss ${fmtDT(u['until'] as num)}'));
+    }
+    return MCard(title: 'Übungsplan (${xs.length})', children: ws);
+  }
+
+  Future<void> _signup(BuildContext c, int id, String v) async {
+    var note = '';
+    if (v.isNotEmpty) {
+      final n = await inputDlg(c, v == 'yes' ? 'Ich nehme teil' : 'Ich nehme nicht teil', label: 'Bemerkung (optional)', hint: 'z. B. komme etwas später', ok: 'Senden');
+      if (n == null) return;
+      note = n.trim();
+    }
+    await _run('su$id', 'ex/signup', {'id': id, 'status': v, 'note': note}, v == 'yes' ? 'Angemeldet' : v == 'no' ? 'Abgemeldet' : 'Antwort zurückgezogen');
   }
 
   Future<void> _exStart(BuildContext c, J p) async {
