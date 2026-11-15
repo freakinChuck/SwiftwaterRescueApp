@@ -77,6 +77,9 @@ class _IncMenuState extends State<IncMenu> {
     if (s.offline) top.add(_offline(c));
     final abs = st?['my_abs'] is Map ? jm(st!['my_abs']) : null;
     if (abs != null) top.add(_absNote(c, abs));
+    // offene Feedback-Anfragen zum After Action Review (Issue #103), nur ohne Einsatz; Antwort in «Meine Einsätze» (WebView)
+    final fbo = i == null && !s.demo ? (ji(st?['fb_open']) ?? 0) : 0;
+    if (fbo > 0) top.add(_fbNote(c, fbo));
     final un = _updLater ? null : updateNote(s.me?['version'] is Map ? jm(s.me!['version']) : null, js(s.me?['app_min']));
     if (un != null) top.add(_updNote(un));
     Widget body;
@@ -172,6 +175,13 @@ class _IncMenuState extends State<IncMenu> {
           }),
         ]),
         const Mut('Du erhältst keine Aufgebote und keine Alarme.'),
+      ]);
+
+  Widget _fbNote(BuildContext c, int n) => MCard(children: [
+        Row(children: [
+          Expanded(child: Text('📝 Feedback erbeten zu ${n == 1 ? 'einem beendeten Einsatz' : '$n beendeten Einsätzen'}', style: const TextStyle(fontWeight: FontWeight.w600))),
+          smallBtn('Antworten', () => openWeb(context, s, 'admin.html#meine')),
+        ]),
       ]);
 
   // ---------- Werkzeuge und Fusszeile ----------

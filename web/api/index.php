@@ -35,7 +35,7 @@ const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applo
 const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
   'user/save' => ['user', 'Benutzer gespeichert'], 'user/password' => ['user', 'Passwort zurückgesetzt'], 'user/active' => ['user', 'Benutzer aktiviert bzw. deaktiviert'], 'user/delete' => ['user', 'Benutzer gelöscht'],
   'urole/save' => ['user', 'Benutzerrolle gespeichert'], 'urole/remove' => ['user', 'Benutzerrolle entfernt'], 'group/save' => ['user', 'Einsatzgruppe gespeichert'], 'group/delete' => ['user', 'Einsatzgruppe gelöscht'],
-  'settings/save' => ['cfg', 'Einstellungen gespeichert'], 'ai/cfg/save' => ['cfg', 'AI-Assistent eingestellt'], 'anon/cfg/save' => ['cfg', 'Anonymisierung eingestellt'], 'aar/cfg/save' => ['cfg', 'After Action Review eingerichtet'],
+  'settings/save' => ['cfg', 'Einstellungen gespeichert'], 'ai/cfg/save' => ['cfg', 'AI-Assistent eingestellt'], 'anon/cfg/save' => ['cfg', 'Anonymisierung eingestellt'], 'aar/cfg/save' => ['cfg', 'After Action Review eingerichtet'], 'aar/fb/request' => ['inc', 'Einsatzfeedback angefordert'], 'aar/fb/close' => ['inc', 'Einsatzfeedback abgeschlossen'], 'my/fb/save' => ['inc', 'Einsatzfeedback abgegeben'],
   'kind/save' => ['cfg', 'Einsatztyp gespeichert'], 'kind/delete' => ['cfg', 'Einsatztyp gelöscht'], 'mode/save' => ['cfg', 'Einrückoption gespeichert'], 'role/save' => ['cfg', 'Spezialrolle gespeichert'],
   'incident/start' => ['inc', 'Einsatz gestartet'], 'ex/start' => ['inc', 'Vorbereitete Übung gestartet'], 'ex/signup' => ['inc', 'Anmeldung zu einer Übung'], 'incident/end' => ['inc', 'Einsatz beendet'],
   'incident/replay/delete' => ['anon', 'Aufzeichnung gelöscht'], 'anon/apply' => ['anon', 'Anonymisierung angewendet'], 'anon/undo' => ['anon', 'Anonymisierung zurückgenommen'],
@@ -150,6 +150,9 @@ foreach ([
   "CREATE TABLE IF NOT EXISTS aar_arch(incident_id INT PRIMARY KEY, created BIGINT, snap LONGTEXT NULL, pdf_at BIGINT NULL, pdf_parts INT NULL, pdf_name TEXT NULL, pdf_sha TEXT NULL)",
   "CREATE TABLE IF NOT EXISTS aar_arch_img(incident_id INT, img_id INT, field_id $tx, caption TEXT, data MEDIUMTEXT, w INT, h INT, PRIMARY KEY(incident_id,img_id))",
   "CREATE TABLE IF NOT EXISTS aar_arch_part(incident_id INT, n INT, data MEDIUMTEXT, PRIMARY KEY(incident_id,n))",
+  // Einsatzfeedback (Issue #103): eine Anfrage je Einsatz (users = gefragte Personen, JSON), eine Antwort je Person (user_id NULL nach dem Lösen der Teilnahmen)
+  "CREATE TABLE IF NOT EXISTS fb_req(incident_id INT PRIMARY KEY, created BIGINT, created_by INT NULL, until_at BIGINT, note TEXT NULL, users TEXT NULL, closed_at BIGINT NULL, reminded BIGINT NULL)",
+  "CREATE TABLE IF NOT EXISTS fb_ans(id $ai, incident_id INT, user_id INT NULL, data MEDIUMTEXT, created BIGINT, updated BIGINT)",
   // AI-Assistent (Issue #111): jede Abfrage beim Anbieter (Kostenbremse, Statistik) und die letzte Antwort je Funktion und Objekt (Companion, keine doppelten Kosten)
   // Technisches Applikationslog (Issue #139): lvl info|warn|err, cat = Bereich (APPLOG_CATS), ctx = JSON mit technischen Angaben, user_id/route der Anfrage
  "CREATE TABLE IF NOT EXISTS app_log(id $ai, at BIGINT, lvl $tx, cat $tx, msg TEXT, ctx TEXT NULL, user_id INT NULL, route $tx NULL)",
@@ -387,7 +390,17 @@ const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
 const AAR_TYPES = ['head' => 'Zwischentitel', 'text' => 'Text einzeilig', 'area' => 'Text mehrzeilig', 'date' => 'Datum', 'time' => 'Uhrzeit', 'number' => 'Zahl', 'select' => 'Auswahl', 'check' => 'Ja/Nein', 'img' => 'Bilder'];
 const AAR_IMG_MAX = 50; // Bilder je Review, je höchstens 3 MB (der Browser verkleinert auf 1600 px JPEG)
-const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'log' => 'Einsatzlog'];
+const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'fb' => 'Feedback der Einsatzkräfte', 'log' => 'Einsatzlog'];
+// Einsatzfeedback (Issue #103): Fragen an die Einsatzkräfte nach dem Einsatz, Antworten fürs After Action Review. Arten wie im Review ohne Bilder.
+// on = Anfragen möglich, intro = Text über den Fragen, days = Frist (Tage), anon = Antworten in Review und Dokument ohne Namen («Rückmeldung N»),
+// kinds = Einsatztypen, bei denen das Einsatzende das Feedback automatisch anfordert; seq wie im Review (nie wieder vergebene Feld-IDs)
+const FB_TYPES = ['head' => 'Zwischentitel', 'text' => 'Text einzeilig', 'area' => 'Text mehrzeilig', 'date' => 'Datum', 'time' => 'Uhrzeit', 'number' => 'Zahl', 'select' => 'Auswahl', 'check' => 'Ja/Nein'];
+const FB_DEFAULT = ['on' => 1, 'intro' => 'Deine Rückmeldung hilft, den Einsatz im After Action Review auszuwerten. Kurze Stichworte genügen.', 'days' => 7, 'anon' => 0, 'kinds' => [], 'seq' => 4, 'fields' => [
+  ['id' => 'q1', 'type' => 'area', 'label' => 'Was lief aus deiner Sicht gut?', 'hint' => ''],
+  ['id' => 'q2', 'type' => 'area', 'label' => 'Was lief weniger gut?', 'hint' => 'Probleme, Unklarheiten, Material'],
+  ['id' => 'q3', 'type' => 'area', 'label' => 'Was sollten wir beim nächsten Mal anders machen?', 'hint' => ''],
+  ['id' => 'q4', 'type' => 'select', 'label' => 'Wie beurteilst du den Einsatz insgesamt?', 'hint' => '', 'opts' => ['sehr gut', 'gut', 'genügend', 'ungenügend']],
+]];
 // Status je Review: 0 = in Arbeit, 1 = freigegeben (abgeschlossen, gesperrt, für Teilnehmende sichtbar), 2 = nicht relevant
 const AAR_STATUS = [0 => 'in Arbeit', 1 => 'freigegeben', 2 => 'nicht relevant'];
 const AAR_ARCH_PARTS = 400; const AAR_ARCH_CHUNK = 2200000; // gesichertes PDF: höchstens so viele Stücke zu je so vielen Zeichen Base64 (reicht für 50 Bilder zu 3 MB)
@@ -395,7 +408,7 @@ const AAR_DL = ['docx' => 'Word (.docx)', 'pdf' => 'PDF']; // Download je Format
 const AAR_DL_ST = ['wip' => 'In Arbeit', 'rel' => 'Freigegeben', 'nr' => 'Nicht relevant']; // «noch kein AAR» zählt als in Arbeit
 // dl je Format und Zustand; die frühere Einstellung (nur Format ein/aus) gilt für «Freigegeben»
 function aarDlNorm($d) { $r = []; foreach (AAR_DL as $k => $_) { $v = $d[$k] ?? null; foreach (AAR_DL_ST as $s => $__) $r[$k][$s] = is_array($v) ? (int)!empty($v[$s]) : ($s === 'rel' ? (int)($v ?? 1) : 0); } return $r; }
-const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 13, 'auto' => ['inc' => 1, 'people' => 1, 'res' => 1, 'ext' => 1, 'log' => 0], 'dl' => ['docx' => ['wip' => 0, 'rel' => 1, 'nr' => 0], 'pdf' => ['wip' => 0, 'rel' => 1, 'nr' => 0]], 'fields' => [
+const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 13, 'auto' => ['inc' => 1, 'people' => 1, 'res' => 1, 'ext' => 1, 'fb' => 1, 'log' => 0], 'dl' => ['docx' => ['wip' => 0, 'rel' => 1, 'nr' => 0], 'pdf' => ['wip' => 0, 'rel' => 1, 'nr' => 0]], 'fields' => [
   ['id' => 'f1', 'type' => 'date', 'label' => 'Datum des Reviews', 'hint' => ''],
   ['id' => 'f2', 'type' => 'text', 'label' => 'Moderation', 'hint' => ''],
   ['id' => 'f3', 'type' => 'area', 'label' => 'Teilnehmende am Review', 'hint' => ''],
@@ -467,6 +480,45 @@ function aarEditable($inc) { global $db; need('aar'); aarSealed($inc['id']);
 function aarTouch($id, $exists) { global $db, $now, $uid;
   if ($exists) $db->prepare("UPDATE aar SET updated=?,updated_by=?,status=0 WHERE incident_id=?")->execute([$now, $uid, $id]);
   else $db->prepare("INSERT INTO aar(incident_id,data,updated,updated_by,status) VALUES(?,'{}',?,?,0)")->execute([$id, $now, $uid]); }
+// Einsatzfeedback (Issue #103): eine Anfrage je Einsatz, gefragt sind die Teilnehmenden (nicht abgelehnt, aktives Konto); offen bis zur Frist oder bis zum Abschliessen,
+// nie mehr nach Freigabe, Sicherung oder Anonymisierung des Reviews (dann ist es für das Review zu spät)
+function fbReq($id) { global $db; $s = $db->prepare("SELECT * FROM fb_req WHERE incident_id=?"); $s->execute([(int)$id]); $r = $s->fetch(); $s->closeCursor(); return $r ?: null; }
+function fbAsked($r) { return $r ? array_map('intval', json_decode((string)$r['users'], true) ?: []) : []; }
+function fbPeople($id) { global $db; $s = $db->prepare("SELECT DISTINCT p.user_id FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=? AND p.mode<>'declined' AND p.user_id>0 AND u.active=1"); $s->execute([(int)$id]); return array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN)); }
+function fbAnswered($id) { global $db; $s = $db->prepare("SELECT user_id FROM fb_ans WHERE incident_id=? AND user_id IS NOT NULL"); $s->execute([(int)$id]); return array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN)); }
+function fbDay($t) { return (new DateTime('@' . $t))->setTimezone(new DateTimeZone('Europe/Zurich'))->format('d.m.Y'); }
+// anfordern oder erinnern: gefragt sind die bisher Gefragten und die aktuellen Teilnehmenden; Push an alle ohne Antwort (nicht an die auslösende Person); liefert die Anzahl
+function fbRequest($inc, $days, $note, $by) { global $db, $now; $id = (int)$inc['id']; $old = fbReq($id);
+  $users = array_values(array_unique(array_merge(fbAsked($old), fbPeople($id)))); $until = $now + $days * 86400;
+  if ($old) $db->prepare("UPDATE fb_req SET until_at=?, note=?, users=?, closed_at=NULL, reminded=? WHERE incident_id=?")->execute([$until, $note, json_encode($users), $now, $id]);
+  else $db->prepare("INSERT INTO fb_req(incident_id,created,created_by,until_at,note,users) VALUES(?,?,?,?,?,?)")->execute([$id, $now, $by, $until, $note, json_encode($users)]);
+  $to = array_values(array_diff($users, fbAnswered($id), $by === null ? [] : [(int)$by]));
+  pushTo($to, ['t' => 'FEEDBACK ZUM ' . mb_strtoupper(kindOf($inc)['name']), 'b' => 'Bitte gib bis ' . fbDay($until) . ' eine Rückmeldung zu «' . mb_substr((string)$inc['message'], 0, 80) . '».', 'tag' => 'f:' . $id] + pushLvl('normal'));
+  return count($to); }
+// offene Anfragen an eine Person (Meine Einsätze, Hinweis in der Einsatz-App), mit der eigenen Antwort
+function fbMine($u) { global $db, $now; if (!aarCfg()['fb']['on']) return [];
+  $s = $db->prepare("SELECT r.incident_id id,r.until_at,r.note,r.users,i.message,i.kind_id,i.alarm_at,i.ended_at FROM fb_req r JOIN incidents i ON i.id=r.incident_id
+    WHERE r.closed_at IS NULL AND r.until_at>? AND i.ended_at IS NOT NULL AND NOT (" . AAR_LOCK . ") AND NOT EXISTS (SELECT 1 FROM aar_arch x WHERE x.incident_id=i.id) AND NOT EXISTS (SELECT 1 FROM aar a WHERE a.incident_id=i.id AND a.status=1) ORDER BY i.alarm_at DESC");
+  $s->execute([$now]); $a = $db->prepare("SELECT data,updated FROM fb_ans WHERE incident_id=? AND user_id=?"); $out = [];
+  foreach ($s->fetchAll() as $r) { if (!in_array((int)$u, fbAsked($r), true)) continue;
+    $a->execute([(int)$r['id'], (int)$u]); $x = $a->fetch(); $a->closeCursor(); unset($r['users']);
+    $r = kindAdd(ints($r, ['id', 'until_at', 'alarm_at', 'ended_at'])); $r['answered'] = $x ? (int)$x['updated'] : null; $r['data'] = $x ? (object)(json_decode($x['data'], true) ?: []) : (object)[];
+    if (myRuns() === 'anon') $r['message'] = anonText($r['message'], anonCtx($r['id'], $u)); // Alarmmeldung wie in Meine Einsätze
+    $out[] = $r; }
+  return $out; }
+// Antworten fürs Review: Namen gemäss Einstellung anon («Rückmeldung N») bzw. anonCtx ($c), Texte wie Nachrichten anonymisiert
+function fbAnswers($id, $c) { global $db; $an = aarCfg()['fb']['anon']; $n = 0;
+  $s = $db->prepare("SELECT a.id,a.user_id,a.data,a.updated,u.name FROM fb_ans a LEFT JOIN users u ON u.id=a.user_id WHERE a.incident_id=? ORDER BY a.created,a.id"); $s->execute([(int)$id]);
+  return array_map(function ($a) use ($an, $c, &$n) { $n++; $u = $a['user_id'] === null ? null : (int)$a['user_id']; $d = json_decode((string)$a['data'], true) ?: [];
+    if ($c) foreach ($d as $k => $v) $d[$k] = anonText((string)$v, $c);
+    return ['id' => (int)$a['id'], 'name' => $an || $u === null ? "Rückmeldung $n" : ($c ? ($c['u'][$u] ?? 'Einsatzkraft') : ($a['name'] ?? "Rückmeldung $n")), 'at' => (int)$a['updated'], 'data' => (object)$d]; }, $s->fetchAll()); }
+function fbData($inc, $c) { global $db, $now; $id = (int)$inc['id']; $cfg = aarCfg()['fb']; $r = fbReq($id); $ans = fbAnswers($id, $c); $req = null;
+  if ($r) { $asked = fbAsked($r); $pend = array_values(array_diff($asked, fbAnswered($id))); $names = [];
+    if (!$cfg['anon'] && !$c && $pend) { $s = $db->query('SELECT name FROM users WHERE id IN (' . implode(',', $pend) . ') ORDER BY name'); $names = $s->fetchAll(PDO::FETCH_COLUMN); }
+    $by = $r['created_by'] === null ? null : ($c ? ($c['u'][(int)$r['created_by']] ?? 'Person') : ($db->query('SELECT name FROM users WHERE id=' . (int)$r['created_by'])->fetchColumn() ?: '?'));
+    $req = ['created' => (int)$r['created'], 'by' => $by, 'until_at' => (int)$r['until_at'], 'note' => $r['note'], 'closed_at' => $r['closed_at'] === null ? null : (int)$r['closed_at'], 'reminded' => $r['reminded'] === null ? null : (int)$r['reminded'],
+      'open' => $r['closed_at'] === null && (int)$r['until_at'] > $now ? 1 : 0, 'asked' => count($asked), 'answered' => count($asked) - count($pend), 'pending' => $names]; }
+  return ['on' => $cfg['on'], 'days' => $cfg['days'], 'anon' => $cfg['anon'], 'fields' => $cfg['fields'], 'req' => $req, 'answers' => $ans, 'people' => count(fbPeople($id))]; }
 function aarImgRow($img) { global $db; $s = $db->prepare("SELECT id,incident_id FROM aar_img WHERE id=?"); $s->execute([(int)$img]); $r = $s->fetch(); $s->closeCursor(); return $r ?: fail('Bild nicht gefunden', 404); }
 // Inhalt des Dokuments (Route aar/get, Sicherung aarArchive); c = anonCtx oder null
 function aarDoc($inc, $c, $anon, $forced, $mine, $self) { global $db; $id = (int)$inc['id']; $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
@@ -482,11 +534,12 @@ function aarDoc($inc, $c, $anon, $forced, $mine, $self) { global $db; $id = (int
   $first = function ($k) use ($q) { $v = $q("SELECT MIN(ts) v FROM incident_log WHERE incident_id=? AND kind='$k'")[0]['v'] ?? null; return $v === null ? null : (int)$v; };
   $plan = $inc['plan_id'] ? ($db->query('SELECT title FROM ex_plans WHERE id=' . (int)$inc['plan_id'])->fetchColumn() ?: null) : null;
   return ['inc' => ['id' => $id, 'message' => $c ? anonText($inc['message'], $c) : $inc['message'], 'alarm_at' => (int)$inc['alarm_at'], 'ended_at' => $inc['ended_at'] === null ? null : (int)$inc['ended_at'],
-      'kind_name' => kindOf($inc)['name'], 'kind_color' => kindOf($inc)['color'], 'creator' => $nm($inc['created_by']), 'plan' => $plan, 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms'],
+      'kind_name' => kindOf($inc)['name'], 'kind_color' => kindOf($inc)['color'], 'kind_id' => (int)kindOf($inc)['id'], 'recorded' => (int)$inc['recorded'], 'rp_anon' => $rpa ? 1 : 0, 'log_anon' => (int)$inc['log_anon'], 'creator' => $nm($inc['created_by']), 'plan' => $plan, 'flow_ms' => $inc['flow_ms'] === null ? null : (float)$inc['flow_ms'],
       'lat' => $inc['lat'] === null ? null : (float)$inc['lat'], 'lon' => $inc['lon'] === null ? null : (float)$inc['lon'], 'first_accept' => $first('accept'), 'first_area' => $first('area')],
     'anon' => $anon, 'forced' => $forced, 'people' => $parts, 'rescuees' => $res, 'externals' => $ext, 'log' => $mine && !myBtns()['log'] ? [] : logRows($id, true, $anon, $self), 'my_anon' => $mine && myRuns() === 'anon',
     'data' => $a ? (json_decode($a['data'], true) ?: (object)[]) : (object)[], 'updated' => $a && $a['updated'] !== null ? (int)$a['updated'] : null, 'updated_by' => $a ? $nm($a['updated_by']) : null,
     'status' => $a ? (int)$a['status'] : 0, 'rel_at' => $a && $a['rel_at'] !== null ? (int)$a['rel_at'] : null, 'rel_by' => $a ? $nm($a['rel_by']) : null,
+    'fb' => fbAnswers($id, $c), // Einsatzfeedback (Issue #103), Fragen in der Einstellung (aarCfg()['fb'])
     'imgs' => array_map(fn($r) => ints($r, ['id', 'w', 'h']), $q("SELECT id,field_id field,caption,w,h FROM aar_img WHERE incident_id=? ORDER BY id"))]; } // Bilder ohne Inhalt, der kommt einzeln über aar/img
 // Sicherung vor dem Anonymisieren: Ein freigegebenes Review bleibt als PDF vollständig erhalten (Tabelle aar_arch, Recht aar_arch). Das PDF entsteht im Browser (jsPDF), die automatische Anonymisierung läuft aber ohne Browser:
 // Deshalb hält anonDo in derselben Transaktion zuerst den Inhalt fest (snap, Bilder in aar_arch_img); der nächste Browser mit dem Recht erzeugt daraus das PDF. Danach ist es unveränderlich (pdf_at), und snap und Bilder entfallen.
@@ -499,21 +552,19 @@ function aarArchive($inc) { global $db, $now, $my; $id = (int)$inc['id'];
   $db->prepare("INSERT INTO aar_arch_img(incident_id,img_id,field_id,caption,data,w,h) SELECT incident_id,id,field_id,caption,data,w,h FROM aar_img WHERE incident_id=?")->execute([$id]); }
 function aarArchRow($id) { global $db; $s = $db->prepare("SELECT incident_id,created,pdf_at,pdf_parts,pdf_name,pdf_sha FROM aar_arch WHERE incident_id=?"); $s->execute([(int)$id]); $r = $s->fetch(); $s->closeCursor(); return $r ?: fail('Keine Sicherung für diesen Einsatz', 404); }
 function aarCfg() { $c = json_decode((string)setting('aar_cfg', ''), true);
-  if (!is_array($c)) return AAR_DEFAULT;
+  if (!is_array($c)) return AAR_DEFAULT + ['fb' => FB_DEFAULT];
   $c += AAR_DEFAULT; $a = []; foreach (AAR_AUTO as $k => $_) $a[$k] = (int)($c['auto'][$k] ?? AAR_DEFAULT['auto'][$k]); $c['auto'] = $a;
-  $c['dl'] = aarDlNorm((array)$c['dl']);
+  $c['dl'] = aarDlNorm((array)$c['dl']); $c['fb'] = fbCfg($c['fb'] ?? null);
   return $c; }
-// Einstellungen prüfen; neue Felder erhalten eine nie zuvor vergebene ID (seq), damit Werte entfernter Felder nie einem neuen Feld zufallen
-function aarIn($in) { $old = aarCfg(); $s = fn($v, $n) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)$v)), 0, $n);
-  $seq = (int)$old['seq']; $known = array_column($old['fields'], 'id'); $f = []; $ids = [];
-  $fs = (array)($in['fields'] ?? []);
-  if (count($fs) > 80) fail('Höchstens 80 Felder');
+// Felder prüfen (Review und Feedback); neue Felder erhalten eine nie zuvor vergebene ID ($pre + ++$seq)
+function aarFieldsIn($fs, &$seq, $known, $types, $pre, $max) { $s = fn($v, $n) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)$v)), 0, $n); $f = []; $ids = [];
+  $fs = (array)$fs; if (count($fs) > $max) fail("Höchstens $max Felder");
   foreach ($fs as $x) {
     if (!is_array($x)) fail('Ungültiges Feld');
-    $t = (string)($x['type'] ?? ''); if (!isset(AAR_TYPES[$t])) fail('Ungültige Feldart');
+    $t = (string)($x['type'] ?? ''); if (!isset($types[$t])) fail('Ungültige Feldart');
     $l = $s($x['label'] ?? '', 150); if ($l === '') fail('Jedes Feld braucht eine Bezeichnung');
     $id = (string)($x['id'] ?? '');
-    if (!in_array($id, $known, true) || isset($ids[$id])) $id = 'f' . ++$seq;
+    if (!in_array($id, $known, true) || isset($ids[$id])) $id = $pre . ++$seq;
     $ids[$id] = 1; $r = ['id' => $id, 'type' => $t, 'label' => $l, 'hint' => $s($x['hint'] ?? '', 300)];
     if ($t === 'select') {
       $o = array_values(array_unique(array_filter(array_map(fn($v) => $s($v, 80), (array)($x['opts'] ?? [])), 'strlen')));
@@ -522,9 +573,22 @@ function aarIn($in) { $old = aarCfg(); $s = fn($v, $n) => mb_substr(trim(preg_re
     }
     $f[] = $r;
   }
+  return $f; }
+function fbCfg($c) { if (!is_array($c)) return FB_DEFAULT; $c += FB_DEFAULT;
+  return ['on' => (int)!empty($c['on']), 'intro' => (string)$c['intro'], 'days' => max(1, min(90, (int)$c['days'])), 'anon' => (int)!empty($c['anon']),
+    'kinds' => array_values(array_unique(array_map('intval', (array)$c['kinds']))), 'seq' => (int)$c['seq'], 'fields' => array_values((array)$c['fields'])]; }
+function fbIn($in, $old) { $seq = (int)$old['seq']; $f = aarFieldsIn($in['fields'] ?? [], $seq, array_column($old['fields'], 'id'), FB_TYPES, 'q', 40);
+  $d = (int)($in['days'] ?? 0); if ($d < 1 || $d > 90) fail('Frist für das Feedback: 1 bis 90 Tage');
+  $ks = array_map('intval', array_keys(array_filter(kinds(), fn($k) => !$k['deleted'])));
+  return ['on' => (int)!empty($in['on']), 'intro' => mb_substr(trim((string)($in['intro'] ?? '')), 0, 1000), 'days' => $d, 'anon' => (int)!empty($in['anon']),
+    'kinds' => array_values(array_intersect(array_map('intval', (array)($in['kinds'] ?? [])), $ks)), 'seq' => $seq, 'fields' => $f]; }
+// Einstellungen prüfen; neue Felder erhalten eine nie zuvor vergebene ID (seq), damit Werte entfernter Felder nie einem neuen Feld zufallen
+function aarIn($in) { $old = aarCfg(); $s = fn($v, $n) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)$v)), 0, $n);
+  $seq = (int)$old['seq']; $f = aarFieldsIn($in['fields'] ?? [], $seq, array_column($old['fields'], 'id'), AAR_TYPES, 'f', 80);
   $a = []; foreach (AAR_AUTO as $k => $_) $a[$k] = (int)!empty(($in['auto'] ?? [])[$k]);
   $d = isset($in['dl']) ? aarDlNorm((array)$in['dl']) : $old['dl'];
-  return ['title' => $s($in['title'] ?? '', 120) ?: AAR_DEFAULT['title'], 'org' => $s($in['org'] ?? '', 120), 'seq' => $seq, 'auto' => $a, 'dl' => $d, 'fields' => $f]; }
+  return ['title' => $s($in['title'] ?? '', 120) ?: AAR_DEFAULT['title'], 'org' => $s($in['org'] ?? '', 120), 'seq' => $seq, 'auto' => $a, 'dl' => $d, 'fields' => $f,
+    'fb' => isset($in['fb']) && is_array($in['fb']) ? fbIn($in['fb'], $old['fb']) : $old['fb']]; }
 const FEATURES = ['area' => 'Suchgebiet', 'res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
                   'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)', 'place' => 'Feste Standorte', 'hydro' => 'Pegel & Abfluss (BAFU)', 'pinfo' => 'Personeninfo (Infofenster beim Antippen einer Einsatzkraft)', 'geo' => 'Geodaten-Ebene (Objekte am Gewässer aus OpenStreetMap, zuschaltbar)', 'voice' => 'Funk (Durchsagen und Live-Konferenz)', 'veh' => 'Fahrzeuge (BLE-Beacons)', 'vehp' => 'Personen im Fahrzeug (Zuordnung über die Beacons)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
 // Navigations-Apps (Funktion «nav»): in der Verwaltung einzeln ausschaltbar (nav_off), Standard nav_default, pro Person users.nav_app
@@ -2778,6 +2842,7 @@ function anonStep($inc, $k, $how) { global $db; $id = (int)$inc['id'];
     foreach ($s->fetchAll() as $r) $up->execute([anonText($r['name'], $c), $r['id']]);
     $db->prepare("UPDATE messages SET text='(Text entfernt)' WHERE incident_id=?")->execute([$id]);
     $db->prepare("UPDATE voice SET transcript='(Text entfernt)' WHERE incident_id=? AND transcript IS NOT NULL")->execute([$id]); // Transkripte der Durchsagen (Issue #113)
+    $db->prepare("DELETE FROM fb_ans WHERE incident_id=?")->execute([$id]); $db->prepare("UPDATE fb_req SET note=NULL, closed_at=COALESCE(closed_at,?) WHERE incident_id=?")->execute([time(), $id]); // Einsatzfeedback (Issue #103): Freitexte; ein freigegebenes Review hat es vorher gesichert
     logev($id, null, 'anon', "Personenangaben und Freitexte entfernt $how"); return true;
   case 'parts': // negative ID in derselben Reihenfolge wie die Standortverläufe des Replays (Teilnahmen ohne Abgelehnte nach id, danach die Abgelehnten), Bezeichnung in label
     if (!$claim("UPDATE incidents SET part_anon=1 WHERE id=? AND part_anon=0")) return false;
@@ -2787,6 +2852,7 @@ function anonStep($inc, $k, $how) { global $db; $id = (int)$inc['id'];
     // übrige Verweise auf Konten in den Einsatzdaten (ausgelöst von, erfasst/markiert/gerettet von); das After Action Review bleibt unverändert
     $db->prepare("UPDATE incidents SET created_by=NULL WHERE id=?")->execute([$id]);
     $db->prepare("UPDATE rescuees SET created_by=NULL, loc_by=NULL, rescued_by=NULL WHERE incident_id=?")->execute([$id]);
+    $db->prepare("UPDATE fb_ans SET user_id=NULL WHERE incident_id=?")->execute([$id]); $db->prepare("UPDATE fb_req SET users=NULL, created_by=NULL WHERE incident_id=?")->execute([$id]); // Einsatzfeedback (Issue #103)
     foreach (['externals', 'pois'] as $t) $db->prepare("UPDATE $t SET created_by=NULL WHERE incident_id=?")->execute([$id]);
     $db->prepare("UPDATE veh_links SET by_user=NULL WHERE incident_id=?")->execute([$id]); // Fahrzeuge (Issue #177): wer verladen hat
     logev($id, null, 'anon', "Teilnahmen vom Konto gelöst $how"); return true;
@@ -3296,7 +3362,7 @@ switch ($route) {
     // feste Standorte auch ohne Einsatz (Änderungswunsch #96): die aktiven permanenten, solange die Funktion für einen der Einsatztypen an ist
     $fpl = array_filter(featuresAll(), fn($f) => $f['place']) ? array_values(array_map(fn($r) => array_diff_key($r, ['active' => 1]), array_filter(placesOf(null), fn($r) => $r['active']))) : [];
     if ($blocked) $xp = [];
-    out(['incident' => null, 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
+    out(['incident' => null, 'fb_open' => count(array_filter(fbMine($uid), fn($x) => !$x['answered'])), 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
   }
   $inc['id'] = (int)$inc['id']; $inc['plan_id'] = $inc['plan_id'] === null ? null : (int)$inc['plan_id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc = kindAdd($inc); $inc['kind'] = kindPub(kindOf($inc)); $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
@@ -3879,6 +3945,7 @@ switch ($route) {
   logev($inc['id'], $uid, 'end', 'hat den Einsatz beendet');
   voiceCloseAll($inc['id']); voiceEnd($inc); // Funk (Issue #113): Konferenzräume schliessen, Aufbewahrung der Durchsagen gemäss Einsatztyp
   if (feature($inc, 'hydro')) { $hid = (int)$inc['id']; after(fn() => hydroLog($hid, 'end')); } // Pegel und Abfluss am Einsatzende (Issue #125), nach der Antwort
+  $fc = aarCfg()['fb']; if ($fc['on'] && in_array((int)kindOf($inc)['id'], $fc['kinds'], true) && fbPeople($inc['id'])) { $fn = fbRequest($inc, $fc['days'], null, null); alog('info', 'inc', 'Einsatzfeedback automatisch angefordert', ['id' => (int)$inc['id'], 'n' => $fn]); } // Issue #103
   $s = $db->prepare("SELECT user_id FROM participants WHERE incident_id=? AND mode<>'declined' AND left_at IS NULL AND user_id<>?"); $s->execute([$inc['id'], $uid]);
   $pt = array_column($s->fetchAll(), 'user_id'); if (($el = noteLvl($inc, 'end')) !== 'none') pushTo($pt, ['t' => mb_strtoupper(kindOf($inc)['name']) . ' BEENDET', 'b' => kindOf($inc)['name'] . ' beendet.', 'tag' => 'e:' . $inc['id']] + pushLvl($el));
   out(['ok' => true]);
@@ -4202,7 +4269,7 @@ switch ($route) {
 
  /* ---------- After Action Review (Issue #55) ---------- */
  case 'aar/cfg': if (myRuns() === 'off') need('aar', 'aar_rel', 'aar_cfg'); // mit Meine Einsätze für alle (Ansicht freigegebener Reviews)
-  out(['cfg' => aarCfg(), 'logo' => setting('aar_logo', '') ?: null, 'types' => AAR_TYPES, 'auto' => AAR_AUTO, 'dls' => AAR_DL, 'dlst' => AAR_DL_ST]);
+  out(['cfg' => aarCfg(), 'logo' => setting('aar_logo', '') ?: null, 'types' => AAR_TYPES, 'auto' => AAR_AUTO, 'dls' => AAR_DL, 'dlst' => AAR_DL_ST, 'fbtypes' => FB_TYPES]);
  case 'aar/cfg/save': need('aar_cfg'); setSetting('aar_cfg', json_encode(aarIn($in), JSON_UNESCAPED_UNICODE)); out(['cfg' => aarCfg()]);
  case 'aar/logo': need('aar_cfg'); // PNG oder JPEG als Data-URL (der Browser verkleinert vorher), null = entfernen
   $l = $in['logo'] ?? null;
@@ -4219,6 +4286,36 @@ switch ($route) {
   $fin = (int)$inc['log_anon'] || $inc['rp_anon'] !== null; $forced = $fin || (int)$inc['view_anon']; $self = $mine && !$fin ? $uid : null; // Anzeige anonymisiert: die Person selbst behält den Namen
   $anon = $forced || !empty($_GET['anon']) || $mine && myRuns() === 'anon'; $c = $anon ? anonCtx($id, $self) : null;
   out(aarDoc($inc, $c, $anon, $forced, $mine, $self) + ['ai' => $mine ? null : aiInc($inc)]); // ai: Modi des AI-Assistenten (nur Verwaltung)
+ /* ---------- Einsatzfeedback (Issue #103): anfordern und lesen mit dem Recht aar, beantworten durch die Gefragten ---------- */
+ case 'aar/fb': // Anfrage und Antworten eines Einsatzes (AAR-Arbeitsplatz); Namen wie aar/get
+  $inc = incById($_GET['id'] ?? 0); $id = (int)$inc['id']; aarView($id);
+  $forced = (int)$inc['log_anon'] || $inc['rp_anon'] !== null || (int)$inc['view_anon'];
+  out(fbData($inc, $forced || !empty($_GET['anon']) ? anonCtx($id) : null));
+ case 'aar/fb/request': // anfordern bzw. erinnern (erneut an alle ohne Antwort, neue Frist): id, days, note
+  $inc = incById($in['id'] ?? 0); aarEditable($inc); $cfg = aarCfg()['fb'];
+  if (!$cfg['on']) fail('Das Einsatzfeedback ist ausgeschaltet (Auswertung → After Action Review einrichten)');
+  if (!array_filter($cfg['fields'], fn($f) => $f['type'] !== 'head')) fail('Es sind keine Fragen für das Feedback eingerichtet');
+  if (!fbPeople($inc['id'])) fail('Keine Einsatzkräfte mit aktivem Konto, die gefragt werden könnten');
+  $d = (int)($in['days'] ?? $cfg['days']); if ($d < 1 || $d > 90) fail('Frist: 1 bis 90 Tage');
+  $note = mb_substr(trim((string)($in['note'] ?? '')), 0, 500) ?: null;
+  $n = fbRequest($inc, $d, $note, $uid); out(['sent' => $n] + fbData($inc, null));
+ case 'aar/fb/close': // keine weiteren Antworten (wieder öffnen über aar/fb/request)
+  $inc = incById($in['id'] ?? 0); need('aar'); aarSealed($inc['id']);
+  $db->prepare("UPDATE fb_req SET closed_at=? WHERE incident_id=? AND closed_at IS NULL")->execute([$now, $inc['id']]); out(fbData($inc, null));
+ case 'my/fb': // offene Anfragen an mich, auch ohne Einsicht in eigene Einsätze (my_runs)
+  $c = aarCfg()['fb']; out(['intro' => $c['intro'], 'anon' => $c['anon'], 'fields' => $c['fields'], 'items' => fbMine($uid)]);
+ case 'my/fb/save': // eigene Antwort, änderbar bis zur Frist; nur Felder der Einstellung, geprüft je Art
+  $id = (int)($in['id'] ?? 0); if (!in_array($id, array_column(fbMine($uid), 'id'), true)) fail('Diese Feedback-Anfrage ist nicht mehr offen', 409);
+  $d = is_array($in['data'] ?? null) ? $in['data'] : []; $o = [];
+  foreach (aarCfg()['fb']['fields'] as $f) { if ($f['type'] === 'head') continue; $v = trim((string)($d[$f['id']] ?? '')); if ($v === '') continue; $l = $f['label'];
+    if (mb_strlen($v) > 5000) fail("«{$l}»: höchstens 5000 Zeichen");
+    $ok = match ($f['type']) { 'select' => in_array($v, $f['opts'], true), 'check' => $v === '1' || $v === '0', 'number' => is_numeric($v), 'date' => (bool)preg_match('/^\d{4}-\d{2}-\d{2}$/', $v), 'time' => (bool)preg_match('/^\d{2}:\d{2}$/', $v), default => true };
+    if (!$ok) fail("«{$l}»: ungültiger Wert");
+    $o[$f['id']] = $f['type'] === 'text' ? mb_substr(preg_replace('/\s+/u', ' ', $v), 0, 2000) : $v; }
+  if (!$o) fail('Bitte mindestens eine Frage beantworten');
+  $j = json_encode($o, JSON_UNESCAPED_UNICODE); $u = $db->prepare("UPDATE fb_ans SET data=?, updated=? WHERE incident_id=? AND user_id=?"); $u->execute([$j, $now, $id, $uid]);
+  if (!$u->rowCount()) $db->prepare("INSERT INTO fb_ans(incident_id,user_id,data,created,updated) VALUES(?,?,?,?,?)")->execute([$id, $uid, $j, $now, $now]);
+  out(['ok' => true, 'at' => $now]);
  /* ---------- Vor dem Anonymisieren gesicherte Reviews, alles nur mit Recht aar_arch; das fertige PDF lässt sich nicht mehr ändern ---------- */
  case 'aar/arch/pending': need('aar_arch'); // Sicherungen, aus denen der Browser noch das PDF erzeugen muss
   out(['ids' => array_map('intval', $db->query("SELECT incident_id FROM aar_arch WHERE pdf_at IS NULL AND snap IS NOT NULL ORDER BY incident_id")->fetchAll(PDO::FETCH_COLUMN))]);
@@ -4451,7 +4548,7 @@ switch ($route) {
   if (!$u) fail('Benutzer nicht gefunden', 404);
   if ($u['last_login'] !== null || isset(usersUsed()[$id])) fail('Diese Person hat sich schon angemeldet oder kommt in Einsatzdaten vor; bitte deaktivieren');
   $db->beginTransaction();
-  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'sessions', 'push_native', 'ex_signups'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
+  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'sessions', 'push_native', 'ex_signups', 'fb_ans'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
   $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
   foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
     $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));
