@@ -405,3 +405,11 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **FZ-12** – «Beacon einlernen» in der nativen App (Recht «Karte & Daten einstellen»): Beacons in der Nähe mit Signalstärke, ein Tipp ordnet eines einem Fahrzeug zu; unter iOS nur Beacons mit eingetragener UUID (**Grenze** von iOS) (#177).
 - **FZ-13** – Der Demo-Modus zeigt fiktive Fahrzeuge (Bus mit Anhänger und Boot, Kommandofahrzeug): Sie fahren mit den simulierten Einsatzkräften, das Boot wird an der Einwasserung abgeladen, Verladen und Abladen von Hand ist möglich (#177, #74).
 - GPS-Tracker mit eigener SIM-Karte als weitere Quelle für Fahrzeuge ohne Personen in der Nähe (**offen**, vorerst nicht, Entscheid des Auftraggebers).
+
+## 30. Ausbildungskontrolle (AU)
+
+- **AU-01** – Die Verwaltung richtet Fähigkeiten ein (Name, Kategorie, Beschreibung, Reihenfolge): Gültigkeit unbegrenzt, eine Anzahl Monate ab dem Datum der Ausbildung oder bis Ende des Kalenderjahres bzw. einer Anzahl Folgejahre (0 = laufendes Jahr, 1 = Folgejahr …); Vorwarnung in Tagen vor dem Ablauf; gilt für alle Personen oder nur für Mitglieder bestimmter Einsatzgruppen; Pflicht nein, für alle, für die sie gilt, oder nur für Mitglieder bestimmter Einsatzgruppen. Fähigkeiten mit erfassten Ausbildungen werden deaktiviert statt gelöscht (#117).
+- **AU-02** – Je Person wird die Ausbildung bzw. Auffrischung mit Datum und optionaler Bemerkung erfasst; es gilt der neuste Eintrag, frühere bleiben als Verlauf. Die Person erfasst ihre eigenen selbst, sofern die Fähigkeit das erlaubt, und kann selbst erfasste wieder entfernen; alles Übrige nur mit dem Recht «Ausbildung verwalten» (#117).
+- **AU-03** – Stand je Fähigkeit: gültig (mit Ablaufdatum), läuft bald ab (innerhalb der Vorwarnung), abgelaufen, fehlt (Pflicht) oder nicht erfasst (#117).
+- **AU-04** – Jede Person sieht ihre Ausbildungen im Profil der Einsatz-App (Web und nativ) und erhält im Menü ohne Einsatz einen Hinweis, wenn eine abgelaufen ist, bald abläuft oder eine Pflicht-Ausbildung fehlt (#117).
+- **AU-05** – Verwaltung → Personen → «Ausbildung» (Recht «Ausbildung verwalten»): Übersicht Personen × Fähigkeiten mit farbigem Stand, Suche, Filter nach Einsatzgruppe und «nur mit Handlungsbedarf», CSV-Export, Ausbildungen je Person erfassen und entfernen, Katalog der Fähigkeiten (#117).

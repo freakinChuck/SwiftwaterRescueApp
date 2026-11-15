@@ -262,7 +262,7 @@ const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
 const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
 const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
-const ADMIN_PERMS=['users','uroles','groups','avail','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon','cfg_conn','applog','versions']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','skills','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','anon','cfg_conn','applog','versions']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 // Abmelden: Server meldet die Sitzung ab (Gerätesitzung der App bzw. Browser-Token, Route logout), danach die App benachrichtigen (beendet das Konto, Issue #108)
 function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});
@@ -344,6 +344,29 @@ function pwDialog(forced,done){
     async d=>{const n=$('#pwN',d).value;if(n!==$('#pwR',d).value)throw new Error('Die neuen Passwörter stimmen nicht überein.');
       await api('me/password',{old:$('#pwO',d).value,new:n});toast('Passwort geändert.');done&&done()},
     'Speichern',forced?'Abmelden':'Abbrechen',forced?()=>{logout();done&&done()}:null)}
+/* ---------- Ausbildungskontrolle (Issue #117): Fähigkeiten mit Datum der letzten Ausbildung, Ablauf und Vorwarnung; gemeinsam für Profil (Einsatz-App) und Verwaltung ---------- */
+const SK_ST={ok:['gültig','ok'],warn:['läuft bald ab','warn'],exp:['abgelaufen','exp'],miss:['fehlt (Pflicht)','warn'],none:['nicht erfasst','none']};
+const skD=ts=>ts?new Date(ts*1000).toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+const skDay=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10),skTs=v=>v?Math.floor(new Date(v+'T12:00').getTime()/1000)||0:0; // Datum = Mittag Ortszeit
+// Gültigkeit in Worten (exp none|months|year, n)
+function skValid(k){if(k.exp==='months')return k.n%12?`${k.n} Monate`:(k.n===12?'1 Jahr':`${k.n/12} Jahre`);if(k.exp==='year')return!k.n?'bis Ende des Kalenderjahres':k.n===1?'bis Ende des Folgejahres':`bis Ende des ${k.n}. Folgejahres`;return'unbegrenzt'} // n: 0 = laufendes Jahr, 1 = Folgejahr …
+// Pflicht für wen (req_grp null = alle, für die sie gilt); gn = Name einer Gruppe aus der ID
+function skReqTxt(k,gn){return!k.req||k.req_grp==null?'':' für '+(k.req_grp.length?k.req_grp.map(gn).join(', '):'niemand')}
+const skChip=x=>`<span class="skchip sk-${SK_ST[x.state][1]}">${SK_ST[x.state][0]}${x.exp?(x.state==='exp'?' seit ':' bis ')+skD(x.exp):''}</span>`;
+// Zusammenfassung aus me.skills {exp, warn, miss}; leer = alles in Ordnung
+function skSum(s){if(!s)return'';const t=[];s.exp&&t.push(s.exp+' abgelaufen');s.warn&&t.push(s.warn+' läuft bald ab');s.miss&&t.push(s.miss+(s.miss>1?' Pflicht-Ausbildungen fehlen':' Pflicht-Ausbildung fehlt'));return t.join(', ')}
+// Liste der Fähigkeiten einer Person (Route me/skills): adm = Recht skills, uid = Person, my = eigene Benutzer-ID (eigene, selbst erfasste Einträge entfernbar)
+function skRows(items,adm,my,uid){if(!items.length)return'<div class="mut">Für dich ist keine Ausbildung hinterlegt.</div>';
+  return items.map(x=>{const k=x.skill,ed=adm||(uid===my&&k.self);
+    return`<div class="skrow"><div class="skh"><b>${esc(k.name)}</b>${k.cat?` <span class="mut">${esc(k.cat)}</span>`:''}${(x.req??k.req)?' <span class="mut" title="Pflicht">★</span>':''} ${skChip(x)}</div>
+      <div class="mut skm">${x.done?'Zuletzt '+skD(x.done)+(x.note?' – '+esc(x.note):''):'Noch keine Ausbildung erfasst'} · Gültigkeit ${esc(skValid(k))}${k.descr?'<br>'+esc(k.descr):''}</div>
+      <div class="row skb">${ed?`<button data-ska="${k.id}">${x.done?'+ Auffrischung erfassen':'+ Ausbildung erfassen'}</button>`:(!x.done||x.state!=='ok'?'<span class="mut">Erfasst die Verwaltung.</span>':'')}
+      ${x.hist.length?`<details><summary>Verlauf (${x.hist.length})</summary>${x.hist.map(e=>`<div class="skh2">${skD(e.done_at)}${e.note?' – '+esc(e.note):''} <span class="mut">${e.created_by!==uid&&e.by_name?'erfasst von '+esc(e.by_name):''}</span>${adm||(e.created_by===my&&uid===my&&k.self)?` <button data-skx="${e.id}" title="Eintrag entfernen" aria-label="Eintrag entfernen">✕</button>`:''}</div>`).join('')}</details>`:''}</div></div>`}).join('')}
+function skEntryDlg(k,uid,uname,done){dlg(k.name+(uname?' – '+uname:''),`<label class="mut">Datum der Ausbildung bzw. Auffrischung<input id="skD" type="date" value="${skDay(Date.now()/1000)}" max="${skDay(Date.now()/1000)}"></label>
+    <label class="mut">Bemerkung (optional)<input id="skN" maxlength="300" placeholder="z. B. Kurs, Ort, Ausbildner"></label><div class="mut">Gültigkeit: ${esc(skValid(k))}${k.exp!=='none'?`, Vorwarnung ${k.warn} Tage vorher`:''}</div>`,
+    async d=>{const t=skTs($('#skD',d).value);if(!t)throw new Error('Datum fehlt');await api('skill/entry/save',{user_id:uid,skill_id:k.id,done:t,note:$('#skN',d).value});toast('Ausbildung erfasst.','ok');done()})}
+function skBind(el,items,uid,uname,done){el.querySelectorAll('[data-ska]').forEach(b=>b.onclick=()=>skEntryDlg(items.find(x=>x.skill.id===+b.dataset.ska).skill,uid,uname,done));
+  el.querySelectorAll('[data-skx]').forEach(b=>b.onclick=()=>{if(confirm('Diesen Eintrag entfernen?'))api('skill/entry/remove',{id:+b.dataset.skx}).then(()=>{toast('Eintrag entfernt.','ok');done()}).catch(fail)})}
 /* ---------- Einsatzlog im Gross-Modus ---------- */
 let big=null;
 const KIND_GROUPS={all:['Alle Einträge',null],join:['Beitritt / Austritt',['accept','decline','leave','kick']],role:['Rollen',['role']],move:['Fahrten / Suchgebiet',['move','area']],resc:['Rettlinge',['rescuee','resmark','rescued','mark','markdel']],msg:['Nachrichten',['message']],voice:['Funk',['voice','conf','voiceguest','voicech']],poi:['Markierungen / Bereiche',['poi','poidel']],inc:['Einsatz / Fliessgeschwindigkeit / Aufzeichnung / Öffentlich',['start','end','flow','rec','pub','anon','air']]};

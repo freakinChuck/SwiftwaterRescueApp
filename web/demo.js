@@ -351,6 +351,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     'air/home':()=>fail('Helikopter ohne Einsatz gibt es im Demo-Modus nicht.',403),
     'incident/end':()=>{needLead('Nur die Einsatzleitung kann den Einsatz beenden');endInc(ME_ID);return{ok:true}},
     'ex/start':()=>fail('Vorbereitete Übungen gibt es im Demo-Modus nicht.'),'ex/release':()=>fail('Vorbereitete Übungen gibt es im Demo-Modus nicht.'),
+    'me/skills':()=>({items:[],exp:{}}), // Ausbildung (Issue #117): im Demo keine
     'absences':()=>{const t=now();return S.abs.filter(a=>!a.removed&&(a.until_at==null||a.until_at>t)).map(a=>({...a,name:S.me.name,by_name:S.me.name,now:a.from_at<=t?1:0}))},
     'absence/save':b=>{const t=now(),from=b.from?Math.max(+b.from,t-60):t,until=b.until!=null&&b.until!==''?+b.until:null;if(until!=null&&until<=Math.max(from,t))fail('«Bis» muss nach «Von» und in der Zukunft liegen');
       const k=['abs','sus'].includes(b.kind)?b.kind:'abs',nt=String(b.note||'').trim().slice(0,200)||null;if(b.id){const a=S.abs.find(x=>x.id===+b.id&&!x.removed)||fail('Eintrag nicht gefunden',404);Object.assign(a,{from_at:from,until_at:until,kind:k,note:nt});return{ok:true,id:a.id}}

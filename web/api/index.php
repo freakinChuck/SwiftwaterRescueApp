@@ -34,6 +34,7 @@ const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applo
 // Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
 const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
   'user/save' => ['user', 'Benutzer gespeichert'], 'user/password' => ['user', 'Passwort zurückgesetzt'], 'user/active' => ['user', 'Benutzer aktiviert bzw. deaktiviert'], 'user/delete' => ['user', 'Benutzer gelöscht'],
+  'skill/save' => ['user', 'Fähigkeit der Ausbildung gespeichert'], 'skill/remove' => ['user', 'Fähigkeit der Ausbildung entfernt'], 'skill/entry/save' => ['user', 'Ausbildung erfasst'], 'skill/entry/remove' => ['user', 'Ausbildung entfernt'],
   'urole/save' => ['user', 'Benutzerrolle gespeichert'], 'urole/remove' => ['user', 'Benutzerrolle entfernt'], 'group/save' => ['user', 'Einsatzgruppe gespeichert'], 'group/delete' => ['user', 'Einsatzgruppe gelöscht'],
   'settings/save' => ['cfg', 'Einstellungen gespeichert'], 'ai/cfg/save' => ['cfg', 'AI-Assistent eingestellt'], 'anon/cfg/save' => ['cfg', 'Anonymisierung eingestellt'], 'aar/cfg/save' => ['cfg', 'After Action Review eingerichtet'], 'aar/fb/request' => ['inc', 'Einsatzfeedback angefordert'], 'aar/fb/close' => ['inc', 'Einsatzfeedback abgeschlossen'], 'my/fb/save' => ['inc', 'Einsatzfeedback abgegeben'],
   'kind/save' => ['cfg', 'Einsatztyp gespeichert'], 'kind/delete' => ['cfg', 'Einsatztyp gelöscht'], 'mode/save' => ['cfg', 'Einrückoption gespeichert'], 'role/save' => ['cfg', 'Spezialrolle gespeichert'],
@@ -129,6 +130,10 @@ foreach ([
  // seen (Rettling gesichtet: neuer PLS für den Rettling aus dem Element ref_id; ref_id NULL = neuer Rettling mit name bzw. unbekannter Rettling ohne name, erfasst bei der Freigabe); ago = Zeitpunkt des PLS in Minuten vor der Freigabe (NULL = Übungsleitung gibt ihn bei der Freigabe ein);
  // ext (neue externe Einsatzkraft: name, descr, role_id, abbr, color; ext_id nach der Freigabe), extdel (entfernt die externe Einsatzkraft aus dem Element ref_id, Standort wie dieses)
  // auto = automatisch freigeben so viele Minuten nach dem Übungsstart (NULL = nur von Hand; released_by NULL = automatisch freigegeben); msg = Meldung, geht bei der Freigabe als Nachricht an alle
+ // Ausbildungskontrolle (Issue #117): Fähigkeiten (cat = Kategorie, exp none|months|year: Gültigkeit n Monate bzw. bis Ende des n-ten Kalenderjahres, warn = Tage Vorwarnung,
+ // self = Person darf selbst erfassen, req = Pflicht (fehlend zählt als Warnung), grp = JSON-Gruppen, für die sie gilt, NULL = alle) und Einträge je Person (done_at = Datum der Ausbildung bzw. Auffrischung)
+ "CREATE TABLE IF NOT EXISTS skills(id $ai, name $tx, descr TEXT NULL, cat $tx NULL, exp $tx, n INT DEFAULT 1, warn INT DEFAULT 30, self INT DEFAULT 1, req INT DEFAULT 0, grp TEXT NULL, sort INT NULL, active INT DEFAULT 1)",
+ "CREATE TABLE IF NOT EXISTS user_skills(id $ai, user_id INT, skill_id INT, done_at BIGINT, note $tx NULL, created_by INT, created_at BIGINT, removed INT DEFAULT 0)",
  // Anmeldungen zu vorbereiteten Übungen (Issue #169): je Person und Übung eine Zeile, status yes (nimmt teil) | no (nimmt nicht teil), note = Bemerkung
  "CREATE TABLE IF NOT EXISTS ex_signups(id $ai, plan_id INT, user_id INT, status $tx, note $tx NULL, at BIGINT)",
  // Einsatzgruppen (Issue #90): pos = Reihenfolge, active 0 = deaktiviert; Mitglieder in inc_group_members; aufbietbar und vorausgewählt je Einsatztyp (inc_kinds)
@@ -220,6 +225,9 @@ if (setting('place_props_mig', '') === '') { if (!$db->query("SELECT COUNT(*) FR
     foreach ([['Flusssperrung / nicht passierbar', '⛔', '#d62828', 'stop'], ['Treibgutfang (Rechen)', '🧲', '#9d4edd', 'stop'], ['Lebensgefahr (Walze, Rücklauf)', '⚠️', '#f77f00', 'warn'], ['Umtragestelle', '↪️', '#457b9d', 'none'],
       ['Einwasserung möglich', '🛶', '#2a9d8f', 'none'], ['Ausstieg möglich', '🪜', '#2a9d8f', 'none'], ['Zufahrt Fahrzeug', '🚒', '#6c757d', 'none'], ['Zufahrt nur zu Fuss', '🚶', '#6c757d', 'none']] as $n => $r) $i->execute([$r[0], $r[1], $r[2], $r[3], $n + 1]); }
   setSetting('place_props_mig', '1'); }
+// Ausbildung (Issue #117): Pflicht je Einsatzgruppe (req_grp, NULL = für alle, für die die Fähigkeit gilt); Kalenderjahre neu ab 0 (0 = laufendes, 1 = Folgejahr)
+try { $db->exec("ALTER TABLE skills ADD COLUMN req_grp TEXT NULL"); } catch (Throwable $e) {}
+if (setting('skill_y0_mig', '') === '') { $db->exec("UPDATE skills SET n=n-1 WHERE exp='year' AND n>0"); setSetting('skill_y0_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX voice_inc ON voice(incident_id,upd)"); } catch (Throwable $e) {}
 if (!$db->query("SELECT COUNT(*) c FROM roles")->fetch()['c']) {
@@ -350,6 +358,7 @@ const PERMS = [
   'veh_home' => ['Einsatz-App', 'Fahrzeuge ausserhalb von Einsätzen sehen', 'Standorte der Fahrzeuge (BLE-Beacons) auch ohne laufenden Einsatz auf der Karte, wenn die Verwaltung das unter «Fahrzeuge» so eingestellt hat'],
   'ex_plan' => ['Übungen', 'Übungen vorbereiten', 'Verwaltung → Übungen; im Einsatz die vorbereiteten Elemente sehen und freigeben'],
   'groups' => ['Verwaltung', 'Einsatzgruppen verwalten', 'Gruppen anlegen, ändern, deaktivieren und ihre Mitglieder bestimmen'],
+  'skills' => ['Verwaltung', 'Ausbildung verwalten', 'Fähigkeiten der Ausbildungskontrolle einrichten (Gültigkeit, Vorwarnung, Gruppen) und die Einträge aller Personen erfassen und entfernen (die eigenen darf jede Person bei dafür freigegebenen Fähigkeiten selbst erfassen)'],
   'avail' => ['Verwaltung', 'Abwesenheiten verwalten', 'Abwesenheiten und ausgesetzte Einsatzfähigkeit aller Personen erfassen und entfernen (die eigenen darf jede Person selbst setzen)'],
   'users' => ['Verwaltung', 'Benutzer verwalten', 'Anlegen, bearbeiten, Passwort zurücksetzen, deaktivieren, nie angemeldete löschen, Benutzerrollen zuweisen'],
   'uroles' => ['Verwaltung', 'Benutzerrollen verwalten', 'Rollen anlegen, ändern und entfernen'],
@@ -2217,6 +2226,30 @@ function incAbsent($inc, $u) { return in_array($u, array_map('intval', json_deco
 function absNow($u = null) { global $db, $now; $s = $db->prepare("SELECT user_id,kind,until_at,note FROM absences WHERE removed=0 AND from_at<=? AND (until_at IS NULL OR until_at>?)" . ($u ? ' AND user_id=' . (int)$u : '') . " ORDER BY until_at IS NULL, until_at"); $s->execute([$now, $now]);
   $r = []; foreach ($s->fetchAll() as $a) $r[(int)$a['user_id']] = ['kind' => $a['kind'], 'until' => $a['until_at'] === null ? null : (int)$a['until_at'], 'note' => $a['note']]; return $r; }
 function absText($n) { return $n === 1 ? '1 Person abwesend, nicht alarmiert' : "$n Personen abwesend, nicht alarmiert"; }
+// Ausbildungskontrolle (Issue #117)
+const SKILL_EXP = ['none' => 'Unbegrenzt gültig', 'months' => 'Gültig für eine Anzahl Monate', 'year' => 'Gültig bis Ende Kalenderjahr'];
+function skillRows($all = false) { global $db; return array_map(function ($k) { $k = ints($k, ['id', 'n', 'warn', 'self', 'req', 'sort', 'active']); $k['grp'] = $k['grp'] === null ? null : idsIn(json_decode($k['grp'], true) ?: []); $k['req_grp'] = ($k['req_grp'] ?? null) === null ? null : idsIn(json_decode($k['req_grp'], true) ?: []); return $k; },
+  $db->query("SELECT * FROM skills" . ($all ? '' : ' WHERE active=1') . " ORDER BY active DESC, sort IS NULL, sort, cat, name")->fetchAll()); }
+// gilt die Fähigkeit für die Person? (grp NULL = alle, sonst Mitglied einer der Gruppen; $mg = Gruppen der Person)
+function skillFor($k, $mg) { return $k['grp'] === null || array_intersect($k['grp'], $mg); }
+// Pflicht für die Person? (req und req_grp NULL = alle, für die sie gilt, sonst Mitglied einer der Pflicht-Gruppen)
+function skillReq($k, $mg) { return $k['req'] && ($k['req_grp'] === null || array_intersect($k['req_grp'], $mg)); }
+function userGrps($u) { global $db; $s = $db->prepare("SELECT m.group_id FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id WHERE g.active=1 AND m.user_id=?"); $s->execute([$u]); return array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN)); }
+// Ablauf: months = Datum + n Monate; year = Ende des Kalenderjahres (n = 0 laufendes Jahr, 1 = Folgejahr …), jeweils Zeit Zürich; none = null
+function skillExp($k, $d) { $tz = new DateTimeZone('Europe/Zurich'); $t = (new DateTime('@' . (int)$d))->setTimezone($tz);
+  if ($k['exp'] === 'months') { $t->modify('+' . max(1, (int)$k['n']) . ' months'); return $t->getTimestamp(); }
+  if ($k['exp'] === 'year') { $y = (int)$t->format('Y') + max(0, (int)$k['n']) + 1; return (new DateTime("$y-01-01 00:00:00", $tz))->getTimestamp() - 1; }
+  return null; }
+// Stand: ok, warn (läuft in den nächsten warn Tagen ab bzw. Pflicht und fehlt), exp (abgelaufen), none (nicht erfasst, keine Pflicht)
+function skillState($k, $e, $req) { global $now; if (!$e) return $req ? 'miss' : 'none'; $x = skillExp($k, $e['done_at']); if ($x === null) return 'ok'; if ($x < $now) return 'exp'; return $x - $k['warn'] * 86400 < $now ? 'warn' : 'ok'; }
+// letzte Einträge je Person und Fähigkeit: [user][skill] = Eintrag
+function skillLast($uids = null) { global $db; $q = "SELECT * FROM user_skills WHERE removed=0" . ($uids ? ' AND user_id IN (' . qm($uids) . ')' : '') . " ORDER BY done_at, id"; $s = $db->prepare($q); $s->execute($uids ?: []);
+  $r = []; foreach ($s->fetchAll() as $e) $r[(int)$e['user_id']][(int)$e['skill_id']] = ints($e, ['id', 'user_id', 'skill_id', 'done_at', 'created_by', 'created_at']); return $r; }
+function skillCell($k, $e, $mg) { $q = skillReq($k, $mg); return ['req' => $q ? 1 : 0, 'done' => $e ? $e['done_at'] : null, 'exp' => $e ? skillExp($k, $e['done_at']) : null, 'state' => skillState($k, $e, $q), 'note' => $e['note'] ?? null, 'eid' => $e['id'] ?? null]; }
+// eigene Übersicht: geltende Fähigkeiten mit Stand; Zusammenfassung für me (Anzahl abgelaufen, bald ablaufend, fehlende Pflicht)
+function skillMine($u) { $mg = userGrps($u); $l = skillLast([$u])[$u] ?? []; $r = [];
+  foreach (skillRows() as $k) if (skillFor($k, $mg)) $r[] = ['skill' => $k] + skillCell($k, $l[$k['id']] ?? null, $mg); return $r; }
+function skillSum($u) { $m = skillMine($u); $c = ['n' => count($m), 'exp' => 0, 'warn' => 0, 'miss' => 0]; foreach ($m as $x) if (isset($c[$x['state']])) $c[$x['state']]++; return $c; } // n = geltende Fähigkeiten
 // Übungsplan und Anmeldungen (Issue #169): sched = im Übungsplan aller sichtbar; su_on = Anmeldung offen für Mitglieder von su_grp (JSON, NULL = alle aktiven Personen, [] = niemand),
 // bis su_until (NULL = bis zum Start); su_inv = beim Start die Angemeldeten aufbieten (zusätzlich zur Auswahl, ohne Auswahl nur sie)
 function suGrp($p) { return $p['su_grp'] === null ? null : idsIn(json_decode($p['su_grp'], true) ?: []); }
@@ -3141,7 +3174,7 @@ try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog
 try { if (!$me['must_change']) geoAuto(); } catch (Throwable $e) { alog('err', 'geo', 'Abgleich der Geodaten: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // Abgleich übernommener Standorte mit der Quelle (Issue #182), täglich im Nachlauf
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 switch ($route) {
- case 'me': out(['me' => $me + mapsFor(null) + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe()]]); // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': out(['me' => $me + mapsFor(null) + ['coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid)]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message', 'can_voice', 'sec']), $db->query("SELECT id,name,color,is_lead,is_post,can_message,can_voice,sec FROM roles WHERE active=1 ORDER BY id")->fetchAll())); // sec: Spezialrolle für Sekundäreinsätze (Issue #164)
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen); sec: Einrückoption für Sekundäreinsätze (Issue #164)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts', 'sec']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts,sec FROM modes ORDER BY id")->fetchAll()));
@@ -4460,6 +4493,47 @@ switch ($route) {
   $s = $db->prepare("SELECT * FROM absences WHERE id=? AND removed=0"); $s->execute([(int)($in['id'] ?? 0)]); $a = $s->fetch(); if (!$a) fail('Eintrag nicht gefunden', 404);
   if ((int)$a['user_id'] !== $uid) need('avail');
   $db->prepare("UPDATE absences SET removed=1 WHERE id=?")->execute([(int)$a['id']]); out(['ok' => true]);
+ // Ausbildungskontrolle (Issue #117)
+ case 'me/skills': // eigene Fähigkeiten mit Stand und Verlauf; user=<id> mit Recht skills
+  $u = (int)($_GET['user'] ?? 0) ?: $uid; if ($u !== $uid) need('skills');
+  $s = $db->prepare("SELECT e.id,e.skill_id,e.done_at,e.note,e.created_by,e.created_at,c.name by_name FROM user_skills e LEFT JOIN users c ON c.id=e.created_by WHERE e.removed=0 AND e.user_id=? ORDER BY e.done_at DESC, e.id DESC"); $s->execute([$u]);
+  $h = []; foreach ($s->fetchAll() as $e) $h[(int)$e['skill_id']][] = ints($e, ['id', 'skill_id', 'done_at', 'created_by', 'created_at']);
+  out(['items' => array_map(fn($x) => $x + ['hist' => $h[$x['skill']['id']] ?? []], skillMine($u)), 'exp' => SKILL_EXP]);
+ case 'skills/cfg': need('skills'); out(['skills' => skillRows(true), 'exp' => SKILL_EXP, 'groups' => grpRows()]);
+ case 'skill/save': need('skills'); // id, name, descr, cat, exp, n, warn, self, req, req_grp (null = alle, für die sie gilt), grp (null = alle), active
+  $name = mb_substr(trim((string)($in['name'] ?? '')), 0, 120); if ($name === '') fail('Name fehlt');
+  $exp = (string)($in['exp'] ?? 'none'); if (!isset(SKILL_EXP[$exp])) fail('Unbekannte Gültigkeit');
+  $n = (int)($in['n'] ?? 1); if ($exp === 'months' && ($n < 1 || $n > 240)) fail('Gültigkeit: 1 bis 240 Monate'); if ($exp === 'year' && ($n < 0 || $n > 20)) fail('Gültigkeit: 0 bis 20 Folgejahre');
+  $warn = (int)($in['warn'] ?? 30); if ($warn < 0 || $warn > 730) fail('Vorwarnung: 0 bis 730 Tage');
+  $gl = ($in['grp'] ?? null) === null ? null : idsIn($in['grp']); $grp = $gl === null ? null : json_encode($gl);
+  $req = empty($in['req']) ? 0 : 1; $rg = !$req || ($in['req_grp'] ?? null) === null ? null : idsIn($in['req_grp']); // Pflicht-Gruppen nur innerhalb der Gruppen, für die sie gilt
+  if ($rg !== null && $gl !== null) $rg = array_values(array_intersect($rg, $gl)); if ($req && $rg !== null && !$rg) fail('Pflicht: mindestens eine Einsatzgruppe wählen');
+  $v = [$name, mb_substr(trim((string)($in['descr'] ?? '')), 0, 1000) ?: null, mb_substr(trim((string)($in['cat'] ?? '')), 0, 80) ?: null, $exp, $exp === 'none' ? 1 : $n, $warn, empty($in['self']) ? 0 : 1, $req, $rg === null ? null : json_encode($rg), $grp, array_key_exists('active', $in) && empty($in['active']) ? 0 : 1];
+  if (!empty($in['id'])) { $db->prepare("UPDATE skills SET name=?,descr=?,cat=?,exp=?,n=?,warn=?,self=?,req=?,req_grp=?,grp=?,active=? WHERE id=?")->execute([...$v, (int)$in['id']]); out(['ok' => true, 'id' => (int)$in['id']]); }
+  $db->prepare("INSERT INTO skills(name,descr,cat,exp,n,warn,self,req,req_grp,grp,active) VALUES(?,?,?,?,?,?,?,?,?,?,?)")->execute($v); out(['ok' => true, 'id' => (int)$db->lastInsertId()]);
+ case 'skill/move': need('skills'); sortMove('skills', "SELECT id FROM skills ORDER BY active DESC, sort IS NULL, sort, cat, name", [], (int)($in['id'] ?? 0), (int)($in['dir'] ?? 1)); out(['ok' => true]);
+ case 'skill/remove': need('skills'); // ohne Einträge löschen, sonst deaktivieren (Einträge bleiben)
+  $id = (int)($in['id'] ?? 0); $s = $db->prepare("SELECT COUNT(*) FROM user_skills WHERE skill_id=?"); $s->execute([$id]);
+  if ((int)$s->fetchColumn()) { $db->prepare("UPDATE skills SET active=0 WHERE id=?")->execute([$id]); out(['ok' => true, 'kept' => 1]); }
+  $db->prepare("DELETE FROM skills WHERE id=?")->execute([$id]); out(['ok' => true, 'kept' => 0]);
+ case 'skills/matrix': need('skills'); // alle aktiven Personen × aktive Fähigkeiten: cells[user][skill] nur für geltende
+  $ks = skillRows(); $us = $db->query("SELECT id,name FROM users WHERE active=1 ORDER BY name")->fetchAll(); $l = skillLast(); $mg = [];
+  foreach ($db->query("SELECT m.user_id,m.group_id FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id WHERE g.active=1")->fetchAll() as $x) $mg[(int)$x['user_id']][] = (int)$x['group_id'];
+  $cells = []; foreach ($us as $u) { $i = (int)$u['id']; foreach ($ks as $k) if (skillFor($k, $mg[$i] ?? [])) $cells[$i][$k['id']] = skillCell($k, $l[$i][$k['id']] ?? null, $mg[$i] ?? []); }
+  out(['skills' => $ks, 'users' => array_map(fn($u) => ints($u, ['id']) + ['groups' => $mg[(int)$u['id']] ?? []], $us), 'cells' => (object)$cells, 'groups' => grpRows(true)]); // groups je Person: aktive Einsatzgruppen (Filter)
+ case 'skill/entry/save': // user_id (andere mit skills), skill_id, done (Unix-Zeit), note; eigene nur bei Fähigkeiten mit self (oder mit Recht skills)
+  $u = (int)($in['user_id'] ?? 0) ?: $uid; if ($u !== $uid) need('skills');
+  $k = null; foreach (skillRows() as $x) if ($x['id'] === (int)($in['skill_id'] ?? 0)) $k = $x; if (!$k) fail('Unbekannte oder deaktivierte Fähigkeit', 404);
+  if ($u === $uid && !$k['self'] && !can('skills')) fail('Diese Fähigkeit trägt die Verwaltung ein', 403);
+  $s = $db->prepare("SELECT id FROM users WHERE id=? AND active=1"); $s->execute([$u]); if (!$s->fetch()) fail('Unbekannte oder deaktivierte Person');
+  $d = (int)($in['done'] ?? 0); if ($d <= 0 || $d > $now + 86400) fail('Datum fehlt oder liegt in der Zukunft'); if ($d < $now - 60 * 366 * 86400) fail('Datum zu weit zurück');
+  $nt = mb_substr(trim((string)($in['note'] ?? '')), 0, 300);
+  $db->prepare("INSERT INTO user_skills(user_id,skill_id,done_at,note,created_by,created_at) VALUES(?,?,?,?,?,?)")->execute([$u, $k['id'], $d, $nt === '' ? null : $nt, $uid, $now]);
+  out(['ok' => true, 'id' => (int)$db->lastInsertId()]);
+ case 'skill/entry/remove': // id; eigene selbst erfasste bei Fähigkeiten mit self, sonst Recht skills
+  $s = $db->prepare("SELECT e.*,k.self FROM user_skills e JOIN skills k ON k.id=e.skill_id WHERE e.id=? AND e.removed=0"); $s->execute([(int)($in['id'] ?? 0)]); $e = $s->fetch(); if (!$e) fail('Eintrag nicht gefunden', 404);
+  if (!can('skills') && ((int)$e['user_id'] !== $uid || (int)$e['created_by'] !== $uid || !(int)$e['self'])) fail('Diesen Eintrag kann nur die Verwaltung entfernen', 403);
+  $db->prepare("UPDATE user_skills SET removed=1 WHERE id=?")->execute([(int)$e['id']]); out(['ok' => true]);
  case 'me/password': // eigenes Passwort ändern (aktuelles Passwort nötig)
   $s = $db->prepare("SELECT pass_hash FROM users WHERE id=?"); $s->execute([$uid]);
   if (!password_verify($in['old'] ?? '', $s->fetch()['pass_hash'])) fail('Das aktuelle Passwort ist falsch', 403);
@@ -4548,7 +4622,7 @@ switch ($route) {
   if (!$u) fail('Benutzer nicht gefunden', 404);
   if ($u['last_login'] !== null || isset(usersUsed()[$id])) fail('Diese Person hat sich schon angemeldet oder kommt in Einsatzdaten vor; bitte deaktivieren');
   $db->beginTransaction();
-  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'sessions', 'push_native', 'ex_signups', 'fb_ans'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
+  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'sessions', 'push_native', 'user_skills', 'ex_signups', 'fb_ans'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
   $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
   foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
     $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));
@@ -4632,7 +4706,7 @@ switch ($route) {
   $db->beginTransaction();
   $drop = function ($tbl, $col, $null) use ($db, $id) { foreach ($db->query("SELECT id,$col FROM $tbl WHERE $col IS NOT NULL")->fetchAll() as $x) { $v = json_decode($x[$col], true); if (!is_array($v) || !in_array($id, array_map('intval', $v), true)) continue;
     $db->prepare("UPDATE $tbl SET $col=? WHERE id=?")->execute([json_encode(array_values(array_diff(idsIn($v), [$id]))), $x['id']]); } };
-  $drop('inc_kinds', 'grp_off', 0); $drop('inc_kinds', 'grp_def', 0); $drop('ex_plans', 'grp_ids', 0); $drop('ex_plans', 'su_grp', 1); $drop('uroles', 'grp_ids', 1);
+  $drop('inc_kinds', 'grp_off', 0); $drop('inc_kinds', 'grp_def', 0); $drop('ex_plans', 'grp_ids', 0); $drop('ex_plans', 'su_grp', 1); $drop('uroles', 'grp_ids', 1); $drop('skills', 'grp', 1); $drop('skills', 'req_grp', 1);
   foreach ($db->query("SELECT id,inv_groups FROM incidents WHERE inv_groups IS NOT NULL")->fetchAll() as $x) { $v = json_decode($x['inv_groups'], true); if (!in_array($id, idsIn($v['g'] ?? []), true)) continue;
     $v['gn'] = (array)($v['gn'] ?? []); $v['gn'][$id] = $g['name']; $db->prepare("UPDATE incidents SET inv_groups=? WHERE id=?")->execute([json_encode($v), $x['id']]); }
   $db->prepare("DELETE FROM inc_group_members WHERE group_id=?")->execute([$id]); $db->prepare("DELETE FROM inc_groups WHERE id=?")->execute([$id]);
