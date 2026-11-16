@@ -23,6 +23,7 @@ Personen anlegen, Name und Benutzerrollen ändern, Passwort zurücksetzen und de
 
 - **Deaktivieren** meldet die Person ab und trägt sie aus einem laufenden Einsatz aus. Ihre Daten bleiben, sie lässt sich wieder aktivieren.
 - **Löschen** gibt es nur für Konten, die sich noch nie angemeldet haben und in keinem Einsatz vorkommen.
+- **Endgültig löschen** gibt es für alle übrigen Konten mit dem Spezialrecht «Endgültig löschen» (siehe [Endgültig löschen](#endgueltig)).
 - Du kannst nur Personen bearbeiten, deren Rechte du selbst alle hast.
 
 ### Benutzerrollen {#benutzerrollen}
@@ -206,3 +207,21 @@ Technisches Protokoll von Server und Geräten: Ereignisse, Warnungen und Fehler,
 ### Versionen {#versionen}
 
 Version des Servers, Mindestversion der Apps und alle angemeldeten Apps je Plattform und Version.
+
+### Endgültig löschen {#endgueltig}
+
+Manches lässt sich normalerweise nur deaktivieren oder gar nicht löschen, damit Einsatzdaten vollständig bleiben. Wer zusätzlich zum Recht des Bereichs das Spezialrecht **«Endgültig löschen»** hat (Benutzerrollen, Gruppe System), sieht dort den Knopf **«Endgültig löschen»**:
+
+| Was | Wo | Folgen |
+|---|---|---|
+| Beendeter Einsatz | Einsatzstatistik (Recht «Alle Einsätze auswerten») | Einsatz mit Log, Nachrichten, Aufzeichnung, Rettlingen, Markierungen, Durchsagen, After Action Review (auch gesichertes PDF) und Feedback; eine vorbereitete Übung wird zurückgesetzt |
+| Benutzer | Benutzer | Konto und alle persönlichen Angaben; in bisherigen Einsätzen erscheint die Person als «Gelöschte Person», auch in Log und Nachrichten |
+| Einrückoption | Einrückoptionen | bisherige Teilnahmen zeigen nur noch das Kürzel; je Kategorie bleibt mindestens eine aktiv |
+| Spezialrolle | Spezialrollen | bisherige Einsatzkräfte, Vorlagen, Elemente von Übungen und Funkkanäle verlieren die Rolle |
+| Vorlage | Externe Einsatzkräfte | bereits erfasste Externe bleiben |
+| Fähigkeit mit Einträgen | Ausbildung | die erfassten Ausbildungen aller Personen |
+| Fahrzeugart mit Fahrzeugen, Fahrzeug aus Einsätzen | Fahrzeuge | die Fahrzeuge mit Sichtungen und Verbund, auch im Replay |
+
+Vor dem Löschen zählt eine Rückfrage die Folgen auf. **Das lässt sich nicht rückgängig machen.** Laufende Einsätze und das eigene Konto lassen sich nicht löschen. Jedes endgültige Löschen steht im Applikationslog (ohne Namen).
+
+> ! Für Personendaten in Einsätzen ist meist die [Anonymisierung](#anonymisierung) der bessere Weg: Sie behält Statistik und Einsatzlog.

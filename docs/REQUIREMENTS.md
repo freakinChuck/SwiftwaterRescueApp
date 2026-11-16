@@ -46,12 +46,13 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **BE-04** – Niemand kann Rechte vergeben oder Personen bearbeiten, deren Rechte über die eigenen hinausgehen (#63).
 - **BE-05** – Eine Rolle kann bei neuen Benutzern vorausgewählt sein (#63).
 - **BE-06** – Benutzer entfernen = deaktivieren: abgemeldet, aus dem laufenden Einsatz ausgetragen, Daten bleiben, reaktivierbar (AG).
-- **BE-07** – Löschen nur für Konten, die sich nie angemeldet haben und in keinen Einsatz- oder Übungsdaten vorkommen (AG).
+- **BE-07** – Löschen nur für Konten, die sich nie angemeldet haben und in keinen Einsatz- oder Übungsdaten vorkommen (AG). Mit dem Spezialrecht «Endgültig löschen» auch alle übrigen (BE-13).
 - **BE-08** – Die Verwaltung zeigt jeder Person nur die Bereiche, für die sie ein Recht hat (#63).
 - **BE-09** – Die Benutzerkarten in der Verwaltung zeigen Status, letzte Anmeldung und Passwort (gesetzt bzw. Wechsel ausstehend), nicht den Übungsmodus, immer in denselben Spalten, egal wie viele Rollen und Gruppen jemand hat; die Benutzerrollen stehen je als Chip auf einer Zeile, die Einsatzgruppen darunter; links vom Namen das Profilbild bzw. ein Platzhalter (#112, #127).
 - **BE-10** – Die Benutzerliste ist nach aktiven und deaktivierten Personen getrennt (deaktivierte eingeklappt) und ab sechs Personen durchsuchbar (Name, Benutzername, Rolle, Gruppe) (#127).
 - **BE-11** – Eigenes Recht «Geodaten übernehmen und abgleichen»: Objekte aus OpenStreetMap als feste Standorte übernehmen (auch in vorbereitete Übungen) und Abweichungen zur Quelle bearbeiten; bei der Einführung keiner Rolle zugeteilt (#182).
 - **BE-12** – Recht «Fahrzeuge ausserhalb von Einsätzen sehen», wirksam, wenn die Verwaltung die Sichtbarkeit ohne Einsatz darauf beschränkt (#177).
+- **BE-13** – Spezialrecht «Endgültig löschen»: zusammen mit dem Recht des Bereichs lassen sich auch Elemente löschen, die sonst nur deaktiviert werden oder nicht löschbar sind (beendete Einsätze, Benutzer mit Einsatzdaten, Einrückoptionen, Spezialrollen, Vorlagen externer Einsatzkräfte, Fähigkeiten mit Einträgen, Fahrzeugarten mit Fahrzeugen, Fahrzeuge aus Einsätzen); Rückfrage mit den Folgen, nicht umkehrbar, Eintrag im Applikationslog; gelöschte Personen erscheinen in bisherigen Einsätzen als «Gelöschte Person» (#211).
 
 ## 4. Alarmierung und Einsatz (EI)
 
