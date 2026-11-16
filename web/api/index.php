@@ -230,6 +230,7 @@ if (setting('place_props_mig', '') === '') { if (!$db->query("SELECT COUNT(*) FR
   setSetting('place_props_mig', '1'); }
 // Ausbildung (Issue #117): Pflicht je Einsatzgruppe (req_grp, NULL = für alle, für die die Fähigkeit gilt); Kalenderjahre neu ab 0 (0 = laufendes, 1 = Folgejahr)
 try { $db->exec("ALTER TABLE skills ADD COLUMN req_grp TEXT NULL"); } catch (Throwable $e) {}
+try { $db->exec("ALTER TABLE users ADD COLUMN purged INT DEFAULT 0"); } catch (Throwable $e) {} // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
 if (setting('skill_y0_mig', '') === '') { $db->exec("UPDATE skills SET n=n-1 WHERE exp='year' AND n>0"); setSetting('skill_y0_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX voice_inc ON voice(incident_id,upd)"); } catch (Throwable $e) {}
@@ -382,6 +383,7 @@ const PERMS = [
   'versions' => ['System', 'Versionen einsehen und einstellen', 'Ausgelieferte Version des Servers, Versionen der angemeldeten Apps und Mindestversion der App (Hinweis «Bitte App aktualisieren»)'],
   'applog' => ['System', 'Applikationslog einsehen', 'Technisches Applikationslog mit Ereignissen, Warnungen und Fehlern des Servers und der Geräte; Aufbewahrung einstellen'],
   'dsar' => ['Datenschutz', 'Datenschutzauszug je Person erstellen', 'Auskunft über alle gespeicherten Daten einer Person (Auskunftsbegehren nach Datenschutzgesetz) als PDF und als ZIP mit den Daten in maschinenlesbarer Form, mit Namen und Standorten'],
+  'purge' => ['System', 'Endgültig löschen', 'Auch löschen, was sonst nur deaktiviert wird oder nicht löschbar ist: beendete Einsätze, Benutzer mit Einsatzdaten, Einrückoptionen, Spezialrollen, Vorlagen externer Einsatzkräfte, Fähigkeiten mit Einträgen, Fahrzeugarten und Fahrzeuge; nur zusammen mit dem Recht des jeweiligen Bereichs, nicht umkehrbar'],
   'dsar_org' => ['Datenschutz', 'Datenexport der Organisation erstellen', 'Alle Daten der Organisation als ZIP (je Tabelle JSON und CSV, auf Wunsch mit Sprachaufnahmen und gesicherten After Action Reviews) und eine Übersicht als PDF; ohne Passwörter, Schlüssel und Zugangstoken'],
 ];
 // Alarmstufen der Einsatztypen (Issue #90), von stark nach schwach: Schlüssel => [Bezeichnung, Erklärung]; Einsatz-App und Service Worker setzen sie um
@@ -3358,6 +3360,99 @@ function dsarUser($id) { global $db;
 function dsarMeta() { global $me, $now; $l = (string)setting('aar_logo', ''); $lg = legalCfg();
   return ['at' => $now, 'by' => $me['name'], 'org' => orgInfo()['name'], 'legal' => array_intersect_key($lg, array_flip(['org', 'addr', 'contact', 'privacy'])), 'logo' => str_starts_with($l, 'data:image/') ? $l : null,
     'applog_days' => applogDays(), 'version' => verInfo()['full']]; }
+/* ---------- Endgültig löschen (Issue #211) ---------- */
+// Mit dem Spezialrecht purge lassen sich auch Elemente löschen, die sonst nur deaktiviert werden oder gar nicht löschbar sind.
+// Je Art: [Bezeichnung, nötiges Bereichsrecht]; purgeInfo beschreibt die Folgen (Rückfrage im Frontend), purgeDo löscht in einer Transaktion.
+const PURGE_KINDS = ['incident' => ['Einsatz', 'stats'], 'user' => ['Benutzer', 'users'], 'mode' => ['Einrückoption', 'cfg_inc'], 'role' => ['Spezialrolle', 'cfg_inc'],
+  'ext_template' => ['Vorlage externe Einsatzkraft', 'cfg_inc'], 'skill' => ['Fähigkeit', 'skills'], 'veh_kind' => ['Fahrzeugart', 'cfg_map'], 'vehicle' => ['Fahrzeug', 'cfg_map']];
+// Tabellen mit Daten eines Einsatzes (Spalte incident_id); neue Tabellen mit incident_id hier aufnehmen
+const PURGE_INC_TABLES = ['participants', 'incident_log', 'messages', 'track', 'rec_periods', 'air_track', 'rescuees', 'rescuee_marks', 'externals', 'pois', 'inc_hydro',
+  'voice', 'voice_guests', 'voice_conf', 'voice_mute', 'aar', 'aar_img', 'aar_arch', 'aar_arch_img', 'aar_arch_part', 'fb_req', 'fb_ans', 'vehicle_seen', 'veh_links'];
+function purgeCnt($sql, $p) { global $db; try { $s = $db->prepare($sql); $s->execute($p); return (int)$s->fetchColumn(); } catch (Throwable $e) { return 0; } }
+// Element laden und prüfen; liefert [Name, Folgen (Liste von Sätzen)]
+function purgeInfo($k, $id) {
+  global $db, $uid;
+  if (!isset(PURGE_KINDS[$k])) fail('Unbekannte Art');
+  need('purge'); need(PURGE_KINDS[$k][1]);
+  $row = function ($sql) use ($db, $id, $k) { $s = $db->prepare($sql); $s->execute([$id]); $r = $s->fetch(); $s->closeCursor(); return $r ?: fail(PURGE_KINDS[$k][0] . ' nicht gefunden', 404); };
+  $c = fn($sql) => purgeCnt($sql, [$id]); $why = []; $pl = fn($n, $a, $b) => "$n " . ($n === 1 ? $a : $b);
+  if ($k === 'incident') { $r = $row("SELECT * FROM incidents WHERE id=?"); if ($r['ended_at'] === null) fail('Ein laufender Einsatz lässt sich nicht löschen; zuerst beenden');
+    $why[] = 'Der Einsatz verschwindet mit Log, Nachrichten, Aufzeichnung, Rettlingen, Markierungen, Durchsagen, After Action Review und Feedback aus allen Auswertungen.';
+    $n = $c("SELECT COUNT(*) FROM participants WHERE incident_id=?"); if ($n) $why[] = $pl($n, 'Teilnahme fehlt', 'Teilnahmen fehlen') . " danach in der Statistik pro Person und in «Meine Einsätze».";
+    if ($c("SELECT COUNT(*) FROM aar_arch WHERE incident_id=?")) $why[] = 'Auch das gesicherte PDF des After Action Review wird gelöscht.';
+    if ($c("SELECT COUNT(*) FROM ex_plans WHERE incident_id=?")) $why[] = 'Die vorbereitete Übung wird zurückgesetzt und kann neu durchgeführt werden.';
+    return [mb_substr((string)$r['message'], 0, 80) ?: 'Einsatz ' . $id, $why]; }
+  if ($k === 'user') { if ($id === $uid) fail('Das eigene Konto kann nicht gelöscht werden'); needUserEditable($id); $r = $row("SELECT * FROM users WHERE id=? AND COALESCE(purged,0)=0");
+    $why[] = 'Konto, Anmeldungen, Rollen, Einsatzgruppen, Abwesenheiten, Ausbildung, Anmeldungen zu Übungen, Feedback und Profilbild werden gelöscht.';
+    $n = $c("SELECT COUNT(*) FROM participants WHERE user_id=?"); if ($n) $why[] = "In " . $pl($n, 'Einsatz', 'Einsätzen') . " erscheint die Person danach als «Gelöschte Person» (auch in Log und Nachrichten); Standortverläufe und Nachrichten bleiben ohne Namen.";
+    return [$r['name'], $why]; }
+  if ($k === 'mode') { $r = $row("SELECT * FROM modes WHERE id=?");
+    $s = $db->prepare("SELECT COUNT(*) FROM modes WHERE active=1 AND sec=? AND id<>?"); $s->execute([(int)$r['sec'], $id]); if ((int)$r['active'] && !(int)$s->fetchColumn()) fail('Mindestens eine Einrückoption für ' . SEC_CATS[(int)$r['sec']][1] . ' muss aktiv bleiben');
+    $n = purgeCnt("SELECT COUNT(*) FROM participants WHERE mode=?", [$r['code']]); if ($n) $why[] = $pl($n, 'bisherige Teilnahme zeigt', 'bisherige Teilnahmen zeigen') . " danach statt «{$r['name']}» nur noch das Kürzel «{$r['code']}».";
+    if (in_array($r['code'], ['base', 'direct', 'logistics', 'coordinator'], true)) $why[] = 'Es ist eine Standardoption; sie wird nicht neu angelegt.';
+    return [$r['name'], $why]; }
+  if ($k === 'role') { $r = $row("SELECT * FROM roles WHERE id=?");
+    $n = $c("SELECT COUNT(*) FROM participants WHERE role_id=?") + $c("SELECT COUNT(*) FROM externals WHERE role_id=?"); if ($n) $why[] = $pl($n, 'Einsatzkraft in bisherigen Einsätzen erscheint', 'Einsatzkräfte in bisherigen Einsätzen erscheinen') . " danach ohne Spezialrolle.";
+    $n = $c("SELECT COUNT(*) FROM ext_templates WHERE role_id=?") + $c("SELECT COUNT(*) FROM ex_injects WHERE role_id=?"); if ($n) $why[] = $pl($n, 'Vorlage bzw. Element vorbereiteter Übungen verliert', 'Vorlagen und Elemente vorbereiteter Übungen verlieren') . " die Spezialrolle.";
+    $why[] = 'Funkkanäle verlieren die Rolle bei «Hören» und «Sprechen».';
+    return [$r['name'], $why]; }
+  if ($k === 'ext_template') { $r = $row("SELECT * FROM ext_templates WHERE id=?"); $why[] = 'Bereits erfasste externe Einsatzkräfte bleiben unverändert.'; return [$r['name'], $why]; }
+  if ($k === 'skill') { $r = $row("SELECT * FROM skills WHERE id=?"); $n = $c("SELECT COUNT(*) FROM user_skills WHERE skill_id=?"); if ($n) $why[] = $pl($n, 'erfasste Ausbildung wird', 'erfasste Ausbildungen werden') . " mitgelöscht."; return [$r['name'], $why]; }
+  if ($k === 'veh_kind') { $r = $row("SELECT * FROM veh_kinds WHERE id=?"); $n = $c("SELECT COUNT(*) FROM vehicles WHERE kind_id=?");
+    if ($n) $why[] = $pl($n, 'Fahrzeug dieser Art wird', 'Fahrzeuge dieser Art werden') . " mitgelöscht, mit ihren Sichtungen und dem Verbund; sie fehlen danach auch im Replay bisheriger Einsätze.";
+    return [$r['name'], $why]; }
+  $r = $row("SELECT * FROM vehicles WHERE id=?"); $n = $c("SELECT COUNT(*) FROM vehicle_seen WHERE vehicle_id=?") + $c("SELECT COUNT(*) FROM veh_links WHERE vehicle_id=? OR carrier_id=?");
+  $why[] = 'Das Fahrzeug fehlt danach auch im Replay und in den Fahrzeuglisten bisheriger Einsätze' . ($n ? " ($n Sichtungen und Verbindungen werden gelöscht)." : '.');
+  return [$r['name'], $why];
+}
+function purgeVehicles($ids) { global $db; foreach ($ids as $v) { $v = (int)$v;
+  foreach (["DELETE FROM vehicle_seen WHERE vehicle_id=?", "DELETE FROM veh_links WHERE vehicle_id=? OR carrier_id=?", "DELETE FROM veh_cand WHERE a=? OR b=?"] as $q) $db->prepare($q)->execute(substr_count($q, '?') === 2 ? [$v, $v] : [$v]);
+  $db->prepare("UPDATE vehicles SET carrier_id=NULL, carrier_at=NULL, carrier_manual=0 WHERE carrier_id=?")->execute([$v]);
+  $db->prepare("UPDATE participants SET veh_id=NULL WHERE veh_id=?")->execute([$v]); $db->prepare("UPDATE participants SET veh_cand=NULL WHERE veh_cand=?")->execute([$v]);
+  try { $db->prepare("UPDATE track SET veh_id=NULL WHERE veh_id=?")->execute([$v]); } catch (Throwable $e) {}
+  $db->prepare("DELETE FROM vehicles WHERE id=?")->execute([$v]); } }
+function purgeDo($k, $id, $name) {
+  global $db, $uid, $now;
+  $db->beginTransaction();
+  if ($k === 'incident') {
+    foreach (PURGE_INC_TABLES as $t) { try { $db->prepare("DELETE FROM $t WHERE incident_id=?")->execute([$id]); } catch (Throwable $e) {} }
+    try { $db->prepare("UPDATE ai_usage SET incident_id=NULL WHERE incident_id=?")->execute([$id]); } catch (Throwable $e) {}
+    $db->prepare("UPDATE incidents SET parent_id=NULL WHERE parent_id=?")->execute([$id]); $db->prepare("UPDATE vehicles SET seen_inc=NULL WHERE seen_inc=?")->execute([$id]);
+    foreach ($db->query("SELECT id FROM ex_plans WHERE incident_id=" . (int)$id)->fetchAll() as $p) { // vorbereitete Übung wie ex/plan/reset zurücksetzen
+      $db->prepare("UPDATE ex_plans SET incident_id=NULL WHERE id=?")->execute([$p['id']]);
+      $db->prepare("UPDATE ex_injects SET released=NULL, released_by=NULL, rescuee_id=NULL, ext_id=NULL WHERE plan_id=?")->execute([$p['id']]);
+      $db->prepare("DELETE FROM ex_signups WHERE plan_id=?")->execute([$p['id']]); }
+    $db->prepare("DELETE FROM incidents WHERE id=?")->execute([$id]);
+  } elseif ($k === 'user') {
+    foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'avail_rules', 'sessions', 'push_native', 'user_skills', 'ex_signups', 'fb_ans'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
+    foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
+      $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));
+      if ($fx($p['leads']) !== $p['leads'] || $fx($p['invite']) !== $p['invite']) $db->prepare("UPDATE ex_plans SET leads=?, invite=? WHERE id=?")->execute([$fx($p['leads']), $fx($p['invite']), $p['id']]); }
+    // Name in Texten der Einsätze ersetzen (Log, Nachrichten, Durchsagen); die Zeile in users bleibt ohne Personendaten, damit Einsatzdaten gültig bleiben
+    $gn = 'Gelöschte Person';
+    if (mb_strlen($name) >= 2) foreach (['incident_log' => 'text', 'messages' => 'text', 'voice' => 'transcript'] as $t => $col) {
+      $s = $db->prepare("SELECT id,$col FROM $t WHERE $col LIKE ?"); $s->execute(['%' . $name . '%']);
+      foreach ($s->fetchAll() as $x) $db->prepare("UPDATE $t SET $col=? WHERE id=?")->execute([str_replace($name, $gn, (string)$x[$col]), $x['id']]); }
+    try { $db->prepare("UPDATE app_log SET user_id=NULL WHERE user_id=?")->execute([$id]); } catch (Throwable $e) {}
+    $db->prepare("UPDATE users SET name=?, username=?, pass_hash='', token=NULL, photo=NULL, phone=NULL, active=0, must_change=0, purged=1 WHERE id=?")->execute([$gn, '#geloescht-' . $id, $id]);
+    if (!adminCount()) { $db->rollBack(); fail('Mindestens eine aktive Person muss die Rolle Systemadministrator behalten'); }
+  } elseif ($k === 'mode') { $db->prepare("DELETE FROM modes WHERE id=?")->execute([$id]);
+  } elseif ($k === 'role') {
+    foreach (['participants', 'externals', 'ext_templates', 'ex_injects'] as $t) $db->prepare("UPDATE $t SET role_id=NULL WHERE role_id=?")->execute([$id]);
+    foreach ($db->query("SELECT id,hear,speak FROM voice_channels")->fetchAll() as $ch) { $fx = fn($j) => json_encode(array_values(array_filter((array)json_decode((string)$j, true), fn($m) => $m !== 'r' . $id)));
+      if ($fx($ch['hear']) !== $ch['hear'] || $fx($ch['speak']) !== $ch['speak']) $db->prepare("UPDATE voice_channels SET hear=?, speak=? WHERE id=?")->execute([$fx($ch['hear']), $fx($ch['speak']), $ch['id']]); }
+    $db->prepare("DELETE FROM roles WHERE id=?")->execute([$id]);
+  } elseif ($k === 'ext_template') { $db->prepare("DELETE FROM ext_templates WHERE id=?")->execute([$id]);
+  } elseif ($k === 'skill') { $db->prepare("DELETE FROM user_skills WHERE skill_id=?")->execute([$id]); $db->prepare("DELETE FROM skills WHERE id=?")->execute([$id]);
+  } elseif ($k === 'veh_kind') { purgeVehicles($db->query("SELECT id FROM vehicles WHERE kind_id=" . (int)$id)->fetchAll(PDO::FETCH_COLUMN)); $db->prepare("DELETE FROM veh_kinds WHERE id=?")->execute([$id]);
+    foreach ($db->query("SELECT id,carries FROM veh_kinds")->fetchAll() as $x) { $ca = (array)json_decode((string)$x['carries'], true); if (array_key_exists((string)$id, $ca)) { unset($ca[(string)$id]); $db->prepare("UPDATE veh_kinds SET carries=? WHERE id=?")->execute([json_encode((object)$ca), $x['id']]); } }
+  } else purgeVehicles([$id]);
+  $db->commit();
+  if ($k === 'incident') { // Dateien: Durchsagen, Zwischenspeicher der Helikopter
+    $d = __DIR__ . '/data/voice/' . $id; if (is_dir($d)) { foreach (glob($d . '/*') ?: [] as $f) @unlink($f); @rmdir($d); }
+    @unlink(__DIR__ . '/data/air/inc' . $id . '.json'); }
+  alog('warn', $k === 'user' ? 'user' : ($k === 'incident' ? 'inc' : 'cfg'), PURGE_KINDS[$k][0] . ' endgültig gelöscht', ['id' => $id]); // ohne Namen (Personendaten)
+}
 function dsarTable($t) { if (!isset(DSAR_TABLES[$t])) fail('Unbekannte Tabelle'); return $t; }
 function dsarRow($t, $r) { foreach (DSAR_HIDE[$t] ?? [] as $k) if (array_key_exists($k, $r)) $r[$k] = $r[$k] === null ? null : '(entfernt)';
   if ($t === 'settings' && in_array($r['k'], DSAR_SECRET, true)) $r['v'] = $r['v'] === null || $r['v'] === '' ? $r['v'] : '(entfernt)';
@@ -4820,12 +4915,12 @@ switch ($route) {
 
  /* ---------- Verwaltung (je nach Recht der Benutzerrollen, Issue #63) ---------- */
  case 'users': need('users', 'ex_plan', 'groups', 'avail'); // Übungsleiter (nur ex_plan) nur Name und Benutzername (Auswahl von Übungsleitung und Aufgebotenen)
-  if (!can('users')) { $an = can('groups') || can('avail') ? absNow() : []; out(array_map(fn($r) => ints($r, ['id', 'active']) + ['absent' => $an[(int)$r['id']] ?? null], $db->query("SELECT id,username,name,active FROM users ORDER BY active DESC, name")->fetchAll())); } // absent: laufende Abwesenheit (Issue #91), für die Zuteilung der Einsatzgruppen
+  if (!can('users')) { $an = can('groups') || can('avail') ? absNow() : []; out(array_map(fn($r) => ints($r, ['id', 'active']) + ['absent' => $an[(int)$r['id']] ?? null], $db->query("SELECT id,username,name,active FROM users WHERE COALESCE(purged,0)=0 ORDER BY active DESC, name")->fetchAll())); } // absent: laufende Abwesenheit (Issue #91), für die Zuteilung der Einsatzgruppen
   $ur = []; foreach ($db->query("SELECT user_id,urole_id FROM user_uroles")->fetchAll() as $x) $ur[(int)$x['user_id']][] = (int)$x['urole_id'];
   $ug = []; foreach ($db->query("SELECT m.user_id,m.group_id FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id WHERE g.active=1 ORDER BY g.pos, g.name")->fetchAll() as $x) $ug[(int)$x['user_id']][] = (int)$x['group_id']; // Einsatzgruppen (Issue #90)
   $an = absNow(); // laufende Abwesenheit (Issue #91)
   $used = usersUsed(); // deletable = nie angemeldet, in keinen Daten, nicht man selbst (Issue #63)
-  out(array_map(fn($r) => ints($r, ['id', 'active', 'exercise_mode', 'must_change', 'last_login']) + ['uroles' => $ur[(int)$r['id']] ?? [], 'groups' => $ug[(int)$r['id']] ?? [], 'absent' => $an[(int)$r['id']] ?? null, 'editable' => ($e = userEditable((int)$r['id'])) ? 1 : 0, 'deletable' => $e && $r['last_login'] === null && !isset($used[(int)$r['id']]) && (int)$r['id'] !== $uid ? 1 : 0], $db->query("SELECT id,username,name,photo,phone,active,exercise_mode,must_change,last_login FROM users ORDER BY active DESC, name")->fetchAll())); // photo: Profilbild für die Benutzerliste (kleine Data-URL)
+  out(array_map(fn($r) => ints($r, ['id', 'active', 'exercise_mode', 'must_change', 'last_login']) + ['uroles' => $ur[(int)$r['id']] ?? [], 'groups' => $ug[(int)$r['id']] ?? [], 'absent' => $an[(int)$r['id']] ?? null, 'editable' => ($e = userEditable((int)$r['id'])) ? 1 : 0, 'deletable' => $e && $r['last_login'] === null && !isset($used[(int)$r['id']]) && (int)$r['id'] !== $uid ? 1 : 0], $db->query("SELECT id,username,name,photo,phone,active,exercise_mode,must_change,last_login FROM users WHERE COALESCE(purged,0)=0 ORDER BY active DESC, name")->fetchAll())); // photo: Profilbild für die Benutzerliste (kleine Data-URL)
  case 'user/save': need('users'); // anlegen oder Name/Benutzerrollen ändern: uroles = Liste der Rollen-IDs (nicht übergeben = unverändert)
   $nm = trim($in['name'] ?? ''); $id = (int)($in['id'] ?? 0);
   if ($id) needUserEditable($id);
@@ -4899,6 +4994,10 @@ switch ($route) {
     voiceKick($inc['id'], 'u' . $id); // Live-Konferenz (Issue #113)
   }
   out(['ok' => true]);
+ case 'purge/info': // Issue #211: Folgen des endgültigen Löschens (Rückfrage); what = Art aus PURGE_KINDS, id
+  [$nm, $why] = purgeInfo((string)($in['what'] ?? ''), (int)($in['id'] ?? 0)); out(['name' => $nm, 'label' => PURGE_KINDS[$in['what']][0], 'why' => $why]);
+ case 'purge': // Issue #211: endgültig löschen (Recht purge plus Recht des Bereichs), nicht umkehrbar
+  $k = (string)($in['what'] ?? ''); $id = (int)($in['id'] ?? 0); [$nm] = purgeInfo($k, $id); purgeDo($k, $id, $nm); out(['ok' => true]);
  case 'me/photo': // kleines Bild als Data-URL (Client verkleinert auf ca. 96px)
   if (strlen($in['photo'] ?? '') > 200000) fail('Bild zu gross');
   $db->prepare("UPDATE users SET photo=? WHERE id=?")->execute([$in['photo'], $uid]);
@@ -5030,7 +5129,7 @@ switch ($route) {
  /* ---------- Technisches Applikationslog (Issue #139) ---------- */
  /* Datenschutzauszug (Issue #199): Daten liefert der Server, PDF und ZIP entstehen im Browser; jeder Abruf eines Auszugs steht im Verlauf */
  case 'dsar/cfg': need('dsar', 'dsar_org'); $h = json_decode((string)setting('dsar_hist', ''), true);
-  out(['people' => can('dsar') ? array_map(fn($r) => ints($r, ['id', 'active']), $db->query("SELECT id,name,username,active FROM users ORDER BY active DESC, name")->fetchAll()) : [],
+  out(['people' => can('dsar') ? array_map(fn($r) => ints($r, ['id', 'active']), $db->query("SELECT id,name,username,active FROM users WHERE COALESCE(purged,0)=0 ORDER BY active DESC, name")->fetchAll()) : [],
     'hist' => is_array($h) ? $h : [], 'user' => can('dsar') ? 1 : 0, 'org' => can('dsar_org') ? 1 : 0]);
  case 'dsar/user': need('dsar'); $id = (int)($in['id'] ?? 0); $d = dsarUser($id);
   $f = in_array($in['fmt'] ?? '', ['pdf', 'zip'], true) ? $in['fmt'] : 'pdf'; dsarHist('user', $id, $f);
@@ -5039,7 +5138,7 @@ switch ($route) {
   foreach (DSAR_TABLES as $t => [$l]) { try { $n = (int)$db->query("SELECT COUNT(*) FROM $t")->fetchColumn(); } catch (Throwable $e) { $n = null; } $tb[] = ['t' => $t, 'label' => $l, 'n' => $n]; }
   $f = in_array($in['fmt'] ?? '', ['pdf', 'zip'], true) ? $in['fmt'] : 'pdf'; dsarHist('org', null, $f . (!empty($in['voice']) ? '+voice' : '') . (!empty($in['arch']) ? '+arch' : ''));
   out(['meta' => dsarMeta(), 'tables' => $tb, 'hidden' => DSAR_HIDE, 'secret' => DSAR_SECRET, 'skipped' => ['ai_cache' => 'Zwischenspeicher der AI-Antworten', 'veh_cand' => 'Zwischenstand des automatischen Fahrzeugverbunds', 'aar_arch_part' => 'gesicherte PDFs, als eigene Dateien'],
-    'people' => array_map(fn($r) => ints($r, ['id', 'active', 'last_login']), $db->query("SELECT id,name,username,active,last_login FROM users ORDER BY name")->fetchAll()),
+    'people' => array_map(fn($r) => ints($r, ['id', 'active', 'last_login']), $db->query("SELECT id,name,username,active,last_login FROM users WHERE COALESCE(purged,0)=0 ORDER BY name")->fetchAll()),
     'voice' => array_map(fn($r) => ints($r, ['id', 'incident_id']), array_values(array_filter(dsarQ("SELECT id,incident_id,file,mime FROM voice WHERE file IS NOT NULL ORDER BY id"), fn($v) => ($p = voicePath($v)) && is_file($p)))),
     'arch' => array_map(fn($r) => ints($r, ['incident_id', 'pdf_at']), dsarQ("SELECT incident_id,pdf_at,pdf_name FROM aar_arch WHERE pdf_at IS NOT NULL ORDER BY incident_id"))]);
  case 'dsar/org/table': need('dsar_org'); $t = dsarTable((string)($in['t'] ?? '')); $o = max(0, (int)($in['o'] ?? 0));
