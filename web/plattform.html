@@ -77,7 +77,8 @@ function memDlg(oid){const d=dlg('Mitglied hinzufügen',`<label class="mut">Benu
   toast('Hinzugefügt.');OPEN.add(oid);load()});
   let t=0;$('#mU',d).oninput=()=>{clearTimeout(t);t=setTimeout(()=>pf('idents&q='+encodeURIComponent($('#mU',d).value.trim())).then(r=>{$('#mL',d).innerHTML=r.idents.map(i=>`<option value="${esc(i.username)}">${esc(i.name)}</option>`).join('');
     $('#mNew',d).hidden=!$('#mU',d).value.trim()||r.idents.some(i=>i.username===$('#mU',d).value.trim())}).catch(()=>{}),300)}}
-// gemeinsame Einstellungen (Infrastruktur): je Gruppe Modus; Werte stellt ein Plattform-Administrator in der Verwaltung einer Organisation ein bzw. übernimmt sie von dort
+// gemeinsame Einstellungen (Infrastruktur): je Gruppe Modus; Werte direkt über «Werte bearbeiten» (admin.html?pf=1, ohne Mitgliedschaft) oder von einer Organisation übernehmen
+const SHARE_SEC={maps:'karten',geo:'geoquellen',air:'helikopter',hydro:'pegel'};
 // Vereinbarungen (Issue #60): «A darf Einsatzgruppen von B aufbieten»; es gelten die Einstellungen der aufbietenden Organisation
 let LK=null;
 async function loadLinks(){try{LK=await pf('links')}catch(e){$('#sLink').innerHTML='<h2>Vereinbarungen</h2>';secErrP($('#sLink'),e);return}drawLinks()}
@@ -102,8 +103,9 @@ function linkDlg(l){const os=PF.orgs.filter(o=>o.active),opt=v=>os.map(o=>`<opti
     $('#lG',d).hidden=$('#lA',d).checked;$('#lG',d).innerHTML=g.length?g.map(x=>`<label class="chk"><input type="checkbox" data-lg="${x.id}" ${sel.includes(x.id)?'checked':''}> ${esc(x.name)}</label>`).join(''):'<p class="mut">Diese Organisation hat keine aktiven Einsatzgruppen.</p>'};
   $('#lT',d).onchange=gs;$('#lA',d).onchange=gs;gs()}
 function drawShare(){const s=$('#sShare');
-  s.innerHTML=`<h2>Gemeinsame Einstellungen</h2><p class="mut">«Je Organisation»: jede stellt selbst ein. «Plattform-Vorgabe, übersteuerbar»: die Vorgabe gilt, bis eine Organisation eigene Werte speichert. «Global»: gilt für alle, nur Plattform-Administratoren ändern sie (in der Verwaltung einer beliebigen Organisation). Der Schlüssel für Web-Push ist immer gemeinsam.</p>
+  s.innerHTML=`<h2>Gemeinsame Einstellungen</h2><p class="mut">«Je Organisation»: jede stellt selbst ein. «Plattform-Vorgabe, übersteuerbar»: die Vorgabe gilt, bis eine Organisation eigene Werte speichert. «Global»: gilt für alle, nur Plattform-Administratoren ändern sie. «Werte bearbeiten» stellt die Werte der Plattform direkt ein, auch ohne Mitgliedschaft in einer Organisation; sie wirken bei «übersteuerbar» und «global». Der Schlüssel für Web-Push ist immer gemeinsam.</p>
   ${PF.share.map(g=>`<div class="pfs"><span><b>${esc(g.label)}</b><br><small class="mut">${g.set?'Vorgabe der Plattform gespeichert':'noch keine Vorgabe der Plattform'}</small></span><span class="row" style="margin:0">
+    ${SHARE_SEC[g.key]?`<a class="btn" href="admin.html?pf=1#${SHARE_SEC[g.key]}">Werte bearbeiten</a>`:''}
     <select data-sm="${g.key}">${Object.entries(PF.modes).map(([k,v])=>`<option value="${k}" ${g.mode===k?'selected':''}>${esc(v)}</option>`).join('')}</select>
     <select data-st="${g.key}"><option value="">Vorgabe übernehmen von …</option>${PF.orgs.filter(o=>o.ready).map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select>
     ${g.mode!=='org'?`<button class="sec" data-sc="${g.key}">Eigene Werte aller Organisationen entfernen</button>`:''}</span></div>`).join('')}`;
@@ -113,7 +115,9 @@ function drawShare(){const s=$('#sShare');
   s.querySelectorAll('[data-sc]').forEach(b=>b.onclick=async()=>{if(!await ask('Eigene Werte aller Organisationen entfernen?\n\nDanach gilt überall die Vorgabe der Plattform.',{danger:1}))return;
     pf('share/clear',{group:b.dataset.sc}).then(r=>toast(r.removed+' Werte entfernt.')).catch(fail)})}
 // Konten: Suche, Plattform-Recht, Passwort zurücksetzen
-function drawIds(){const s=$('#sId');s.innerHTML=`<h2>Konten</h2><p class="mut">Ein Konto gilt für alle Organisationen der Person. Passwort und Benutzername von Personen in mehreren Organisationen ändert nur die Plattform.</p><input id="iQ" placeholder="Name oder Benutzername suchen" data-nodirty><div id="iL"></div>`;
+function drawIds(){const s=$('#sId');s.innerHTML=`<h2>Konten</h2><p class="mut">Ein Konto gilt für alle Organisationen der Person. Passwort und Benutzername von Personen in mehreren Organisationen ändert nur die Plattform.</p><div class="row"><input id="iQ" placeholder="Name oder Benutzername suchen" data-nodirty><button id="iNew">+ Plattform-Administrator</button></div><div id="iL"></div>`;
+  $('#iNew').onclick=()=>dlg('Plattform-Administrator anlegen','<p class="mut">Ein Konto ohne Organisation. Es verwaltet die Plattform und die gemeinsamen Einstellungen; einer Organisation lässt es sich später zuordnen.</p><label class="mut">Benutzername<input id="nU" autocomplete="off"></label><label class="mut">Name<input id="nN" maxlength="120"></label><label class="mut">Startpasswort (muss beim ersten Login geändert werden)<input id="nP" autocomplete="off"></label>',
+    async d=>{await pf('ident/new',{username:$('#nU',d).value.trim(),name:$('#nN',d).value.trim(),password:$('#nP',d).value,platform_admin:1});toast('Angelegt.');q()});
   let t=0;const q=()=>pf('idents&q='+encodeURIComponent($('#iQ').value.trim())).then(r=>{$('#iL').innerHTML=r.idents.map(i=>`<div class="pfm"><span><b>${esc(i.name)}</b> <span class="mut">${esc(i.username)} · ${i.orgs.length?esc(i.orgs.map(o=>o.name).join(', ')):'keine Organisation'}${i.platform_admin?' · <b>Plattform-Administrator</b>':''}</span></span>
     <button data-ip="${i.id}" data-v="${i.platform_admin?0:1}">${i.platform_admin?'Plattform-Recht entziehen':'Zum Plattform-Administrator machen'}</button><button data-ir="${i.id}">Passwort zurücksetzen</button></div>`).join('')||empty0('Keine Treffer.');
     $('#iL').querySelectorAll('[data-ip]').forEach(b=>b.onclick=async()=>{if(!await ask(b.textContent+'?'))return;pf('ident/save',{id:+b.dataset.ip,platform_admin:+b.dataset.v}).then(()=>{toast('Gespeichert.');q()}).catch(fail)});
