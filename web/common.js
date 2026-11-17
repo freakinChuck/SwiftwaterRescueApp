@@ -16,12 +16,15 @@ function orgSwitch(o,x=''){try{window.localStorage.setItem('sw_org',String(o))}c
   ['fokus','inc'].forEach(k=>u.searchParams.delete(k));if(x)new URLSearchParams(x).forEach((v,k)=>u.searchParams.set(k,v));location.href=u.toString()}
 // Antwort von me/login: Organisation des Servers übernehmen (ohne Wahl wählt der Server; true = es wird neu geladen)
 function orgFollow(id){id=+id||0;if(!id||DEMO)return false;if(ORG===id)return false;const had=ORG;try{window.localStorage.setItem('sw_org',String(id))}catch(e){}
-  if(had===0&&id===1){ORG=1;return false}orgSwitch(id);return true}
+  if(had===0&&id===1){ORG=1;return false}if(had)try{sessionStorage.setItem('sw_orgmiss','1')}catch(e){}orgSwitch(id);return true}
 // Fehler von me: Konto gehört nicht (mehr) zu dieser Organisation (no_org) → zur ersten eigenen wechseln bzw. Plattform-Administratoren zur Plattformverwaltung (true = erledigt)
 function orgNoOrg(e){const d=e&&e.data;if(!d||!d.no_org||DEMO)return false;const os=d.orgs||[];if(os.length&&os[0].id!==ORG){orgSwitch(os[0].id);return true}
   if(d.platform_admin){location.href='plattform.html';return true}return false}
 // nach me: Organisation übernehmen und Wahl der Abwesenheiten für alle Organisationen (true = es wird neu geladen)
-function orgMe(m){if(!m||DEMO)return false;if(orgFollow(m.org_id))return true;ABS_MULTI=(m.orgs||[]).length>1;return false}
+function orgMe(m){if(!m||DEMO)return false;if(orgFollow(m.org_id))return true;ABS_MULTI=(m.orgs||[]).length>1;orgMiss(m);return false}
+// nach einem Wechsel, weil die gewünschte Organisation nicht zum Konto gehört: sagen, welche jetzt offen ist (sonst wirkt «?o=» wirkungslos)
+function orgMiss(m){let f=null;try{f=sessionStorage.getItem('sw_orgmiss');sessionStorage.removeItem('sw_orgmiss')}catch(e){}if(!f)return;
+  const o=(m.orgs||[]).find(x=>x.id===m.org_id);toast(`Du bist in der gewünschten Organisation nicht Mitglied. Geöffnet ist ${o?'«'+o.name+'»':'deine Organisation'}.`+(m.platform_admin?' Zuordnen kannst du dich in der Plattformverwaltung.':''),'info')}
 // Auswahl der Organisationen (Profil, Menü, Verwaltung): orgs = me.orgs [{id, name}], nur bei mehr als einer
 const orgPick=(orgs,cur)=>orgs&&orgs.length>1?`<label class="mut">Organisation<select data-orgsel>${orgs.map(o=>`<option value="${o.id}" ${o.id===cur?'selected':''}>${esc(o.name)}</option>`).join('')}</select></label>`:'';
 // Alarme anderer Organisationen (me.org_alarms bzw. incident/state org_alarms): Hinweis mit «Wechseln»; die Person entscheidet wie bei parallelen Einsätzen (Issue #167)
