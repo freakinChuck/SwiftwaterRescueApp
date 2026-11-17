@@ -41,8 +41,10 @@ function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHan
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download=name;document.body.appendChild(l);l.click();setTimeout(()=>{URL.revokeObjectURL(l.href);l.remove()},3000)}
 // Parallele Einsätze (Issue #167): INC_SEL = in der Einsatz-App angezeigter Einsatz, geht als X-Inc mit (0 = der Server wählt; Verwaltung, öffentliche Ansicht)
 let INC_SEL=0;
-async function api(r,body){const o={headers:{'X-Token':token||''}};if(ORG)o.headers['X-Org']=String(ORG);if(INC_SEL)o.headers['X-Inc']=String(INC_SEL);if(body){o.method='POST';o.body=JSON.stringify(body)}
-  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));{const xo=+res.headers.get('X-Org')||0;if(xo===1&&!ORG&&!DEMO){ORG=1;try{window.localStorage.setItem('sw_org',String(xo))}catch(e){}}}const j=await res.json().catch(()=>({error:'Serverfehler'}));
+// Plattform-Konfiguration (Rückmeldung zu PR #213): admin.html?pf=1 bearbeitet die gemeinsamen Einstellungen der Plattform direkt, auch ohne Mitgliedschaft (Header X-Pf-Cfg)
+const PFC=(()=>{try{return new URLSearchParams(location.search).get('pf')==='1'}catch(e){return false}})();
+async function api(r,body){const o={headers:{'X-Token':token||''}};if(PFC)o.headers['X-Pf-Cfg']='1';else if(ORG)o.headers['X-Org']=String(ORG);if(INC_SEL)o.headers['X-Inc']=String(INC_SEL);if(body){o.method='POST';o.body=JSON.stringify(body)}
+  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));{const xo=+res.headers.get('X-Org')||0;if(xo===1&&!ORG&&!DEMO&&!PFC){ORG=1;try{window.localStorage.setItem('sw_org',String(xo))}catch(e){}}}const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
 // Applikationslog (Issue #139): Skriptfehler an den Server melden (nur angemeldet, höchstens 5 je Seitenaufruf, gleiche Meldung einmal; der Server begrenzt zusätzlich).
 // Nicht gemeldet: Fehler fremder Skripte ohne Angaben («Script error.»), Verbindungsabbrüche (offline) und abgelehnte API-Antworten (stehen schon im Log bzw. sind Eingabefehler).

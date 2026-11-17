@@ -80,6 +80,12 @@ case 'pf/member/remove': { $oid = (int)($in['org'] ?? 0); $gid = (int)($in['iden
 case 'pf/idents': { $q = trim((string)($_GET['q'] ?? '')); $st = $PF->prepare("SELECT * FROM pf_idents" . ($q !== '' ? " WHERE username LIKE ? OR name LIKE ?" : '') . " ORDER BY name LIMIT 200");
   $st->execute($q !== '' ? ['%' . $q . '%', '%' . $q . '%'] : []);
   out(['idents' => array_map(fn($i) => $pfIdentPub($i) + ['orgs' => array_map(fn($o) => ['id' => $o['id'], 'name' => $o['name']], pfMemberOrgs($i['id']))], $st->fetchAll())]); }
+case 'pf/ident/new': { // Konto ohne Organisation (Rückmeldung zu PR #213), z. B. ein Plattform-Administrator ohne Mitgliedschaft; Startpasswort muss beim ersten Login geändert werden
+  $un = trim((string)($in['username'] ?? '')); $nm = trim((string)($in['name'] ?? '')); $pw = (string)($in['password'] ?? '');
+  if ($un === '' || $nm === '' || $pw === '') out(['error' => 'Benutzername, Name und Startpasswort angeben'], 400);
+  $gid = pfIdentNew(mb_substr($un, 0, 80), mb_substr($nm, 0, 120), password_hash($pw, PASSWORD_DEFAULT)); if (!$gid) out(['error' => 'Benutzername schon vergeben'], 409);
+  $PF->prepare("UPDATE pf_idents SET must_change=1, platform_admin=? WHERE id=?")->execute([!empty($in['platform_admin']) ? 1 : 0, $gid]);
+  alog('info', 'platform', 'Konto angelegt', ['ident' => (int)$gid, 'platform_admin' => !empty($in['platform_admin']) ? 1 : 0]); out(['ok' => 1, 'id' => (int)$gid]); }
 case 'pf/ident/save': { // Plattform-Recht setzen, Passwort zurücksetzen (Person muss beim nächsten Login ein eigenes setzen)
   $gid = (int)($in['id'] ?? 0); $s = $PF->prepare("SELECT * FROM pf_idents WHERE id=?"); $s->execute([$gid]); $i = $s->fetch(); $s->closeCursor(); if (!$i) out(['error' => 'Konto nicht gefunden'], 404);
   if (isset($in['platform_admin'])) { $v = (int)$in['platform_admin'] ? 1 : 0;
