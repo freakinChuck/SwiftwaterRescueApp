@@ -58,7 +58,7 @@ Future<Account?> accountFor(Map<String, dynamic> d) async {
   return l.where((a) => same(a) && (a.orgId == 0 || (o == 1 && a.orgId == 1))).firstOrNull;
 }
 
-/// Schlüssel ohne den Präfix der Organisation (o<id>/, Issue #60): das Konto steht schon für die Organisation, die Überwachung meldet ohne Präfix
+/// Schlüssel ohne den Präfix der Organisation (`o<id>/`, Issue #60): das Konto steht schon für die Organisation, die Überwachung meldet ohne Präfix
 String pushTag(Object? t) => '${t ?? ''}'.replaceFirst(RegExp(r'^o\d+/'), '');
 
 String _lvl(Map<String, dynamic> d) => d['crit'] == '1' ? 'crit' : (d['stay'] == '1' ? 'high' : (d['silent'] == '1' ? 'low' : 'normal'));
