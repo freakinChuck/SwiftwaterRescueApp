@@ -97,14 +97,19 @@ case 'pf/ident/save': { // Plattform-Recht setzen, Passwort zurücksetzen (Perso
   if (isset($in['name']) && trim((string)$in['name']) !== '') pfSync($gid, ['name' => mb_substr(trim((string)$in['name']), 0, 120)]);
   out(['ok' => 1]); }
 case 'pf/links': // Vereinbarungen (Issue #60): Mandant org_from darf Einsatzgruppen von org_to aufbieten (grp null = alle, sonst nur diese)
-  { $gr = []; foreach (pfOrgs(true) as $o) $gr[(int)$o['id']] = pfWith($o['id'], fn() => array_map(fn($g) => ['id' => $g['id'], 'name' => $g['name'], 'color' => $g['color']], grpRows(true))) ?? [];
-    out(['links' => pfLinks(), 'groups' => (object)$gr]); }
+  { $gr = []; $kd = []; foreach (pfOrgs(true) as $o) { $gr[(int)$o['id']] = pfWith($o['id'], fn() => array_map(fn($g) => ['id' => $g['id'], 'name' => $g['name'], 'color' => $g['color']], grpRows(true))) ?? [];
+      $kd[(int)$o['id']] = pfWith($o['id'], fn() => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'sec' => $k['sec']], array_filter(kinds(), fn($k) => $k['active'] && !$k['deleted'])))) ?? []; }
+    out(['links' => pfLinks(), 'groups' => (object)$gr, 'kinds' => (object)$kd]); }
 case 'pf/link/save': { $f = (int)($in['from'] ?? 0); $t = (int)($in['to'] ?? 0);
   if (!pfOrg($f) || !pfOrg($t) || $f === $t) out(['error' => 'Bitte zwei verschiedene Mandanten wählen'], 400);
   $g = $in['grp'] ?? null; $g = $g === null ? null : json_encode(array_values(array_unique(array_filter(array_map('intval', (array)$g), fn($x) => $x > 0))));
   if ($g === '[]') out(['error' => 'Bitte mindestens eine Einsatzgruppe wählen oder «alle»'], 400);
+  // kinds = {Einsatztyp von from: Einsatztyp von to}: welcher Typ beim aufgebotenen Mandanten für den verknüpften Einsatz gilt; ohne Eintrag kein Aufgebot bei diesem Typ
+  $ka = array_column(pfWith($f, fn() => array_values(kinds())) ?? [], null, 'id'); $kb = array_column(pfWith($t, fn() => array_values(kinds())) ?? [], null, 'id'); $km = [];
+  foreach ((array)($in['kinds'] ?? []) as $a => $b) { $a = (int)$a; $b = (int)$b; if (!$b) continue; if (!isset($ka[$a], $kb[$b]) || $kb[$b]['deleted']) out(['error' => 'Unbekannter Einsatztyp'], 400); $km[(string)$a] = $b; }
+  if (!$km) out(['error' => 'Bitte mindestens einem Einsatztyp einen Typ der anderen Organisation zuordnen'], 400); $km = json_encode($km);
   $s = $PF->prepare("SELECT id FROM pf_links WHERE org_from=? AND org_to=?"); $s->execute([$f, $t]); $id = $s->fetchColumn(); $s->closeCursor();
-  if ($id) $PF->prepare("UPDATE pf_links SET grp=? WHERE id=?")->execute([$g, $id]); else $PF->prepare("INSERT INTO pf_links(org_from,org_to,grp,created) VALUES(?,?,?,?)")->execute([$f, $t, $g, time()]);
+  if ($id) $PF->prepare("UPDATE pf_links SET grp=?, kinds=? WHERE id=?")->execute([$g, $km, $id]); else $PF->prepare("INSERT INTO pf_links(org_from,org_to,grp,kinds,created) VALUES(?,?,?,?,?)")->execute([$f, $t, $g, $km, time()]);
   alog('info', 'platform', 'Vereinbarung gespeichert', ['from' => $f, 'to' => $t]); out(['ok' => 1, 'links' => pfLinks()]); }
 case 'pf/link/remove': { $id = (int)($in['id'] ?? 0); $PF->prepare("DELETE FROM pf_links WHERE id=?")->execute([$id]);
   alog('info', 'platform', 'Vereinbarung entfernt', ['id' => $id]); out(['ok' => 1, 'links' => pfLinks()]); }
