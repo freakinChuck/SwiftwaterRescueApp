@@ -57,6 +57,12 @@ Bei Einrückoptionen mit Standort teilt die App deinen Standort, solange du teil
 
 Laufen mehrere Einsätze, zeigt das Menü über den Registern die Karte **Laufende Einsätze**. Dort wechselst du den angezeigten Einsatz. Du nimmst immer nur an einem teil: Nimmst du einen anderen an, verlässt du den bisherigen. Die übrigen Einsätze erscheinen blass auf der Karte; im Fenster [Ansicht](#karte/ansicht) blendest du sie unter «Weitere Einsätze» ein und aus.
 
+## Alarm einer anderen Organisation {#organisation}
+
+Gehörst du mehreren Organisationen an oder bietet dich eine andere Organisation über eine Vereinbarung auf, meldet die App auch deren Alarme. Im Menü steht dann die Karte **🔔 «Organisation»: …** mit dem Knopf **Zu «Organisation» wechseln**; dort nimmst du wie gewohnt an. Wie bei mehreren Einsätzen entscheidest du selbst, wo du teilnimmst. In der nativen App öffnet das Antippen der Meldung das Konto der Organisation (es wird bei Bedarf angelegt).
+
+> Im Demo-Modus gibt es keine anderen Organisationen.
+
 ## Einsatzende {#ende}
 
 Beendet die Einsatzleitung den Einsatz, erhältst du eine Meldung, und die Benachrichtigungen zum Einsatz verschwinden. Log und Replay findest du danach unter [Meine Einsätze](#auswertung/meine).

@@ -33,7 +33,7 @@ Gruppen Geodaten-Quellen, Kartenanbieter, Helikopter, Pegel & Abfluss: «Je Orga
 1. **PR 1** Server, Web-App, Verwaltung, Plattformverwaltung (`plattform.html`), Push, Hilfe.
 2. **PR 2** Native App: Organisation je Konto (`X-Org`), Push-Zuordnung über `o`, Überwachung über alle Organisationen.
 3. **PR 3** Organisationsübergreifende Einsätze: Vereinbarungen, Aufgebot fremder Gruppen, Gäste in der Datenbank der führenden Organisation.
-4. **PR 4** Demo, Bildschirmfotos, Anforderungen abschliessen.
+4. **PR 4** Demo, Anleitung, Anforderungen abschliessen (Bildschirmfotos der Plattformverwaltung folgen, sobald die Oberfläche feststeht).
 
 ## Grenzen
 - Ein Benutzername ist plattformweit eindeutig.
