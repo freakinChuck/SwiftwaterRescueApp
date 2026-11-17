@@ -103,7 +103,7 @@ String _up(String s) => s.toUpperCase();
 
 /// Ein Konto abfragen und Neues melden. Gibt den neuen Stand zurück.
 /// Mandanten (Issue #60): Alarme anderer Organisationen derselben Person auf diesem Server. Gibt es dort ein eigenes Konto in der App,
-/// meldet dieses selbst; sonst meldet das Konto mit der kleinsten Organisation (nicht doppelt) mit dem Schlüssel o<Organisation>/i:<Einsatz>.
+/// meldet dieses selbst; sonst meldet das Konto mit der kleinsten Organisation (nicht doppelt) mit dem Schlüssel `o<Organisation>/i:<Einsatz>`.
 /// Antippen öffnet die Organisation (openAccount legt das Konto bei Bedarf an), die Person entscheidet dort über die Teilnahme.
 Future<void> _orgAlarms(Account a, List l) async {
   final acc = await Accounts.load();
