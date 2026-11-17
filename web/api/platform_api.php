@@ -23,7 +23,7 @@ if ((int)$pi['must_change']) out(['error' => 'Bitte zuerst ein eigenes Passwort 
 
 $pfSlug = function ($v) { $v = strtolower(trim((string)$v)); $v = preg_replace('/[^a-z0-9-]+/', '-', $v); return trim(substr($v, 0, 40), '-'); };
 $pfCount = function ($oid) use ($PF) { $s = $PF->prepare("SELECT COUNT(*) FROM pf_members WHERE org_id=?"); $s->execute([(int)$oid]); return (int)$s->fetchColumn(); };
-$pfOrgPub = fn($o) => ['id' => (int)$o['id'], 'slug' => $o['slug'], 'name' => $o['name'], 'active' => (int)$o['active'], 'sort' => (int)$o['sort'], 'dsn' => (int)$o['id'] === 1 ? '' : (string)$o['dsn'], 'db_user' => (string)($o['db_user'] ?? ''), 'pass_set' => trim((string)($o['db_pass'] ?? '')) !== '' ? 1 : 0, 'members' => $pfCount($o['id']), 'ready' => pfConn($o['id']) ? 1 : 0];
+$pfOrgPub = fn($o) => ['id' => (int)$o['id'], 'slug' => $o['slug'], 'name' => $o['name'], 'active' => (int)$o['active'], 'sort' => (int)$o['sort'], 'dsn' => (int)$o['id'] === 1 ? '' : (string)$o['dsn'], 'db_user' => (string)($o['db_user'] ?? ''), 'pass_set' => trim((string)($o['db_pass'] ?? '')) !== '' ? 1 : 0, 'members' => $pfCount($o['id']), 'ready' => pfConn($o['id']) ? 1 : 0, 'mine' => pfIsMember($pid, $o['id']) ? 1 : 0]; // mine = eigenes Konto ist Mitglied (sonst öffnet admin.html?o= eine andere Organisation)
 // Person in einem Mandanten deaktivieren (Mitgliedschaft beendet): abmelden, Push-Abos weg; Daten bleiben, erneutes Hinzufügen aktiviert sie wieder
 $pfLocalOff = function ($oid, $gid) { $x = pfConn($oid); if (!$x) return;
   try { $s = $x->prepare("SELECT id FROM users WHERE gid=?"); $s->execute([(int)$gid]); $uid = $s->fetchColumn(); $s->closeCursor(); if ($uid === false) return;
