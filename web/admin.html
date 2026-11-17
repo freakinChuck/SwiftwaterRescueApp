@@ -173,6 +173,7 @@ const roleWire=el=>{const bs=[...el.querySelectorAll('.urb')],n=el.querySelector
 const roleVal=el=>[...el.querySelectorAll('[data-ur]')].filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>+c.dataset.ur);
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
   try{me=(await api('me')).me}catch(e){if(orgNoOrg(e))return;if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
+  if(PFC)return pfcView(a); // Plattform-Konfiguration: nur die gemeinsamen Einstellungen
   if(orgMe(me))return; // Mandanten (Issue #60)
   mapsSet(me.maps,me.map_def); // Kartenanbieter für die kleinen Karten (Issue #106)
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
@@ -208,7 +209,7 @@ const NAV=[
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
 const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',ausbildung:'skills',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',planungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',direktanruf:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',datenschutzauszug:['dsar','dsar_org'],emailalarm:'cfg_conn',funk:'cfg_conn',applog:'applog',versionen:'versions'};
-const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
+const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>(!PFC||PF_SEC[k])&&[].concat(NAV_PERM[k]).some(can))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
 let MY=false;const myMode=()=>(me.my_runs!=='off'||location.hash==='#meine')&&(!nav().length||location.hash==='#meine'); /* #meine auch bei my_runs off: offene Feedback-Anfragen (Issue #103) */const myQ=()=>MY?'&my=1':'';
@@ -238,6 +239,13 @@ function userMenuWire(){hlpWire();document.querySelectorAll('[data-orgsw]').forE
   if(!umDoc){umDoc=true;document.addEventListener('click',e=>{const m=$('#umL');if(m&&!e.target.closest('.um')){m.hidden=true;$('#bUm').setAttribute('aria-expanded',false)}})}
   l.onkeydown=e=>{if(e.key==='Escape'){set(false);b.focus()}};
   $('#bPw').onclick=()=>{set(false);pwDialog(false)};$('#bChg').onclick=()=>{set(false);changesDlg()};$('#bOut').onclick=()=>{logout();start()}}
+// Plattform-Konfiguration (Rückmeldung zu PR #213): Verwaltung nur mit den Bereichen der gemeinsamen Einstellungen (PF_SEC), Werte in der Plattform statt in einer Organisation
+function pfcView(a){if(!me.platform_admin){a.innerHTML='<div class="card"><h1>Kein Zugriff</h1><p>Nur für Plattform-Administratoren.</p><a class="btn" href="plattform.html">Zur Plattformverwaltung</a></div>';return}
+  a.innerHTML=`<header><h1>Swiftwater Rescue – Plattform-Konfiguration</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="plattform.html">🏢 Zur Plattformverwaltung</a><button id="bHlp" title="Bedienungsanleitung zu diesem Bereich" aria-label="Anleitung">?</button></header>
+    <div id="wrap"><nav id="nav" aria-label="Gemeinsame Einstellungen"><select id="navSel" aria-label="Bereich wählen">${navItems().map(([k,,l])=>`<option value="${k}">${esc(l)}</option>`).join('')}</select>
+    <div class="navl">${navItems().map(it=>`<div class="ngw one">${navLink(it,'Karte & Daten')}</div>`).join('')}</div></nav>
+    <main>${navItems().map(([k,id,l])=>`<section id="${id}" hidden><h2>${esc(l)}</h2><div class="mut">Wird geladen …</div></section>`).join('')}</main></div>${adminFoot()}`;
+  $('#bHlp').onclick=()=>hilfe('verwaltung/plattform');footWire();$('#navSel').onchange=e=>{location.hash=e.target.value};showNav()}
 function showNav(){if(!$('#nav'))return;if(location.hash==='#gewaesserdaten')history.replaceState(null,'','#geoquellen'); // früherer Name des Bereichs
   if(location.hash==='#uebungen')history.replaceState(null,'','#planungen'); // früher «Übungen»
   const its=navItems(),it=its.find(x=>x[0]===location.hash.slice(1).split('?')[0])||its[0],[k,id,l,load]=it;
@@ -248,14 +256,14 @@ function showNav(){if(!$('#nav'))return;if(location.hash==='#gewaesserdaten')his
 // Mandanten (Issue #60): gemeinsame Einstellungen der Plattform. «Global» = nur Plattform-Administratoren ändern sie (Hinweis, Eingaben gesperrt; der Server lehnt sonst ab),
 // «übersteuerbar» = Vorgabe der Plattform gilt, solange hier nichts gespeichert ist
 const PF_SEC={karten:'maps',geoquellen:'geo',helikopter:'air',pegel:'hydro'};
-function pfLock(k,id){const g=PF_SEC[k];if(!g||!me.orgs)return;api('settings').then(r=>{const x=(r.pf_share||{})[g],el=$('#'+id);if(!x||!el||x.mode==='org')return;
+function pfLock(k,id){const g=PF_SEC[k];if(!g||!me.orgs)return;api('settings').then(r=>{const x=(r.pf_share||{})[g],el=$('#'+id);if(!x||!el||x.mode==='org'&&!PFC)return;
   el.querySelectorAll('.pfnote').forEach(n=>n.remove());const n=document.createElement('div');n.className='absnote pfnote';
-  n.innerHTML=x.mode==='global'?(x.locked?'🏢 <b>Gemeinsame Einstellung der Plattform.</b> <span class="mut">Gilt für alle Organisationen und lässt sich nur in der Plattformverwaltung ändern.</span>':'🏢 <b>Gemeinsame Einstellung der Plattform.</b> <span class="mut">Als Plattform-Administrator änderst du hier den Wert für alle Organisationen.</span>'):'🏢 <b>Vorgabe der Plattform.</b> <span class="mut">Gilt, solange diese Organisation keine eigenen Werte speichert.</span>';
+  n.innerHTML=PFC?`🏢 <b>Wert der Plattform</b> <span class="mut">(${{org:'je Organisation',over:'übersteuerbare Vorgabe',global:'global für alle'}[x.mode]||x.mode}).</span> <span class="mut">${x.mode==='org'?'Wirkt erst, wenn die Gruppe in der Plattformverwaltung auf «übersteuerbar» oder «global» steht; bis dahin gelten die Werte der Organisationen.':x.mode==='over'?'Gilt in allen Organisationen ohne eigene Werte.':'Gilt in allen Organisationen.'} Einstellungen je Einsatztyp gehören den Organisationen und fehlen hier.</span>`:x.mode==='global'?(x.locked?'🏢 <b>Gemeinsame Einstellung der Plattform.</b> <span class="mut">Gilt für alle Organisationen und lässt sich nur in der Plattformverwaltung ändern.</span>':'🏢 <b>Gemeinsame Einstellung der Plattform.</b> <span class="mut">Als Plattform-Administrator änderst du hier den Wert für alle Organisationen.</span>'):'🏢 <b>Vorgabe der Plattform.</b> <span class="mut">Gilt, solange diese Organisation keine eigenen Werte speichert.</span>';
   const h=el.querySelector('h2');if(h)h.after(n);else el.prepend(n);
   if(x.locked)el.querySelectorAll('input,select,textarea,button').forEach(b=>{if(!b.classList.contains('hlp'))b.disabled=true})}).catch(()=>{})}
 // Farbpunkte der Einsatzgruppen beim Namen (Issue #105): nur aktive Gruppen mit «Farbe beim Namen» (Route groups/names), vor jedem Bereich frisch geladen
 let GN={groups:[],members:{}};
-const gnLoad=()=>api('groups/names').then(r=>{GN=r}).catch(()=>{});
+const gnLoad=()=>PFC?Promise.resolve():api('groups/names').then(r=>{GN=r}).catch(()=>{});
 function gdots(uid){const l=(GN.members[uid]||[]).map(id=>GN.groups.find(g=>g.id===id)).filter(Boolean);
   return l.length?`<span class="gdots" title="${esc(l.map(g=>g.name).join(', '))}" aria-label="Einsatzgruppen: ${esc(l.map(g=>g.name).join(', '))}">${l.map(g=>`<i class="gdot" style="background:${esc(g.color)}"></i>`).join('')}</span>`:''}
 const nmG=(name,uid)=>esc(name)+gdots(uid);

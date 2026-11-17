@@ -40,6 +40,7 @@ function pfPut($k, $v) { global $PF, $PFMY; if ($v === null) { $PF->prepare("DEL
 // Modus einer Gruppe gemeinsamer Einstellungen; Gruppe und Modus eines Schlüssels
 function pfMode($g) { $m = pfSet('share:' . $g, 'org'); return isset(PF_MODES[$m]) ? $m : 'org'; }
 function pfKeyMode($k) { if (in_array($k, PF_ALWAYS, true)) return 'global'; foreach (PF_SHARE as $g => $x) if (in_array($k, $x[1], true)) return pfMode($g); return 'org'; }
+function pfShareKey($k) { foreach (PF_SHARE as $x) if (in_array($k, $x[1], true)) return true; return false; } // Schlüssel einer gemeinsamen Einstellung
 function pfInGroup($in) { foreach (PF_SHARE as $g => $x) if (in_array($in, $x[2], true)) return $g; return null; } // Eingabe von settings/save → Gruppe
 
 function pfOrg($id) { global $PF; $s = $PF->prepare("SELECT * FROM pf_orgs WHERE id=?"); $s->execute([(int)$id]); $r = $s->fetch() ?: null; $s->closeCursor(); return $r; }
