@@ -192,7 +192,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   List<J>? _incPrev; // laufende Einsätze der letzten Abfrage (Ende der übrigen melden)
   Set<String> othHide = {}; // ausgeblendete übrige Einsätze (oth_hide_<Konto>, wie sw_othhide; Schlüssel othK)
 
-  /// Schlüssel eines Eintrags in others: verknüpfte Einsätze anderer Organisationen 'o<Org>-<Einsatz>' (Issue #60), sonst die ID
+  /// Schlüssel eines Eintrags in others: verknüpfte Einsätze anderer Organisationen `o<Org>-<Einsatz>` (Issue #60), sonst die ID
   static String othK(J o) => js(o['k']).isNotEmpty ? js(o['k']) : '${ji(o['id'])}';
 
   /// alle laufenden Einsätze, die man sehen darf (leer bei älteren Servern und im Demo)
@@ -240,7 +240,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   void setOthHide(String id, bool hide) {
     hide ? othHide.add(id) : othHide.remove(id);
-    _sp?.setStringList('oth_hide_${acc.id}', othHide.map((e) => '$e').toList());
+    _sp?.setStringList('oth_hide_${acc.id}', othHide.toList());
     notifyListeners();
   }
 

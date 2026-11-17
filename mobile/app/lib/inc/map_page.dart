@@ -1229,7 +1229,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       }
       // feste Standorte und Fahrzeuge der Partnerorganisation (Issue #60)
       for (final f in jl(o['places'])) {
-        final pts = jl(f['pts']).map((q) => q is List && q.length > 1 ? LatLng(jd(q[0]) ?? 0, jd(q[1]) ?? 0) : null).whereType<LatLng>().toList();
+        final pts = poiPts(f);
         final c = llOf(f), fc = js(f['color']).isNotEmpty ? hexColor(f['color']) : col, name = js(f['name']);
         if (pts.length > 1 && jb(f['line'])) {
           lines.add(Polyline(points: pts, color: fc.withValues(alpha: .7), strokeWidth: 3, pattern: StrokePattern.dashed(segments: const [12, 6])));
