@@ -7,6 +7,7 @@ Neben spontanen Einsätzen und Übungen gibt es **vorbereitete Übungen**: Die �
 In der Verwaltung unter **Planungen** (Recht «Übungen vorbereiten»):
 
 1. **+ Neue Übung**: Titel, Einsatztyp, Aufgebotsmeldung, Übungsleitung und Aufgebot (Einsatzgruppen oder Einzelpersonen).
+   Unter **Partnerorganisationen** (nur mit einer Vereinbarung für den Einsatztyp) bietest du Einsatzgruppen anderer Organisationen auf und trägst deren Übungsleitung ein. Beim Start erhalten sie einen eigenen, verknüpften Einsatz; ihre Übungsleitung sieht die Übung in ihrer Verwaltung unter «Gemeinsame Übungen von Partnerorganisationen».
 2. **Elemente** hinzufügen, je mit Standort (Koordinaten oder Klick auf die Karte) und optionaler Meldung:
    - **PLS** des Einsatzes setzen oder verschieben,
    - **Rettling** mit eigenem PLS,

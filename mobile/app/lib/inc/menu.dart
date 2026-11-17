@@ -46,6 +46,7 @@ class _IncMenuState extends State<IncMenu> {
   final _flFocus = FocusNode();
   String? _flSrv;
   final _busy = <String>{};
+  final _jm = TextEditingController(); // gemeinsamer Kanal (Issue #60)
   bool _updLater = true; // Hinweis «Bitte App aktualisieren» bis zur Prüfung von «Später» ausgeblendet (Issue #175)
 
   @override
@@ -59,6 +60,7 @@ class _IncMenuState extends State<IncMenu> {
   @override
   void dispose() {
     _fl.dispose();
+    _jm.dispose();
     _flFocus.dispose();
     super.dispose();
   }
@@ -573,6 +575,8 @@ class _IncMenuState extends State<IncMenu> {
   List<Widget> _main(BuildContext c, J i) {
     final st = s.st!, m = s.myPart, joined = s.joined;
     final out = <Widget>[];
+    final jc = _jointCard(c);
+    if (jc != null) out.add(jc);
     final ai = jm(st['ai']), aiSit = js(ai['sit']).isNotEmpty && ai['sit'] != 'off' && (joined || s.canManage || s.exLead);
     if (aiSit) {
       out.add(Padding(
@@ -728,6 +732,65 @@ class _IncMenuState extends State<IncMenu> {
               const SizedBox(width: 6),
               ji(x['id']) == cur ? const Mut('angezeigt') : smallBtn('Anzeigen', () => s.setSel(ji(x['id'])!)),
             ])),
+    ]);
+  }
+
+  /// Verknüpfter Einsatz mit Partnerorganisationen (Issue #60, jointCard in index.html): Partner, gemeinsame Konferenz, gemeinsamer Kanal
+  Widget? _jointCard(BuildContext c) {
+    final j = s.joint;
+    if (j == null) return null;
+    final vc = s.vx.confCh == VoiceStore.jointCh && s.vx.room != null, can = jb(j['can_msg']) && !jb(j['ended']);
+    Future<void> send() async {
+      final t = _jm.text.trim();
+      if (t.isEmpty) return;
+      final r = await _run('jm', 'incident/jmsg', {'text': t});
+      if (r != null) _jm.clear();
+    }
+
+    final ms = s.jMsgs.length > 30 ? s.jMsgs.sublist(s.jMsgs.length - 30) : s.jMsgs;
+    return MCard(title: 'Gemeinsamer Einsatz', children: [
+      Mut('${jb(j['host']) ? 'Deine Organisation hat diesen Einsatz ausgelöst.' : 'Ausgelöst von einer Partnerorganisation.'} Jede Organisation führt ihren eigenen Einsatz mit eigenen Einstellungen; ihre Lage steht auf der Karte (Fenster «Ansicht», «Weitere Einsätze»).'),
+      for (final p in jl(j['partners']))
+        Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Text.rich(TextSpan(children: [
+              TextSpan(text: js(p['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+              TextSpan(
+                  text: ' · ${jb(p['host']) ? 'hat ausgelöst' : 'verknüpft'}${js(p['kind_name']).isNotEmpty ? ' · ${js(p['kind_name'])}' : ''}${jb(p['down']) ? ' · nicht erreichbar' : jb(p['ended']) ? ' · beendet' : ''}',
+                  style: TextStyle(fontSize: 12, color: Theme.of(c).colorScheme.onSurfaceVariant)),
+            ]))),
+      if (jb(j['conf']) && !jb(j['ended']))
+        Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: OutlinedButton(
+                onPressed: s.vx.confState == 'connecting' ? null : () => vc ? s.vx.confLeave() : s.vx.confJoin(VoiceStore.jointCh),
+                child: Text(vc ? 'Gemeinsame Konferenz verlassen' : 'Der gemeinsamen Konferenz beitreten'))),
+      if (jb(j['msg'])) ...[
+        Padding(padding: const EdgeInsets.only(top: 8), child: Text('Gemeinsamer Kanal', style: Theme.of(c).textTheme.titleSmall)),
+        if (ms.isEmpty) const Mut('Noch keine Nachrichten. Gemeinsame Nachrichten gehen ohne Benachrichtigung an alle beteiligten Organisationen und stehen in deren Einsatzlog.'),
+        for (final m in ms)
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text.rich(TextSpan(children: [
+                TextSpan(text: '${fmtT(jn(m['at']))} ', style: TextStyle(color: Theme.of(c).colorScheme.onSurfaceVariant)),
+                TextSpan(text: js(m['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+                TextSpan(text: ' ${js(m['org_name'])} ', style: TextStyle(fontSize: 12, color: Theme.of(c).colorScheme.onSurfaceVariant)),
+                TextSpan(text: js(m['text'])),
+              ]))),
+        if (can)
+          Row(children: [
+            Expanded(
+                child: TextField(
+                    controller: _jm,
+                    maxLength: 2000,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => send(),
+                    decoration: const InputDecoration(hintText: 'Nachricht an alle Organisationen', counterText: '', isDense: true))),
+            const SizedBox(width: 8),
+            smallBtn('Senden', _busy.contains('jm') ? null : send),
+          ]),
+      ] else
+        const Mut('Einen gemeinsamen Kanal gibt es nur, wenn alle Organisationen die Funktion «Nachrichten» eingeschaltet haben.'),
     ]);
   }
 
@@ -1265,7 +1328,8 @@ class _InvPick extends StatelessWidget {
   Widget build(BuildContext context) {
     final off = _ints(k['grp_off']);
     final gs = jl(o['groups']).where((g) => !off.contains(ji(g['id'])) && (allowed == null || allowed!.contains(ji(g['id'])))).toList();
-    final xo = allowed == null ? jl(o['ext']) : <J>[]; // nur wer alle Gruppen aufbieten darf
+    // Partnerorganisationen mit Vereinbarung für diesen Einsatztyp (Issue #60), nur wer alle Gruppen aufbieten darf
+    final xo = allowed == null ? jl(o['ext']).where((x) => jm(x['kinds'])['${ji(k['id'])}'] != null).toList() : <J>[];
     if (jl(o['groups']).isEmpty && xo.isEmpty) return const SizedBox.shrink();
     final kid = '${ji(k['id'])}';
     final kpRaw = jm(o['kind_people'])[kid], kp = kpRaw == null ? null : _ints(kpRaw), na = ji(jm(o['kind_absent'])[kid]) ?? 0;
@@ -1338,7 +1402,7 @@ class _InvPick extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8, bottom: 2),
             child: Text.rich(TextSpan(children: [
               TextSpan(text: js(x['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
-              TextSpan(text: '  andere Organisation', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              TextSpan(text: '  Partnerorganisation, eigener verknüpfter Einsatz «${js(jm(x['kinds'])['${ji(k['id'])}'])}»', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ]))),
         for (final g in jl(x['groups']))
           row(

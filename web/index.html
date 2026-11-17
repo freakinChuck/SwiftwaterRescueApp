@@ -252,7 +252,7 @@ function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" cla
   $('#bMenu').onclick=()=>toggleSheet();$('#bView').onclick=()=>viewBox();
   $('#viewBox').onclick=e=>{const a=e.target.closest('[data-va]');if(a){const cats=(st&&st.incident?viewCats():[['place']]).map(v=>v[0]);if(cats.includes('place'))setPlaceCat(placeCatsUsed().map(c=>c.id),a.dataset.va==='1');setVis(cats,a.dataset.va==='1')}
     if(e.target.closest('[data-vpr]'))setPlaceCat(null);if(e.target.closest('#bViewX'))viewBox(false)};
-  $('#viewBox').onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked);else if(t.dataset.vpc){setPlaceCat([+t.dataset.vpc],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.vpl)setPlaceCat(['lbl'],t.checked);else if(t.dataset.vo)othSet(+t.dataset.vo,t.checked)};
+  $('#viewBox').onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked);else if(t.dataset.vpc){setPlaceCat([+t.dataset.vpc],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.vpl)setPlaceCat(['lbl'],t.checked);else if(t.dataset.vo)othSet(/^\d+$/.test(t.dataset.vo)?+t.dataset.vo:t.dataset.vo,t.checked)};
 $('#joinBan').onclick=joinOpen;const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOpen=!areaOpen;drawNote()}};an.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&an.classList.contains('more')){e.preventDefault();an.onclick()}};$('#bCam').onclick=()=>camMenu();$('#camMenu').onclick=e=>{const b=e.target.closest('[data-cam]');if(!b)return;camMenu(false);const k=b.dataset.cam;k==='f'?fitForces():k==='auto'?(toggleSheet(false),setAuto(!autoView)):fitArea(k||null)};$('#bClose').onclick=()=>toggleSheet(false);$('#bAdm').onclick=()=>{location.href='admin.html'};$('#bMy').onclick=()=>{location.href='admin.html#meine'};$('#bPrefs').onclick=()=>prefs(true);$('#bHelp').onclick=()=>hilfe(!st||!st.incident?'start/oberflaeche':({lead:'leitung/rechte',ex:'planung/freigabe',log:'einsatz/log'})[menuTab]||'einsatz/menu');$('#bPrefsX').onclick=()=>prefs(false);$('#prefs').onkeydown=e=>{if(e.key==='Escape')prefs(false)};$('#chip').onclick=()=>toggleSheet(true);
   followId=null;panel=null;msgSeen=0;msgFormKey='';$('#bPeople').onclick=()=>togglePanel('people');$('#bPeopleX').onclick=()=>togglePanel('people',false);$('#bUnfollow').onclick=stopFollow;
   $('#bMsg').onclick=()=>togglePanel('msgs');$('#bMsgX').onclick=()=>togglePanel('msgs',false);
@@ -562,7 +562,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   if(st.can_flow)h+=mcard(feat('area')?'Fliessgeschwindigkeit &amp; Suchgebiet':'Fliessgeschwindigkeit',`<div class="mrow"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label><button id="bFl">${feat('area')?'Setzen &amp; berechnen':'Setzen'}</button></div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`);
   // ältere Einzelmarkierungen des Rettlings (vor der Rettlingsverwaltung) nur noch anzeigen und entfernen
   if(joined&&(st.marks||[]).length)h+=mcard('Frühere Rettling-Markierungen',(st.marks||[]).map(x=>`<div class="mli"><span>${x.manual?'Einsatzleitung (manuell)':esc(x.name)} · ${fmtT(x.ts)}${esc(fcs(x.lat,x.lon))}</span>${(st.can_manage||x.user_id==me.id)?`<button data-mr="${x.id}">Entfernen</button>`:''}</div>`).join('')+'<div class="mut">Neue Markierungen über den Kartenknopf «Rettlinge».</div>');
-  P.main=h+hydroCard()+startMore()+tools;
+  P.main=jointCard()+h+hydroCard()+startMore()+tools;
   // Register «Leitung» (nur can_manage): Aufgebot, PLS, Aufzeichnung, Helikopter, öffentliche Ansicht, Einsatzkräfte, Einsatz beenden
   // Aufzeichnung fürs Replay: record 0 aus/beendet, 1 läuft, 2 pausiert; nach «Beenden» jederzeit wieder aufnehmbar
   const REC={0:[i.recorded?'Beendet. Bisherige Aufzeichnung bleibt für das Replay erhalten.':'Aus',[['start',i.recorded?'Wieder aufnehmen':'Aufzeichnung starten']]],1:['● Läuft',[['pause','Pausieren'],['stop','Beenden']]],2:['❚❚ Pausiert',[['resume','Fortsetzen'],['stop','Beenden']]]}[i.record]||['?',[]];
@@ -582,7 +582,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   s.innerHTML=head+incSwitch()+`<div class="mtabs" role="tablist" aria-label="Bereiche des Menüs">${tabs.map(([k,l])=>`<button role="tab" data-mt="${k}" aria-selected="${k===menuTab}" aria-controls="mtp-${k}">${l}</button>`).join('')}</div>`
     +tabs.map(([k])=>`<div class="mtab" id="mtp-${k}" role="tabpanel" ${k===menuTab?'':'hidden'}>${P[k]||''}</div>`).join('')+footInfo();
   s.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{menuTab=b.dataset.mt;s.querySelectorAll('[data-mt]').forEach(x=>x.setAttribute('aria-selected',x===b));s.querySelectorAll('.mtab').forEach(p=>p.hidden=p.id!=='mtp-'+menuTab);s.scrollTop=0});
-  bindPush();bindTools();bindMarks();bindHydro(s);vxLeadBind();bindStartMore(s);if($('#bAiSit'))$('#bAiSit').onclick=()=>{const r=aiSitR.id===i.id?aiSitR.r:null;aiSitR.r=null;toggleSheet(false);aiPanel({title:'Lagezusammenfassung',req:{fn:'sit',id:i.id},pre:r,chat:aiCh})};if($('#bAiQ'))$('#bAiQ').onclick=()=>{toggleSheet(false);aiPanel({title:'Frage zum Einsatz',req:{fn:'sit',id:i.id},chatOnly:true})};if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
+  bindPush();bindTools();bindMarks();bindHydro(s);vxLeadBind();bindStartMore(s);bindJoint(s);if($('#bAiSit'))$('#bAiSit').onclick=()=>{const r=aiSitR.id===i.id?aiSitR.r:null;aiSitR.r=null;toggleSheet(false);aiPanel({title:'Lagezusammenfassung',req:{fn:'sit',id:i.id},pre:r,chat:aiCh})};if($('#bAiQ'))$('#bAiQ').onclick=()=>{toggleSheet(false);aiPanel({title:'Frage zum Einsatz',req:{fn:'sit',id:i.id},chatOnly:true})};if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
   s.querySelectorAll('[data-xr]').forEach(b=>b.onclick=async()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xr);
     if(j.ago==null){exRelAt(j);return} // kein vorbereiteter Zeitpunkt: die Übungsleitung gibt ihn jetzt an
@@ -648,12 +648,12 @@ function photo(e){const f=e.target.files[0];if(!f)return;const img=new Image();i
 /* ---------- Aufgebot (Issue #90): Einsatzgruppen, bei Übungen auch Einzelpersonen, oder alle Personen ---------- */
 // o = start/options, allowed = erlaubte Gruppen (null = alle, dann auch «Alle Personen»); liefert get() für incident/start bzw. incident/invite/add
 function invPick(el,o,K,allowed,sel){const gs=o.groups.filter(g=>!(K.grp_off||[]).includes(g.id)&&(allowed==null||allowed.includes(g.id)));let ps=[];
-  const xo=allowed==null?(o.ext||[]):[]; // Einsatzgruppen anderer Organisationen gemäss Vereinbarung (Issue #60), nur wer alle Gruppen aufbieten darf
+  const xo=allowed==null?(o.ext||[]).filter(x=>(x.kinds||{})[K.id]):[]; // Partnerorganisationen gemäss Vereinbarung (Issue #60, je Einsatztyp), nur wer alle Gruppen aufbieten darf; sie erhalten einen eigenen, verknüpften Einsatz
   if(!o.groups.length&&!xo.length){el.innerHTML='';return null} // ohne Einsatzgruppen werden wie bisher alle alarmiert
   const kp=(o.kind_people||{})[K.id],na=(o.kind_absent||{})[K.id]||0,pp=K.persons?o.people.filter(u=>kp==null||kp.includes(u.id)):[],pn=id=>(pp.find(u=>u.id===id)||{}).name||'?';
   el.innerHTML=`<h4 style="margin:.3rem 0">Aufgebot</h4>${allowed==null?'<label class="row" style="align-items:center"><input type="checkbox" id="iAll" style="flex:0 0 auto"> <span>Alle aufbietbaren Personen alarmieren</span></label>'+(na?`<div class="mut">${na} ${na===1?'Person ist':'Personen sind'} abwesend und ${na===1?'wird':'werden'} nicht alarmiert.</div>`:''):''}
     ${o.groups.length?'':'<div class="mut">Ohne Auswahl werden alle Personen dieser Organisation alarmiert.</div>'}<div id="iGs">${gs.map(g=>`<label class="row" style="align-items:center"><input type="checkbox" data-ig="${g.id}" style="flex:0 0 auto" ${(sel||[]).includes(g.id)?'checked':''}> <span><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)} <small class="mut">${g.n} ${g.n===1?'Person':'Personen'}${g.na?`, davon ${g.na} abwesend`:''}</small></span></label>`).join('')||(o.groups.length?`<div class="mut">Du darfst bei «${esc(K.name)}» keine Einsatzgruppe aufbieten.</div>`:'')}
-    ${xo.map(x=>`<h5 style="margin:.5rem 0 .2rem">${esc(x.name)} <small class="mut">andere Organisation</small></h5>${x.groups.map(g=>`<label class="row" style="align-items:center"><input type="checkbox" data-ixo="${x.org}" data-ixg="${g.id}" style="flex:0 0 auto"> <span><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)} <small class="mut">${g.n} ${g.n===1?'Person':'Personen'}${g.na?`, davon ${g.na} abwesend`:''}</small></span></label>`).join('')}`).join('')}
+    ${xo.map(x=>`<h5 style="margin:.5rem 0 .2rem">${esc(x.name)} <small class="mut">Partnerorganisation, eigener verknüpfter Einsatz «${esc(x.kinds[K.id])}»</small></h5>${x.groups.map(g=>`<label class="row" style="align-items:center"><input type="checkbox" data-ixo="${x.org}" data-ixg="${g.id}" style="flex:0 0 auto"> <span><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)} <small class="mut">${g.n} ${g.n===1?'Person':'Personen'}${g.na?`, davon ${g.na} abwesend`:''}</small></span></label>`).join('')}`).join('')}
     ${pp.length?`<label class="mut">Einzelpersonen<input id="iPq" type="search" placeholder="Liste filtern: Name" autocomplete="off"></label><div id="iPr" class="isr"></div><div id="iPs" class="isel"></div>`:''}</div>`;
   const drawP=()=>{if(!$('#iPq',el))return;const q=$('#iPq',el).value.trim().toLowerCase(),m=pp.filter(u=>!ps.includes(u.id)&&(!q||u.name.toLowerCase().includes(q))); // leere Suche = alle (scrollbare Liste)
     $('#iPr',el).innerHTML=m.map(u=>`<button data-ipa="${u.id}">+ ${esc(u.name)}${u.absent?' <small>(abwesend)</small>':''}</button>`).join('')||`<div class="mut">${q?'Keine passende Person':'Alle ausgewählt'}</div>`;
@@ -1267,6 +1267,21 @@ function incWatch(nx){const IL=nx.incidents;if(!IL)return false;const cur=nx.inc
     incNotesClose(x.id);if(x.alarm||x.mine)notify(x.kind_name.toUpperCase()+' BEENDET',x.kind_name+' beendet.','e:'+x.id,x.end_level||'normal')});
   incPrev=IL;if(sw){try{localStorage.setItem('sw_incsel',String(INC_SEL))}catch(e){}secReset=true}return sw}
 // Menü: Auswahl, sobald mehr als ein Einsatz läuft
+/* ---------- Gemeinsamer Einsatz mit Partnerorganisationen (Issue #60): je Organisation ein eigener, verknüpfter Einsatz ---------- */
+// gemeinsamer Nachrichtenkanal: Stand jMsgs/jLast je gemeinsamem Einsatz (jId), inkrementell über den Parameter jm
+let jMsgs=[],jLast=0,jId=null;
+function jointMerge(nx){const j=nx.joint;if(!j){jMsgs=[];jLast=0;jId=null;return}if(j.id!==jId){jId=j.id;jMsgs=[];jLast=0}
+  (j.msgs||[]).forEach(m=>{if(m.id>jLast){jLast=m.id;jMsgs.push(m)}});if(jMsgs.length>300)jMsgs=jMsgs.slice(-300)}
+const jmQ=()=>jId!=null?'&jm='+jLast:'';
+function jointCard(){const j=st&&st.joint;if(!j)return'';const ps=j.partners||[];
+  const row=p=>`<div class="mli"><span><b>${esc(p.name)}</b><small class="mut"> · ${p.host?'hat ausgelöst':'verknüpft'}${p.kind_name?' · '+esc(p.kind_name):''}${p.down?' · <b>nicht erreichbar</b>':p.ended?' · beendet':''}</small></span></div>`;
+  const vc=VX.conf&&VX.conf.ch==='j';
+  return mcard('Gemeinsamer Einsatz',`<div class="mut">${j.host?'Deine Organisation hat diesen Einsatz ausgelöst.':'Ausgelöst von einer Partnerorganisation.'} Jede Organisation führt ihren eigenen Einsatz mit eigenen Einstellungen; ihre Lage steht auf der Karte (Fenster «Ansicht», «Weitere Einsätze»).</div>${ps.map(row).join('')}
+    ${j.conf?`<div class="mbtns"><button id="bJConf">${vc?'Gemeinsame Konferenz verlassen':'Der gemeinsamen Konferenz beitreten'}</button></div>`:''}
+    ${j.msg?`<h5>Gemeinsamer Kanal</h5><div class="jmsgs">${jMsgs.slice(-30).map(m=>`<div class="msg"><span class="mut">${fmtT(m.at)}</span> <b>${esc(m.name)}</b> <small class="mut">${esc(m.org_name||'')}</small> ${esc(m.text)}</div>`).join('')||'<div class="mut">Noch keine Nachrichten. Gemeinsame Nachrichten gehen ohne Benachrichtigung an alle beteiligten Organisationen und stehen in deren Einsatzlog.</div>'}</div>
+      ${j.can_msg&&!j.ended?'<div class="row"><input id="jmT" maxlength="2000" placeholder="Nachricht an alle Organisationen" autocomplete="off"><button id="bJm">Senden</button></div>':''}`:'<div class="mut">Einen gemeinsamen Kanal gibt es nur, wenn alle Organisationen die Funktion «Nachrichten» eingeschaltet haben.</div>'}`)}
+function bindJoint(s){const t=$('#jmT',s),b=$('#bJm',s);if(b){const go=()=>{const v=t.value.trim();if(!v)return;b.disabled=true;api('incident/jmsg',{text:v}).then(()=>{t.value='';t.blur();return poll()}).catch(fail).finally(()=>b.disabled=false)};b.onclick=go;t.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go()}}}
+  const c=$('#bJConf',s);if(c)c.onclick=()=>{if(VX.conf&&VX.conf.ch==='j')vxConfLeave();else vxConfJoin('j')}}
 function incSwitch(){const IL=(st&&st.incidents)||[];if(IL.length<2)return'';const cur=st.incident&&st.incident.id;
   return mcard(`Laufende Einsätze (${IL.length})`,IL.map(x=>`<div class="mli${x.id===cur?' cur':''}"><span>${kindBadge(x)} ${esc(x.message||'–')}<small class="mut"> · ${esc(fmtDT(x.alarm_at))}${x.mine?' · du nimmst teil':x.ex_lead?' · Übungsleitung':x.alarm&&!x.joined?' · <b>alarmiert</b>':''}</small></span>${x.id===cur?'<span class="mut" style="white-space:nowrap">angezeigt</span>':`<button data-isw="${x.id}">Anzeigen</button>`}</div>`).join(''))}
 // Menü im Einsatz: weiteren Einsatz bzw. eine Planung starten (läuft parallel)
@@ -1279,14 +1294,16 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-isw]');if(
 // Karte: Lage der übrigen Einsätze, je Einsatz ein-/ausblendbar (Fenster «Ansicht», ausgeblendete in sw_othhide)
 let othKey='';
 const othHide=()=>{try{return JSON.parse(localStorage.getItem('sw_othhide')||'[]')}catch(e){return[]}};
+const othK=o=>o.k||o.id; // Partner eines gemeinsamen Einsatzes: Schlüssel o<Org>-<Einsatz>
+const othInfo=(o,IL)=>o.joint?{kind_name:o.kind_name,kind_color:o.kind_color,message:o.message,org:o.org_name}:IL.find(y=>y.id===o.id)||{};
 function othSet(id,on){const h=othHide().filter(x=>x!==id);if(!on)h.push(id);try{localStorage.setItem('sw_othhide',JSON.stringify(h))}catch(e){}othKey='';drawOthers()}
 function othView(){const O=(st&&st.incident&&st.others)||[],IL=st&&st.incidents||[],h=othHide();if(!O.length)return'';
-  return'<h4>Weitere Einsätze</h4>'+O.map(o=>{const x=IL.find(y=>y.id===o.id)||{};return`<label><input type="checkbox" data-vo="${o.id}" ${h.includes(o.id)?'':'checked'}> ${kindBadge(x)} ${esc(x.message||'')}</label>`}).join('')}
+  return'<h4>Weitere Einsätze</h4>'+O.map(o=>{const x=othInfo(o,IL),k=othK(o);return`<label><input type="checkbox" data-vo="${esc(k)}" ${h.includes(k)?'':'checked'}> ${x.org?`<b>${esc(x.org)}</b> `:''}${kindBadge(x)} ${esc(x.message||'')}${o.down?' <small class="mut">(nicht erreichbar)</small>':''}</label>`}).join('')}
 function drawOthers(){if(!map)return;const O=(st&&st.incident&&st.others)||[],h=othHide(),k=JSON.stringify([O,h,st&&st.incidents]);if(k===othKey)return;othKey=k;
   if(layers.oth){map.removeLayer(layers.oth);layers.oth=null}if(!O.length)return;const IL=st.incidents||[],ms=[];
   const ini=n=>String(n||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
-  O.forEach(o=>{if(h.includes(o.id))return;const x=IL.find(y=>y.id===o.id)||{},c=x.kind_color||'#888',nm=(x.kind_name||'Einsatz')+(x.message?': '+x.message:'');
-    const pop=t=>`<b>${esc(t)}</b><div class="mut">${esc(nm)}</div><div class="mbtns"><button data-isw="${o.id}">Diesen Einsatz anzeigen</button></div>`;
+  O.forEach(o=>{if(h.includes(othK(o))||o.down)return;const x=othInfo(o,IL),c=x.kind_color||'#888',nm=(x.org?x.org+' · ':'')+(x.kind_name||'Einsatz')+(x.message?': '+x.message:'');
+    const pop=t=>`<b>${esc(t)}</b><div class="mut">${esc(nm)}</div>${o.joint?'<div class="mut">Partnerorganisation (eigener verknüpfter Einsatz)</div>':`<div class="mbtns"><button data-isw="${o.id}">Diesen Einsatz anzeigen</button></div>`}`;
     const mk=(ll,html,t,sz)=>ms.push(L.marker(ll,{icon:L.divIcon({className:'',html,iconSize:sz||[22,22],iconAnchor:[(sz||[22])[0]/2,(sz||[22,22])[1]/2]}),opacity:1}).bindTooltip(esc(t+' · '+nm)).bindPopup(pop(t)));
     const chip=(t,sq)=>`<div class="othp${sq?' sq':''}" style="border-color:${esc(c)}">${esc(t)}</div>`;
     (o.pls||[]).forEach(p=>mk([p.lat,p.lon],`<div class="pls oth" style="background:${esc(c)}"></div>`,'PLS'));
@@ -1295,11 +1312,14 @@ function drawOthers(){if(!map)return;const O=(st&&st.incident&&st.others)||[],h=
       else if(p.pts[0])mk(p.pts[0],chip('⚑'),p.name||p.sym_name||'Markierung')});
     (o.res||[]).forEach(r=>mk([r.lat,r.lon],chip(r.rescued?'✓':'R'),'Rettling '+r.name));
     (o.ext||[]).forEach(r=>mk([r.lat,r.lon],chip(r.abbr||ini(r.name),1),r.name+' (extern)'));
-    (o.ppl||[]).forEach(p=>mk([p.lat,p.lon],chip(ini(p.name)),p.name))});
+    (o.ppl||[]).forEach(p=>mk([p.lat,p.lon],chip(ini(p.name)),p.name+(p.role?' ('+p.role+')':'')));
+    (o.places||[]).forEach(p=>{const t=p.name+' (fester Standort)';if(p.pts&&p.pts.length>1)ms.push((p.line?L.polyline(p.pts,{color:p.color||c,weight:3,dashArray:'12 6',opacity:.7}):L.polygon(p.pts,{color:p.color||c,weight:2,dashArray:'12 6',fillOpacity:.05})).bindTooltip(esc(t+' · '+nm)).bindPopup(pop(t)));
+      else if(p.lat!=null)mk([p.lat,p.lon],chip(p.abbr||ini(p.name),1),t)}); // feste Standorte und Fahrzeuge der Partnerorganisationen (Issue #60)
+    ((o.veh&&o.veh.list)||[]).forEach(v=>{if(v.lat!=null&&v.carrier_id==null)mk([v.lat,v.lon],chip(v.abbr||ini(v.name),1),v.name+' (Fahrzeug)')})});
   layers.oth=L.layerGroup(ms).addTo(map)}
 /* ---------- Polling ---------- */
 // Alarmstufe kommt vom Server (level, je Person: Einsatztyp, Übungsmodus); Nachrichten und Einsatzende auch bei «Keine» als stiller Hinweis
-let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}&vs=${VX.vs}${vxQ()}&oth=1`);
+let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}&vs=${VX.vs}${vxQ()}${jmQ()}&oth=1`);jointMerge(nx);
     if(!DEMO)(nx.org_alarms||[]).forEach(a=>{if(!a.joined)notify(a.org_name+': '+String(a.kind_name||'Einsatz').toUpperCase(),a.message,'o'+a.org+'/i:'+a.id,a.level)}); // Alarm einer anderen Organisation (Issue #60)
     if(incWatch(nx))return poll(); // neu alarmiert zu einem anderen Einsatz ohne eigene Teilnahme: diesen anzeigen
     if(nx.incident){const i=nx.incident,lv=nx.level||'crit',cr=nx.msg_level||(lv==='none'?'low':lv),kr=cr==='none'?'low':cr;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(nx.alarm!==false&&notify(kindOf(i).name.toUpperCase(),i.message,'i:'+i.id,lv))toggleSheet(true)}
@@ -1329,16 +1349,16 @@ function vxFix(){const h=vxChs(),s=vxSpeakChs();if(!h.some(c=>c.id===vxCh)){cons
   if(!h.some(c=>c.id===vxCc)){const l=+vxLs('sw_vxcc');vxCc=VX.conf?VX.conf.ch:(h.find(c=>c.id===l)||h[0]||{}).id??null}}
 const vxSpk=()=>{const s=vxSpeakChs();return(s.find(c=>c.id===vxCh)||s[0]||{}).id??null}; // Kanal der Sprechtaste (Durchsage)
 const vxConfName=i=>((st&&st.voice&&st.voice.conf_list||[]).find(x=>x.ident===i)||{}).name||'Jemand';
-function vxIo(){return{me:me.id,upload:b=>api('incident/voice',{...b,inc:st.incident.id}),audio:id=>voiceBlob(id),join:ch=>api('incident/voice/join',{ch}),
-  conf:ch=>api('incident/voice/conf',{ch}).catch(()=>{}),change:()=>{renderVx();vxFab()},poll:()=>poll()}}
+function vxIo(){return{me:me.id,upload:b=>api('incident/voice',{...b,inc:st.incident.id}),audio:id=>voiceBlob(id),join:ch=>ch==='j'?api('incident/voice/jjoin',{}):api('incident/voice/join',{ch}),
+  conf:ch=>ch==='j'?Promise.resolve():api('incident/voice/conf',{ch}).catch(()=>{}),change:()=>{renderVx();vxFab()},poll:()=>poll()}}
 // nach jedem Abruf: neue Durchsagen übernehmen, nachsenden, Hinweis ohne Mithören; Konferenz verlassen, wenn sie nicht mehr erlaubt ist; Stummschaltung übernehmen
 function vxPoll(nx){if(!nx.incident||!nx.voice){if(VX.conf)vxConfLeave();if(VX.rec)vxRecStop(true);return}
   vxInit(vxIo(),nx.incident.id,nx.voice.listen);VX.io=vxIo();VX.ann=nx.voice.ann!==0;VX.max=nx.voice.max_s||60;
   const fresh=vxMerge(nx.voice.items,nx.now),lv=nx.msg_level||'normal';
   if(!VX.listen||document.hidden)fresh.slice(-3).forEach(it=>notify('Durchsage «'+vxChName(it.ch)+'»',it.name+' ('+vxDur(it.dur)+')','v:'+it.id,lv==='none'?'low':lv));
-  if(VX.conf&&(!nx.voice.conf||!nx.voice.ch.some(c=>c.id===VX.conf.ch)))vxConfLeave();
+  if(VX.conf&&(VX.conf.ch==='j'?!(nx.joint&&nx.joint.conf&&!nx.joint.ended):!nx.voice.conf||!nx.voice.ch.some(c=>c.id===VX.conf.ch)))vxConfLeave(); // gemeinsame Konferenz (Issue #60): Kanal 'j'
   vxConfSync(nx.voice.conf_list);if(vxQueued())vxFlush();vxFix()}
-const vxQ=()=>VX.conf?'&vc='+VX.conf.ch:(VX.wasConf?'&vc=0':''); // Anwesenheit in der Konferenz bei jedem Abruf melden
+const vxQ=()=>VX.conf&&VX.conf.ch!=='j'?'&vc='+VX.conf.ch:VX.conf?'&vc=0':(VX.wasConf?'&vc=0':''); // Anwesenheit in der Konferenz bei jedem Abruf melden
 const vxFast=()=>vxOn()&&(panel==='vx'||VX.listen||!!VX.conf); // schneller abfragen, solange man zuhört
 // Sprechtaste links unten über dem Hinweis zum Suchgebiet (der Hinweis bleibt, wo er ist; die Taste rückt über ihn)
 function vxFabPos(){const f=$('#vxFab'),an=$('#areaNote');if(!f||f.hidden)return;const r=an&&!an.hidden?an.getBoundingClientRect():null;

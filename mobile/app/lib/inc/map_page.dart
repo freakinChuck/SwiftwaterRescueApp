@@ -1156,7 +1156,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   // ---------- Parallele Einsätze (Issue #167, drawOthers in index.html) ----------
   /// Lage der übrigen laufenden Einsätze: blass, Rand in der Farbe des Einsatztyps; Antippen → «Diesen Einsatz anzeigen»
   void _othLayers(List<Widget> out) {
-    final os = s.others.where((o) => !s.othHide.contains(ji(o['id']))).toList();
+    final os = s.others.where((o) => !jb(o['down']) && !s.othHide.contains(IncStore.othK(o))).toList();
     if (os.isEmpty) return;
     final polys = <Polygon>[], lines = <Polyline>[], mks = <Marker>[];
     String ini(dynamic n) {
@@ -1164,15 +1164,17 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       return t.isEmpty ? '?' : t;
     }
     for (final o in os) {
-      final id = ji(o['id'])!, x = s.incOf(id) ?? {}, col = hexColor(js(x['kind_color']).isEmpty ? '#888888' : x['kind_color']);
-      final nm = '${js(x['kind_name']).isEmpty ? 'Einsatz' : js(x['kind_name'])}${js(x['message']).isNotEmpty ? ': ${js(x['message'])}' : ''}';
-      void tap(String t, LatLng p) => _sheet(t, [nm], lat: p.latitude, lon: p.longitude, actions: (c) => [
-            OutlinedButton(
-                onPressed: () {
-                  Navigator.pop(c);
-                  s.setSel(id);
-                },
-                child: const Text('Diesen Einsatz anzeigen')),
+      // verknüpfter Einsatz einer Partnerorganisation (Issue #60): Angaben stehen im Eintrag selbst, nicht in incidents
+      final jt = jb(o['joint']), id = ji(o['id'])!, x = jt ? o : (s.incOf(id) ?? {}), col = hexColor(js(x['kind_color']).isEmpty ? '#888888' : x['kind_color']);
+      final nm = '${jt ? '${js(o['org_name'])} · ' : ''}${js(x['kind_name']).isEmpty ? 'Einsatz' : js(x['kind_name'])}${js(x['message']).isNotEmpty ? ': ${js(x['message'])}' : ''}';
+      void tap(String t, LatLng p) => _sheet(t, [nm, if (jt) 'Partnerorganisation (eigener verknüpfter Einsatz)'], lat: p.latitude, lon: p.longitude, actions: (c) => [
+            if (!jt)
+              OutlinedButton(
+                  onPressed: () {
+                    Navigator.pop(c);
+                    s.setSel(id);
+                  },
+                  child: const Text('Diesen Einsatz anzeigen')),
           ]);
       Widget chip(String t, {bool sq = false}) => Opacity(
           opacity: .8,
@@ -1223,7 +1225,26 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       }
       for (final p in jl(o['ppl'])) {
         final ll = llOf(p);
-        if (ll != null) mk(ll, chip(ini(p['name'])), js(p['name']));
+        if (ll != null) mk(ll, chip(ini(p['name'])), '${js(p['name'])}${js(p['role']).isNotEmpty ? ' (${js(p['role'])})' : ''}');
+      }
+      // feste Standorte und Fahrzeuge der Partnerorganisation (Issue #60)
+      for (final f in jl(o['places'])) {
+        final pts = jl(f['pts']).map((q) => q is List && q.length > 1 ? LatLng(jd(q[0]) ?? 0, jd(q[1]) ?? 0) : null).whereType<LatLng>().toList();
+        final c = llOf(f), fc = js(f['color']).isNotEmpty ? hexColor(f['color']) : col, name = js(f['name']);
+        if (pts.length > 1 && jb(f['line'])) {
+          lines.add(Polyline(points: pts, color: fc.withValues(alpha: .7), strokeWidth: 3, pattern: StrokePattern.dashed(segments: const [12, 6])));
+          if (c != null) mks.add(Marker(point: c, width: 30, height: 30, child: GestureDetector(onTap: () => tap(name, c), behavior: HitTestBehavior.translucent, child: const SizedBox())));
+        } else if (pts.length > 2) {
+          polys.add(Polygon(points: pts, color: fc.withValues(alpha: .06), borderColor: fc, borderStrokeWidth: 2, pattern: StrokePattern.dashed(segments: const [12, 6])));
+          if (c != null) mks.add(Marker(point: c, width: 30, height: 30, child: GestureDetector(onTap: () => tap(name, c), behavior: HitTestBehavior.translucent, child: const SizedBox())));
+        } else if (c != null) {
+          mk(c, chip(js(f['abbr']).isNotEmpty ? js(f['abbr']) : ini(name), sq: true), name);
+        }
+      }
+      final vl = o['veh'] is Map ? jl(o['veh']['list']) : jl(o['veh']);
+      for (final v in vl.where((v) => v['carrier_id'] == null)) {
+        final ll = llOf(v);
+        if (ll != null) mk(ll, chip(js(v['abbr']).isNotEmpty ? js(v['abbr']) : '🚐', sq: true), '${js(v['name'])} (Fahrzeug)');
       }
     }
     if (lines.isNotEmpty) out.add(PolylineLayer(polylines: lines));
@@ -1273,14 +1294,18 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                           const Divider(),
                           Text('Weitere Einsätze', style: Theme.of(c).textTheme.titleSmall),
                           for (final o in s.others)
-                            CheckboxListTile(
-                                dense: true,
-                                value: !s.othHide.contains(ji(o['id'])),
-                                onChanged: (v) => s.setOthHide(ji(o['id'])!, v != true),
-                                title: Text.rich(TextSpan(children: [
-                                  WidgetSpan(alignment: PlaceholderAlignment.middle, child: Chip2(js(s.incOf(ji(o['id']))?['kind_name']), color: hexColor(s.incOf(ji(o['id']))?['kind_color']))),
-                                  TextSpan(text: ' ${js(s.incOf(ji(o['id']))?['message'])}'),
-                                ]))),
+                            Builder(builder: (_) {
+                              final x = jb(o['joint']) ? o : (s.incOf(ji(o['id'])) ?? {});
+                              return CheckboxListTile(
+                                  dense: true,
+                                  value: !s.othHide.contains(IncStore.othK(o)),
+                                  onChanged: (v) => s.setOthHide(IncStore.othK(o), v != true),
+                                  title: Text.rich(TextSpan(children: [
+                                    if (jb(o['joint'])) TextSpan(text: '${js(o['org_name'])} ', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    WidgetSpan(alignment: PlaceholderAlignment.middle, child: Chip2(js(x['kind_name']), color: hexColor(x['kind_color']))),
+                                    TextSpan(text: ' ${js(x['message'])}${jb(o['down']) ? ' (nicht erreichbar)' : ''}'),
+                                  ])));
+                            }),
                         ],
                         if (_airOn) Padding(padding: const EdgeInsets.only(top: 8), child: Mut(_airInfo(), size: 12)),
                       ])));
