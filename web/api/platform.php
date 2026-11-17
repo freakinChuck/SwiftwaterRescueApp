@@ -27,11 +27,18 @@ if (!$PFMY) { $PF->exec('PRAGMA journal_mode=WAL'); $PF->exec('PRAGMA busy_timeo
     "CREATE TABLE IF NOT EXISTS pf_members(id $ai, ident_id INT, org_id INT, user_id INT NULL, boot INT DEFAULT 0, created BIGINT)",
     "CREATE TABLE IF NOT EXISTS pf_sessions(id $ai, ident_id INT, token $tx UNIQUE, device $tx, platform $tx, created BIGINT, last_seen BIGINT, app_ver $tx NULL)",
     "CREATE TABLE IF NOT EXISTS pf_settings(k $tx PRIMARY KEY, v MEDIUMTEXT)",
-    "CREATE TABLE IF NOT EXISTS pf_links(id $ai, org_from INT, org_to INT, grp TEXT NULL, created BIGINT)", // organisationsübergreifend: org_from darf Einsatzgruppen von org_to aufbieten
+    // Gemeinsame Einsätze (Issue #60, PR 3): Vereinbarung org_from darf Einsatzgruppen von org_to aufbieten (grp NULL = alle aktiven), kinds = {Typ-ID bei org_from: Typ-ID bei org_to}
+    "CREATE TABLE IF NOT EXISTS pf_links(id $ai, org_from INT, org_to INT, grp TEXT NULL, kinds TEXT NULL, created BIGINT)",
+    // Verknüpfung der Einsätze: jede Organisation führt ihren eigenen Einsatz in ihrer Datenbank, pf_joint hält sie zusammen (host = auslösende Organisation)
+    "CREATE TABLE IF NOT EXISTS pf_joint(id $ai, host_org INT, host_inc INT, created BIGINT, ended_at BIGINT NULL)",
+    "CREATE TABLE IF NOT EXISTS pf_joint_inc(id $ai, joint_id INT, org_id INT, incident_id INT, leads TEXT NULL, created BIGINT)", // leads = Konten (pf_idents) der Übungsleitung in dieser Organisation
+    "CREATE TABLE IF NOT EXISTS pf_jmsg(id $ai, joint_id INT, org_id INT, gid INT, name $tx, text TEXT, at BIGINT)", // gemeinsamer Nachrichtenkanal
   ] as $q) $PF->exec($PFMY ? $q : str_replace('MEDIUMTEXT', 'TEXT', $q));
   try { $PF->exec("CREATE UNIQUE INDEX pf_members_io ON pf_members(ident_id, org_id)"); } catch (Throwable $e) {}
   try { $PF->exec("CREATE UNIQUE INDEX pf_links_ft ON pf_links(org_from, org_to)"); } catch (Throwable $e) {}
-  try { $PF->exec("ALTER TABLE pf_members ADD COLUMN guest INT DEFAULT 0"); } catch (Throwable $e) {} // 1 = nur als Gast aufgeboten (organisationsübergreifender Einsatz)
+  try { $PF->exec("ALTER TABLE pf_links ADD COLUMN kinds TEXT NULL"); } catch (Throwable $e) {}
+  try { $PF->exec("CREATE UNIQUE INDEX pf_joint_inc_oi ON pf_joint_inc(org_id, incident_id)"); } catch (Throwable $e) {}
+  try { $PF->exec("CREATE INDEX pf_jmsg_j ON pf_jmsg(joint_id, id)"); } catch (Throwable $e) {}
   // Org 1 = die bisherige Datenbank, immer vorhanden
   if (!(int)$PF->query("SELECT COUNT(*) FROM pf_orgs")->fetchColumn())
     try { $PF->prepare("INSERT INTO pf_orgs(id,slug,name,dsn,active,sort,created) VALUES(1,'org1','Organisation',NULL,1,1,?)")->execute([time()]); } catch (Throwable $e) {}
@@ -55,12 +62,13 @@ function pfDsn($o) { global $cfg; if ((int)$o['id'] === 1) return [$cfg['dsn0'],
   $d = __DIR__ . '/data/org' . (int)$o['id']; if (!is_dir($d)) @mkdir($d, 0775, true); return ['sqlite:' . $d . '/swiftwater.sqlite', null, null]; }
 function pfData($id) { return (int)$id === 1 ? __DIR__ . '/data' : __DIR__ . '/data/org' . (int)$id; } // Ordner der Dateien je Mandant (Funk, Helikopter, Sperren)
 // Verbindung zur Datenbank eines anderen Mandanten (zwischengespeichert); null, wenn sie (noch) nicht eingerichtet ist
-function pfConn($id) { global $db, $PF; static $c = []; $id = (int)$id;
+function pfConn($id) { global $db, $PF, $cfg; static $c = []; $id = (int)$id;
   if ($id === ORG_ID && isset($db) && $db instanceof PDO) return $db;
   if (array_key_exists($id, $c)) return $c[$id];
   $o = pfOrg($id); if (!$o) return $c[$id] = null;
   try { [$dsn, $u, $p] = pfDsn($o);
     if (str_starts_with($dsn, 'sqlite:') && !is_file(substr($dsn, 7))) return $c[$id] = null; // noch nie geöffnet: Schema fehlt, Mitglieder werden beim ersten Aufruf verknüpft
+    if ($dsn === ($cfg['platform_dsn'] ?? $cfg['dsn0'])) return $c[$id] = $PF; // dieselbe Datenbank wie die zentralen Tabellen: dieselbe Verbindung
     $x = new PDO($dsn, $u, $p, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
     if (!str_starts_with($dsn, 'mysql')) $x->exec('PRAGMA busy_timeout=10000');
     $x->query("SELECT gid FROM users LIMIT 1"); // Schema mit Konten-Spalte vorhanden?
@@ -73,8 +81,8 @@ function pfIdentByToken($t) { global $PF; if ($t === '') return null;
   $s = $PF->prepare("SELECT * FROM pf_idents WHERE token=?"); $s->execute([$t]); $r = $s->fetch(); $s->closeCursor(); if ($r) return $r;
   $s = $PF->prepare("SELECT i.* FROM pf_sessions s JOIN pf_idents i ON i.id=s.ident_id WHERE s.token=?"); $s->execute([$t]); $r = $s->fetch(); $s->closeCursor(); return $r ?: null; }
 // Mitgliedschaften eines Kontos in aktiven Mandanten
-function pfMemberOrgs($gid, $guests = true) { global $PF; $s = $PF->prepare("SELECT o.id,o.slug,o.name,m.user_id,COALESCE(m.guest,0) guest FROM pf_members m JOIN pf_orgs o ON o.id=m.org_id WHERE m.ident_id=? AND o.active=1" . ($guests ? '' : ' AND COALESCE(m.guest,0)=0') . " ORDER BY o.sort, o.id");
-  $s->execute([(int)$gid]); return array_map(fn($r) => ['id' => (int)$r['id'], 'slug' => $r['slug'], 'name' => $r['name'], 'user_id' => $r['user_id'] === null ? null : (int)$r['user_id'], 'guest' => (int)$r['guest']], $s->fetchAll()); }
+function pfMemberOrgs($gid) { global $PF; $s = $PF->prepare("SELECT o.id,o.slug,o.name,m.user_id FROM pf_members m JOIN pf_orgs o ON o.id=m.org_id WHERE m.ident_id=? AND o.active=1 ORDER BY o.sort, o.id");
+  $s->execute([(int)$gid]); return array_map(fn($r) => ['id' => (int)$r['id'], 'slug' => $r['slug'], 'name' => $r['name'], 'user_id' => $r['user_id'] === null ? null : (int)$r['user_id']], $s->fetchAll()); }
 function pfIsMember($gid, $oid) { foreach (pfMemberOrgs($gid) as $o) if ($o['id'] === (int)$oid) return true; return false; }
 
 // Felder des Kontos in alle Mandanten spiegeln (users.gid): Name, Bild, Telefon, Benutzername, Passwort, Token
@@ -176,13 +184,12 @@ function pfOnlyHere($gid) { global $PF; if (!$gid) return true; $s = $PF->prepar
 // Die Person entscheidet wie bei parallelen Einsätzen selbst, ob sie wechselt.
 function pfOtherAlarms($gid) { $r = [];
   foreach (pfMemberOrgs($gid) as $o) { if ($o['id'] === ORG_ID || !$o['user_id']) continue; $x = pfConn($o['id']); if (!$x) continue;
-    try { $u = $o['user_id']; $a = $x->prepare("SELECT active,COALESCE(guest,0) guest FROM users WHERE id=?"); $a->execute([$u]); $ur = $a->fetch(); $a->closeCursor(); if (!$ur || !(int)$ur['active']) continue; $gst = (int)$ur['guest'] > 0;
+    try { $u = $o['user_id']; $a = $x->prepare("SELECT active FROM users WHERE id=?"); $a->execute([$u]); if (!(int)$a->fetchColumn()) continue;
       $ks = []; foreach ($x->query("SELECT id,name,color,alarm,sec FROM inc_kinds")->fetchAll() as $k) $ks[(int)$k['id']] = $k;
       foreach ($x->query("SELECT id,kind_id,message,alarm_at,invite,inv_groups,inv_absent,created_by FROM incidents WHERE ended_at IS NULL ORDER BY id DESC")->fetchAll() as $i) {
         $k = $ks[(int)$i['kind_id']] ?? null; if ($k && ((int)$k['sec'] === 1 || $k['alarm'] === 'none')) continue; if ((int)$i['created_by'] === $u) continue; // selbst gestartet
         if (in_array($u, array_map('intval', json_decode($i['inv_absent'] ?? '[]', true) ?: []), true)) continue;
         $g = json_decode($i['inv_groups'] ?? 'null', true);
-        if ($gst && $i['invite'] === null) continue; // Gäste nur bei ausdrücklichem Aufgebot
         if (empty($g['all']) && $i['invite'] !== null && !in_array($u, array_map('intval', json_decode($i['invite'], true) ?: []), true)) continue;
         $p = $x->prepare("SELECT 1 FROM participants WHERE incident_id=? AND user_id=? AND mode<>'declined' AND left_at IS NULL"); $p->execute([$i['id'], $u]); $j = (bool)$p->fetchColumn();
         $r[] = ['org' => $o['id'], 'org_name' => $o['name'], 'id' => (int)$i['id'], 'message' => (string)$i['message'], 'alarm_at' => (int)$i['alarm_at'], 'kind_name' => $k['name'] ?? '', 'kind_color' => $k['color'] ?? '', 'level' => $k['alarm'] ?? 'normal', 'joined' => $j ? 1 : 0]; } }
@@ -200,68 +207,117 @@ function pfMirror($table, $gkey, $gid, $f) { if (!$gkey || !$gid) return;
     catch (Throwable $e) {} } }
 function pfMulti($gid) { return $gid && count(array_filter(pfMemberOrgs($gid), fn($o) => $o['user_id'] !== null)) > 1; } // Person in mehreren Mandanten?
 
-/* ---------- Organisationsübergreifende Einsätze (Issue #60, PR 3) ---------- */
-// Vereinbarung «A darf B aufbieten» (pf_links, gepflegt in der Plattformverwaltung): A bietet beim Start bzw. Nachbieten Einsatzgruppen von B auf (grp = erlaubte Gruppen von B, NULL = alle aktiven).
-// Die Aufgebotenen werden in A als Gäste angelegt (users.guest = Heim-Organisation, pf_members.guest = 1): ohne Benutzerrollen und Einsatzgruppen, sie sehen nur Einsätze,
-// zu denen sie ausdrücklich aufgeboten sind oder an denen sie teilgenommen haben, nie Aufgebote «alle Personen». Es gelten die Einstellungen von A (der Einsatz liegt in der Datenbank von A).
-// Push erhalten Gäste über die Geräte ihrer Heim-Organisation (pfGuestSubs); in der App erscheint der Alarm wie ein Alarm einer anderen Organisation (org_alarms).
+/* ---------- Gemeinsame Einsätze mehrerer Organisationen (Issue #60, PR 3) ---------- */
+// Vereinbarung «A darf B aufbieten» (pf_links, Plattformverwaltung): je Einsatztyp von A der Einsatztyp, den B dafür verwendet (kinds), und die Einsatzgruppen von B (grp).
+// Bietet A Gruppen von B auf, entsteht in der Datenbank von B ein eigener, verknüpfter Einsatz (pf_joint, pf_joint_inc): B alarmiert ihre Leute mit ihren Einstellungen,
+// Funktionen und Rechten. Die Lage aller verknüpften Einsätze steht bei allen auf der Karte (incident/state, others mit joint 1), dazu ein gemeinsamer
+// Nachrichtenkanal (pf_jmsg, wenn beide Nachrichten eingeschaltet haben) und eine gemeinsame Live-Konferenz (wenn beide sie eingerichtet haben).
 function pfLinks($from = null, $to = null) { global $PF; $w = []; $a = [];
   if ($from !== null) { $w[] = 'org_from=?'; $a[] = (int)$from; } if ($to !== null) { $w[] = 'org_to=?'; $a[] = (int)$to; }
   $s = $PF->prepare("SELECT * FROM pf_links" . ($w ? ' WHERE ' . implode(' AND ', $w) : '') . " ORDER BY org_from, org_to"); $s->execute($a);
-  return array_map(fn($r) => ['id' => (int)$r['id'], 'org_from' => (int)$r['org_from'], 'org_to' => (int)$r['org_to'], 'grp' => $r['grp'] === null ? null : array_values(array_map('intval', json_decode($r['grp'], true) ?: [])), 'created' => (int)$r['created']], $s->fetchAll()); }
-// Code in der Datenbank eines anderen Mandanten ausführen (die Funktionen von index.php arbeiten mit global $db); null = Datenbank nicht erreichbar.
-// Im Callback nie fail()/out() aufrufen: exit würde $db nicht zurücksetzen.
-function pfWith($id, $fn) { $x = pfConn($id); if (!$x) return null; $old = $GLOBALS['db']; $GLOBALS['db'] = $x;
-  try { return $fn($x); } catch (Throwable $e) { return null; } finally { $GLOBALS['db'] = $old; } }
-// Einsatzgruppen der Organisationen, die dieser Mandant aufbieten darf: [{org, name, groups: [{id, name, color, n, na}]}]
-function pfExtOrgs() { $r = [];
-  foreach (pfLinks(ORG_ID) as $l) { $o = pfOrg($l['org_to']); if (!$o || !(int)$o['active'] || (int)$o['id'] === ORG_ID) continue;
-    $gs = pfWith($o['id'], function () use ($l) { $ab = absentIds(); $out = [];
+  return array_map(function ($r) { $k = []; foreach ((json_decode((string)$r['kinds'], true) ?: []) as $x => $y) if ((int)$x > 0 && (int)$y > 0) $k[(string)(int)$x] = (int)$y;
+    return ['id' => (int)$r['id'], 'org_from' => (int)$r['org_from'], 'org_to' => (int)$r['org_to'], 'grp' => $r['grp'] === null ? null : array_values(array_map('intval', json_decode($r['grp'], true) ?: [])), 'kinds' => (object)$k, 'created' => (int)$r['created']]; }, $s->fetchAll()); }
+// Mandant, in dessen Datenbank gerade gearbeitet wird (pfIn), sonst der der Anfrage
+function ctxOrg() { return $GLOBALS['PFCTX'] ?? ORG_ID; }
+function orgData() { return pfData(ctxOrg()); }
+// Code in der Datenbank eines anderen Mandanten ausführen. Die Funktionen von index.php arbeiten mit den globalen $db, $uid, $me, $KINDS, $my:
+// alle werden getauscht (Person = «System» ohne Rechte), Push und Nachlauf laufen danach ebenfalls im anderen Mandanten.
+// Rückgabe des Callbacks, null = Datenbank nicht erreichbar oder Fehler. Im Callback nie fail()/out() aufrufen (exit liesse den Zustand vertauscht).
+function pfIn($id, $fn) { $id = (int)$id; if ($id === ctxOrg()) return $fn($GLOBALS['db']);
+  $x = pfConn($id); if (!$x) return null; $keep = ['db', 'KINDS', 'uid', 'me', 'PFCTX', 'pushQ', 'my', 'AFTER']; $old = [];
+  foreach ($keep as $k) $old[$k] = $GLOBALS[$k] ?? null;
+  $GLOBALS['db'] = $x; $GLOBALS['KINDS'] = null; $GLOBALS['uid'] = 0; $GLOBALS['me'] = ['id' => 0, 'gid' => 0, 'name' => 'System', 'exercise_mode' => 0, 'perms' => [], 'must_change' => 0]; $GLOBALS['PFCTX'] = $id; $GLOBALS['pushQ'] = []; $GLOBALS['AFTER'] = [];
+  $GLOBALS['my'] = $x->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql'; $r = null; $q = []; $af = [];
+  try { $r = $fn($x); } catch (Throwable $e) { $err = $e; } finally { $q = $GLOBALS['pushQ']; $af = $GLOBALS['AFTER']; foreach ($keep as $k) $GLOBALS[$k] = $old[$k]; }
+  if (isset($err)) { if (function_exists('alog')) alog('err', 'platform', 'Fehler in einem anderen Mandanten: ' . $err->getMessage(), ['org' => $id, 'file' => basename($err->getFile()), 'line' => $err->getLine()]); return null; }
+  if ($q || $af) after(fn() => pfIn($id, function () use ($q, $af) { $GLOBALS['pushQ'] = $q; if ($q) pushFlush(); foreach ($af as $f) $f(); }));
+  return $r; }
+function pfWith($id, $fn) { return pfIn($id, $fn); }
+// Organisationen, die dieser Mandant aufbieten darf: [{org, name, kinds: {eigene Typ-ID: Typname bei der anderen}, groups: [{id, name, color, n, na}]}]
+function pfExtOrgs($people = false) { $r = [];
+  foreach (pfLinks(ctxOrg()) as $l) { $o = pfOrg($l['org_to']); if (!$o || !(int)$o['active'] || (int)$o['id'] === ctxOrg() || !(array)$l['kinds']) continue;
+    $d = pfIn($o['id'], function () use ($l, $people) { $ab = absentIds(); $out = []; $ks = kinds(); $kn = [];
+      foreach ((array)$l['kinds'] as $a => $b) if (isset($ks[$b]) && $ks[$b]['active'] && !$ks[$b]['deleted']) $kn[$a] = $ks[$b]['name'];
       foreach (grpRows(true) as $g) { if ($l['grp'] !== null && !in_array($g['id'], $l['grp'], true)) continue; $m = grpMembers([$g['id']]);
         $out[] = ['id' => $g['id'], 'name' => $g['name'], 'color' => $g['color'], 'n' => count($m), 'na' => count(array_intersect($m, $ab))]; }
-      return $out; });
-    if ($gs) $r[] = ['org' => (int)$o['id'], 'name' => $o['name'], 'groups' => $gs]; }
+      $pp = []; if ($people && $out) { $m = grpMembers(array_column($out, 'id')); if ($m) { $s = $GLOBALS['db']->prepare("SELECT gid,name FROM users WHERE gid IS NOT NULL AND id IN (" . implode(',', array_fill(0, count($m), '?')) . ") ORDER BY name"); $s->execute($m);
+        $pp = array_map(fn($x) => ['gid' => (int)$x['gid'], 'name' => $x['name']], $s->fetchAll()); } }
+      return ['kinds' => (object)$kn, 'groups' => $out] + ($people ? ['people' => $pp] : []); });
+    if ($d && $d['groups'] && (array)$d['kinds']) $r[] = ['org' => (int)$o['id'], 'name' => $o['name']] + $d; }
   return $r; }
-// Auswahl {Org-ID: [Gruppen-IDs]} prüfen und auflösen; legt fehlende Personen als Gäste an.
-// Rückgabe [IDs hier, davon abwesend (Abwesenheiten und Einsatzzeiten der Heim-Organisation), Aufgebot je Organisation [{o, n, g, gn, c}]]
-function pfExtResolve($sel) { $ids = []; $abs = []; $info = []; if (!is_array($sel) || !$sel) return [[], [], []];
-  $links = []; foreach (pfLinks(ORG_ID) as $l) $links[$l['org_to']] = $l;
-  foreach ($sel as $o => $gs) { $o = (int)$o; $gs = array_values(array_unique(array_filter(array_map('intval', (array)$gs), fn($x) => $x > 0))); if (!$gs) continue;
-    if (!isset($links[$o]) || $o === ORG_ID) fail('Diese Organisation darfst du nicht aufbieten', 403);
-    if ($links[$o]['grp'] !== null && array_diff($gs, $links[$o]['grp'])) fail('Diese Einsatzgruppe der anderen Organisation darfst du nicht aufbieten', 403);
-    $org = pfOrg($o); if (!$org || !(int)$org['active']) fail('Die andere Organisation ist nicht verfügbar');
-    $r = pfWith($o, function ($x) use ($gs) { $ok = array_column(grpRows(true), 'name', 'id'); if (array_diff($gs, array_keys($ok))) return false;
-      $m = grpMembers($gs); $gid = [];
-      if ($m) { $s = $x->prepare("SELECT id,gid FROM users WHERE gid IS NOT NULL AND id IN (" . implode(',', array_fill(0, count($m), '?')) . ")"); $s->execute($m); $gid = array_column($s->fetchAll(), 'gid', 'id'); }
-      return [$gid, array_values(array_intersect(absentIds(), $m)), array_map(fn($g) => $ok[$g], $gs)]; });
-    if ($r === null) fail('Die Datenbank der Organisation «' . $org['name'] . '» ist nicht erreichbar');
-    if ($r === false) fail('Unbekannte oder deaktivierte Einsatzgruppe der Organisation «' . $org['name'] . '»');
-    [$gid, $ab, $gn] = $r; $c = 0;
-    foreach ($gid as $bu => $g) { $u = pfGuest((int)$g, $o); if (!$u) continue; $ids[] = $u; $c++; if (in_array((int)$bu, $ab, true)) $abs[] = $u; }
-    $info[] = ['o' => $o, 'n' => $org['name'], 'g' => $gs, 'gn' => $gn, 'c' => $c]; }
-  return [array_values(array_unique($ids)), array_values(array_unique($abs)), $info]; }
-// Person (Konto) als Gast in diesem Mandanten: bestehende Person (auch reguläres Mitglied) bzw. neu als Gast angelegt; null = hier deaktiviert oder nicht möglich
-function pfGuest($gid, $home) { global $db, $PF;
-  $s = $db->prepare("SELECT id,active,COALESCE(guest,0) guest FROM users WHERE gid=? AND COALESCE(purged,0)=0"); $s->execute([$gid]); $u = $s->fetch(); $s->closeCursor();
-  if ($u) { if (!(int)$u['active']) { if (!(int)$u['guest']) return null; $db->prepare("UPDATE users SET active=1 WHERE id=?")->execute([$u['id']]); } return (int)$u['id']; }
-  $s = $PF->prepare("SELECT * FROM pf_idents WHERE id=?"); $s->execute([$gid]); $i = $s->fetch(); $s->closeCursor(); if (!$i) return null;
-  try { $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin,active,photo,token,must_change,phone,last_login,gid,guest) VALUES(?,?,?,0,1,?,?,?,?,?,?,?)")
-      ->execute([$i['username'], $i['name'], $i['pass_hash'], $i['photo'], $i['token'], (int)$i['must_change'], $i['phone'], $i['last_login'], (int)$gid, (int)$home]); }
-  catch (Throwable $e) { return null; } // Benutzername hier schon vergeben (ältere Person ohne Konto)
-  $uid = (int)$db->lastInsertId();
-  $ss = $PF->prepare("SELECT * FROM pf_sessions WHERE ident_id=?"); $ss->execute([$gid]);
-  foreach ($ss->fetchAll() as $x) try { $db->prepare("INSERT INTO sessions(user_id,token,device,platform,created,last_seen,app_ver) VALUES(?,?,?,?,?,?,?)")->execute([$uid, $x['token'], $x['device'], $x['platform'], $x['created'], $x['last_seen'], $x['app_ver']]); } catch (Throwable $e) {}
-  try { $PF->prepare("INSERT INTO pf_members(ident_id,org_id,user_id,guest,created) VALUES(?,?,?,1,?)")->execute([(int)$gid, ORG_ID, $uid, time()]); }
-  catch (Throwable $e) { $PF->prepare("UPDATE pf_members SET user_id=? WHERE ident_id=? AND org_id=?")->execute([$uid, (int)$gid, ORG_ID]); }
-  return $uid; }
-function pfIsGuest($u) { return (int)($u['guest'] ?? 0) > 0; }
-// Push-Abos (push_subs bzw. push_native) der Gäste unter $ids aus ihrer Heim-Organisation: user_id = Gast hier, id = 0 (nie hier löschen),
-// _uid/_o = Person und Organisation des Geräts (die App ordnet die Meldung damit ihrem Konto zu)
-function pfGuestSubs($table, $ids) { global $db; if (!$ids) return []; $r = [];
-  try { $s = $db->prepare("SELECT id,gid,guest FROM users WHERE active=1 AND guest>0 AND gid IS NOT NULL AND id IN (" . implode(',', array_fill(0, count($ids), '?')) . ")"); $s->execute(array_values($ids)); $gs = $s->fetchAll(); }
-  catch (Throwable $e) { return []; }
-  foreach ($gs as $g) { $home = (int)$g['guest']; $hu = null; foreach (pfMemberOrgs($g['gid']) as $m) if ($m['id'] === $home) $hu = $m['user_id']; if (!$hu) continue;
-    $x = pfConn($home); if (!$x || $home === ORG_ID) continue;
-    try { $q = $x->prepare($table === 'push_subs' ? "SELECT * FROM push_subs WHERE user_id=?" : "SELECT n.* FROM push_native n LEFT JOIN sessions se ON se.id=n.session_id WHERE (n.session_id IS NULL OR se.id IS NOT NULL) AND n.user_id=?");
-      $q->execute([$hu]); foreach ($q->fetchAll() as $row) $r[] = ['user_id' => (int)$g['id'], 'id' => 0, '_uid' => (int)$hu, '_o' => $home] + $row; } catch (Throwable $e) {} }
+// Auswahl {Org-ID: [Gruppen-IDs]} für einen eigenen Einsatztyp prüfen: [[Org-ID, Gruppen, Typ-ID dort, Name der Organisation], …]; Fehlertext statt Liste bei Ungültigem
+function pfJointCheck($kid, $ext) { if (!is_array($ext) || !$ext) return []; $links = []; foreach (pfLinks(ctxOrg()) as $l) $links[$l['org_to']] = $l; $r = [];
+  foreach ($ext as $o => $gs) { $o = (int)$o; $gs = array_values(array_unique(array_filter(array_map('intval', (array)$gs), fn($x) => $x > 0))); if (!$gs) continue;
+    $org = pfOrg($o); $l = $links[$o] ?? null; if (!$l || !$org || !(int)$org['active'] || $o === ctxOrg()) return 'Diese Organisation darfst du nicht aufbieten';
+    $bk = ((array)$l['kinds'])[(string)(int)$kid] ?? null; if (!$bk) return 'Für diesen Einsatztyp gibt es keine Vereinbarung mit «' . $org['name'] . '»';
+    if ($l['grp'] !== null && array_diff($gs, $l['grp'])) return 'Diese Einsatzgruppe von «' . $org['name'] . '» darfst du nicht aufbieten';
+    $r[] = [$o, $gs, (int)$bk, $org['name']]; }
   return $r; }
+function pfJointOf($org, $inc) { global $PF; $s = $PF->prepare("SELECT j.* FROM pf_joint_inc x JOIN pf_joint j ON j.id=x.joint_id WHERE x.org_id=? AND x.incident_id=?"); $s->execute([(int)$org, (int)$inc]); $r = $s->fetch() ?: null; $s->closeCursor();
+  return $r ? ints($r, ['id', 'host_org', 'host_inc', 'created', 'ended_at']) : null; }
+function pfJointIncs($jid) { global $PF; $s = $PF->prepare("SELECT org_id,incident_id,leads FROM pf_joint_inc WHERE joint_id=? ORDER BY id"); $s->execute([(int)$jid]);
+  return array_map(fn($r) => ['org' => (int)$r['org_id'], 'inc' => (int)$r['incident_id'], 'leads' => array_map('intval', json_decode((string)$r['leads'], true) ?: [])], $s->fetchAll()); }
+// Konten der Übungsleitung eines verknüpften Einsatzes in diesem Mandanten (gemeinsame Übungen)
+function pfJointLeads($inc) { static $c = []; $k = ctxOrg() . ':' . (int)$inc; if (isset($c[$k])) return $c[$k];
+  global $PF; $s = $PF->prepare("SELECT leads FROM pf_joint_inc WHERE org_id=? AND incident_id=?"); $s->execute([ctxOrg(), (int)$inc]); $v = $s->fetchColumn(); $s->closeCursor();
+  return $c[$k] = array_map('intval', json_decode((string)$v, true) ?: []); }
+// Verknüpfte Einsätze anlegen bzw. erweitern (Start, Nachbieten, gemeinsame Übung). $inc = eigener Einsatz, $list aus pfJointCheck, $leads = {Org-ID: [Konten der Übungsleitung]}.
+// Rückgabe: Aufgebot je Organisation [{o, n, g, gn, c, a}] (c = alarmierte Personen, a = abwesende), Fehler je Organisation stehen im Log.
+function pfJointLink($inc, $list, $leads = [], $ex = false) { global $PF, $now, $uid; if (!$list) return [];
+  $j = pfJointOf(ctxOrg(), $inc['id']);
+  if (!$j) { $PF->prepare("INSERT INTO pf_joint(host_org,host_inc,created) VALUES(?,?,?)")->execute([ctxOrg(), (int)$inc['id'], $now]); $jid = (int)$PF->lastInsertId();
+    $PF->prepare("INSERT INTO pf_joint_inc(joint_id,org_id,incident_id,created) VALUES(?,?,?,?)")->execute([$jid, ctxOrg(), (int)$inc['id'], $now]); } else $jid = $j['id'];
+  $me = pfOrg(ctxOrg())['name'] ?? 'Organisation'; $have = []; foreach (pfJointIncs($jid) as $x) $have[$x['org']] = $x['inc']; $out = [];
+  foreach ($list as [$o, $gs, $bk, $on]) { $bid = $have[$o] ?? null; $ld = array_values(array_map('intval', $leads[$o] ?? $leads[(string)$o] ?? []));
+    $r = pfIn($o, function ($x) use ($inc, $gs, $bk, $bid, $me, $ld, $ex) { global $now; $ks = kinds(); $k = $ks[$bk] ?? null;
+      if (!$k || !$k['active'] || $k['deleted']) return 'Der vereinbarte Einsatztyp ist dort nicht aktiv';
+      $gn = array_column(grpRows(true), 'name', 'id'); $gs = array_values(array_filter($gs, fn($g) => isset($gn[$g]))); if (!$gs) return 'Die Einsatzgruppen sind dort nicht aktiv';
+      $lu = []; if ($ld) { $s = $x->prepare("SELECT id FROM users WHERE active=1 AND gid IN (" . implode(',', array_fill(0, count($ld), '?')) . ")"); $s->execute($ld); $lu = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN)); }
+      $ids = array_values(array_diff(grpMembers($gs), $lu)); $abs = array_values(array_intersect(absentIds(), $ids)); $txt = implode(', ', array_map(fn($g) => $gn[$g], $gs));
+      if ($bid) { $s = $x->prepare("SELECT * FROM incidents WHERE id=? AND ended_at IS NULL"); $s->execute([$bid]); $b = $s->fetch(); $s->closeCursor(); if (!$b) return 'Der verknüpfte Einsatz ist dort schon beendet';
+        $old = json_decode((string)$b['invite'], true); $old = is_array($old) ? array_map('intval', $old) : null; $new = $old === null ? [] : array_values(array_diff($ids, $old));
+        $ig = json_decode((string)$b['inv_groups'], true) ?: ['g' => [], 'p' => []]; $ig['g'] = array_values(array_unique(array_merge($ig['g'] ?? [], $gs)));
+        $ia = array_values(array_unique(array_merge(array_map('intval', json_decode($b['inv_absent'] ?? '[]', true) ?: []), array_intersect($abs, $new))));
+        if ($old !== null) $x->prepare("UPDATE incidents SET invite=?, inv_groups=?, inv_absent=? WHERE id=?")->execute([json_encode(array_values(array_unique(array_merge($old, $ids)))), json_encode($ig), $ia ? json_encode($ia) : null, $bid]);
+        $na = array_values(array_diff($new, $abs));
+        logev($bid, null, 'invite', '«' . $me . '» bietet nach: ' . $txt . ' (' . (count($na) === 1 ? '1 weitere Person' : count($na) . ' weitere Personen') . ($abs && $new ? ', dazu ' . absText(count(array_intersect($abs, $new))) : '') . ')');
+        if ($na) pushAlarm($b, [], $na); return [$bid, count($na), count(array_intersect($abs, $new)), array_map(fn($g) => $gn[$g], $gs)]; }
+      $msg = $inc['message'] . ' (gemeinsam mit «' . $me . '»)'; $air = airCfg()['on'] ? airDef($bk) : null; $rec = $k['rec'] && features($bk)['rec'] ? 1 : 0;
+      $x->prepare("INSERT INTO incidents(message,lat,lon,pls_at,alarm_at,created_by,is_exercise,air,kind_id,invite,inv_groups,inv_absent) VALUES(?,?,?,?,?,NULL,?,?,?,?,?,?)")
+        ->execute([$msg, $inc['lat'], $inc['lon'], $inc['pls_at'] ?? null, (int)$inc['alarm_at'], $k['plans'] ? 1 : 0, $air, $bk, json_encode($ids), json_encode(['g' => $gs, 'p' => []]), $abs ? json_encode($abs) : null]);
+      $nid = (int)$x->lastInsertId(); if ($rec) setRec($nid, 1);
+      logev($nid, null, 'start', '«' . $me . '» hat ' . ($ex ? 'die gemeinsame Übung' : 'den gemeinsamen Einsatz') . ' ausgelöst (' . $k['name'] . ($rec ? ', mit Aufzeichnung' : '') . '): ' . $inc['message']);
+      logev($nid, null, 'invite', 'aufgeboten: ' . $txt . ' (' . (count($ids) === 1 ? '1 Person' : count($ids) . ' Personen') . ($abs ? ', davon ' . absText(count($abs)) : '') . ')');
+      $s = $x->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([$nid]); $b = $s->fetch(); $s->closeCursor(); pushAlarm($b, array_merge($abs, $lu), $ids);
+      return [$nid, count(array_diff($ids, $abs)), count($abs), array_map(fn($g) => $gn[$g], $gs)]; });
+    if (!is_array($r)) { logev((int)$inc['id'], null, 'invite', '«' . $on . '» konnte nicht aufgeboten werden: ' . ($r ?: 'Datenbank nicht erreichbar')); continue; }
+    if (!$bid) $PF->prepare("INSERT INTO pf_joint_inc(joint_id,org_id,incident_id,leads,created) VALUES(?,?,?,?,?)")->execute([$jid, $o, $r[0], $ld ? json_encode($ld) : null, $now]);
+    $out[] = ['o' => $o, 'n' => $on, 'g' => $gs, 'gn' => $r[3], 'c' => $r[1], 'a' => $r[2]]; }
+  return $out; }
+// Lage der verknüpften Einsätze der anderen Organisationen für die Karte (wie incOther, dazu feste Standorte und Fahrzeuge), 3 s zwischengespeichert
+function pfJointOthers($j, $selfInc) { $r = [];
+  foreach (pfJointIncs($j['id']) as $x) { if ($x['org'] === ctxOrg() && $x['inc'] === (int)$selfInc) continue; $org = pfOrg($x['org']); if (!$org) continue;
+    $f = __DIR__ . '/data/joint/j' . $j['id'] . '-o' . $x['org'] . '-i' . $x['inc'] . '.json'; $c = json_decode((string)@file_get_contents($f), true);
+    if (!is_array($c) || ($c['at'] ?? 0) < time() - 3) { $c = pfIn($x['org'], function ($db) use ($x) { $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([$x['inc']]); $i = $s->fetch(); $s->closeCursor(); if (!$i) return null;
+        $k = kindOf($i); $F = features($i['kind_id']); $o = incOther($i); $rn = $db->query("SELECT id,name FROM roles")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $o['ppl'] = array_map(fn($p) => ['id' => $p['id'], 'name' => $p['name'], 'role' => $p['role_id'] !== null ? ($rn[$p['role_id']] ?? null) : null, 'role_id' => null, 'lat' => $p['lat'], 'lon' => $p['lon']], $o['ppl']);
+        return $o + ['ended' => $i['ended_at'] !== null ? 1 : 0, 'message' => (int)$i['txt_anon'] ? '' : $i['message'], 'kind_name' => $k['name'], 'kind_color' => $k['color'],
+          'places' => incPlaces($i), 'veh' => $F['veh'] && vehVisible($i) ? vehState($i, true) : null, 'msg' => $F['msg'], 'conf' => voiceConfOn($i) ? 1 : 0]; });
+      if ($c === null) $c = ['id' => $x['inc'], 'down' => 1]; $c['at'] = time(); @mkdir(dirname($f), 0775, true); @file_put_contents($f, json_encode($c, JSON_UNESCAPED_UNICODE), LOCK_EX); }
+    unset($c['at']); $r[] = ['k' => 'o' . $x['org'] . '-' . $x['inc'], 'org' => $x['org'], 'org_name' => $org['name'], 'joint' => 1, 'host' => $x['org'] === $j['host_org'] && $x['inc'] === $j['host_inc'] ? 1 : 0] + $c; }
+  return $r; }
+// Gemeinsamer Nachrichtenkanal: Nachrichten nach $since (höchstens 200)
+function pfJointMsgs($jid, $since) { global $PF; $s = $PF->prepare("SELECT m.id,m.org_id,m.gid,m.name,m.text,m.at,o.name org_name FROM pf_jmsg m LEFT JOIN pf_orgs o ON o.id=m.org_id WHERE m.joint_id=? AND m.id>? ORDER BY m.id DESC LIMIT 200");
+  $s->execute([(int)$jid, (int)$since]); return array_reverse(array_map(fn($r) => ints($r, ['id', 'org_id', 'gid', 'at']), $s->fetchAll())); }
+// Log-Eintrag in einem verknüpften Einsatz eines anderen Mandanten (Person nur als Bezeichnung, actor)
+function pfJointLog($org, $inc, $kind, $actor, $text) { pfIn($org, function ($db) use ($inc, $kind, $actor, $text) { global $now; $db->prepare("INSERT INTO incident_log(incident_id,ts,user_id,kind,text,actor) VALUES(?,?,NULL,?,?,?)")->execute([(int)$inc, $now, $kind, $text, $actor]); }); }
+// Der auslösende Einsatz endet: die verknüpften Einsätze der anderen enden mit (Aufzeichnung, Konferenz, Durchsagen, Push wie incident/end)
+function pfJointEnd($inc) { global $PF, $now; $j = pfJointOf(ctxOrg(), $inc['id']); if (!$j) return;
+  $me = pfOrg(ctxOrg())['name'] ?? 'Organisation'; $host = $j['host_org'] === ctxOrg() && $j['host_inc'] === (int)$inc['id'];
+  if (!$host) { foreach (pfJointIncs($j['id']) as $x) if ($x['org'] !== ctxOrg()) pfJointLog($x['org'], $x['inc'], 'end', 'System', '«' . $me . '» hat ihren Teil des gemeinsamen Einsatzes beendet'); return; }
+  $PF->prepare("UPDATE pf_joint SET ended_at=? WHERE id=?")->execute([$now, $j['id']]);
+  foreach (pfJointIncs($j['id']) as $x) { if ($x['org'] === ctxOrg()) continue;
+    pfIn($x['org'], function ($db) use ($x, $me) { $s = $db->prepare("SELECT * FROM incidents WHERE id=? AND ended_at IS NULL"); $s->execute([$x['inc']]); $i = $s->fetch(); $s->closeCursor(); if (!$i) return;
+      global $now; if ((int)$i['record']) setRec((int)$i['id'], 0); $db->prepare("UPDATE incidents SET ended_at=? WHERE id=?")->execute([$now, $i['id']]);
+      logev($i['id'], null, 'end', '«' . $me . '» hat den gemeinsamen Einsatz beendet'); voiceCloseAll($i['id']); voiceEnd($i);
+      $s = $db->prepare("SELECT user_id FROM participants WHERE incident_id=? AND mode<>'declined' AND left_at IS NULL"); $s->execute([$i['id']]); pushEnd($i, array_column($s->fetchAll(), 'user_id')); }); } }
