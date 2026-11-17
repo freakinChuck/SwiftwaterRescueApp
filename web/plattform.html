@@ -29,10 +29,10 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
   if(!ME.me.platform_admin){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Plattformverwaltung ist nur für Plattform-Administratoren.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a></div></div>`;return}
   a.innerHTML=`<header><h1>Swiftwater Rescue – Plattform</h1><span class="mut">${esc(ME.me.name)}</span>${ME.orgs.length?'<a class="btn" href="./">Zur Einsatz-App</a>':''}<a class="btn" href="hilfe.html#verwaltung/plattform" target="_blank" rel="noopener">?</a><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
   <div id="wrap"><section class="card" id="sOrg"><h2>Organisationen (Mandanten)</h2><div class="mut">Wird geladen …</div></section>
-  <section class="card" id="sShare"><h2>Gemeinsame Einstellungen</h2></section><section class="card" id="sId"><h2>Konten</h2></section></div>`;
+  <section class="card" id="sLink"><h2>Vereinbarungen</h2></section><section class="card" id="sShare"><h2>Gemeinsame Einstellungen</h2></section><section class="card" id="sId"><h2>Konten</h2></section></div>`;
   $('#bPw').onclick=()=>pfPw(false);$('#bOut').onclick=()=>{fetch(`${API}?r=pf/logout`,{method:'POST',headers:{'X-Token':token},body:'{}',keepalive:true}).catch(()=>{});token=null;localStorage.removeItem('sw_token');start()};
   load()}
-async function load(){try{PF=await pf('orgs')}catch(e){$('#sOrg').innerHTML='<h2>Organisationen (Mandanten)</h2>';secErrP($('#sOrg'),e);return}drawOrgs();drawShare();drawIds()}
+async function load(){try{PF=await pf('orgs')}catch(e){$('#sOrg').innerHTML='<h2>Organisationen (Mandanten)</h2>';secErrP($('#sOrg'),e);return}drawOrgs();drawShare();drawIds();loadLinks()}
 function secErrP(el,e){el.insertAdjacentHTML('beforeend',`<p class="mut">${esc(e.message)}</p><button id="bRe">Erneut versuchen</button>`);$('#bRe').onclick=load}
 // Organisationen mit Mitgliedern (aufklappbar)
 function drawOrgs(){const s=$('#sOrg');
@@ -73,6 +73,29 @@ function memDlg(oid){const d=dlg('Mitglied hinzufügen',`<label class="mut">Benu
   let t=0;$('#mU',d).oninput=()=>{clearTimeout(t);t=setTimeout(()=>pf('idents&q='+encodeURIComponent($('#mU',d).value.trim())).then(r=>{$('#mL',d).innerHTML=r.idents.map(i=>`<option value="${esc(i.username)}">${esc(i.name)}</option>`).join('');
     $('#mNew',d).hidden=!$('#mU',d).value.trim()||r.idents.some(i=>i.username===$('#mU',d).value.trim())}).catch(()=>{}),300)}}
 // gemeinsame Einstellungen (Infrastruktur): je Gruppe Modus; Werte stellt ein Plattform-Administrator in der Verwaltung einer Organisation ein bzw. übernimmt sie von dort
+// Vereinbarungen (Issue #60): «A darf Einsatzgruppen von B aufbieten»; es gelten die Einstellungen der aufbietenden Organisation
+let LK=null;
+async function loadLinks(){try{LK=await pf('links')}catch(e){$('#sLink').innerHTML='<h2>Vereinbarungen</h2>';secErrP($('#sLink'),e);return}drawLinks()}
+function lkOrg(id){const o=PF.orgs.find(x=>x.id===id);return o?o.name:'Organisation '+id}
+function lkGrp(l){if(l.grp===null)return 'alle Einsatzgruppen';const gs=LK.groups[l.org_to]||[];return l.grp.map(id=>(gs.find(g=>g.id===id)||{name:'Gruppe '+id}).name).join(', ')}
+function drawLinks(){const s=$('#sLink');
+  s.innerHTML=`<h2>Vereinbarungen</h2><p class="mut">Eine Vereinbarung erlaubt einer Organisation, beim Start oder Nachbieten Einsatzgruppen einer anderen aufzubieten. Die Aufgebotenen nehmen als Gäste teil; es gelten die Einstellungen der aufbietenden Organisation. Nur wer dort alle Einsatzgruppen aufbieten darf, sieht die anderen Organisationen.</p>
+  <div class="row"><button class="pri" id="bNl"${PF.orgs.length<2?' disabled':''}>+ Vereinbarung</button></div>
+  ${LK.links.length?LK.links.map(l=>`<div class="pfm"><span><b>${esc(lkOrg(l.org_from))}</b> darf <b>${esc(lkOrg(l.org_to))}</b> aufbieten<br><small class="mut">${esc(lkGrp(l))}</small></span><button data-le="${l.id}">Bearbeiten</button><button class="sec" data-lr="${l.id}">Entfernen</button></div>`).join(''):'<p class="mut">Noch keine Vereinbarungen. Beispiel: Organisation A darf die Gruppe «Boot» von Organisation B aufbieten.</p>'}`;
+  $('#bNl').onclick=()=>linkDlg(null);
+  s.querySelectorAll('[data-le]').forEach(b=>b.onclick=()=>linkDlg(LK.links.find(l=>l.id===+b.dataset.le)));
+  s.querySelectorAll('[data-lr]').forEach(b=>b.onclick=async()=>{const l=LK.links.find(x=>x.id===+b.dataset.lr);
+    if(!await ask(`Vereinbarung entfernen?\n\n${lkOrg(l.org_from)} kann danach ${lkOrg(l.org_to)} nicht mehr aufbieten. Laufende Einsätze sind nicht betroffen.`,{danger:1}))return;
+    pf('link/remove',{id:l.id}).then(r=>{LK.links=r.links;drawLinks()}).catch(fail)})}
+function linkDlg(l){const os=PF.orgs.filter(o=>o.active),opt=v=>os.map(o=>`<option value="${o.id}" ${v===o.id?'selected':''}>${esc(o.name)}</option>`).join('');
+  const d=dlg(l?'Vereinbarung bearbeiten':'Neue Vereinbarung',`<label class="mut">Diese Organisation …<select id="lF" ${l?'disabled':''}>${opt(l?l.org_from:os[0]&&os[0].id)}</select></label>
+  <label class="mut">… darf aufbieten<select id="lT" ${l?'disabled':''}>${opt(l?l.org_to:os[1]&&os[1].id)}</select></label>
+  <label class="chk"><input type="checkbox" id="lA" ${!l||l.grp===null?'checked':''}> alle Einsatzgruppen (auch künftige)</label><div id="lG"></div>`,async d=>{
+    const all=$('#lA',d).checked,grp=all?null:[...d.querySelectorAll('[data-lg]:checked')].map(x=>+x.dataset.lg);
+    const r=await pf('link/save',{from:+$('#lF',d).value,to:+$('#lT',d).value,grp});LK.links=r.links;drawLinks();toast('Gespeichert.','ok')});
+  const gs=()=>{const t=+$('#lT',d).value,g=LK.groups[t]||[],sel=l&&l.org_to===t&&l.grp?l.grp:[];
+    $('#lG',d).hidden=$('#lA',d).checked;$('#lG',d).innerHTML=g.length?g.map(x=>`<label class="chk"><input type="checkbox" data-lg="${x.id}" ${sel.includes(x.id)?'checked':''}> ${esc(x.name)}</label>`).join(''):'<p class="mut">Diese Organisation hat keine aktiven Einsatzgruppen.</p>'};
+  $('#lT',d).onchange=gs;$('#lA',d).onchange=gs;gs()}
 function drawShare(){const s=$('#sShare');
   s.innerHTML=`<h2>Gemeinsame Einstellungen</h2><p class="mut">«Je Organisation»: jede stellt selbst ein. «Plattform-Vorgabe, übersteuerbar»: die Vorgabe gilt, bis eine Organisation eigene Werte speichert. «Global»: gilt für alle, nur Plattform-Administratoren ändern sie (in der Verwaltung einer beliebigen Organisation). Der Schlüssel für Web-Push ist immer gemeinsam.</p>
   ${PF.share.map(g=>`<div class="pfs"><span><b>${esc(g.label)}</b><br><small class="mut">${g.set?'Vorgabe der Plattform gespeichert':'noch keine Vorgabe der Plattform'}</small></span><span class="row" style="margin:0">

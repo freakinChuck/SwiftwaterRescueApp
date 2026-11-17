@@ -40,6 +40,8 @@ Im Register «Leitung» setzt, verschiebst oder entfernst du den **PLS des Einsa
 
 Die Karte **Aufgebot** zeigt, wer aufgeboten ist. **Nachbieten** alarmiert weitere Einsatzgruppen, Einzelpersonen oder alle; alarmiert werden nur die neu Aufgebotenen. **Allen den Beitritt erlauben** lässt auch Nicht-Aufgebotene teilnehmen, ohne sie zu alarmieren.
 
+Hat deine Organisation eine **Vereinbarung** mit einer anderen (eingerichtet in der Plattformverwaltung) und darfst du alle Einsatzgruppen aufbieten, stehen beim Start und beim Nachbieten unter dem Namen der anderen Organisation auch deren Einsatzgruppen zur Wahl. Die Aufgebotenen nehmen bei euch als **Gäste** teil: Sie sehen nur Einsätze, zu denen sie aufgeboten sind, erhalten den Alarm auf ihren Geräten und entscheiden selbst, ob sie teilnehmen. Abwesenheiten in ihrer eigenen Organisation gelten auch hier. Es gelten eure Einstellungen.
+
 ## Externe Einsatzkräfte {#externe}
 
 Externe Einsatzkräfte haben kein App-Konto, zum Beispiel Sicherungsposten der Feuerwehr. Im Fenster «Einsatzkräfte» erfasst du sie mit **+ Externe Einsatzkraft**:
