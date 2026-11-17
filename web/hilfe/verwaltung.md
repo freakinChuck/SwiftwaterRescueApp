@@ -235,6 +235,8 @@ Eine Installation kann mehrere **Organisationen** (Mandanten) betreiben, je mit 
 - **Gemeinsame Einstellungen**: Für Geodaten-Quellen, Kartenanbieter, Helikopter und Pegel & Abfluss gilt je Gruppe *Je Organisation*, *Plattform-Vorgabe, übersteuerbar* oder *Global (nur Plattform)*. Bei «Global» zeigt die Verwaltung der Organisationen den Bereich gesperrt mit Hinweis. «Vorgabe übernehmen von» kopiert die Einstellungen einer Organisation als Plattform-Vorgabe; «Eigene Werte aller Organisationen entfernen» setzt alle Organisationen auf die Vorgabe zurück.
 - **Konten**: alle Konten der Plattform mit Suche; **Zum Plattform-Administrator machen** bzw. **Plattform-Recht entziehen** (das eigene nicht, mindestens eines bleibt) und Passwort zurücksetzen.
 
+> «Verwaltung öffnen» gibt es nur bei Organisationen, in denen dein eigenes Konto Mitglied ist. Bei den übrigen steht ein Hinweis mit **Mich als Systemadministrator zuordnen**. Öffnest du eine Organisation, der du nicht angehörst (z. B. über einen alten Link mit `?o=`), öffnet die App deine eigene und sagt das in einer Meldung.
+
 > Ein Konto gilt für alle Organisationen der Person: Benutzername, Passwort, Name, Profilbild, Telefonnummer und Geräte. Rollen, Einsatzgruppen, Ausbildung und Einstellungen sind je Organisation.
 
 > ! Bestehende Installationen laufen unverändert als erste Organisation weiter. Die Adressen bleiben gleich; andere Organisationen wählt die App über die gemerkte Wahl bzw. `?o=<Nummer>` in Links.

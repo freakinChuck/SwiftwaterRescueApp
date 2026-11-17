@@ -40,11 +40,16 @@ function drawOrgs(){const s=$('#sOrg');
   <div class="row"><button class="pri" id="bNo">+ Organisation</button></div>
   ${PF.orgs.map((o,i)=>`<div class="pfo${o.active?'':' off'}"><h3>${esc(o.name)} <small class="mut">${esc(o.slug)} · ${o.members} ${o.members===1?'Mitglied':'Mitglieder'}${o.active?'':' · deaktiviert'}${o.ready?'':' · Datenbank noch nicht eingerichtet'}</small></h3>
     <div class="mut">${o.id===1?'Bisherige Installation (Datenbank aus config.php)':o.dsn?'Datenbank: '+esc(o.dsn.replace(/password=[^;]*/i,'password=…')):'Eigene SQLite-Datei auf dem Server'}</div>
-    <div class="row"><button data-om="${o.id}" aria-expanded="${OPEN.has(o.id)}">${OPEN.has(o.id)?'Mitglieder ausblenden':'Mitglieder'}</button><button data-oe="${o.id}">Bearbeiten</button><a class="btn" href="admin.html?o=${o.id}">Verwaltung öffnen</a>${i?`<button data-ou="${o.id}" aria-label="nach oben">↑</button>`:''}${i<PF.orgs.length-1?`<button data-od="${o.id}" aria-label="nach unten">↓</button>`:''}</div>
+    <div class="row"><button data-om="${o.id}" aria-expanded="${OPEN.has(o.id)}">${OPEN.has(o.id)?'Mitglieder ausblenden':'Mitglieder'}</button><button data-oe="${o.id}">Bearbeiten</button>${o.mine?`<a class="btn" href="admin.html?o=${o.id}">Verwaltung öffnen</a>`:`<button data-oj="${o.id}">Mich als Systemadministrator zuordnen</button>`}${i?`<button data-ou="${o.id}" aria-label="nach oben">↑</button>`:''}${i<PF.orgs.length-1?`<button data-od="${o.id}" aria-label="nach unten">↓</button>`:''}</div>
+    ${o.mine||!o.active?'':'<div class="mut">Du bist hier nicht Mitglied. Die Verwaltung dieser Organisation öffnet sich erst, wenn dein Konto ihr zugeordnet ist.</div>'}
     <div data-ol="${o.id}" ${OPEN.has(o.id)?'':'hidden'}></div></div>`).join('')}`;
   $('#bNo').onclick=()=>orgDlg(null);
   s.querySelectorAll('[data-oe]').forEach(b=>b.onclick=()=>orgDlg(PF.orgs.find(o=>o.id===+b.dataset.oe)));
   s.querySelectorAll('[data-ou],[data-od]').forEach(b=>b.onclick=()=>pf('org/move',{id:+(b.dataset.ou||b.dataset.od),dir:b.dataset.ou?-1:1}).then(load).catch(fail));
+  s.querySelectorAll('[data-oj]').forEach(b=>b.onclick=async()=>{const o=PF.orgs.find(x=>x.id===+b.dataset.oj);if(!o||!await ask(`Dich in «${o.name}» als Systemadministrator zuordnen?
+
+Dein Konto wird Mitglied dieser Organisation und erhält dort alle Rechte. Danach öffnet «Verwaltung öffnen» ihre Verwaltung.`,{ok:'Zuordnen'}))return;
+    try{await pf('member/add',{org:o.id,username:ME.me.username,admin:1});toast('Zugeordnet.','ok');load()}catch(e){fail(e)}});
   s.querySelectorAll('[data-om]').forEach(b=>b.onclick=()=>{const id=+b.dataset.om;if(OPEN.has(id))OPEN.delete(id);else OPEN.add(id);drawOrgs()});
   OPEN.forEach(id=>members(id))}
 function orgDlg(o){const sq=PF.sqlite;dlg(o?'Organisation bearbeiten':'Neue Organisation',`<label class="mut">Name<input id="oN" maxlength="120" value="${esc(o?o.name:'')}" placeholder="z. B. SLRG Sektion Luzern"></label>
