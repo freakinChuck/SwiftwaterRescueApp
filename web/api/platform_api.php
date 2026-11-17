@@ -35,7 +35,7 @@ $pfShare = fn() => array_map(fn($g, $x) => ['key' => $g, 'label' => $x[0], 'mode
 
 switch ($route) {
 case 'pf/orgs':
-  out(['orgs' => array_map($pfOrgPub, pfOrgs(true)), 'share' => $pfShare(), 'modes' => PF_MODES, 'sqlite' => str_starts_with($cfg['dsn0'], 'sqlite') ? 1 : 0, 'admins' => $pfAdmins()]);
+  out(['orgs' => array_map(fn($o) => $pfOrgPub(pfOrg($o['id'])), pfOrgs(true)), 'share' => $pfShare(), 'modes' => PF_MODES, 'sqlite' => str_starts_with($cfg['dsn0'], 'sqlite') ? 1 : 0, 'admins' => $pfAdmins()]); // pfOrgs liefert nur die Kurzangaben, DSN und Zugang stehen in pfOrg
 case 'pf/org/save': { // neu bzw. ändern; Org 1 = bisherige Datenbank (DSN nicht änderbar, nicht deaktivierbar)
   $id = (int)($in['id'] ?? 0); $o = $id ? pfOrg($id) : null; if ($id && !$o) out(['error' => 'Mandant nicht gefunden'], 404);
   $name = trim((string)($in['name'] ?? ($o['name'] ?? ''))); if ($name === '') out(['error' => 'Name fehlt'], 400); $name = mb_substr($name, 0, 120);
