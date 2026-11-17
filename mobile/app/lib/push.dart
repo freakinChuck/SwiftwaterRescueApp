@@ -45,13 +45,21 @@ Future<bool> _initFirebase() async {
 /// Konto zur Nachricht finden: srv = Host und Pfad des Backends, uid = Empfänger.
 Future<Account?> accountFor(Map<String, dynamic> d) async {
   final srv = '${d['srv'] ?? ''}'.toLowerCase(), uid = int.tryParse('${d['uid'] ?? ''}');
+  final o = int.tryParse('${d['o'] ?? ''}') ?? 1; // Mandanten (Issue #60): Organisation der Meldung, ältere Server ohne Angabe = 1
   final l = await Accounts.load();
   bool same(Account a) => hostPath(a.base).toLowerCase() == srv || hostPath(a.base).toLowerCase().replaceAll(RegExp(r'/$'), '') == srv.replaceAll(RegExp(r'/$'), '');
-  final m = l.where((a) => same(a) && (uid == null || a.uid == uid)).toList();
-  if (m.isNotEmpty) return m.first;
-  final h = l.where(same).toList();
-  return h.isEmpty ? null : h.first;
+  bool uidOk(Account a) => uid == null || a.uid == uid;
+  // zuerst Organisation und Person genau, dann die Organisation, dann ältere Konten ohne Organisation; die Benutzer-ID gilt je Organisation
+  for (final f in <bool Function(Account)>[(a) => a.orgId == o && uidOk(a), (a) => a.orgId == o, (a) => a.orgId == 0 && uidOk(a)]) {
+    final m = l.where((a) => same(a) && f(a)).firstOrNull;
+    if (m != null) return m;
+  }
+  // nie das Konto einer anderen Organisation; ältere Konten ohne Organisation wie bisher auch mit anderer Benutzer-ID
+  return l.where((a) => same(a) && (a.orgId == 0 || (o == 1 && a.orgId == 1))).firstOrNull;
 }
+
+/// Schlüssel ohne den Präfix der Organisation (o<id>/, Issue #60): das Konto steht schon für die Organisation, die Überwachung meldet ohne Präfix
+String pushTag(Object? t) => '${t ?? ''}'.replaceFirst(RegExp(r'^o\d+/'), '');
 
 String _lvl(Map<String, dynamic> d) => d['crit'] == '1' ? 'crit' : (d['stay'] == '1' ? 'high' : (d['silent'] == '1' ? 'low' : 'normal'));
 
@@ -59,7 +67,7 @@ Future<void> _show(RemoteMessage m) async {
   final d = m.data;
   final a = await accountFor(d);
   if (a == null || !a.active) return;
-  final tag = '${d['tag'] ?? 'sw'}';
+  final tag = d['tag'] == null ? 'sw' : pushTag(d['tag']);
   // Einsatzende (Issue #174): zuerst die Meldungen des Einsatzes zurücknehmen; rt = nur zurücknehmen, nichts Neues zeigen
   if (d['end'] != null) {
     await cancelIncNotes(a.id, int.tryParse('${d['end']}'));
@@ -88,8 +96,8 @@ Future<void> initPush(void Function(String accId, String tag) onOpen) async {
   Future<void> open(RemoteMessage m) async {
     final a = await accountFor(m.data);
     if (a != null) {
-      await markTag(a.id, '${m.data['tag'] ?? ''}');
-      onOpen(a.id, '${m.data['tag'] ?? ''}');
+      await markTag(a.id, pushTag(m.data['tag']));
+      onOpen(a.id, pushTag(m.data['tag']));
     }
   }
 

@@ -1,5 +1,5 @@
 // Seiten der Web-App in der App (Verwaltung, «Meine Einsätze», Rechtliches) in einer WebView statt im Browser, ohne eigene Anmeldung:
-// Vor dem ersten Skript der Seite setzt die App den Anmeldeschlüssel des Kontos (localStorage sw_token). Fremde Adressen (Navigation,
+// Vor dem ersten Skript der Seite setzt die App den Anmeldeschlüssel des Kontos (localStorage sw_token) und seine Organisation (sw_org, Issue #60). Fremde Adressen (Navigation,
 // Telefon, Mail, fremde Seiten) öffnen sich ausserhalb, der Schlüssel bleibt beim Backend. «Zur Einsatz-App» führt zurück zur Karte.
 // Dateien, die die Web-App im Browser erzeugt (AAR Word/PDF, CSV), gibt sie über swSave an die App, die sie zum Teilen bzw. Speichern anbietet.
 // Abmelden in der Web-App meldet das Konto in der App ab (swLogout). Ein neuer Alarm schliesst die Seite, damit er auf der Karte erscheint.
@@ -66,7 +66,7 @@ class _WebState extends State<WebPage> {
   String get _js {
     final o = _origin;
     final origin = jsonEncode('${o.scheme}://${o.host}${o.hasPort && o.port != 80 && o.port != 443 ? ':${o.port}' : ''}');
-    return '(function(){try{if(location.origin!==$origin)return;localStorage.setItem("sw_token",${jsonEncode(widget.s.acc.token)})}catch(e){}})();';
+    return '(function(){try{if(location.origin!==$origin)return;localStorage.setItem("sw_token",${jsonEncode(widget.s.acc.token)});${widget.s.acc.orgId > 0 ? 'localStorage.setItem("sw_org","${widget.s.acc.orgId}")' : 'localStorage.removeItem("sw_org")'}}catch(e){}})();';
   }
 
   Future<bool> _external(Uri u) async {
@@ -83,7 +83,10 @@ class _WebState extends State<WebPage> {
     _gone = true;
     final a = widget.s.acc;
     await pushForget(a);
-    await Accounts.update(a.id, (x) => x.loggedOut = true);
+    for (final o in await Accounts.sharing(a)) {
+      await pushForget(o); // dieselbe Anmeldung in weiteren Organisationen (Issue #60)
+    }
+    await Accounts.markOut(a);
     await syncService();
     if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
   }

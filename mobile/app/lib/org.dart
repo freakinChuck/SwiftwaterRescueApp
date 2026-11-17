@@ -7,7 +7,8 @@ String? orgLogoUrl(String base, Object? info) {
   if (info is! Map || base.startsWith('demo:')) return null;
   final v = info['logo'];
   if (v is! String || v.isEmpty) return null;
-  return Uri.parse('${base}api/index.php').replace(queryParameters: {'r': 'org/logo', 'v': v}).toString();
+  final o = info['o']; // Mandanten (Issue #60): Logo der Organisation des Kontos
+  return Uri.parse('${base}api/index.php').replace(queryParameters: {'r': 'org/logo', 'v': v, if (o is num && o > 1) 'o': '$o'}).toString();
 }
 
 class OrgLogo extends StatelessWidget {

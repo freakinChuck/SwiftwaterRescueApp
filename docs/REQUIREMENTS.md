@@ -452,5 +452,5 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **MD-06** – Rolle «Plattform-Administrator» (nur zentral): verwaltet Organisationen (anlegen, Datenbank, Reihenfolge, deaktivieren), Mitglieder (zuordnen, neu anlegen, als Systemadministrator der Organisation, entfernen) und Konten (Plattform-Recht, Passwort zurücksetzen), sieht aber keine Einsatzdaten (#60).
 - **MD-07** – Infrastruktur-Einstellungen (Geodaten-Quellen, Kartenanbieter, Helikopter, Pegel & Abfluss) je Gruppe «Je Organisation», «Plattform-Vorgabe, übersteuerbar» oder «Global (nur Plattform)»; global gesperrte zeigt die Verwaltung der Organisation nur lesend (#60).
 - **MD-08** – Datenschutz, Impressum, Applikationslog, Auszüge und Anonymisierung je Organisation (#60).
-- **MD-09** – Die native App unterstützt Organisationen je Konto (Wahl, Push, Überwachung) (**offen**, folgt, #60).
+- **MD-09** – Die native App führt je Organisation ein Konto mit derselben Anmeldung: Auswahl der Organisationen nach der Anmeldung, Push und Überwachung je Organisation, Alarme anderer Organisationen mit «Wechseln» (legt das Konto bei Bedarf an), gemeinsames Abmelden (#60).
 - **MD-10** – Organisationsübergreifende Einsätze über Vereinbarungen «A darf B aufbieten»; es gelten die Einstellungen der führenden Organisation (**offen**, folgt, #60).
