@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Swiftwater Rescue – Plattform</title>
+<link rel="stylesheet" href="common.css?v=0">
+<style>
+body{min-height:100dvh}
+header{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10}header h1{font-size:1.15rem;margin:0;flex:1 1 12rem}
+#wrap{max-width:1100px;margin:0 auto;padding:1rem;display:grid;gap:1.2rem}#wrap>.card{max-width:none;margin:0;max-height:none}
+.pfo{border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem;margin:.5rem 0}.pfo h3{margin:0 0 .3rem;font-size:1.05rem}.pfo.off{opacity:.6}
+.pfo .row{flex-wrap:wrap}.pfm{display:flex;flex-wrap:wrap;gap:.3rem .8rem;align-items:center;padding:.35rem 0;border-top:1px solid var(--line)}.pfm>span{flex:1 1 14rem}
+.pfs{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.4rem .8rem;align-items:center;padding:.4rem 0;border-top:1px solid var(--line)}
+@media(max-width:600px){.pfs{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head><body>
+<div id="app"></div>
+<script src="common.js?v=0"></script>
+<script>
+/* Plattformverwaltung (Issue #60): Mandanten (Organisationen), Mitglieder, Konten und gemeinsame Einstellungen. Nur für Plattform-Administratoren.
+   Sieht keine Einsatzdaten; die Verwaltung jeder Organisation bleibt in admin.html (mit ?o=<id>). */
+let ME=null,PF=null,OPEN=new Set();
+onUnauth=()=>start();
+const pf=(r,b)=>api('pf/'+r,b);
+function pfPw(forced){dlg(forced?'Eigenes Passwort setzen':'Passwort ändern',`${forced?'<p class="mut">Dein Passwort wurde zurückgesetzt. Setze zuerst ein eigenes.</p>':'<label class="mut">Aktuelles Passwort<input id="pO" type="password" autocomplete="current-password"></label>'}
+  <label class="mut">Neues Passwort<input id="pN" type="password" autocomplete="new-password"></label>`,async d=>{await pf('password',{old:forced?'':$('#pO',d).value,new:$('#pN',d).value});toast('Passwort geändert.');start()})}
+async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Plattform',start);
+  try{ME=(await pf('me'))}catch(e){a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
+  if(ME.me.must_change)return pfPw(true);
+  if(!ME.me.platform_admin){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Die Plattformverwaltung ist nur für Plattform-Administratoren.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a></div></div>`;return}
+  a.innerHTML=`<header><h1>Swiftwater Rescue – Plattform</h1><span class="mut">${esc(ME.me.name)}</span>${ME.orgs.length?'<a class="btn" href="./">Zur Einsatz-App</a>':''}<a class="btn" href="hilfe.html#verwaltung/plattform" target="_blank" rel="noopener">?</a><button id="bPw">Passwort ändern</button><button id="bOut">Abmelden</button></header>
+  <div id="wrap"><section class="card" id="sOrg"><h2>Organisationen (Mandanten)</h2><div class="mut">Wird geladen …</div></section>
+  <section class="card" id="sShare"><h2>Gemeinsame Einstellungen</h2></section><section class="card" id="sId"><h2>Konten</h2></section></div>`;
+  $('#bPw').onclick=()=>pfPw(false);$('#bOut').onclick=()=>{fetch(`${API}?r=pf/logout`,{method:'POST',headers:{'X-Token':token},body:'{}',keepalive:true}).catch(()=>{});token=null;localStorage.removeItem('sw_token');start()};
+  load()}
+async function load(){try{PF=await pf('orgs')}catch(e){$('#sOrg').innerHTML='<h2>Organisationen (Mandanten)</h2>';secErrP($('#sOrg'),e);return}drawOrgs();drawShare();drawIds()}
+function secErrP(el,e){el.insertAdjacentHTML('beforeend',`<p class="mut">${esc(e.message)}</p><button id="bRe">Erneut versuchen</button>`);$('#bRe').onclick=load}
+// Organisationen mit Mitgliedern (aufklappbar)
+function drawOrgs(){const s=$('#sOrg');
+  s.innerHTML=`<h2>Organisationen (Mandanten)</h2><p class="mut">Jede Organisation hat eine eigene Datenbank und eine eigene Verwaltung. Eine Person hat ein Konto für alle ihre Organisationen (gleicher Benutzername, gleiches Passwort, gleiche Geräte) und wechselt in der App zwischen ihnen.</p>
+  <div class="row"><button class="pri" id="bNo">+ Organisation</button></div>
+  ${PF.orgs.map((o,i)=>`<div class="pfo${o.active?'':' off'}"><h3>${esc(o.name)} <small class="mut">${esc(o.slug)} · ${o.members} ${o.members===1?'Mitglied':'Mitglieder'}${o.active?'':' · deaktiviert'}${o.ready?'':' · Datenbank noch nicht eingerichtet'}</small></h3>
+    <div class="mut">${o.id===1?'Bisherige Installation (Datenbank aus config.php)':o.dsn?'Datenbank: '+esc(o.dsn.replace(/password=[^;]*/i,'password=…')):'Eigene SQLite-Datei auf dem Server'}</div>
+    <div class="row"><button data-om="${o.id}" aria-expanded="${OPEN.has(o.id)}">${OPEN.has(o.id)?'Mitglieder ausblenden':'Mitglieder'}</button><button data-oe="${o.id}">Bearbeiten</button><a class="btn" href="admin.html?o=${o.id}">Verwaltung öffnen</a>${i?`<button data-ou="${o.id}" aria-label="nach oben">↑</button>`:''}${i<PF.orgs.length-1?`<button data-od="${o.id}" aria-label="nach unten">↓</button>`:''}</div>
+    <div data-ol="${o.id}" ${OPEN.has(o.id)?'':'hidden'}></div></div>`).join('')}`;
+  $('#bNo').onclick=()=>orgDlg(null);
+  s.querySelectorAll('[data-oe]').forEach(b=>b.onclick=()=>orgDlg(PF.orgs.find(o=>o.id===+b.dataset.oe)));
+  s.querySelectorAll('[data-ou],[data-od]').forEach(b=>b.onclick=()=>pf('org/move',{id:+(b.dataset.ou||b.dataset.od),dir:b.dataset.ou?-1:1}).then(load).catch(fail));
+  s.querySelectorAll('[data-om]').forEach(b=>b.onclick=()=>{const id=+b.dataset.om;if(OPEN.has(id))OPEN.delete(id);else OPEN.add(id);drawOrgs()});
+  OPEN.forEach(id=>members(id))}
+function orgDlg(o){const sq=PF.sqlite;dlg(o?'Organisation bearbeiten':'Neue Organisation',`<label class="mut">Name<input id="oN" maxlength="120" value="${esc(o?o.name:'')}" placeholder="z. B. SLRG Sektion Luzern"></label>
+  <label class="mut">Kurzname (für Adressen, nur a–z, 0–9, -)<input id="oS" maxlength="40" value="${esc(o?o.slug:'')}"></label>
+  ${o&&o.id===1?'<div class="mut">Die erste Organisation nutzt die Datenbank aus config.php.</div>':`<label class="mut">Datenbank (DSN, ${sq?'leer = eigene SQLite-Datei auf dem Server':'z. B. mysql:host=localhost;dbname=sw_org2;charset=utf8mb4'})<input id="oD" value="${esc(o?o.dsn:'')}"></label>
+  <label class="mut">Datenbank-Benutzer<input id="oU" value="${esc(o?o.db_user:'')}" autocomplete="off"></label><label class="mut">Datenbank-Passwort ${o&&o.pass_set?'(leer = behalten)':''}<input id="oP" type="password" autocomplete="new-password"></label>`}
+  ${o&&o.id!==1?`<label class="chk"><input type="checkbox" id="oA" ${o.active?'checked':''}> Aktiv</label>`:''}`,async d=>{
+  const b={id:o?o.id:undefined,name:$('#oN',d).value,slug:$('#oS',d).value};if($('#oD',d)){b.dsn=$('#oD',d).value;b.db_user=$('#oU',d).value;if($('#oP',d).value)b.db_pass=$('#oP',d).value}if($('#oA',d))b.active=$('#oA',d).checked?1:0;
+  const r=await pf('org/save',b);
+  // Datenbank anlegen: erster Aufruf mit dieser Organisation legt das Schema an
+  await fetch(`${API}?r=org&o=${r.id}`).catch(()=>{});toast('Gespeichert.');if(!o)OPEN.add(r.id);load()})}
+async function members(oid){const el=document.querySelector(`[data-ol="${oid}"]`);if(!el)return;el.innerHTML='<div class="mut">Wird geladen …</div>';
+  let ms;try{ms=(await pf('members&org='+oid)).members}catch(e){el.innerHTML=`<div class="mut">${esc(e.message)}</div>`;return}
+  el.innerHTML=`<div class="row"><button data-ma="${oid}">+ Mitglied</button></div>${ms.length?ms.map(m=>`<div class="pfm"><span><b>${esc(m.name)}</b> <span class="mut">${esc(m.username)}${m.orgs>1?' · '+m.orgs+' Organisationen':''}${m.boot?' · erster Administrator':''}${!m.linked?' · wird beim nächsten Aufruf angelegt':m.active===0?' · in der Organisation deaktiviert':''}</span></span><button class="sec" data-mx="${m.id}">Entfernen</button></div>`).join(''):empty0('Noch keine Mitglieder. Füge zuerst eine Person als Administrator hinzu; sie verwaltet danach die übrigen in der Verwaltung der Organisation.')}`;
+  el.querySelector('[data-ma]').onclick=()=>memDlg(oid);
+  el.querySelectorAll('[data-mx]').forEach(b=>b.onclick=async()=>{const m=ms.find(x=>x.id===+b.dataset.mx);
+    if(!await ask(`${m.name} aus dieser Organisation entfernen?\n\nDie Person wird dort deaktiviert und abgemeldet, ihre Einsatzdaten bleiben. Das Konto und andere Organisationen bleiben unverändert.`))return;
+    try{await pf('member/remove',{org:oid,ident:m.id});toast('Entfernt.');load()}catch(e){fail(e)}})}
+const empty0=t=>`<div class="mut">${esc(t)}</div>`;
+function memDlg(oid){const d=dlg('Mitglied hinzufügen',`<label class="mut">Benutzername (bestehendes Konto oder neu)<input id="mU" autocomplete="off" list="mL"></label><datalist id="mL"></datalist>
+  <div id="mNew" hidden><label class="mut">Name<input id="mN" maxlength="120"></label><label class="mut">Startpasswort (muss beim ersten Login geändert werden)<input id="mP" type="text" autocomplete="off"></label></div>
+  <label class="chk"><input type="checkbox" id="mA"> Systemadministrator dieser Organisation</label>`,async d=>{
+  const b={org:oid,username:$('#mU',d).value.trim(),admin:$('#mA',d).checked?1:0};if(!$('#mNew',d).hidden){b.name=$('#mN',d).value;b.password=$('#mP',d).value}
+  try{await pf('member/add',b)}catch(e){if(e.data&&e.data.new){$('#mNew',d).hidden=false;throw new Error('Kein Konto mit diesem Benutzernamen: Name und Startpasswort für ein neues Konto angeben.')}throw e}
+  toast('Hinzugefügt.');OPEN.add(oid);load()});
+  let t=0;$('#mU',d).oninput=()=>{clearTimeout(t);t=setTimeout(()=>pf('idents&q='+encodeURIComponent($('#mU',d).value.trim())).then(r=>{$('#mL',d).innerHTML=r.idents.map(i=>`<option value="${esc(i.username)}">${esc(i.name)}</option>`).join('');
+    $('#mNew',d).hidden=!$('#mU',d).value.trim()||r.idents.some(i=>i.username===$('#mU',d).value.trim())}).catch(()=>{}),300)}}
+// gemeinsame Einstellungen (Infrastruktur): je Gruppe Modus; Werte stellt ein Plattform-Administrator in der Verwaltung einer Organisation ein bzw. übernimmt sie von dort
+function drawShare(){const s=$('#sShare');
+  s.innerHTML=`<h2>Gemeinsame Einstellungen</h2><p class="mut">«Je Organisation»: jede stellt selbst ein. «Plattform-Vorgabe, übersteuerbar»: die Vorgabe gilt, bis eine Organisation eigene Werte speichert. «Global»: gilt für alle, nur Plattform-Administratoren ändern sie (in der Verwaltung einer beliebigen Organisation). Der Schlüssel für Web-Push ist immer gemeinsam.</p>
+  ${PF.share.map(g=>`<div class="pfs"><span><b>${esc(g.label)}</b><br><small class="mut">${g.set?'Vorgabe der Plattform gespeichert':'noch keine Vorgabe der Plattform'}</small></span><span class="row" style="margin:0">
+    <select data-sm="${g.key}">${Object.entries(PF.modes).map(([k,v])=>`<option value="${k}" ${g.mode===k?'selected':''}>${esc(v)}</option>`).join('')}</select>
+    <select data-st="${g.key}"><option value="">Vorgabe übernehmen von …</option>${PF.orgs.filter(o=>o.ready).map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select>
+    ${g.mode!=='org'?`<button class="sec" data-sc="${g.key}">Eigene Werte aller Organisationen entfernen</button>`:''}</span></div>`).join('')}`;
+  s.querySelectorAll('[data-sm]').forEach(x=>x.onchange=()=>pf('share/save',{group:x.dataset.sm,mode:x.value}).then(r=>{PF.share=r.share;drawShare();toast('Gespeichert. Gilt sofort.')}).catch(fail));
+  s.querySelectorAll('[data-st]').forEach(x=>x.onchange=async()=>{if(!x.value)return;const o=PF.orgs.find(y=>y.id===+x.value);
+    if(!await ask(`Werte von «${o.name}» als Vorgabe der Plattform übernehmen?`)){x.value='';return}pf('share/take',{group:x.dataset.st,org:+x.value}).then(r=>{PF.share=r.share;drawShare();toast('Übernommen.')}).catch(fail)});
+  s.querySelectorAll('[data-sc]').forEach(b=>b.onclick=async()=>{if(!await ask('Eigene Werte aller Organisationen entfernen?\n\nDanach gilt überall die Vorgabe der Plattform.',{danger:1}))return;
+    pf('share/clear',{group:b.dataset.sc}).then(r=>toast(r.removed+' Werte entfernt.')).catch(fail)})}
+// Konten: Suche, Plattform-Recht, Passwort zurücksetzen
+function drawIds(){const s=$('#sId');s.innerHTML=`<h2>Konten</h2><p class="mut">Ein Konto gilt für alle Organisationen der Person. Passwort und Benutzername von Personen in mehreren Organisationen ändert nur die Plattform.</p><input id="iQ" placeholder="Name oder Benutzername suchen" data-nodirty><div id="iL"></div>`;
+  let t=0;const q=()=>pf('idents&q='+encodeURIComponent($('#iQ').value.trim())).then(r=>{$('#iL').innerHTML=r.idents.map(i=>`<div class="pfm"><span><b>${esc(i.name)}</b> <span class="mut">${esc(i.username)} · ${i.orgs.length?esc(i.orgs.map(o=>o.name).join(', ')):'keine Organisation'}${i.platform_admin?' · <b>Plattform-Administrator</b>':''}</span></span>
+    <button data-ip="${i.id}" data-v="${i.platform_admin?0:1}">${i.platform_admin?'Plattform-Recht entziehen':'Zum Plattform-Administrator machen'}</button><button data-ir="${i.id}">Passwort zurücksetzen</button></div>`).join('')||empty0('Keine Treffer.');
+    $('#iL').querySelectorAll('[data-ip]').forEach(b=>b.onclick=async()=>{if(!await ask(b.textContent+'?'))return;pf('ident/save',{id:+b.dataset.ip,platform_admin:+b.dataset.v}).then(()=>{toast('Gespeichert.');q()}).catch(fail)});
+    $('#iL').querySelectorAll('[data-ir]').forEach(b=>b.onclick=()=>dlg('Passwort zurücksetzen','<p class="mut">Die Person wird auf allen Geräten abgemeldet und muss beim nächsten Login ein eigenes Passwort setzen.</p><label class="mut">Startpasswort<input id="rP" autocomplete="off"></label>',async d=>{await pf('ident/save',{id:+b.dataset.ir,password:$('#rP',d).value});toast('Zurückgesetzt.')}))}).catch(fail);
+  $('#iQ').oninput=()=>{clearTimeout(t);t=setTimeout(q,300)};q()}
+start();
+</script></body></html>

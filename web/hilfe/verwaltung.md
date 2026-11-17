@@ -225,3 +225,15 @@ Manches lässt sich normalerweise nur deaktivieren oder gar nicht löschen, dami
 Vor dem Löschen zählt eine Rückfrage die Folgen auf. **Das lässt sich nicht rückgängig machen.** Laufende Einsätze und das eigene Konto lassen sich nicht löschen. Jedes endgültige Löschen steht im Applikationslog (ohne Namen).
 
 > ! Für Personendaten in Einsätzen ist meist die [Anonymisierung](#anonymisierung) der bessere Weg: Sie behält Statistik und Einsatzlog.
+
+## Plattformverwaltung {#plattform}
+
+Eine Installation kann mehrere **Organisationen** (Mandanten) betreiben, je mit eigener Datenbank, eigenen Einstellungen, Einsätzen und Rechten. Die Plattformverwaltung (`plattform.html`, Link im Konto-Menü der Verwaltung und im Profil) sehen nur **Plattform-Administratoren**. Sie verwalten nur die Organisationen, nicht deren Inhalte.
+
+- **Organisationen**: anlegen, umbenennen, Reihenfolge, deaktivieren (die erste Organisation bleibt immer aktiv). Je Organisation die Datenbank: unter SQLite entsteht sie automatisch, unter MySQL gibt man DSN, Benutzer und Passwort einer leeren Datenbank an. **Mitglieder** zeigt die Konten der Organisation; **+ Mitglied** ordnet ein bestehendes Konto zu oder legt ein neues an (mit Startpasswort, das beim ersten Anmelden geändert werden muss). «Systemadministrator dieser Organisation» gibt dem Konto in dieser Organisation die Rolle Systemadministrator. **Entfernen** meldet das Konto in dieser Organisation ab und trägt es aus laufenden Einsätzen aus; seine Daten bleiben dort erhalten. **Verwaltung öffnen** öffnet die Verwaltung der Organisation.
+- **Gemeinsame Einstellungen**: Für Geodaten-Quellen, Kartenanbieter, Helikopter und Pegel & Abfluss gilt je Gruppe *Je Organisation*, *Plattform-Vorgabe, übersteuerbar* oder *Global (nur Plattform)*. Bei «Global» zeigt die Verwaltung der Organisationen den Bereich gesperrt mit Hinweis. «Vorgabe übernehmen von» kopiert die Einstellungen einer Organisation als Plattform-Vorgabe; «Eigene Werte aller Organisationen entfernen» setzt alle Organisationen auf die Vorgabe zurück.
+- **Konten**: alle Konten der Plattform mit Suche; **Zum Plattform-Administrator machen** bzw. **Plattform-Recht entziehen** (das eigene nicht, mindestens eines bleibt) und Passwort zurücksetzen.
+
+> Ein Konto gilt für alle Organisationen der Person: Benutzername, Passwort, Name, Profilbild, Telefonnummer und Geräte. Rollen, Einsatzgruppen, Ausbildung und Einstellungen sind je Organisation.
+
+> ! Bestehende Installationen laufen unverändert als erste Organisation weiter. Die Adressen bleiben gleich; andere Organisationen wählt die App über die gemerkte Wahl bzw. `?o=<Nummer>` in Links.

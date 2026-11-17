@@ -11,4 +11,7 @@ return [
   // der App (Firebase-Konsole → Projekteinstellungen → Dienstkonten → Neuen privaten Schlüssel generieren). Datei ausserhalb des Webroots oder in api/data/ ablegen, nie committen.
   // Ohne diesen Eintrag erhalten die Apps keinen Push und überwachen den Server nur per Polling.
   // 'fcm' => __DIR__ . '/data/firebase-service-account.json',
+  // Optional: Mandanten (Issue #60). Die zentralen Tabellen (Organisationen, Konten, Sitzungen, gemeinsame Einstellungen; Präfix pf_) liegen
+  // standardmässig in der Datenbank oben. Für eine eigene zentrale Datenbank:
+  // 'platform_dsn' => 'mysql:host=localhost;dbname=DBNAME_PLATTFORM;charset=utf8mb4', 'platform_user' => '...', 'platform_pass' => '...',
 ];

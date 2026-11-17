@@ -441,3 +441,16 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **BA-02** – Die Kapitel sind Markdown-Dateien (`hilfe/*.md`) mit Bildschirmfotos aus dem Demo-Modus; die Fotos entstehen reproduzierbar mit einem Skript (#37).
 - **BA-03** – Kontextbezogene Links: Knopf «?» in der Kopfzeile des Menüs (je nach Register bzw. ohne Einsatz), in den Seitenfenstern Einsatzkräfte, Rettlinge, Nachrichten, Funk, Markierungen und Messstationen, im Profil und in der Verwaltung je Bereich bzw. in «Meine Einsätze»; dazu Links bei der Anmeldung, im Profil (Karte «Rechtliches», auch nativ) und im Konto-Menü der Verwaltung (#37).
 - **BA-04** – Die Anleitung wird bei jeder Änderung der Bedienung nachgeführt (Text und, wo nötig, Bildschirmfotos) (#37).
+
+## 32. Mandanten (MD)
+
+- **MD-01** – Eine Installation betreibt mehrere Organisationen (Mandanten), je mit eigener Datenbank (Einsätze, Personen, Rollen, Einstellungen, Dateien). Eine zentrale Datenbank hält Organisationen, Konten, Sitzungen und gemeinsame Einstellungen. Bestehende Installationen laufen unverändert als erste Organisation weiter (#60).
+- **MD-02** – Ein Konto je Person für alle Organisationen: Benutzername, Passwort, Name, Profilbild, Telefonnummer, regelmässige Einsatzzeiten und angemeldete Geräte gelten überall; Rollen, Einsatzgruppen, Ausbildung und persönliche Einstellungen je Organisation (#60).
+- **MD-03** – Wechsel der Organisation wie ein Serverwechsel: gemerkte Wahl je Gerät, Auswahl im Profil und im Konto-Menü der Verwaltung, für Links `?o=<Nummer>`; die Anmeldung wählt die zuletzt verwendete bzw. erste Organisation des Kontos (#60).
+- **MD-04** – Eine Abwesenheit gilt wahlweise für alle Organisationen der Person oder nur für die aktuelle (#60).
+- **MD-05** – Alarme anderer Organisationen der Person erscheinen in der Einsatz-App als Hinweis mit Benachrichtigung; die Person wechselt und entscheidet über die Teilnahme wie bei parallelen Einsätzen. Push-Meldungen tragen die Organisation und öffnen die App in ihr (#60).
+- **MD-06** – Rolle «Plattform-Administrator» (nur zentral): verwaltet Organisationen (anlegen, Datenbank, Reihenfolge, deaktivieren), Mitglieder (zuordnen, neu anlegen, als Systemadministrator der Organisation, entfernen) und Konten (Plattform-Recht, Passwort zurücksetzen), sieht aber keine Einsatzdaten (#60).
+- **MD-07** – Infrastruktur-Einstellungen (Geodaten-Quellen, Kartenanbieter, Helikopter, Pegel & Abfluss) je Gruppe «Je Organisation», «Plattform-Vorgabe, übersteuerbar» oder «Global (nur Plattform)»; global gesperrte zeigt die Verwaltung der Organisation nur lesend (#60).
+- **MD-08** – Datenschutz, Impressum, Applikationslog, Auszüge und Anonymisierung je Organisation (#60).
+- **MD-09** – Die native App unterstützt Organisationen je Konto (Wahl, Push, Überwachung) (**offen**, folgt, #60).
+- **MD-10** – Organisationsübergreifende Einsätze über Vereinbarungen «A darf B aufbieten»; es gelten die Einstellungen der führenden Organisation (**offen**, folgt, #60).

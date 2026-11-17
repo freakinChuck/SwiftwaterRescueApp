@@ -172,7 +172,8 @@ const roleWire=el=>{const bs=[...el.querySelectorAll('.urb')],n=el.querySelector
   if(f)f.oninput=()=>{const q=f.value.trim().toLowerCase();bs.forEach(b=>b.hidden=!!q&&!b.textContent.toLowerCase().includes(q))}};
 const roleVal=el=>[...el.querySelectorAll('[data-ur]')].filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>+c.dataset.ur);
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
-  try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
+  try{me=(await api('me')).me}catch(e){if(orgNoOrg(e))return;if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
+  if(orgMe(me))return; // Mandanten (Issue #60)
   mapsSet(me.maps,me.map_def); // Kartenanbieter für die kleinen Karten (Issue #106)
   if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
   whatsNew(me.version); // nach einem Update einmal «Was ist neu» (Issue #175)
@@ -225,7 +226,7 @@ function navWire(){const n=$('#nav'),s=navOGet();n.querySelectorAll('.ngw:not(.o
     w.querySelectorAll('a').forEach(a=>{const h=!t||gm||a.textContent.toLowerCase().includes(t);a.hidden=!h;if(h)hit++});w.hidden=!!t&&!hit;w.classList.toggle('q',!!t&&!!hit);any+=hit});n.querySelector('.nq0').hidden=!t||any>0};
   q.onkeydown=e=>{if(e.key==='Enter'){const a=[...n.querySelectorAll('.navl a')].find(a=>!a.hidden&&!a.closest('.ngw').hidden);if(a){location.hash=a.dataset.k;q.value='';q.oninput();q.blur()}}else if(e.key==='Escape'){q.value='';q.oninput()}}}
 // Konto-Menü in der Kopfzeile (Issue #128): Name, Passwort ändern, Abmelden, Impressum
-const userMenu=()=>`<div class="um"><button id="bUm" aria-expanded="false" aria-haspopup="menu" aria-controls="umL" title="Konto">👤 <span>${esc(me.name)}</span> ▾</button><div id="umL" role="menu" hidden><div class="mut">${esc(me.username)}</div><button id="bPw" role="menuitem">Passwort ändern</button><button id="bOut" role="menuitem">Abmelden</button><button id="bChg" role="menuitem">Was ist neu</button><a class="mut" href="hilfe.html" target="_blank" rel="noopener" role="menuitem">Bedienungsanleitung</a><a class="mut" href="legal.html" target="_blank" rel="noopener" role="menuitem">Impressum · Datenschutz</a>${me.version?`<div class="mut">Version ${esc(verTxt(me.version))}</div>`:''}</div></div>`;
+const userMenu=()=>`<div class="um"><button id="bUm" aria-expanded="false" aria-haspopup="menu" aria-controls="umL" title="Konto">👤 <span>${esc(me.name)}</span> ▾</button><div id="umL" role="menu" hidden><div class="mut">${esc(me.username)}</div>${(me.orgs||[]).length>1?me.orgs.filter(o=>o.id!==me.org_id).map(o=>`<button role="menuitem" data-orgsw="${o.id}">⇄ ${esc(o.name)}</button>`).join(''):''}${me.platform_admin?'<a class="mut" href="plattform.html" role="menuitem">🏢 Plattformverwaltung</a>':''}<button id="bPw" role="menuitem">Passwort ändern</button><button id="bOut" role="menuitem">Abmelden</button><button id="bChg" role="menuitem">Was ist neu</button><a class="mut" href="hilfe.html" target="_blank" rel="noopener" role="menuitem">Bedienungsanleitung</a><a class="mut" href="legal.html" target="_blank" rel="noopener" role="menuitem">Impressum · Datenschutz</a>${me.version?`<div class="mut">Version ${esc(verTxt(me.version))}</div>`:''}</div></div>`;
 // Organisation mit Logo in der Kopfzeile und Fusszeile mit Impressum, Lizenzen, Datenschutz, Version (Issue #123)
 const orgHd=()=>orgMark(me.org_info,'orghd');
 const adminFoot=()=>`<footer id="aFoot" class="legalf">${me.org_info&&me.org_info.name?`<span>© ${esc(me.org_info.name)}</span>`:''}<span>${legalLinks()}</span>${me.version?`<span>Swiftwater Rescue ${esc(verTxt(me.version))}</span>`:''}<a href="#" id="fChg">Was ist neu</a></footer>`;
@@ -233,7 +234,7 @@ function footWire(){const c=$('#fChg');if(c)c.onclick=e=>{e.preventDefault();cha
 let umDoc=false;
 // Anleitung zum geöffneten Bereich (Issue #37): Abschnitt = Schlüssel in NAV, siehe hilfe/verwaltung.md
 function hlpWire(){const b=$('#bHlp');if(b)b.onclick=()=>{const k=location.hash.slice(1).split('?')[0];hilfe(k==='kalender'?'profil/kalender':MY||k==='meine'?'auswertung/meine':k==='planungen'?'planung/vorbereiten':'verwaltung'+(k?'/'+k:''))}}
-function userMenuWire(){hlpWire();const b=$('#bUm'),l=$('#umL'),set=o=>{l.hidden=!o;b.setAttribute('aria-expanded',o)};b.onclick=e=>{e.stopPropagation();set(l.hidden)};
+function userMenuWire(){hlpWire();document.querySelectorAll('[data-orgsw]').forEach(x=>x.onclick=()=>orgSwitch(+x.dataset.orgsw));const b=$('#bUm'),l=$('#umL'),set=o=>{l.hidden=!o;b.setAttribute('aria-expanded',o)};b.onclick=e=>{e.stopPropagation();set(l.hidden)};
   if(!umDoc){umDoc=true;document.addEventListener('click',e=>{const m=$('#umL');if(m&&!e.target.closest('.um')){m.hidden=true;$('#bUm').setAttribute('aria-expanded',false)}})}
   l.onkeydown=e=>{if(e.key==='Escape'){set(false);b.focus()}};
   $('#bPw').onclick=()=>{set(false);pwDialog(false)};$('#bChg').onclick=()=>{set(false);changesDlg()};$('#bOut').onclick=()=>{logout();start()}}
@@ -243,7 +244,15 @@ function showNav(){if(!$('#nav'))return;if(location.hash==='#gewaesserdaten')his
   its.forEach(([,i])=>{$('#'+i).hidden=i!==id});dirtyWire($('#'+id)); // Hinweis «Ungespeicherte Änderungen» (Issue #95)
   document.querySelectorAll('#nav a').forEach(a=>{if(a.dataset.k===k)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   const g=(nav().find(([,its])=>its.some(x=>x[0]===k))||[])[0];document.querySelectorAll('#nav .ngw').forEach(w=>{const c=w.dataset.g===g;w.classList.toggle('cur',c);navOpen(w,c||navOGet().has(w.dataset.g),false)}); // von Hand geöffnete bleiben offen
-  $('#navSel').value=k;document.title='Swiftwater Rescue – Verwaltung – '+l;gnLoad().then(load)}
+  $('#navSel').value=k;document.title='Swiftwater Rescue – Verwaltung – '+l;gnLoad().then(load).then(()=>pfLock(k,id),()=>{})}
+// Mandanten (Issue #60): gemeinsame Einstellungen der Plattform. «Global» = nur Plattform-Administratoren ändern sie (Hinweis, Eingaben gesperrt; der Server lehnt sonst ab),
+// «übersteuerbar» = Vorgabe der Plattform gilt, solange hier nichts gespeichert ist
+const PF_SEC={karten:'maps',geoquellen:'geo',helikopter:'air',pegel:'hydro'};
+function pfLock(k,id){const g=PF_SEC[k];if(!g||!me.orgs)return;api('settings').then(r=>{const x=(r.pf_share||{})[g],el=$('#'+id);if(!x||!el||x.mode==='org')return;
+  el.querySelectorAll('.pfnote').forEach(n=>n.remove());const n=document.createElement('div');n.className='absnote pfnote';
+  n.innerHTML=x.mode==='global'?(x.locked?'🏢 <b>Gemeinsame Einstellung der Plattform.</b> <span class="mut">Gilt für alle Organisationen und lässt sich nur in der Plattformverwaltung ändern.</span>':'🏢 <b>Gemeinsame Einstellung der Plattform.</b> <span class="mut">Als Plattform-Administrator änderst du hier den Wert für alle Organisationen.</span>'):'🏢 <b>Vorgabe der Plattform.</b> <span class="mut">Gilt, solange diese Organisation keine eigenen Werte speichert.</span>';
+  const h=el.querySelector('h2');if(h)h.after(n);else el.prepend(n);
+  if(x.locked)el.querySelectorAll('input,select,textarea,button').forEach(b=>{if(!b.classList.contains('hlp'))b.disabled=true})}).catch(()=>{})}
 // Farbpunkte der Einsatzgruppen beim Namen (Issue #105): nur aktive Gruppen mit «Farbe beim Namen» (Route groups/names), vor jedem Bereich frisch geladen
 let GN={groups:[],members:{}};
 const gnLoad=()=>api('groups/names').then(r=>{GN=r}).catch(()=>{});
