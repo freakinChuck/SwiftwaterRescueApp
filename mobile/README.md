@@ -70,7 +70,7 @@ In den Einstellungen der App gibt es dazu Folgendes:
 Voraussetzungen:
 - Flutter 3.47 (Version wie in `.github/workflows/mobile.yml`)
 - Android: JDK 17 und das Android SDK
-- iOS: macOS mit Xcode
+- iOS: macOS mit Xcode 27 oder neuer (ab April 2027 verlangt App Store Connect das iOS-27-SDK). Die Pipeline `ios.yml` baut im GitHub-Abbild `xcode-27` mit dem neusten Xcode 27.x; über die Repo-Variablen `IOS_RUNNER` (Runner) und `IOS_XCODE_MAJOR` (Hauptversion) lässt sich das ohne Codeänderung umstellen.
 
 ```bash
 cd mobile/app
