@@ -5,15 +5,13 @@
 	<!-- Push über APNs (Firebase Cloud Messaging). Beim Export für den App Store wird daraus «production». -->
 	<key>aps-environment</key>
 	<string>development</string>
-	<!-- Kritische Hinweise (ertönen auch bei «Nicht stören» und Lautlos) verlangen eine Freigabe von Apple:
-	     https://developer.apple.com/contact/request/notifications-critical-alerts-entitlement/
-	     Nach der Freigabe hier ergänzen und im Provisioning-Profil aktivieren:
+	<!-- Kritische Hinweise (ertönen auch bei «Nicht stören» und Lautlos, Alarmstufe «kritisch»), von Apple freigegeben.
+	     Das Provisioning-Profil (Secret IOS_PROFILE_BASE64) muss die Fähigkeit enthalten, sonst scheitert der Build. -->
 	<key>com.apple.developer.usernotifications.critical-alerts</key>
 	<true/>
-	-->
-	<!-- Zeitkritische Hinweise (Alarmstufe «hoch»): Fähigkeit «Time Sensitive Notifications» bei der App-ID einschalten, dann hier ergänzen:
+	<!-- Zeitkritische Hinweise (Alarmstufe «hoch», durchbrechen einen Fokus). -->
 	<key>com.apple.developer.usernotifications.time-sensitive</key>
 	<true/>
-	-->
+	<!-- Push to Talk (com.apple.developer.push-to-talk) erst eintragen, wenn das PushToTalk-Framework eingebaut ist (Issue #113, offen). -->
 </dict>
 </plist>

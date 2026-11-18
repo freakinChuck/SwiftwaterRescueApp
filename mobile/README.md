@@ -30,7 +30,7 @@ Native Apps für Android und iOS (Issue #108), gebaut mit Flutter in `mobile/app
 |---|---|---|
 | Abfrage bei geschlossener App | Vordergrunddienst «Bereit für Alarme», alle 10–60 s, auch nach einem Neustart; nur ohne Push, im Einsatz oder mit «Immer im Hintergrund abfragen» (Issue #179) | nicht möglich (iOS erlaubt es nicht) |
 | Push (optional, Firebase Cloud Messaging) | Hauptweg, weckt das Gerät auch im Ruhezustand; mit Push läuft der Dienst (und seine dauerhafte Meldung) nur noch im Einsatz | einziger Weg bei geschlossener App |
-| Kritischer Alarm trotz «Nicht stören» | nach Erlaubnis in den Einstellungen der App | nur mit Freigabe «Critical Alerts» von Apple |
+| Kritischer Alarm trotz «Nicht stören» | nach Erlaubnis in den Einstellungen der App | als «Kritischer Hinweis» nach Erlaubnis beim ersten Start (Freigabe von Apple liegt vor) |
 
 In den Einstellungen der App gibt es dazu Folgendes:
 - Abfrageintervall
@@ -137,7 +137,9 @@ Ein Server ohne Dienstkonto meldet `push/key` mit `native: 0`. Die App zeigt dan
 
 Damit ein Alarm auch bei «Nicht stören» und Lautlos ertönt, braucht es die Berechtigung «Critical Alerts». Apple vergibt sie nur auf Antrag: https://developer.apple.com/contact/request/notifications-critical-alerts-entitlement/
 
-Nach der Freigabe den Eintrag in `ios/Runner/Runner.entitlements` einkommentieren und das Provisioning-Profil neu erstellen. Für die Alarmstufe «hoch» ebenso «Time Sensitive Notifications». Ohne diese Berechtigungen kommen Alarme als gewöhnliche Meldung mit Ton.
+Die Freigabe liegt vor: `ios/Runner/Runner.entitlements` enthält «Critical Alerts» und, für die Alarmstufe «hoch», «Time Sensitive Notifications». Beide Fähigkeiten sind bei der App-ID eingeschaltet; das Provisioning-Profil im Secret `IOS_PROFILE_BASE64` muss danach neu erstellt worden sein (eine Änderung der Fähigkeiten macht das alte ungültig). `ios.yml` prüft das vor dem Build und bricht mit einem Hinweis ab, wenn eine Berechtigung im Profil fehlt. Beim ersten Start fragt iOS separat nach «Kritische Hinweise» (Einstellungen → Mitteilungen → Swiftwater Rescue). Ohne Erlaubnis kommen Alarme als gewöhnliche Meldung mit Ton.
+
+Push to Talk ist bei der App-ID ebenfalls eingeschaltet, steht aber noch nicht in den Entitlements: Es braucht das PushToTalk-Framework, den Hintergrundmodus `push-to-talk` und APNs direkt vom Server (`apns-push-type: pushtotalk`, Topic `ch.swiftwaterrescue.app.voip-ptt`, nicht über FCM).
 
 ## Regeln
 
