@@ -69,6 +69,13 @@ jobs:
           security cms -D -i "$RUNNER_TEMP/app.mobileprovision" > "$RUNNER_TEMP/profile.plist"
           uuid=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")
           pname=$(/usr/libexec/PlistBuddy -c 'Print Name' "$RUNNER_TEMP/profile.plist")
+          # Jede Berechtigung aus Runner.entitlements muss im Profil stehen, sonst scheitert die Signierung unverständlich
+          miss=""
+          for k in com.apple.developer.usernotifications.critical-alerts com.apple.developer.usernotifications.time-sensitive; do
+            grep -q "<key>$k</key>" ios/Runner/Runner.entitlements || continue
+            /usr/libexec/PlistBuddy -c "Print :Entitlements:$k" "$RUNNER_TEMP/profile.plist" >/dev/null 2>&1 || miss="$miss $k"
+          done
+          if [ -n "$miss" ]; then echo "::error::Provisioning-Profil «$pname» ohne:$miss. Profil im Apple-Portal neu erstellen und IOS_PROFILE_BASE64 ersetzen."; exit 1; fi
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$RUNNER_TEMP/app.mobileprovision" ~/Library/MobileDevice/Provisioning\ Profiles/"$uuid".mobileprovision
           # Nur das Ziel Runner manuell signieren (Bibliotheken bleiben unverändert)
