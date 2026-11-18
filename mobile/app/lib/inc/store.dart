@@ -324,7 +324,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final a = await accState(acc.id);
       _acked.addAll((_sp!.getStringList('ack_${acc.id}') ?? []));
-      _acked.addAll(a.tags.where((t) => !t.startsWith('i:'))); // Nachrichten und Einsatzende, die schon gemeldet wurden, nicht nochmals
+      _acked.addAll(a.tags.where((t) => !t.startsWith('i:') && !t.startsWith('t:'))); // Alarme (auch Testalarm) zeigt die App trotzdem als Vollbild // Nachrichten und Einsatzende, die schon gemeldet wurden, nicht nochmals
     } catch (_) {}
     _beat();
     _fg = Timer.periodic(const Duration(seconds: 5), (_) => _beat());
@@ -569,6 +569,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       // neu alarmiert zu einem anderen Einsatz ohne eigene Teilnahme: diesen anzeigen
       if (_incWatch(nx)) nx = await api.call('incident/state', query: {'since': '0', ...vx.query(), 'oth': '1'});
       _askBt(nx);
+      if (nx['test_alarm'] is Map) { // persönlicher Testalarm (Issue #218), Stufe wie ein Alarm
+        final t = jm(nx['test_alarm']);
+        notify(js(t['t']), js(t['b']), js(t['tag']), js(t['lvl']));
+      }
       final i = nx['incident'] is Map ? jm(nx['incident']) : null;
       if (i != null) {
         final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']);

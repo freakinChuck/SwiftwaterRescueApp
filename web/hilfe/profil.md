@@ -14,6 +14,9 @@ Name, Benutzername und deine Einsatzgruppen. Hier änderst du dein **Profilbild*
 - **Übungsmodus**: Bei Einsatztypen, die das vorsehen (zum Beispiel Übungen), wirst du wie bei einem kritischen Alarm alarmiert.
 - **Push-Benachrichtigungen** ein- oder ausschalten und eine Probe senden.
 - **App installieren**, falls der Browser das anbietet.
+- **Testalarm**: Stufe wählen (Kritisch, Hoch, Normal, Leise) und «Testalarm in 30 s» antippen. Nach 30 Sekunden kommt ein Alarm dieser Stufe nur an dich, ohne Einsatz. Schliesse in der Zwischenzeit die App oder sperre den Bildschirm, dann siehst du, ob Ton, «Nicht stören» und Push wie gewünscht wirken. «Abbrechen» stoppt den Test vorher.
+
+> Ohne Push auf dem Gerät kommt der Testalarm nur, solange die App offen ist. Genau das zeigt der Test.
 
 ## Abwesenheit {#abwesenheit}
 

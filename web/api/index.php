@@ -32,7 +32,7 @@ const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', '
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
 // Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
-const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
+const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/testalarm' => ['push', 'Persönlicher Testalarm angefordert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
   'user/save' => ['user', 'Benutzer gespeichert'], 'user/password' => ['user', 'Passwort zurückgesetzt'], 'user/active' => ['user', 'Benutzer aktiviert bzw. deaktiviert'], 'user/delete' => ['user', 'Benutzer gelöscht'],
   'skill/save' => ['user', 'Fähigkeit der Ausbildung gespeichert'], 'skill/remove' => ['user', 'Fähigkeit der Ausbildung entfernt'], 'skill/entry/save' => ['user', 'Ausbildung erfasst'], 'skill/entry/remove' => ['user', 'Ausbildung entfernt'],
   'urole/save' => ['user', 'Benutzerrolle gespeichert'], 'urole/remove' => ['user', 'Benutzerrolle entfernt'], 'group/save' => ['user', 'Einsatzgruppe gespeichert'], 'group/delete' => ['user', 'Einsatzgruppe gelöscht'],
@@ -230,7 +230,8 @@ if (setting('place_props_mig', '') === '') { if (!$db->query("SELECT COUNT(*) FR
   setSetting('place_props_mig', '1'); }
 // Ausbildung (Issue #117): Pflicht je Einsatzgruppe (req_grp, NULL = für alle, für die die Fähigkeit gilt); Kalenderjahre neu ab 0 (0 = laufendes, 1 = Folgejahr)
 try { $db->exec("ALTER TABLE skills ADD COLUMN req_grp TEXT NULL"); } catch (Throwable $e) {}
-try { $db->exec("ALTER TABLE users ADD COLUMN purged INT DEFAULT 0"); } catch (Throwable $e) {} // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
+try { $db->exec("ALTER TABLE users ADD COLUMN purged INT DEFAULT 0"); } catch (Throwable $e) {}
+try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {} // persönlicher Testalarm (Issue #218): JSON {id, lvl, at} // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
 if (setting('skill_y0_mig', '') === '') { $db->exec("UPDATE skills SET n=n-1 WHERE exp='year' AND n>0"); setSetting('skill_y0_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX voice_inc ON voice(incident_id,upd)"); } catch (Throwable $e) {}
@@ -2688,6 +2689,15 @@ function fcmDone($mh, $hn) { global $db; $ok = 0;
     curl_multi_remove_handle($mh, $h); }
   if ($hn) alog('info', 'push', 'App-Push an FCM übergeben', ['ok' => $ok, 'failed' => count($hn) - $ok]); }
 // alle aktiven Benutzer ausser $skip (IDs), bei Aufgebot nur die aufgebotenen ($only, NULL = alle); Stufe wie alarmLvl je Person, «Keine» sendet nichts
+// Persönlicher Testalarm (Issue #218): fällig ab at, danach TEST_ALARM_S lang im Polling (incident/state), damit ihn auch Geräte ohne Push zeigen.
+// Tag t:<id> (eigener Quittierschlüssel, kein Einsatz), Stufe wie ein Alarm (crit/high Vollbild in der App).
+const TEST_ALARM_LVL = ['crit', 'high', 'normal', 'low'];
+const TEST_ALARM_S = 300;
+function testAlarmMsg($t) { return ['t' => 'TESTALARM', 'b' => 'Persönlicher Testalarm, Stufe «' . ALARM_LEVELS[$t['lvl']][0] . '». Kein Einsatz, einfach quittieren.', 'tag' => 't:' . $t['id']]; }
+function testAlarmOf($uid) { global $db; $s = $db->prepare("SELECT test_alarm FROM users WHERE id=?"); $s->execute([$uid]); $v = $s->fetchColumn(); $s->closeCursor();
+  $t = $v ? json_decode($v, true) : null; return is_array($t) && isset($t['id'], $t['lvl'], $t['at']) && in_array($t['lvl'], TEST_ALARM_LVL, true) ? $t : null; }
+function testAlarmDue($uid) { global $now; $t = testAlarmOf($uid); if (!$t || $t['at'] > $now || $now - $t['at'] > TEST_ALARM_S) return null;
+  return ['id' => (int)$t['id'], 'lvl' => $t['lvl'], 'at' => (int)$t['at']] + testAlarmMsg($t); }
 function pushAlarm($inc, $skip, $only = null) { global $db; if (!pushOk() && !fcmOk()) return;
   foreach ($db->query("SELECT id,exercise_mode FROM users WHERE active=1")->fetchAll() as $u) { $id = (int)$u['id']; if (in_array($id, $skip, true) || ($only !== null && !in_array($id, $only, true))) continue;
     $l = alarmLvl($inc, (int)$u['exercise_mode']); if ($l === 'none') continue;
@@ -3690,7 +3700,7 @@ switch ($route) {
     // feste Standorte auch ohne Einsatz (Änderungswunsch #96): die aktiven permanenten, solange die Funktion für einen der Einsatztypen an ist
     $fpl = array_filter(featuresAll(), fn($f) => $f['place']) ? array_values(array_map(fn($r) => array_diff_key($r, ['active' => 1]), array_filter(placesOf(null), fn($r) => $r['active']))) : [];
     if ($blocked) $xp = [];
-    out(['incident' => null, 'incidents' => [], 'my_inc' => null, 'fb_open' => count(array_filter(fbMine($uid), fn($x) => !$x['answered'])), 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
+    out(['test_alarm' => testAlarmDue($uid), 'incident' => null, 'incidents' => [], 'my_inc' => null, 'fb_open' => count(array_filter(fbMine($uid), fn($x) => !$x['answered'])), 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
   }
   $inc['id'] = (int)$inc['id']; $inc['plan_id'] = $inc['plan_id'] === null ? null : (int)$inc['plan_id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc = kindAdd($inc); $inc['kind'] = kindPub(kindOf($inc)); $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
@@ -3763,7 +3773,7 @@ switch ($route) {
       $vo['guest_links'] = $vk['guests'] ? array_map(fn($g) => ints($g, ['id', 'ch', 'speak', 'created', 'opened_at']), $s->fetchAll()) : []; } }
   unset($inc['voice_ch'], $inc['voice_anon']);
   $il = incList(); $oth = isset($_GET['oth']) && count($il) > 1 ? array_values(array_map('incOther', array_filter(runningIncidents(), fn($r) => (int)$r['id'] !== $id && in_array((int)$r['id'], array_column($il, 'id'), true)))) : [];
-  out(['incident' => $inc, 'incidents' => $il, 'others' => $oth, 'my_inc' => myIncPub(), 'start_plans' => exStartable(), 'kinds' => kindsPub(), 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
+  out(['test_alarm' => testAlarmDue($uid), 'incident' => $inc, 'incidents' => $il, 'others' => $oth, 'my_inc' => myIncPub(), 'start_plans' => exStartable(), 'kinds' => kindsPub(), 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
        'phone_cfg' => $phSee ? ['show' => phoneCfg()['show'], 'call' => phoneCfg()['call']] : null, // Direktanruf (Issue #44): null = keine Nummern
        'participants' => array_map(function ($p) use ($pg, $F, $phSee) { if (!$phSee || $p['phone'] === null || $p['left_at'] !== null || $p['mode'] === 'declined') unset($p['phone']); /* nur aktive Teilnahmen */ foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; if ($pg) $p['groups'] = $pg['m'][(int)$p['user_id']] ?? []; if (!$F['vehp'] || !$F['veh']) unset($p['veh_id']); return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at', 'veh_id']); }, $ps->fetchAll()),
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
@@ -4886,6 +4896,17 @@ switch ($route) {
   // Gerätesitzungen (Issue #108) bleiben bewusst bestehen: Wer das eigene Passwort ändert, soll die Alarmierung über die App nicht verlieren.
   // Abmelden einzelner Apps über «Angemeldete Apps» im Profil (me/session/remove); Zurücksetzen durch die Verwaltung löscht alle.
   out(['ok' => true]);
+ case 'me/testalarm': // persönlicher Testalarm (Issue #218): lvl crit|high|normal|low, nach 30 Sekunden an die Person selbst; '' = abbrechen
+  $l = (string)($in['lvl'] ?? '');
+  if ($l === '') { $db->prepare("UPDATE users SET test_alarm=NULL WHERE id=?")->execute([$uid]); out(['ok' => 1]); }
+  if (!in_array($l, TEST_ALARM_LVL, true)) fail('Unbekannte Alarmstufe');
+  $t = ['id' => random_int(1, 2000000000), 'lvl' => $l, 'at' => $now + 30];
+  $db->prepare("UPDATE users SET test_alarm=? WHERE id=?")->execute([json_encode($t), $uid]);
+  // Push nach der Antwort: warten, bis er fällig ist, und nur senden, wenn er inzwischen nicht abgebrochen oder ersetzt wurde
+  after(function () use ($uid, $t) { set_time_limit(90); while (time() < $t['at']) sleep(1);
+    $c = testAlarmOf($uid); if (!$c || $c['id'] !== $t['id']) return;
+    pushTo([$uid], testAlarmMsg($t) + pushLvl($t['lvl'])); pushFlush(); });
+  out(['ok' => 1, 'id' => $t['id'], 'at' => $t['at'], 'push' => pushOk() || fcmOk() ? 1 : 0]);
  case 'me/settings': // nur übergebene Werte ändern. exercise_mode: Übungen wie scharfe Einsätze kritisch alarmieren; coord_sys: '' = Standard der Verwaltung, none = ausblenden
   if (isset($in['exercise_mode'])) $db->prepare("UPDATE users SET exercise_mode=? WHERE id=?")->execute([empty($in['exercise_mode']) ? 0 : 1, $uid]);
   if (array_key_exists('phone', $in)) { if (!phoneCfg()['self']) fail('Die Telefonnummer pflegt die Verwaltung', 403); $db->prepare("UPDATE users SET phone=? WHERE id=?")->execute([phoneNorm($in['phone'] ?? ''), $uid]); } // Direktanruf (Issue #44), '' = entfernen

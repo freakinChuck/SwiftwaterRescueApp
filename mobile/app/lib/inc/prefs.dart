@@ -10,6 +10,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../beacon.dart';
 import '../notify.dart';
@@ -83,6 +84,9 @@ class _PrefsPageState extends State<PrefsPage> {
   Map<String, String> _snd = {}; // eigene Töne je Einsatztyp (sounds.dart)
   String? _probe; // Typ-ID, deren Probe gerade läuft (Android)
   Timer? _probeT;
+  String _taLvl = 'crit'; // persönlicher Testalarm (Issue #218): gewählte Stufe (pro Gerät), laufender Test mit Zeitpunkt
+  J? _ta;
+  Timer? _taT;
 
   @override
   void initState() {
@@ -91,13 +95,79 @@ class _PrefsPageState extends State<PrefsPage> {
     _loadSess();
     _loadLoc();
     _loadSnd();
+    s.addListener(_onAlarm);
+    SharedPreferences.getInstance().then((p) {
+      final v = p.getString('talvl');
+      if (mounted && v != null && _taTxt.containsKey(v)) setState(() => _taLvl = v);
+    });
   }
 
   @override
   void dispose() {
+    s.removeListener(_onAlarm);
     if (_probe != null) alarmStop();
     _probeT?.cancel();
+    _taT?.cancel();
     super.dispose();
+  }
+
+  /// Ein Alarm (auch der Testalarm) steht auf der Karte: Profil schliessen, damit er sichtbar ist
+  void _onAlarm() {
+    if (s.alarm == null || !mounted) return;
+    if (_ta != null && s.alarm!.key == 't:${_ta!['id']}') _ta = null;
+    if (ModalRoute.of(context)?.isCurrent == true) Navigator.of(context).maybePop();
+  }
+
+  static const _taTxt = {'crit': 'Kritisch', 'high': 'Hoch', 'normal': 'Normal', 'low': 'Leise'};
+
+  Future<void> _testAlarm() async {
+    try {
+      if (_ta != null) {
+        await s.api.call('me/testalarm', body: {'lvl': ''});
+        _ta = null;
+        s.toast('Testalarm abgebrochen', 'info');
+      } else {
+        final r = await s.api.call('me/testalarm', body: {'lvl': _taLvl});
+        _ta = {'id': r['id'], 'at': r['at'], 'lvl': _taLvl};
+        s.toast(s.demo ? 'Testalarm in 30 s (im Demo nur bei offener App).' : 'Testalarm in 30 s. Jetzt die App schliessen oder den Bildschirm sperren.', 'ok');
+        // die Überwachung bzw. die offene App fragt ab; damit er pünktlich kommt, kurz nach dem Zeitpunkt selbst abfragen
+        Timer(const Duration(seconds: 31), () => s.poll());
+      }
+    } catch (e) {
+      s.fail(e);
+    }
+    _taTick();
+  }
+
+  void _taTick() {
+    _taT?.cancel();
+    if (_ta != null && (jn(_ta!['at']) ?? 0) * 1000 < DateTime.now().millisecondsSinceEpoch - 5000) _ta = null;
+    if (mounted) setState(() {});
+    if (_ta != null) _taT = Timer(const Duration(seconds: 1), _taTick);
+  }
+
+  List<Widget> _testAlarmUi() {
+    final left = _ta == null ? 0 : ((jn(_ta!['at']) ?? 0) - DateTime.now().millisecondsSinceEpoch / 1000).ceil().clamp(0, 60);
+    return [
+      _h5('Testalarm'),
+      const Mut('Löst nach 30 Sekunden einen Alarm der gewählten Stufe nur für dich aus, ohne Einsatz. Danach die App schliessen oder den Bildschirm sperren, um Ton und Benachrichtigung zu prüfen.', size: 12),
+      Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            DropdownButton<String>(
+                value: _taLvl,
+                items: [for (final e in _taTxt.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+                onChanged: _ta != null
+                    ? null
+                    : (v) {
+                        if (v == null) return;
+                        setState(() => _taLvl = v);
+                        SharedPreferences.getInstance().then((p) => p.setString('talvl', v));
+                      }),
+            OutlinedButton(onPressed: _testAlarm, child: Text(_ta == null ? 'Testalarm in 30 s' : 'Abbrechen')),
+            if (_ta != null) Mut(left > 0 ? 'Testalarm «${_taTxt[_ta!['lvl']]}» in $left s' : 'Testalarm ausgelöst'),
+          ])),
+    ];
   }
 
   Future<void> _loadSnd() async {
@@ -697,6 +767,7 @@ class _PrefsPageState extends State<PrefsPage> {
           onChanged: (v) => _set({'exercise_mode': v ? 1 : 0}, poll: true)),
       _h5('Ton bei kritischem Alarm'),
       ..._sounds(me),
+      ..._testAlarmUi(),
       _h5('Standort'),
       Mut(_locText),
       Padding(
