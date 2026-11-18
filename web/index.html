@@ -22,7 +22,7 @@ body{height:100dvh;display:flex;flex-direction:column}#app{flex:1;min-height:0;o
 body.off #chip,body.off #joinBan,body.off #bMenu,body.off #bView,body.off #viewBox{margin-top:var(--offH,2.4rem)} /* Höhe des Hinweises, gesetzt in setOffline */
 #toasts{position:fixed;top:calc(4.2rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:8000;display:grid;gap:.4rem;width:min(420px,calc(100vw - 2rem))}
 .toast{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--ex);border-radius:6px;padding:.6rem .8rem;box-shadow:0 2px 8px #000a;cursor:pointer}
-.toast.al{background:var(--alarm);border-color:var(--alarm);color:#fff}.toast.al b{font-size:1.1rem} /* Alarm (crit/high): rote Benachrichtigung statt Vollbild, bleibt bis zum Antippen */
+.toast.al{background:var(--alarm);border-color:var(--alarm);color:#fff}.toast.al b{font-size:1.1rem}.toast .alj{display:grid;gap:.35rem;margin-top:.5rem}.toast .alj:empty{display:none}.toast .alj .btn{background:#fff;color:#000;border-color:#fff;font-weight:600} /* Alarm (crit/high): rote Benachrichtigung statt Vollbild, bleibt bis zum Antippen */
 #sheetWrap{position:fixed;z-index:1100;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;transition:transform .2s;left:0;right:0;bottom:0;max-height:58dvh;transform:translateY(105%)}
 #sheetWrap.open{transform:none}#sheetBar{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.5rem .8rem;border-bottom:1px solid var(--line)}
 #sheet{overflow:auto;padding:.8rem;flex:1;padding-bottom:calc(.8rem + env(safe-area-inset-bottom))}
@@ -191,9 +191,16 @@ function alarmTone(){[0,600,1200].forEach(t=>setTimeout(()=>tone(880,400),t));na
 // normal Hinweis mit kurzem Ton, low Hinweis still, none nichts. Nachrichten und Einsatzende mit eigener Stufe je Einsatztyp (msg_level, end_level, Issue #168). Antippen eines Alarms oder einer Nachricht im Einsatz zeigt das Einsatzgebiet (focusArea).
 function notify(t,b,key,lvl){if(lvl==='none')return false;if(key){if(ackGet().includes(key))return false;ackAdd(key)}const al=lvl==='crit'||lvl==='high';
   const d=document.createElement('div');d.className='toast'+(al?' al':'');d.setAttribute('role',al?'alert':'status');d.innerHTML=`<b>${esc(t)}</b><div>${esc(b)}</div>`;
-  d.onclick=()=>{d.remove();if(key&&/^[imk]:/.test(key))focusArea()};$('#toasts').appendChild(d);if(!al)setTimeout(()=>d.remove(),20000);
+  const ai=al&&key&&/^i:(\d+)$/.exec(key);if(ai)d.insertAdjacentHTML('beforeend',`<div class="alj" data-alinc="${ai[1]}"></div>`); // Annehmen direkt im Alarm (alJoinSync)
+  d.onclick=()=>{d.remove();if(key&&/^[imk]:/.test(key))focusArea()};$('#toasts').appendChild(d);if(!al)setTimeout(()=>d.remove(),20000);if(ai)setTimeout(alJoinSync);
   if(lvl==='crit')alarmTone();else if(lvl!=='low')ping();
   sysNote(t,b,key,al,lvl==='low');return true}
+// Alarm-Benachrichtigung: Einrückoptionen zum Annehmen, solange der Einsatz angezeigt wird und man nicht teilnimmt (nicht für die Übungsleitung);
+// wie die Karte «Teilnahme» (join), Antippen daneben quittiert wie bisher. Bei jedem paint() nachgeführt, weil notify vor dem neuen Stand läuft.
+function alJoinSync(){document.querySelectorAll('#toasts .alj').forEach(e=>{const i=st&&st.incident,ok=i&&i.id==e.dataset.alinc&&!(st.me&&!st.me.left_at&&st.me.mode!=='declined')&&!st.ex_lead&&!st.blocked,
+    ms=ok?iModes().filter(x=>x.active):[],k=ms.map(x=>x.code).join();if(e.dataset.k===k)return;e.dataset.k=k;
+  e.innerHTML=ms.map(x=>`<button class="btn" data-almode="${esc(x.code)}">Annehmen: ${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</button>`).join('');
+  e.querySelectorAll('[data-almode]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();e.closest('.toast').remove();join(b.dataset.almode)})})}
 const ackGet=()=>{try{return JSON.parse(localStorage.getItem('sw_acked')||'[]')}catch(e){return[]}};
 function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}swNative('swAck',k)} // native App: ihre Meldung dazu schliessen
 // Systembenachrichtigung über den Service Worker (Issue #67), mit demselben tag wie die Push-Nachricht des Servers: ersetzt sie statt sie zu verdoppeln
@@ -736,7 +743,8 @@ function autoFit(){if(!autoView||!map)return;const pts=overviewPts(),k=JSON.stri
 // Ersetzt die Startansicht (startView) und endet beim Verschieben der Karte von Hand.
 const AREA_WAIT_MS=30000;let areaFocus=0;
 function focusArea(){areaFocus=Date.now();if(narrow())toggleSheet(false);areaFocusNow()}
-function areaFocusNow(){if(!areaFocus||!map||!st||!st.incident)return;if(Date.now()-areaFocus>AREA_WAIT_MS){areaFocus=0;return}
+function areaFocusNow(){if(!areaFocus||!map||!st||!st.incident)return;const z=map.getSize();if(!z.x||!z.y)return; // Karte noch ohne Grösse: beim nächsten Polling (wie _camOk nativ)
+  if(Date.now()-areaFocus>AREA_WAIT_MS){areaFocus=0;return}
   const b=areaBounds(),pls=plsList(),on=pls.filter(p=>p.on),pts=(on.length?on:pls).map(p=>[p.lat,p.lon]);if(!b&&!pts.length)return; // noch kein PLS: beim nächsten Polling
   fitted=st.incident.id;followId=null;endAuto();updateFollowChip();
   if(b){pts.forEach(p=>b.extend(p));areaFocus=0;return map.fitBounds(b,FITPAD)}
@@ -1308,7 +1316,7 @@ let timer;async function poll(){try{const nx=await api(`incident/state&since=${l
     else{if(st&&st.incident){const k=kindOf(st.incident).name,lv=st.level||'crit';incNotesClose(st.incident.id);if((st.alarm!==false||st.me)&&notify(k.toUpperCase()+' BEENDET',k+' beendet.','e:'+st.incident.id,st.end_level||(lv==='none'?'low':lv)))toggleSheet(true)}st=nx;lastIncId=null;vxPoll(nx);stop()}
     saveLast();setOffline(false);if(bootOff){bootOff=false;return render()} // offline gestartet: jetzt alles frisch laden
     paint()}catch(e){if(e instanceof TypeError)setOffline(true);console.error('Poll',e)}} // TypeError = keine Verbindung (fetch)
-function paint(){if(st&&st.incident)creating=false;baseSync();updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderHyd();renderVx();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
+function paint(){if(st&&st.incident)creating=false;alJoinSync();baseSync();updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderHyd();renderVx();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
 /* ---------- Funk & Konferenz (Issue #113): Kartenknopf «Funk», Seitenfenster, Sprechtaste auf der Karte, Live-Konferenz ---------- */
 // st.voice vom Server: ch (meine Kanäle mit speak), items (Durchsagen inkrementell nach upd, vs), conf (Konferenz verfügbar), conf_list (wer verbunden ist, muted), tr, max_s, listen, keep;
 // Einsatzleitung zusätzlich all_ch, inc_ch, guests, guest_speak, guest_links. Aufnahme, Wiedergabe und Konferenz in voice.js (VX).
