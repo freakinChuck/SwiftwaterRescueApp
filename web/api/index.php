@@ -236,7 +236,8 @@ if (setting('place_props_mig', '') === '') { if (!$db->query("SELECT COUNT(*) FR
 try { $db->exec("ALTER TABLE skills ADD COLUMN req_grp TEXT NULL"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE users ADD COLUMN purged INT DEFAULT 0"); } catch (Throwable $e) {}
 foreach (["users ADD COLUMN gid INT NULL", "absences ADD COLUMN gkey $tx NULL", "avail_rules ADD COLUMN gkey $tx NULL"] as $q) try { $db->exec("ALTER TABLE $q"); } catch (Throwable $e) {} // Mandanten (Issue #60): Konto der Plattform; gkey = derselbe Eintrag in allen Mandanten // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
-try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {} // persönlicher Testalarm (Issue #218): JSON {id, lvl, at}
+try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {}
+try { $db->exec("ALTER TABLE rescuees ADD COLUMN jkey $tx NULL"); } catch (Throwable $e) {} // gemeinsame Rettlinge verknüpfter Einsätze (Issue #60, pfResSync) // persönlicher Testalarm (Issue #218): JSON {id, lvl, at}
 if (setting('skill_y0_mig', '') === '') { $db->exec("UPDATE skills SET n=n-1 WHERE exp='year' AND n>0"); setSetting('skill_y0_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX voice_inc ON voice(incident_id,upd)"); } catch (Throwable $e) {}
@@ -4070,12 +4071,14 @@ switch ($route) {
       $db->prepare("UPDATE rescuees SET pls_lat=?, pls_lon=?, pls_at=? WHERE id=?")->execute([...$pls, $r['id']]);
       logev($inc['id'], $uid, 'rescuee', $plsTxt($name));
     }
+    pfResSync($inc['id'], $r['id'], 'rescuee', $r['name'] !== $name || (string)$r['descr'] !== $descr || ($hasPls && $old !== $pls) ? "bearbeitet den Rettling «{$name}»" : '');
     out(['ok' => true, 'id' => (int)$r['id']]);
   }
   $db->prepare("INSERT INTO rescuees(incident_id,name,descr,created_by,created,pls_lat,pls_lon,pls_at) VALUES(?,?,?,?,?,?,?,?)")->execute([$inc['id'], $name, $descr, $uid, $now, ...$pls]);
   $rid = (int)$db->lastInsertId();
   logev($inc['id'], $uid, 'rescuee', "erfasst den Rettling «{$name}»" . ($descr !== '' ? ": {$descr}" : ''));
   if ($pls[0] !== null) logev($inc['id'], $uid, 'rescuee', $plsTxt($name));
+  pfResSync($inc['id'], $rid, 'rescuee', "erfasst den Rettling «{$name}»" . ($descr !== '' ? ": {$descr}" : ''));
   out(['ok' => true, 'id' => $rid]);
 
  case 'incident/rescuee/locate': // own=1: eigener geteilter Standort (serverseitig), clear=1: Fundort zurücksetzen (Issue #85), sonst lat/lon (auf der Karte gewählt)
@@ -4087,6 +4090,7 @@ switch ($route) {
     $db->prepare("UPDATE rescuees SET lat=NULL, lon=NULL, loc_at=NULL, loc_by=NULL WHERE id=?")->execute([$r['id']]);
     if ((int)$inc['record'] === 1) $db->prepare("INSERT INTO track(incident_id,rescuee_id,ts,lat,lon) VALUES(?,?,?,NULL,NULL)")->execute([$inc['id'], $r['id'], $now]);
     logev($inc['id'], $uid, 'resmark', "setzt den Fundort von «{$r['name']}» zurück");
+    pfResSync($inc['id'], $r['id'], 'resmark', "setzt den Fundort von «{$r['name']}» zurück");
     out(['ok' => true]);
   }
   if (!empty($in['own'])) {
@@ -4099,7 +4103,8 @@ switch ($route) {
   }
   $db->prepare("UPDATE rescuees SET lat=?, lon=?, loc_at=?, loc_by=? WHERE id=?")->execute([$la, $lo, $now, $uid, $r['id']]);
   if ((int)$inc['record'] === 1) $db->prepare("INSERT INTO track(incident_id,rescuee_id,ts,lat,lon) VALUES(?,?,?,?,?)")->execute([$inc['id'], $r['id'], $now, $la, $lo]); // frühere Standorte fürs Replay
-  logev($inc['id'], $uid, 'resmark', sprintf('markiert den Standort von «%s» %s (%.5F, %.5F)', $r['name'], !empty($in['own']) ? 'am eigenen Standort' : 'auf der Karte', $la, $lo));
+  logev($inc['id'], $uid, 'resmark', $t = sprintf('markiert den Standort von «%s» %s (%.5F, %.5F)', $r['name'], !empty($in['own']) ? 'am eigenen Standort' : 'auf der Karte', $la, $lo));
+  pfResSync($inc['id'], $r['id'], 'resmark', $t);
   out(['ok' => true]);
 
  case 'incident/rescuee/rescued': // rescued=1 gerettet, 0 = zurücknehmen
@@ -4108,7 +4113,8 @@ switch ($route) {
   $r = rescuee($inc, $in['id'] ?? 0); $on = !empty($in['rescued']);
   if ($on === ($r['rescued_at'] !== null)) out(['ok' => true]); // unverändert, z. B. gleichzeitig von zwei Personen
   $db->prepare("UPDATE rescuees SET rescued_at=?, rescued_by=? WHERE id=?")->execute($on ? [$now, $uid, $r['id']] : [null, null, $r['id']]);
-  logev($inc['id'], $uid, 'rescued', $on ? "meldet «{$r['name']}» als gerettet" : "nimmt «gerettet» bei «{$r['name']}» zurück");
+  logev($inc['id'], $uid, 'rescued', $t = $on ? "meldet «{$r['name']}» als gerettet" : "nimmt «gerettet» bei «{$r['name']}» zurück");
+  pfResSync($inc['id'], $r['id'], 'rescued', $t);
   out(['ok' => true]);
 
  case 'incident/rescuee/remove': // nur Einsatzleitung (bleibt in der Datenbank, removed gesetzt)
@@ -4117,6 +4123,7 @@ switch ($route) {
   $r = rescuee($inc, $in['id'] ?? 0);
   $db->prepare("UPDATE rescuees SET removed=? WHERE id=?")->execute([$now, $r['id']]);
   logev($inc['id'], $uid, 'rescuee', "entfernt den Rettling «{$r['name']}»");
+  pfResSync($inc['id'], $r['id'], 'rescuee', "entfernt den Rettling «{$r['name']}»");
   out(['ok' => true]);
 
  // Externe Einsatzkräfte ohne App-Konto mit festem Standort (Issue #39): nur Einsatzleitung

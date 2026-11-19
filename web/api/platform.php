@@ -268,9 +268,9 @@ function pfJointLink($inc, $list, $leads = [], $ex = false) { global $PF, $now, 
   $j = pfJointOf(ctxOrg(), $inc['id']);
   if (!$j) { $PF->prepare("INSERT INTO pf_joint(host_org,host_inc,created) VALUES(?,?,?)")->execute([ctxOrg(), (int)$inc['id'], $now]); $jid = (int)$PF->lastInsertId();
     $PF->prepare("INSERT INTO pf_joint_inc(joint_id,org_id,incident_id,created) VALUES(?,?,?,?)")->execute([$jid, ctxOrg(), (int)$inc['id'], $now]); } else $jid = $j['id'];
-  $me = pfOrg(ctxOrg())['name'] ?? 'Organisation'; $have = []; foreach (pfJointIncs($jid) as $x) $have[$x['org']] = $x['inc']; $out = [];
+  $seed = pfResAll((int)$inc['id']); $me = pfOrg(ctxOrg())['name'] ?? 'Organisation'; $have = []; foreach (pfJointIncs($jid) as $x) $have[$x['org']] = $x['inc']; $out = [];
   foreach ($list as [$o, $gs, $bk, $on]) { $bid = $have[$o] ?? null; $ld = array_values(array_map('intval', $leads[$o] ?? $leads[(string)$o] ?? []));
-    $r = pfIn($o, function ($x) use ($inc, $gs, $bk, $bid, $me, $ld, $ex) { global $now; $ks = kinds(); $k = $ks[$bk] ?? null;
+    $r = pfIn($o, function ($x) use ($inc, $gs, $bk, $bid, $me, $ld, $ex, $seed) { global $now; $ks = kinds(); $k = $ks[$bk] ?? null;
       if (!$k || !$k['active'] || $k['deleted']) return 'Der vereinbarte Einsatztyp ist dort nicht aktiv';
       $gn = array_column(grpRows(true), 'name', 'id'); $gs = array_values(array_filter($gs, fn($g) => isset($gn[$g]))); if (!$gs) return 'Die Einsatzgruppen sind dort nicht aktiv';
       $lu = []; if ($ld) { $s = $x->prepare("SELECT id FROM users WHERE active=1 AND gid IN (" . implode(',', array_fill(0, count($ld), '?')) . ")"); $s->execute($ld); $lu = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN)); }
@@ -286,7 +286,7 @@ function pfJointLink($inc, $list, $leads = [], $ex = false) { global $PF, $now, 
       $msg = $inc['message'] . ' (gemeinsam mit «' . $me . '»)'; $air = airCfg()['on'] ? airDef($bk) : null; $rec = $k['rec'] && features($bk)['rec'] ? 1 : 0;
       $x->prepare("INSERT INTO incidents(message,lat,lon,pls_at,alarm_at,created_by,is_exercise,air,kind_id,invite,inv_groups,inv_absent) VALUES(?,?,?,?,?,NULL,?,?,?,?,?,?)")
         ->execute([$msg, $inc['lat'], $inc['lon'], $inc['pls_at'] ?? null, (int)$inc['alarm_at'], $k['plans'] ? 1 : 0, $air, $bk, json_encode($ids), json_encode(['g' => $gs, 'p' => []]), $abs ? json_encode($abs) : null]);
-      $nid = (int)$x->lastInsertId(); if ($rec) setRec($nid, 1);
+      $nid = (int)$x->lastInsertId(); if ($rec) setRec($nid, 1); foreach ($seed as $sr) pfResPut($x, $nid, $sr); // bestehende Rettlinge übernehmen (gemeinsam)
       logev($nid, null, 'start', '«' . $me . '» hat ' . ($ex ? 'die gemeinsame Übung' : 'den gemeinsamen Einsatz') . ' ausgelöst (' . $k['name'] . ($rec ? ', mit Aufzeichnung' : '') . '): ' . $inc['message']);
       logev($nid, null, 'invite', 'aufgeboten: ' . $txt . ' (' . (count($ids) === 1 ? '1 Person' : count($ids) . ' Personen') . ($abs ? ', davon ' . absText(count($abs)) : '') . ')');
       $s = $x->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([$nid]); $b = $s->fetch(); $s->closeCursor(); pushAlarm($b, array_merge($abs, $lu), $ids);
@@ -295,6 +295,26 @@ function pfJointLink($inc, $list, $leads = [], $ex = false) { global $PF, $now, 
     if (!$bid) $PF->prepare("INSERT INTO pf_joint_inc(joint_id,org_id,incident_id,leads,created) VALUES(?,?,?,?,?)")->execute([$jid, $o, $r[0], $ld ? json_encode($ld) : null, $now]);
     $out[] = ['o' => $o, 'n' => $on, 'g' => $gs, 'gn' => $r[3], 'c' => $r[1], 'a' => $r[2]]; }
   return $out; }
+// Gemeinsame Rettlinge (Rückmeldung zu #60): jede Änderung an einem Rettling eines verknüpften Einsatzes wird in alle übrigen verknüpften Einsätze gespiegelt.
+// Gleicher Rettling = gleicher Schlüssel rescuees.jkey; Personen-IDs (loc_by, rescued_by, created_by) bleiben in den anderen leer, das Log nennt «Name (Organisation)».
+const PF_RES_F = ['name', 'descr', 'lat', 'lon', 'loc_at', 'rescued_at', 'removed', 'pls_lat', 'pls_lon', 'pls_at'];
+function pfResKey(&$r) { global $db; if (empty($r['jkey'])) { $r['jkey'] = bin2hex(random_bytes(8)); $db->prepare("UPDATE rescuees SET jkey=? WHERE id=?")->execute([$r['jkey'], $r['id']]); } return $r; }
+function pfResAll($inc) { global $db; $s = $db->prepare("SELECT * FROM rescuees WHERE incident_id=? AND removed IS NULL ORDER BY id"); $s->execute([(int)$inc]); return array_map('pfResKey', $s->fetchAll()); }
+function pfResPut($x, $inc, $r, $kind = '', $actor = '', $text = '') { global $now; // in der Datenbank $x (Callback von pfIn)
+  try { $x->exec("ALTER TABLE rescuees ADD COLUMN jkey VARCHAR(40) NULL"); } catch (Throwable $e) {} // ältere Datenbank des Partners
+  $s = $x->prepare("SELECT id,record FROM incidents WHERE id=? AND ended_at IS NULL"); $s->execute([(int)$inc]); $i = $s->fetch(); $s->closeCursor(); if (!$i) return;
+  $s = $x->prepare("SELECT id,lat,lon FROM rescuees WHERE incident_id=? AND jkey=?"); $s->execute([(int)$inc, $r['jkey']]); $o = $s->fetch(); $s->closeCursor();
+  $v = array_map(fn($k) => $r[$k] ?? null, PF_RES_F);
+  if ($o) { $x->prepare("UPDATE rescuees SET " . implode(',', array_map(fn($k) => "$k=?", PF_RES_F)) . " WHERE id=?")->execute([...$v, $o['id']]); $id = (int)$o['id']; }
+  else { $x->prepare("INSERT INTO rescuees(incident_id,jkey,created," . implode(',', PF_RES_F) . ") VALUES(?,?,?" . str_repeat(',?', count(PF_RES_F)) . ")")->execute([(int)$inc, $r['jkey'], $r['created'] ?? $now, ...$v]); $id = (int)$x->lastInsertId(); }
+  $moved = $o ? [$o['lat'], $o['lon']] != [$r['lat'], $r['lon']] : $r['lat'] !== null;
+  if ($moved && (int)$i['record'] === 1) $x->prepare("INSERT INTO track(incident_id,rescuee_id,ts,lat,lon) VALUES(?,?,?,?,?)")->execute([(int)$inc, $id, $now, $r['lat'], $r['lon']]);
+  if ($text !== '') $x->prepare("INSERT INTO incident_log(incident_id,ts,user_id,kind,text,actor) VALUES(?,?,NULL,?,?,?)")->execute([(int)$inc, $now, $kind, $text, $actor]); }
+function pfResSync($incId, $rid, $kind = '', $text = '') { global $db, $me; $j = pfJointOf(ctxOrg(), (int)$incId); if (!$j) return;
+  $s = $db->prepare("SELECT * FROM rescuees WHERE id=?"); $s->execute([(int)$rid]); $r = $s->fetch(); $s->closeCursor(); if (!$r) return; pfResKey($r);
+  $actor = ($me['name'] ?? 'System') . ' (' . (pfOrg(ctxOrg())['name'] ?? 'Organisation') . ')';
+  foreach (pfJointIncs($j['id']) as $x) { if ($x['org'] === ctxOrg() && $x['inc'] === (int)$incId) continue;
+    pfIn($x['org'], fn($xd) => pfResPut($xd, $x['inc'], $r, $kind, $actor, $text)); } }
 // Lage der verknüpften Einsätze der anderen Organisationen für die Karte (wie incOther, dazu feste Standorte und Fahrzeuge), 3 s zwischengespeichert
 function pfJointOthers($j, $selfInc) { $r = [];
   foreach (pfJointIncs($j['id']) as $x) { if ($x['org'] === ctxOrg() && $x['inc'] === (int)$selfInc) continue; $org = pfOrg($x['org']); if (!$org) continue;
@@ -302,6 +322,10 @@ function pfJointOthers($j, $selfInc) { $r = [];
     if (!is_array($c) || ($c['at'] ?? 0) < time() - 3) { $c = pfIn($x['org'], function ($db) use ($x) { $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([$x['inc']]); $i = $s->fetch(); $s->closeCursor(); if (!$i) return null;
         $k = kindOf($i); $F = features($i['kind_id']); $o = incOther($i); $rn = $db->query("SELECT id,name FROM roles")->fetchAll(PDO::FETCH_KEY_PAIR);
         $o['ppl'] = array_map(fn($p) => ['id' => $p['id'], 'name' => $p['name'], 'role' => $p['role_id'] !== null ? ($rn[$p['role_id']] ?? null) : null, 'role_id' => null, 'lat' => $p['lat'], 'lon' => $p['lon']], $o['ppl']);
+        // Listen für die Fenster der Partner (nur lesend): alle aktiven Einsatzkräfte, auch ohne Standort, und alle Rettlinge
+        $mn = $db->query("SELECT code,name FROM modes")->fetchAll(PDO::FETCH_KEY_PAIR); $s = $db->prepare("SELECT p.user_id,p.role_id,p.mode,p.lat,p.lon,p.loc_at,u.name FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=? AND p.mode<>'declined' AND p.left_at IS NULL ORDER BY u.name"); $s->execute([$x['inc']]);
+        $o['team'] = array_map(fn($p) => ['name' => $p['name'], 'role' => $p['role_id'] !== null ? ($rn[$p['role_id']] ?? null) : null, 'mode' => $mn[$p['mode']] ?? null, 'lat' => $p['lat'] !== null ? (float)$p['lat'] : null, 'lon' => $p['lon'] !== null ? (float)$p['lon'] : null, 'loc_at' => $p['loc_at'] !== null ? (int)$p['loc_at'] : null], $s->fetchAll());
+        $o['res'] = []; $o['pls'] = array_values(array_filter($o['pls'], fn($p) => empty($p['own']))); // Rettlinge sind gemeinsam (pfResSync), stehen also schon im eigenen Einsatz
         return $o + ['ended' => $i['ended_at'] !== null ? 1 : 0, 'message' => (int)$i['txt_anon'] ? '' : $i['message'], 'kind_name' => $k['name'], 'kind_color' => $k['color'],
           'places' => incPlaces($i), 'veh' => $F['veh'] && vehVisible($i) ? vehState($i, true) : null, 'msg' => $F['msg'], 'conf' => voiceConfOn($i) ? 1 : 0]; });
       if ($c === null) $c = ['id' => $x['inc'], 'down' => 1]; $c['at'] = time(); @mkdir(dirname($f), 0775, true); @file_put_contents($f, json_encode($c, JSON_UNESCAPED_UNICODE), LOCK_EX); }

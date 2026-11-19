@@ -339,3 +339,33 @@ Widget avatar(J p, {double r = 16, Color? border}) {
       decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: border ?? Colors.white, width: 2.5)),
       child: CircleAvatar(radius: r, backgroundColor: appBlue, backgroundImage: img, child: img == null ? Text(n, style: TextStyle(fontSize: r * .7, color: Colors.white)) : null));
 }
+
+// Verknüpfte Einsätze von Partnerorganisationen (Issue #60): Listen in den Fenstern «Einsatzkräfte» und «Markierungen», nur lesend
+List<J> jointParts(IncStore s) => s.inc == null ? <J>[] : s.others.where((o) => jn(o['joint']) == 1).toList();
+String jointName(J o) => '${js(o['org_name'])} · Partnerorganisation${jn(o['host']) == 1 ? ' (auslösend)' : ''}';
+const jointDown = Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Mut('Die Partnerorganisation ist gerade nicht erreichbar.'));
+
+/// Zeile mit «Zentrieren»/«Zeigen» (ein Punkt: Karte schieben, mehrere: Ausschnitt) und 🧭
+Widget jointRow(BuildContext context, IncStore s, MapCtl map, String name, String sub, List<LatLng> pts, {String btn = 'Zentrieren'}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+      if (sub.isNotEmpty) Mut(sub, size: 12),
+      if (pts.isNotEmpty)
+        Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              OutlinedButton(
+                  onPressed: () {
+                    pts.length > 1 ? map.fitPts(pts) : map.centerOn(pts.first);
+                    if (MediaQuery.sizeOf(context).width < 760) map.openPanel(null);
+                  },
+                  child: Text(btn)),
+              ?navBtn(s, pts.first.latitude, pts.first.longitude, name),
+            ])),
+    ]));
+
+/// Punkte eines Eintrags ([[lat, lon], …] oder lat/lon)
+List<LatLng> jointPts(dynamic v) => v is List
+    ? v.whereType<List>().where((p) => p.length >= 2 && jd(p[0]) != null && jd(p[1]) != null).map((p) => LatLng(jd(p[0])!, jd(p[1])!)).toList()
+    : <LatLng>[];
