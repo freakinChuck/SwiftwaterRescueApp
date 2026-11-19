@@ -1340,8 +1340,11 @@ class _InvPick extends StatelessWidget {
     Widget row(Widget ctl, Widget t) => Row(children: [ctl, Expanded(child: t)]);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
       const Padding(padding: EdgeInsets.only(top: 4, bottom: 2), child: Text('Aufgebot', style: TextStyle(fontWeight: FontWeight.bold))),
+      // eigene Organisation und Partner getrennt (Issue #60, wie invPick in index.html)
+      if (xo.isNotEmpty) const Padding(padding: EdgeInsets.only(top: 4), child: Text('Eigene Organisation', style: TextStyle(fontWeight: FontWeight.w600))),
       if (allowed == null) ...[
-        row(Checkbox(value: v.all, onChanged: (x) => ss(() => v.all = x == true)), const Text('Alle aufbietbaren Personen alarmieren')),
+        row(Checkbox(value: v.all, onChanged: (x) => ss(() => v.all = x == true)),
+            Text(jl(o['groups']).isNotEmpty ? 'Alle aufbietbaren Personen alarmieren' : 'Alle Personen dieser Organisation alarmieren')),
         if (na > 0) Mut('$na ${na == 1 ? 'Person ist' : 'Personen sind'} abwesend und ${na == 1 ? 'wird' : 'werden'} nicht alarmiert.'),
       ],
       Opacity(
@@ -1396,13 +1399,21 @@ class _InvPick extends StatelessWidget {
           ],
         ]),
       ),
-      if (jl(o['groups']).isEmpty) const Mut('Ohne Auswahl werden alle Personen dieser Organisation alarmiert.'),
+      if (jl(o['groups']).isEmpty)
+        Mut(xo.isEmpty
+            ? 'Ohne Auswahl werden alle Personen dieser Organisation alarmiert.'
+            : 'Ohne Auswahl werden alle Personen dieser Organisation alarmiert, ausser es ist eine Partnerorganisation gewählt: dann nur diese.'),
+      if (xo.isNotEmpty) ...[
+        const Divider(height: 18),
+        const Text('Partnerorganisationen', style: TextStyle(fontWeight: FontWeight.w600)),
+        const Mut('Jede gewählte Partnerorganisation erhält einen eigenen, verknüpften Einsatz und alarmiert nur die gewählten Gruppen.'),
+      ],
       for (final x in xo) ...[
         Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 2),
             child: Text.rich(TextSpan(children: [
               TextSpan(text: js(x['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
-              TextSpan(text: '  Partnerorganisation, eigener verknüpfter Einsatz «${js(jm(x['kinds'])['${ji(k['id'])}'])}»', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              TextSpan(text: '  Einsatztyp dort: ${js(jm(x['kinds'])['${ji(k['id'])}'])}', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ]))),
         for (final g in jl(x['groups']))
           row(
@@ -1422,6 +1433,8 @@ class _InvPick extends StatelessWidget {
                     style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ]))),
       ],
+      if (!v.all && v.groups.isEmpty && v.persons.isEmpty && v.ext.values.any((e) => e.isNotEmpty))
+        const Mut('Aus der eigenen Organisation wird niemand alarmiert, nur die gewählten Partnerorganisationen.'),
     ]);
   }
 }
