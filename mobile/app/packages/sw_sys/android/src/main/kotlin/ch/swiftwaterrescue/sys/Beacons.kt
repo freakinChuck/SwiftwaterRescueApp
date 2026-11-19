@@ -15,6 +15,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.ParcelUuid
 import org.json.JSONObject
 
 // Fahrzeuge mit BLE-Beacons (Issue #177): iBeacons erkennen (Herstellerdaten von Apple 0x004C, Typ 0x02 0x15, UUID, Major, Minor, Sendeleistung).
@@ -22,9 +23,12 @@ import org.json.JSONObject
 // watch: stromsparender Hintergrund-Scan über PendingIntent mit Hardware-Filter auf die UUIDs (SCAN_MODE_LOW_POWER). Der Bluetooth-Chip filtert
 // selbst; das System weckt nur den Empfänger BeaconReceiver, der die Sichtung in SharedPreferences ablegt. Die App holt sie mit pending ab
 // (Vordergrunddienst bei jeder Abfrage, App beim Start), der Standort kommt von dort. Ohne laufenden Prozess startet Android den Empfänger selbst.
+// Batteriestand (Issue #224): DX-Smart sendet ihn im Frame «Device Info» als Service-Daten 0xFEAB (Byte 0 = Prozent, danach optional die
+// MAC-Adresse in 6 Bytes). Der aktive Scan sucht ihn mit und hängt ihn über die Geräteadresse an das iBeacon desselben Geräts.
 object Beacons {
     private const val PREFS = "sw_beacons"
     private const val APPLE = 0x004C
+    private val DX_INFO: ParcelUuid = ParcelUuid.fromString("0000FEAB-0000-1000-8000-00805F9B34FB")
     private val main = Handler(Looper.getMainLooper())
 
     fun permitted(c: Context): Boolean =
@@ -54,6 +58,16 @@ object Beacons {
         return Triple(uuid, major, minor)
     }
 
+    /** Frame «Device Info» von DX-Smart: (MAC «AA:BB:…», Prozent) oder null; ohne MAC im Frame die Geräteadresse */
+    fun parseBatt(r: ScanResult): Pair<String, Int>? {
+        val d = r.scanRecord?.getServiceData(DX_INFO) ?: return null
+        if (d.isEmpty()) return null
+        val pct = d[0].toInt() and 0xFF
+        if (pct > 100) return null
+        val mac = if (d.size >= 7) (1..6).joinToString(":") { "%02X".format(d[it]) } else (r.device?.address ?: return null).uppercase()
+        return Pair(mac, pct)
+    }
+
     /** Filter auf iBeacons, je UUID einer (leer = alle iBeacons, für «Beacon einlernen») */
     private fun filters(uuids: List<String>): List<ScanFilter> {
         if (uuids.isEmpty()) return listOf(ScanFilter.Builder().setManufacturerData(APPLE, byteArrayOf(0x02, 0x15), byteArrayOf(-1, -1)).build())
@@ -68,7 +82,8 @@ object Beacons {
         }
     }
 
-    /** Aktiver Scan für ms Millisekunden; Ergebnis über done (Liste von Maps uuid, major, minor, rssi) */
+    /** Aktiver Scan für ms Millisekunden; Ergebnis über done: iBeacons (uuid, major, minor, rssi, dazu mac und batt, wenn dasselbe Gerät den
+     *  Frame «Device Info» sendet) und Geräte, von denen nur dieser Frame kam (mac, batt, rssi) */
     @SuppressLint("MissingPermission")
     fun scan(c: Context, uuids: List<String>, ms: Long, done: (List<Map<String, Any>>) -> Unit) {
         val s = scanner(c)
@@ -76,10 +91,18 @@ object Beacons {
             done(emptyList()); return
         }
         val best = HashMap<String, MutableMap<String, Any>>()
+        val addr = HashMap<String, String>() // Schlüssel des iBeacons → Geräteadresse
+        val batt = HashMap<String, MutableMap<String, Any>>() // Geräteadresse → mac, batt, rssi
         val cb = object : ScanCallback() {
             override fun onScanResult(type: Int, r: ScanResult) {
+                val a = r.device?.address?.uppercase() ?: ""
+                parseBatt(r)?.let { (mac, pct) ->
+                    val o = batt[a]
+                    batt[a] = mutableMapOf("mac" to mac, "batt" to pct, "rssi" to maxOf(r.rssi, (o?.get("rssi") as? Int) ?: -127))
+                }
                 val b = parse(r) ?: return
                 val k = "${b.first}|${b.second}|${b.third}"
+                if (a.isNotEmpty()) addr[k] = a
                 val o = best[k]
                 if (o == null || (o["rssi"] as Int) < r.rssi) best[k] = mutableMapOf("uuid" to b.first, "major" to b.second, "minor" to b.third, "rssi" to r.rssi)
             }
@@ -87,7 +110,7 @@ object Beacons {
             override fun onBatchScanResults(rs: MutableList<ScanResult>) = rs.forEach { onScanResult(0, it) }
         }
         try {
-            s.startScan(filters(uuids), ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_BALANCED).build(), cb)
+            s.startScan(filters(uuids) + ScanFilter.Builder().setServiceData(DX_INFO, ByteArray(0)).build(), ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_BALANCED).build(), cb)
         } catch (_: Exception) {
             done(emptyList()); return
         }
@@ -96,7 +119,9 @@ object Beacons {
                 s.stopScan(cb)
             } catch (_: Exception) {
             }
-            done(best.values.map { it.toMap() })
+            val used = HashSet<String>()
+            for ((k, o) in best) addr[k]?.let { a -> batt[a]?.let { b -> o["mac"] = b["mac"]!!; o["batt"] = b["batt"]!!; used.add(a) } }
+            done(best.values.map { it.toMap() } + batt.filterKeys { it !in used }.values.map { it.toMap() })
         }, ms)
     }
 

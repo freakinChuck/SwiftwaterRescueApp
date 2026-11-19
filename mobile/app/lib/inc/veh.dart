@@ -48,12 +48,22 @@ String vehAgo(num? ts, num now) {
   return 'am ${fmtDT(ts)}';
 }
 
+/// Batteriestand des Beacons (Issue #224): «Batterie 80 %», schwach ab vehBattLow, Stand älter als 1 Tag mit Zeitpunkt; null = unbekannt
+const vehBattLow = 20;
+String? vehBatt(IncStore s, J v) {
+  final p = ji(v['batt']);
+  if (p == null) return null;
+  final at = jn(v['batt_at']);
+  return '${p <= vehBattLow ? '⚠ Batterie schwach' : 'Batterie'} $p %${at != null && s.now - at > 86400 ? ' (${vehAgo(at, s.now)})' : ''}';
+}
+
 String vehInfo(IncStore s, J v) {
   final c = vehById(s, v['carrier_id']);
   return [
     js(vehKind(s, v)['name']),
     if (c != null) '${_hang(s, c) ? 'an' : 'auf'} «${js(c['name'])}»',
     '${jb(v['inc']) ? 'gesehen' : 'zuletzt gesehen'} ${vehAgo(jn(v['seen_at']), s.now)}',
+    ?vehBatt(s, v),
   ].join(' · ');
 }
 
@@ -270,6 +280,7 @@ Widget? vehScanBtn(BuildContext context, IncStore s) {
 }
 
 String _sig(int r) => '${r >= -60 ? 'stark' : r >= -75 ? 'mittel' : 'schwach'} ($r dBm)';
+String _bt(int? p) => p == null ? '' : ' · ${p <= vehBattLow ? '⚠ Batterie schwach' : 'Batterie'} $p %';
 
 /// Sucht etwa 6 s nach den Beacons, meldet sie (IncStore.scanVehicles) und zeigt, was gefunden und gemeldet wurde
 Future<void> vehScanDlg(BuildContext context, IncStore s) async {
@@ -295,14 +306,25 @@ Future<void> vehScanDlg(BuildContext context, IncStore s) async {
                             Mut('Die App sucht einige Sekunden nach den Beacons der Fahrzeuge.'),
                           ])
                         : ListView(shrinkWrap: true, children: [
-                            for (final b in x.found)
+                            for (final b in x.found.where((b) => b['id'] != null))
                               ListTile(
                                   dense: true,
                                   contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Icons.directions_car),
+                                  leading: Icon(Icons.directions_car, color: (ji(b['batt']) ?? 100) <= vehBattLow ? const Color(0xFFE57373) : null),
                                   title: Text(js(b['name'])),
-                                  subtitle: Text('Signal ${_sig(ji(b['rssi']) ?? -127)}')),
+                                  subtitle: Text('Signal ${_sig(ji(b['rssi']) ?? -127)}${_bt(ji(b['batt']))}')),
                             Padding(padding: const EdgeInsets.only(top: 8), child: Text(x.msg, style: TextStyle(color: x.ok ? null : const Color(0xFFE57373)))),
+                            if (x.found.any((b) => b['id'] == null)) ...[
+                              const Padding(padding: EdgeInsets.only(top: 12), child: Text('Weitere Beacons in der Nähe', style: TextStyle(fontWeight: FontWeight.w600))),
+                              const Mut('Senden den Batteriestand, gehören aber zu keinem Fahrzeug. Die MAC-Adresse lässt sich beim Fahrzeug in der Verwaltung eintragen.', size: 12),
+                              for (final b in x.found.where((b) => b['id'] == null))
+                                ListTile(
+                                    dense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: const Icon(Icons.bluetooth),
+                                    title: Text(js(b['mac'])),
+                                    subtitle: Text('Signal ${_sig(ji(b['rssi']) ?? -127)}${_bt(ji(b['batt']))}')),
+                            ],
                           ])),
                 actions: [
                   if (x != null)

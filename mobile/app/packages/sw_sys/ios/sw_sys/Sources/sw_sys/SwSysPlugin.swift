@@ -1,3 +1,4 @@
+import CoreBluetooth
 import CoreLocation
 import Flutter
 import UIKit
@@ -11,7 +12,10 @@ import UIKit
 //   Bei jedem Aufruf fragt es zusätzlich den Zustand der Regionen ab (requestState): Wer schon beim Fahrzeug ist, betritt die Region nicht neu.
 // Ohne «Genauer Standort» (reduzierte Genauigkeit) gibt es weder Ranging noch Region Monitoring: Zustand 3, requestBluetooth bittet dann
 // um den genauen Standort für diese Nutzung (Schlüssel «beacons» in NSLocationTemporaryUsageDescriptionDictionary).
-public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
+// Batteriestand (Issue #224): iBeacon-Frames sieht nur CoreLocation, den Frame «Device Info» von DX-Smart (Service-Daten 0xFEAB, Byte 0 = Prozent,
+// Bytes 1–6 = MAC) nur CoreBluetooth. beaconScan sucht ihn deshalb parallel und liefert ihn als eigene Einträge {mac, batt, rssi}; die App ordnet
+// ihn über die MAC des Fahrzeugs zu. Ohne MAC im Frame (nur 1 Byte) lässt er sich unter iOS keinem Gerät zuordnen und fällt weg.
+public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate, CBCentralManagerDelegate {
     private let lm = CLLocationManager()
     private var channel: FlutterMethodChannel?
     private var scanBest: [String: [String: Any]]? = nil // laufender Scan
@@ -19,6 +23,9 @@ public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
     private var scanCons: [CLBeaconIdentityConstraint] = []
     private var bgCons: [CLBeaconIdentityConstraint] = []
     private var bgTask: UIBackgroundTaskIdentifier = .invalid
+    private var cm: CBCentralManager? = nil // nur während eines Scans
+    private var battBest: [String: [String: Any]] = [:]
+    private static let dxInfo = CBUUID(string: "FEAB")
     private static let pendingKey = "sw_beacons_pending", prefix = "sw-veh-"
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -58,6 +65,8 @@ public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
             scanResult = result
             scanCons = uuids.map { CLBeaconIdentityConstraint(uuid: $0) }
             scanCons.forEach { lm.startRangingBeacons(satisfying: $0) }
+            battBest = [:]
+            cm = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: false])
             DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(ms)) { [weak self] in self?.finishScan() }
         case "beaconWatch":
             let want = Set(uuids.map { SwSysPlugin.prefix + $0.uuidString })
@@ -89,10 +98,28 @@ public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
     private func finishScan() {
         scanCons.forEach { lm.stopRangingBeacons(satisfying: $0) }
         scanCons = []
+        if cm?.state == .poweredOn { cm?.stopScan() }
+        cm = nil
         let r = scanResult, b = scanBest
         scanResult = nil
         scanBest = nil
-        r?(Array((b ?? [:]).values))
+        r?(Array((b ?? [:]).values) + Array(battBest.values))
+        battBest = [:]
+    }
+
+    public func centralManagerDidUpdateState(_ c: CBCentralManager) {
+        if c === cm, c.state == .poweredOn { c.scanForPeripherals(withServices: [SwSysPlugin.dxInfo], options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]) }
+    }
+
+    public func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData ad: [String: Any], rssi: NSNumber) {
+        guard c === cm, let sd = ad[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data], let d = sd[SwSysPlugin.dxInfo], d.count >= 7 else { return }
+        let b = [UInt8](d)
+        if b[0] > 100 { return }
+        let mac = b[1...6].map { String(format: "%02X", $0) }.joined(separator: ":")
+        let r = rssi.intValue
+        if r == 127 || r == 0 { return }
+        if let o = battBest[mac], (o["rssi"] as? Int ?? -127) >= r { return }
+        battBest[mac] = ["mac": mac, "batt": Int(b[0]), "rssi": r]
     }
 
     private static func key(_ b: CLBeacon) -> String { "\(b.uuid.uuidString)|\(b.major)|\(b.minor)" }

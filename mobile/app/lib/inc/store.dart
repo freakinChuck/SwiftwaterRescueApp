@@ -775,7 +775,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       );
     }
     final found = await Beacons.scanNow(acc);
-    if (found.isEmpty) return (found: found, msg: 'Kein Fahrzeug in der Nähe gefunden.', ok: true);
+    if (!found.any((b) => b['id'] != null)) return (found: found, msg: 'Kein Fahrzeug in der Nähe gefunden.', ok: true);
     if (sharing && manualPos == null && _lastPos != null) {
       await _sendPos(_lastPos!);
       return (found: found, msg: 'Mit deinem Standort im Einsatz gemeldet.', ok: true);
@@ -936,6 +936,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         'lat': p.latitude,
         'lon': p.longitude,
         'beacons': ?bs,
+        if (bs != null) 'batt': ?Beacons.battFor(acc), // Batteriestand (Issue #224)
         if (manualPos == null && devPos != null) 'acc': devPos!.accuracy,
         // Gewässer nur, wenn der angezeigte Einsatz der eigene ist (sonst ist das Gewässernetz eines anderen geladen, Issue #167)
         'water': !otherShown && waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()) < waterM ? 1 : 0,

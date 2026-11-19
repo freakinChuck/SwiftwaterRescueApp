@@ -18,6 +18,8 @@
 	<string>Swiftwater Rescue</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Im Einsatz teilst du deinen Standort mit der Einsatzleitung und siehst dich auf der Karte.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Beim Scannen der Fahrzeuge liest die App den Batteriestand ihrer Beacons.</string>
 	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
 	<dict>
 		<key>beacons</key>
