@@ -271,13 +271,30 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     _autoBusy = false;
   }
 
+  /// Karte hat eine echte Grösse. Nach dem Antippen einer Meldung (App kalt gestartet bzw. aus dem Hintergrund geholt) meldet
+  /// flutter_map onMapReady, bevor das System die Grösse des Bildschirms liefert (0 × 0 bzw. kImpossibleSize). Ein fitCamera gegen
+  /// diese Grösse ergibt Zoom 0 bzw. NaN, die Karte blieb grau ohne Kacheln.
+  bool get _camOk {
+    final z = mc.camera.nonRotatedSize;
+    return z.width > 0 && z.height > 0 && z.width.isFinite && z.height.isFinite;
+  }
+
+  List<LatLng>? _fitLater; // Ausschnitt, der auf die Grösse der Karte wartet
+
   void _fitRaw(List<LatLng> pts) {
     if (!_mapReady || pts.isEmpty) return;
+    if (!_camOk) {
+      _fitLater = pts; // nachgeholt bei MapEventNonRotatedSizeChange
+      return;
+    }
+    _fitLater = null;
     if (pts.length == 1 || pts.every((p) => geoDist(p, pts.first) < 20)) {
       mc.move(pts.first, 15);
     } else {
       mc.fitCamera(CameraFit.coordinates(coordinates: pts, padding: _fitPad, maxZoom: 17));
     }
+    final c = mc.camera; // Rückfall, falls die Anpassung trotzdem keinen gültigen Ausschnitt ergab
+    if (!c.zoom.isFinite || !c.center.latitude.isFinite || !c.center.longitude.isFinite) mc.move(pts.first, 13);
   }
 
   void _stopFollow() {
@@ -1520,29 +1537,85 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         _ => null,
       };
 
-  Widget _alarm(AlarmItem a) => Positioned.fill(
-      child: Material(
-          color: a.lvl == 'crit' ? const Color(0xF0B71C1C) : const Color(0xF0E65100),
-          child: SafeArea(
-              child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    const Icon(Icons.notifications_active, size: 72, color: Colors.white),
-                    const SizedBox(height: 16),
-                    Text(a.title, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-                    Text(a.body, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 20)),
-                    const SizedBox(height: 8),
-                    Text(widget.account.label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
-                    const SizedBox(height: 32),
-                    FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 18)),
-                        onPressed: () async {
-                          await s.ackAlarm();
-                          if (s.alarm == null && a.key.startsWith('i:')) _sk.currentState?.openDrawer();
-                        },
-                        child: const Text('Quittieren', style: TextStyle(fontSize: 20))),
-                  ])))));
+  /// Einrückoptionen im Alarm-Vollbild: nur für den angezeigten Einsatz, solange man nicht teilnimmt (nicht für die Übungsleitung),
+  /// dieselben wie in der Karte «Teilnahme» des Menüs (aktive Optionen der Kategorie des Einsatzes)
+  List<J> _alarmModes(AlarmItem a) {
+    final id = int.tryParse(RegExp(r'^i:(\d+)$').firstMatch(a.key)?.group(1) ?? '');
+    if (id == null || ji(s.inc?['id']) != id || s.joined || s.exLead || jb(s.st?['blocked'])) return const [];
+    return s.iModes.where((x) => jb(x['active'])).toList();
+  }
+
+  bool _alarmBusy = false;
+
+  /// Direkt aus dem Alarm annehmen: wie _join im Menü, danach quittieren und das Einsatzgebiet zeigen
+  /// (Teilen im Hintergrund startet IncStore nach dem Polling selbst, _trackNow)
+  Future<void> _alarmJoin(AlarmItem a, J x) async {
+    if (_alarmBusy) return;
+    final o = s.myInc, i = s.inc;
+    if (o != null && i != null && ji(o['id']) != ji(i['id']) &&
+        !await confirmDlg(context, 'Du nimmst an «${js(o['kind_name'])}: ${js(o['message'])}» teil. Diesen Einsatz annehmen und den anderen verlassen?', ok: 'Annehmen')) {
+      return;
+    }
+    setState(() => _alarmBusy = true);
+    final r = await s.act('incident/join', {'mode': x['code']});
+    if (!mounted) return;
+    setState(() => _alarmBusy = false);
+    if (r == null) return; // Fehler: Hinweis kam von act, der Alarm bleibt
+    if (s.alarm?.key == a.key) await s.ackAlarm();
+    if (mounted) focusArea();
+  }
+
+  Widget _alarm(AlarmItem a) {
+    final ms = _alarmModes(a);
+    final fill = FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16));
+    return Positioned.fill(
+        child: Material(
+            color: a.lvl == 'crit' ? const Color(0xF0B71C1C) : const Color(0xF0E65100),
+            child: SafeArea(
+                child: LayoutBuilder(
+                    builder: (c, bc) => SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: math.max(0, bc.maxHeight - 48)),
+                            child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                              const Icon(Icons.notifications_active, size: 72, color: Colors.white),
+                              const SizedBox(height: 16),
+                              Text(a.title, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 12),
+                              Text(a.body, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 20)),
+                              const SizedBox(height: 8),
+                              Text(widget.account.label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+                              const SizedBox(height: 32),
+                              // Annehmen direkt im Alarm: eine Taste je Einrückoption
+                              for (final x in ms) ...[
+                                FilledButton(
+                                    style: fill,
+                                    onPressed: _alarmBusy ? null : () => _alarmJoin(a, x),
+                                    child: Text('Annehmen: ${js(x['name'])}${jb(x['share_location']) ? '' : ' (ohne Standort)'}',
+                                        textAlign: TextAlign.center, style: const TextStyle(fontSize: 18))),
+                                const SizedBox(height: 10),
+                              ],
+                              if (ms.isNotEmpty) const SizedBox(height: 8),
+                              ms.isEmpty
+                                  ? FilledButton(
+                                      style: fill.copyWith(padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 18))),
+                                      onPressed: () async {
+                                        await s.ackAlarm();
+                                        if (s.alarm == null && a.key.startsWith('i:')) _sk.currentState?.openDrawer();
+                                      },
+                                      child: const Text('Quittieren', style: TextStyle(fontSize: 20)))
+                                  : OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.white, side: const BorderSide(color: Colors.white, width: 1.5), padding: const EdgeInsets.symmetric(vertical: 16)),
+                                      onPressed: _alarmBusy
+                                          ? null
+                                          : () async {
+                                              await s.ackAlarm();
+                                              if (s.alarm == null) _sk.currentState?.openDrawer();
+                                            },
+                                      child: const Text('Nur quittieren', style: TextStyle(fontSize: 18))),
+                            ])))))));
+  }
 
   void _openPrefs() {
     closeMenu();
@@ -1586,12 +1659,20 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         _onStore();
                       },
                       onMapEvent: (e) {
+                        if (e is MapEventNonRotatedSizeChange && _fitLater != null && _camOk) {
+                          final p = _fitLater!;
+                          _fitLater = null;
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) _fitRaw(p);
+                          });
+                        }
                         if (e is MapEventRotate || e is MapEventRotateEnd) setState(() => _rot = mc.camera.rotation);
                         if (e is MapEventMoveEnd || e is MapEventFlingAnimationEnd || e is MapEventDoubleTapZoomEnd || e is MapEventScrollWheelZoom) _geoSync();
                         final hand = e.source == MapEventSource.onDrag || e.source == MapEventSource.onMultiFinger || e.source == MapEventSource.doubleTap || e.source == MapEventSource.doubleTapHold || e.source == MapEventSource.scrollWheel;
                         if (hand && e is MapEventMoveStart) {
                           if (!_homeBusy) _homeDone = true;
                           _areaFocus = null;
+                          _fitLater = null;
                           if (!_autoBusy) _stopFollow();
                         }
                       }),

@@ -143,7 +143,7 @@ Objekte am Gewässer aus OpenStreetMap (Wehre, Kraftwerke, Brücken, Slipanlagen
 
 ### Fahrzeuge {#fahrzeuge}
 
-Fahrzeugarten (Boot, Anhänger, Zugfahrzeug) mit Platz und Ladung, Fahrzeuge mit ihrem Beacon (UUID, Major, Minor), Standort von Hand setzen und Verbund (welches Fahrzeug was trägt).
+Fahrzeugarten (Boot, Anhänger, Zugfahrzeug) mit Platz und Ladung, Fahrzeuge mit ihrem Beacon (UUID, Major, Minor, optional die MAC-Adresse für den Batteriestand unter iOS; Android-Geräte lernen sie selbst) und dem zuletzt gemeldeten Batteriestand, Standort von Hand setzen und Verbund (welches Fahrzeug was trägt).
 
 ## Auswertung {#auswertung-kat}
 

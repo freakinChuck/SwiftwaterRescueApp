@@ -324,7 +324,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final a = await accState(acc.id);
       _acked.addAll((_sp!.getStringList('ack_${acc.id}') ?? []));
-      _acked.addAll(a.tags.where((t) => !t.startsWith('i:'))); // Nachrichten und Einsatzende, die schon gemeldet wurden, nicht nochmals
+      _acked.addAll(a.tags.where((t) => !t.startsWith('i:') && !t.startsWith('t:'))); // Alarme (auch Testalarm) zeigt die App trotzdem als Vollbild // Nachrichten und Einsatzende, die schon gemeldet wurden, nicht nochmals
     } catch (_) {}
     _beat();
     _fg = Timer.periodic(const Duration(seconds: 5), (_) => _beat());
@@ -569,6 +569,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       // neu alarmiert zu einem anderen Einsatz ohne eigene Teilnahme: diesen anzeigen
       if (_incWatch(nx)) nx = await api.call('incident/state', query: {'since': '0', ...vx.query(), 'oth': '1'});
       _askBt(nx);
+      if (nx['test_alarm'] is Map) { // persönlicher Testalarm (Issue #218), Stufe wie ein Alarm
+        final t = jm(nx['test_alarm']);
+        notify(js(t['t']), js(t['b']), js(t['tag']), js(t['lvl']));
+      }
       final i = nx['incident'] is Map ? jm(nx['incident']) : null;
       if (i != null) {
         final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']);
@@ -753,6 +757,37 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     requestBluetooth();
   }
 
+  /// «Fahrzeuge jetzt scannen»: sofort nach Beacons suchen und melden. Im Einsatz mit geteiltem Standort sofort mit einer Standortmeldung,
+  /// sonst über beacon/report (manual, ohne Person; nur wenn die Verwaltung Meldungen ausserhalb von Einsätzen erlaubt).
+  /// Ergebnis: gefundene Fahrzeuge ([{id, rssi, name}]) und Text zum Stand der Meldung.
+  Future<({List<J> found, String msg, bool ok})> scanVehicles() async {
+    if (demo) return (found: <J>[], msg: 'Im Demo-Modus gibt es keine Beacons.', ok: false);
+    final bt = await requestBluetooth();
+    if (bt != 2) {
+      return (
+        found: <J>[],
+        msg: switch (bt) {
+          3 => 'iOS findet Beacons nur mit dem genauen Standort (Einstellungen → Swiftwater Rescue → Standort → «Genauer Standort»).',
+          1 => Platform.isIOS ? 'Die App darf den Standort nicht nutzen, ohne ihn sieht iOS keine Beacons.' : 'Die App darf Bluetooth nicht nutzen («Geräte in der Nähe» erlauben).',
+          _ => 'Bluetooth ist aus.',
+        },
+        ok: false
+      );
+    }
+    final found = await Beacons.scanNow(acc);
+    if (!found.any((b) => b['id'] != null)) return (found: found, msg: 'Kein Fahrzeug in der Nähe gefunden.', ok: true);
+    if (sharing && manualPos == null && _lastPos != null) {
+      await _sendPos(_lastPos!);
+      return (found: found, msg: 'Mit deinem Standort im Einsatz gemeldet.', ok: true);
+    }
+    try {
+      final n = await Beacons.reportNow(acc, found);
+      return (found: found, msg: n > 0 ? 'Standort gemeldet (ohne deinen Namen).' : 'Nicht gemeldet: Es gibt schon eine neuere Sichtung.', ok: true);
+    } catch (e) {
+      return (found: found, msg: 'Nicht gemeldet: ${e is ApiError ? e.message : '$e'.replaceFirst('Exception: ', '')}', ok: false);
+    }
+  }
+
   void toast(String text, [String kind = 'ok']) => toasts.add(Toast(text, kind));
   void fail(Object e) => toasts.add(Toast(e is ApiError ? e.message : '$e', 'err'));
 
@@ -901,6 +936,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         'lat': p.latitude,
         'lon': p.longitude,
         'beacons': ?bs,
+        if (bs != null) 'batt': ?Beacons.battFor(acc), // Batteriestand (Issue #224)
         if (manualPos == null && devPos != null) 'acc': devPos!.accuracy,
         // Gewässer nur, wenn der angezeigte Einsatz der eigene ist (sonst ist das Gewässernetz eines anderen geladen, Issue #167)
         'water': !otherShown && waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()) < waterM ? 1 : 0,

@@ -7,6 +7,11 @@
 // Zustimmung) sucht das Betriebssystem selbst (Android: Scan mit Hardware-Filter über PendingIntent, iOS: Region Monitoring, sw_sys); die App holt
 // die Sichtungen ab (flush: im Dienst bei jeder Abfrage, unter iOS beim Wecken über beaconEvent), nimmt den letzten bekannten Standort statt
 // laufendem GPS und meldet je Fahrzeug höchstens alle home_min Minuten über beacon/report.
+//
+// Batteriestand (Issue #224): Der aktive Scan liefert zusätzlich den Frame «Device Info» von DX-Smart (mac, batt). Unter Android hängt das Plugin
+// ihn an das iBeacon desselben Geräts, unter iOS kommt er als eigener Eintrag nur mit MAC; zugeordnet wird er dann über die MAC des Fahrzeugs
+// (me.beacon_cfg.list[].mac, lernt der Server von Android-Geräten oder trägt die Verwaltung ein). Gemeldet wird er als batt [{id, pct, mac, mv}].
+// Eddystone-TLM liefert nur die Spannung (mv); daraus schätzt battPct die Prozent (Lithium 3 V: 2.0 V = 0 %, 3.0 V = 100 %, linear).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -55,6 +60,7 @@ class Beacons {
   static int _lastAt = 0;
   static bool _scanning = false;
   static final _used = <String, int>{}; // Konto → Zeitpunkt des Scans, den es schon gemeldet hat
+  static final _battOut = <String, List<J>>{}; // Konto → Batteriestände des Scans, den forReport zuletzt geliefert hat
   static final _nets = <String, ({String key, RiverNet? net})>{}; // Gewässernetz je Konto (Boot auf dem Wasser)
   static bool _handler = false;
 
@@ -89,10 +95,38 @@ class Beacons {
   /// Fahrzeug-ID dieses Kontos zu einem gesehenen Beacon
   static int? _vid(J c, J b) {
     final u = js(b['uuid']).toUpperCase();
+    if (u.isEmpty) { // nur Frame «Device Info» (iOS bzw. Gerät ohne iBeacon im Scan): über die MAC
+      final m = js(b['mac']).toUpperCase();
+      if (m.isEmpty) return null;
+      for (final v in jl(c['list'])) {
+        if (js(v['mac']).toUpperCase() == m) return ji(v['id']);
+      }
+      return null;
+    }
     for (final v in jl(c['list'])) {
       if (js(v['uuid']).toUpperCase() == u && ji(v['major']) == ji(b['major']) && ji(v['minor']) == ji(b['minor'])) return ji(v['id']);
     }
     return null;
+  }
+
+  /// Prozent aus der Spannung des TLM-Frames (Schätzung, siehe oben)
+  static int? battPct(int? mv) => mv == null ? null : ((mv - 2000) / 10).round().clamp(0, 100);
+
+  /// Batteriestände eines Scans für dieses Konto: [{id, pct, mac, mv}]
+  static List<J> _batt(J c, List<J> scan) {
+    final o = <int, J>{};
+    for (final b in scan) {
+      final mv = ji(b['mv']), p = ji(b['batt']) ?? battPct(mv), id = _vid(c, b);
+      if (p == null || id == null) continue;
+      o[id] = {'id': id, 'pct': p, if (js(b['mac']).isNotEmpty) 'mac': js(b['mac']), 'mv': ?mv};
+    }
+    return o.values.toList();
+  }
+
+  /// Batteriestände zu den Beacons, die forReport eben geliefert hat (einmal abholen, null = keine)
+  static List<J>? battFor(Account a) {
+    final l = _battOut.remove(a.id);
+    return l == null || l.isEmpty ? null : l;
   }
 
   static Future<List<Account>> _accs() async => (await Accounts.load()).where((a) => a.active && !a.loggedOut).toList();
@@ -174,6 +208,7 @@ class Beacons {
     if (!_scanning && now - _lastAt > every) unawaited(_scan());
     if (_lastAt == 0 || _used[a.id] == _lastAt || now - _lastAt > every * 2) return null;
     _used[a.id] = _lastAt;
+    _battOut[a.id] = _batt(c, _last);
     final o = <J>[];
     for (final b in _last) {
       final id = _vid(c, b);
@@ -182,7 +217,62 @@ class Beacons {
     return o;
   }
 
-  static Future<void> _scan() async {
+  /// «Fahrzeuge jetzt scannen»: Einstellung neu laden, sofort scannen und die gefundenen Fahrzeuge dieses Kontos liefern ([{id, rssi, name,
+  /// batt?}], stärkstes zuerst), danach Beacons mit Frame «Device Info», die zu keinem Fahrzeug gehören ({mac, batt, rssi}, ohne id).
+  /// Der nächste forReport gibt das Ergebnis mit (Einsatz), sonst meldet reportNow.
+  static Future<List<J>> scanNow(Account a) async {
+    final c = _c(await cfg(a, force: true));
+    if (c == null || jl(c['list']).isEmpty) return [];
+    for (var i = 0; _scanning && i < 50; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    await _scan(ms: 6000);
+    _used.remove(a.id);
+    final o = <int, J>{};
+    for (final b in _last) {
+      final id = _vid(c, b);
+      if (id == null) continue;
+      final r = ji(b['rssi']) ?? -127;
+      if ((ji(o[id]?['rssi']) ?? -128) >= r) continue;
+      final v = jl(c['list']).where((v) => ji(v['id']) == id).firstOrNull;
+      o[id] = {'id': id, 'rssi': r, 'name': js(v?['name'])}; // ältere Server liefern keinen Namen, vehScanDlg ergänzt ihn;
+    }
+    for (final b in _batt(c, _last)) {
+      o[ji(b['id'])]?['batt'] = b['pct'];
+      if (o[ji(b['id'])] != null && b['mac'] != null) o[ji(b['id'])]!['mac'] = b['mac'];
+      if (o[ji(b['id'])] != null && b['mv'] != null) o[ji(b['id'])]!['mv'] = b['mv'];
+    }
+    int rs(J x) => ji(x['rssi']) ?? -127;
+    final l = o.values.toList()..sort((x, y) => rs(y).compareTo(rs(x)));
+    final unk = <String, J>{};
+    for (final b in _last) {
+      final m = js(b['mac']).toUpperCase();
+      final p = ji(b['batt']) ?? battPct(ji(b['mv']));
+      if (p == null || m.isEmpty || _vid(c, b) != null) continue;
+      if (rs(b) > (ji(unk[m]?['rssi']) ?? -128)) unk[m] = {'mac': m, 'batt': p, 'mv': ji(b['mv']), 'rssi': rs(b)};
+    }
+    return l + (unk.values.toList()..sort((x, y) => rs(y).compareTo(rs(x))));
+  }
+
+  /// Ausserhalb eines Einsatzes von Hand melden (beacon/report mit manual, ohne Person): Anzahl gemeldeter Fahrzeuge; Fehler als Ausnahme
+  static Future<int> reportNow(Account a, List<J> found) async {
+    Position? p;
+    try {
+      p = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15)));
+    } catch (_) {
+      p = await Geolocator.getLastKnownPosition();
+    }
+    if (p == null) throw Exception('Ohne Standort kann die App die Fahrzeuge nicht melden.');
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final r = await a.api.call('beacon/report', body: {
+      'manual': 1,
+      'seen': [for (final b in found.where((b) => b['id'] != null)) {'id': b['id'], 'rssi': b['rssi'], 'lat': p.latitude, 'lon': p.longitude, 'acc': p.accuracy, 'at': now}],
+      'batt': [for (final b in found.where((b) => b['id'] != null && b['batt'] != null)) {'id': b['id'], 'pct': b['batt'], if (b['mac'] != null) 'mac': b['mac'], if (b['mv'] != null) 'mv': b['mv']}]
+    }, timeout: const Duration(seconds: 15));
+    return ji(r['n']) ?? 0;
+  }
+
+  static Future<void> _scan({int ms = _scanMs}) async {
     _scanning = true;
     try {
       final u = <String>{};
@@ -190,7 +280,7 @@ class Beacons {
         final x = _c(await cfg(a));
         if (x != null) u.addAll(jl(x['list']).map((v) => js(v['uuid']).toUpperCase()));
       }
-      _last = await beaconScan(u.toList(), ms: _scanMs);
+      _last = await beaconScan(u.toList(), ms: ms);
       _lastAt = DateTime.now().millisecondsSinceEpoch;
     } finally {
       _scanning = false;

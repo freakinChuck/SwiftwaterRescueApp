@@ -250,6 +250,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     const hs=S.org?HYDRO.filter(h=>h.type!=='lake'&&h.lat!=null&&(h.flow!=null||h.height!=null||h.level!=null)).map(h=>[hav(a[0],a[1],h.lat,h.lon),h]).filter(x=>x[0]<=15000).sort((x,y)=>x[0]-y[0]).slice(0,3).map(x=>x[1]):HYDRO.slice(0,i.script==='bsp'?2:1);
     return hs.map(h=>{const d=Math.round(hav(a[0],a[1],h.lat,h.lon));return{phase:'start',ts:t,station:h.id,name:h.name,water:h.water,lat:h.lat,lon:h.lon,dist:i.script==='bsp'||S.org?d:null,at:t-300,danger:h.danger,
       v:{flow:h.flow,height:h.height,level:h.level,temp:h.temp,danger:h.danger}}})}
+  function taDue(){const t=S.ta,n=now();if(!t||t.at>n||n-t.at>300)return null;return{id:t.id,lvl:t.lvl,at:t.at,t:'TESTALARM',b:'Persönlicher Testalarm, Stufe «'+{crit:'Kritisch',high:'Hoch',normal:'Normal',low:'Leise'}[t.lvl]+'». Kein Einsatz, einfach quittieren.',tag:'t:'+t.id}}
   function state(qs){const t=now();simRun(t);const i=I(),me=S.me;
     if(!i)return{incident:null,fb_open:0,air_home:0,my_abs:absNow(),blocked:0,last_ended:S.last,places:PLACES,place_cats:PLACE_CATS,kinds:KINDS,features:featAll(),ex_plans:[],ex_sched:[],veh:KINDS.some(k=>featOf(k).veh)?vehOut(null):null,...mapsOut(),...placeOut()};
     const K=kindOf(i),since=+qs.get('since')||0,mgr=canManage(),act=active(),res=i.res.filter(r=>!r.removed).map(r=>({...r,loc_name:r.loc_by?uname(r.loc_by):null,rescued_name:r.rescued_by?uname(r.rescued_by):null}));
@@ -279,7 +280,9 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     'me/settings':b=>{['exercise_mode','coord_sys','nav_app','place_view','hydro','ai_modes'].forEach(k=>{if(k in b)S.me[k]=k==='coord_sys'||k==='nav_app'?(b[k]||null):b[k]});return{ok:true}},
     'me/password':()=>fail('Im Demo-Modus gibt es kein Passwort.'),'me/photo':b=>{S.me.photo=b.photo||null;return{ok:true}},'me/sessions':()=>[],'me/session/remove':()=>({ok:true}),
     'roles':()=>ROLES,'modes':()=>MODES,
-    'incident/state':(b,qs)=>state(qs),
+    'incident/state':(b,qs)=>({...state(qs),test_alarm:taDue()}),
+    // persönlicher Testalarm (Issue #218): im Demo nur über das Polling, ohne Push
+    'me/testalarm':b=>{if(!b.lvl){S.ta=null;return{ok:1}}if(!['crit','high','normal','low'].includes(b.lvl))fail('Unbekannte Alarmstufe');S.ta={id:1+Math.floor(Math.random()*2e9),lvl:b.lvl,at:now()+30};return{ok:1,id:S.ta.id,at:S.ta.at,push:0}},
     'start/options':()=>({groups:[],kinds:KINDS,start:{1:null,2:null},add:{1:null,2:null},people:[],kind_people:{1:null,2:null},kind_absent:{1:0,2:0}}),
     'incident/start':b=>{if(I())fail('Es läuft bereits ein Einsatz');if(!String(b.message||'').trim())fail('Die Meldung ist Pflicht');const K=KINDS.find(k=>k.id===+b.kind_id)||KINDS[0],t=now();
       const at=b.alarm_at?Math.min(+b.alarm_at,t):t,pls=b.lat!=null&&b.lon!=null&&b.lat!==''&&isFinite(b.lat)&&isFinite(b.lon);

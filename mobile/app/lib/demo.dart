@@ -1172,6 +1172,14 @@ class Demo {
     }).toList();
   }
 
+  _J? _ta; // persönlicher Testalarm (Issue #218)
+  static const _taTxt = {'crit': 'Kritisch', 'high': 'Hoch', 'normal': 'Normal', 'low': 'Leise'};
+  _J? _taDue() {
+    final t = _ta, n = _now();
+    if (t == null || (t['at'] as int) > n || n - (t['at'] as int) > 300) return null;
+    return {...t, 't': 'TESTALARM', 'b': 'Persönlicher Testalarm, Stufe «${_taTxt[t['lvl']]}». Kein Einsatz, einfach quittieren.', 'tag': 't:${t['id']}'};
+  }
+
   _J _state(Map<String, String> q) {
     final t = _now();
     _simRun(t);
@@ -1436,7 +1444,16 @@ class Demo {
       case 'modes':
         return _ms;
       case 'incident/state':
-        return _state(q);
+        return {..._state(q), 'test_alarm': _taDue()};
+      case 'me/testalarm': // persönlicher Testalarm (Issue #218): im Demo nur über das Polling, ohne Push
+        final l = '${b['lvl'] ?? ''}';
+        if (l.isEmpty) {
+          _ta = null;
+          return {'ok': 1};
+        }
+        if (!_taTxt.containsKey(l)) _fail('Unbekannte Alarmstufe');
+        _ta = {'id': 1 + math.Random().nextInt(2000000000), 'lvl': l, 'at': _now() + 30};
+        return {'ok': 1, 'id': _ta!['id'], 'at': _ta!['at'], 'push': 0};
       case 'start/options':
         return {
           'groups': [],
