@@ -18,6 +18,11 @@
 	<string>Swiftwater Rescue</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Im Einsatz teilst du deinen Standort mit der Einsatzleitung und siehst dich auf der Karte.</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>beacons</key>
+		<string>Die Beacons der Fahrzeuge findet iOS nur mit dem genauen Standort.</string>
+	</dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Für Durchsagen und die Live-Konferenz im Funk des Einsatzes.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

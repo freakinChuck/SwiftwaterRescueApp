@@ -8,6 +8,9 @@ import UIKit
 // - beaconWatch: Region Monitoring je UUID (höchstens 20 Regionen je App). Das System überwacht selbst, fast ohne Akku, und weckt die App beim
 //   Betreten, auch wenn sie geschlossen ist; dann höchstens 10 s Ranging, um Major/Minor zu lesen. Die Sichtungen liegen bis zum Abholen
 //   (beaconPending) in UserDefaults; die App erhält «beaconEvent» und meldet sie mit dem Standort. Braucht den Standort «Immer».
+//   Bei jedem Aufruf fragt es zusätzlich den Zustand der Regionen ab (requestState): Wer schon beim Fahrzeug ist, betritt die Region nicht neu.
+// Ohne «Genauer Standort» (reduzierte Genauigkeit) gibt es weder Ranging noch Region Monitoring: Zustand 3, requestBluetooth bittet dann
+// um den genauen Standort für diese Nutzung (Schlüssel «beacons» in NSLocationTemporaryUsageDescriptionDictionary).
 public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
     private let lm = CLLocationManager()
     private var channel: FlutterMethodChannel?
@@ -32,18 +35,22 @@ public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
 
     private func auth() -> CLAuthorizationStatus { lm.authorizationStatus }
 
-    /// 0 = kein Ranging möglich, 1 = keine Standortberechtigung, 2 = bereit
+    /// 0 = kein Ranging möglich, 1 = keine Standortberechtigung, 2 = bereit, 3 = nur ungefährer Standort (iOS sucht dann keine Beacons)
     private func state() -> Int {
         if !CLLocationManager.isRangingAvailable() { return 0 }
         let a = auth()
-        return a == .authorizedAlways || a == .authorizedWhenInUse ? 2 : 1
+        if a != .authorizedAlways && a != .authorizedWhenInUse { return 1 }
+        return lm.accuracyAuthorization == .reducedAccuracy ? 3 : 2
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let args = call.arguments as? [String: Any] ?? [:]
         let uuids = (args["uuids"] as? [String] ?? []).compactMap { UUID(uuidString: $0) }
         switch call.method {
-        case "btState", "requestBluetooth": result(state()) // die Standortberechtigung fragt geolocator an
+        case "btState": result(state())
+        case "requestBluetooth": // die Standortberechtigung fragt geolocator an; hier nur der genaue Standort
+            if state() != 3 { result(state()); return }
+            lm.requestTemporaryFullAccuracyAuthorization(withPurposeKey: "beacons") { [weak self] _ in result(self?.state() ?? 0) }
         case "beaconScan":
             if state() != 2 || uuids.isEmpty || scanResult != nil { result([]); return }
             let ms = max(500, min(20000, args["ms"] as? Int ?? 5000))
@@ -57,7 +64,12 @@ public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
             for r in lm.monitoredRegions where r.identifier.hasPrefix(SwSysPlugin.prefix) && !want.contains(r.identifier) { lm.stopMonitoring(for: r) }
             if uuids.isEmpty || auth() != .authorizedAlways || !CLLocationManager.isMonitoringAvailable(for: CLBeaconRegion.self) { result(false); return }
             let have = Set(lm.monitoredRegions.map { $0.identifier })
-            for u in uuids where !have.contains(SwSysPlugin.prefix + u.uuidString) {
+            for u in uuids {
+                if have.contains(SwSysPlugin.prefix + u.uuidString) {
+                    // schon überwacht: Zustand abfragen, sonst meldet iOS ein Fahrzeug, bei dem man schon ist, erst nach Verlassen und erneutem Betreten
+                    if let r = lm.monitoredRegions.first(where: { $0.identifier == SwSysPlugin.prefix + u.uuidString }) { lm.requestState(for: r) }
+                    continue
+                }
                 let r = CLBeaconRegion(uuid: u, identifier: SwSysPlugin.prefix + u.uuidString)
                 r.notifyOnEntry = true
                 r.notifyOnExit = false
@@ -106,6 +118,14 @@ public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
             }
         }
         if bgCons.contains(c), !beacons.isEmpty { store(beacons) }
+    }
+
+    public func locationManager(_ m: CLLocationManager, didFailRangingFor c: CLBeaconIdentityConstraint, error: Error) {
+        NSLog("sw_sys: Ranging fehlgeschlagen für %@: %@", c.uuid.uuidString, error.localizedDescription)
+    }
+
+    public func locationManager(_ m: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error) {
+        NSLog("sw_sys: Region Monitoring fehlgeschlagen für %@: %@", region?.identifier ?? "-", error.localizedDescription)
     }
 
     // Region betreten (auch bei geschlossener App): höchstens 10 s Ranging, dann der App melden

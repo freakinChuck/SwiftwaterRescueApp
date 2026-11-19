@@ -47,6 +47,8 @@ Durchsagen und Live-Konferenz funktionieren in der App wie im Browser (siehe [Fu
 
 Im Einsatz mit Fahrzeugen fragt die App einmal nach Bluetooth. Sie erkennt die Beacons der Fahrzeuge in der Nähe, meldet ihren Standort und ordnet dich dem Fahrzeug zu, in dem du sitzt. Ausserhalb von Einsätzen meldet sie Beacons nur mit deiner Zustimmung im Profil.
 
+> ! Am iPhone findet die App Beacons nur mit **Genauer Standort** (Einstellungen → Swiftwater Rescue → Standort). Ist er aus, steht das im Profil unter «Fahrzeuge», mit dem Knopf **Genauen Standort erlauben**. Ausserhalb von Einsätzen braucht es zusätzlich «Immer».
+
 ## Updates {#updates}
 
 Ist deine App-Version zu alt für den Server, erscheint ein Hinweis mit **Aktualisieren** (Google Play bzw. TestFlight). **Was ist neu** im Profil zeigt die Änderungen.
