@@ -776,6 +776,16 @@ function togglePanel(name,on){panel=(on===undefined?panel!==name:on)?name:(panel
 // gruppiert nach Spezialrolle in der Reihenfolge der Verwaltung, Personen ohne Rolle zuletzt; innerhalb alphabetisch
 const byRole=list=>[...roles.map(r=>({r,items:list.filter(p=>p.role_id==r.id)})),{r:null,items:list.filter(p=>!roles.some(r=>r.id==p.role_id))}]
   .filter(g=>g.items.length).map(g=>({r:g.r,items:g.items.sort((a,b)=>a.name.localeCompare(b.name,'de'))}));
+// Partnerorganisationen eines gemeinsamen Einsatzes (Issue #60): in den Fenstern «Einsatzkräfte», «Markierungen» und «Rettlinge» je Organisation, nur lesend (Daten aus st.others mit joint)
+const jParts=()=>((st&&st.incident&&st.others)||[]).filter(o=>o.joint);
+const jName=o=>esc(o.org_name)+' · Partnerorganisation'+(o.host?' (auslösend)':'');
+const jRow=(nm,sub,pts,t)=>`<div class="pp"><div class="nm">${esc(nm)}<small>${esc(sub)}</small></div>${pts&&pts.length?`<div class="pa"><button data-jz="${esc(JSON.stringify(pts))}" title="Auf der Karte zeigen">${t||'Zentrieren'}</button>${navBtn(pts[0][0],pts[0][1],nm)}</div>`:''}</div>`;
+const jDown='<div class="mut" style="padding:.4rem 0">Die Partnerorganisation ist gerade nicht erreichbar.</div>';
+document.addEventListener('click',e=>{const b=e.target.closest('[data-jz]');if(!b||!map)return;const p=JSON.parse(b.dataset.jz);stopFollow();if(p.length>1)map.fitBounds(p,{padding:[30,30]});else map.panTo(p[0]);if(narrow()&&panel)togglePanel(panel,false)});
+function jPeople(){return jParts().map(o=>{const k='j:'+o.k,c=pplFold.has(k),t=o.team||[],x=o.ext||[],rs=[...new Set(t.map(p=>p.role||''))].sort((a,b)=>!a-!b||a.localeCompare(b));
+  const body=o.down?jDown:rs.map(r=>{const it=t.filter(p=>(p.role||'')===r);return`<div class="pg">${r?esc(r):'Ohne Spezialrolle'} (${it.length})</div>`+it.map(p=>jRow(p.name,[p.mode,p.lat!=null?(p.loc_at?'Standort '+ago(p.loc_at):'Standort'):'kein Standort'].filter(Boolean).join(' · '),p.lat!=null?[[p.lat,p.lon]]:null)).join('')}).join('')
+    +(x.length?`<div class="pg">Externe Einsatzkräfte (${x.length})</div>`+x.map(e=>jRow(e.name,'Extern',[[e.lat,e.lon]])).join(''):'')||'<div class="mut" style="padding:.4rem 0">Noch niemand im Einsatz.</div>';
+  return`<button class="pfold" data-pf="${esc(k)}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${jName(o)} (${o.down?'?':t.length+x.length})</button>`+(c?'':body)}).join('')}
 function renderPeople(){const o=$('#people');if(!o)return;const inc=!!(st&&st.incident),on=panel==='people'&&(inc||vehBtn());o.hidden=!on;$('#bPeople').setAttribute('aria-expanded',on);
   const ap=activePeople(),n=ap.filter(p=>modeOf(p.mode).counts).length,c=$('#peopleCnt');c.hidden=!n;c.textContent=n; // Zähler am Knopf: alle im Einsatz mit zählender Einrückoption (Verwaltung, z. B. ohne Koordinator KP Rück)
   if(!on)return;
@@ -787,7 +797,7 @@ function renderPeople(){const o=$('#people');if(!o)return;const inc=!!(st&&st.in
   // zwei Gruppen (mit App / extern), je zusammenklappbar, darin nach Spezialrolle
   const roleGrp=list=>byRole(list).map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.map(p=>p.ext?xrow(p):row(p)).join('')).join('');
   const xl=extList(),fold=(k,t,list,empty)=>{const c=pplFold.has(k);return `<button class="pfold" data-pf="${k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button>`+(c?'':roleGrp(list)||`<div class="mut" style="padding:.4rem 0">${empty}</div>`)};
-  $('#peopleList').innerHTML=fold('int','Einsatzkräfte mit App',ap,'Noch niemand im Einsatz.')+(feat('ext')&&(xl.length||st.can_manage)?fold('ext','Externe Einsatzkräfte',xl,'Keine erfasst.'):'')+vehFold();
+  $('#peopleList').innerHTML=fold('int','Einsatzkräfte mit App',ap,'Noch niemand im Einsatz.')+(feat('ext')&&(xl.length||st.can_manage)?fold('ext','Externe Einsatzkräfte',xl,'Keine erfasst.'):'')+jPeople()+vehFold();
   $('#peopleForm').hidden=!(st.can_manage&&feat('ext'))}
 // zugeklappte Gruppen im Fenster «Einsatzkräfte», pro Gerät gemerkt (localStorage sw_pplfold)
 const pplFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pplfold')||'[]'))}catch(e){return new Set()}})();
@@ -999,7 +1009,10 @@ function renderPois(){const o=$('#pois');if(!o)return;const inc=!!(st&&st.incide
   const sub=(k,t,list,inv)=>{const c=inv?!poiFold.has(k+'+'):poiFold.has(k);return `<div class="psh">${secChk(list,t+': alle Standorte anzeigen')}<button class="sfold" data-pof="${inv?k+'+':k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button></div>`+(c?'':`<div class="pgb">${list.length?cats(k+':',list,1):'<div class="mut">Keine</div>'}</div>`)};
   const body=!areaIn?cats('fix:',top.concat(rest)):cats('fix:',top)+sub('fix:in','Im Einsatzgebiet',rest.filter(isIn))+sub('fix:out','Ausserhalb des Einsatzgebiets',rest.filter(f=>!isIn(f)),1);
   const fl=!fs.length?'':hd('fix','Feste Standorte',fs.length,chk('data-pfgrp="1"',fs.every(f=>!poiHide.has('f'+f.id)),0,'Alle festen Standorte anzeigen'))+grpBody('fix',body);
-  $('#poiList').innerHTML=pls+lg+fl;
+  const KN={point:'Markierung',area:'Bereich',line:'Linie'},jl=inc?jParts().map(o=>{const k='j:'+o.k,ps=o.pois||[],pl=o.pls||[];
+    return hd(k,jName(o),o.down?'?':ps.length+pl.length,'<span class="nochk"></span>')+grpBody(k,o.down?jDown:pl.map(p=>jRow('PLS'+(p.label?' «'+p.label+'»':''),fcs(p.lat,p.lon,'',''),[[p.lat,p.lon]],'Zeigen')).join('')
+      +ps.map(p=>jRow(p.name||p.sym_name||KN[p.kind],(KN[p.kind]||'')+(p.sym_name&&p.sym_name!==p.name?' · '+p.sym_name:''),p.kind==='point'?p.pts.slice(0,1):p.pts,'Zeigen')).join('')||'<div class="mut">Keine</div>')}).join(''):'';
+  $('#poiList').innerHTML=pls+lg+jl+fl;
   const f=$('#poiForm'),ok=inc&&!!st.can_manage&&feat('poi');f.hidden=!ok;if(ok&&!$('#bPoiP')){f.innerHTML='<div class="row" style="margin:0"><button class="pri" id="bPoiP">+ Markierung</button><button class="pri" id="bPoiA">+ Bereich</button><button class="pri" id="bPoiL">+ Linie</button></div>';$('#bPoiP').onclick=()=>newPoi('point');$('#bPoiA').onclick=()=>newPoi('area');$('#bPoiL').onclick=()=>newPoi('line')}}
 const PLACE_COL='#1d7fd1';
 // zugeklappte Gruppen im Fenster «Markierungen» (pls, lage, fix, lage:<Art>, fix:<Kategorie>, fix:in, fix:in:<Kategorie>, fix:out:<Kategorie>; fix:out+ = «Ausserhalb» geöffnet), pro Gerät gemerkt (localStorage sw_poifold)

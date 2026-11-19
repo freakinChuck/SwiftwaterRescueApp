@@ -612,6 +612,27 @@ class _PoisPanelState extends State<PoisPanel> {
     ];
   }
 
+  /// PLS und Lage der verknüpften Einsätze von Partnerorganisationen (Issue #60), nur lesend
+  static const _kn = {'point': 'Markierung', 'area': 'Bereich', 'line': 'Linie'};
+  List<Widget> _joint() => [
+        for (final o in jointParts(s))
+          () {
+            final k = 'j:${js(o['k'])}', ps = jl(o['pois']), pl = jl(o['pls']), down = jn(o['down']) == 1;
+            final rows = <Widget>[
+              for (final p in pl)
+                jointRow(context, s, map, 'PLS${js(p['label']).isNotEmpty ? ' «${js(p['label'])}»' : ''}', '', jointPts([[p['lat'], p['lon']]]), btn: 'Zeigen'),
+              for (final p in ps)
+                () {
+                  final kd = js(p['kind']), sn = js(p['sym_name']), nm = js(p['name']).isNotEmpty ? js(p['name']) : (sn.isNotEmpty ? sn : (_kn[kd] ?? ''));
+                  final pts = jointPts(p['pts']);
+                  return jointRow(context, s, map, nm, '${_kn[kd] ?? ''}${sn.isNotEmpty && sn != nm ? ' · $sn' : ''}', kd == 'point' ? pts.take(1).toList() : pts, btn: 'Zeigen');
+                }(),
+            ];
+            return _grp(k, jointName(o), down ? 0 : ps.length + pl.length,
+                down ? const [jointDown] : (rows.isEmpty ? const [Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Mut('Keine'))] : rows));
+          }(),
+      ];
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
       listenable: s,
@@ -620,6 +641,7 @@ class _PoisPanelState extends State<PoisPanel> {
         final body = [
           if (inc) ..._pls(),
           if (inc && s.feat('poi')) ..._poiGroups(),
+          if (inc) ..._joint(),
           ..._places(),
         ];
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
