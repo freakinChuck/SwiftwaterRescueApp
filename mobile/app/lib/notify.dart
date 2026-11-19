@@ -91,7 +91,7 @@ Future<bool?> hasDndAccess() async => notes.resolvePlatformSpecificImplementatio
 /// Nachrichten und Einsatzende deshalb doppelt. Ist das Konto für Push angemeldet, meldet im Hintergrund nur noch Push, was der Server
 /// auch pusht (i:, m:, e:); andere Meldungen (z. B. «aus dem Einsatz entfernt») und alles im Vordergrund zeigt weiterhin die App.
 Future<bool> _pushShows(String acc, String tag) async {
-  if (!Platform.isIOS || !RegExp(r'^[imev]:').hasMatch(tag)) return false; // v: Durchsage im Funk (Issue #113)
+  if (!Platform.isIOS || !RegExp(r'^[imevt]:').hasMatch(tag)) return false; // v: Durchsage im Funk (Issue #113), t: Testalarm (Issue #218)
   if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) return false;
   try {
     final t = await SharedPreferencesAsync().getString('push_$acc'); // gesetzt von syncPush (push.dart): Token = angemeldet
@@ -162,6 +162,6 @@ Future<void> cancelIncNotes(String acc, [int? inc]) async {
 }
 
 Future<void> cancelNote(String acc, String tag) async {
-  if (tag.startsWith('i:')) await alarmStop(); // Alarm quittiert: Weckton aus
+  if (tag.startsWith('i:') || tag.startsWith('t:')) await alarmStop(); // Alarm (bzw. Testalarm) quittiert: Weckton aus
   await notes.cancel(id: noteId(acc, tag), tag: tag);
 }
