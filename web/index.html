@@ -22,7 +22,7 @@ body{height:100dvh;display:flex;flex-direction:column}#app{flex:1;min-height:0;o
 body.off #chip,body.off #joinBan,body.off #bMenu,body.off #bView,body.off #viewBox{margin-top:var(--offH,2.4rem)} /* Höhe des Hinweises, gesetzt in setOffline */
 #toasts{position:fixed;top:calc(4.2rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:8000;display:grid;gap:.4rem;width:min(420px,calc(100vw - 2rem))}
 .toast{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--ex);border-radius:6px;padding:.6rem .8rem;box-shadow:0 2px 8px #000a;cursor:pointer}
-.toast.al{background:var(--alarm);border-color:var(--alarm);color:#fff}.toast.al b{font-size:1.1rem} /* Alarm (crit/high): rote Benachrichtigung statt Vollbild, bleibt bis zum Antippen */
+.toast.al{background:var(--alarm);border-color:var(--alarm);color:#fff}.toast.al b{font-size:1.1rem}.toast .alj{display:grid;gap:.35rem;margin-top:.5rem}.toast .alj:empty{display:none}.toast .alj .btn{background:#fff;color:#000;border-color:#fff;font-weight:600} /* Alarm (crit/high): rote Benachrichtigung statt Vollbild, bleibt bis zum Antippen */
 #sheetWrap{position:fixed;z-index:1100;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;transition:transform .2s;left:0;right:0;bottom:0;max-height:58dvh;transform:translateY(105%)}
 #sheetWrap.open{transform:none}#sheetBar{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.5rem .8rem;border-bottom:1px solid var(--line)}
 #sheet{overflow:auto;padding:.8rem;flex:1;padding-bottom:calc(.8rem + env(safe-area-inset-bottom))}
@@ -191,9 +191,16 @@ function alarmTone(){[0,600,1200].forEach(t=>setTimeout(()=>tone(880,400),t));na
 // normal Hinweis mit kurzem Ton, low Hinweis still, none nichts. Nachrichten und Einsatzende mit eigener Stufe je Einsatztyp (msg_level, end_level, Issue #168). Antippen eines Alarms oder einer Nachricht im Einsatz zeigt das Einsatzgebiet (focusArea).
 function notify(t,b,key,lvl){if(lvl==='none')return false;if(key){if(ackGet().includes(key))return false;ackAdd(key)}const al=lvl==='crit'||lvl==='high';
   const d=document.createElement('div');d.className='toast'+(al?' al':'');d.setAttribute('role',al?'alert':'status');d.innerHTML=`<b>${esc(t)}</b><div>${esc(b)}</div>`;
-  d.onclick=()=>{d.remove();if(key&&/^[imk]:/.test(key))focusArea()};$('#toasts').appendChild(d);if(!al)setTimeout(()=>d.remove(),20000);
+  const ai=al&&key&&/^i:(\d+)$/.exec(key);if(ai)d.insertAdjacentHTML('beforeend',`<div class="alj" data-alinc="${ai[1]}"></div>`); // Annehmen direkt im Alarm (alJoinSync)
+  d.onclick=()=>{d.remove();if(key&&/^[imk]:/.test(key))focusArea()};$('#toasts').appendChild(d);if(!al)setTimeout(()=>d.remove(),20000);if(ai)setTimeout(alJoinSync);
   if(lvl==='crit')alarmTone();else if(lvl!=='low')ping();
   sysNote(t,b,key,al,lvl==='low');return true}
+// Alarm-Benachrichtigung: Einrückoptionen zum Annehmen, solange der Einsatz angezeigt wird und man nicht teilnimmt (nicht für die Übungsleitung);
+// wie die Karte «Teilnahme» (join), Antippen daneben quittiert wie bisher. Bei jedem paint() nachgeführt, weil notify vor dem neuen Stand läuft.
+function alJoinSync(){document.querySelectorAll('#toasts .alj').forEach(e=>{const i=st&&st.incident,ok=i&&i.id==e.dataset.alinc&&!(st.me&&!st.me.left_at&&st.me.mode!=='declined')&&!st.ex_lead&&!st.blocked,
+    ms=ok?iModes().filter(x=>x.active):[],k=ms.map(x=>x.code).join();if(e.dataset.k===k)return;e.dataset.k=k;
+  e.innerHTML=ms.map(x=>`<button class="btn" data-almode="${esc(x.code)}">Annehmen: ${esc(x.name)}${x.share_location?'':' (ohne Standort)'}</button>`).join('');
+  e.querySelectorAll('[data-almode]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();e.closest('.toast').remove();join(b.dataset.almode)})})}
 const ackGet=()=>{try{return JSON.parse(localStorage.getItem('sw_acked')||'[]')}catch(e){return[]}};
 function ackAdd(k){try{const a=ackGet();if(!a.includes(k)){a.push(k);localStorage.setItem('sw_acked',JSON.stringify(a.slice(-300)))}}catch(e){}swNative('swAck',k)} // native App: ihre Meldung dazu schliessen
 // Systembenachrichtigung über den Service Worker (Issue #67), mit demselben tag wie die Push-Nachricht des Servers: ersetzt sie statt sie zu verdoppeln
@@ -736,7 +743,8 @@ function autoFit(){if(!autoView||!map)return;const pts=overviewPts(),k=JSON.stri
 // Ersetzt die Startansicht (startView) und endet beim Verschieben der Karte von Hand.
 const AREA_WAIT_MS=30000;let areaFocus=0;
 function focusArea(){areaFocus=Date.now();if(narrow())toggleSheet(false);areaFocusNow()}
-function areaFocusNow(){if(!areaFocus||!map||!st||!st.incident)return;if(Date.now()-areaFocus>AREA_WAIT_MS){areaFocus=0;return}
+function areaFocusNow(){if(!areaFocus||!map||!st||!st.incident)return;const z=map.getSize();if(!z.x||!z.y)return; // Karte noch ohne Grösse: beim nächsten Polling (wie _camOk nativ)
+  if(Date.now()-areaFocus>AREA_WAIT_MS){areaFocus=0;return}
   const b=areaBounds(),pls=plsList(),on=pls.filter(p=>p.on),pts=(on.length?on:pls).map(p=>[p.lat,p.lon]);if(!b&&!pts.length)return; // noch kein PLS: beim nächsten Polling
   fitted=st.incident.id;followId=null;endAuto();updateFollowChip();
   if(b){pts.forEach(p=>b.extend(p));areaFocus=0;return map.fitBounds(b,FITPAD)}
@@ -1153,7 +1161,7 @@ const vehBtn=()=>!!(st&&st.veh&&(st.veh.list||[]).length); // Knopf «Fahrzeuge�
 const vehL=()=>(st&&st.veh&&st.veh.list)||[],vehNow=()=>(st&&st.now)||Date.now()/1000,vehById=id=>vehL().find(v=>v.id===id);
 const vehHang=c=>!!vehKind(st.veh,c).persons; // an einem Fahrzeug mit Personen «angehängt», sonst «verladen»
 function vehCrew(v){return (v.crew||[]).map(u=>{const p=(st.participants||[]).find(x=>x.user_id===u);return p?p.name:null}).filter(Boolean)}
-function vehInfo(v){const k=vehKind(st.veh,v),c=v.carrier_id!=null&&vehById(v.carrier_id);return [k.name,c?(vehHang(c)?'an «':'auf «')+c.name+'»':null,(v.inc?'gesehen ':'zuletzt gesehen ')+vehAgo(v.seen_at,vehNow())].filter(Boolean).join(' · ')}
+function vehInfo(v){const k=vehKind(st.veh,v),c=v.carrier_id!=null&&vehById(v.carrier_id);return [k.name,c?(vehHang(c)?'an «':'auf «')+c.name+'»':null,(v.inc?'gesehen ':'zuletzt gesehen ')+vehAgo(v.seen_at,vehNow()),vehBattTxt(v,vehNow())].filter(Boolean).join(' · ')}
 // im Fahrzeug (Personen im Fahrzeug, Funktion vehp): Zeile für Liste und Personeninfo
 function vehOf(p){const v=p&&p.veh_id!=null&&vehById(p.veh_id);return v?`<small>${vehKind(st.veh,v).sym} im Fahrzeug «${esc(v.name)}»</small>`:''}
 // mögliche Träger für v (Art passt, nicht v selbst oder etwas, das v trägt), mit Belegung
@@ -1164,7 +1172,7 @@ function vehBtns(v){if(!st.veh.can_link)return'';const c=v.carrier_id!=null&&veh
 function vehPop(r,kids){const one=v=>{const cr=vehCrew(v);return `<div style="margin-top:.3rem"><b>${vehKind(st.veh,v).sym} ${esc(v.name)}</b><span class="t">${esc(vehInfo(v))}</span>${v.descr?esc(v.descr)+'<br>':''}${cr.length?`<span class="t">An Bord: ${esc(cr.join(', '))}</span>`:''}${vehBtns(v)?`<div class="vbt">${vehBtns(v)}</div>`:''}</div>`};
   return `<div class="mmpop">${one(r)}${kids.map(one).join('')}<span class="t">${esc(fc(r.lat,r.lon)||'')}${r.acc!=null&&r.acc>50?' · Genauigkeit ca. '+Math.round(r.acc)+' m':''}</span>${navBtn(r.lat,r.lon,r.name,'Navigieren')}</div>`}
 function drawVeh(){if(!vehLayer)return;const V=st&&st.veh,on=!!V&&vis('veh');
-  const k=on?JSON.stringify([V.list.map(v=>[v.id,v.lat,v.lon,v.acc,v.carrier_id,v.seen_at,v.name,v.abbr,v.color,v.descr,(v.crew||[]).join()]),V.can_link,feat('nav'),me&&me.coord_sys,Math.floor(vehNow()/60)]):'';
+  const k=on?JSON.stringify([V.list.map(v=>[v.id,v.lat,v.lon,v.acc,v.carrier_id,v.seen_at,v.name,v.abbr,v.color,v.descr,(v.crew||[]).join(),v.batt,v.batt_mv]),V.can_link,feat('nav'),me&&me.coord_sys,Math.floor(vehNow()/60)]):'';
   if(k===vehKey)return;vehKey=k;vehDraw(vehLayer,on?V:null,vehNow(),vehPop)}
 // Gruppe «Fahrzeuge» im Fenster «Einsatzkräfte»: Hinweise «Träger voll», Ketten mit eingerückten aufgenommenen Fahrzeugen
 function vehFold(){const V=st&&st.veh;if(!V||!V.list.length)return'';const l=V.list,c=pplFold.has('veh');
@@ -1298,6 +1306,7 @@ function drawOthers(){if(!map)return;const O=(st&&st.incident&&st.others)||[],h=
 // Alarmstufe kommt vom Server (level, je Person: Einsatztyp, Übungsmodus); Nachrichten und Einsatzende auch bei «Keine» als stiller Hinweis
 let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}&vs=${VX.vs}${vxQ()}&oth=1`);
     if(!DEMO)(nx.org_alarms||[]).forEach(a=>{if(!a.joined)notify(a.org_name+': '+String(a.kind_name||'Einsatz').toUpperCase(),a.message,'o'+a.org+'/i:'+a.id,a.level)}); // Alarm einer anderen Organisation (Issue #60)
+    if(nx.test_alarm){const t=nx.test_alarm;if(TA&&TA.id===t.id){TA=null;taUi()}notify(t.t,t.b,t.tag,t.lvl)} // Testalarm (Issue #218)
     if(incWatch(nx))return poll(); // neu alarmiert zu einem anderen Einsatz ohne eigene Teilnahme: diesen anzeigen
     if(nx.incident){const i=nx.incident,lv=nx.level||'crit',cr=nx.msg_level||(lv==='none'?'low':lv),kr=cr==='none'?'low':cr;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(nx.alarm!==false&&notify(kindOf(i).name.toUpperCase(),i.message,'i:'+i.id,lv))toggleSheet(true)}
       // alle sehen alle Nachrichten, benachrichtigt werden nur die markierten Empfänger (bzw. alle bei «an alle»)
@@ -1309,7 +1318,7 @@ let timer;async function poll(){try{const nx=await api(`incident/state&since=${l
     else{if(st&&st.incident){const k=kindOf(st.incident).name,lv=st.level||'crit';incNotesClose(st.incident.id);if((st.alarm!==false||st.me)&&notify(k.toUpperCase()+' BEENDET',k+' beendet.','e:'+st.incident.id,st.end_level||(lv==='none'?'low':lv)))toggleSheet(true)}st=nx;lastIncId=null;vxPoll(nx);stop()}
     saveLast();setOffline(false);if(bootOff){bootOff=false;return render()} // offline gestartet: jetzt alles frisch laden
     paint()}catch(e){if(e instanceof TypeError)setOffline(true);console.error('Poll',e)}} // TypeError = keine Verbindung (fetch)
-function paint(){if(st&&st.incident)creating=false;baseSync();updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderHyd();renderVx();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
+function paint(){if(st&&st.incident)creating=false;alJoinSync();baseSync();updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderHyd();renderVx();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
 /* ---------- Funk & Konferenz (Issue #113): Kartenknopf «Funk», Seitenfenster, Sprechtaste auf der Karte, Live-Konferenz ---------- */
 // st.voice vom Server: ch (meine Kanäle mit speak), items (Durchsagen inkrementell nach upd, vs), conf (Konferenz verfügbar), conf_list (wer verbunden ist, muted), tr, max_s, listen, keep;
 // Einsatzleitung zusätzlich all_ch, inc_ch, guests, guest_speak, guest_links. Aufnahme, Wiedergabe und Konferenz in voice.js (VX).
@@ -1494,7 +1503,7 @@ function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.ac
   // Karten Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches (Issue #126: je Thema ein Unterabschnitt mit Titel, Knöpfe bündig)
   const h=`<div class="pcard"><h4>Konto</h4><div class="pwho">${me.photo?`<img src="${esc(me.photo)}" alt="Profilbild">`:'<span class="ph0" aria-hidden="true">👤</span>'}<div><b>${esc(me.name)}</b><div class="mut">${esc(me.username)} · ${esc(roleNames(me))}</div></div></div>${(me.groups||[]).length?`<h5>Meine Einsatzgruppen</h5><div class="isel">${me.groups.map(g=>`<span class="lchip ro"><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)}</span>`).join('')}</div>`:''}<div class="pbtns"><button id="bPh">Profilbild ändern</button>${DEMO?'':'<button id="bPw">Passwort ändern</button>'}<button id="bOut">${DEMO?'Demo beenden':'Abmelden'}</button></div><input type="file" id="ph" accept="image/*" hidden>${DEMO?'':orgPick(me.orgs,me.org_id)}${!DEMO&&me.platform_admin?'<div class="pbtns"><a class="btn" href="plattform.html">🏢 Plattformverwaltung</a></div>':''}${telPrefs()}<div id="sessMine"></div></div>`
     +`<div class="pcard"><h4>Alarmierung</h4><div class="phd"><h5>Einsatzfähigkeit</h5>${me.absent?absChip(me.absent):'<span class="okchip">✓ einsatzfähig</span>'}</div><div class="mut">Abwesend oder Einsatzfähigkeit ausgesetzt: kein Aufgebot und kein Alarm. Laufende Einsätze bleiben sichtbar.</div><div id="absMine" class="pabs"><div class="mut">Wird geladen …</div></div><h5>Regelmässige Einsatzzeiten</h5><div class="mut">Je Wochentag und Uhrzeit: nur in diesen Zeiten alarmiert werden (Einsatzzeit) oder regelmässig ausgesetzt.</div><div id="ruleMine" class="pabs"><div class="mut">Wird geladen …</div></div>${DEMO?'':'<div class="pbtns"><a class="btn" href="admin.html#kalender">📅 Kalender</a></div>'}`
-    +`<h5>Übungsmodus</h5><label class="row" style="align-items:center;margin:0"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Einsatztypen, die das vorsehen (z. B. Übungen), kritisch alarmieren</span></label>${pushHtml()}</div>`
+    +`<h5>Übungsmodus</h5><label class="row" style="align-items:center;margin:0"><input type="checkbox" id="exm" ${me.exercise_mode?'checked':''}><span>Einsatztypen, die das vorsehen (z. B. Übungen), kritisch alarmieren</span></label>${pushHtml()}${taHtml()}</div>`
     +(me.skills&&me.skills.n&&!DEMO?`<div class="pcard" id="skCard"><h4>Ausbildung</h4><div class="mut">Deine Ausbildungen mit Gültigkeit. Läuft eine ab oder fehlt eine Pflicht-Ausbildung, steht ein Hinweis im Menü.</div><div id="skMine"><div class="mut">Wird geladen …</div></div></div>`:'')
     +`<div class="pcard"><h4>Anzeige</h4><label class="mut">Koordinatensystem<select id="csys"><option value="">Standard: ${esc(COORD_SYS[me.coord_default]||COORD_SYS.lv95)}</option>${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===me.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}<option value="none" ${me.coord_sys==='none'?'selected':''}>Keine Koordinaten anzeigen</option></select></label>${feat('nav')?`<label class="mut">Navigations-App (Knopf 🧭)<select id="navA"><option value="">Standard: ${esc(NAV_APPS[me.nav_default]||NAV_APPS.google)}</option>${(me.nav_apps||[]).filter(navOk).map(k=>`<option value="${k}" ${k===me.nav_app?'selected':''}>${esc(NAV_APPS[k])}</option>`).join('')}</select></label>`:''}</div>`
     +hyPrefs()+vehPrefs()+aiPrefs()
@@ -1506,7 +1515,7 @@ function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.ac
     +`<div class="pcard"><h4>Version</h4>${mkv([['Version',esc(verTxt(me.version)||'unbekannt')],['Server',esc(location.host+location.pathname.replace(/[^/]*$/,''))]])}<div class="pbtns"><button id="bChg">Was ist neu</button></div></div>` // Issue #175
     +`<div class="pcard"><h4>Rechtliches</h4>${DEMO?'':orgMark(me.org_info,'orgbig')}<div class="mut">Wer die App betreibt, welche Daten sie speichert und welche Lizenzen gelten.</div><div class="pbtns"><a class="btn" href="hilfe.html" target="_blank" rel="noopener">Bedienungsanleitung</a><a class="btn" href="legal.html#impressum" target="_blank" rel="noopener">Impressum</a><a class="btn" href="legal.html#lizenzen" target="_blank" rel="noopener">Lizenzen</a><a class="btn" href="legal.html#datenschutz" target="_blank" rel="noopener">Datenschutz</a></div></div>`;
   // Issue #126: früher stand diese Prüfung doppelt; die zweite brach immer ab, Knöpfe und Abwesenheiten blieben ohne Funktion
-  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;absMine();ruleMine();skMine();sessMine();hyBindPrefs(p);vehBindPrefs();if($('#bDemo'))$('#bDemo').onclick=()=>DEMO.panel(false);
+  if(h===prefsHtml)return;prefsHtml=h;p.innerHTML=h;taBind();absMine();ruleMine();skMine();sessMine();hyBindPrefs(p);vehBindPrefs();if($('#bDemo'))$('#bDemo').onclick=()=>DEMO.panel(false);
   if($('#pvTap')){$('#pvTap').onchange=e=>{vxLs('sw_vxtap',e.target.checked?1:0);prefsHtml='';vxFab()};$('#pvLis').onchange=e=>{vxSetListen(e.target.checked);prefsHtml=''};$('#pvMap').onchange=e=>{vxLs('sw_vxptt',e.target.checked?1:0);prefsHtml='';vxFab()}}
   p.querySelectorAll('[data-aisel]').forEach(x=>x.onchange=e=>{e.target.blur();const v={};p.querySelectorAll('[data-aisel]').forEach(y=>{if(y.value)v[y.dataset.aisel]=y.value});
     api('me/settings',{ai_modes:v}).then(()=>api('me')).then(r=>{me=r.me;prefsHtml='';prefsDraw();draw()}).catch(fail)});
@@ -1516,6 +1525,18 @@ function prefsDraw(){const p=$('#prefsIn');if(!p||!me)return;const f=document.ac
   $('#csys').onchange=e=>{const v=e.target.value,old=me.coord_sys;e.target.blur();me.coord_sys=v||null;poiKey=resKey='';prefsHtml='';api('me/settings',{coord_sys:v}).then(poll).catch(x=>{me.coord_sys=old;fail(x);poll()})};
   telBind();
   const na=$('#navA');if(na)na.onchange=e=>{const v=e.target.value,old=me.nav_app;e.target.blur();me.nav_app=v||null;prefsHtml='';api('me/settings',{nav_app:v}).catch(x=>{me.nav_app=old;fail(x);draw()})}}
+// Persönlicher Testalarm (Issue #218): nach 30 s ein Alarm der gewählten Stufe an sich selbst (Push vom Server, sonst über das Polling);
+// gewählte Stufe pro Gerät in sw_talvl, laufender Test in TA (Countdown im Profil, «Abbrechen»)
+const TA_LVL=['crit','high','normal','low'],TA_TXT={crit:'Kritisch',high:'Hoch',normal:'Normal',low:'Leise'};let TA=null,taT=0;
+const taLvl=()=>{try{const v=localStorage.getItem('sw_talvl');return TA_LVL.includes(v)?v:'crit'}catch(e){return 'crit'}};
+function taHtml(){return `<h5>Testalarm</h5><div class="mut">Löst nach 30 Sekunden einen Alarm der gewählten Stufe nur für dich aus, ohne Einsatz. Danach die App schliessen oder den Bildschirm sperren, um Ton und Push zu prüfen.</div>
+  <div class="row" style="align-items:center;flex-wrap:wrap;gap:.4rem"><select id="taL" data-nodirty>${TA_LVL.map(k=>`<option value="${k}" ${k===taLvl()?'selected':''}>${TA_TXT[k]}</option>`).join('')}</select><button id="bTa"></button><span id="taSt" class="mut"></span></div>`}
+function taUi(){const b=$('#bTa'),st=$('#taSt');clearTimeout(taT);if(TA&&TA.at*1000<Date.now()-5000)TA=null;if(!b)return;
+  const s=TA?Math.max(0,Math.ceil(TA.at-Date.now()/1000)):0;b.textContent=TA?'Abbrechen':'Testalarm in 30 s';
+  st.textContent=TA?(s?`Testalarm «${TA_TXT[TA.lvl]}» in ${s} s${TA.push?'':' (ohne Push: nur bei offener App)'}`:'Testalarm ausgelöst'):'';if(TA)taT=setTimeout(taUi,1000)}
+function taBind(){const l=$('#taL'),b=$('#bTa');if(!b)return;l.onchange=e=>{try{localStorage.setItem('sw_talvl',e.target.value)}catch(x){}e.target.blur()};
+  b.onclick=async()=>{b.disabled=true;try{if(TA){await api('me/testalarm',{lvl:''});TA=null;toast('Testalarm abgebrochen','info')}
+    else{const lvl=l.value,r=await api('me/testalarm',{lvl});TA={id:r.id,at:r.at,lvl,push:r.push};toast(r.push?'Testalarm in 30 s. Jetzt die App schliessen oder den Bildschirm sperren.':'Testalarm in 30 s. Ohne Push auf diesem Gerät kommt er nur bei offener App.','ok')}}catch(e){fail(e)}b.disabled=false;taUi()};taUi()}
 // eigene Abwesenheiten im Profil (Issue #91): laden, erfassen, ändern, beenden
 function absMine(){const el=$('#absMine');if(!el)return;api('absences').then(rs=>{if(!el.isConnected)return;el.innerHTML=absRows(rs,false)+'<div class="pbtns"><button id="bAbsN">+ Abwesenheit erfassen</button></div>';absBind(el,rs,absDone);$('#bAbsN').onclick=()=>absDialog(null,null,absDone)}).catch(()=>{if(el.isConnected)el.innerHTML='<div class="mut">Abwesenheiten nicht verfügbar (keine Verbindung).</div>'})}
 // Regelmässige Einsatzzeiten im Profil (Issue #180)

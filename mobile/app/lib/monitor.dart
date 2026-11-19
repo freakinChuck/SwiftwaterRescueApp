@@ -83,7 +83,11 @@ Future<bool> isForeground(String id) async {
 Future<void> report(Account a, String tag, String title, String body, String lvl, {int? kind, String? ksnd}) async {
   if (lvl == 'none') return;
   if (!await markTag(a.id, tag)) return;
+<<<<<<< HEAD
   final alarm = RegExp(r'^(o\d+/)?i:').hasMatch(tag) && (lvl == 'crit' || lvl == 'high'); // o<id>/i: Alarm einer anderen Organisation (Issue #60), auch bei offener App
+=======
+  final alarm = RegExp(r'^[it]:').hasMatch(tag) && (lvl == 'crit' || lvl == 'high'); // t: persönlicher Testalarm (Issue #218)
+>>>>>>> claude/fervent-archimedes-y80omb
   if (!alarm && await isForeground(a.id)) return;
   await showNote(a.id, tag, title, body, lvl, sub: a.label, kind: kind, ksnd: ksnd);
 }
@@ -138,6 +142,8 @@ Future<AccState> pollOne(Account a) async {
     j['at'] = DateTime.now().millisecondsSinceEpoch;
     final inc = r['incident'] as Map?;
     j['blocked'] = r['blocked'] == 1;
+    final ta = r['test_alarm']; // persönlicher Testalarm (Issue #218)
+    if (ta is Map) await report(a, '${ta['tag']}', '${ta['t'] ?? 'TESTALARM'}', '${ta['b'] ?? ''}', '${ta['lvl'] ?? 'crit'}');
     final il = r['incidents'] is List ? (r['incidents'] as List).whereType<Map>().toList() : null;
     if (il != null) await _watchAll(a, st, j, il, r['kinds']);
     if (r['org_alarms'] is List) await _orgAlarms(a, r['org_alarms'] as List);

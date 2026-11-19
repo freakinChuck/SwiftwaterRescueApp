@@ -14,11 +14,13 @@ Startet jemand einen Einsatz oder eine Übung, alarmiert die App alle aufgeboten
 
 Ist die App offen, erscheint die Meldung oben rechts, bis du sie antippst. Bei geschlossener App kommt sie als Push-Benachrichtigung. Antippen öffnet die App und zeigt das Einsatzgebiet.
 
+In der Alarm-Meldung (in der nativen App im Vollbild) stehen schon die Einrückoptionen: Mit **Annehmen: …** nimmst du den Einsatz direkt an, die Karte zeigt danach das Einsatzgebiet. **Nur quittieren** (in der Web-App: die Meldung daneben antippen) schliesst den Alarm, ohne anzunehmen; annehmen kannst du dann wie unten beschrieben im Menü.
+
 Mit dem **Übungsmodus** im [Profil](#profil/alarmierung) lässt du dich auch bei Übungen kritisch alarmieren, sofern der Einsatztyp das vorsieht. Bist du [abwesend gemeldet](#profil/abwesenheit), wirst du nicht alarmiert, siehst den Einsatz aber und kannst freiwillig teilnehmen.
 
 ## Einsatz annehmen {#annehmen}
 
-Solange du nicht teilnimmst, zeigt die Karte unter dem Einsatz-Chip die gelbe Leiste **Einsatz noch nicht angenommen**. Antippen öffnet das Menü bei der Karte «Teilnahme».
+Direkt im Alarm geht es am schnellsten (siehe [Der Alarm](#alarm)). Solange du nicht teilnimmst, zeigt die Karte unter dem Einsatz-Chip die gelbe Leiste **Einsatz noch nicht angenommen**. Antippen öffnet das Menü bei der Karte «Teilnahme».
 
 ![Hinweis «Einsatz noch nicht angenommen»](img/hinweis-annehmen.jpg)
 ![Teilnahme mit den Einrückoptionen](img/teilnahme.jpg)

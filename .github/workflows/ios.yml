@@ -12,6 +12,8 @@ on:
 
 env:
   FLUTTER_VERSION: '3.47.9'
+  # Ab April 2027 nimmt App Store Connect nur Builds mit dem iOS-27-SDK an (ITMS-90725). Gewählt wird das neuste Xcode dieser Hauptversion.
+  XCODE_MAJOR: '27'
 
 defaults:
   run:
@@ -19,9 +21,19 @@ defaults:
 
 jobs:
   ios:
-    runs-on: macos-latest
+    # Xcode 27 gibt es bei GitHub zurzeit nur im Abbild «xcode-27» (Preview); Rückfall ohne Codeänderung über die Repo-Variable IOS_RUNNER (z. B. macos-latest) und XCODE_MAJOR
+    runs-on: ${{ vars.IOS_RUNNER || 'xcode-27' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Xcode wählen
+        shell: bash
+        working-directory: .
+        run: |
+          maj="${{ vars.IOS_XCODE_MAJOR || env.XCODE_MAJOR }}"
+          x=$(ls -d /Applications/Xcode_${maj}*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$x" ]; then echo "::error::Kein Xcode $maj auf diesem Runner: $(ls -d /Applications/Xcode_*.app | xargs -n1 basename | tr '\n' ' ')"; exit 1; fi
+          sudo xcode-select -s "$x/Contents/Developer"
+          echo "::notice::$(xcodebuild -version | tr '\n' ' ')/ iOS-SDK $(xcrun --sdk iphoneos --show-sdk-version)"
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -69,6 +81,13 @@ jobs:
           security cms -D -i "$RUNNER_TEMP/app.mobileprovision" > "$RUNNER_TEMP/profile.plist"
           uuid=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")
           pname=$(/usr/libexec/PlistBuddy -c 'Print Name' "$RUNNER_TEMP/profile.plist")
+          # Jede Berechtigung aus Runner.entitlements muss im Profil stehen, sonst scheitert die Signierung unverständlich
+          miss=""
+          for k in com.apple.developer.usernotifications.critical-alerts com.apple.developer.usernotifications.time-sensitive; do
+            grep -q "<key>$k</key>" ios/Runner/Runner.entitlements || continue
+            /usr/libexec/PlistBuddy -c "Print :Entitlements:$k" "$RUNNER_TEMP/profile.plist" >/dev/null 2>&1 || miss="$miss $k"
+          done
+          if [ -n "$miss" ]; then echo "::error::Provisioning-Profil «$pname» ohne:$miss. Profil im Apple-Portal neu erstellen und IOS_PROFILE_BASE64 ersetzen."; exit 1; fi
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$RUNNER_TEMP/app.mobileprovision" ~/Library/MobileDevice/Provisioning\ Profiles/"$uuid".mobileprovision
           # Nur das Ziel Runner manuell signieren (Bibliotheken bleiben unverändert)

@@ -48,12 +48,23 @@ String vehAgo(num? ts, num now) {
   return 'am ${fmtDT(ts)}';
 }
 
+/// Batteriestand des Beacons (Issue #224): «Batterie 80 %», schwach ab vehBattLow, Stand älter als 1 Tag mit Zeitpunkt; null = unbekannt
+const vehBattLow = 20;
+String? vehBatt(IncStore s, J v) {
+  final p = ji(v['batt']);
+  if (p == null) return null;
+  final at = jn(v['batt_at']);
+  final mv = ji(v['batt_mv']);
+  return '${p <= vehBattLow ? '⚠ Batterie schwach' : 'Batterie'} $p %${mv != null ? ' (${(mv / 1000).toStringAsFixed(2)} V)' : ''}${at != null && s.now - at > 86400 ? ' (${vehAgo(at, s.now)})' : ''}';
+}
+
 String vehInfo(IncStore s, J v) {
   final c = vehById(s, v['carrier_id']);
   return [
     js(vehKind(s, v)['name']),
     if (c != null) '${_hang(s, c) ? 'an' : 'auf'} «${js(c['name'])}»',
     '${jb(v['inc']) ? 'gesehen' : 'zuletzt gesehen'} ${vehAgo(jn(v['seen_at']), s.now)}',
+    ?vehBatt(s, v),
   ].join(' · ');
 }
 
@@ -211,6 +222,8 @@ List<String> vehSheetLines(IncStore s, J root, List<J> kids) => [
 /// Gruppe «Fahrzeuge» im Fenster «Einsatzkräfte»: Hinweise «Träger voll», Ketten mit eingerückten aufgenommenen Fahrzeugen
 List<Widget> vehRows(BuildContext context, IncStore s, MapCtl map) {
   final out = <Widget>[];
+  final scan = vehScanBtn(context, s);
+  if (scan != null) out.add(Padding(padding: const EdgeInsets.only(top: 4, bottom: 4), child: Align(alignment: Alignment.centerLeft, child: scan)));
   for (final h in jl(vehOf(s)?['hints'])) {
     final a = vehById(s, h['id']), b = vehById(s, h['carrier']);
     if (a == null || b == null) continue;
@@ -259,4 +272,88 @@ List<Widget> vehRows(BuildContext context, IncStore s, MapCtl map) {
     out.addAll(vehKids(s, ji(r['id'])).map((k) => row(k, true)));
   }
   return out;
+}
+
+/// Knopf «Fahrzeuge jetzt scannen» (Fenster «Einsatzkräfte» und Profil); nicht im Demo und ohne Fahrzeuge mit Beacon
+Widget? vehScanBtn(BuildContext context, IncStore s) {
+  if (s.demo || s.me?['beacon_cfg'] is! Map) return null;
+  return OutlinedButton.icon(onPressed: () => vehScanDlg(context, s), icon: const Icon(Icons.bluetooth_searching, size: 18), label: const Text('Fahrzeuge jetzt scannen'));
+}
+
+String _sig(int r) => '${r >= -60 ? 'stark' : r >= -75 ? 'mittel' : 'schwach'} ($r dBm)';
+String _bt(int? p) => p == null ? '' : ' · ${p <= vehBattLow ? '⚠ Batterie schwach' : 'Batterie'} $p %';
+
+/// Ergänzt fehlende Namen (ältere Server ohne name in beacon_cfg): aus der Lage, mit cfg_map aus der Verwaltung, sonst «Fahrzeug N»
+Future<void> _scanNames(IncStore s, List<J> found) async {
+  final miss = found.where((b) => b['id'] != null && js(b['name']).isEmpty).toList();
+  if (miss.isEmpty) return;
+  final nm = <int, String>{for (final v in vehList(s)) if (ji(v['id']) != null && js(v['name']).isNotEmpty) ji(v['id'])!: js(v['name'])};
+  if (miss.any((b) => !nm.containsKey(ji(b['id']))) && s.can('cfg_map')) {
+    try {
+      for (final v in jl((await s.api.call('vehicles'))['vehicles'])) {
+        if (ji(v['id']) != null && js(v['name']).isNotEmpty) nm[ji(v['id'])!] = js(v['name']);
+      }
+    } catch (_) {}
+  }
+  for (final b in miss) {
+    b['name'] = nm[ji(b['id'])] ?? 'Fahrzeug ${b['id']}';
+  }
+}
+
+/// Sucht etwa 6 s nach den Beacons, meldet sie (IncStore.scanVehicles) und zeigt, was gefunden und gemeldet wurde
+Future<void> vehScanDlg(BuildContext context, IncStore s) async {
+  ({List<J> found, String msg, bool ok})? r;
+  var started = false;
+  await showDialog<void>(
+      context: context,
+      builder: (dc) => StatefulBuilder(builder: (dc, set) {
+            if (!started) {
+              started = true;
+              s.scanVehicles().then((x) async {
+                await _scanNames(s, x.found);
+                if (dc.mounted) set(() => r = x);
+              });
+            }
+            final x = r;
+            return AlertDialog(
+                title: const Text('Fahrzeuge scannen'),
+                content: SizedBox(
+                    width: 420,
+                    child: x == null
+                        ? const Column(mainAxisSize: MainAxisSize.min, children: [
+                            Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()),
+                            Mut('Die App sucht einige Sekunden nach den Beacons der Fahrzeuge.'),
+                          ])
+                        : ListView(shrinkWrap: true, children: [
+                            for (final b in x.found.where((b) => b['id'] != null))
+                              ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(Icons.directions_car, color: (ji(b['batt']) ?? 100) <= vehBattLow ? const Color(0xFFE57373) : null),
+                                  title: Text(js(b['name'])),
+                                  subtitle: Text('Signal ${_sig(ji(b['rssi']) ?? -127)}${_bt(ji(b['batt']))}')),
+                            Padding(padding: const EdgeInsets.only(top: 8), child: Text(x.msg, style: TextStyle(color: x.ok ? null : const Color(0xFFE57373)))),
+                            if (x.found.any((b) => b['id'] == null)) ...[
+                              const Padding(padding: EdgeInsets.only(top: 12), child: Text('Weitere Beacons in der Nähe', style: TextStyle(fontWeight: FontWeight.w600))),
+                              const Mut('Senden den Batteriestand, gehören aber zu keinem Fahrzeug. Die MAC-Adresse lässt sich beim Fahrzeug in der Verwaltung eintragen.', size: 12),
+                              for (final b in x.found.where((b) => b['id'] == null))
+                                ListTile(
+                                    dense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: const Icon(Icons.bluetooth),
+                                    title: Text(js(b['mac'])),
+                                    subtitle: Text('Signal ${_sig(ji(b['rssi']) ?? -127)}${_bt(ji(b['batt']))}')),
+                            ],
+                          ])),
+                actions: [
+                  if (x != null)
+                    TextButton(
+                        onPressed: () => set(() {
+                              r = null;
+                              started = false;
+                            }),
+                        child: const Text('Erneut scannen')),
+                  TextButton(onPressed: () => Navigator.pop(dc), child: const Text('Schliessen')),
+                ]);
+          }));
 }
