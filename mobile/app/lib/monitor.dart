@@ -83,11 +83,7 @@ Future<bool> isForeground(String id) async {
 Future<void> report(Account a, String tag, String title, String body, String lvl, {int? kind, String? ksnd}) async {
   if (lvl == 'none') return;
   if (!await markTag(a.id, tag)) return;
-<<<<<<< HEAD
-  final alarm = RegExp(r'^(o\d+/)?i:').hasMatch(tag) && (lvl == 'crit' || lvl == 'high'); // o<id>/i: Alarm einer anderen Organisation (Issue #60), auch bei offener App
-=======
-  final alarm = RegExp(r'^[it]:').hasMatch(tag) && (lvl == 'crit' || lvl == 'high'); // t: persönlicher Testalarm (Issue #218)
->>>>>>> claude/fervent-archimedes-y80omb
+  final alarm = RegExp(r'^(o\d+/)?[it]:').hasMatch(tag) && (lvl == 'crit' || lvl == 'high'); // o<id>/i: Alarm einer anderen Organisation (Issue #60), t: persönlicher Testalarm (Issue #218), auch bei offener App
   if (!alarm && await isForeground(a.id)) return;
   await showNote(a.id, tag, title, body, lvl, sub: a.label, kind: kind, ksnd: ksnd);
 }
