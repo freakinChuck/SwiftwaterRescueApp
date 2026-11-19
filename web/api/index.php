@@ -35,7 +35,7 @@ const APPLOG_CATS = ['api' => 'Server', 'platform' => 'Plattform (Mandanten)', '
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
 // Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
-const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
+const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/testalarm' => ['push', 'Persönlicher Testalarm angefordert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
   'user/save' => ['user', 'Benutzer gespeichert'], 'user/password' => ['user', 'Passwort zurückgesetzt'], 'user/active' => ['user', 'Benutzer aktiviert bzw. deaktiviert'], 'user/delete' => ['user', 'Benutzer gelöscht'],
   'skill/save' => ['user', 'Fähigkeit der Ausbildung gespeichert'], 'skill/remove' => ['user', 'Fähigkeit der Ausbildung entfernt'], 'skill/entry/save' => ['user', 'Ausbildung erfasst'], 'skill/entry/remove' => ['user', 'Ausbildung entfernt'],
   'urole/save' => ['user', 'Benutzerrolle gespeichert'], 'urole/remove' => ['user', 'Benutzerrolle entfernt'], 'group/save' => ['user', 'Einsatzgruppe gespeichert'], 'group/delete' => ['user', 'Einsatzgruppe gelöscht'],
@@ -204,7 +204,7 @@ foreach (['inc_kinds' => ["snd $tx NULL", "msg_lvl $tx NULL", "end_lvl $tx NULL"
   foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 // Fahrzeuge (Issue #177): participants.veh_id = im Fahrzeug (veh_at = zuletzt stark gesehen, veh_cand = Kandidat aus dem letzten Scan), track.veh_id = im Fahrzeug bei der Meldung,
 // users.beacon = Fahrzeuge auch ausserhalb von Einsätzen melden (freiwillig)
-foreach (['participants' => ['veh_id INT NULL', 'veh_at BIGINT NULL', 'veh_cand INT NULL'], 'track' => ['veh_id INT NULL'], 'users' => ['beacon INT DEFAULT 0', 'phone TEXT NULL'], 'veh_kinds' => ['carry_max INT NULL'], 'vehicles' => ['cap_max INT NULL', 'deleted INT DEFAULT 0']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
+foreach (['participants' => ['veh_id INT NULL', 'veh_at BIGINT NULL', 'veh_cand INT NULL'], 'track' => ['veh_id INT NULL'], 'users' => ['beacon INT DEFAULT 0', 'phone TEXT NULL'], 'veh_kinds' => ['carry_max INT NULL'], 'vehicles' => ['cap_max INT NULL', 'deleted INT DEFAULT 0', 'mac TEXT NULL', 'batt INT NULL', 'batt_at BIGINT NULL', 'batt_mv INT NULL']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 try { $db->exec("CREATE INDEX vehicle_seen_inc ON vehicle_seen(incident_id,ts)"); } catch (Throwable $e) {}
 // Standardarten beim ersten Aufruf (Sperre über die Zeile veh_mig wie bei den Einsatztypen): Zug-/Personenfahrzeug nimmt 1 Anhänger auf, Anhänger 1 Boot
 if (!$db->query("SELECT COUNT(*) c FROM veh_kinds")->fetch()['c']) {
@@ -236,6 +236,7 @@ if (setting('place_props_mig', '') === '') { if (!$db->query("SELECT COUNT(*) FR
 try { $db->exec("ALTER TABLE skills ADD COLUMN req_grp TEXT NULL"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE users ADD COLUMN purged INT DEFAULT 0"); } catch (Throwable $e) {}
 foreach (["users ADD COLUMN gid INT NULL", "absences ADD COLUMN gkey $tx NULL", "avail_rules ADD COLUMN gkey $tx NULL"] as $q) try { $db->exec("ALTER TABLE $q"); } catch (Throwable $e) {} // Mandanten (Issue #60): Konto der Plattform; gkey = derselbe Eintrag in allen Mandanten // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
+try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {} // persönlicher Testalarm (Issue #218): JSON {id, lvl, at}
 if (setting('skill_y0_mig', '') === '') { $db->exec("UPDATE skills SET n=n-1 WHERE exp='year' AND n>0"); setSetting('skill_y0_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX voice_inc ON voice(incident_id,upd)"); } catch (Throwable $e) {}
@@ -2107,12 +2108,21 @@ function vehKinds($all = true) { global $db; $r = [];
   foreach ($db->query("SELECT * FROM veh_kinds ORDER BY " . SORT_ORDER)->fetchAll() as $k) { if (!$all && !(int)$k['active']) continue;
     $k = ints($k, ['id', 'persons', 'water', 'active', 'sort', 'carry_max']); $k['carries'] = (object)vehCarries($k['carries']); $k['sym'] = VEH_ICONS[$k['icon'] ?? ''] ?? '🚐'; $r[] = $k; }
   return $r; }
-function vehRow($v) { $v = floats(ints($v, ['id', 'kind_id', 'major', 'minor', 'active', 'sort', 'seen_at', 'seen_inc', 'seen_rssi', 'seen_uid', 'own_at', 'carrier_id', 'carrier_at', 'carrier_manual', 'lone_n', 'trip_at', 'fast_at', 'cap_max']), ['lat', 'lon', 'acc', 'own_lat', 'own_lon', 'trip_lat', 'trip_lon']);
+function vehRow($v) { $v = floats(ints($v, ['id', 'kind_id', 'major', 'minor', 'active', 'sort', 'seen_at', 'seen_inc', 'seen_rssi', 'seen_uid', 'own_at', 'carrier_id', 'carrier_at', 'carrier_manual', 'lone_n', 'trip_at', 'fast_at', 'cap_max', 'batt', 'batt_at', 'batt_mv']), ['lat', 'lon', 'acc', 'own_lat', 'own_lon', 'trip_lat', 'trip_lon']);
   $v['cap'] = $v['cap'] === null ? null : vehCarries($v['cap']); return $v; }
 // $del: auch gelöschte (nur fürs Replay, sie bleiben dort mit Name und Art)
 function vehAll($del = false) { global $db; return array_map('vehRow', $db->query("SELECT * FROM vehicles" . ($del ? '' : ' WHERE COALESCE(deleted,0)=0') . " ORDER BY " . SORT_ORDER)->fetchAll()); }
 // Fahrzeuge, die in Einsätzen vorkommen (Sichtungen oder Verbund im Einsatz, als Fahrzeug oder Träger): Löschen markiert sie nur als gelöscht
 function vehUsed() { global $db; return array_map('intval', $db->query("SELECT vehicle_id FROM vehicle_seen UNION SELECT vehicle_id FROM veh_links WHERE incident_id IS NOT NULL UNION SELECT carrier_id FROM veh_links WHERE incident_id IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN)); }
+// MAC-Adresse «AA:BB:CC:DD:EE:FF» (Trennzeichen frei), sonst null
+function macIn($v) { $h = strtoupper(preg_replace('/[^0-9A-Fa-f]/', '', (string)$v)); return strlen($h) === 12 ? implode(':', str_split($h, 2)) : null; }
+// Batteriestand der Beacons (Issue #224, Frame «Device Info» von DX-Smart oder Eddystone-TLM): [{id, pct, mac?, mv?}]; mv = Spannung aus TLM (sonst NULL); lernt die MAC, solange beim Fahrzeug keine eingetragen ist
+function vehBatt($list) { global $db, $now; if (!is_array($list) || !$list) return 0; $by = vehById(); $n = 0;
+  foreach (array_slice($list, 0, 50) as $b) { $id = (int)($b['id'] ?? 0); $p = $b['pct'] ?? null; if (!isset($by[$id]) || !is_numeric($p) || $p < 0 || $p > 100) continue;
+    $m = macIn($b['mac'] ?? ''); $learn = $m !== null && empty($by[$id]['mac']);
+    $mv = isset($b['mv']) && is_numeric($b['mv']) && $b['mv'] >= 1000 && $b['mv'] <= 4000 ? (int)$b['mv'] : null;
+    $db->prepare("UPDATE vehicles SET batt=?, batt_at=?, batt_mv=?" . ($learn ? ', mac=?' : '') . " WHERE id=?")->execute($learn ? [(int)$p, $now, $mv, $m, $id] : [(int)$p, $now, $mv, $id]); $n++; }
+  return $n; }
 function vehById($del = false) { $o = []; foreach (vehAll($del) as $v) $o[$v['id']] = $v; return $o; }
 function vehCap($v, $kb) { return $v['cap'] ?? (array)($kb[$v['kind_id']]['carries'] ?? []); } // Höchstzahlen {Art-ID: Anzahl|null}
 function vehCapMax($v, $kb) { return $v['cap'] !== null ? ($v['cap_max'] ?? null) : ($kb[$v['kind_id']]['carry_max'] ?? null); } // insgesamt höchstens (null = nur je Art)
@@ -2240,7 +2250,7 @@ function vehState($inc, $pub = false) { global $db, $now; $c = beaconCfg();
   $list = [];
   foreach ($all as $v) { $room = []; foreach (vehCap($v, $kb) as $k => $m) $room[$k] = ['n' => count(array_filter($all, fn($x) => $x['carrier_id'] === $v['id'] && $x['kind_id'] === (int)$k)), 'max' => $m];
     $list[] = ['id' => $v['id'], 'kind_id' => $v['kind_id'], 'name' => $v['name'], 'descr' => $pub ? null : $v['descr'], 'abbr' => $v['abbr'], 'color' => $v['color'], 'lat' => $v['lat'], 'lon' => $v['lon'], 'acc' => $v['acc'], 'seen_at' => $v['seen_at'],
-      'inc' => $inc && $v['seen_inc'] === (int)$inc['id'] ? 1 : 0, 'carrier_id' => $v['carrier_id'], 'carrier_manual' => $v['carrier_manual'], 'room' => (object)$room,
+      'inc' => $inc && $v['seen_inc'] === (int)$inc['id'] ? 1 : 0, 'batt' => $pub ? null : $v['batt'], 'batt_at' => $pub ? null : $v['batt_at'], 'batt_mv' => $pub ? null : $v['batt_mv'], 'carrier_id' => $v['carrier_id'], 'carrier_manual' => $v['carrier_manual'], 'room' => (object)$room,
       'room_all' => ['n' => count(array_filter($all, fn($x) => $x['carrier_id'] === $v['id'])), 'max' => vehCapMax($v, $kb)]] + ($pub ? [] : ['crew' => $crew[$v['id']] ?? []]); }
   $hints = []; if ($inc && !$pub) { $s = $db->prepare("SELECT a,b FROM veh_cand WHERE full=1 AND n>=? AND at>=?"); $s->execute([VEH_LINK_N, $now - 600]);
     foreach ($s->fetchAll() as $r) if (isset($all[(int)$r['a']], $all[(int)$r['b']]) && $all[(int)$r['a']]['carrier_id'] !== (int)$r['b']) $hints[] = ['id' => (int)$r['a'], 'carrier' => (int)$r['b']]; }
@@ -2249,7 +2259,7 @@ function vehState($inc, $pub = false) { global $db, $now; $c = beaconCfg();
 // Für die native App (me.beacon): wonach sie sucht. null = nichts zu tun (Funktion überall aus oder keine aktiven Fahrzeuge)
 function beaconMe() { if (!array_filter(featuresAll(), fn($f) => $f['veh'])) return null; $c = beaconCfg(); $kb = array_column(vehKinds(), null, 'id');
   $l = array_values(array_filter(vehAll(), fn($v) => $v['active'])); if (!$l) return null;
-  $l = array_map(fn($v) => ['id' => $v['id'], 'uuid' => $v['uuid'] ?: $c['uuid'], 'major' => $v['major'], 'minor' => $v['minor'], 'water' => (int)!empty($kb[$v['kind_id']]['water'])], $l);
+  $l = array_map(fn($v) => ['id' => $v['id'], 'name' => $v['name'], 'uuid' => $v['uuid'] ?: $c['uuid'], 'major' => $v['major'], 'minor' => $v['minor'], 'mac' => $v['mac'] ?? null, 'water' => (int)!empty($kb[$v['kind_id']]['water'])], $l);
   return ['uuids' => array_values(array_unique(array_column($l, 'uuid'))), 'list' => $l, 'inc_s' => $c['inc_s'], 'home' => $c['home'], 'home_min' => $c['home_min'], 'assign' => $c['assign'], 'link' => $c['link'], 'assign_rssi' => $c['assign_rssi'], 'link_rssi' => $c['link_rssi']]; }
 // Replay: Fahrzeuge mit Sichtungen dieses Einsatzes (Punkte [id, ts, lat, lon] wie track), Verbund als [Fahrzeug, Träger, von, bis]
 function vehReplay($id) { global $db; $s = $db->prepare("SELECT vehicle_id,ts,lat,lon FROM vehicle_seen WHERE incident_id=? ORDER BY ts,id"); $s->execute([$id]);
@@ -2725,6 +2735,15 @@ function fcmDone($mh, $hn) { global $db; $ok = 0;
     curl_multi_remove_handle($mh, $h); }
   if ($hn) alog('info', 'push', 'App-Push an FCM übergeben', ['ok' => $ok, 'failed' => count($hn) - $ok]); }
 // alle aktiven Benutzer ausser $skip (IDs), bei Aufgebot nur die aufgebotenen ($only, NULL = alle); Stufe wie alarmLvl je Person, «Keine» sendet nichts
+// Persönlicher Testalarm (Issue #218): fällig ab at, danach TEST_ALARM_S lang im Polling (incident/state), damit ihn auch Geräte ohne Push zeigen.
+// Tag t:<id> (eigener Quittierschlüssel, kein Einsatz), Stufe wie ein Alarm (crit/high Vollbild in der App).
+const TEST_ALARM_LVL = ['crit', 'high', 'normal', 'low'];
+const TEST_ALARM_S = 300;
+function testAlarmMsg($t) { return ['t' => 'TESTALARM', 'b' => 'Persönlicher Testalarm, Stufe «' . ALARM_LEVELS[$t['lvl']][0] . '». Kein Einsatz, einfach quittieren.', 'tag' => 't:' . $t['id']]; }
+function testAlarmOf($uid) { global $db; $s = $db->prepare("SELECT test_alarm FROM users WHERE id=?"); $s->execute([$uid]); $v = $s->fetchColumn(); $s->closeCursor();
+  $t = $v ? json_decode($v, true) : null; return is_array($t) && isset($t['id'], $t['lvl'], $t['at']) && in_array($t['lvl'], TEST_ALARM_LVL, true) ? $t : null; }
+function testAlarmDue($uid) { global $now; $t = testAlarmOf($uid); if (!$t || $t['at'] > $now || $now - $t['at'] > TEST_ALARM_S) return null;
+  return ['id' => (int)$t['id'], 'lvl' => $t['lvl'], 'at' => (int)$t['at']] + testAlarmMsg($t); }
 function pushAlarm($inc, $skip, $only = null) { global $db; if (!pushOk() && !fcmOk()) return;
   foreach ($db->query("SELECT id,exercise_mode FROM users WHERE active=1")->fetchAll() as $u) { $id = (int)$u['id']; if (in_array($id, $skip, true) || ($only !== null && !in_array($id, $only, true))) continue;
     $l = alarmLvl($inc, (int)$u['exercise_mode']); if ($l === 'none') continue;
@@ -3733,7 +3752,7 @@ switch ($route) {
     // feste Standorte auch ohne Einsatz (Änderungswunsch #96): die aktiven permanenten, solange die Funktion für einen der Einsatztypen an ist
     $fpl = array_filter(featuresAll(), fn($f) => $f['place']) ? array_values(array_map(fn($r) => array_diff_key($r, ['active' => 1]), array_filter(placesOf(null), fn($r) => $r['active']))) : [];
     if ($blocked) $xp = [];
-    out(['incident' => null, 'incidents' => [], 'my_inc' => null, 'fb_open' => count(array_filter(fbMine($uid), fn($x) => !$x['answered'])), 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
+    out(['test_alarm' => testAlarmDue($uid), 'incident' => null, 'incidents' => [], 'my_inc' => null, 'fb_open' => count(array_filter(fbMine($uid), fn($x) => !$x['answered'])), 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
   }
   $inc['id'] = (int)$inc['id']; $inc['plan_id'] = $inc['plan_id'] === null ? null : (int)$inc['plan_id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc = kindAdd($inc); $inc['kind'] = kindPub(kindOf($inc)); $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
@@ -3813,7 +3832,7 @@ switch ($route) {
       'partners' => array_map(fn($o) => ['org' => $o['org'], 'name' => $o['org_name'], 'inc' => (int)$o['id'], 'host' => $o['host'], 'down' => empty($o['down']) ? 0 : 1, 'ended' => (int)($o['ended'] ?? 0), 'kind_name' => $o['kind_name'] ?? '', 'msg' => (int)($o['msg'] ?? 0), 'conf' => (int)($o['conf'] ?? 0)], $jo),
       'msg' => $jmsg, 'can_msg' => $jread && ($F['msg'] && (canMessage($inc) || canManage($inc))) ? 1 : 0, 'msgs' => $jread ? pfJointMsgs($jt['id'], (int)($_GET['jm'] ?? 0)) : [],
       'conf' => $F['voice'] && voiceConfOn($inc) && array_filter($up, fn($o) => !empty($o['conf'])) && (isActivePart($id) || canManage($inc)) ? 1 : 0]; }
-  out(['joint' => $joint, 'incident' => $inc, 'incidents' => $il, 'others' => $oth, 'my_inc' => myIncPub(), 'start_plans' => exStartable(), 'kinds' => kindsPub(), 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
+  out(['test_alarm' => testAlarmDue($uid), 'joint' => $joint, 'incident' => $inc, 'incidents' => $il, 'others' => $oth, 'my_inc' => myIncPub(), 'start_plans' => exStartable(), 'kinds' => kindsPub(), 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
        'phone_cfg' => $phSee ? ['show' => phoneCfg()['show'], 'call' => phoneCfg()['call']] : null, // Direktanruf (Issue #44): null = keine Nummern
        'participants' => array_map(function ($p) use ($pg, $F, $phSee) { if (!$phSee || $p['phone'] === null || $p['left_at'] !== null || $p['mode'] === 'declined') unset($p['phone']); /* nur aktive Teilnahmen */ foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; if ($pg) $p['groups'] = $pg['m'][(int)$p['user_id']] ?? []; if (!$F['vehp'] || !$F['veh']) unset($p['veh_id']); return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at', 'veh_id']); }, $ps->fetchAll()),
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
@@ -3940,6 +3959,8 @@ switch ($route) {
     } elseif ($fast) $db->prepare("UPDATE participants SET fast_at=? WHERE incident_id=? AND user_id=?")->execute([$now, $inc['id'], $uid]);
   }
   // Fahrzeuge (Issue #177): beacons = Beacons des letzten Scans der nativen App [{id, rssi}], acc = Genauigkeit; skip = Fahrzeuge, die das Gerät vorerst nicht melden muss
+  // batt = Batteriestand der Beacons [{id, pct, mac?}] (Issue #224)
+  if (isset($in['batt']) && feature($inc, 'veh')) vehBatt($in['batt']);
   $vf = $dt >= 4 && empty($in['manual']) && hav((float)$p['lat'], (float)$p['lon'], $la, $lo) / $dt >= VEHICLE_MS; // fährt (auch auf dem Wasser)
   $sk = array_key_exists('beacons', $in) || $p['veh_id'] !== null ? vehReport($inc, $p, $la, $lo, isset($in['acc']) ? min(10000, max(0, (float)$in['acc'])) : null, array_key_exists('beacons', $in) ? (is_array($in['beacons']) ? array_slice($in['beacons'], 0, 50) : []) : null, $vf, !empty($in['water'])) : [];
   out(['ok' => true] + ($sk ? ['skip' => (object)$sk] : []));
@@ -4993,6 +5014,17 @@ switch ($route) {
   // Gerätesitzungen (Issue #108) bleiben bewusst bestehen: Wer das eigene Passwort ändert, soll die Alarmierung über die App nicht verlieren.
   // Abmelden einzelner Apps über «Angemeldete Apps» im Profil (me/session/remove); Zurücksetzen durch die Verwaltung löscht alle.
   out(['ok' => true]);
+ case 'me/testalarm': // persönlicher Testalarm (Issue #218): lvl crit|high|normal|low, nach 30 Sekunden an die Person selbst; '' = abbrechen
+  $l = (string)($in['lvl'] ?? '');
+  if ($l === '') { $db->prepare("UPDATE users SET test_alarm=NULL WHERE id=?")->execute([$uid]); out(['ok' => 1]); }
+  if (!in_array($l, TEST_ALARM_LVL, true)) fail('Unbekannte Alarmstufe');
+  $t = ['id' => random_int(1, 2000000000), 'lvl' => $l, 'at' => $now + 30];
+  $db->prepare("UPDATE users SET test_alarm=? WHERE id=?")->execute([json_encode($t), $uid]);
+  // Push nach der Antwort: warten, bis er fällig ist, und nur senden, wenn er inzwischen nicht abgebrochen oder ersetzt wurde
+  after(function () use ($uid, $t) { set_time_limit(90); while (time() < $t['at']) sleep(1);
+    $c = testAlarmOf($uid); if (!$c || $c['id'] !== $t['id']) return;
+    pushTo([$uid], testAlarmMsg($t) + pushLvl($t['lvl'])); pushFlush(); });
+  out(['ok' => 1, 'id' => $t['id'], 'at' => $t['at'], 'push' => pushOk() || fcmOk() ? 1 : 0]);
  case 'me/settings': // nur übergebene Werte ändern. exercise_mode: Übungen wie scharfe Einsätze kritisch alarmieren; coord_sys: '' = Standard der Verwaltung, none = ausblenden
   if (isset($in['exercise_mode'])) $db->prepare("UPDATE users SET exercise_mode=? WHERE id=?")->execute([empty($in['exercise_mode']) ? 0 : 1, $uid]);
   if (array_key_exists('phone', $in)) { if (!phoneCfg()['self']) fail('Die Telefonnummer pflegt die Verwaltung', 403); $db->prepare("UPDATE users SET phone=? WHERE id=?")->execute([phoneNorm($in['phone'] ?? ''), $uid]); pfSync($me['gid'], ['phone' => phoneNorm($in['phone'] ?? '')]); } // Direktanruf (Issue #44), '' = entfernen
@@ -5383,14 +5415,15 @@ switch ($route) {
   }
   out(['ok' => true]);
  /* ---------- Fahrzeuge mit BLE-Beacons (Issue #177) ---------- */
- case 'beacon/report': // Sichtungen ausserhalb von Einsätzen (native App, reduziert): nur mit home und eigener Zustimmung; gespeichert ohne Person, nur der letzte Stand
-  if (!beaconCfg()['home'] || !(int)($me['beacon'] ?? 0)) fail('Fahrzeuge ausserhalb von Einsätzen melden ist ausgeschaltet', 403);
+ case 'beacon/report': // Sichtungen ausserhalb von Einsätzen (native App, reduziert): nur mit home und eigener Zustimmung bzw. von Hand («Fahrzeuge jetzt scannen», manual); gespeichert ohne Person, nur der letzte Stand
+  if (!beaconCfg()['home'] || (!(int)($me['beacon'] ?? 0) && empty($in['manual']))) fail('Fahrzeuge ausserhalb von Einsätzen melden ist ausgeschaltet', 403);
   if (!array_filter(featuresAll(), fn($f) => $f['veh'])) fail('Die Funktion «' . FEATURES['veh'] . '» ist ausgeschaltet', 403);
   $by = array_filter(vehById(), fn($v) => $v['active']); $n = 0;
   foreach (array_slice(is_array($in['seen'] ?? null) ? $in['seen'] : [], 0, 50) as $b) { $id = (int)($b['id'] ?? 0); $at = (int)($b['at'] ?? $now); $la = (float)($b['lat'] ?? 0); $lo = (float)($b['lon'] ?? 0);
     if (!isset($by[$id]) || $at > $now + 60 || $at < $now - 3600 || abs($la) > 90 || abs($lo) > 180 || ($la == 0 && $lo == 0)) continue;
     if ($by[$id]['seen_at'] !== null && $by[$id]['seen_at'] >= $at) continue; // es gibt schon eine neuere Sichtung
     vehMove($id, $la, $lo, isset($b['acc']) ? min(10000, max(0, (float)$b['acc'])) : null, isset($b['rssi']) ? (int)$b['rssi'] : null, null, $by, null, min($at, $now)); $n++; }
+  vehBatt($in['batt'] ?? null); // Batteriestand (Issue #224)
   out(['ok' => true, 'n' => $n]);
  case 'incident/vehicle/link': // verladen/anhängen bzw. abladen/abhängen von Hand (alle Teilnehmenden und die Einsatzleitung); carrier null = lösen
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz'); if (!isActivePart((int)$inc['id']) && !canManage($inc)) fail('Nur Personen, die am Einsatz teilnehmen', 403);
@@ -5417,7 +5450,7 @@ switch ($route) {
   $used = vehUsed();
   out(['vehicles' => array_map(fn($v) => array_diff_key($v, array_flip(['seen_uid', 'own_lat', 'own_lon', 'lone_n', 'trip_lat', 'trip_lon', 'trip_at', 'fast_at'])) + ['used' => in_array($v['id'], $used, true) ? 1 : 0], vehAll()),
     'kinds' => vehKinds(), 'icons' => VEH_ICONS, 'cfg' => beaconCfg(), 'num' => BEACON_NUM, 'app' => VEH_APP, 'home_vis' => VEH_HOME, 'feat' => (object)array_map(fn($f) => ['veh' => $f['veh'], 'vehp' => $f['vehp']], featuresAll())]);
- case 'vehicle/save': need('cfg_map'); // Fahrzeug: name, descr, kind_id, abbr, color, uuid ('' = Standard-UUID), major, minor (0–65535), cap (null = wie die Art), cap_max (nur mit cap: insgesamt, leer = nur je Art), active
+ case 'vehicle/save': need('cfg_map'); // Fahrzeug: name, descr, kind_id, abbr, color, uuid ('' = Standard-UUID), major, minor (0–65535), cap (null = wie die Art), cap_max (nur mit cap: insgesamt, leer = nur je Art), active, mac (Batteriestand unter iOS, '' = entfernen, fehlt = unverändert)
   $old = null; if (!empty($in['id'])) { $old = vehById()[(int)$in['id']] ?? fail('Fahrzeug nicht gefunden', 404); }
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
   $kid = (int)($in['kind_id'] ?? 0); if (!in_array($kid, array_column(vehKinds(), 'id'), true)) fail('Fahrzeugart wählen');
@@ -5427,12 +5460,15 @@ switch ($route) {
   foreach (vehAll() as $x) if ($x['id'] !== ($old['id'] ?? 0) && ($x['uuid'] ?? null) === $u && $x['major'] === $ma && $x['minor'] === $mi) fail('Dieses Beacon (UUID, Major, Minor) gehört schon zu «' . $x['name'] . '»');
   [$ab, $co] = extStyle($in); $cap = array_key_exists('cap', $in) && $in['cap'] !== null ? json_encode((object)vehCarries($in['cap'])) : null;
   $row = [$nm, mb_substr(trim((string)($in['descr'] ?? '')), 0, 500), $kid, $ab, $co, $u, $ma, $mi, $cap, array_key_exists('active', $in) && empty($in['active']) ? 0 : 1, $cap === null ? null : vehMaxIn($in['cap_max'] ?? null)];
-  if ($old) { $db->prepare("UPDATE vehicles SET name=?, descr=?, kind_id=?, abbr=?, color=?, uuid=?, major=?, minor=?, cap=?, active=?, cap_max=?" . ($old['kind_id'] !== $kid ? ', sort=NULL' : '') . " WHERE id=?")->execute([...$row, $old['id']]);
+  $mac = array_key_exists('mac', $in) ? (trim((string)$in['mac']) === '' ? null : (macIn($in['mac']) ?? fail('Die MAC-Adresse hat nicht die Form AA:BB:CC:DD:EE:FF'))) : ($old['mac'] ?? null);
+  if ($mac !== null) foreach (vehAll() as $x) if ($x['id'] !== ($old['id'] ?? 0) && ($x['mac'] ?? null) === $mac) fail('Diese MAC-Adresse gehört schon zu «' . $x['name'] . '»');
+  $row[] = $mac;
+  if ($old) { $db->prepare("UPDATE vehicles SET name=?, descr=?, kind_id=?, abbr=?, color=?, uuid=?, major=?, minor=?, cap=?, active=?, cap_max=?, mac=?" . ($old['kind_id'] !== $kid ? ', sort=NULL' : '') . " WHERE id=?")->execute([...$row, $old['id']]);
     if ($old['kind_id'] !== $kid || !$row[9]) { // andere Art bzw. deaktiviert: Verbund prüfen
       $by = vehById(); $kb = array_column(vehKinds(), null, 'id'); $v = $by[$old['id']];
       if ($v['carrier_id'] !== null && (!$row[9] || !isset($by[$v['carrier_id']]) || vehRoom($by[$v['carrier_id']], $kid, $by, $kb, $v['id']) < 0)) vehLinkSet($v['id'], null, true, $uid, null, false);
       if (!$row[9]) foreach ($by as $x) if ($x['carrier_id'] === $v['id']) { $db->prepare("UPDATE veh_links SET to_at=? WHERE vehicle_id=? AND to_at IS NULL")->execute([$now, $x['id']]); $db->prepare("UPDATE vehicles SET carrier_id=NULL, carrier_at=NULL, carrier_manual=0 WHERE id=?")->execute([$x['id']]); } } }
-  else $db->prepare("INSERT INTO vehicles(name,descr,kind_id,abbr,color,uuid,major,minor,cap,active,cap_max) VALUES(?,?,?,?,?,?,?,?,?,?,?)")->execute($row);
+  else $db->prepare("INSERT INTO vehicles(name,descr,kind_id,abbr,color,uuid,major,minor,cap,active,cap_max,mac) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")->execute($row);
   out(['ok' => true]);
  case 'vehicle/move': need('cfg_map'); $v = vehById()[(int)($in['id'] ?? 0)] ?? fail('Fahrzeug nicht gefunden', 404); // innerhalb seiner Art
   sortMove('vehicles', "SELECT id FROM vehicles WHERE COALESCE(deleted,0)=0 AND kind_id=" . (int)$v['kind_id'] . " ORDER BY " . SORT_ORDER, [], $v['id'], (int)($in['dir'] ?? 1)); out(['ok' => true]);

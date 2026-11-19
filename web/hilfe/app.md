@@ -49,6 +49,12 @@ Durchsagen und Live-Konferenz funktionieren in der App wie im Browser (siehe [Fu
 
 Im Einsatz mit Fahrzeugen fragt die App einmal nach Bluetooth. Sie erkennt die Beacons der Fahrzeuge in der Nähe, meldet ihren Standort und ordnet dich dem Fahrzeug zu, in dem du sitzt. Ausserhalb von Einsätzen meldet sie Beacons nur mit deiner Zustimmung im Profil.
 
+**Fahrzeuge jetzt scannen** (im Fenster «Einsatzkräfte» unter «Fahrzeuge» und im Profil, Karte «Fahrzeuge») sucht sofort nach den Beacons in der Nähe, zeigt die gefundenen Fahrzeuge mit Signalstärke und meldet sie: im Einsatz mit deinem Standort, sonst ohne deinen Namen (nur wenn die Verwaltung Meldungen ausserhalb von Einsätzen erlaubt). Praktisch zum Prüfen, ob ein Beacon funktioniert.
+
+**Batteriestand:** Beacons von DX-Smart senden ihn, wenn in ihrer Konfigurations-App der Frame «Device Info» eingeschaltet ist (den Frame «iBeacon» eingeschaltet lassen). Beacons mit Eddystone-TLM gehen ebenso: Sie senden die Spannung, die App schätzt daraus die Prozent (3.0 V = voll, 2.0 V = leer). Unter iOS braucht es dazu zusätzlich den Frame «Device Info». Die App liest ihn bei jedem Scan mit; er steht beim Fahrzeug (ab 20 % mit «⚠ Batterie schwach») und in der Übersicht von «Fahrzeuge jetzt scannen». Dort erscheinen auch Beacons in der Nähe, die zu keinem Fahrzeug gehören, mit ihrer MAC-Adresse. Unter iOS ordnet die App den Batteriestand nur über die MAC-Adresse des Fahrzeugs zu: Ein Android-Gerät lernt sie beim ersten Scan, sonst trägt die Verwaltung sie beim Fahrzeug ein.
+
+> ! Am iPhone findet die App Beacons nur mit **Genauer Standort** (Einstellungen → Swiftwater Rescue → Standort). Ist er aus, steht das im Profil unter «Fahrzeuge», mit dem Knopf **Genauen Standort erlauben**. Ausserhalb von Einsätzen braucht es zusätzlich «Immer».
+
 ## Updates {#updates}
 
 Ist deine App-Version zu alt für den Server, erscheint ein Hinweis mit **Aktualisieren** (Google Play bzw. TestFlight). **Was ist neu** im Profil zeigt die Änderungen.
