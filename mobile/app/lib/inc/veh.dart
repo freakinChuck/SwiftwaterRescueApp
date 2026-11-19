@@ -211,6 +211,8 @@ List<String> vehSheetLines(IncStore s, J root, List<J> kids) => [
 /// Gruppe «Fahrzeuge» im Fenster «Einsatzkräfte»: Hinweise «Träger voll», Ketten mit eingerückten aufgenommenen Fahrzeugen
 List<Widget> vehRows(BuildContext context, IncStore s, MapCtl map) {
   final out = <Widget>[];
+  final scan = vehScanBtn(context, s);
+  if (scan != null) out.add(Padding(padding: const EdgeInsets.only(top: 4, bottom: 4), child: Align(alignment: Alignment.centerLeft, child: scan)));
   for (final h in jl(vehOf(s)?['hints'])) {
     final a = vehById(s, h['id']), b = vehById(s, h['carrier']);
     if (a == null || b == null) continue;
@@ -259,4 +261,58 @@ List<Widget> vehRows(BuildContext context, IncStore s, MapCtl map) {
     out.addAll(vehKids(s, ji(r['id'])).map((k) => row(k, true)));
   }
   return out;
+}
+
+/// Knopf «Fahrzeuge jetzt scannen» (Fenster «Einsatzkräfte» und Profil); nicht im Demo und ohne Fahrzeuge mit Beacon
+Widget? vehScanBtn(BuildContext context, IncStore s) {
+  if (s.demo || s.me?['beacon_cfg'] is! Map) return null;
+  return OutlinedButton.icon(onPressed: () => vehScanDlg(context, s), icon: const Icon(Icons.bluetooth_searching, size: 18), label: const Text('Fahrzeuge jetzt scannen'));
+}
+
+String _sig(int r) => '${r >= -60 ? 'stark' : r >= -75 ? 'mittel' : 'schwach'} ($r dBm)';
+
+/// Sucht etwa 6 s nach den Beacons, meldet sie (IncStore.scanVehicles) und zeigt, was gefunden und gemeldet wurde
+Future<void> vehScanDlg(BuildContext context, IncStore s) async {
+  ({List<J> found, String msg, bool ok})? r;
+  var started = false;
+  await showDialog<void>(
+      context: context,
+      builder: (dc) => StatefulBuilder(builder: (dc, set) {
+            if (!started) {
+              started = true;
+              s.scanVehicles().then((x) {
+                if (dc.mounted) set(() => r = x);
+              });
+            }
+            final x = r;
+            return AlertDialog(
+                title: const Text('Fahrzeuge scannen'),
+                content: SizedBox(
+                    width: 420,
+                    child: x == null
+                        ? const Column(mainAxisSize: MainAxisSize.min, children: [
+                            Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()),
+                            Mut('Die App sucht einige Sekunden nach den Beacons der Fahrzeuge.'),
+                          ])
+                        : ListView(shrinkWrap: true, children: [
+                            for (final b in x.found)
+                              ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.directions_car),
+                                  title: Text(js(b['name'])),
+                                  subtitle: Text('Signal ${_sig(ji(b['rssi']) ?? -127)}')),
+                            Padding(padding: const EdgeInsets.only(top: 8), child: Text(x.msg, style: TextStyle(color: x.ok ? null : const Color(0xFFE57373)))),
+                          ])),
+                actions: [
+                  if (x != null)
+                    TextButton(
+                        onPressed: () => set(() {
+                              r = null;
+                              started = false;
+                            }),
+                        child: const Text('Erneut scannen')),
+                  TextButton(onPressed: () => Navigator.pop(dc), child: const Text('Schliessen')),
+                ]);
+          }));
 }

@@ -24,6 +24,7 @@ import 'hydro.dart';
 import 'skills.dart';
 import 'store.dart';
 import 'util.dart';
+import 'veh.dart';
 import 'voice.dart';
 
 /// Arten der Abwesenheit (ABS_KIND)
@@ -856,12 +857,12 @@ class _PrefsPageState extends State<PrefsPage> {
     if (mounted) setState(() => _bt = b);
   }
 
-  /// Karte «Fahrzeuge»: Zustimmung für ausserhalb von Einsätzen (nur wenn die Verwaltung es erlaubt), Bluetooth, «Beacon einlernen» (Recht cfg_map)
+  /// Karte «Fahrzeuge»: Zustimmung für ausserhalb von Einsätzen (nur wenn die Verwaltung es erlaubt), Bluetooth, «Fahrzeuge jetzt scannen»,
+  /// «Beacon einlernen» (Recht cfg_map)
   Widget? _veh(J me) {
     final c = me['beacon_cfg'];
-    if (c is! Map) return null;
+    if (c is! Map || s.demo) return null;
     final home = jb(c['home']), admin = s.can('cfg_map');
-    if (!home && !admin) return null;
     if (_bt == null) _loadBt();
     return MCard(title: 'Fahrzeuge', children: [
       if (home)
@@ -887,7 +888,7 @@ class _PrefsPageState extends State<PrefsPage> {
         Padding(
             padding: const EdgeInsets.only(top: 6),
             child: OutlinedButton(onPressed: () => requestBluetooth().then((_) => _loadBt()), child: Text(_bt == 3 ? 'Genauen Standort erlauben' : 'Bluetooth erlauben'))),
-      if (admin) Padding(padding: const EdgeInsets.only(top: 6), child: OutlinedButton(onPressed: _learn, child: const Text('Beacon einlernen …'))),
+      Padding(padding: const EdgeInsets.only(top: 6), child: Wrap(spacing: 8, runSpacing: 6, children: [?vehScanBtn(context, s), if (admin) OutlinedButton(onPressed: _learn, child: const Text('Beacon einlernen …'))])),
     ]);
   }
 

@@ -182,7 +182,46 @@ class Beacons {
     return o;
   }
 
-  static Future<void> _scan() async {
+  /// «Fahrzeuge jetzt scannen»: Einstellung neu laden, sofort scannen und die gefundenen Fahrzeuge dieses Kontos liefern ([{id, rssi, name}],
+  /// stärkstes zuerst). Der nächste forReport gibt das Ergebnis mit (Einsatz), sonst meldet reportNow.
+  static Future<List<J>> scanNow(Account a) async {
+    final c = _c(await cfg(a, force: true));
+    if (c == null || jl(c['list']).isEmpty) return [];
+    for (var i = 0; _scanning && i < 50; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    await _scan(ms: 6000);
+    _used.remove(a.id);
+    final o = <int, J>{};
+    for (final b in _last) {
+      final id = _vid(c, b);
+      if (id == null) continue;
+      final r = ji(b['rssi']) ?? -127;
+      if ((ji(o[id]?['rssi']) ?? -128) >= r) continue;
+      final v = jl(c['list']).where((v) => ji(v['id']) == id).firstOrNull;
+      o[id] = {'id': id, 'rssi': r, 'name': js(v?['name']).isEmpty ? 'Fahrzeug $id' : js(v?['name'])};
+    }
+    return o.values.toList()..sort((x, y) => (ji(y['rssi']) ?? 0).compareTo(ji(x['rssi']) ?? 0));
+  }
+
+  /// Ausserhalb eines Einsatzes von Hand melden (beacon/report mit manual, ohne Person): Anzahl gemeldeter Fahrzeuge; Fehler als Ausnahme
+  static Future<int> reportNow(Account a, List<J> found) async {
+    Position? p;
+    try {
+      p = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15)));
+    } catch (_) {
+      p = await Geolocator.getLastKnownPosition();
+    }
+    if (p == null) throw Exception('Ohne Standort kann die App die Fahrzeuge nicht melden.');
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final r = await a.api.call('beacon/report', body: {
+      'manual': 1,
+      'seen': [for (final b in found) {'id': b['id'], 'rssi': b['rssi'], 'lat': p.latitude, 'lon': p.longitude, 'acc': p.accuracy, 'at': now}]
+    }, timeout: const Duration(seconds: 15));
+    return ji(r['n']) ?? 0;
+  }
+
+  static Future<void> _scan({int ms = _scanMs}) async {
     _scanning = true;
     try {
       final u = <String>{};
@@ -190,7 +229,7 @@ class Beacons {
         final x = _c(await cfg(a));
         if (x != null) u.addAll(jl(x['list']).map((v) => js(v['uuid']).toUpperCase()));
       }
-      _last = await beaconScan(u.toList(), ms: _scanMs);
+      _last = await beaconScan(u.toList(), ms: ms);
       _lastAt = DateTime.now().millisecondsSinceEpoch;
     } finally {
       _scanning = false;

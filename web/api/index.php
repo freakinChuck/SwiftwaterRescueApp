@@ -2229,7 +2229,7 @@ function vehState($inc, $pub = false) { global $db, $now; $c = beaconCfg();
 // Für die native App (me.beacon): wonach sie sucht. null = nichts zu tun (Funktion überall aus oder keine aktiven Fahrzeuge)
 function beaconMe() { if (!array_filter(featuresAll(), fn($f) => $f['veh'])) return null; $c = beaconCfg(); $kb = array_column(vehKinds(), null, 'id');
   $l = array_values(array_filter(vehAll(), fn($v) => $v['active'])); if (!$l) return null;
-  $l = array_map(fn($v) => ['id' => $v['id'], 'uuid' => $v['uuid'] ?: $c['uuid'], 'major' => $v['major'], 'minor' => $v['minor'], 'water' => (int)!empty($kb[$v['kind_id']]['water'])], $l);
+  $l = array_map(fn($v) => ['id' => $v['id'], 'name' => $v['name'], 'uuid' => $v['uuid'] ?: $c['uuid'], 'major' => $v['major'], 'minor' => $v['minor'], 'water' => (int)!empty($kb[$v['kind_id']]['water'])], $l);
   return ['uuids' => array_values(array_unique(array_column($l, 'uuid'))), 'list' => $l, 'inc_s' => $c['inc_s'], 'home' => $c['home'], 'home_min' => $c['home_min'], 'assign' => $c['assign'], 'link' => $c['link'], 'assign_rssi' => $c['assign_rssi'], 'link_rssi' => $c['link_rssi']]; }
 // Replay: Fahrzeuge mit Sichtungen dieses Einsatzes (Punkte [id, ts, lat, lon] wie track), Verbund als [Fahrzeug, Träger, von, bis]
 function vehReplay($id) { global $db; $s = $db->prepare("SELECT vehicle_id,ts,lat,lon FROM vehicle_seen WHERE incident_id=? ORDER BY ts,id"); $s->execute([$id]);
@@ -5287,8 +5287,8 @@ switch ($route) {
   }
   out(['ok' => true]);
  /* ---------- Fahrzeuge mit BLE-Beacons (Issue #177) ---------- */
- case 'beacon/report': // Sichtungen ausserhalb von Einsätzen (native App, reduziert): nur mit home und eigener Zustimmung; gespeichert ohne Person, nur der letzte Stand
-  if (!beaconCfg()['home'] || !(int)($me['beacon'] ?? 0)) fail('Fahrzeuge ausserhalb von Einsätzen melden ist ausgeschaltet', 403);
+ case 'beacon/report': // Sichtungen ausserhalb von Einsätzen (native App, reduziert): nur mit home und eigener Zustimmung bzw. von Hand («Fahrzeuge jetzt scannen», manual); gespeichert ohne Person, nur der letzte Stand
+  if (!beaconCfg()['home'] || (!(int)($me['beacon'] ?? 0) && empty($in['manual']))) fail('Fahrzeuge ausserhalb von Einsätzen melden ist ausgeschaltet', 403);
   if (!array_filter(featuresAll(), fn($f) => $f['veh'])) fail('Die Funktion «' . FEATURES['veh'] . '» ist ausgeschaltet', 403);
   $by = array_filter(vehById(), fn($v) => $v['active']); $n = 0;
   foreach (array_slice(is_array($in['seen'] ?? null) ? $in['seen'] : [], 0, 50) as $b) { $id = (int)($b['id'] ?? 0); $at = (int)($b['at'] ?? $now); $la = (float)($b['lat'] ?? 0); $lo = (float)($b['lon'] ?? 0);

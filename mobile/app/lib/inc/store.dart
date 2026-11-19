@@ -757,6 +757,37 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     requestBluetooth();
   }
 
+  /// «Fahrzeuge jetzt scannen»: sofort nach Beacons suchen und melden. Im Einsatz mit geteiltem Standort sofort mit einer Standortmeldung,
+  /// sonst über beacon/report (manual, ohne Person; nur wenn die Verwaltung Meldungen ausserhalb von Einsätzen erlaubt).
+  /// Ergebnis: gefundene Fahrzeuge ([{id, rssi, name}]) und Text zum Stand der Meldung.
+  Future<({List<J> found, String msg, bool ok})> scanVehicles() async {
+    if (demo) return (found: <J>[], msg: 'Im Demo-Modus gibt es keine Beacons.', ok: false);
+    final bt = await requestBluetooth();
+    if (bt != 2) {
+      return (
+        found: <J>[],
+        msg: switch (bt) {
+          3 => 'iOS findet Beacons nur mit dem genauen Standort (Einstellungen → Swiftwater Rescue → Standort → «Genauer Standort»).',
+          1 => Platform.isIOS ? 'Die App darf den Standort nicht nutzen, ohne ihn sieht iOS keine Beacons.' : 'Die App darf Bluetooth nicht nutzen («Geräte in der Nähe» erlauben).',
+          _ => 'Bluetooth ist aus.',
+        },
+        ok: false
+      );
+    }
+    final found = await Beacons.scanNow(acc);
+    if (found.isEmpty) return (found: found, msg: 'Kein Fahrzeug in der Nähe gefunden.', ok: true);
+    if (sharing && manualPos == null && _lastPos != null) {
+      await _sendPos(_lastPos!);
+      return (found: found, msg: 'Mit deinem Standort im Einsatz gemeldet.', ok: true);
+    }
+    try {
+      final n = await Beacons.reportNow(acc, found);
+      return (found: found, msg: n > 0 ? 'Standort gemeldet (ohne deinen Namen).' : 'Nicht gemeldet: Es gibt schon eine neuere Sichtung.', ok: true);
+    } catch (e) {
+      return (found: found, msg: 'Nicht gemeldet: ${e is ApiError ? e.message : '$e'.replaceFirst('Exception: ', '')}', ok: false);
+    }
+  }
+
   void toast(String text, [String kind = 'ok']) => toasts.add(Toast(text, kind));
   void fail(Object e) => toasts.add(Toast(e is ApiError ? e.message : '$e', 'err'));
 
