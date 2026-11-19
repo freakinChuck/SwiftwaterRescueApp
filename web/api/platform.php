@@ -189,6 +189,7 @@ function pfOtherAlarms($gid) { $r = [];
       foreach ($x->query("SELECT id,kind_id,message,alarm_at,invite,inv_groups,inv_absent,created_by FROM incidents WHERE ended_at IS NULL ORDER BY id DESC")->fetchAll() as $i) {
         $k = $ks[(int)$i['kind_id']] ?? null; if ($k && ((int)$k['sec'] === 1 || $k['alarm'] === 'none')) continue; if ((int)$i['created_by'] === $u) continue; // selbst gestartet
         if (in_array($u, array_map('intval', json_decode($i['inv_absent'] ?? '[]', true) ?: []), true)) continue;
+        $jo = pfJointOf($o['id'], $i['id']); if ($jo && array_filter(pfJointIncs($jo['id']), fn($y) => $y['org'] === ORG_ID)) continue; // verknüpft mit einem Einsatz hier: steht schon hier
         $g = json_decode($i['inv_groups'] ?? 'null', true);
         if (empty($g['all']) && $i['invite'] !== null && !in_array($u, array_map('intval', json_decode($i['invite'], true) ?: []), true)) continue;
         $p = $x->prepare("SELECT 1 FROM participants WHERE incident_id=? AND user_id=? AND mode<>'declined' AND left_at IS NULL"); $p->execute([$i['id'], $u]); $j = (bool)$p->fetchColumn();
