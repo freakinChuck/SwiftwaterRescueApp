@@ -9,8 +9,10 @@ header{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.7rem 1r
 #wrap{max-width:1100px;margin:0 auto;padding:1rem;display:grid;gap:1.2rem}#wrap>.card{max-width:none;margin:0;max-height:none}
 .pfo{border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem;margin:.5rem 0}.pfo h3{margin:0 0 .3rem;font-size:1.05rem}.pfo.off{opacity:.6}
 .pfo .row{flex-wrap:wrap}.pfm{display:flex;flex-wrap:wrap;gap:.3rem .8rem;align-items:center;padding:.35rem 0;border-top:1px solid var(--line)}.pfm>span{flex:1 1 14rem}
-.pfs{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.4rem .8rem;align-items:center;padding:.4rem 0;border-top:1px solid var(--line)}
-@media(max-width:600px){.pfs{grid-template-columns:minmax(0,1fr)}}
+.pfs{padding:.7rem 0;border-top:1px solid var(--line)}.pfs .hd{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .8rem}.pfs .hd b{font-size:1.02rem}.pfs .hd .btn{margin-left:auto;padding:.35rem .7rem;font-size:.9rem}
+.pfs .ctl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem .8rem;margin-top:.5rem}.pfs label{display:grid;gap:.2rem;font-size:.82rem;color:var(--mut)}.pfs select{width:100%;min-width:0;font-size:.95rem}
+.pfs .clr{margin-top:.5rem;padding:.35rem .7rem;font-size:.85rem}
+@media(max-width:600px){.pfs .ctl{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head><body>
 <div id="app"></div>
@@ -112,11 +114,11 @@ function linkDlg(l){const os=PF.orgs.filter(o=>o.active),opt=v=>os.map(o=>`<opti
   $('#lT',d).onchange=()=>{gs();ks()};$('#lF',d).onchange=ks;$('#lA',d).onchange=gs;gs();ks()}
 function drawShare(){const s=$('#sShare');
   s.innerHTML=`<h2>Gemeinsame Einstellungen</h2><p class="mut">«Je Organisation»: jede stellt selbst ein. «Plattform-Vorgabe, übersteuerbar»: die Vorgabe gilt, bis eine Organisation eigene Werte speichert. «Global»: gilt für alle, nur Plattform-Administratoren ändern sie. «Werte bearbeiten» stellt die Werte der Plattform direkt ein, auch ohne Mitgliedschaft in einer Organisation; sie wirken bei «übersteuerbar» und «global». Der Schlüssel für Web-Push ist immer gemeinsam.</p>
-  ${PF.share.map(g=>`<div class="pfs"><span><b>${esc(g.label)}</b><br><small class="mut">${g.set?'Vorgabe der Plattform gespeichert':'noch keine Vorgabe der Plattform'}</small></span><span class="row" style="margin:0">
-    ${SHARE_SEC[g.key]?`<a class="btn" href="admin.html?pf=1#${SHARE_SEC[g.key]}">Werte bearbeiten</a>`:''}
-    <select data-sm="${g.key}">${Object.entries(PF.modes).map(([k,v])=>`<option value="${k}" ${g.mode===k?'selected':''}>${esc(v)}</option>`).join('')}</select>
-    <select data-st="${g.key}"><option value="">Vorgabe übernehmen von …</option>${PF.orgs.filter(o=>o.ready).map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select>
-    ${g.mode!=='org'?`<button class="sec" data-sc="${g.key}">Eigene Werte aller Organisationen entfernen</button>`:''}</span></div>`).join('')}`;
+  ${PF.share.map(g=>`<div class="pfs"><div class="hd"><b>${esc(g.label)}</b><span class="mut">${g.set?'Vorgabe der Plattform gespeichert':'noch keine Vorgabe der Plattform'}</span>
+    ${SHARE_SEC[g.key]?`<a class="btn" href="admin.html?pf=1#${SHARE_SEC[g.key]}">Werte bearbeiten</a>`:''}</div>
+    <div class="ctl"><label>Geltung<select data-sm="${g.key}">${Object.entries(PF.modes).map(([k,v])=>`<option value="${k}" ${g.mode===k?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <label>Vorgabe der Plattform übernehmen von<select data-st="${g.key}"><option value="">Organisation wählen …</option>${PF.orgs.filter(o=>o.ready).map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select></label></div>
+    ${g.mode!=='org'?`<button class="sec clr" data-sc="${g.key}">Eigene Werte aller Organisationen entfernen</button>`:''}</div>`).join('')}`;
   s.querySelectorAll('[data-sm]').forEach(x=>x.onchange=()=>pf('share/save',{group:x.dataset.sm,mode:x.value}).then(r=>{PF.share=r.share;drawShare();toast('Gespeichert. Gilt sofort.')}).catch(fail));
   s.querySelectorAll('[data-st]').forEach(x=>x.onchange=async()=>{if(!x.value)return;const o=PF.orgs.find(y=>y.id===+x.value);
     if(!await ask(`Werte von «${o.name}» als Vorgabe der Plattform übernehmen?`)){x.value='';return}pf('share/take',{group:x.dataset.st,org:+x.value}).then(r=>{PF.share=r.share;drawShare();toast('Übernommen.')}).catch(fail)});
