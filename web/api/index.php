@@ -1764,7 +1764,7 @@ function legalCfg() { $v = json_decode(setting('legal', ''), true); $v = is_arra
 // sonst die des AAR. Ohne Anmeldung (Anmeldeseite, öffentliche Ansicht, Kontenliste der App): org liefert Name und Stand des Logos (logo = Kurzwert
 // zum Neuladen, null = keines), org/logo das Bild selbst (zwischenspeicherbar, die Adresse ändert sich mit dem Stand).
 function orgInfo() { $l = (string)setting('aar_logo', ''); $n = legalCfg()['org']; if ($n === '') $n = trim((string)(json_decode((string)setting('aar_cfg', ''), true)['org'] ?? ''));
-  return ['name' => mb_substr($n, 0, 120), 'logo' => $l !== '' ? substr(sha1($l), 0, 12) : null]; }
+  return ['name' => mb_substr($n, 0, 120), 'logo' => $l !== '' ? substr(sha1($l), 0, 12) : null, 'o' => ORG_ID]; } // o: Mandant (Issue #60), für die Adresse des Logos
 if ($route === 'org') out(orgInfo() + ['version' => verPub()]);
 if ($route === 'org/logo') { $l = (string)setting('aar_logo', '');
   if (!preg_match('~^data:(image/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$~', $l, $m) || ($b = base64_decode($m[2], true)) === false) { http_response_code(404); exit; }

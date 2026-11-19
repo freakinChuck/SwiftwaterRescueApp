@@ -112,7 +112,7 @@ class _HomeState extends State<HomePage> {
         _ver[a.id] = v;
       } catch (_) {}
       try {
-        _org[a.id] = await Api(a.base).call('org', timeout: const Duration(seconds: 10)); // Logo der Organisation (Issue #123), ältere Server ohne Route
+        _org[a.id] = await Api(a.base, null, a.orgId).call('org', timeout: const Duration(seconds: 10)); // Logo der Organisation (Issue #123), ältere Server ohne Route
       } catch (_) {}
     }
     if (mounted) setState(() {});
@@ -146,7 +146,8 @@ class _HomeState extends State<HomePage> {
             ));
     if (ok != true) return;
     await pushForget(a);
-    if (!a.loggedOut) await a.api.logout();
+    // Mandanten (Issue #60): nur abmelden, wenn kein weiteres Konto (andere Organisation) dieselbe Anmeldung nutzt
+    if (!a.loggedOut && (await Accounts.sharing(a)).isEmpty) await a.api.logout();
     await Accounts.remove(a.id);
     await clearState(a.id);
     await forgetSnd(a.id);
@@ -352,33 +353,73 @@ class _LoginState extends State<LoginPage> {
       _err = null;
     });
     try {
-      final api = Api(base);
+      final re = widget.relogin;
+      final api = Api(base, null, re?.orgId ?? 0); // neu anmelden: in der Organisation des Kontos (X-Org)
       await api.login(user, _p.text, '${Platform.isIOS ? 'iOS' : 'Android'}-App');
-      final me = (await api.call('me'))['me'] as Map? ?? {};
+      // Mandanten (Issue #60): ein Konto, mehrere Organisationen auf demselben Server; je Organisation ein Konto in der App mit demselben Schlüssel
+      final orgs = <(int, String)>[
+        for (final o in (api.lastLogin['orgs'] as List? ?? const []))
+          if (o is Map && o['id'] is num) ((o['id'] as num).toInt(), '${o['name'] ?? ''}')
+      ];
+      if (orgs.isEmpty && api.lastLogin['org'] == null && api.lastLogin['orgs'] is List) {
+        throw ApiError('Dein Konto gehört noch keiner Organisation an. Die Plattformverwaltung öffnest du im Browser (plattform.html).');
+      }
+      var pick = <int>[api.org];
+      if (re == null && orgs.length > 1) {
+        if (!mounted) return;
+        final l0 = await Accounts.load();
+        bool have(int o) => l0.any((a) => a.base == base && a.username.toLowerCase() == user.toLowerCase() && (a.orgId == o || (a.orgId == 0 && o == 1)) && !a.loggedOut);
+        final p = await _pickOrgs(orgs, {for (final o in orgs) if (!have(o.$1)) o.$1});
+        if (p == null || p.isEmpty) {
+          await api.logout();
+          return;
+        }
+        pick = orgs.map((o) => o.$1).where(p.contains).toList();
+      }
       final l = await Accounts.load();
-      // dasselbe Backend mit derselben Person ersetzen (z. B. neu anmelden)
-      final old = widget.relogin ?? l.where((a) => a.base == base && a.username.toLowerCase() == user.toLowerCase()).firstOrNull;
-      final org = '${me['org'] ?? ''}'.trim();
-      final a = Account(
-          id: old?.id ?? newId(),
-          base: base,
-          username: user,
-          token: api.token!,
-          name: '${me['name'] ?? ''}',
-          org: org,
-          alias: _alias.text.trim(),
-          active: old?.active ?? true,
-          added: old?.added ?? DateTime.now().millisecondsSinceEpoch,
-          uid: (me['id'] as num?)?.toInt() ?? 0);
-      if (old != null && old.token != a.token && !old.loggedOut) await old.api.logout();
-      if (old != null && old.base != base) await clearState(old.id);
-      await Accounts.put(a);
+      String? first;
+      for (final o in pick) {
+        final oa = Api(base, api.token, o);
+        final me = (await oa.call('me'))['me'] as Map? ?? {};
+        final oid = (me['org_id'] as num?)?.toInt() ?? o; // ältere Server ohne Mandanten: 0
+        // dasselbe Backend mit derselben Person und Organisation ersetzen (z. B. neu anmelden); ältere Konten ohne Organisation gelten als Organisation 1
+        final old = (re != null && (o == re.orgId || pick.length == 1))
+            ? re
+            : l.where((a) => a.base == base && a.username.toLowerCase() == user.toLowerCase() && (a.orgId == oid || (a.orgId == 0 && oid <= 1))).firstOrNull;
+        final org = '${me['org'] ?? ''}'.trim();
+        final a = Account(
+            id: old?.id ?? newId(),
+            base: base,
+            username: user,
+            token: api.token!,
+            name: '${me['name'] ?? ''}',
+            org: org.isNotEmpty ? org : orgs.where((x) => x.$1 == oid).firstOrNull?.$2 ?? '',
+            alias: pick.length == 1 ? _alias.text.trim() : (old?.alias ?? ''),
+            active: old?.active ?? true,
+            added: old?.added ?? DateTime.now().millisecondsSinceEpoch,
+            uid: (me['id'] as num?)?.toInt() ?? 0,
+            orgId: oid);
+        // alte Anmeldung nur beenden, wenn kein anderes Konto sie noch braucht
+        if (old != null && old.token != a.token && !old.loggedOut && (await Accounts.sharing(old)).every((x) => x.base == base && x.username.toLowerCase() == user.toLowerCase())) await old.api.logout();
+        if (old != null && old.base != base) await clearState(old.id);
+        await Accounts.put(a);
+        first ??= a.id;
+      }
+      // weitere Konten derselben Person auf diesem Server (andere Organisationen) nutzen die neue Anmeldung mit
+      final all = await Accounts.load();
+      for (final x in all) {
+        if (x.base == base && x.username.toLowerCase() == user.toLowerCase() && x.token != api.token) {
+          x.token = api.token!;
+          x.loggedOut = false;
+        }
+      }
+      await Accounts.save(all);
       await requestNotePerms();
       await syncService();
       await syncPush(force: true);
-      if (!mounted) return;
+      if (!mounted || first == null) return;
       Navigator.pop(context);
-      openAccount(a.id);
+      openAccount(first);
     } on ApiError catch (e) {
       setState(() => _err = e.message);
     } catch (e) {
@@ -386,6 +427,33 @@ class _LoginState extends State<LoginPage> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Mandanten (Issue #60): Organisationen wählen, für die ein Konto entsteht (vorausgewählt = noch keines auf diesem Gerät)
+  Future<Set<int>?> _pickOrgs(List<(int, String)> orgs, Set<int> pre) {
+    final sel = pre.isEmpty ? {orgs.first.$1} : {...pre};
+    return showDialog<Set<int>>(
+        context: context,
+        builder: (c) => StatefulBuilder(
+            builder: (c, set) => AlertDialog(
+                  title: const Text('Organisationen'),
+                  content: SingleChildScrollView(
+                      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Du gehörst auf diesem Server mehreren Organisationen an. Für jede gewählte entsteht ein eigenes Konto in der Kontenliste, mit derselben Anmeldung.'),
+                    const SizedBox(height: 8),
+                    for (final o in orgs)
+                      CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: sel.contains(o.$1),
+                          title: Text(o.$2.isNotEmpty ? o.$2 : 'Organisation ${o.$1}'),
+                          subtitle: pre.contains(o.$1) || pre.isEmpty ? null : const Text('schon auf diesem Gerät'),
+                          onChanged: (v) => set(() => v == true ? sel.add(o.$1) : sel.remove(o.$1))),
+                  ])),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(c), child: const Text('Abbrechen')),
+                    FilledButton(onPressed: sel.isEmpty ? null : () => Navigator.pop(c, sel), child: const Text('Hinzufügen')),
+                  ],
+                )));
   }
 
   @override

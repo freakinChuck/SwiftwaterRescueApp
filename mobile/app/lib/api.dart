@@ -42,9 +42,16 @@ String hostPath(String base) {
 }
 
 class Api {
-  Api(this.base, [this.token]);
+  Api(this.base, [this.token, this.org = 0]);
   final String base;
   String? token;
+
+  /// Mandanten (Issue #60): Organisation des Kontos, geht als X-Org mit (0 = der Server wählt: Organisation 1, sonst die erste der Person).
+  /// Der Token gilt in allen Organisationen der Person, das Konto in der App ist je Organisation eines.
+  int org;
+
+  /// Antwort der letzten Anmeldung (org, orgs, platform_admin)
+  Map<String, dynamic> lastLogin = const {};
 
   /// Parallele Einsätze (Issue #167): in der Einsatz-App angezeigter Einsatz, geht als X-Inc mit (0 = der Server wählt: der eigene, sonst der neuste).
   /// Nur die Einsatz-App (IncStore) setzt ihn; Überwachung und Standortdienst fragen ohne.
@@ -56,7 +63,7 @@ class Api {
   Future<Map<String, dynamic>> call(String route, {Map<String, dynamic>? body, Map<String, String>? query, Duration timeout = const Duration(seconds: 20)}) async {
     if (isDemoBase(base)) return Demo.i.call(route, body: body, query: query); // Demo-Modus (Issue #74): kein Netz
     // X-App-Version (Issue #175): der Server führt die Version je Gerätesitzung nach (Verwaltung → System → «Versionen»)
-    final h = {'X-Token': token ?? '', 'User-Agent': appUa, 'X-App-Version': appVerHeader, if (inc > 0) 'X-Inc': '$inc', if (body != null) 'Content-Type': 'application/json'};
+    final h = {'X-Token': token ?? '', 'User-Agent': appUa, 'X-App-Version': appVerHeader, if (inc > 0) 'X-Inc': '$inc', if (org > 0) 'X-Org': '$org', if (body != null) 'Content-Type': 'application/json'};
     http.Response r;
     try {
       r = body != null
@@ -87,6 +94,8 @@ class Api {
     final j = await call('login', body: {'username': user, 'password': pass, 'device': device, 'platform': Platform.isIOS ? 'ios' : 'android', 'app_ver': appVerHeader});
     final t = j['token'];
     if (t is! String || t.isEmpty) throw ApiError('Anmeldung fehlgeschlagen');
+    lastLogin = j;
+    if (org <= 0 && j['org'] is num) org = (j['org'] as num).toInt(); // ältere Server ohne Mandanten: kein org
     return token = t;
   }
 

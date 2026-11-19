@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../main.dart' show orgAccount, openAccount;
 import '../org.dart';
 import '../version.dart';
 import 'ctx.dart';
@@ -95,6 +96,11 @@ class _IncMenuState extends State<IncMenu> {
     // offene Feedback-Anfragen zum After Action Review (Issue #103), nur ohne Einsatz; Antwort in «Meine Einsätze» (WebView)
     final fbo = i == null && !s.demo ? (ji(st?['fb_open']) ?? 0) : 0;
     if (fbo > 0) top.add(_fbNote(c, fbo));
+    // Mandanten (Issue #60): Alarme anderer Organisationen der Person; «Wechseln» öffnet deren Konto (bei Bedarf neu angelegt), dort entscheidet sie
+    for (final m in (st?['org_alarms'] is List ? st!['org_alarms'] as List : const []).whereType<Map>()) {
+      if (m['joined'] == true || m['joined'] == 1) continue;
+      top.add(_orgAlarm(c, m));
+    }
     final un = _updLater ? null : updateNote(s.me?['version'] is Map ? jm(s.me!['version']) : null, js(s.me?['app_min']));
     if (un != null) top.add(_updNote(un));
     Widget body;
@@ -199,6 +205,27 @@ class _IncMenuState extends State<IncMenu> {
           smallBtn('Antworten', () => openWeb(context, s, 'admin.html#meine')),
         ]),
       ]);
+
+  Widget _orgAlarm(BuildContext c, Map m) {
+    final o = ji(m['org']) ?? 0, id = ji(m['id']) ?? 0, k = js(m['kind_name']), on = js(m['org_name']);
+    return MCard(children: [
+      Row(children: [
+        Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('🚨 Alarm bei ${on.isEmpty ? 'Organisation $o' : on}', style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.red)),
+          Text('${k.isEmpty ? '' : '$k: '}${js(m['message'])}'),
+        ])),
+        smallBtn('Wechseln', () async {
+          final b = await orgAccount(s.acc, o, on);
+          if (b == null) {
+            s.toast('Organisation konnte nicht geöffnet werden', 'err');
+            return;
+          }
+          await openAccount(b.id, focus: true, tag: 'i:$id');
+        }),
+      ]),
+    ]);
+  }
 
   // Kalender (Issue #181): ohne Einsatz über dem Übungsplan, öffnet admin.html#kalender; nicht im Demo
   Widget? _calCard(BuildContext c) => s.demo

@@ -83,7 +83,7 @@ Future<bool> isForeground(String id) async {
 Future<void> report(Account a, String tag, String title, String body, String lvl, {int? kind, String? ksnd}) async {
   if (lvl == 'none') return;
   if (!await markTag(a.id, tag)) return;
-  final alarm = RegExp(r'^[it]:').hasMatch(tag) && (lvl == 'crit' || lvl == 'high'); // t: persönlicher Testalarm (Issue #218)
+  final alarm = RegExp(r'^(o\d+/)?[it]:').hasMatch(tag) && (lvl == 'crit' || lvl == 'high'); // o<id>/i: Alarm einer anderen Organisation (Issue #60), t: persönlicher Testalarm (Issue #218), auch bei offener App
   if (!alarm && await isForeground(a.id)) return;
   await showNote(a.id, tag, title, body, lvl, sub: a.label, kind: kind, ksnd: ksnd);
 }
@@ -102,6 +102,33 @@ bool _forMe(Map m, int uid) {
 String _up(String s) => s.toUpperCase();
 
 /// Ein Konto abfragen und Neues melden. Gibt den neuen Stand zurück.
+/// Mandanten (Issue #60): Alarme anderer Organisationen derselben Person auf diesem Server. Gibt es dort ein eigenes Konto in der App,
+/// meldet dieses selbst; sonst meldet das Konto mit der kleinsten Organisation (nicht doppelt) mit dem Schlüssel `o<Organisation>/i:<Einsatz>`.
+/// Antippen öffnet die Organisation (openAccount legt das Konto bei Bedarf an), die Person entscheidet dort über die Teilnahme.
+Future<void> _orgAlarms(Account a, List l) async {
+  final acc = await Accounts.load();
+  bool mine(Account x) => x.base == a.base && x.username.toLowerCase() == a.username.toLowerCase();
+  if (acc.any((x) => mine(x) && x.id != a.id && x.active && !x.loggedOut && x.org1 < a.org1)) return;
+  if (a.orgId == 0) {
+    // ältere Konten: Organisation einmal nachtragen (Server mit Mandanten liefert org_alarms)
+    try {
+      final me = (await a.api.call('me'))['me'] as Map? ?? {};
+      final o = (me['org_id'] as num?)?.toInt() ?? 0;
+      if (o > 0) {
+        await Accounts.update(a.id, (x) => x.orgId = o);
+        a.orgId = o;
+      }
+    } catch (_) {}
+  }
+  for (final m in l.whereType<Map>()) {
+    final o = (m['org'] as num?)?.toInt() ?? 0, id = (m['id'] as num?)?.toInt() ?? 0;
+    if (o <= 0 || id <= 0 || m['joined'] == true || m['joined'] == 1) continue;
+    if (acc.any((x) => mine(x) && x.org1 == o)) continue; // eigenes Konto dieser Organisation meldet selbst (auch ausgeschaltet: so gewollt)
+    final k = '${m['kind_name'] ?? ''}'.trim();
+    await report(a, 'o$o/i:$id', 'ALARM BEI ${'${m['org_name'] ?? ''}'.toUpperCase()}', '${k.isEmpty ? '' : '$k: '}${m['message'] ?? ''}', '${m['level'] ?? 'high'}');
+  }
+}
+
 Future<AccState> pollOne(Account a) async {
   final st = await accState(a.id);
   final j = Map<String, dynamic>.from(st.j);
@@ -115,6 +142,7 @@ Future<AccState> pollOne(Account a) async {
     if (ta is Map) await report(a, '${ta['tag']}', '${ta['t'] ?? 'TESTALARM'}', '${ta['b'] ?? ''}', '${ta['lvl'] ?? 'crit'}');
     final il = r['incidents'] is List ? (r['incidents'] as List).whereType<Map>().toList() : null;
     if (il != null) await _watchAll(a, st, j, il, r['kinds']);
+    if (r['org_alarms'] is List) await _orgAlarms(a, r['org_alarms'] as List);
     if (inc != null) {
       final id = (inc['id'] as num).toInt();
       final lvl = (r['level'] as String?) ?? 'crit';

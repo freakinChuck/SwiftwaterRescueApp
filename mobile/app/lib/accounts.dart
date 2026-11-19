@@ -12,7 +12,7 @@ const _key = 'accounts';
 const storage = FlutterSecureStorage(iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock));
 
 class Account {
-  Account({required this.id, required this.base, required this.username, required this.token, this.name = '', this.org = '', this.alias = '', this.active = true, this.loggedOut = false, this.added = 0, this.uid = 0});
+  Account({required this.id, required this.base, required this.username, required this.token, this.name = '', this.org = '', this.alias = '', this.active = true, this.loggedOut = false, this.added = 0, this.uid = 0, this.orgId = 0});
   final String id;
   final String base; // Web-Ordner mit «/» am Ende, z. B. https://example.ch/swiftwater/
   final String username;
@@ -24,11 +24,15 @@ class Account {
   bool loggedOut; // Server hat den Schlüssel abgelehnt (z. B. Passwort zurückgesetzt): neu anmelden
   int added;
   int uid; // Benutzer-ID auf diesem Backend (Nachrichten an mich, Push-Zuordnung)
+  int orgId; // Mandanten (Issue #60): Organisation auf diesem Server (X-Org), 0 = unbekannt (älteres Konto bzw. Server ohne Mandanten, gilt als Organisation 1)
+
+  /// Organisation für den Abgleich (Push, Alarme anderer Organisationen): 0 zählt als 1
+  int get org1 => orgId > 0 ? orgId : 1;
 
   String get label => alias.isNotEmpty ? alias : (org.isNotEmpty ? org : hostPath(base));
-  Api get api => Api(base, token);
+  Api get api => Api(base, token, orgId);
 
-  Map<String, dynamic> toJson() => {'id': id, 'base': base, 'username': username, 'token': token, 'name': name, 'org': org, 'alias': alias, 'active': active, 'loggedOut': loggedOut, 'added': added, 'uid': uid};
+  Map<String, dynamic> toJson() => {'id': id, 'base': base, 'username': username, 'token': token, 'name': name, 'org': org, 'alias': alias, 'active': active, 'loggedOut': loggedOut, 'added': added, 'uid': uid, 'orgId': orgId};
   factory Account.fromJson(Map<String, dynamic> j) => Account(
       id: j['id'] as String,
       base: j['base'] as String,
@@ -40,7 +44,8 @@ class Account {
       active: j['active'] != false,
       loggedOut: j['loggedOut'] == true,
       added: (j['added'] as num?)?.toInt() ?? 0,
-      uid: (j['uid'] as num?)?.toInt() ?? 0);
+      uid: (j['uid'] as num?)?.toInt() ?? 0,
+      orgId: (j['orgId'] as num?)?.toInt() ?? 0);
 }
 
 String newId() {
@@ -77,6 +82,18 @@ class Accounts {
       l[i] = a;
     } else {
       l.add(a);
+    }
+    await save(l);
+  }
+
+  /// Mandanten (Issue #60): weitere Konten desselben Servers mit demselben Anmeldeschlüssel (eine Anmeldung, je Organisation ein Konto)
+  static Future<List<Account>> sharing(Account a) async => (await load()).where((x) => x.id != a.id && x.base == a.base && x.token == a.token).toList();
+
+  /// Abmelden beendet die Sitzung für alle Organisationen: alle Konten mit diesem Schlüssel gelten danach als abgemeldet
+  static Future<void> markOut(Account a) async {
+    final l = await load();
+    for (final x in l) {
+      if (x.id == a.id || (x.base == a.base && x.token == a.token)) x.loggedOut = true;
     }
     await save(l);
   }

@@ -13,6 +13,8 @@ Verwaltung, «Meine Einsätze» und diese Anleitung öffnet die App als Webseite
 
 Beim ersten Start fügst du ein Konto hinzu: Adresse des Servers, Benutzername und Passwort, optional eine eigene Bezeichnung. Weitere Konten (andere Organisationen) fügst du in der Kontenliste hinzu. Je Konto schaltest du ein, ob es überwacht wird («aktiv»).
 
+Gehörst du auf einem Server **mehreren Organisationen** an, fragt die App nach der Anmeldung, für welche Organisationen sie ein Konto anlegen soll. Jede erscheint als eigenes Konto in der Kontenliste, alle mit derselben Anmeldung; Abmelden meldet sie gemeinsam ab. Alarme einer Organisation ohne eigenes Konto meldet die App als **«Alarm bei …»**; das Antippen der Meldung oder **Wechseln** im Menü legt das Konto bei Bedarf an und öffnet den Einsatz dort.
+
 - Die App öffnet beim Start das zuletzt verwendete Konto.
 - Zurück zur Kontenliste: Servername mit ⇄ in der Kopfzeile des Menüs antippen oder im Profil «Konten / Server wechseln».
 - Die Kontenliste zeigt je Konto, ob der Standort zuletzt geteilt werden konnte.

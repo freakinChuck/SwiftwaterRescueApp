@@ -170,8 +170,15 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       return;
     }
     await pushForget(a);
-    if (!byServer) await a.api.logout();
-    await Accounts.update(a.id, (x) => x.loggedOut = true);
+    if (!byServer) {
+      for (final o in await Accounts.sharing(a)) {
+        await pushForget(o); // dieselbe Anmeldung in weiteren Organisationen (Issue #60) endet mit
+      }
+      await a.api.logout();
+      await Accounts.markOut(a);
+    } else {
+      await Accounts.update(a.id, (x) => x.loggedOut = true);
+    }
     await syncService();
     if (!mounted) return;
     final nav = Navigator.of(context);

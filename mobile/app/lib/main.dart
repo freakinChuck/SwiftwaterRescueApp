@@ -15,6 +15,7 @@ import 'sys.dart';
 import 'inc/map_page.dart';
 import 'inc/store.dart' show IncStore;
 import 'accounts.dart';
+import 'api.dart';
 import 'beacon.dart';
 import 'demo.dart';
 import 'demo_ui.dart' show demoSource;
@@ -30,6 +31,16 @@ Future<void> openAccount(String id, {bool focus = false, String? tag}) async {
   final a = l.where((x) => x.id == id).firstOrNull;
   final nav = navKey.currentState;
   if (a == null || nav == null) return;
+  // Mandanten (Issue #60): Alarm einer anderen Organisation (o<Organisation>/i:<Einsatz>) öffnet deren Konto, bei Bedarf neu angelegt
+  final om = RegExp(r'^o(\d+)/(.*)$').firstMatch(tag ?? '');
+  if (om != null && !a.loggedOut) {
+    final o = int.parse(om.group(1)!);
+    if (o != a.org1) {
+      final b = await orgAccount(a, o);
+      if (b != null) return openAccount(b.id, focus: focus, tag: om.group(2));
+    }
+    tag = o == a.org1 ? om.group(2) : null; // nicht erreichbar: das eigene Konto öffnen, ohne fremden Einsatz zu wählen
+  }
   if (a.loggedOut) {
     nav.push(MaterialPageRoute(builder: (_) => LoginPage(relogin: a)));
     return;
@@ -42,6 +53,34 @@ Future<void> openAccount(String id, {bool focus = false, String? tag}) async {
   if (IncPage.openId == id) return;
   nav.popUntil((r) => r.isFirst);
   nav.push(MaterialPageRoute(builder: (_) => IncPage(account: a)));
+}
+
+/// Mandanten (Issue #60): Konto derselben Person für eine andere Organisation auf demselben Server, mit derselben Anmeldung.
+/// Gibt es keines, entsteht es (Route me mit X-Org), Push meldet sich für die neue Organisation an.
+Future<Account?> orgAccount(Account a, int org, [String name = '']) async {
+  final l = await Accounts.load();
+  final b = l.where((x) => x.base == a.base && x.username.toLowerCase() == a.username.toLowerCase() && x.org1 == org).firstOrNull;
+  if (b != null) return b;
+  try {
+    final me = ((await Api(a.base, a.token, org).call('me'))['me'] as Map?) ?? {};
+    final n = '${me['org'] ?? ''}'.trim();
+    final c = Account(
+        id: newId(),
+        base: a.base,
+        username: a.username,
+        token: a.token,
+        name: '${me['name'] ?? a.name}',
+        org: n.isNotEmpty ? n : name,
+        added: DateTime.now().millisecondsSinceEpoch,
+        uid: (me['id'] as num?)?.toInt() ?? 0,
+        orgId: (me['org_id'] as num?)?.toInt() ?? org);
+    await Accounts.put(c);
+    unawaited(syncService());
+    unawaited(syncPush(force: true));
+    return c;
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Demo-Modus (Issue #74): Einsatz-App mit dem simulierten Backend (demo.dart) öffnen; mode null = bisherigen Stand weiterführen
