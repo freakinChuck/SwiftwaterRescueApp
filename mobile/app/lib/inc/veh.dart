@@ -283,6 +283,23 @@ Widget? vehScanBtn(BuildContext context, IncStore s) {
 String _sig(int r) => '${r >= -60 ? 'stark' : r >= -75 ? 'mittel' : 'schwach'} ($r dBm)';
 String _bt(int? p) => p == null ? '' : ' · ${p <= vehBattLow ? '⚠ Batterie schwach' : 'Batterie'} $p %';
 
+/// Ergänzt fehlende Namen (ältere Server ohne name in beacon_cfg): aus der Lage, mit cfg_map aus der Verwaltung, sonst «Fahrzeug N»
+Future<void> _scanNames(IncStore s, List<J> found) async {
+  final miss = found.where((b) => b['id'] != null && js(b['name']).isEmpty).toList();
+  if (miss.isEmpty) return;
+  final nm = <int, String>{for (final v in vehList(s)) if (ji(v['id']) != null && js(v['name']).isNotEmpty) ji(v['id'])!: js(v['name'])};
+  if (miss.any((b) => !nm.containsKey(ji(b['id']))) && s.can('cfg_map')) {
+    try {
+      for (final v in jl((await s.api.call('vehicles'))['vehicles'])) {
+        if (ji(v['id']) != null && js(v['name']).isNotEmpty) nm[ji(v['id'])!] = js(v['name']);
+      }
+    } catch (_) {}
+  }
+  for (final b in miss) {
+    b['name'] = nm[ji(b['id'])] ?? 'Fahrzeug ${b['id']}';
+  }
+}
+
 /// Sucht etwa 6 s nach den Beacons, meldet sie (IncStore.scanVehicles) und zeigt, was gefunden und gemeldet wurde
 Future<void> vehScanDlg(BuildContext context, IncStore s) async {
   ({List<J> found, String msg, bool ok})? r;
@@ -292,7 +309,8 @@ Future<void> vehScanDlg(BuildContext context, IncStore s) async {
       builder: (dc) => StatefulBuilder(builder: (dc, set) {
             if (!started) {
               started = true;
-              s.scanVehicles().then((x) {
+              s.scanVehicles().then((x) async {
+                await _scanNames(s, x.found);
                 if (dc.mounted) set(() => r = x);
               });
             }

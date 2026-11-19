@@ -235,7 +235,7 @@ class Beacons {
       final r = ji(b['rssi']) ?? -127;
       if ((ji(o[id]?['rssi']) ?? -128) >= r) continue;
       final v = jl(c['list']).where((v) => ji(v['id']) == id).firstOrNull;
-      o[id] = {'id': id, 'rssi': r, 'name': js(v?['name']).isEmpty ? 'Fahrzeug $id' : js(v?['name'])};
+      o[id] = {'id': id, 'rssi': r, 'name': js(v?['name'])}; // ältere Server liefern keinen Namen, vehScanDlg ergänzt ihn;
     }
     for (final b in _batt(c, _last)) {
       o[ji(b['id'])]?['batt'] = b['pct'];
