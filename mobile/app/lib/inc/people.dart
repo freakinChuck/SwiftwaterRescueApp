@@ -388,7 +388,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
           () {
             final k = 'j:${js(o['k'])}', t = jl(o['team']), x = jl(o['ext']), down = jn(o['down']) == 1;
             final rs = t.map((p) => js(p['role'])).toSet().toList()..sort((a, b) => a.isEmpty != b.isEmpty ? (a.isEmpty ? 1 : -1) : a.compareTo(b));
-            final pt = (J p) => jd(p['lat']) != null && jd(p['lon']) != null ? [LatLng(jd(p['lat'])!, jd(p['lon'])!)] : <LatLng>[];
+            List<LatLng> pt(J p) => jd(p['lat']) != null && jd(p['lon']) != null ? [LatLng(jd(p['lat'])!, jd(p['lon'])!)] : <LatLng>[];
             final body = <Widget>[
               if (down) jointDown,
               if (!down) ...[
