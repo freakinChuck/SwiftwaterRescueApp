@@ -3720,12 +3720,14 @@ switch ($route) {
   $air = airCfg()['on'] ? (isset($in['air']) ? (empty($in['air']) ? 0 : 1) : airDef($kid)) : null; // Helikopter: Häkchen beim Start, sonst Vorauswahl; Hauptschalter aus = offen lassen (NULL)
   // Aufgebot (Issue #90): groups, persons (wenn der Typ das erlaubt) oder invite_all=1 (alle beim Typ aufbietbaren Gruppen); ohne aktive Einsatzgruppen wie bisher alle
   $allowed = startGroups($kind); $ids = null; $ig = null;
+  $xl = pfJointCheck($kid, $in['ext'] ?? null); if (is_string($xl)) fail($xl, 403); // Partnerorganisationen (Issue #60): eigene, verknüpfte Einsätze dort
+  $own = !empty($in['invite_all']) || ($in['groups'] ?? []) || ($in['persons'] ?? []); // Auswahl der eigenen Organisation; ohne sie und mit Partnern wird hier niemand aufgeboten
   if (grpRows(true)) { if (!empty($in['invite_all'])) { if ($allowed !== null) fail('Du darfst nur bestimmte Einsatzgruppen aufbieten', 403); $in['groups'] = kindGroups($kind); $in['persons'] = []; }
     [$ids, $g, $pp] = resolveInvite($kind, $in['groups'] ?? [], $in['persons'] ?? [], $allowed);
-    if (!$g && !$pp) fail('Bitte mindestens eine Einsatzgruppe aufbieten');
-    if (!array_diff($ids, [$uid])) fail('Die gewählten Einsatzgruppen haben keine (weiteren) aktiven Mitglieder');
+    if (!$g && !$pp && !$xl) fail('Bitte mindestens eine Einsatzgruppe aufbieten');
+    if (($g || $pp) && !array_diff($ids, [$uid])) fail('Die gewählten Einsatzgruppen haben keine (weiteren) aktiven Mitglieder');
     $ig = ['g' => $g, 'p' => $pp]; }
-  $xl = pfJointCheck($kid, $in['ext'] ?? null); if (is_string($xl)) fail($xl, 403); // Partnerorganisationen (Issue #60): eigene, verknüpfte Einsätze dort
+  elseif ($xl && !$own) { $ids = []; $ig = ['g' => [], 'p' => []]; } // ohne Einsatzgruppen: nur die Partner, nicht alle hier
   if ($xl && $allowed !== null) fail('Andere Organisationen darf nur aufbieten, wer alle Einsatzgruppen aufbieten darf', 403);
   $abs = array_values(array_diff($ids === null ? absentIds() : array_intersect(absentIds(), $ids), [$uid])); // Abwesende (Issue #91): aufgeboten, aber kein Alarm
   $db->prepare("INSERT INTO incidents(message,lat,lon,alarm_at,created_by,is_exercise,air,kind_id,invite,inv_groups,inv_absent) VALUES(?,?,?,?,?,?,?,?,?,?,?)")->execute([$in['message'], $pls[0], $pls[1], $at, $uid, $kind['plans'] ? 1 : 0, $air, $kid, $ids === null ? null : json_encode($ids), $ig === null ? null : json_encode($ig), $abs ? json_encode($abs) : null]);
@@ -3734,7 +3736,7 @@ switch ($route) {
   logev($nid, $uid, 'start', 'hat ' . [0 => 'den Einsatz', 1 => 'den Sekundäreinsatz ohne Alarm', 2 => 'das freie Ereignis'][$kind['sec']] . ' gestartet (' . $kind['name'] . ($rec ? ', mit Aufzeichnung' : '') . ($air ? ', mit Helikoptern' : '') . ($pls[0] === null ? ', ohne PLS' : '') . '): ' . $in['message']);
   if ($par) { $tk = secTake($nid, $par, $in, $plsAt);
     logev($nid, $uid, 'parent', 'Folgeeinsatz zu «' . kindOf($par)['name'] . '» vom ' . hm((int)$par['alarm_at']) . ': ' . $par['message'] . ($tk ? ' (übernommen: ' . implode(', ', $tk) . ')' : '')); }
-  if ($ig) logev($nid, $uid, 'invite', 'bietet auf: ' . invText($ig['g'], $ig['p']) . ' (' . (($n = count(array_diff($ids, [$uid]))) === 1 ? '1 Person' : $n . ' Personen') . ($abs ? ', davon ' . absText(count($abs)) : '') . ')');
+  if ($ig && ($ig['g'] || $ig['p'])) logev($nid, $uid, 'invite', 'bietet auf: ' . invText($ig['g'], $ig['p']) . ' (' . (($n = count(array_diff($ids, [$uid]))) === 1 ? '1 Person' : $n . ' Personen') . ($abs ? ', davon ' . absText(count($abs)) : '') . ')');
   elseif ($abs) logev($nid, $uid, 'invite', absText(count($abs)));
   pushAlarm(['id' => $nid, 'kind_id' => $kid, 'message' => $in['message']], array_merge([$uid], $abs), $ids);
   if ($xl) jointInvite($nid, $xl);
