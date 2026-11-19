@@ -68,7 +68,7 @@ Je Funktion des AI-Assistenten wählst du, wie weit er dich unterstützt: aus, *
 
 ## Fahrzeuge {#fahrzeuge}
 
-Werden die Fahrzeuge auch ausserhalb von Einsätzen verfolgt, gibst du hier deine Zustimmung, dass die native App Beacons in deiner Nähe meldet. Mit dem nötigen Recht lernst du hier ein neues Beacon ein.
+Werden die Fahrzeuge auch ausserhalb von Einsätzen verfolgt, gibst du hier deine Zustimmung, dass die native App Beacons in deiner Nähe meldet. **Fahrzeuge jetzt scannen** sucht sofort nach Fahrzeugen in deiner Nähe und meldet sie (siehe [Fahrzeuge und Beacons](#app/beacons)). Mit dem nötigen Recht lernst du hier ein neues Beacon ein.
 
 ## Ausbildung {#ausbildung}
 

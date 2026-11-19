@@ -24,6 +24,7 @@ import 'hydro.dart';
 import 'skills.dart';
 import 'store.dart';
 import 'util.dart';
+import 'veh.dart';
 import 'voice.dart';
 
 /// Arten der Abwesenheit (ABS_KIND)
@@ -856,12 +857,12 @@ class _PrefsPageState extends State<PrefsPage> {
     if (mounted) setState(() => _bt = b);
   }
 
-  /// Karte «Fahrzeuge»: Zustimmung für ausserhalb von Einsätzen (nur wenn die Verwaltung es erlaubt), Bluetooth, «Beacon einlernen» (Recht cfg_map)
+  /// Karte «Fahrzeuge»: Zustimmung für ausserhalb von Einsätzen (nur wenn die Verwaltung es erlaubt), Bluetooth, «Fahrzeuge jetzt scannen»,
+  /// «Beacon einlernen» (Recht cfg_map)
   Widget? _veh(J me) {
     final c = me['beacon_cfg'];
-    if (c is! Map) return null;
+    if (c is! Map || s.demo) return null;
     final home = jb(c['home']), admin = s.can('cfg_map');
-    if (!home && !admin) return null;
     if (_bt == null) _loadBt();
     return MCard(title: 'Fahrzeuge', children: [
       if (home)
@@ -878,12 +879,16 @@ class _PrefsPageState extends State<PrefsPage> {
             }),
       Mut(switch (_bt) {
         0 => 'Bluetooth ist aus oder fehlt: Die App sieht keine Fahrzeuge.',
-        1 => 'Die App darf Bluetooth noch nicht nutzen.',
-        2 => 'Bluetooth bereit.',
+        1 => Platform.isIOS ? 'Die App darf den Standort noch nicht nutzen: Ohne ihn sieht iOS keine Beacons.' : 'Die App darf Bluetooth noch nicht nutzen.',
+        2 => Platform.isIOS ? 'Bereit, sofern Bluetooth eingeschaltet ist.' : 'Bluetooth bereit.',
+        3 => 'Nur ungefährer Standort: iOS findet so keine Beacons. Einstellungen → Swiftwater Rescue → Standort → «Genauer Standort» einschalten.',
         _ => '',
       }),
-      if (_bt == 1) Padding(padding: const EdgeInsets.only(top: 6), child: OutlinedButton(onPressed: () => requestBluetooth().then((_) => _loadBt()), child: const Text('Bluetooth erlauben'))),
-      if (admin) Padding(padding: const EdgeInsets.only(top: 6), child: OutlinedButton(onPressed: _learn, child: const Text('Beacon einlernen …'))),
+      if (_bt == 1 || _bt == 3)
+        Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: OutlinedButton(onPressed: () => requestBluetooth().then((_) => _loadBt()), child: Text(_bt == 3 ? 'Genauen Standort erlauben' : 'Bluetooth erlauben'))),
+      Padding(padding: const EdgeInsets.only(top: 6), child: Wrap(spacing: 8, runSpacing: 6, children: [?vehScanBtn(context, s), if (admin) OutlinedButton(onPressed: _learn, child: const Text('Beacon einlernen …'))])),
     ]);
   }
 
@@ -897,12 +902,18 @@ class _PrefsPageState extends State<PrefsPage> {
       return;
     }
     if (!mounted) return;
-    if (await requestBluetooth() != 2) {
-      s.toast('Bluetooth ist aus oder nicht erlaubt', 'err');
+    final bt = await requestBluetooth();
+    if (bt != 2) {
+      s.toast(bt == 3 ? 'iOS findet Beacons nur mit dem genauen Standort' : 'Bluetooth ist aus oder nicht erlaubt', 'err');
       return;
     }
     final cfg = jm(d['cfg']), vs = jl(d['vehicles']).where((v) => jb(v['active'])).toList();
-    final known = [js(cfg['uuid']), ...(cfg['uuids'] is List ? cfg['uuids'] as List : const []).map((u) => '$u')];
+    // iOS sieht nur Beacons mit bekannter UUID: Standard, weitere UUIDs der Einstellung und die eigenen UUIDs der Fahrzeuge
+    final known = {
+      js(cfg['uuid']),
+      ...(cfg['uuids'] is List ? cfg['uuids'] as List : const []).map((u) => '$u'),
+      ...vs.map((v) => js(v['uuid'])),
+    }.where((u) => u.isNotEmpty).map((u) => u.toUpperCase()).toList();
     if (!mounted) return;
     await showDialog<void>(
         context: context,
@@ -912,7 +923,7 @@ class _PrefsPageState extends State<PrefsPage> {
           return StatefulBuilder(builder: (dc, set) {
             Future<void> scan() async {
               set(() => busy = true);
-              final r = await beaconScan(Platform.isIOS ? known : [], ms: 6000);
+              final r = (await beaconScan(Platform.isIOS ? known : [], ms: 6000)).where((b) => js(b['uuid']).isNotEmpty).toList(); // ohne Einträge nur mit Batteriestand
               r.sort((a, b) => (ji(b['rssi']) ?? -127).compareTo(ji(a['rssi']) ?? -127));
               set(() {
                 found = r;
@@ -924,7 +935,8 @@ class _PrefsPageState extends State<PrefsPage> {
             String owner(J b) {
               final u = js(b['uuid']).toUpperCase();
               final v = vs.where((v) => (js(v['uuid']).isEmpty ? js(cfg['uuid']) : js(v['uuid'])).toUpperCase() == u && ji(v['major']) == ji(b['major']) && ji(v['minor']) == ji(b['minor'])).firstOrNull;
-              return v == null ? '' : ' · gehört zu «${js(v['name'])}»';
+              final p = ji(b['batt']) ?? Beacons.battPct(ji(b['mv']));
+              return (v == null ? ' · noch keinem Fahrzeug zugeordnet' : ' · gehört zu «${js(v['name'])}»') + (p == null ? '' : ' · Batterie $p %');
             }
 
             return AlertDialog(
@@ -951,7 +963,7 @@ class _PrefsPageState extends State<PrefsPage> {
                                         if (v == null) return;
                                         final u = js(b['uuid']).toUpperCase() == js(cfg['uuid']).toUpperCase() ? '' : js(b['uuid']);
                                         try {
-                                          await s.api.call('vehicle/save', body: {...v, 'uuid': u, 'major': ji(b['major']), 'minor': ji(b['minor'])});
+                                          await s.api.call('vehicle/save', body: {...v, 'uuid': u, 'major': ji(b['major']), 'minor': ji(b['minor']), if (js(b['mac']).isNotEmpty) 'mac': js(b['mac'])});
                                           s.toast('«${js(v['name'])}» hat jetzt dieses Beacon');
                                           if (dc.mounted) Navigator.pop(dc);
                                         } catch (e) {
