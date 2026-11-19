@@ -54,7 +54,8 @@ String? vehBatt(IncStore s, J v) {
   final p = ji(v['batt']);
   if (p == null) return null;
   final at = jn(v['batt_at']);
-  return '${p <= vehBattLow ? '⚠ Batterie schwach' : 'Batterie'} $p %${at != null && s.now - at > 86400 ? ' (${vehAgo(at, s.now)})' : ''}';
+  final mv = ji(v['batt_mv']);
+  return '${p <= vehBattLow ? '⚠ Batterie schwach' : 'Batterie'} $p %${mv != null ? ' (${(mv / 1000).toStringAsFixed(2)} V)' : ''}${at != null && s.now - at > 86400 ? ' (${vehAgo(at, s.now)})' : ''}';
 }
 
 String vehInfo(IncStore s, J v) {

@@ -1172,7 +1172,7 @@ function vehBtns(v){if(!st.veh.can_link)return'';const c=v.carrier_id!=null&&veh
 function vehPop(r,kids){const one=v=>{const cr=vehCrew(v);return `<div style="margin-top:.3rem"><b>${vehKind(st.veh,v).sym} ${esc(v.name)}</b><span class="t">${esc(vehInfo(v))}</span>${v.descr?esc(v.descr)+'<br>':''}${cr.length?`<span class="t">An Bord: ${esc(cr.join(', '))}</span>`:''}${vehBtns(v)?`<div class="vbt">${vehBtns(v)}</div>`:''}</div>`};
   return `<div class="mmpop">${one(r)}${kids.map(one).join('')}<span class="t">${esc(fc(r.lat,r.lon)||'')}${r.acc!=null&&r.acc>50?' · Genauigkeit ca. '+Math.round(r.acc)+' m':''}</span>${navBtn(r.lat,r.lon,r.name,'Navigieren')}</div>`}
 function drawVeh(){if(!vehLayer)return;const V=st&&st.veh,on=!!V&&vis('veh');
-  const k=on?JSON.stringify([V.list.map(v=>[v.id,v.lat,v.lon,v.acc,v.carrier_id,v.seen_at,v.name,v.abbr,v.color,v.descr,(v.crew||[]).join(),v.batt]),V.can_link,feat('nav'),me&&me.coord_sys,Math.floor(vehNow()/60)]):'';
+  const k=on?JSON.stringify([V.list.map(v=>[v.id,v.lat,v.lon,v.acc,v.carrier_id,v.seen_at,v.name,v.abbr,v.color,v.descr,(v.crew||[]).join(),v.batt,v.batt_mv]),V.can_link,feat('nav'),me&&me.coord_sys,Math.floor(vehNow()/60)]):'';
   if(k===vehKey)return;vehKey=k;vehDraw(vehLayer,on?V:null,vehNow(),vehPop)}
 // Gruppe «Fahrzeuge» im Fenster «Einsatzkräfte»: Hinweise «Träger voll», Ketten mit eingerückten aufgenommenen Fahrzeugen
 function vehFold(){const V=st&&st.veh;if(!V||!V.list.length)return'';const l=V.list,c=pplFold.has('veh');

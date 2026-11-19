@@ -923,7 +923,7 @@ class _PrefsPageState extends State<PrefsPage> {
           return StatefulBuilder(builder: (dc, set) {
             Future<void> scan() async {
               set(() => busy = true);
-              final r = await beaconScan(Platform.isIOS ? known : [], ms: 6000);
+              final r = (await beaconScan(Platform.isIOS ? known : [], ms: 6000)).where((b) => js(b['uuid']).isNotEmpty).toList(); // ohne Einträge nur mit Batteriestand
               r.sort((a, b) => (ji(b['rssi']) ?? -127).compareTo(ji(a['rssi']) ?? -127));
               set(() {
                 found = r;
@@ -935,7 +935,8 @@ class _PrefsPageState extends State<PrefsPage> {
             String owner(J b) {
               final u = js(b['uuid']).toUpperCase();
               final v = vs.where((v) => (js(v['uuid']).isEmpty ? js(cfg['uuid']) : js(v['uuid'])).toUpperCase() == u && ji(v['major']) == ji(b['major']) && ji(v['minor']) == ji(b['minor'])).firstOrNull;
-              return v == null ? '' : ' · gehört zu «${js(v['name'])}»';
+              final p = ji(b['batt']) ?? Beacons.battPct(ji(b['mv']));
+              return (v == null ? ' · noch keinem Fahrzeug zugeordnet' : ' · gehört zu «${js(v['name'])}»') + (p == null ? '' : ' · Batterie $p %');
             }
 
             return AlertDialog(
@@ -962,7 +963,7 @@ class _PrefsPageState extends State<PrefsPage> {
                                         if (v == null) return;
                                         final u = js(b['uuid']).toUpperCase() == js(cfg['uuid']).toUpperCase() ? '' : js(b['uuid']);
                                         try {
-                                          await s.api.call('vehicle/save', body: {...v, 'uuid': u, 'major': ji(b['major']), 'minor': ji(b['minor'])});
+                                          await s.api.call('vehicle/save', body: {...v, 'uuid': u, 'major': ji(b['major']), 'minor': ji(b['minor']), if (js(b['mac']).isNotEmpty) 'mac': js(b['mac'])});
                                           s.toast('«${js(v['name'])}» hat jetzt dieses Beacon');
                                           if (dc.mounted) Navigator.pop(dc);
                                         } catch (e) {

@@ -10,7 +10,8 @@
 //
 // Batteriestand (Issue #224): Der aktive Scan liefert zusätzlich den Frame «Device Info» von DX-Smart (mac, batt). Unter Android hängt das Plugin
 // ihn an das iBeacon desselben Geräts, unter iOS kommt er als eigener Eintrag nur mit MAC; zugeordnet wird er dann über die MAC des Fahrzeugs
-// (me.beacon_cfg.list[].mac, lernt der Server von Android-Geräten oder trägt die Verwaltung ein). Gemeldet wird er als batt [{id, pct, mac}].
+// (me.beacon_cfg.list[].mac, lernt der Server von Android-Geräten oder trägt die Verwaltung ein). Gemeldet wird er als batt [{id, pct, mac, mv}].
+// Eddystone-TLM liefert nur die Spannung (mv); daraus schätzt battPct die Prozent (Lithium 3 V: 2.0 V = 0 %, 3.0 V = 100 %, linear).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -108,13 +109,16 @@ class Beacons {
     return null;
   }
 
-  /// Batteriestände eines Scans für dieses Konto: [{id, pct, mac}]
+  /// Prozent aus der Spannung des TLM-Frames (Schätzung, siehe oben)
+  static int? battPct(int? mv) => mv == null ? null : ((mv - 2000) / 10).round().clamp(0, 100);
+
+  /// Batteriestände eines Scans für dieses Konto: [{id, pct, mac, mv}]
   static List<J> _batt(J c, List<J> scan) {
     final o = <int, J>{};
     for (final b in scan) {
-      final p = ji(b['batt']), id = _vid(c, b);
+      final mv = ji(b['mv']), p = ji(b['batt']) ?? battPct(mv), id = _vid(c, b);
       if (p == null || id == null) continue;
-      o[id] = {'id': id, 'pct': p, if (js(b['mac']).isNotEmpty) 'mac': js(b['mac'])};
+      o[id] = {'id': id, 'pct': p, if (js(b['mac']).isNotEmpty) 'mac': js(b['mac']), 'mv': ?mv};
     }
     return o.values.toList();
   }
@@ -236,14 +240,16 @@ class Beacons {
     for (final b in _batt(c, _last)) {
       o[ji(b['id'])]?['batt'] = b['pct'];
       if (o[ji(b['id'])] != null && b['mac'] != null) o[ji(b['id'])]!['mac'] = b['mac'];
+      if (o[ji(b['id'])] != null && b['mv'] != null) o[ji(b['id'])]!['mv'] = b['mv'];
     }
     int rs(J x) => ji(x['rssi']) ?? -127;
     final l = o.values.toList()..sort((x, y) => rs(y).compareTo(rs(x)));
     final unk = <String, J>{};
     for (final b in _last) {
       final m = js(b['mac']).toUpperCase();
-      if (ji(b['batt']) == null || m.isEmpty || _vid(c, b) != null) continue;
-      if (rs(b) > (ji(unk[m]?['rssi']) ?? -128)) unk[m] = {'mac': m, 'batt': ji(b['batt']), 'rssi': rs(b)};
+      final p = ji(b['batt']) ?? battPct(ji(b['mv']));
+      if (p == null || m.isEmpty || _vid(c, b) != null) continue;
+      if (rs(b) > (ji(unk[m]?['rssi']) ?? -128)) unk[m] = {'mac': m, 'batt': p, 'mv': ji(b['mv']), 'rssi': rs(b)};
     }
     return l + (unk.values.toList()..sort((x, y) => rs(y).compareTo(rs(x))));
   }
@@ -261,7 +267,7 @@ class Beacons {
     final r = await a.api.call('beacon/report', body: {
       'manual': 1,
       'seen': [for (final b in found.where((b) => b['id'] != null)) {'id': b['id'], 'rssi': b['rssi'], 'lat': p.latitude, 'lon': p.longitude, 'acc': p.accuracy, 'at': now}],
-      'batt': [for (final b in found.where((b) => b['id'] != null && b['batt'] != null)) {'id': b['id'], 'pct': b['batt'], if (b['mac'] != null) 'mac': b['mac']}]
+      'batt': [for (final b in found.where((b) => b['id'] != null && b['batt'] != null)) {'id': b['id'], 'pct': b['batt'], if (b['mac'] != null) 'mac': b['mac'], if (b['mv'] != null) 'mv': b['mv']}]
     }, timeout: const Duration(seconds: 15));
     return ji(r['n']) ?? 0;
   }

@@ -88,7 +88,7 @@ function vehKids(list,id){const o=[],add=i=>list.filter(x=>x.carrier_id===i).for
 const vehStale=(V,v,now)=>v.seen_at==null||((now||Date.now()/1000)-v.seen_at)>((V&&V.stale_min)||30)*60;
 // Batteriestand des Beacons (Issue #224, Frame «Device Info» von DX-Smart): «Batterie 80 %», schwach ab VEH_BATT_LOW, älter als 1 Tag mit Zeitpunkt; '' = unbekannt
 const VEH_BATT_LOW=20;
-function vehBattTxt(v,now){if(!v||v.batt==null)return'';const n=now||Date.now()/1000;return `${v.batt<=VEH_BATT_LOW?'⚠ Batterie schwach':'Batterie'} ${v.batt} %${v.batt_at&&n-v.batt_at>86400?' ('+vehAgo(v.batt_at,n)+')':''}`}
+function vehBattTxt(v,now){if(!v||v.batt==null)return'';const n=now||Date.now()/1000;return `${v.batt<=VEH_BATT_LOW?'⚠ Batterie schwach':'Batterie'} ${v.batt} %${v.batt_mv?' ('+(v.batt_mv/1000).toFixed(2)+' V)':''}${v.batt_at&&n-v.batt_at>86400?' ('+vehAgo(v.batt_at,n)+')':''}`}
 function vehAgo(ts,now){if(ts==null)return'noch nie gesehen';const s=Math.max(0,Math.round((now||Date.now()/1000)-ts));return s<60?'gerade eben':s<3600?`vor ${Math.round(s/60)} min`:s<86400?`vor ${Math.floor(s/3600)} h ${Math.round(s%3600/60)} min`:'am '+fmtDT(ts)}
 // je Fahrzeug der Kette ein eigenes Feld (Farbe, Symbol, Kürzel), eine Zeile je Kette
 function vehIconHtml(V,root,kids,stale){const seg=v=>`<span class="sg" style="--c:${esc(v.color||'#335c67')}" title="${esc(v.name)}"><span class="s">${vehKind(V,v).sym}</span>${v.abbr?`<span class="a">${esc(v.abbr)}</span>`:''}</span>`;

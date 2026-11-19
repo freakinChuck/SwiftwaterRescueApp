@@ -15,6 +15,8 @@ import UIKit
 // Batteriestand (Issue #224): iBeacon-Frames sieht nur CoreLocation, den Frame «Device Info» von DX-Smart (Service-Daten 0xFEAB, Byte 0 = Prozent,
 // Bytes 1–6 = MAC) nur CoreBluetooth. beaconScan sucht ihn deshalb parallel und liefert ihn als eigene Einträge {mac, batt, rssi}; die App ordnet
 // ihn über die MAC des Fahrzeugs zu. Ohne MAC im Frame (nur 1 Byte) lässt er sich unter iOS keinem Gerät zuordnen und fällt weg.
+// Eddystone-TLM (0xFEAA, Typ 0x20, Spannung in mV) enthält keine MAC und CoreBluetooth gibt sie nicht heraus: Die Spannung gilt nur, wenn
+// dasselbe Gerät (CBPeripheral.identifier) im Scan auch den Frame «Device Info» mit MAC gesendet hat, dann als mv beim selben Eintrag.
 public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate, CBCentralManagerDelegate {
     private let lm = CLLocationManager()
     private var channel: FlutterMethodChannel?
@@ -25,7 +27,9 @@ public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate, CB
     private var bgTask: UIBackgroundTaskIdentifier = .invalid
     private var cm: CBCentralManager? = nil // nur während eines Scans
     private var battBest: [String: [String: Any]] = [:]
-    private static let dxInfo = CBUUID(string: "FEAB")
+    private var idMac: [UUID: String] = [:] // Gerät → MAC aus «Device Info»
+    private var tlm: [UUID: Int] = [:] // Gerät → Spannung in mV
+    private static let dxInfo = CBUUID(string: "FEAB"), eddy = CBUUID(string: "FEAA")
     private static let pendingKey = "sw_beacons_pending", prefix = "sw-veh-"
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -65,7 +69,7 @@ public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate, CB
             scanResult = result
             scanCons = uuids.map { CLBeaconIdentityConstraint(uuid: $0) }
             scanCons.forEach { lm.startRangingBeacons(satisfying: $0) }
-            battBest = [:]
+            battBest = [:]; idMac = [:]; tlm = [:]
             cm = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: false])
             DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(ms)) { [weak self] in self?.finishScan() }
         case "beaconWatch":
@@ -100,25 +104,33 @@ public class SwSysPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate, CB
         scanCons = []
         if cm?.state == .poweredOn { cm?.stopScan() }
         cm = nil
+        for (id, mv) in tlm { if let m = idMac[id] { battBest[m]?["mv"] = mv } }
         let r = scanResult, b = scanBest
         scanResult = nil
         scanBest = nil
         r?(Array((b ?? [:]).values) + Array(battBest.values))
-        battBest = [:]
+        battBest = [:]; idMac = [:]; tlm = [:]
     }
 
     public func centralManagerDidUpdateState(_ c: CBCentralManager) {
-        if c === cm, c.state == .poweredOn { c.scanForPeripherals(withServices: [SwSysPlugin.dxInfo], options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]) }
+        // ohne Filter: nicht jedes Beacon nennt FEAB/FEAA in der Liste der Dienste; der Scan läuft nur wenige Sekunden im Vordergrund
+        if c === cm, c.state == .poweredOn { c.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]) }
     }
 
     public func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData ad: [String: Any], rssi: NSNumber) {
-        guard c === cm, let sd = ad[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data], let d = sd[SwSysPlugin.dxInfo], d.count >= 7 else { return }
+        guard c === cm, let sd = ad[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] else { return }
+        let r = rssi.intValue
+        if r == 127 || r == 0 { return }
+        if let e = sd[SwSysPlugin.eddy], e.count >= 4 {
+            let t = [UInt8](e), mv = Int(t[2]) << 8 | Int(t[3])
+            if t[0] == 0x20, t[1] == 0x00, mv >= 1000, mv <= 4000 { tlm[p.identifier] = mv }
+        }
+        guard let d = sd[SwSysPlugin.dxInfo], d.count >= 7 else { return }
         let b = [UInt8](d)
         if b[0] > 100 { return }
         let mac = b[1...6].map { String(format: "%02X", $0) }.joined(separator: ":")
-        let r = rssi.intValue
-        if r == 127 || r == 0 { return }
-        if let o = battBest[mac], (o["rssi"] as? Int ?? -127) >= r { return }
+        idMac[p.identifier] = mac
+        if let o = battBest[mac], (o["rssi"] as? Int ?? -127) >= r { battBest[mac]?["batt"] = Int(b[0]); return }
         battBest[mac] = ["mac": mac, "batt": Int(b[0]), "rssi": r]
     }
 

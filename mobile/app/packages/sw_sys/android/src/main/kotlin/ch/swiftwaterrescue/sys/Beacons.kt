@@ -24,11 +24,21 @@ import org.json.JSONObject
 // selbst; das System weckt nur den Empfänger BeaconReceiver, der die Sichtung in SharedPreferences ablegt. Die App holt sie mit pending ab
 // (Vordergrunddienst bei jeder Abfrage, App beim Start), der Standort kommt von dort. Ohne laufenden Prozess startet Android den Empfänger selbst.
 // Batteriestand (Issue #224): DX-Smart sendet ihn im Frame «Device Info» als Service-Daten 0xFEAB (Byte 0 = Prozent, danach optional die
-// MAC-Adresse in 6 Bytes). Der aktive Scan sucht ihn mit und hängt ihn über die Geräteadresse an das iBeacon desselben Geräts.
+// MAC-Adresse in 6 Bytes). Alternativ Eddystone-TLM (Service-Daten 0xFEAA, Typ 0x20, Version 0x00, Bytes 2–3 = Spannung in mV, big-endian;
+// 0 = nicht unterstützt). Der aktive Scan sucht beide mit und hängt sie über die Geräteadresse an das iBeacon desselben Geräts (batt und/oder mv).
 object Beacons {
     private const val PREFS = "sw_beacons"
     private const val APPLE = 0x004C
     private val DX_INFO: ParcelUuid = ParcelUuid.fromString("0000FEAB-0000-1000-8000-00805F9B34FB")
+    private val EDDY: ParcelUuid = ParcelUuid.fromString("0000FEAA-0000-1000-8000-00805F9B34FB")
+
+    /** Eddystone-TLM (unverschlüsselt): Batteriespannung in mV oder null */
+    fun parseTlm(r: ScanResult): Int? {
+        val d = r.scanRecord?.getServiceData(EDDY) ?: return null
+        if (d.size < 4 || d[0] != 0x20.toByte() || d[1] != 0x00.toByte()) return null
+        val mv = ((d[2].toInt() and 0xFF) shl 8) or (d[3].toInt() and 0xFF)
+        return if (mv in 1000..4000) mv else null
+    }
     private val main = Handler(Looper.getMainLooper())
 
     fun permitted(c: Context): Boolean =
@@ -83,7 +93,7 @@ object Beacons {
     }
 
     /** Aktiver Scan für ms Millisekunden; Ergebnis über done: iBeacons (uuid, major, minor, rssi, dazu mac und batt, wenn dasselbe Gerät den
-     *  Frame «Device Info» sendet) und Geräte, von denen nur dieser Frame kam (mac, batt, rssi) */
+     *  Frame «Device Info» bzw. TLM sendet; TLM als mv) und Geräte, von denen nur diese Frames kamen (mac, batt und/oder mv, rssi) */
     @SuppressLint("MissingPermission")
     fun scan(c: Context, uuids: List<String>, ms: Long, done: (List<Map<String, Any>>) -> Unit) {
         val s = scanner(c)
@@ -97,8 +107,12 @@ object Beacons {
             override fun onScanResult(type: Int, r: ScanResult) {
                 val a = r.device?.address?.uppercase() ?: ""
                 parseBatt(r)?.let { (mac, pct) ->
-                    val o = batt[a]
-                    batt[a] = mutableMapOf("mac" to mac, "batt" to pct, "rssi" to maxOf(r.rssi, (o?.get("rssi") as? Int) ?: -127))
+                    val o = batt.getOrPut(a) { mutableMapOf("mac" to a, "rssi" to -127) }
+                    o["mac"] = mac; o["batt"] = pct; o["rssi"] = maxOf(r.rssi, o["rssi"] as Int)
+                }
+                if (a.isNotEmpty()) parseTlm(r)?.let { mv ->
+                    val o = batt.getOrPut(a) { mutableMapOf("mac" to a, "rssi" to -127) }
+                    o["mv"] = mv; o["rssi"] = maxOf(r.rssi, o["rssi"] as Int)
                 }
                 val b = parse(r) ?: return
                 val k = "${b.first}|${b.second}|${b.third}"
@@ -110,7 +124,7 @@ object Beacons {
             override fun onBatchScanResults(rs: MutableList<ScanResult>) = rs.forEach { onScanResult(0, it) }
         }
         try {
-            s.startScan(filters(uuids) + ScanFilter.Builder().setServiceData(DX_INFO, ByteArray(0)).build(), ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_BALANCED).build(), cb)
+            s.startScan(filters(uuids) + ScanFilter.Builder().setServiceData(DX_INFO, ByteArray(0)).build() + ScanFilter.Builder().setServiceData(EDDY, byteArrayOf(0x20), byteArrayOf(-1)).build(), ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_BALANCED).build(), cb)
         } catch (_: Exception) {
             done(emptyList()); return
         }
@@ -120,7 +134,7 @@ object Beacons {
             } catch (_: Exception) {
             }
             val used = HashSet<String>()
-            for ((k, o) in best) addr[k]?.let { a -> batt[a]?.let { b -> o["mac"] = b["mac"]!!; o["batt"] = b["batt"]!!; used.add(a) } }
+            for ((k, o) in best) addr[k]?.let { a -> batt[a]?.let { b -> o["mac"] = b["mac"]!!; b["batt"]?.let { o["batt"] = it }; b["mv"]?.let { o["mv"] = it }; used.add(a) } }
             done(best.values.map { it.toMap() } + batt.filterKeys { it !in used }.values.map { it.toMap() })
         }, ms)
     }
