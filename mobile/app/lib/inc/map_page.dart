@@ -1589,7 +1589,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     final fill = FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16));
     return Positioned.fill(
         child: Material(
-            color: a.lvl == 'crit' ? const Color(0xF0B71C1C) : const Color(0xF0E65100),
+            color: a.lvl == 'high' ? const Color(0xF0E65100) : const Color(0xF0B71C1C), // rot, nur «hoch» orange (Issue #226: alle Stufen)
             child: SafeArea(
                 child: LayoutBuilder(
                     builder: (c, bc) => SingleChildScrollView(
