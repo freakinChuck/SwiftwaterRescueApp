@@ -1,0 +1,103 @@
+# Aktuellen Release an externe TestFlight-Tester:innen geben, von Hand: Actions → «TestFlight extern» → «Run workflow».
+# Baut nichts: nimmt den Build, den «Native Apps» auf dem Release-Tag nach App Store Connect geladen hat, weist ihn der externen
+# Gruppe zu (Standard «Swiftwater Test Extern», Repo-Variable TF_GROUP), setzt «Was zu testen ist» aus web/changes.json,
+# reicht ihn zur Beta-Prüfung ein und gibt ihn nach der Genehmigung frei («Tester benachrichtigen»), damit der öffentliche Link Tester annimmt.
+# Skript .github/scripts/tf_extern.py; Geheimnisse ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 wie in mobile.yml (Rolle «App Manager» oder höher).
+name: TestFlight extern
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version (leer = neuster Release-Tag vX.Y.Z)
+        type: string
+        required: false
+      build:
+        description: Build-Nummer JJMMTThhmm (leer = Build des Release-Laufs, sonst der neuste der Version)
+        type: string
+        required: false
+      group:
+        description: Externe TestFlight-Gruppe (leer = Variable TF_GROUP bzw. «Swiftwater Test Extern»)
+        type: string
+        required: false
+      notes:
+        description: «Was zu testen ist» (leer = Punkte der Version aus «Was ist neu»; «-» = nicht ändern)
+        type: string
+        required: false
+      wait:
+        description: Minuten auf Verarbeitung und Beta-Prüfung warten (0 = nur einreichen; freigegeben wird nach der Genehmigung trotzdem automatisch)
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency: testflight-extern
+
+jobs:
+  extern:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Release bestimmen
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IN_VER: ${{ inputs.version }}
+          IN_NOTES: ${{ inputs.notes }}
+        shell: bash
+        run: |
+          v="${IN_VER#v}"
+          if [ -z "$v" ]; then
+            t=$(git tag -l 'v[0-9]*' --sort=-v:refname | head -1)
+            [ -n "$t" ] && v="${t#v}" || v=$(tr -d ' \r\n' < VERSION)
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          # Zeitfenster des Builds: Lauf von «Native Apps» auf dem Tag; die iOS-Build-Nummer ist die UTC-Zeit des Builds (JJMMTThhmm)
+          at=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/mobile.yml/runs?branch=v$v&per_page=20" \
+                 --jq '[.workflow_runs[] | select(.conclusion=="success")][0].run_started_at // empty' 2>/dev/null || true)
+          if [[ "$at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T ]]; then
+            s=$(date -u -d "$at" +%s)
+            echo "from=$(date -u -d "@$s" +%y%m%d%H%M)" >> "$GITHUB_OUTPUT"
+            echo "to=$(date -u -d "@$((s + 10800))" +%y%m%d%H%M)" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release v$v, Lauf «Native Apps» gestartet $at"
+          else
+            echo "::warning::Kein erfolgreicher Lauf «Native Apps» auf dem Tag v$v gefunden; nehme den neusten Build der Version $v"
+          fi
+          # «Was zu testen ist»
+          if [ "$IN_NOTES" = "-" ]; then n=""
+          elif [ -n "$IN_NOTES" ]; then n=$(printf '%b' "$IN_NOTES")
+          else
+            n=$(python3 -c "import json,sys; d=json.load(open('web/changes.json',encoding='utf-8'))
+          e=[x for x in d.get('versions',[]) if x.get('version')==sys.argv[1]]
+          print(('Version '+sys.argv[1]+'\n'+'\n'.join('• '+i for i in e[0].get('items',[]))) if e else '')" "$v")
+          fi
+          { echo 'notes<<__EOF__'; echo "$n"; echo '__EOF__'; } >> "$GITHUB_OUTPUT"
+      - name: Geheimnisse prüfen
+        env:
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          KEY: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          if [ -z "$KEY_ID" ] || [ -z "$ISSUER" ] || [ -z "$KEY" ]; then
+            echo "::error::ASC_KEY_ID, ASC_ISSUER_ID oder ASC_KEY_P8 fehlt"; exit 1
+          fi
+      - run: pip install --quiet 'pyjwt[crypto]==2.10.1'
+      - name: An externe Gruppe geben
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUNDLE_ID: ch.swiftwaterrescue.app
+          VERSION: ${{ steps.rel.outputs.version }}
+          BUILD: ${{ inputs.build }}
+          WIN_FROM: ${{ steps.rel.outputs.from }}
+          WIN_TO: ${{ steps.rel.outputs.to }}
+          GROUP: ${{ inputs.group || vars.TF_GROUP || 'Swiftwater Test Extern' }}
+          NOTES: ${{ steps.rel.outputs.notes }}
+          WAIT_MIN: ${{ inputs.wait }}
+        run: python3 .github/scripts/tf_extern.py
