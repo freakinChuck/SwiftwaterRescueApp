@@ -15,7 +15,9 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const want=q.get('demo')==='leer'?'leer':'bsp',SS=window.sessionStorage,PFX='swdemo:';
   // ---------- eigener Speicher statt localStorage ----------
   // echte Anmeldung vor dem Umleiten merken: «Neu ohne Daten» übernimmt angemeldet die Vorgaben (nur lesend, loadOrg)
-  let REAL_TOK=null;try{REAL_TOK=window.localStorage.getItem('sw_token')}catch(e){}
+  // Mandanten (Issue #60): dazu die gewählte Organisation (sw_org), damit die Vorgaben aus derselben kommen wie die Anmeldung
+  let REAL_TOK=null,REAL_ORG='';try{REAL_TOK=window.localStorage.getItem('sw_token');REAL_ORG=window.localStorage.getItem('sw_org')||''}catch(e){}
+  const realH=x=>Object.assign({'X-Token':REAL_TOK||''},/^\d+$/.test(REAL_ORG)&&+REAL_ORG>0?{'X-Org':REAL_ORG}:{},x||{});
   const realFetch=window.fetch.bind(window),API_URL=location.pathname.replace(/[^/]*$/,'')+'api/index.php';
   const mem={},sg=k=>{try{return SS.getItem(k)}catch(e){return mem[k]??null}},ss=(k,v)=>{try{SS.setItem(k,v)}catch(e){mem[k]=v}},sr=k=>{try{SS.removeItem(k)}catch(e){}delete mem[k]};
   const keys=()=>{const o=[];try{for(let i=0;i<SS.length;i++){const k=SS.key(i);if(k.startsWith(PFX))o.push(k.slice(PFX.length))}}catch(e){Object.keys(mem).forEach(k=>{if(k.startsWith(PFX))o.push(k.slice(PFX.length))})}return o};
@@ -69,7 +71,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   // Einmal beim Start des Demos liest das Gerät mit der echten Anmeldung (nur lesende Routen) feste Standorte, Einsatztypen, Spezialrollen,
   // Einrückoptionen, Messstationen, Symbole, Grundkarten und die eigenen Einstellungen. Geschrieben wird nie etwas; ohne Anmeldung oder Antwort die Demo-Daten.
   let READY=Promise.resolve(),VER=null;
-  const realGet=r=>realFetch(API_URL+'?r='+r,{headers:{'X-Token':REAL_TOK||''}}).then(x=>x.ok?x.json():null).catch(()=>null);
+  const realGet=r=>realFetch(API_URL+'?r='+r,{headers:realH()}).then(x=>x.ok?x.json():null).catch(()=>null);
   async function loadOrg(){if(!REAL_TOK||REAL_TOK==='demo')return null;const m=await realGet('me'),me=m&&m.me;if(!me||me.must_change)return null;
     const pm=me.perms||[],[ro,mo,dp,hy,ex]=await Promise.all([realGet('roles'),realGet('modes'),realGet('demo/places'),realGet('hydro'),pm.includes('cfg_inc')||pm.includes('ex_plan')?realGet('ext_templates'):null]);
     // alle festen Standorte (demo/places); ältere Server ohne die Route: wie bisher aus incident/state
@@ -270,7 +272,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   // Overpass: wie der Server ohne Antwort (502 mit fertiger Abfrage), das Gerät fragt dann direkt (overpassNet in common.js); Ergebnisse bleiben bis zum Neuladen im Speicher
   const OPC=new Map(),opKey=b=>JSON.stringify(b.around||b.bbox||null);
   async function realOverpass(b){if(!REAL_TOK||REAL_TOK==='demo')return null;
-    try{const x=await realFetch(API_URL+'?r=overpass',{method:'POST',headers:{'X-Token':REAL_TOK},body:JSON.stringify({around:b.around,bbox:b.bbox})});
+    try{const x=await realFetch(API_URL+'?r=overpass',{method:'POST',headers:realH(),body:JSON.stringify({around:b.around,bbox:b.bbox})});
       return x.ok||x.status===502||x.status===503?x:null}catch(e){return null}}
   function overpassQ(b){const f=x=>(+x).toFixed(5);let sel;if(b.around){const[r,la,lo]=b.around.map(Number);if(!(r>=100&&r<=30000))fail('Ungültiger Umkreis');sel=`around:${Math.round(r)},${f(la)},${f(lo)}`}
     else if(b.bbox)sel=b.bbox.map(f).join(',');else fail('Umkreis oder Ausschnitt fehlt');return`[out:json][timeout:25];way(${sel})["waterway"~"^(river|stream|canal)$"];out geom;`}
