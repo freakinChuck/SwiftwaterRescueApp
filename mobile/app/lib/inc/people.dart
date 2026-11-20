@@ -3,7 +3,6 @@
 // Zentrieren, Folgen, Navigation; für die Einsatzleitung Spezialrolle ändern, aus dem Einsatz entfernen und Externe erfassen,
 // bearbeiten, verschieben und entfernen.
 import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ctx.dart';
@@ -382,30 +381,62 @@ class _PeoplePanelState extends State<PeoplePanel> {
         children: l.isEmpty ? [Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Mut(empty))] : _roleGroups(l, row));
   }
 
-  /// Einsatzkräfte der verknüpften Einsätze von Partnerorganisationen (Issue #60), nach Spezialrolle, nur lesend
+  /// Einsatzkräfte der verknüpften Einsätze von Partnerorganisationen (Issue #60), nach Spezialrolle; Zentrieren, Folgen, Info, 🧭 und Anruf wie bei den eigenen
+  Widget _jrow(J p) {
+    final ll = llOf(p), ext = p['ext'] != null, k = js(p['jk']), f = map.followJId == k;
+    final cs = ll != null ? s.fc(p['lat'], p['lon']) : '';
+    return _entry(
+      lead: avatar(p, r: 16),
+      title: js(p['name']),
+      lines: [
+        [if (ext) 'Extern' else if (js(p['mode']).isNotEmpty) js(p['mode']), ll == null ? 'kein Standort' : (jn(p['loc_at']) != null ? 'Standort ${agoS(s.now, jn(p['loc_at'])!)}' : 'Standort')].join(' · '),
+        ?telTxt(s, p),
+        if (cs.isNotEmpty) cs,
+      ],
+      buttons: [
+        if (ll != null) smallBtn('Zentrieren', () => _center(p)),
+        if (ll != null && !ext) smallBtn(f ? 'Folgt' : 'Folgen', () => _followJ(k), primary: f),
+        if (ll != null && s.feat('pinfo'))
+          smallBtn('ℹ Info', () {
+            map.personInfo(k);
+            if (_narrow()) map.openPanel(null);
+          }),
+        if (ll != null) ?navBtn(s, p['lat'], p['lon'], js(p['name'])),
+        if (!ext) ?telBtn(s, p),
+      ],
+    );
+  }
+
+  void _followJ(String k) {
+    map.followJ(map.followJId == k ? null : k);
+    if (map.followJId != null && _narrow()) {
+      map.openPanel(null);
+    } else {
+      setState(() {});
+    }
+  }
+
   List<Widget> _joint() => [
         for (final o in jointParts(s))
           () {
-            final k = 'j:${js(o['k'])}', t = jl(o['team']), x = jl(o['ext']), down = jn(o['down']) == 1;
+            final k = 'j:${js(o['k'])}', all = jointPpl(o), down = jn(o['down']) == 1;
+            final t = all.where((p) => p['ext'] == null).toList(), x = all.where((p) => p['ext'] != null).toList();
             final rs = t.map((p) => js(p['role'])).toSet().toList()..sort((a, b) => a.isEmpty != b.isEmpty ? (a.isEmpty ? 1 : -1) : a.compareTo(b));
-            List<LatLng> pt(J p) => jd(p['lat']) != null && jd(p['lon']) != null ? [LatLng(jd(p['lat'])!, jd(p['lon'])!)] : <LatLng>[];
             final body = <Widget>[
               if (down) jointDown,
               if (!down) ...[
                 for (final r in rs) ...[
                   Padding(padding: const EdgeInsets.only(top: 6, bottom: 2), child: Text('${r.isEmpty ? 'Ohne Spezialrolle' : r} (${t.where((p) => js(p['role']) == r).length})', style: Theme.of(context).textTheme.labelLarge)),
-                  for (final p in t.where((p) => js(p['role']) == r))
-                    jointRow(context, s, map, js(p['name']),
-                        [if (js(p['mode']).isNotEmpty) js(p['mode']), pt(p).isEmpty ? 'kein Standort' : (jn(p['loc_at']) != null ? 'Standort ${agoS(s.now, jn(p['loc_at'])!)}' : 'Standort')].join(' · '), pt(p)),
+                  for (final p in t.where((p) => js(p['role']) == r)) _jrow(p),
                 ],
                 if (x.isNotEmpty) ...[
                   Padding(padding: const EdgeInsets.only(top: 6, bottom: 2), child: Text('Externe Einsatzkräfte (${x.length})', style: Theme.of(context).textTheme.labelLarge)),
-                  for (final e in x) jointRow(context, s, map, js(e['name']), 'Extern', pt(e)),
+                  for (final e in x) _jrow(e),
                 ],
-                if (t.isEmpty && x.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Mut('Noch niemand im Einsatz.')),
+                if (all.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Mut('Noch niemand im Einsatz.')),
               ],
             ];
-            return FoldGroup(title: jointName(o), count: down ? null : t.length + x.length, open: !_fold.contains(k), onToggle: () => _toggleFold(k), children: body);
+            return FoldGroup(title: jointName(o), count: down ? null : all.length, open: !_fold.contains(k), onToggle: () => _toggleFold(k), children: body);
           }(),
       ];
 

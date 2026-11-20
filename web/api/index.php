@@ -3829,7 +3829,7 @@ switch ($route) {
   unset($inc['voice_ch'], $inc['voice_anon']);
   $il = incList(); $oth = isset($_GET['oth']) && count($il) > 1 ? array_values(array_map('incOther', array_filter(runningIncidents(), fn($r) => (int)$r['id'] !== $id && in_array((int)$r['id'], array_column($il, 'id'), true)))) : [];
   // Gemeinsamer Einsatz mehrerer Organisationen (Issue #60): Lage der verknüpften Einsätze auf der Karte, gemeinsamer Nachrichtenkanal und Konferenz, wenn beide Seiten die Funktion haben
-  $joint = null; if ($jt = pfJointOf(ctxOrg(), $id)) { $jo = pfJointOthers($jt, $id); $oth = array_merge($oth, $jo); $up = array_values(array_filter($jo, fn($o) => empty($o['down'])));
+  $joint = null; if ($jt = pfJointOf(ctxOrg(), $id)) { $jo = pfJointOthers($jt, $id); if (!isActivePart($id) && !canManage($inc)) foreach ($jo as &$jx) { unset($jx['phone_cfg']); foreach ($jx['team'] ?? [] as &$jp) $jp['phone'] = null; unset($jp); } unset($jx); $oth = array_merge($oth, $jo); $up = array_values(array_filter($jo, fn($o) => empty($o['down'])));
     $jmsg = $F['msg'] && array_filter($up, fn($o) => !empty($o['msg'])) ? 1 : 0; $jread = $jmsg && (isActivePart($id) || canManage($inc) || $canRead);
     $joint = ['id' => $jt['id'], 'host' => $jt['host_org'] === ctxOrg() && $jt['host_inc'] === $id ? 1 : 0, 'ended' => $jt['ended_at'] ? 1 : 0,
       'partners' => array_map(fn($o) => ['org' => $o['org'], 'name' => $o['org_name'], 'inc' => (int)$o['id'], 'host' => $o['host'], 'down' => empty($o['down']) ? 0 : 1, 'ended' => (int)($o['ended'] ?? 0), 'kind_name' => $o['kind_name'] ?? '', 'msg' => (int)($o['msg'] ?? 0), 'conf' => (int)($o['conf'] ?? 0)], $jo),

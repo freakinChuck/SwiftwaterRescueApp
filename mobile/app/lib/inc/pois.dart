@@ -617,7 +617,7 @@ class _PoisPanelState extends State<PoisPanel> {
   List<Widget> _joint() => [
         for (final o in jointParts(s))
           () {
-            final k = 'j:${js(o['k'])}', ps = jl(o['pois']), pl = jl(o['pls']), down = jn(o['down']) == 1;
+            final k = 'j:${js(o['k'])}', ps = jl(o['pois']), pl = jl(o['pls']), pf = jl(o['places']).where((f) => llOf(f) != null).toList(), down = jn(o['down']) == 1;
             final rows = <Widget>[
               for (final p in pl)
                 jointRow(context, s, map, 'PLS${js(p['label']).isNotEmpty ? ' «${js(p['label'])}»' : ''}', '', jointPts([[p['lat'], p['lon']]]), btn: 'Zeigen'),
@@ -627,8 +627,13 @@ class _PoisPanelState extends State<PoisPanel> {
                   final pts = jointPts(p['pts']);
                   return jointRow(context, s, map, nm, '${_kn[kd] ?? ''}${sn.isNotEmpty && sn != nm ? ' · $sn' : ''}', kd == 'point' ? pts.take(1).toList() : pts, btn: 'Zeigen');
                 }(),
+              // feste Standorte der Partnerorganisation (wie placeInfo: Art und Beschreibung)
+              if (pf.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6, bottom: 2), child: Text('Feste Standorte (${pf.length})', style: Theme.of(context).textTheme.labelLarge)),
+              for (final f in pf)
+                jointRow(context, s, map, js(f['name']), [placeLine(f) || placeArea(f) ? _placeShape(f) : 'Punkt', if (js(f['descr']).isNotEmpty) js(f['descr'])].join(' · '), placePts(f),
+                    btn: 'Zeigen'),
             ];
-            return _grp(k, jointName(o), down ? 0 : ps.length + pl.length,
+            return _grp(k, jointName(o), down ? 0 : ps.length + pl.length + pf.length,
                 down ? const [jointDown] : (rows.isEmpty ? const [Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Mut('Keine'))] : rows));
           }(),
       ];
