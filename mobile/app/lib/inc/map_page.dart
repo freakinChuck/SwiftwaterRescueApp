@@ -64,6 +64,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   bool _mapReady = false, _closing = false, _fold = false, _camOpen = false, _noteOpen = false;
   String? _panel;
   int? _follow, _fitted;
+  String? _jfollow; // Folgen einer Einsatzkraft einer Partnerorganisation (Schlüssel jk, Issue #60)
   List<String>? _pinfo; // Personeninfo (Issue #105): 'u<user_id>' bzw. 'x<id der Externen>'
   int? _areaFocus; // seit wann das Einsatzgebiet gezeigt werden soll (focusArea)
   double _rot = 0;
@@ -208,6 +209,14 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         mc.move(llOf(p)!, mc.camera.zoom);
       }
     }
+    if (_jfollow != null) {
+      final p = jointPerson(s, _jfollow!);
+      if (p == null || llOf(p) == null) {
+        _jfollow = null;
+      } else if (_mapReady) {
+        mc.move(llOf(p)!, mc.camera.zoom);
+      }
+    }
     if (_mapReady) {
       final i = s.inc;
       if (_areaFocus != null) _focusNow();
@@ -305,8 +314,9 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   }
 
   void _stopFollow() {
-    if (_follow != null || s.autoView) {
+    if (_follow != null || _jfollow != null || s.autoView) {
       _follow = null;
+      _jfollow = null;
       if (s.autoView) s.setAuto(false);
       setState(() {});
     }
@@ -328,7 +338,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   @override
   void follow(int? userId) {
     if (s.autoView) s.setAuto(false);
-    setState(() => _follow = userId);
+    setState(() {
+      _follow = userId;
+      _jfollow = null;
+    });
     if (userId != null) {
       final p = _partOf(userId);
       if (p != null) mc.move(llOf(p)!, mc.camera.zoom);
@@ -337,6 +350,20 @@ class _IncPageState extends State<IncPage> implements MapCtl {
 
   @override
   int? get followId => _follow;
+
+  @override
+  void followJ(String? key) {
+    if (s.autoView) s.setAuto(false);
+    setState(() {
+      _jfollow = key;
+      _follow = null;
+    });
+    final p = key == null ? null : jointPerson(s, key);
+    if (p != null && llOf(p) != null) mc.move(llOf(p)!, mc.camera.zoom);
+  }
+
+  @override
+  String? get followJId => _jfollow;
 
   @override
   Future<LatLng?> pickPoint(String hint) {
@@ -464,6 +491,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     _fitted = ji(i['id']);
     _homeDone = true;
     _follow = null;
+    _jfollow = null;
     if (s.autoView) s.setAuto(false);
     _fitRaw(pts);
   }
@@ -628,7 +656,13 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   // ---------- Personeninfo (Issue #105, Funktion «pinfo», wie pinfo in index.html) ----------
   // Nicht blockierend: Karte als Marker über der Person, fährt bei jeder Aktualisierung mit, Karte und übrige Elemente bleiben bedienbar.
   // Schliesst über ✕, Antippen der leeren Karte und wenn die Person den Einsatz verlässt, ausgeblendet wird oder keinen Standort mehr hat.
-  String _pinfoK(J p, bool ext) => ext ? 'x${ji(p['id'])}' : 'u${ji(p['user_id'])}';
+  String _pinfoK(J p, bool ext) => p['jk'] != null ? js(p['jk']) : (ext ? 'x${ji(p['id'])}' : 'u${ji(p['user_id'])}');
+
+  // Name mit Organisation für den Folgen-Chip (Partner)
+  String _jName(String k) {
+    final p = jointPerson(s, k);
+    return p == null ? '' : '${js(p['name'])} (${js(p['org_name'])})';
+  }
 
   void _pinfoOpen(List<(J, bool)> items) {
     if (_picking) return;
@@ -639,6 +673,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     final out = <(J, bool)>[];
     if (!s.feat('pinfo') || s.inc == null) return out;
     for (final k in keys) {
+      if (k.startsWith('j')) {
+        // Partnerorganisation (Issue #60): sichtbar, solange ihr Einsatz eingeblendet ist
+        final p = jointPerson(s, k);
+        if (p != null && llOf(p) != null) out.add((p, k.startsWith('jx')));
+        continue;
+      }
       final ext = k.startsWith('x');
       final p = ext
           ? (s.vis('ext') ? _exts.where((e) => _pinfoK(e, true) == k).firstOrNull : null)
@@ -649,6 +689,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   }
 
   Widget _pinfoOne(J p, bool ext) {
+    if (p['jk'] != null) return _pinfoJ(p, ext);
     final r = s.roleOf(p['role_id']), uid = ji(p['user_id']), f = !ext && uid != null && _follow == uid;
     final gs = jl(s.st?['groups']), gids = p['groups'] is List ? (p['groups'] as List).map(ji).toList() : const <int?>[];
     final g = ext ? <J>[] : gids.map((id) => gs.where((x) => ji(x['id']) == id).firstOrNull).whereType<J>().toList(); // alle Gruppen, unabhängig von «Farbe beim Namen»
@@ -695,6 +736,35 @@ class _IncPageState extends State<IncPage> implements MapCtl {
               ?nav,
               ?tel,
             ])),
+    ]);
+  }
+
+  // Personeninfo einer Einsatzkraft bzw. Externen einer Partnerorganisation: Spezialrolle als Text, ohne Einsatzgruppen und Fahrzeug
+  Widget _pinfoJ(J p, bool ext) {
+    final k = js(p['jk']), f = _jfollow == k;
+    final sub = [js(p['role']).isNotEmpty ? js(p['role']) : 'Ohne Spezialrolle', ext ? 'Externe Einsatzkraft' : js(p['mode']), js(p['org_name'])].where((x) => x.isNotEmpty).join(' · ');
+    final loc = [ext ? 'Fester Standort' : (jn(p['loc_at']) != null ? 'Standort ${agoS(s.now, jn(p['loc_at'])!)}' : 'Standort'), s.fc(p['lat'], p['lon'])].where((x) => x.isNotEmpty).join(' · ');
+    final nav = navBtn(s, p['lat'], p['lon'], js(p['name'])), tel = ext ? null : telBtn(s, p), telT = ext ? null : telTxt(s, p);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Row(children: [
+        avatar(p, r: 22),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(js(p['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+          Mut(sub),
+        ])),
+      ]),
+      if (ext && js(p['descr']).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(js(p['descr']))),
+      if (telT != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(telT)),
+      Padding(padding: const EdgeInsets.only(top: 4), child: Mut(loc)),
+      Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Wrap(spacing: 6, runSpacing: 4, children: [
+            smallBtn(f ? 'Folgt' : 'Folgen', () => followJ(f ? null : k), primary: f),
+            ?nav,
+            ?tel,
+          ])),
     ]);
   }
 
@@ -1236,13 +1306,26 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         final ll = llOf(r);
         if (ll != null) mk(ll, chip(jb(r['rescued']) ? '✓' : 'R'), 'Rettling ${js(r['name'])}');
       }
+      // Einsatzkräfte und Externe der Partner: Antippen öffnet wie bei den eigenen die Personeninfo (Folgen, 🧭, Anruf)
+      void pk(LatLng p, Widget w, String t, J e) => mks.add(Marker(
+          point: p,
+          width: 44,
+          height: 26,
+          child: GestureDetector(onTap: () => s.feat('pinfo') ? _pinfoOpen([(e, e['ext'] != null)]) : tap(t, p), child: Center(child: w))));
+      final jp = jt ? jointPpl(o) : <J>[];
       for (final r in jl(o['ext'])) {
         final ll = llOf(r);
-        if (ll != null) mk(ll, chip(js(r['abbr']).isNotEmpty ? js(r['abbr']) : ini(r['name']), sq: true), '${js(r['name'])} (extern)');
+        if (ll == null) continue;
+        final w = chip(js(r['abbr']).isNotEmpty ? js(r['abbr']) : ini(r['name']), sq: true), t = '${js(r['name'])} (extern)';
+        final e = jp.where((x) => x['ext'] != null && ji(x['id']) == ji(r['id'])).firstOrNull;
+        e != null ? pk(ll, w, t, e) : mk(ll, w, t);
       }
       for (final p in jl(o['ppl'])) {
         final ll = llOf(p);
-        if (ll != null) mk(ll, chip(ini(p['name'])), '${js(p['name'])}${js(p['role']).isNotEmpty ? ' (${js(p['role'])})' : ''}');
+        if (ll == null) continue;
+        final w = chip(ini(p['name'])), t = '${js(p['name'])}${js(p['role']).isNotEmpty ? ' (${js(p['role'])})' : ''}';
+        final e = jp.where((x) => x['ext'] == null && ji(x['id']) == ji(p['id'])).firstOrNull;
+        e != null ? pk(ll, w, t, e) : mk(ll, w, t);
       }
       // feste Standorte und Fahrzeuge der Partnerorganisation (Issue #60)
       for (final f in jl(o['places'])) {
@@ -1455,6 +1538,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
               it('Auto-Übersicht', () {
                 final on = !s.autoView;
                 _follow = null;
+                _jfollow = null;
                 s.setAuto(on);
                 _autoKey = '';
                 if (on) _autoFit();
@@ -1486,11 +1570,15 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                             color: s.offline ? const Color(0xFF8A6D00) : (k != null ? hexColor(k.color) : appBlue).withValues(alpha: .92), borderRadius: BorderRadius.circular(16)),
                         child: Text(t, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)))),
                 ?_joinBan(),
-                if (_follow != null || s.autoView)
+                if (_follow != null || _jfollow != null || s.autoView)
                   Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: InputChip(
-                          label: Text(_follow != null ? 'Folgen: ${js(s.participants.where((p) => ji(p['user_id']) == _follow).firstOrNull?['name'])}' : 'Auto-Übersicht'),
+                          label: Text(_follow != null
+                              ? 'Folgen: ${js(s.participants.where((p) => ji(p['user_id']) == _follow).firstOrNull?['name'])}'
+                              : _jfollow != null
+                                  ? 'Folgen: ${_jName(_jfollow!)}'
+                                  : 'Auto-Übersicht'),
                           onDeleted: _stopFollow)),
               ])),
               const SizedBox(width: 8),
