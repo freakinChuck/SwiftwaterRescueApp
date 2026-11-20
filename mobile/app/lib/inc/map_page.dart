@@ -35,6 +35,20 @@ import 'voice.dart';
 
 const _fitPad = EdgeInsets.fromLTRB(50, 90, 80, 50);
 const _homeWaitMs = 20000, _areaWaitMs = 30000;
+// Quellen von Kartenereignissen, die von der Person ausgehen (nicht von der App selbst)
+const _handSrc = {
+  MapEventSource.dragStart,
+  MapEventSource.onDrag,
+  MapEventSource.multiFingerGestureStart,
+  MapEventSource.onMultiFinger,
+  MapEventSource.doubleTap,
+  MapEventSource.doubleTapHold,
+  MapEventSource.doubleTapZoomAnimationController,
+  MapEventSource.flingAnimationController,
+  MapEventSource.scrollWheel,
+  MapEventSource.cursorKeyboardRotation,
+  MapEventSource.keyboard,
+};
 
 class IncPage extends StatefulWidget {
   const IncPage({super.key, required this.account});
@@ -66,6 +80,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   int? _follow, _fitted;
   List<String>? _pinfo; // Personeninfo (Issue #105): 'u<user_id>' bzw. 'x<id der Externen>'
   int? _areaFocus; // seit wann das Einsatzgebiet gezeigt werden soll (focusArea)
+  String _areaKey = ''; // zuletzt gezeigtes Ziel von focusArea
   double _rot = 0;
 
   // Punktwahl und Bereich zeichnen
@@ -453,6 +468,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     final pls = s.plsList(), on = pls.where((p) => p.on).toList();
     final pts = [...area, ...(on.isNotEmpty ? on : pls).map((p) => LatLng(p.lat, p.lon))];
     if (pts.isEmpty) return; // noch kein PLS: beim nächsten Polling
+    // Nur bei geändertem Ziel neu ausrichten (Issue #225), sonst springt die Karte bei jeder Aktualisierung auf dieselben PLS zurück
+    final k = '$_areaFocus|${pts.map((p) => '${p.latitude.toStringAsFixed(5)},${p.longitude.toStringAsFixed(5)}').join(';')}';
+    if (area.isEmpty && k == _areaKey) return;
+    _areaKey = k;
     if (area.isNotEmpty || !s.feat('area')) _areaFocus = null;
     _fitted = ji(i['id']);
     _homeDone = true;
@@ -1668,8 +1687,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         }
                         if (e is MapEventRotate || e is MapEventRotateEnd) setState(() => _rot = mc.camera.rotation);
                         if (e is MapEventMoveEnd || e is MapEventFlingAnimationEnd || e is MapEventDoubleTapZoomEnd || e is MapEventScrollWheelZoom) _geoSync();
-                        final hand = e.source == MapEventSource.onDrag || e.source == MapEventSource.onMultiFinger || e.source == MapEventSource.doubleTap || e.source == MapEventSource.doubleTapHold || e.source == MapEventSource.scrollWheel;
-                        if (hand && e is MapEventMoveStart) {
+                        // Von Hand verschoben, gezoomt oder gedreht (Issue #225): flutter_map meldet den Beginn mit dragStart bzw.
+                        // multiFingerGestureStart, nicht mit onDrag/onMultiFinger; die frühere Prüfung griff deshalb nie, und
+                        // Einsatzgebiet, Startansicht und Folgen setzten die Karte bei jedem Polling zurück.
+                        if (_handSrc.contains(e.source) && e is! MapEventMoveEnd && e is! MapEventFlingAnimationEnd && e is! MapEventDoubleTapZoomEnd) {
                           if (!_homeBusy) _homeDone = true;
                           _areaFocus = null;
                           _fitLater = null;

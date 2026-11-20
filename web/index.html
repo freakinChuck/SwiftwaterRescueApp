@@ -288,7 +288,7 @@ $('#joinBan').onclick=joinOpen;const an=$('#areaNote');an.onclick=()=>{if(an.cla
   geoLayer=L.layerGroup().addTo(map);geoKey='';map.on('moveend',geoSync); // Geodaten-Ebene (Issue #182)
   layers={};fitted=null;map.on('zoomend',drawMap);map.on('click',()=>pinfoClose()); // Antippen der leeren Karte schliesst die Personeninfo (Issue #105)
 map.on('dragstart',()=>{homeDone=true;areaFocus=0;if(followId!=null||autoView)stopFollow()}); // von Hand verschieben beendet das Folgen, die Auto-Übersicht und die Startansicht
-  map.on('zoomstart',()=>{if(Date.now()-homeBusy>1500)homeDone=true;if(autoView&&Date.now()-autoBusy>1500)stopFollow()}); // Zoomen von Hand beendet die Auto-Übersicht (nicht deren eigenes Zoomen)
+  map.on('zoomstart',()=>{if(Date.now()-homeBusy>1500)homeDone=true;if(Date.now()-areaBusy>1500)areaFocus=0;if(autoView&&Date.now()-autoBusy>1500)stopFollow()}); // Zoomen von Hand beendet die Auto-Übersicht (nicht deren eigenes Zoomen)
   homeDone=false;homeT0=Date.now();homeKey='';
   if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}
 // Karte drehen (leaflet-rotate): zwei Finger am Handy, Shift + Mausrad oder Ziehen am Kompass am Computer; Klick auf den Kompass richtet nach Norden aus
@@ -741,12 +741,13 @@ function autoFit(){if(!autoView||!map)return;const pts=overviewPts(),k=JSON.stri
 // Einsatzgebiet zeigen (Feedback zu #108): nach dem Öffnen einer Benachrichtigung zum laufenden Einsatz und nach dem Annehmen.
 // Suchgebiet mit den PLS, ohne Einsatzkräfte. Solange das Suchgebiet noch berechnet wird (Gewässernetz lädt), die PLS; wartet höchstens AREA_WAIT_MS.
 // Ersetzt die Startansicht (startView) und endet beim Verschieben der Karte von Hand.
-const AREA_WAIT_MS=30000;let areaFocus=0;
+const AREA_WAIT_MS=30000;let areaFocus=0,areaKey='',areaBusy=0;
 function focusArea(){areaFocus=Date.now();if(narrow())toggleSheet(false);areaFocusNow()}
 function areaFocusNow(){if(!areaFocus||!map||!st||!st.incident)return;const z=map.getSize();if(!z.x||!z.y)return; // Karte noch ohne Grösse: beim nächsten Polling (wie _camOk nativ)
   if(Date.now()-areaFocus>AREA_WAIT_MS){areaFocus=0;return}
   const b=areaBounds(),pls=plsList(),on=pls.filter(p=>p.on),pts=(on.length?on:pls).map(p=>[p.lat,p.lon]);if(!b&&!pts.length)return; // noch kein PLS: beim nächsten Polling
-  fitted=st.incident.id;followId=null;endAuto();updateFollowChip();
+  const k=areaFocus+'|'+JSON.stringify(pts.map(p=>p.map(x=>x.toFixed(5))));if(!b&&k===areaKey)return; // wartet auf das Suchgebiet: dieselben PLS nicht bei jedem Polling/Zoom erneut zeigen (Issue #225)
+  areaKey=k;areaBusy=Date.now();fitted=st.incident.id;followId=null;endAuto();updateFollowChip();
   if(b){pts.forEach(p=>b.extend(p));areaFocus=0;return map.fitBounds(b,FITPAD)}
   if(!feat('area'))areaFocus=0; // ohne Suchgebiet bleiben nur die PLS
   if(pts.length===1)map.setView(pts[0],15);else map.fitBounds(L.latLngBounds(pts),FITPAD)}
