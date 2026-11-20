@@ -58,8 +58,13 @@ Future<Account?> accountFor(Map<String, dynamic> d) async {
   return l.where((a) => same(a) && (a.orgId == 0 || (o == 1 && a.orgId == 1))).firstOrNull;
 }
 
-/// Schlüssel ohne den Präfix der Organisation (`o<id>/`, Issue #60): das Konto steht schon für die Organisation, die Überwachung meldet ohne Präfix
-String pushTag(Object? t) => '${t ?? ''}'.replaceFirst(RegExp(r'^o\d+/'), '');
+/// Schlüssel ohne den Präfix der Organisation (`o<id>/`, Issue #60): das Konto steht schon für die Organisation, die Überwachung meldet ohne Präfix.
+/// Ein anderer Präfix bleibt stehen: Alarm einer anderen Organisation, die die Person als Gast aufbietet (sie hat dort evtl. noch kein Konto); Antippen öffnet sie über orgAccount.
+String pushTag(Object? t, [Account? a]) {
+  final s = '${t ?? ''}', m = RegExp(r'^o(\d+)/').firstMatch(s);
+  if (m == null || (a != null && int.parse(m[1]!) != a.org1)) return s;
+  return s.substring(m.end);
+}
 
 String _lvl(Map<String, dynamic> d) => d['crit'] == '1' ? 'crit' : (d['stay'] == '1' ? 'high' : (d['silent'] == '1' ? 'low' : 'normal'));
 
@@ -67,14 +72,16 @@ Future<void> _show(RemoteMessage m) async {
   final d = m.data;
   final a = await accountFor(d);
   if (a == null || !a.active) return;
-  final tag = d['tag'] == null ? 'sw' : pushTag(d['tag']);
+  final tag = d['tag'] == null ? 'sw' : pushTag(d['tag'], a);
   // Einsatzende (Issue #174): zuerst die Meldungen des Einsatzes zurücknehmen; rt = nur zurücknehmen, nichts Neues zeigen
-  if (d['end'] != null) {
+  if (d['end'] != null && tag == pushTag(tag)) {
     await cancelIncNotes(a.id, int.tryParse('${d['end']}'));
     if (d['rt'] == '1') {
       await markTag(a.id, tag); // die Überwachung meldet das Ende dann nicht noch einmal
       return;
     }
+  } else if (d['end'] != null && d['rt'] == '1') {
+    return; // Ende eines Einsatzes einer anderen Organisation (als Gast): Einsatznummern gelten dort, nichts dieses Kontos schliessen
   }
   await report(a, tag, '${d['t'] ?? m.notification?.title ?? 'Swiftwater Rescue'}', '${d['b'] ?? m.notification?.body ?? ''}', _lvl(d),
       kind: int.tryParse('${d['kind'] ?? ''}'), ksnd: d['ksnd'] as String?);
@@ -96,8 +103,8 @@ Future<void> initPush(void Function(String accId, String tag) onOpen) async {
   Future<void> open(RemoteMessage m) async {
     final a = await accountFor(m.data);
     if (a != null) {
-      await markTag(a.id, pushTag(m.data['tag']));
-      onOpen(a.id, pushTag(m.data['tag']));
+      await markTag(a.id, pushTag(m.data['tag'], a));
+      onOpen(a.id, pushTag(m.data['tag'], a));
     }
   }
 
