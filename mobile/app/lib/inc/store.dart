@@ -223,8 +223,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     for (final x in il) {
       final id = ji(x['id']) ?? 0, k = '${x['kind_name'] ?? 'Einsatz'}';
       if (id == cur || !jb(x['alarm']) || jb(x['joined']) || _acked.contains('i:$id')) continue;
-      final lv = js(x['level']).isEmpty ? 'crit' : js(x['level']);
-      if (lv == 'none') continue;
+      final lv = js(x['level']).isEmpty ? 'crit' : js(x['level']); // auch none: Vollbild in der App (Issue #226)
       final kd = jl(nx['kinds']).where((y) => ji(y['id']) == ji(x['kind_id'])).firstOrNull;
       notify(k.toUpperCase(), js(x['message']), 'i:$id', lv, kind: ji(x['kind_id']), ksnd: kd?['snd'] as String?);
       if (!sw && nx['my_inc'] == null && !inNow) {
@@ -697,11 +696,14 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   // ---------- Alarme und Hinweise ----------
-  /// Alarmstufe (Issue #90): crit Vollbild mit Dauerton, high Vollbild mit einmaligem Ton, normal Hinweis mit Ton, low still, none nichts
+  /// Alarmstufe (Issue #90): crit Vollbild mit Dauerton, high Vollbild mit einmaligem Ton, normal Hinweis mit Ton, low still, none nichts.
+  /// Issue #226: Alarm eines Einsatzes (i:) und Testalarm (t:) immer als Vollbild mit den Einrückoptionen, auch bei normal, low und none;
+  /// Ton und Meldung des Geräts folgen weiter der Stufe (_showAlarm).
   void notify(String t, String b, String key, String lvl, {int? kind, String? ksnd}) {
-    if (lvl == 'none') return;
+    final ia = RegExp(r'^[it]:').hasMatch(key);
+    if (lvl == 'none' && !ia) return;
     if (_acked.contains(key)) return;
-    if (lvl == 'crit' || lvl == 'high') {
+    if (ia || lvl == 'crit' || lvl == 'high') {
       if (alarm?.key == key || alarmQ.any((q) => q.key == key)) return;
       alarmQ.add(AlarmItem(t, b, key, lvl, kind, ksnd));
       _showAlarm();
@@ -720,9 +722,16 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     if (alarm != null || alarmQ.isEmpty) return;
     alarm = alarmQ.removeAt(0);
     final a = alarm!;
-    // Meldung des Geräts mit Weckton (kritisch) bzw. Alarmton; dieselbe Kennung wie die Überwachung, also nie doppelt
+    // Meldung des Geräts mit Weckton (kritisch) bzw. Alarmton; dieselbe Kennung wie die Überwachung, also nie doppelt.
+    // Tiefere Stufen (Issue #226) wie bisher ihre Hinweise: normal sichtbar mit kurzem Ton, sonst Meldung; low nur still als Meldung; none nur das Vollbild
+    final up = a.lvl == 'crit' || a.lvl == 'high';
     markTag(acc.id, a.key);
-    showNote(acc.id, a.key, demo ? 'DEMO – ${a.title}' : a.title, a.body, a.lvl, sub: acc.label, kind: a.kind, ksnd: a.ksnd);
+    if (!up && a.lvl == 'normal' && _visible) {
+      SystemSound.play(SystemSoundType.alert);
+      HapticFeedback.mediumImpact();
+    } else if (up || (a.lvl != 'none' && !_visible)) {
+      showNote(acc.id, a.key, demo ? 'DEMO – ${a.title}' : a.title, a.body, a.lvl, sub: acc.label, kind: a.kind, ksnd: a.ksnd);
+    }
     if (a.lvl == 'crit' && Platform.isIOS) HapticFeedback.heavyImpact();
     notifyListeners();
   }

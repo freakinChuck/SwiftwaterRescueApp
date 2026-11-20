@@ -8,11 +8,11 @@ Startet jemand einen Einsatz oder eine Übung, alarmiert die App alle aufgeboten
 |---|---|
 | Kritisch | Rote Meldung mit dreifachem Ton, Push bleibt stehen. In der nativen App Vollbild und Dauerton, auch bei «Nicht stören». |
 | Hoch | Rote Meldung mit Ton, Push bleibt stehen. In der nativen App Vollbild. |
-| Normal | Hinweis mit kurzem Ton. |
-| Niedrig | Stiller Hinweis. |
-| Keine | Keine Meldung, der Einsatz erscheint nur in der App. |
+| Normal | Rote Meldung mit kurzem Ton. In der nativen App Vollbild. |
+| Niedrig | Rote Meldung ohne Ton, stille Push-Benachrichtigung. In der nativen App Vollbild. |
+| Keine | Rote Meldung nur in der offenen App, ohne Ton und ohne Push. In der nativen App Vollbild. |
 
-Ist die App offen, erscheint die Meldung oben rechts, bis du sie antippst. Bei geschlossener App kommt sie als Push-Benachrichtigung. Antippen öffnet die App und zeigt das Einsatzgebiet.
+Ist die App offen, erscheint die Meldung oben rechts, bis du sie antippst; das gilt bei jeder Alarmstufe, auch bei Sekundäreinsätzen. Bei geschlossener App kommt sie als Push-Benachrichtigung. Antippen öffnet die App und zeigt das Einsatzgebiet.
 
 In der Alarm-Meldung (in der nativen App im Vollbild) stehen schon die Einrückoptionen: Mit **Annehmen: …** nimmst du den Einsatz direkt an, die Karte zeigt danach das Einsatzgebiet. **Nur quittieren** (in der Web-App: die Meldung daneben antippen) schliesst den Alarm, ohne anzunehmen; annehmen kannst du dann wie unten beschrieben im Menü.
 
