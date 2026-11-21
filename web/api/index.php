@@ -1,12 +1,15 @@
 <?php
 // Swiftwater Rescue API – Aufruf: api/index.php?r=<route>
 $cfg = require __DIR__ . '/config.php';
+require __DIR__ . '/platform.php'; // Mandanten (Issue #60): wählt die Datenbank des Mandanten der Anfrage
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 ini_set('serialize_precision', '-1'); // Zahlen im JSON kurz ausgeben (47.481 statt 47.48100000000000164…), Hosting-Einstellung übersteuern
 // HTTPS-Abrufe unter Windows (lokales DEV mit IIS): Zertifikate aus dem Windows-Speicher, PHP bringt dort keine Liste mit (sonst schlägt jeder Abruf fehl, Feedback zu #125)
 define('CURL_CA', PHP_OS_FAMILY === 'Windows' && defined('CURLSSLOPT_NATIVE_CA') ? [CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA] : []);
 function out($d, $c = 200) { if ($c < 400 && isset(APPLOG_ROUTES[$GLOBALS['route'] ?? ''])) alogRoute($d); // Ereignis fürs Applikationslog (Issue #139)
+  // Mandanten (Issue #60): Alarme anderer Organisationen der Person bei jedem Polling mitgeben (die Person entscheidet, ob sie wechselt)
+  if ($c < 400 && is_array($d) && ($GLOBALS['route'] ?? '') === 'incident/state' && !empty($GLOBALS['me']['gid']) && function_exists('pfOtherAlarms')) { try { $d['org_alarms'] = pfMulti($GLOBALS['me']['gid']) ? pfOtherAlarms($GLOBALS['me']['gid']) : []; } catch (Throwable $e) { $d['org_alarms'] = []; } }
   http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE);
   if (!empty($GLOBALS['pushQ']) || !empty($GLOBALS['AFTER'])) { // Web-Push erst nach der Antwort senden (Issue #67), damit z. B. «Alarm auslösen» nicht auf die Push-Dienste wartet
     ignore_user_abort(true); if (function_exists('fastcgi_finish_request')) fastcgi_finish_request(); elseif (function_exists('litespeed_finish_request')) litespeed_finish_request(); else flush(); // cyon läuft mit LiteSpeed
@@ -27,7 +30,7 @@ set_exception_handler(function ($e) { global $db;
 // alog schreibt nie einen Fehler weiter (der Log-Eintrag darf eine Anfrage nicht scheitern lassen); Warnungen und Fehler gehen zusätzlich ins error_log des Servers.
 // Nie Passwörter, Schlüssel oder Inhalte von Einsätzen ins Log, nur Kennungen und technische Angaben.
 const APPLOG_LVL = ['info' => 'Ereignis', 'warn' => 'Warnung', 'err' => 'Fehler'];
-const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
+const APPLOG_CATS = ['api' => 'Server', 'platform' => 'Plattform (Mandanten)', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
   'push' => 'Push', 'overpass' => 'Geodaten-Quellen', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'voice' => 'Funk & Konferenz', 'geo' => 'Geodaten übernehmen', 'veh' => 'Fahrzeuge', 'dsar' => 'Datenschutz', 'client' => 'Browser & App'];
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
@@ -231,7 +234,8 @@ if (setting('place_props_mig', '') === '') { if (!$db->query("SELECT COUNT(*) FR
 // Ausbildung (Issue #117): Pflicht je Einsatzgruppe (req_grp, NULL = für alle, für die die Fähigkeit gilt); Kalenderjahre neu ab 0 (0 = laufendes, 1 = Folgejahr)
 try { $db->exec("ALTER TABLE skills ADD COLUMN req_grp TEXT NULL"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE users ADD COLUMN purged INT DEFAULT 0"); } catch (Throwable $e) {}
-try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {} // persönlicher Testalarm (Issue #218): JSON {id, lvl, at} // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
+foreach (["users ADD COLUMN gid INT NULL", "absences ADD COLUMN gkey $tx NULL", "avail_rules ADD COLUMN gkey $tx NULL"] as $q) try { $db->exec("ALTER TABLE $q"); } catch (Throwable $e) {} // Mandanten (Issue #60): Konto der Plattform; gkey = derselbe Eintrag in allen Mandanten // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
+try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {} // persönlicher Testalarm (Issue #218): JSON {id, lvl, at}
 if (setting('skill_y0_mig', '') === '') { $db->exec("UPDATE skills SET n=n-1 WHERE exp='year' AND n>0"); setSetting('skill_y0_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX voice_inc ON voice(incident_id,upd)"); } catch (Throwable $e) {}
@@ -260,7 +264,7 @@ if (setting('free_seed', '') === '') { try { setSetting('free_seed', '1');
 // Kategorien der Einsatztypen, Einrückoptionen und Spezialrollen: [Einzahl, Mehrzahl]
 const SEC_CATS = [0 => ['Primäreinsatz', 'Primäreinsätze'], 1 => ['Sekundäreinsatz', 'Sekundäreinsätze'], 2 => ['Freies Ereignis', 'Freie Ereignisse']];
 function secIn($v) { return max(0, min(2, (int)$v)); }
-if (!$db->query("SELECT COUNT(*) c FROM users")->fetch()['c'])
+if (ORG_ID === 1 && !$db->query("SELECT COUNT(*) c FROM users")->fetch()['c']) // Erst-Admin nur bei Org 1, neue Mandanten erhalten ihn von der Plattform (pfLink)
   $db->prepare("INSERT INTO users(username,name,pass_hash,is_admin,must_change) VALUES(?,?,?,1,1)")->execute([$cfg['admin_user'], 'Administrator', password_hash($cfg['admin_pass'], PASSWORD_DEFAULT)]);
 // Einsatztypen (Issue #90): beim ersten Aufruf «Einsatz» und «Übung» mit den bisherigen Einstellungen anlegen. Die Sperrzeile in settings sorgt dafür, dass gleichzeitige Anfragen das nur einmal tun
 // (eine zweite wartet, bis die erste fertig ist, und schlägt dann am Primärschlüssel fehl).
@@ -297,6 +301,8 @@ if (!$db->query("SELECT COUNT(*) c FROM uroles")->fetch()['c']) {
 if ($db->query("SELECT COUNT(*) c FROM uroles WHERE sys='admin' AND name='Administrator'")->fetch()['c'])
   $db->exec("UPDATE uroles SET name='Systemadministrator' WHERE sys='admin' AND name='Administrator'");
 
+pfMigrate(); pfLink(); // Mandanten (Issue #60): bisherige Personen als Konten übernehmen, neue Mitglieder anlegen
+
 $route = $_GET['r'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: [];
 $now = time();
@@ -331,6 +337,7 @@ if (verInfo()['commit'] !== '') header('X-Build: ' . verInfo()['commit']);
 // Applikationslog: beim ersten Aufruf nach einem Deployment «Version a → b» (Stand in der Einstellung ver_seen)
 try { $vi = verInfo(); if ($vi['env'] !== 'local' && ($vs = (string)setting('ver_seen', '')) !== $vi['full']) { setSetting('ver_seen', $vi['full']);
   alog('info', 'api', $vs === '' ? 'Version ' . $vi['full'] . ' ausgeliefert' : "Version $vs → " . $vi['full'], ['commit' => $vi['commit'], 'env' => $vi['env']] + ($vi['pr'] ? ['pr' => $vi['pr']] : [])); } } catch (Throwable $e) {}
+if (str_starts_with($route, 'pf/')) require __DIR__ . '/platform_api.php'; // Plattform-Verwaltung (beendet die Anfrage; nach dem Block Versionen, braucht verPub)
 // Version ohne Anmeldung (Anmeldung, legal.html, Kontenliste der App)
 if ($route === 'version') out(verPub() + ['app_min' => appMin()]);
 // Release Notes («Was ist neu», Datei changes.json, geschrieben von release.yml): nur ausgelieferte Versionen (bis zur eigenen), neueste zuerst; ohne Anmeldung
@@ -759,7 +766,7 @@ function airGet($url) {
   $r = curl_exec($c); $code = curl_getinfo($c, CURLINFO_HTTP_CODE); $err = $r === false ? (curl_errno($c) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($c)) : ''; 
   return [$code, $r === false ? null : $r, $err]; }
 // Abruf je Quelle für die Anzeige in der Verwaltung (api/data/air/status.json); darf die Abfrage nie stören
-function airStat($k, $ok, $ms, $err, $n) { if (!$ok) alog('warn', 'air', 'Quelle ohne Antwort: ' . (AIR_SOURCES[$k]['name'] ?? $k), ['err' => $err === null ? null : mb_substr((string)$err, 0, 200), 'ms' => (int)$ms]); try { $f = __DIR__ . '/data/air/status.json'; if (!is_dir(dirname($f))) @mkdir(dirname($f), 0775, true); $s = json_decode((string)@file_get_contents($f), true) ?: []; $x = $s[$k] ?? ['uses' => 0, 'fails' => 0];
+function airStat($k, $ok, $ms, $err, $n) { if (!$ok) alog('warn', 'air', 'Quelle ohne Antwort: ' . (AIR_SOURCES[$k]['name'] ?? $k), ['err' => $err === null ? null : mb_substr((string)$err, 0, 200), 'ms' => (int)$ms]); try { $f = ORG_DATA . '/air/status.json'; if (!is_dir(dirname($f))) @mkdir(dirname($f), 0775, true); $s = json_decode((string)@file_get_contents($f), true) ?: []; $x = $s[$k] ?? ['uses' => 0, 'fails' => 0];
   $x['uses']++; if ($ok) { $x['last_ok'] = time(); $x['ms'] = (int)$ms; $x['n'] = $n; } else { $x['fails']++; $x['last_fail'] = time(); $x['err'] = mb_substr((string)$err, 0, 150); }
   $s[$k] = $x; @file_put_contents("$f.tmp", json_encode($s)); @rename("$f.tmp", $f); } catch (Throwable $e) {} }
 // erste Quelle mit gültiger Antwort für den Kreis (la, lo, rm Meter): [Quelle, Liste, abgedeckter Radius] oder null
@@ -816,7 +823,7 @@ function airServeZ($z, $key, $inc, $info) { global $now, $db; $c = airCfg(); $id
   if (!$c['src']) return $base + ['err' => 'Keine Datenquelle eingeschaltet (Verwaltung → Helikopter)'];
   if (!$z) return $base + ['info' => $info];
   $qs = airGroups($z);
-  $dir = __DIR__ . '/data/air'; if (!is_dir($dir)) @mkdir($dir, 0775, true); $file = "$dir/$key.json";
+  $dir = ORG_DATA . '/air'; if (!is_dir($dir)) @mkdir($dir, 0775, true); $file = "$dir/$key.json";
   $read = function () use ($file) { clearstatcache(true, $file); $d = is_file($file) ? json_decode((string)@file_get_contents($file), true) : null; return is_array($d) ? $d : null; };
   // gültig, solange jeder Abfragekreis in einem abgefragten liegt (cov); grösser als die Grenze der Dienste: deckt der Cache das Abfragbare ab, gilt er
   $ok = fn($d) => $d && isset($d['at'], $d['cov']) && $now - (int)$d['at'] < $c['cache_s'] && !array_filter($qs, function ($q) use ($d) { foreach ($d['cov'] as $v) if (hav($v[0], $v[1], $q[0], $q[1]) + min($q[2], AIR_MAX_M * .9) <= $v[2]) return false; return true; });
@@ -1456,7 +1463,7 @@ function mailStart($k, $rule, $msg, $pls, $m, $c) { global $db, $now; $kid = $k[
   return $nid; }
 // Postfach abrufen: neue E-Mails seit dem letzten Stand (UID), beim ersten Abruf bzw. neuer UIDVALIDITY nur den Stand merken (alte E-Mails lösen nie aus)
 function mailPoll($manual = false) { global $now; $c = mailCfg(); if (!mailReady($c)) return ['ok' => 0, 'err' => 'E-Mail-Alarm ist nicht eingerichtet oder ausgeschaltet', 'n' => 0];
-  $lf = __DIR__ . '/data/mail.lock'; @mkdir(dirname($lf), 0775, true); $lk = @fopen($lf, 'c'); if (!$lk || !flock($lk, LOCK_EX | LOCK_NB)) return ['ok' => 0, 'err' => 'Ein Abruf läuft bereits', 'n' => 0, 'busy' => 1];
+  $lf = ORG_DATA . '/mail.lock'; @mkdir(dirname($lf), 0775, true); $lk = @fopen($lf, 'c'); if (!$lk || !flock($lk, LOCK_EX | LOCK_NB)) return ['ok' => 0, 'err' => 'Ein Abruf läuft bereits', 'n' => 0, 'busy' => 1];
   $out = ['ok' => 1, 'n' => 0, 'res' => []]; $t = microtime(true);
   try { set_time_limit(90); $im = imapOpen($c, (string)setting('mail_in_pass', '')); $sel = imapSelect($im, $c['folder']);
     $st = explode(':', (string)setting('mail_in_uid', '')); $last = count($st) === 2 && (int)$st[0] === $sel['validity'] ? (int)$st[1] : null;
@@ -1483,22 +1490,23 @@ if ($route === 'mail/hook') { if (!mailKeyOk()) fail('Ungültiger Schlüssel', 4
   $raw = file_get_contents('php://input', false, null, 0, 2 * 1048576); if (!is_string($raw) || trim($raw) === '') fail('Leere E-Mail');
   $r = mailHandle($raw, 'hook'); out(['ok' => 1, 'res' => $r, 'text' => MAIL_RES[$r]]); }
 
-if ($route === 'login') {
-  $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
-  $u = $st->fetch();
-  if (!$u || !password_verify($in['password'] ?? '', $u['pass_hash'])) { alog('warn', 'auth', 'Anmeldung fehlgeschlagen', ['username' => mb_substr((string)($in['username'] ?? ''), 0, 60), 'known' => $u ? 1 : 0]); fail('Benutzername oder Passwort falsch', 401); }
-  $uid = (int)$u['id']; alog('info', 'auth', 'Angemeldet', ['app' => trim((string)($in['device'] ?? '')) !== '' ? 1 : 0, 'platform' => in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : null]); // Applikationslog (Issue #139)
-  $t = bin2hex(random_bytes(24));
+if ($route === 'login') { // Mandanten (Issue #60): Konto der Plattform prüfen; der Token gilt in allen Mandanten der Person
+  $st = $PF->prepare("SELECT * FROM pf_idents WHERE username=?"); $st->execute([trim((string)($in['username'] ?? ''))]); $u = $st->fetch(); $st->closeCursor();
+  $ok = $u && password_verify($in['password'] ?? '', $u['pass_hash']);
+  $orgs = []; if ($ok) foreach (pfMemberOrgs($u['id']) as $o) { $x = pfConn($o['id']); if ($o['id'] === ORG_ID) $x = $db;
+    if (!$x) { if ($o['user_id'] === null) $orgs[] = $o; continue; } // neuer Mandant: Person entsteht beim ersten Aufruf
+    $a = $x->prepare("SELECT active FROM users WHERE gid=?"); $a->execute([$u['id']]); $v = $a->fetchColumn(); $a->closeCursor(); if ($v === false || (int)$v || $o['user_id'] === null) $orgs[] = $o; } // user_id NULL = (wieder) zugeordnet, pfLink aktiviert die Person beim ersten Aufruf
+  if (!$ok || (!$orgs && !(int)$u['platform_admin'])) { alog('warn', 'auth', 'Anmeldung fehlgeschlagen', ['username' => mb_substr((string)($in['username'] ?? ''), 0, 60), 'known' => $u ? 1 : 0]); fail('Benutzername oder Passwort falsch', 401); }
+  $org = null; foreach ($orgs as $o) if ($o['id'] === ORG_ID) $org = ORG_ID; if ($org === null && $orgs) $org = $orgs[0]['id'];
+  alog('info', 'auth', 'Angemeldet', ['app' => trim((string)($in['device'] ?? '')) !== '' ? 1 : 0, 'platform' => in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : null, 'org' => $org]); // Applikationslog (Issue #139)
+  $t = bin2hex(random_bytes(24)); $ol = array_map(fn($o) => ['id' => $o['id'], 'name' => $o['name']], $orgs);
   // Native App (Issue #108): mit device eine eigene Gerätesitzung, andere Geräte bleiben angemeldet; höchstens 20 je Person (die ältesten fallen weg)
   $dev = mb_substr(trim(preg_replace('/[\x00-\x1f]/u', ' ', (string)($in['device'] ?? ''))), 0, 80);
-  if ($dev !== '') { $pf = in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : '';
-    $db->prepare("INSERT INTO sessions(user_id,token,device,platform,created,last_seen,app_ver) VALUES(?,?,?,?,?,?,?)")->execute([$u['id'], $t, $dev, $pf, time(), time(), appVer($in['app_ver'] ?? '') ?: null]);
-    $db->prepare("UPDATE users SET last_login=? WHERE id=?")->execute([time(), $u['id']]);
-    $s = $db->prepare("SELECT id FROM sessions WHERE user_id=? ORDER BY last_seen DESC, id DESC"); $s->execute([$u['id']]);
-    foreach (array_slice($s->fetchAll(PDO::FETCH_COLUMN), 20) as $x) { $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$x]); $db->prepare("DELETE FROM sessions WHERE id=?")->execute([$x]); }
-    out(['token' => $t, 'session' => 1]); }
-  $db->prepare("UPDATE users SET token=?, last_login=? WHERE id=?")->execute([$t, time(), $u['id']]);
-  out(['token' => $t]);
+  if ($dev !== '') { $pl = in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : '';
+    pfSessAdd($u['id'], $t, $dev, $pl, appVer($in['app_ver'] ?? '') ?: null); pfSync($u['id'], ['last_login' => time()]);
+    out(['token' => $t, 'session' => 1, 'org' => $org, 'orgs' => $ol, 'platform_admin' => (int)$u['platform_admin']]); }
+  pfSync($u['id'], ['token' => $t, 'last_login' => time()]);
+  out(['token' => $t, 'org' => $org, 'orgs' => $ol, 'platform_admin' => (int)$u['platform_admin']]);
 }
 
 /* ---------- Kartenanbieter (Issue #106) ---------- */
@@ -1679,13 +1687,13 @@ function voiceStore($inc, $ch, $uid0, $gid, $label, $in) { global $db, $now;
   $ra = (int)($in['rec_at'] ?? $now); if ($ra > $now + 60 || $ra < $now - 6 * 3600) $ra = $now; // Aufnahmezeitpunkt (nachgesendet aus einem Funkloch), höchstens 6 Stunden zurück
   $db->prepare("INSERT INTO voice(incident_id,user_id,guest_id,from_label,channel_id,rec_at,created,upd,dur_ms,mime,bytes,tr_state) VALUES(?,?,?,?,?,?,?,?,?,?,?,0)")
      ->execute([(int)$inc['id'], $uid0, $gid, $label, $ch, $ra, $now, $now, $dur, $mime, strlen($bin)]); $vid = (int)$db->lastInsertId();
-  $dir = __DIR__ . '/data/voice/' . (int)$inc['id']; if (!is_dir($dir)) @mkdir($dir, 0770, true);
+  $dir = ORG_DATA . '/voice/' . (int)$inc['id']; if (!is_dir($dir)) @mkdir($dir, 0770, true);
   $f = $vid . '.' . VOICE_MIME[$mime];
   if (@file_put_contents("$dir/$f", $bin) !== strlen($bin)) { $db->prepare("DELETE FROM voice WHERE id=?")->execute([$vid]); alog('err', 'voice', 'Durchsage konnte nicht gespeichert werden', ['incident' => (int)$inc['id']]); fail('Die Aufnahme konnte nicht gespeichert werden', 500); }
   $db->prepare("UPDATE voice SET file=? WHERE id=?")->execute([$f, $vid]);
   if (voiceTrOn($inc)) { $db->prepare("UPDATE voice SET tr_state=1 WHERE id=?")->execute([$vid]); after(fn() => voiceTranscribe($vid)); }
   return $vid; }
-function voicePath($v) { return $v['file'] ? __DIR__ . '/data/voice/' . (int)$v['incident_id'] . '/' . basename($v['file']) : null; }
+function voicePath($v) { return $v['file'] ? ORG_DATA . '/voice/' . (int)$v['incident_id'] . '/' . basename($v['file']) : null; }
 function voiceDelAudio($v) { global $db; $p = voicePath($v); if ($p && is_file($p)) @unlink($p); $db->prepare("UPDATE voice SET file=NULL, audio_del=?, upd=? WHERE id=?")->execute([time(), time(), (int)$v['id']]); }
 function voiceDur($ms) { $s = (int)round($ms / 1000); return intdiv($s, 60) . ':' . str_pad((string)($s % 60), 2, '0', STR_PAD_LEFT); }
 // Transkription im Nachlauf (after): Aufnahme an den Dienst, Text speichern; danach gelten die Regeln der Aufbewahrung, falls der Einsatz schon beendet ist
@@ -1869,18 +1877,29 @@ if (strncmp($route, 'guest/', 6) === 0) {
 }
 
 $tok = (string)($_SERVER['HTTP_X_TOKEN'] ?? ''); $sid = null; // $sid = Gerätesitzung der nativen App (Issue #108), null = Anmeldung über users.token (Browser)
-$ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.nav_app,u.place_view,u.ai_modes,u.hydro,u.beacon,u.phone';
+$ucols = 'u.gid,u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.nav_app,u.place_view,u.ai_modes,u.hydro,u.beacon,u.phone';
 $me = null; if ($tok !== '') { $st = $db->prepare("SELECT $ucols FROM users u WHERE u.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor(); } // Lesezugriff sofort beenden, nicht erst am Ende des Requests
 if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_seen, s.app_ver FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor();
   if ($me) { $sid = (int)$me['sid']; if ((int)$me['last_seen'] < $now - 600) $db->prepare("UPDATE sessions SET last_seen=? WHERE id=?")->execute([$now, $sid]);
     $av = appVer($_SERVER['HTTP_X_APP_VERSION'] ?? ''); if ($av !== '' && $av !== (string)$me['app_ver']) $db->prepare("UPDATE sessions SET app_ver=? WHERE id=?")->execute([$av, $sid]); // Version der App nachführen (Issue #175)
     unset($me['sid'], $me['last_seen'], $me['app_ver']); } }
+// Plattform-Konfiguration (Rückmeldung zu PR #213): Plattform-Administratoren bearbeiten die gemeinsamen Einstellungen (PF_SHARE) direkt,
+// auch ohne Mitgliedschaft in einer Organisation. Header X-Pf-Cfg: 1 (admin.html?pf=1); nur die Routen in PFC_ROUTES, Werte direkt in pf_settings.
+const PFC_ROUTES = ['me', 'settings', 'settings/save', 'postgis/test', 'pgapi/test', 'air/test', 'hydro/test', 'hydro/status', 'overpass/stats'];
+$PFC = $PF_IDENT && (int)$PF_IDENT['platform_admin'] && !(int)($PF_IDENT['must_change'] ?? 0) && ($_SERVER['HTTP_X_PF_CFG'] ?? '') === '1';
+if ($PFC) { if (!in_array($route, PFC_ROUTES, true)) fail('In der Plattform-Konfiguration nicht verfügbar', 403);
+  $me = ['gid' => (int)$PF_IDENT['id'], 'id' => 0, 'username' => $PF_IDENT['username'] ?? '', 'name' => $PF_IDENT['name'] ?? '', 'photo' => null, 'exercise_mode' => 0, 'must_change' => 0, 'coord_sys' => null, 'nav_app' => null, 'place_view' => null, 'ai_modes' => null, 'hydro' => null, 'beacon' => 0, 'phone' => null]; $sid = null; }
+if (!$me && $PF_IDENT) { // gültiges Konto, aber in diesem Mandanten nicht (mehr) aktiv (Issue #60)
+  if (in_array($route, ['me', 'logout'], true) || str_starts_with($route, 'pf/')) out(['error' => 'Kein Mandant', 'no_org' => 1, 'platform_admin' => (int)$PF_IDENT['platform_admin'], 'orgs' => array_map(fn($o) => ['id' => $o['id'], 'name' => $o['name']], pfMemberOrgs($PF_IDENT['id']))], 403);
+  fail('In dieser Organisation nicht angemeldet', 403); }
 if (!$me) fail('Nicht angemeldet', 401);
-$me = ints($me, ['id', 'exercise_mode', 'must_change', 'beacon']); $me['place_view'] = (object)placeView($me['place_view'] ?? null); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
+$me = ints($me, ['gid', 'id', 'exercise_mode', 'must_change', 'beacon']); $me['platform_admin'] = (int)($PF_IDENT['platform_admin'] ?? 0); $me['org_id'] = ORG_ID; // Mandanten (Issue #60)
+ $me['place_view'] = (object)placeView($me['place_view'] ?? null); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
 $me['ai_modes'] = json_decode((string)$me['ai_modes'], true) ?: []; // AI-Assistent (Issue #111): gewählter Modus je Funktion
 $me['hydro'] = array_values(array_filter((array)(json_decode((string)$me['hydro'], true) ?: []), 'is_string')); // persönliche Messstationen (Issue #125)
 // Benutzerrollen und Rechte (Issue #63): Vereinigung aller Rollen; is_admin = hat die Rolle Systemadministrator (alle Rechte)
 $me['uroles'] = userRoles($uid); $me['is_admin'] = (int)array_reduce($me['uroles'], fn($c, $r) => $c || $r['sys'] === 'admin', false); $me['perms'] = permsOf($me['uroles']);
+if ($PFC) { $me['uroles'] = []; $me['is_admin'] = 0; $me['perms'] = ['cfg_map']; $me['pf_cfg'] = 1; } // nur die gemeinsamen Einstellungen
 // Nach einem Zurücksetzen durch die Verwaltung ist nur der Passwortwechsel erlaubt
 if ($me['must_change'] && !in_array($route, ['me', 'me/password', 'logout'])) fail('Bitte zuerst ein eigenes Passwort setzen', 403);
 
@@ -1911,6 +1930,7 @@ function incView($id) { global $db; $my = !empty($_GET['my']); if (can('stats') 
   if (myRuns() !== 'off' && myPart($id)) return myRuns() === 'full' ? 1 : 2;
   fail($my ? 'Kein Zugriff auf diesen Einsatz' : 'Dafür fehlt dir das Recht «' . PERMS['stats'][1] . '»', 403); }
 // Benutzerrollen einer Person [{id, name, sys}] und die Rechte daraus (Administrator: alle aus PERMS)
+function userGid($u) { global $db; $s = $db->prepare("SELECT gid FROM users WHERE id=?"); $s->execute([(int)$u]); $g = $s->fetchColumn(); $s->closeCursor(); return $g ? (int)$g : null; } // Konto der Plattform (Issue #60)
 function userRoles($u) { global $db; $s = $db->prepare("SELECT r.id,r.name,r.perms,r.sys FROM user_uroles x JOIN uroles r ON r.id=x.urole_id WHERE x.user_id=? ORDER BY r.id"); $s->execute([$u]);
   $r = array_map(fn($x) => ['id' => (int)$x['id'], 'name' => $x['name'], 'sys' => $x['sys'], 'perms' => rolePerms($x)], $s->fetchAll()); $s->closeCursor(); return $r; }
 function rolePerms($r) { return $r['sys'] === 'admin' ? array_keys(permsAll()) : array_values(array_intersect(array_keys(permsAll()), json_decode($r['perms'] ?? '[]', true) ?: [])); }
@@ -2430,8 +2450,11 @@ function exAuto($inc) { global $db, $now;
 function canFlow($inc) { return canManage($inc) || isActivePart((int)$inc['id']); }
 function modeRow($code) { global $db; $s = $db->prepare("SELECT * FROM modes WHERE code=?"); $s->execute([$code]); return $s->fetch() ?: null; }
 function modeShares($code) { $m = modeRow($code); return !$m || (int)$m['share_location']; }
-function setting($k, $d) { global $db; $s = $db->prepare("SELECT v FROM settings WHERE k=?"); $s->execute([$k]); $r = $s->fetch(); return $r ? $r['v'] : $d; }
-function setSetting($k, $v) { global $db, $my; $db->prepare($my ? "INSERT INTO settings(k,v) VALUES(?,?) ON DUPLICATE KEY UPDATE v=VALUES(v)" : "INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v")->execute([$k, $v]); }
+// Mandanten (Issue #60): gemeinsame Einstellungen (PF_SHARE) global aus der Plattform bzw. als übersteuerbare Vorgabe, wenn der Mandant keinen eigenen Wert hat
+function setting($k, $d) { global $db, $PFC; $m = pfKeyMode($k); if ($m === 'global' || ($PFC && pfShareKey($k))) return pfSet($k, $d);
+  $s = $db->prepare("SELECT v FROM settings WHERE k=?"); $s->execute([$k]); $r = $s->fetch(); $s->closeCursor(); return $r ? $r['v'] : ($m === 'over' ? pfSet($k, $d) : $d); }
+function setSetting($k, $v) { global $db, $my, $PFC; if (pfKeyMode($k) === 'global' || ($PFC && pfShareKey($k))) { pfPut($k, $v); return; }
+  if ($PFC) fail('In der Plattform-Konfiguration nur gemeinsame Einstellungen', 403); $db->prepare($my ? "INSERT INTO settings(k,v) VALUES(?,?) ON DUPLICATE KEY UPDATE v=VALUES(v)" : "INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v")->execute([$k, $v]); }
 // Nachrichten senden: nur wer den Einsatz angenommen hat; wer den Einsatz verwalten darf, immer;
 // sonst je nach Spezialrolle (roles.can_message) bzw. Einstellung für Personen ohne Rolle (msg_no_role)
 function canMessage($inc) {
@@ -2601,7 +2624,9 @@ function pushEncrypt($payload, $p256dh, $auth) { // RFC 8291: ein Datensatz, aes
   $ct = openssl_encrypt($payload . "\x02", 'aes-128-gcm', $cek, OPENSSL_RAW_DATA, $nonce, $tag);
   return $salt . pack('N', 4096) . chr(65) . $ep . $ct . $tag; }
 // Benachrichtigung für Personen vormerken; gesendet wird in out() nach der Antwort. $msg: t (Titel), b (Text), tag (wie die Quittierschlüssel der App), crit
-function pushTo($userIds, $msg) { global $pushQ; if ((!pushOk() && !fcmOk()) || !$userIds) return; foreach (array_unique(array_map('intval', $userIds)) as $u) $pushQ[] = [$u, $msg]; }
+// Mandanten (Issue #60): o = Mandant; ausser bei Org 1 tragen Schlüssel (tag, rp, end) den Präfix o<id>/, damit gleiche Einsatznummern verschiedener Mandanten auf einem Gerät nicht zusammenfallen
+function pushOrg($m) { $m['o'] = ORG_ID; if (ORG_ID === 1) return $m; foreach (['tag', 'rp'] as $k) if (isset($m[$k]) && is_string($m[$k]) && $m[$k] !== '') $m[$k] = 'o' . ORG_ID . '/' . $m[$k]; return $m; }
+function pushTo($userIds, $msg) { global $pushQ; if ((!pushOk() && !fcmOk()) || !$userIds) return; $msg = pushOrg($msg); foreach (array_unique(array_map('intval', $userIds)) as $u) $pushQ[] = [$u, $msg]; }
 function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) return;
   $ids = array_values(array_unique(array_column($q, 0))); $in = implode(',', array_fill(0, count($ids), '?'));
   $subs = []; if (pushOk()) { $s = $db->prepare("SELECT s.* FROM push_subs s JOIN users u ON u.id=s.user_id WHERE u.active=1 AND s.user_id IN ($in)"); $s->execute($ids); $subs = $s->fetchAll(); }
@@ -2660,7 +2685,7 @@ function appBase() { $d = str_replace('\\', '/', dirname(dirname($_SERVER['SCRIP
 // Nachricht für ein Gerät: Android nur data (die App zeigt selbst an, auch Vollbild-Alarm), iOS mit alert und Stufe über APNs
 // $snd = Wahl des Geräts je Einsatztyp (push_native.snd); kritisch spielt iOS den Ton aus dem Bundle der App, Android wählt ihn selbst (kind, ksnd)
 function fcmMsg($tok, $pf, $u, $m, $snd = null) { $tag = (string)($m['tag'] ?? 'sw'); $cr = !empty($m['crit']); $sy = !empty($m['stay']); $si = !empty($m['silent']);
-  $d = ['t' => (string)($m['t'] ?? ''), 'b' => mb_substr((string)($m['b'] ?? ''), 0, 1000), 'tag' => $tag, 'crit' => $cr ? '1' : '0', 'stay' => $sy ? '1' : '0', 'silent' => $si ? '1' : '0', 'srv' => appBase(), 'uid' => (string)$u];
+  $d = ['t' => (string)($m['t'] ?? ''), 'b' => mb_substr((string)($m['b'] ?? ''), 0, 1000), 'tag' => $tag, 'crit' => $cr ? '1' : '0', 'stay' => $sy ? '1' : '0', 'silent' => $si ? '1' : '0', 'srv' => appBase(), 'uid' => (string)$u, 'o' => (string)($m['o'] ?? 1)];
   if (isset($m['kind'])) { $d['kind'] = (string)$m['kind']; $d['ksnd'] = (string)($m['ksnd'] ?? ''); }
   if (isset($m['end'])) { $d['end'] = (string)$m['end']; $d['rt'] = empty($m['rt']) ? '0' : '1'; } // Einsatzende (Issue #174): Meldungen des Einsatzes schliessen
   $rp = (string)($m['rp'] ?? $tag); // ersetzt diese Meldung (z. B. den Alarm), auch eine noch nicht zugestellte
@@ -3453,7 +3478,8 @@ function purgeDo($k, $id, $name) {
       $s = $db->prepare("SELECT id,$col FROM $t WHERE $col LIKE ?"); $s->execute(['%' . $name . '%']);
       foreach ($s->fetchAll() as $x) $db->prepare("UPDATE $t SET $col=? WHERE id=?")->execute([str_replace($name, $gn, (string)$x[$col]), $x['id']]); }
     try { $db->prepare("UPDATE app_log SET user_id=NULL WHERE user_id=?")->execute([$id]); } catch (Throwable $e) {}
-    $db->prepare("UPDATE users SET name=?, username=?, pass_hash='', token=NULL, photo=NULL, phone=NULL, active=0, must_change=0, purged=1 WHERE id=?")->execute([$gn, '#geloescht-' . $id, $id]);
+    pfMemberDrop(userGid($id)); // Mitgliedschaft im Mandanten beenden (Issue #60)
+    $db->prepare("UPDATE users SET gid=NULL, name=?, username=?, pass_hash='', token=NULL, photo=NULL, phone=NULL, active=0, must_change=0, purged=1 WHERE id=?")->execute([$gn, '#geloescht-' . $id, $id]);
     if (!adminCount()) { $db->rollBack(); fail('Mindestens eine aktive Person muss die Rolle Systemadministrator behalten'); }
   } elseif ($k === 'mode') { $db->prepare("DELETE FROM modes WHERE id=?")->execute([$id]);
   } elseif ($k === 'role') {
@@ -3468,8 +3494,8 @@ function purgeDo($k, $id, $name) {
   } else purgeVehicles([$id]);
   $db->commit();
   if ($k === 'incident') { // Dateien: Durchsagen, Zwischenspeicher der Helikopter
-    $d = __DIR__ . '/data/voice/' . $id; if (is_dir($d)) { foreach (glob($d . '/*') ?: [] as $f) @unlink($f); @rmdir($d); }
-    @unlink(__DIR__ . '/data/air/inc' . $id . '.json'); }
+    $d = ORG_DATA . '/voice/' . $id; if (is_dir($d)) { foreach (glob($d . '/*') ?: [] as $f) @unlink($f); @rmdir($d); }
+    @unlink(ORG_DATA . '/air/inc' . $id . '.json'); }
   alog('warn', $k === 'user' ? 'user' : ($k === 'incident' ? 'inc' : 'cfg'), PURGE_KINDS[$k][0] . ' endgültig gelöscht', ['id' => $id]); // ohne Namen (Personendaten)
 }
 function dsarTable($t) { if (!isset(DSAR_TABLES[$t])) fail('Unbekannte Tabelle'); return $t; }
@@ -3482,13 +3508,14 @@ function dsarRow($t, $r) { foreach (DSAR_HIDE[$t] ?? [] as $k) if (array_key_exi
 if (array_key_exists($route, FEATURE_ROUTES) && ($inc = activeIncident()) && !feature($inc, FEATURE_ROUTES[$route]))
   fail('Die Funktion «' . FEATURES[FEATURE_ROUTES[$route]] . '» ist für «' . kindOf($inc)['name'] . '» ausgeschaltet', 403);
 
-try { anonAuto(); } catch (Throwable $e) { alog('err', 'anon', 'Automatische Anonymisierung fehlgeschlagen: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // fällige automatische Anonymisierung (Issue #87)
+try { if (!$PFC) anonAuto(); } catch (Throwable $e) { alog('err', 'anon', 'Automatische Anonymisierung fehlgeschlagen: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // fällige automatische Anonymisierung (Issue #87)
 // Applikationslog (Issue #139): Einträge älter als applog_days löschen, höchstens einmal pro Stunde
 try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog_purge_at', (string)$now); $db->prepare("DELETE FROM app_log WHERE at<?")->execute([$now - applogDays() * 86400]); } } catch (Throwable $e) {}
-try { if (!$me['must_change']) geoAuto(); } catch (Throwable $e) { alog('err', 'geo', 'Abgleich der Geodaten: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // Abgleich übernommener Standorte mit der Quelle (Issue #182), täglich im Nachlauf
-try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
+try { if (!$me['must_change'] && !$PFC) geoAuto(); } catch (Throwable $e) { alog('err', 'geo', 'Abgleich der Geodaten: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // Abgleich übernommener Standorte mit der Quelle (Issue #182), täglich im Nachlauf
+try { if (!$me['must_change'] && !$PFC) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 switch ($route) {
- case 'me': out(['me' => $me + mapsFor(null) + ['phone_cfg' => phoneCfg(), 'coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid)]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': if ($PFC) out(['me' => $me + mapsFor(null) + ['kinds' => [], 'features' => (object)[], 'org_info' => null, 'version' => verPub(), 'orgs' => array_map(fn($o) => ['id' => $o['id'], 'name' => $o['name']], pfMemberOrgs($me['gid']))]]); // Plattform-Konfiguration: ohne Daten einer Organisation
+  out(['me' => $me + mapsFor(null) + ['phone_cfg' => phoneCfg(), 'coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid), 'orgs' => array_map(fn($o) => ['id' => $o['id'], 'name' => $o['name']], pfMemberOrgs($me['gid'])), 'org_alarms' => pfOtherAlarms($me['gid'])]]); // orgs: Mandanten der Person (Issue #60) // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message', 'can_voice', 'sec']), $db->query("SELECT id,name,color,is_lead,is_post,can_message,can_voice,sec FROM roles WHERE active=1 ORDER BY id")->fetchAll())); // sec: Spezialrolle für Sekundäreinsätze (Issue #164)
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen); sec: Einrückoption für Sekundäreinsätze (Issue #164)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts', 'sec']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts,sec FROM modes ORDER BY id")->fetchAll()));
@@ -3502,6 +3529,7 @@ switch ($route) {
   }
   out(['ok' => true]);
  case 'overpass/stats': need('cfg_map'); // Statistik für die Verwaltung (Geodaten-Quellen)
+  if ($PFC) out(['since' => null, 'rows' => [], 'pf' => 1]); // Statistik gehört der Organisation
   out(['since' => (int)setting('overpass_stats_since', '0') ?: null, 'rows' => array_map(fn($r) => ints($r, ['uses', 'ok', 'fails', 'ok_ms', 'last_ok', 'last_fail']), $db->query("SELECT * FROM overpass_stats ORDER BY url, src")->fetchAll())]);
  case 'overpass/stats/reset': need('cfg_map');
   $db->exec("DELETE FROM overpass_stats"); setSetting('overpass_stats_since', (string)time()); out(['ok' => true]);
@@ -3656,7 +3684,7 @@ switch ($route) {
  case 'air/test': need('cfg_map'); // Verwaltung: eine Quelle direkt abfragen (ohne Cache), Umkreis 120 NM um die Mitte der Schweiz
   $k = (string)($in['src'] ?? ''); if (!isset(AIR_SOURCES[$k])) fail('Unbekannte Datenquelle');
   $c = airCfg(); $t = microtime(true); $r = airFetch([$k], 46.8, 8.2, 120 * 1852); $ms = (int)((microtime(true) - $t) * 1000);
-  if (!$r) out(['ok' => false, 'ms' => $ms, 'status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true)[$k] ?? null]);
+  if (!$r) out(['ok' => false, 'ms' => $ms, 'status' => json_decode((string)@file_get_contents(ORG_DATA . '/air/status.json'), true)[$k] ?? null]);
   $h = array_values(array_filter($r[1], fn($a) => $a['cat'] === 'A7' || airRescue($a, $c) !== null));
   out(['ok' => true, 'ms' => $ms, 'total' => count($r[1]), 'heli' => array_map(fn($a) => ['cs' => $a['cs'], 'hex' => $a['hex'], 'reg' => $a['reg'], 'type' => $a['type'], 'alt' => $a['gnd'] ? 0 : $a['alt'], 'rescue' => airRescue($a, $c), 'age' => $now - $a['at']], $h)]);
 
@@ -4777,8 +4805,8 @@ switch ($route) {
   out(['ok' => true]);
  case 'push/native/unsubscribe': $db->prepare("DELETE FROM push_native WHERE token=? AND user_id=?")->execute([trim((string)($in['token'] ?? '')), $uid]); out(['ok' => true]);
  case 'logout': // eigene Gerätesitzung samt ihren App-Abos löschen, sonst den Browser-Token
-  if ($sid) { $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$sid]); $db->prepare("DELETE FROM sessions WHERE id=?")->execute([$sid]); }
-  else { $db->prepare("UPDATE users SET token=NULL WHERE id=?")->execute([$uid]); $db->prepare("DELETE FROM push_native WHERE user_id=? AND session_id IS NULL")->execute([$uid]); }
+  if ($sid) pfSessDel($me['gid'], $tok); // in allen Mandanten (Issue #60)
+  else { pfSync($me['gid'], ['token' => null]); $db->prepare("UPDATE users SET token=NULL WHERE id=?")->execute([$uid]); $db->prepare("DELETE FROM push_native WHERE user_id=? AND session_id IS NULL")->execute([$uid]); }
   out(['ok' => true]);
  case 'me/sessions': // eigene Gerätesitzungen ohne Token; cur 1 = diese Sitzung
   $s = $db->prepare("SELECT id,device,platform,created,last_seen,app_ver FROM sessions WHERE user_id=? ORDER BY last_seen DESC, id DESC"); $s->execute([$uid]);
@@ -4788,16 +4816,16 @@ switch ($route) {
   $s = $db->query("SELECT s.id,s.user_id,u.name,s.device,s.platform,s.app_ver,s.created,s.last_seen FROM sessions s JOIN users u ON u.id=s.user_id WHERE u.active=1 ORDER BY s.last_seen DESC, s.id DESC LIMIT 2000");
   out(['server' => verInfo() + ['env_name' => VER_ENV[verInfo()['env']]], 'api' => API_LEVEL, 'app_min' => appMin(), 'apps' => array_map(fn($r) => ints($r, ['id', 'user_id', 'created', 'last_seen']), $s->fetchAll())]);
  case 'me/session/remove': // id; meldet die App auf diesem Gerät ab (sie erhält beim nächsten Aufruf 401)
-  $x = (int)($in['id'] ?? 0); $s = $db->prepare("DELETE FROM sessions WHERE id=? AND user_id=?"); $s->execute([$x, $uid]);
-  if (!$s->rowCount()) fail('Sitzung nicht gefunden', 404);
-  $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$x]); out(['ok' => true]);
+  $x = (int)($in['id'] ?? 0); $s = $db->prepare("SELECT token FROM sessions WHERE id=? AND user_id=?"); $s->execute([$x, $uid]); $t = $s->fetchColumn(); $s->closeCursor();
+  if ($t === false) fail('Sitzung nicht gefunden', 404);
+  pfSessDel($me['gid'], $t); $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$x]); $db->prepare("DELETE FROM sessions WHERE id=?")->execute([$x]); out(['ok' => true]); // in allen Mandanten (Issue #60)
  /* ---------- Abwesenheiten (Issue #91): eigene immer, die anderer Personen mit dem Recht avail ---------- */
  case 'absences': // laufende und künftige Einträge: eigene, user=<id> oder all=1 (beides mit avail)
   $all = !empty($_GET['all']); $u = (int)($_GET['user'] ?? 0) ?: $uid; if ($all || $u !== $uid) need('avail');
-  $s = $db->prepare("SELECT a.id,a.user_id,a.from_at,a.until_at,a.kind,a.note,a.created_by,a.created_at,u.name,c.name by_name FROM absences a JOIN users u ON u.id=a.user_id LEFT JOIN users c ON c.id=a.created_by
+  $s = $db->prepare("SELECT a.id,a.user_id,a.from_at,a.until_at,a.kind,a.note,a.created_by,a.created_at,a.gkey,u.name,c.name by_name FROM absences a JOIN users u ON u.id=a.user_id LEFT JOIN users c ON c.id=a.created_by
     WHERE a.removed=0 AND (a.until_at IS NULL OR a.until_at>?)" . ($all ? ' AND u.active=1' : ' AND a.user_id=?') . " ORDER BY a.from_at, u.name");
   $s->execute($all ? [$now] : [$now, $u]);
-  out(array_map(fn($a) => ints($a, ['id', 'user_id', 'from_at', 'until_at', 'created_by', 'created_at']) + ['now' => (int)$a['from_at'] <= $now ? 1 : 0], $s->fetchAll()));
+  out(array_map(fn($a) => ints($a, ['id', 'user_id', 'from_at', 'until_at', 'created_by', 'created_at']) + ['now' => (int)$a['from_at'] <= $now ? 1 : 0, 'all_orgs' => $a['gkey'] !== null ? 1 : 0, 'gkey' => null], $s->fetchAll())); // all_orgs: gilt für alle Organisationen (Issue #60)
  case 'absence/save': // id (ändern), user_id (andere nur mit avail), from (leer = jetzt), until (null = bis auf Weiteres), kind abs|sus, note
   $id = (int)($in['id'] ?? 0); $old = null;
   if ($id) { $s = $db->prepare("SELECT * FROM absences WHERE id=? AND removed=0"); $s->execute([$id]); $old = $s->fetch(); if (!$old) fail('Eintrag nicht gefunden', 404); }
@@ -4810,11 +4838,16 @@ switch ($route) {
   $k = in_array($in['kind'] ?? '', ['abs', 'sus'], true) ? $in['kind'] : 'abs'; $nt = mb_substr(trim((string)($in['note'] ?? '')), 0, 200); $nt = $nt === '' ? null : $nt;
   if ($old) $db->prepare("UPDATE absences SET from_at=?,until_at=?,kind=?,note=? WHERE id=?")->execute([$from, $until, $k, $nt, $id]);
   else { $db->prepare("INSERT INTO absences(user_id,from_at,until_at,kind,note,created_by,created_at) VALUES(?,?,?,?,?,?,?)")->execute([$u, $from, $until, $k, $nt, $uid, $now]); $id = (int)$db->lastInsertId(); }
+  // Mandanten (Issue #60): all_orgs 1 = gilt für alle Organisationen der Person (fehlt = unverändert)
+  $gk = $old['gkey'] ?? null; $ao = array_key_exists('all_orgs', $in) ? !empty($in['all_orgs']) : $gk !== null; $g = userGid($u);
+  if ($ao && $gk === null) { $gk = bin2hex(random_bytes(12)); $db->prepare("UPDATE absences SET gkey=? WHERE id=?")->execute([$gk, $id]); }
+  if ($ao) pfMirror('absences', $gk, $g, ['from_at' => $from, 'until_at' => $until, 'kind' => $k, 'note' => $nt, 'created_at' => $now]);
+  elseif ($gk !== null) { pfMirror('absences', $gk, $g, null); $db->prepare("UPDATE absences SET gkey=NULL WHERE id=?")->execute([$id]); }
   out(['ok' => true, 'id' => $id]);
  case 'absence/remove': // id; beendet bzw. löscht den Eintrag
   $s = $db->prepare("SELECT * FROM absences WHERE id=? AND removed=0"); $s->execute([(int)($in['id'] ?? 0)]); $a = $s->fetch(); if (!$a) fail('Eintrag nicht gefunden', 404);
   if ((int)$a['user_id'] !== $uid) need('avail');
-  $db->prepare("UPDATE absences SET removed=1 WHERE id=?")->execute([(int)$a['id']]); out(['ok' => true]);
+  $db->prepare("UPDATE absences SET removed=1 WHERE id=?")->execute([(int)$a['id']]); pfMirror('absences', $a['gkey'] ?? null, userGid((int)$a['user_id']), null); out(['ok' => true]);
  /* ---------- Regelmässige Einsatzzeiten (Issue #180): eigene immer, die anderer Personen mit avail ---------- */
  case 'avail/rules': // eigene; user=<id> oder all=1 mit avail; now = Stand jetzt (null, on = ausserhalb der Einsatzzeiten, off = ausgesetzt)
   $all = !empty($_GET['all']); $u = (int)($_GET['user'] ?? 0) ?: $uid; if ($all || $u !== $uid) need('avail');
@@ -4831,11 +4864,13 @@ switch ($route) {
   if (!$old && count(availRules($u)) >= RULE_MAX) fail('Höchstens ' . RULE_MAX . ' Regeln je Person');
   if ($old) $db->prepare("UPDATE avail_rules SET mode=?,days=?,t_from=?,t_to=?,note=? WHERE id=?")->execute([$md, $dy, $f, $t, $nt, $id]);
   else { $db->prepare("INSERT INTO avail_rules(user_id,mode,days,t_from,t_to,note,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)")->execute([$u, $md, $dy, $f, $t, $nt, $uid, $now]); $id = (int)$db->lastInsertId(); }
+  $gk = $old['gkey'] ?? null; if ($gk === null) { $gk = bin2hex(random_bytes(12)); $db->prepare("UPDATE avail_rules SET gkey=? WHERE id=?")->execute([$gk, $id]); } // Regeln gelten für alle Organisationen der Person (Issue #60)
+  pfMirror('avail_rules', $gk, userGid($u), ['mode' => $md, 'days' => $dy, 't_from' => $f, 't_to' => $t, 'note' => $nt, 'created_at' => $now]);
   out(['ok' => true, 'id' => $id]);
  case 'avail/rule/remove': // id
   $s = $db->prepare("SELECT * FROM avail_rules WHERE id=? AND removed=0"); $s->execute([(int)($in['id'] ?? 0)]); $a = $s->fetch(); if (!$a) fail('Eintrag nicht gefunden', 404);
   if ((int)$a['user_id'] !== $uid) need('avail');
-  $db->prepare("UPDATE avail_rules SET removed=1 WHERE id=?")->execute([(int)$a['id']]); out(['ok' => true]);
+  $db->prepare("UPDATE avail_rules SET removed=1 WHERE id=?")->execute([(int)$a['id']]); pfMirror('avail_rules', $a['gkey'] ?? null, userGid((int)$a['user_id']), null); out(['ok' => true]);
  /* ---------- Kalender (Issue #181): alle terminlichen Angaben eines Zeitraums ---------- */
  case 'calendar': // from, to (Unix-Zeit, höchstens 100 Tage); all=1 = Abwesenheiten und Einsatzzeiten aller Personen (Recht avail)
   $f = (int)($_GET['from'] ?? 0); $t = (int)($_GET['to'] ?? 0); if ($f <= 0 || $t <= $f || $t - $f > 100 * 86400) fail('Ungültiger Zeitraum');
@@ -4900,10 +4935,10 @@ switch ($route) {
   if (!can('skills') && ((int)$e['user_id'] !== $uid || (int)$e['created_by'] !== $uid || !(int)$e['self'])) fail('Diesen Eintrag kann nur die Verwaltung entfernen', 403);
   $db->prepare("UPDATE user_skills SET removed=1 WHERE id=?")->execute([(int)$e['id']]); out(['ok' => true]);
  case 'me/password': // eigenes Passwort ändern (aktuelles Passwort nötig)
-  $s = $db->prepare("SELECT pass_hash FROM users WHERE id=?"); $s->execute([$uid]);
-  if (!password_verify($in['old'] ?? '', $s->fetch()['pass_hash'])) fail('Das aktuelle Passwort ist falsch', 403);
+  $s = $PF->prepare("SELECT pass_hash FROM pf_idents WHERE id=?"); $s->execute([$me['gid']]); $ph = $s->fetchColumn(); $s->closeCursor(); // Passwort des Kontos, gilt für alle Mandanten (Issue #60)
+  if (!password_verify($in['old'] ?? '', (string)$ph)) fail('Das aktuelle Passwort ist falsch', 403);
   pwCheck($in['new'] ?? '');
-  $db->prepare("UPDATE users SET pass_hash=?, must_change=0 WHERE id=?")->execute([password_hash($in['new'], PASSWORD_DEFAULT), $uid]);
+  $h = password_hash($in['new'], PASSWORD_DEFAULT); $db->prepare("UPDATE users SET pass_hash=?, must_change=0 WHERE id=?")->execute([$h, $uid]); pfSync($me['gid'], ['pass_hash' => $h, 'must_change' => 0]);
   // Gerätesitzungen (Issue #108) bleiben bewusst bestehen: Wer das eigene Passwort ändert, soll die Alarmierung über die App nicht verlieren.
   // Abmelden einzelner Apps über «Angemeldete Apps» im Profil (me/session/remove); Zurücksetzen durch die Verwaltung löscht alle.
   out(['ok' => true]);
@@ -4920,7 +4955,7 @@ switch ($route) {
   out(['ok' => 1, 'id' => $t['id'], 'at' => $t['at'], 'push' => pushOk() || fcmOk() ? 1 : 0]);
  case 'me/settings': // nur übergebene Werte ändern. exercise_mode: Übungen wie scharfe Einsätze kritisch alarmieren; coord_sys: '' = Standard der Verwaltung, none = ausblenden
   if (isset($in['exercise_mode'])) $db->prepare("UPDATE users SET exercise_mode=? WHERE id=?")->execute([empty($in['exercise_mode']) ? 0 : 1, $uid]);
-  if (array_key_exists('phone', $in)) { if (!phoneCfg()['self']) fail('Die Telefonnummer pflegt die Verwaltung', 403); $db->prepare("UPDATE users SET phone=? WHERE id=?")->execute([phoneNorm($in['phone'] ?? ''), $uid]); } // Direktanruf (Issue #44), '' = entfernen
+  if (array_key_exists('phone', $in)) { if (!phoneCfg()['self']) fail('Die Telefonnummer pflegt die Verwaltung', 403); $db->prepare("UPDATE users SET phone=? WHERE id=?")->execute([phoneNorm($in['phone'] ?? ''), $uid]); pfSync($me['gid'], ['phone' => phoneNorm($in['phone'] ?? '')]); } // Direktanruf (Issue #44), '' = entfernen
   if (isset($in['beacon'])) $db->prepare("UPDATE users SET beacon=? WHERE id=?")->execute([empty($in['beacon']) ? 0 : 1, $uid]); // Fahrzeuge ausserhalb von Einsätzen melden (Issue #177, freiwillig)
   if (isset($in['coord_sys'])) {
     $c = (string)$in['coord_sys']; if ($c !== '' && $c !== 'none' && !in_array($c, COORDS, true)) fail('Unbekanntes Koordinatensystem'); // none = Koordinaten ausblenden (nur persönlich)
@@ -4965,15 +5000,17 @@ switch ($route) {
   }
   if ($id) {
     if ($nm === '') fail('Name fehlt');
-    $db->prepare("UPDATE users SET name=? WHERE id=?")->execute([$nm, $id]);
+    $db->prepare("UPDATE users SET name=? WHERE id=?")->execute([$nm, $id]); pfSync(userGid($id), ['name' => $nm]); // Name gilt für alle Mandanten (Issue #60)
   } else {
     $un = trim($in['username'] ?? ''); if ($un === '') fail('Benutzername ist Pflicht');
     pwCheck($in['password'] ?? '');
-    try { $db->prepare("INSERT INTO users(username,name,pass_hash,must_change) VALUES(?,?,?,1)")->execute([$un, $nm ?: $un, password_hash($in['password'], PASSWORD_DEFAULT)]); }
-    catch (PDOException $e) { fail('Benutzername existiert bereits'); }
-    $id = (int)$db->lastInsertId();
+    $h = password_hash($in['password'], PASSWORD_DEFAULT);
+    $g = pfIdentNew($un, $nm ?: $un, $h); if (!$g) fail('Benutzername existiert bereits (auch in anderen Organisationen); bestehende Konten ordnet die Plattform-Verwaltung zu'); // Konto der Plattform (Issue #60)
+    try { $db->prepare("INSERT INTO users(username,name,pass_hash,must_change,gid) VALUES(?,?,?,1,?)")->execute([$un, $nm ?: $un, $h, $g]); }
+    catch (PDOException $e) { $PF->prepare("DELETE FROM pf_idents WHERE id=?")->execute([$g]); fail('Benutzername existiert bereits'); }
+    $id = (int)$db->lastInsertId(); pfMemberSet($g, $id);
   }
-  if (array_key_exists('phone', $in)) $db->prepare("UPDATE users SET phone=? WHERE id=?")->execute([phoneNorm($in['phone'] ?? ''), $id]); // Direktanruf (Issue #44), fehlt = unverändert
+  if (array_key_exists('phone', $in)) { $db->prepare("UPDATE users SET phone=? WHERE id=?")->execute([phoneNorm($in['phone'] ?? ''), $id]); pfSync(userGid($id), ['phone' => phoneNorm($in['phone'] ?? '')]); } // Direktanruf (Issue #44), fehlt = unverändert
   if ($new !== $old || !isset($in['id'])) {
     $db->beginTransaction();
     $db->prepare("DELETE FROM user_uroles WHERE user_id=?")->execute([$id]);
@@ -4987,7 +5024,9 @@ switch ($route) {
   if ($id === $uid) fail('Das eigene Passwort bitte über «Passwort ändern» setzen');
   needUserEditable($id);
   pwCheck($in['password'] ?? '');
-  $s = $db->prepare("UPDATE users SET pass_hash=?, must_change=1, token=NULL WHERE id=?"); $s->execute([password_hash($in['password'], PASSWORD_DEFAULT), $id]);
+  if (!pfOnlyHere(userGid($id))) fail('Diese Person ist auch in anderen Organisationen; das Passwort setzt die Plattform-Verwaltung zurück', 409); // Konto für alle Mandanten (Issue #60)
+  $h = password_hash($in['password'], PASSWORD_DEFAULT); $s = $db->prepare("UPDATE users SET pass_hash=?, must_change=1, token=NULL WHERE id=?"); $s->execute([$h, $id]);
+  if ($g = userGid($id)) { pfSync($g, ['pass_hash' => $h, 'must_change' => 1, 'token' => null]); pfSessDel($g); }
   $db->prepare("DELETE FROM push_subs WHERE user_id=?")->execute([$id]); // abgemeldet: Geräte erhalten keine Push-Nachrichten mehr
   foreach (['sessions', 'push_native'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]); // auch die Apps abmelden (Issue #108)
   if (!$s->rowCount()) fail('Benutzer nicht gefunden', 404);
@@ -5001,13 +5040,13 @@ switch ($route) {
   if ($u['last_login'] !== null || isset(usersUsed()[$id])) fail('Diese Person hat sich schon angemeldet oder kommt in Einsatzdaten vor; bitte deaktivieren');
   $db->beginTransaction();
   foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'avail_rules', 'sessions', 'push_native', 'user_skills', 'ex_signups', 'fb_ans'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
-  $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
+  $dg = userGid($id); $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
   foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
     $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));
     if ($fx($p['leads']) !== $p['leads'] || $fx($p['invite']) !== $p['invite']) $db->prepare("UPDATE ex_plans SET leads=?, invite=? WHERE id=?")->execute([$fx($p['leads']), $fx($p['invite']), $p['id']]);
   }
   if (!adminCount()) { $db->rollBack(); fail('Mindestens eine aktive Person muss die Rolle Systemadministrator behalten'); }
-  $db->commit();
+  $db->commit(); pfMemberDrop($dg); // Mitgliedschaft im Mandanten beenden (Issue #60)
   out(['ok' => true]);
  case 'user/active': need('users'); // Benutzer entfernen (deaktivieren) oder reaktivieren, Einsatzdaten bleiben erhalten
   $id = (int)($in['id'] ?? 0); $a = empty($in['active']) ? 0 : 1;
@@ -5016,6 +5055,10 @@ switch ($route) {
   $s = $db->prepare("SELECT name FROM users WHERE id=?"); $s->execute([$id]); $u = $s->fetch();
   if (!$u) fail('Benutzer nicht gefunden', 404);
   $db->prepare("UPDATE users SET active=?" . ($a ? '' : ', token=NULL') . " WHERE id=?")->execute([$a, $id]);
+  if ($a && ($g = userGid($id))) { // Reaktivieren (Issue #60): Anmeldung des Kontos wieder übernehmen
+    $q = $PF->prepare("SELECT token FROM pf_idents WHERE id=?"); $q->execute([$g]); $db->prepare("UPDATE users SET token=? WHERE id=?")->execute([$q->fetchColumn() ?: null, $id]);
+    $q = $PF->prepare("SELECT * FROM pf_sessions WHERE ident_id=?"); $q->execute([$g]);
+    foreach ($q->fetchAll() as $x) try { $db->prepare("INSERT INTO sessions(user_id,token,device,platform,created,last_seen,app_ver) VALUES(?,?,?,?,?,?,?)")->execute([$id, $x['token'], $x['device'], $x['platform'], $x['created'], $x['last_seen'], $x['app_ver']]); } catch (Throwable $e) {} }
   if (!$a) foreach (['push_subs', 'sessions', 'push_native'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]); // keine Push-Nachrichten mehr an deaktivierte Personen, Apps abgemeldet (Issue #108)
   if (!$a) foreach (runningIncidents() as $inc) { // aus laufenden Einsätzen austragen (Issue #167: alle)
     $p = part($inc['id'], $id);
@@ -5032,7 +5075,7 @@ switch ($route) {
   $k = (string)($in['what'] ?? ''); $id = (int)($in['id'] ?? 0); [$nm] = purgeInfo($k, $id); purgeDo($k, $id, $nm); out(['ok' => true]);
  case 'me/photo': // kleines Bild als Data-URL (Client verkleinert auf ca. 96px)
   if (strlen($in['photo'] ?? '') > 200000) fail('Bild zu gross');
-  $db->prepare("UPDATE users SET photo=? WHERE id=?")->execute([$in['photo'], $uid]);
+  $db->prepare("UPDATE users SET photo=? WHERE id=?")->execute([$in['photo'], $uid]); pfSync($me['gid'], ['photo' => $in['photo']]); // Bild gilt für alle Mandanten (Issue #60)
   out(['ok' => true]);
  /* ---------- Benutzerrollen (Issue #63) ---------- */
  case 'uroles': need('users', 'uroles'); // alle Rollen mit Rechten und Anzahl Personen, dazu die Liste der Rechte (PERMS)
@@ -5149,10 +5192,10 @@ switch ($route) {
     if (isset($in['sec'])) $db->prepare("UPDATE roles SET sec=? WHERE id=?")->execute([secIn($in['sec']), $in['id']]); } // Kategorie (Issue #164), fehlt = unverändert
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message,can_voice,is_post,sec) VALUES(?,?,?,?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1), (int)($in['can_voice'] ?? 1), (int)($in['is_post'] ?? 0), secIn($in['sec'] ?? 0)]);
   out(['ok' => true]);
- case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'place_near_km' => placeNearKm(), 'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans'], 'map_off' => $k['map_off'], 'map_def' => $k['map_def']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'phone' => phoneCfg(), 'phone_who' => PHONE_WHO, 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
+ case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['pf_share' => array_map(fn($g) => ['mode' => pfMode($g), 'locked' => pfMode($g) === 'global' && !$me['platform_admin'] ? 1 : 0, 'label' => PF_SHARE[$g][0]], array_combine(array_keys(PF_SHARE), array_keys(PF_SHARE))), 'my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'place_near_km' => placeNearKm(), 'kinds' => $PFC ? [] : array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans'], 'map_off' => $k['map_off'], 'map_def' => $k['map_def']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'phone' => phoneCfg(), 'phone_who' => PHONE_WHO, 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
    'maps' => mapsCfg(), 'map_default' => MAP_DEFAULT, 'map_own' => mapOwn(), 'map_sources' => array_map(fn($k) => mapPub($k) + array_intersect_key(MAP_SOURCES[$k], array_flip(['site', 'terms', 'lic', 'area', 'note', 'def'])), array_keys(MAP_SOURCES)), // Kartenanbieter (Issue #106)
    'air' => airCfg(), 'air_default' => AIR_DEFAULT + array_map(fn($x) => $x[0], AIR_NUM), 'air_num' => AIR_NUM, 'air_filters' => AIR_FILTERS, 'air_app' => AIR_APP, 'air_sources' => array_map(fn($s) => ['name' => $s['name'], 'site' => $s['site'], 'note' => $s['note']], AIR_SOURCES),
-   'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
+   'air_status' => json_decode((string)@file_get_contents(ORG_DATA . '/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
    'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM, 'hydro_sources' => HYDRO_SOURCES, // Pegel & Abfluss (Issue #125)
    'sym' => symCfg(), 'sym_sets' => array_map(fn($x) => ['name' => $x[0], 'note' => $x[1]], SYM_SETS), 'sym_all' => array_map('symPub', array_keys(SYMBOLS))] // Einsatzsymbole (Issue #146)
    + (can('cfg_map') ? ['postgis' => pgCfg() + ['pass_set' => setting('postgis_pass', '') !== '' ? 1 : 0, 'ext' => extension_loaded('pdo_pgsql') ? 1 : 0, 'ready' => pgReady() ? 1 : 0], 'postgis_ssl' => PG_SSL, 'postgis_default' => PG_DEFAULT,
@@ -5209,7 +5252,9 @@ switch ($route) {
     'col' => isset($in['col']) ? (int)$in['col'] : null, 'stack' => $t('stack', 1500), 'ver' => $t('ver', 40), 'ua' => mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200)], fn($v) => $v !== null && $v !== ''));
   out(['ok' => true]);
  case 'settings/save': // jede übergebene Einstellung braucht ihr Recht (SETTING_PERMS)
+  if ($PFC) { unset($in['map_kinds'], $in['air_kinds']); foreach (array_keys((array)$in) as $k) if (!pfInGroup($k)) fail('In der Plattform-Konfiguration nur gemeinsame Einstellungen', 403); } // Vorgaben je Einsatztyp gehören der Organisation
   foreach (SETTING_PERMS as $k => $p) if (isset($in[$k])) need($p);
+  foreach (array_keys((array)$in) as $k) if (($g = pfInGroup($k)) && pfMode($g) === 'global' && empty($me['platform_admin'])) fail('«' . PF_SHARE[$g][0] . '» gibt die Plattform für alle Mandanten vor', 403); // Mandanten (Issue #60)
   if (isset($in['ai'])) fail('Den AI-Assistenten über ai/cfg/save einstellen');
   if (isset($in['legal'])) { // Impressum & Datenschutz (Issue #102): nur bekannte Felder, gekürzt
     if (!is_array($in['legal'])) fail('Ungültige Einstellung'); $v = legalCfg();

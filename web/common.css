@@ -170,3 +170,4 @@ button.hlp{font-weight:700;min-width:2rem;padding:.3rem .55rem}
 .cev.more{border:0;background:none;color:var(--mut)}
 .calday{margin-top:.8rem}.calday .cli{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;padding:.45rem .6rem;border-left:5px solid;border-bottom:1px solid var(--line);background:var(--panel);margin:.2rem 0;border-radius:4px}.calday .cli .t{min-width:7.5rem;color:var(--mut);font-size:.88rem}
 @media(max-width:700px){.calg>div{min-height:3.2rem}.cev{font-size:0;height:.45rem;padding:0;margin:.12rem 0;border-left-width:0;background:var(--c)}.cev.more{display:none}.calbar h3{min-width:0;flex:1 1 100%;order:-1}}
+.mcard.orgal{border-left:4px solid #c62828}.mcard.orgal>div{margin:.25rem 0}

@@ -8,6 +8,8 @@ Der Knopf 👤 in der Kopfzeile des Menüs öffnet dein **Profil** mit allen per
 
 Name, Benutzername und deine Einsatzgruppen. Hier änderst du dein **Profilbild** und dein **Passwort** und meldest dich **ab**. Abmelden löscht den auf dem Gerät gemerkten Stand. Unter **Angemeldete Apps** siehst du die Geräte, auf denen die native App mit deinem Konto angemeldet ist, und kannst sie abmelden.
 
+Gehörst du **mehreren Organisationen** an, wählst du hier die Organisation, in der die App läuft. Dein Konto, dein Passwort, Name, Profilbild, Telefonnummer und deine angemeldeten Geräte gelten für alle. Alarme der anderen Organisationen erscheinen im Menü als rote Karte **«Alarm bei …»**; mit **Wechseln** öffnest du den Einsatz dort und entscheidest, ob du teilnimmst. Plattform-Administratoren finden hier den Link **🏢 Plattformverwaltung**.
+
 ## Alarmierung {#alarmierung}
 
 - **Einsatzfähigkeit**: ob du zurzeit alarmiert wirst (siehe unten).
@@ -26,7 +28,7 @@ Mit **+ Abwesenheit erfassen** meldest du dich für einen Zeitraum ab (Ferien, K
 - siehst du Einsätze trotzdem und kannst freiwillig teilnehmen,
 - zeigt das Menü den Hinweis ⏸.
 
-Laufende Abwesenheiten beendest du mit **Beenden**, geplante entfernst du. Die Verwaltung kann Abwesenheiten auch für dich erfassen.
+Laufende Abwesenheiten beendest du mit **Beenden**, geplante entfernst du. Die Verwaltung kann Abwesenheiten auch für dich erfassen. Bist du in mehreren Organisationen, gilt eine Abwesenheit mit dem Häkchen **«Für alle meine Organisationen»** überall, sonst nur in der aktuellen.
 
 ## Regelmässige Einsatzzeiten {#einsatzzeiten}
 

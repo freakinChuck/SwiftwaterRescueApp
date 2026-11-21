@@ -2,6 +2,35 @@
 const API='api/index.php';
 const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 var DEMO=window.DEMO||null; // Demo-Modus (Issue #74): gesetzt von demo.js (nur index.html lädt es, nur mit ?demo), sonst null
+// Mandanten (Issue #60): ORG = gewählte Organisation, geht als X-Org mit (0 = der Server wählt). Wahl über ?o=<id> (Links, Benachrichtigungen) bzw. gemerkt in sw_org.
+// Ein Konto gilt für alle seine Organisationen (gleicher Anmeldeschlüssel). Gerätespeicher je Organisation getrennt: ausser bei Organisation 1 mit dem Präfix o<id>:
+// (ausser sw_token, sw_org und den Werten in ORG_SHARED); im Demo nicht (demo.js leitet localStorage schon um).
+const ORG_SHARED=new Set(['sw_token','sw_org','sw_pushlater','sw_seenver']);
+var ORG=(()=>{let o=0;try{const q=new URLSearchParams(location.search).get('o');if(q&&/^\d+$/.test(q)){o=+q;localStorage.setItem('sw_org',String(o))}else o=+(localStorage.getItem('sw_org')||0)||0}catch(e){}return o})();
+if(!DEMO&&ORG>1)try{const L=window.localStorage,P='o'+ORG+':',k=x=>ORG_SHARED.has(x)?x:P+x;
+  const keys=()=>{const r=[];for(let i=0;i<L.length;i++){const x=L.key(i);if(x.startsWith(P))r.push(x.slice(P.length));else if(ORG_SHARED.has(x))r.push(x)}return r};
+  const st={getItem:x=>L.getItem(k(x)),setItem:(x,v)=>L.setItem(k(x),String(v)),removeItem:x=>L.removeItem(k(x)),clear:()=>keys().forEach(x=>L.removeItem(k(x))),key:i=>keys()[i]??null,get length(){return keys().length}};
+  Object.defineProperty(window,'localStorage',{configurable:true,get:()=>st})}catch(e){}
+// Organisation wechseln: merken und die Seite neu laden (alle Zustände, Karten und Abfragen gehören zur Organisation); x = weitere Parameter der Adresse
+function orgSwitch(o,x=''){try{window.localStorage.setItem('sw_org',String(o))}catch(e){}const u=new URL(location.href);u.searchParams.set('o',String(o));
+  ['fokus','inc'].forEach(k=>u.searchParams.delete(k));if(x)new URLSearchParams(x).forEach((v,k)=>u.searchParams.set(k,v));location.href=u.toString()}
+// Antwort von me/login: Organisation des Servers übernehmen (ohne Wahl wählt der Server; true = es wird neu geladen)
+function orgFollow(id){id=+id||0;if(!id||DEMO)return false;if(ORG===id)return false;const had=ORG;try{window.localStorage.setItem('sw_org',String(id))}catch(e){}
+  if(had===0&&id===1){ORG=1;return false}if(had)try{sessionStorage.setItem('sw_orgmiss','1')}catch(e){}orgSwitch(id);return true}
+// Fehler von me: Konto gehört nicht (mehr) zu dieser Organisation (no_org) → zur ersten eigenen wechseln bzw. Plattform-Administratoren zur Plattformverwaltung (true = erledigt)
+function orgNoOrg(e){const d=e&&e.data;if(!d||!d.no_org||DEMO)return false;const os=d.orgs||[];if(os.length&&os[0].id!==ORG){orgSwitch(os[0].id);return true}
+  if(d.platform_admin){location.href='plattform.html';return true}return false}
+// nach me: Organisation übernehmen und Wahl der Abwesenheiten für alle Organisationen (true = es wird neu geladen)
+function orgMe(m){if(!m||DEMO)return false;if(orgFollow(m.org_id))return true;ABS_MULTI=(m.orgs||[]).length>1;orgMiss(m);return false}
+// nach einem Wechsel, weil die gewünschte Organisation nicht zum Konto gehört: sagen, welche jetzt offen ist (sonst wirkt «?o=» wirkungslos)
+function orgMiss(m){let f=null;try{f=sessionStorage.getItem('sw_orgmiss');sessionStorage.removeItem('sw_orgmiss')}catch(e){}if(!f)return;
+  const o=(m.orgs||[]).find(x=>x.id===m.org_id);toast(`Du bist in der gewünschten Organisation nicht Mitglied. Geöffnet ist ${o?'«'+o.name+'»':'deine Organisation'}.`+(m.platform_admin?' Zuordnen kannst du dich in der Plattformverwaltung.':''),'info')}
+// Auswahl der Organisationen (Profil, Menü, Verwaltung): orgs = me.orgs [{id, name}], nur bei mehr als einer
+const orgPick=(orgs,cur)=>orgs&&orgs.length>1?`<label class="mut">Organisation<select data-orgsel>${orgs.map(o=>`<option value="${o.id}" ${o.id===cur?'selected':''}>${esc(o.name)}</option>`).join('')}</select></label>`:'';
+// Alarme anderer Organisationen (me.org_alarms bzw. incident/state org_alarms): Hinweis mit «Wechseln»; die Person entscheidet wie bei parallelen Einsätzen (Issue #167)
+const orgAlarmHtml=as=>(as||[]).filter(a=>!a.joined).map(a=>`<div class="mcard orgal"><b>🔔 ${esc(a.org_name)}: ${esc(a.kind_name||'Einsatz')}</b><div>${esc(a.message||'')}</div><div class="mbtns"><button class="pri" data-orgal="${a.org}" data-orginc="${a.id}">Zu ${esc(a.org_name)} wechseln</button></div></div>`).join('');
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-orgal]');if(b)orgSwitch(+b.dataset.orgal,'inc='+b.dataset.orginc+'&fokus=1')});
+document.addEventListener('change',e=>{const s=e.target.closest&&e.target.closest('[data-orgsel]');if(s)orgSwitch(+s.value)});
 let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt die jeweilige Seite
 // Native App (Issue #108): Die Flutter-Hülle zeigt die Web-App in einer WebView und hängt «SwiftwaterRescueApp/<Version>» an den User-Agent an.
 // Dann kein Web-Push und kein «App installieren» (Benachrichtigungen kommen über die App); swNative ruft einen Handler der App auf, falls vorhanden.
@@ -12,14 +41,16 @@ function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHan
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download=name;document.body.appendChild(l);l.click();setTimeout(()=>{URL.revokeObjectURL(l.href);l.remove()},3000)}
 // Parallele Einsätze (Issue #167): INC_SEL = in der Einsatz-App angezeigter Einsatz, geht als X-Inc mit (0 = der Server wählt; Verwaltung, öffentliche Ansicht)
 let INC_SEL=0;
-async function api(r,body){const o={headers:{'X-Token':token||''}};if(INC_SEL)o.headers['X-Inc']=String(INC_SEL);if(body){o.method='POST';o.body=JSON.stringify(body)}
-  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:'Serverfehler'}));
+// Plattform-Konfiguration (Rückmeldung zu PR #213): admin.html?pf=1 bearbeitet die gemeinsamen Einstellungen der Plattform direkt, auch ohne Mitgliedschaft (Header X-Pf-Cfg)
+const PFC=(()=>{try{return new URLSearchParams(location.search).get('pf')==='1'}catch(e){return false}})();
+async function api(r,body){const o={headers:{'X-Token':token||''}};if(PFC)o.headers['X-Pf-Cfg']='1';else if(ORG)o.headers['X-Org']=String(ORG);if(INC_SEL)o.headers['X-Inc']=String(INC_SEL);if(body){o.method='POST';o.body=JSON.stringify(body)}
+  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));{const xo=+res.headers.get('X-Org')||0;if(xo===1&&!ORG&&!DEMO&&!PFC){ORG=1;try{window.localStorage.setItem('sw_org',String(xo))}catch(e){}}}const j=await res.json().catch(()=>({error:'Serverfehler'}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
 // Applikationslog (Issue #139): Skriptfehler an den Server melden (nur angemeldet, höchstens 5 je Seitenaufruf, gleiche Meldung einmal; der Server begrenzt zusätzlich).
 // Nicht gemeldet: Fehler fremder Skripte ohne Angaben («Script error.»), Verbindungsabbrüche (offline) und abgelehnte API-Antworten (stehen schon im Log bzw. sind Eingabefehler).
 const CERR={n:0,seen:new Set()};
 function clientErr(msg,x={}){try{msg=String(msg==null?'':msg).slice(0,500);if(!token||!msg||CERR.n>=5||CERR.seen.has(msg)||/^Script error\.?$/i.test(msg))return;CERR.seen.add(msg);CERR.n++;
-  fetch(`${API}?r=applog/client`,{method:'POST',keepalive:true,headers:{'X-Token':token},body:JSON.stringify({msg,page:location.pathname.split('/').pop()||'index.html',...x})}).catch(()=>{})}catch(e){}}
+  fetch(`${API}?r=applog/client`,{method:'POST',keepalive:true,headers:{'X-Token':token,...(ORG?{'X-Org':String(ORG)}:{})},body:JSON.stringify({msg,page:location.pathname.split('/').pop()||'index.html',...x})}).catch(()=>{})}catch(e){}}
 const cErrSkip=r=>!r||r.data||(r instanceof TypeError&&/fetch|network|load failed/i.test(r.message||''))||r.name==='AbortError';
 window.addEventListener('error',e=>{if(!e.message||cErrSkip(e.error))return;clientErr(e.message,{src:String(e.filename||'').split('/').pop().split('?')[0],line:e.lineno,col:e.colno,stack:e.error&&e.error.stack?String(e.error.stack).slice(0,1500):undefined})});
 window.addEventListener('unhandledrejection',e=>{const r=e.reason;if(cErrSkip(r))return;clientErr('Unbehandelt: '+(r&&r.message||r),{stack:r&&r.stack?String(r.stack).slice(0,1500):undefined})});
@@ -270,7 +301,7 @@ const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="backgrou
 const ADMIN_PERMS=['users','uroles','groups','avail','skills','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','dsar','dsar_org','anon','cfg_conn','applog','versions']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 // Abmelden: Server meldet die Sitzung ab (Gerätesitzung der App bzw. Browser-Token, Route logout), danach die App benachrichtigen (beendet das Konto, Issue #108)
-function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});
+function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t,...(ORG?{'X-Org':String(ORG)}:{})},body:'{}',keepalive:true}).catch(()=>{});
   token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k));swNative('swLogout')} // letzter Stand gehört der abgemeldeten Person
 /* ---------- Versionen (Issue #175) ---------- */
 // Stand dieser Seite = ?v= von common.js (deploy.ps1 setzt den Commit ein, im Repo 0 = unbekannt). Der Server liefert seinen Stand im Header X-Build (api());
@@ -302,9 +333,10 @@ const legalLinks=()=>[['impressum','Impressum'],['lizenzen','Lizenzen'],['datens
 /* ---------- Anmeldung ---------- */
 function loginView(el,title,done){el.innerHTML=`<div class="card"><div id="lgOrg"></div><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="index.html?demo">🎓 Demo ausprobieren (ohne Anmeldung)</a><a class="mut lglk" href="hilfe.html" target="_blank" rel="noopener">📖 Bedienungsanleitung</a><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
   // Organisation mit Logo (Issue #123) und Version (Issue #175) ohne Anmeldung; ältere Server ohne Route org: nur die Version
-  fetch(`${API}?r=org`).then(r=>r.ok?r.json():fetch(`${API}?r=version`).then(r=>r.json()).then(v=>({version:v}))).then(o=>{const e=$('#lgVer'),g=$('#lgOrg'),v=o.version;
+  fetch(`${API}?r=org`+(ORG?'&o='+ORG:'')).then(r=>r.ok?r.json():fetch(`${API}?r=version`).then(r=>r.json()).then(v=>({version:v}))).then(o=>{const e=$('#lgVer'),g=$('#lgOrg'),v=o.version;
     if(e&&v&&v.version)e.textContent='Version '+verTxt(v);if(g&&!DEMO)g.innerHTML=orgMark(o,'orgbig')}).catch(()=>{});
-  const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};
+  const go=async()=>{try{const j=await api('login',{username:$('#u').value,password:$('#p').value});token=j.token;localStorage.setItem('sw_token',token);
+    if(!j.org&&j.platform_admin){location.href='plattform.html';return}if(j.org&&orgFollow(j.org))return;done()}catch(e){fail(e)}};
   $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 /* ---------- Dialoge ---------- */
 // Einfacher modaler Dialog; save(d) wirft bei Fehlern, dann bleibt der Dialog offen
@@ -357,6 +389,8 @@ const absLocal=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOS
 // Liste der Einträge (Route absences) mit Entfernen; who = Namen zeigen
 function absRows(rs,who){return rs.length?rs.map(a=>`<div class="absrow"><span><b>${esc(ABS_KIND[a.kind]||ABS_KIND.abs)}</b>${who?' · '+esc(a.name)+(typeof gdots==='function'?gdots(a.user_id):''):''}<br><small class="mut">${a.now?'seit':'ab'} ${esc(absDT(a.from_at))}, ${esc(absUntil(a))}${a.note?' · '+esc(a.note):''}${who&&a.created_by!==a.user_id&&a.by_name?' · erfasst von '+esc(a.by_name):''}</small></span><span class="row" style="margin:0;flex:0 0 auto"><button data-abe="${a.id}">Ändern</button><button data-abx="${a.id}" aria-label="Eintrag entfernen">${a.now?'Beenden':'Entfernen'}</button></span></div>`).join(''):'<div class="mut">Keine Einträge.</div>'}
 // Dialog erfassen/ändern: a = bestehender Eintrag oder null; people = Auswahl der Person (Verwaltung) oder null (eigene); done nach dem Speichern
+// Mandanten (Issue #60): ABS_MULTI = Person gehört zu mehreren Organisationen (me.orgs), dann Wahl «Für alle meine Organisationen» (nur eigene Einträge)
+var ABS_MULTI=false;
 function absDialog(a,people,done){const now=Date.now()/1000,mo=new Date();mo.setDate(mo.getDate()+1);mo.setHours(6,0,0,0);
   const d=dlg(a?'Eintrag ändern':'Abwesenheit erfassen',`${people&&!a?`<label class="mut">Person<select id="abU">${people.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select></label>`:''}
     <label class="mut">Art<select id="abK">${Object.entries(ABS_KIND).map(([k,v])=>`<option value="${k}" ${(a?a.kind:'abs')===k?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
@@ -364,9 +398,10 @@ function absDialog(a,people,done){const now=Date.now()/1000,mo=new Date();mo.set
     <label class="mut">Von<input id="abF" type="datetime-local" value="${absLocal(a?a.from_at:now)}"></label>
     <label class="mut">Bis (leer = bis auf Weiteres)<input id="abT" type="datetime-local" value="${a&&a.until_at?absLocal(a.until_at):''}"></label>
     <div class="row"><button data-abq="m">Bis morgen 06:00</button><button data-abq="w">1 Woche</button><button data-abq="x">Bis auf Weiteres</button></div>
-    <label class="mut">Bemerkung (optional)<input id="abN" maxlength="200" value="${esc(a&&a.note||'')}" placeholder="z. B. Ferien, Krankheit"></label>`,async d=>{
+    <label class="mut">Bemerkung (optional)<input id="abN" maxlength="200" value="${esc(a&&a.note||'')}" placeholder="z. B. Ferien, Krankheit"></label>
+    ${ABS_MULTI&&!(people&&!a)?`<label class="chk"><input type="checkbox" id="abO" ${a&&a.all_orgs?'checked':''}> Für alle meine Organisationen</label>`:''}`,async d=>{
     const f=absTs($('#abF',d).value),t=absTs($('#abT',d).value);
-    await api('absence/save',{id:a?a.id:undefined,user_id:people&&!a?+$('#abU',d).value:undefined,from:f,until:t||null,kind:$('#abK',d).value,note:$('#abN',d).value});toast('Gespeichert.','ok');done&&done()});
+    await api('absence/save',{id:a?a.id:undefined,user_id:people&&!a?+$('#abU',d).value:undefined,from:f,until:t||null,kind:$('#abK',d).value,note:$('#abN',d).value,all_orgs:$('#abO',d)?($('#abO',d).checked?1:0):undefined});toast('Gespeichert.','ok');done&&done()});
   d.querySelectorAll('[data-abq]').forEach(b=>b.onclick=()=>{const q=b.dataset.abq,fr=absTs($('#abF',d).value)||now;
     $('#abT',d).value=q==='x'?'':absLocal(q==='m'?Math.max(mo.getTime()/1000,fr+3600):fr+7*86400)});return d}
 // Klicks einer Liste aus absRows: rs = Einträge, people/done wie absDialog
