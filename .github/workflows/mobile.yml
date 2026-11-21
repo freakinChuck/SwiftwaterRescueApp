@@ -11,6 +11,7 @@
 # Version (Issue #175): gemeinsame Version aus der Datei VERSION. Ein Release-Tag «v<Version>» (Workflow release.yml, startet diesen Workflow auf dem Tag)
 # baut genau diese Version, lädt sie wie main nach TestFlight bzw. Google Play und hängt die Pakete an den GitHub-Release; «mobile-v<Version>» geht weiterhin.
 # Die App erhält Version und Build über --dart-define=APP_VERSION/APP_BUILD (lib/version.dart).
+# Build-Nummer (Issue #230): einmal je Lauf im Job «check» bestimmt, Android und iOS erhalten dieselbe (siehe dort).
 name: Native Apps
 
 on:
@@ -35,7 +36,18 @@ defaults:
 jobs:
   check:
     runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.build.outputs.build }}
     steps:
+      - name: Build-Nummer
+        id: build
+        shell: bash
+        working-directory: .
+        run: |
+          # Gemeinsame Build-Nummer für Android und iOS (Issue #230): Datum und Zeit des Laufs (UTC) als JJMMTThhmm minus 2 000 000 000,
+          # z. B. 21.11.2026 15:30 → 611211530. Android erlaubt als versionCode höchstens 2 100 000 000 (reicht bis 2040),
+          # App Store Connect und Google Play verlangen eine höhere Nummer als die zuletzt hochgeladene; gleiche Formel in ios.yml (TestFlight von Hand)
+          b=$(( $(date -u +%y%m%d%H%M) - 2000000000 )); echo "build=$b" >> "$GITHUB_OUTPUT"; echo "::notice::Build $b (Android und iOS)"
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
@@ -48,6 +60,8 @@ jobs:
 
   android:
     needs: check
+    env:
+      BUILD: ${{ needs.check.outputs.build }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,10 +106,10 @@ jobs:
             --dart-define=FCM_SENDER_ID=${{ secrets.FCM_SENDER_ID }}
             --dart-define=FCM_APP_ID_ANDROID=${{ secrets.FCM_APP_ID_ANDROID }}
             --dart-define=APP_VERSION=${{ steps.ver.outputs.name }}
-            --dart-define=APP_BUILD=${{ github.run_number }}
+            --dart-define=APP_BUILD=${{ needs.check.outputs.build }}
         shell: bash
         run: |
-          args="--release --build-name=${{ steps.ver.outputs.name }} --build-number=${{ github.run_number }} $DEFINES"
+          args="--release --build-name=${{ steps.ver.outputs.name }} --build-number=$BUILD $DEFINES"
           flutter build apk $args
           flutter build appbundle $args
           mkdir -p out
@@ -134,7 +148,7 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: ch.swiftwaterrescue.app
           releaseFiles: mobile/app/out/*.aab
-          releaseName: ${{ steps.ver.outputs.name }} (${{ github.run_number }})
+          releaseName: ${{ steps.ver.outputs.name }} (${{ needs.check.outputs.build }})
           track: ${{ vars.PLAY_TRACK || 'internal' }}
           status: ${{ vars.PLAY_STATUS || 'completed' }}
 
@@ -144,4 +158,6 @@ jobs:
     with:
       # Upload nach TestFlight nur auf main und bei Release-Tags vX.Y.Z
       upload: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
+      # dieselbe Build-Nummer wie Android (Issue #230)
+      build: ${{ needs.check.outputs.build }}
     secrets: inherit
