@@ -189,12 +189,14 @@ function ping(){tone(660,250);navigator.vibrate&&navigator.vibrate(200)}
 function alarmTone(){[0,600,1200].forEach(t=>setTimeout(()=>tone(880,400),t));navigator.vibrate&&navigator.vibrate([300,100,300,100,300])}
 // Alarmstufe des Einsatztyps (Issue #90, ALARM_LEVELS). Im Web kein Vollbild mehr (Feedback zu #108): crit/high rote Benachrichtigung, bleibt bis zum Antippen (crit dreifacher, high einfacher Ton),
 // normal Hinweis mit kurzem Ton, low Hinweis still, none nichts. Nachrichten und Einsatzende mit eigener Stufe je Einsatztyp (msg_level, end_level, Issue #168). Antippen eines Alarms oder einer Nachricht im Einsatz zeigt das Einsatzgebiet (focusArea).
-function notify(t,b,key,lvl){if(lvl==='none')return false;if(key){if(ackGet().includes(key))return false;ackAdd(key)}const al=lvl==='crit'||lvl==='high';
+// Issue #226: Alarm eines Einsatzes (i:) und Testalarm (t:) erscheinen bei jeder Stufe als rote Benachrichtigung mit den Einrückoptionen, auch bei none (dann nur in der App, ohne Ton und Systemmeldung);
+// Ton und Systemmeldung folgen weiter der Stufe.
+function notify(t,b,key,lvl){const ia=!!key&&/^[it]:/.test(key);if(lvl==='none'&&!ia)return false;if(key){if(ackGet().includes(key))return false;ackAdd(key)}const al=ia||lvl==='crit'||lvl==='high';
   const d=document.createElement('div');d.className='toast'+(al?' al':'');d.setAttribute('role',al?'alert':'status');d.innerHTML=`<b>${esc(t)}</b><div>${esc(b)}</div>`;
   const ai=al&&key&&/^i:(\d+)$/.exec(key);if(ai)d.insertAdjacentHTML('beforeend',`<div class="alj" data-alinc="${ai[1]}"></div>`); // Annehmen direkt im Alarm (alJoinSync)
   d.onclick=()=>{d.remove();if(key&&/^[imk]:/.test(key))focusArea()};$('#toasts').appendChild(d);if(!al)setTimeout(()=>d.remove(),20000);if(ai)setTimeout(alJoinSync);
-  if(lvl==='crit')alarmTone();else if(lvl!=='low')ping();
-  sysNote(t,b,key,al,lvl==='low');return true}
+  if(lvl==='crit')alarmTone();else if(lvl!=='low'&&lvl!=='none')ping();
+  if(lvl!=='none')sysNote(t,b,key,lvl==='crit'||lvl==='high',lvl==='low');return true}
 // Alarm-Benachrichtigung: Einrückoptionen zum Annehmen, solange der Einsatz angezeigt wird und man nicht teilnimmt (nicht für die Übungsleitung);
 // wie die Karte «Teilnahme» (join), Antippen daneben quittiert wie bisher. Bei jedem paint() nachgeführt, weil notify vor dem neuen Stand läuft.
 function alJoinSync(){document.querySelectorAll('#toasts .alj').forEach(e=>{const i=st&&st.incident,ok=i&&i.id==e.dataset.alinc&&!(st.me&&!st.me.left_at&&st.me.mode!=='declined')&&!st.ex_lead&&!st.blocked,
