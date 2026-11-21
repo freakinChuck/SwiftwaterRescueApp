@@ -9,6 +9,10 @@ on:
         description: Signiertes IPA nach App Store Connect hochladen
         type: boolean
         default: false
+      build:
+        description: Build-Nummer (von mobile.yml, gleich wie Android); leer = hier bestimmen
+        type: string
+        default: ''
 
 env:
   FLUTTER_VERSION: '3.47.9'
@@ -47,9 +51,11 @@ jobs:
           v=$(tr -d ' \r\n' < ../../VERSION)
           if [[ "$GITHUB_REF" == refs/tags/mobile-v* ]]; then v="${GITHUB_REF#refs/tags/mobile-v}"; elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF#refs/tags/v}"; fi
           echo "name=$v" >> "$GITHUB_OUTPUT"
-          # Build-Nummer aus Datum und Zeit (UTC, JJMMTThhmm): steigt über beide Workflows hinweg (Native Apps und TestFlight),
+          # Build-Nummer (Issue #230): von mobile.yml übergeben (gleich wie Android), sonst (testflight.yml) mit derselben Formel:
+          # Datum und Zeit (UTC) als JJMMTThhmm minus 2 000 000 000, z. B. 611211530; steigt über beide Workflows hinweg,
           # App Store Connect verlangt je Version eine höhere Nummer als die zuletzt hochgeladene
-          b=$(date -u +%y%m%d%H%M); echo "build=$b" >> "$GITHUB_OUTPUT"; echo "::notice::Version $v, Build $b"
+          b="${{ inputs.build }}"; [ -z "$b" ] && b=$(( $(date -u +%y%m%d%H%M) - 2000000000 ))
+          echo "build=$b" >> "$GITHUB_OUTPUT"; echo "::notice::Version $v, Build $b"
       - name: Zertifikat und Profil
         id: sign
         env:
