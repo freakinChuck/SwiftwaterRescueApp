@@ -108,9 +108,11 @@ async function dkUpload(f,to,cfg,prog=()=>{}){const ext=(f.name.split('.').pop()
   if(!ok)throw new Error(`Dateien .${ext} sind nicht erlaubt. Erlaubt: ${(cfg.types||[]).flatMap(t=>t.ext).concat(cfg.free||[]).map(x=>'.'+x).join(', ')}`);
   if(f.size>cfg.max_mb*1048576)throw new Error(`Die Datei ist grösser als ${cfg.max_mb} MB`);
   const buf=await f.arrayBuffer(),sha=dkHex(await crypto.subtle.digest('SHA-256',buf)),u8=new Uint8Array(buf),ch=cfg.chunk||1048576,up=dkHex(crypto.getRandomValues(new Uint8Array(8))),n=Math.ceil(u8.length/ch);
+  // Datei nicht (ganz) lesbar, z. B. nur in der Cloud abgelegt oder inzwischen geändert: nicht hochladen
+  if(!u8.length||u8.length!==f.size)throw new Error(`Die Datei konnte nicht ganz gelesen werden (${u8.length} von ${f.size} Bytes). Liegt sie nur in der Cloud (OneDrive …)? Bitte zuerst lokal speichern.`);
   let tx=null;if(ext==='pdf'&&to.doc_id){prog(0.02);tx=await dkPdfText(buf)}
-  for(let i=0;i<n;i++){await api('doc/upload/put',{up,n:i,data:dkB64(u8.subarray(i*ch,(i+1)*ch)),...(i?{}:{name:f.name,size:f.size,doc_id:to.doc_id||null,sug:to.sug?to.sug.folder_id:null})});prog((i+1)/n)}
-  return api('doc/upload/done',{up,name:f.name,size:f.size,sha,...(to.doc_id?{doc_id:to.doc_id,major:to.major?1:0,text:tx&&tx.text,pages:tx&&tx.pages}:{sug:to.sug})})}
+  for(let i=0;i<n;i++){await api('doc/upload/put',{up,n:i,data:dkB64(u8.subarray(i*ch,(i+1)*ch)),...(i?{}:{name:f.name,size:u8.length,doc_id:to.doc_id||null,sug:to.sug?to.sug.folder_id:null})});prog((i+1)/n)}
+  return api('doc/upload/done',{up,name:f.name,size:u8.length,sha,parts:n,...(to.doc_id?{doc_id:to.doc_id,major:to.major?1:0,text:tx&&tx.text,pages:tx&&tx.pages}:{sug:to.sug})})}
 // Vorschlag: neuer Eintrag (Ordner), neue Version oder Hinweis (Eintrag); mit oder ohne Datei
 function dkSugDlg(o){const d=o.doc,cfg=(typeof me!=='undefined'&&me.docs_cfg)||{};
   const k0=d?(d.kind==='file'?'ver':'note'):'new';

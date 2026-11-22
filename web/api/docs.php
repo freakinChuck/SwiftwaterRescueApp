@@ -319,10 +319,12 @@ function docSugDelete($x) { global $db; if ($x['file']) @unlink(docDir() . '/sug
 function docEditors($fid) { $r = []; foreach (docMem() as $u => $m) if (docEditM($fid, $m) || in_array('docs', permsOf(userRoles($u)), true)) $r[] = $u; return $r; }
 // Datei eines Vorschlags bzw. Hochladen prüfen und an ihren Ort bringen
 function docUpFinish($in) { global $uid;
-  $p = docTmp($in['up'] ?? ''); if (!is_file($p)) fail('Hochladen unvollständig, bitte nochmals versuchen');
+  $p = docTmp($in['up'] ?? ''); $want = (int)($in['size'] ?? -1);
+  if (!is_file($p)) { alog('warn', 'docs', 'Hochladen unvollständig: keine Teile angekommen', ['size' => $want, 'parts' => (int)($in['parts'] ?? -1)]); fail('Hochladen unvollständig (keine Teile angekommen), bitte nochmals versuchen'); }
   $name = trim(basename(str_replace('\\', '/', (string)($in['name'] ?? '')))); $ex = docExtOk($name);
   if (!$ex) { @unlink($p); alog('warn', 'docs', 'Datei mit nicht erlaubtem Typ abgelehnt', ['ext' => strtolower(pathinfo($name, PATHINFO_EXTENSION))]); fail('Dieser Dateityp ist nicht erlaubt'); }
-  clearstatcache(); $sz = filesize($p); if ($sz !== (int)($in['size'] ?? -1)) { @unlink($p); fail('Hochladen unvollständig, bitte nochmals versuchen'); }
+  clearstatcache(); $sz = filesize($p); if ($sz !== $want) { @unlink($p); alog('warn', 'docs', 'Hochladen unvollständig: Grösse stimmt nicht', ['size' => $want, 'got' => $sz, 'parts' => (int)($in['parts'] ?? -1)]);
+    fail('Hochladen unvollständig (' . $sz . ' von ' . $want . ' Bytes angekommen), bitte nochmals versuchen'); }
   if (hash_file('sha256', $p) !== strtolower((string)($in['sha'] ?? ''))) { @unlink($p); fail('Prüfsumme stimmt nicht, bitte nochmals hochladen'); }
   if (!docSniff($p, $ex[0])) { @unlink($p); alog('warn', 'docs', 'Datei abgelehnt: Inhalt passt nicht zur Endung', ['ext' => $ex[0]]); fail('Der Inhalt der Datei passt nicht zur Endung «.' . $ex[0] . '» (oder sie enthält Makros)'); }
   return [$p, $name, $ex[0], $sz, hash_file('sha256', $p)]; }
@@ -421,9 +423,11 @@ function docRoute($route) { global $db, $in, $uid, $me, $now;
       else fail('Ziel fehlt');
       @unlink($p); }
     $d64 = (string)($in['data'] ?? ''); $raw = base64_decode($d64, true); if ($n < 0 || $raw === false || $raw === '' || strlen($raw) > DOC_CHUNK) fail('Ungültiges Stück');
-    if ($n > 0 && !is_file($p)) fail('Hochladen unvollständig, bitte nochmals versuchen');
+    if ($n > 0 && !is_file($p)) { alog('warn', 'docs', 'Hochladen unvollständig: erstes Teil fehlt', ['n' => $n]); fail('Hochladen unvollständig (erstes Teil fehlt), bitte nochmals versuchen'); }
     if (($n + 1) * DOC_CHUNK > $c['max_mb'] * 1048576 + DOC_CHUNK) fail('Die Datei ist zu gross');
-    $fp = fopen($p, 'c+'); if (!$fp) fail('Datei konnte nicht gespeichert werden', 500); fseek($fp, $n * DOC_CHUNK); fwrite($fp, $raw); fclose($fp); out(['ok' => true]);
+    $fp = fopen($p, 'c+'); if (!$fp) fail('Datei konnte nicht gespeichert werden', 500); fseek($fp, $n * DOC_CHUNK); $w = fwrite($fp, $raw); fclose($fp);
+    if ($w !== strlen($raw)) { alog('err', 'docs', 'Teil der Datei konnte nicht geschrieben werden', ['n' => $n, 'len' => strlen($raw), 'written' => $w]); fail('Datei konnte nicht gespeichert werden (Speicherplatz?)', 500); }
+    clearstatcache(); out(['ok' => true, 'have' => filesize($p)]);
   case 'doc/upload/done': // alle Stücke da: up, name, size, sha; doc_id = neue Version (text = Seitentexte, pages, major) bzw. sug = {folder_id, doc_id, kind, title, note}
     if (!empty($in['sug'])) { $sg = (array)$in['sug']; $fid = (int)($sg['folder_id'] ?? 0); if (!docSugOk($fid)) fail('In diesem Ordner darfst du nichts vorschlagen', 403);
       [$p, $name, $ext, $sz, $sha] = docUpFinish($in); $out = docSugAdd($sg, [$p, $name, $ext, $sz, $sha]); out($out); }
