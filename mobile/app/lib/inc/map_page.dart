@@ -20,6 +20,7 @@ import '../service.dart';
 import '../sys.dart';
 import 'ctx.dart';
 import 'geo.dart';
+import 'docs.dart';
 import 'hydro.dart';
 import 'menu.dart';
 import 'msgs.dart';
@@ -609,6 +610,13 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                       stopToggle(s, p);
                     },
                     child: Text(stopOn(s, p) ? '⛔ Sperre aufheben (Einsatz)' : '⛔ Sperre wieder berücksichtigen')),
+              if (placeDocs(s, p).isNotEmpty) // Dokumente zum Standort (Issue #229)
+                OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(c);
+                      placeDocsOpen(context, s, p);
+                    },
+                    child: Text('📚 ${placeDocs(s, p).length == 1 ? js(placeDocs(s, p)[0]['title']) : '${placeDocs(s, p).length} Dokumente'}')),
             ]);
   }
 
@@ -1395,6 +1403,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (s.vx.on) _fab('Funk', const Icon(Icons.mic), () => _togglePanel('vx'), count: s.vx.unheard(null), active: _panel == 'vx'),
       if ((i != null && s.feat('poi')) || s.places.isNotEmpty)
         _fab(i == null ? 'Feste Standorte' : 'Markierungen', const Icon(Icons.place), () => _togglePanel('pois'), active: _panel == 'pois'),
+      if (docBtn(s)) _fab('Dokumente', const Text('📚', style: TextStyle(fontSize: 16)), () => _togglePanel('docs'), count: docAcks(s).isEmpty ? null : docAcks(s).length, active: _panel == 'docs'), // Dokumente (Issue #229)
       if (s.hyBtn) _fab('Messstationen', const Text('💧', style: TextStyle(fontSize: 16)), () => _togglePanel('hyd'), active: _panel == 'hyd'),
       if (i != null && s.feat('rd')) _fab('Flussdistanz', const Icon(Icons.straighten), () => _togglePanel('rd'), active: _panel == 'rd'),
     ];
@@ -1551,6 +1560,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         'res' => ResPanel(s: s, map: this),
         'pois' => PoisPanel(s: s, map: this),
         'rd' => RdPanel(s: s, map: this, rd: rd),
+        'docs' => docBtn(s) ? DocsPanel(s: s, map: this) : null,
         'hyd' => s.hyBtn ? HydPanel(s: s, map: this, openPrefs: _openPrefs) : null,
         'vx' => s.vx.on ? VoicePanel(s: s, map: this) : null,
         _ => null,

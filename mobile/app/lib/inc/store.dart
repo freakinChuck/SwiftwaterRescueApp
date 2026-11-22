@@ -27,6 +27,7 @@ import '../service.dart';
 import '../sys.dart';
 import '../track.dart';
 import 'area.dart';
+import 'docs.dart';
 import 'util.dart';
 import 'voice.dart';
 
@@ -335,6 +336,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     try {
       me = jm((await api.call('me'))['me']);
       unawaited(Beacons.putMe(acc.id, me)); // Fahrzeuge (Issue #177)
+      unawaited(docOffSync(this)); // Dokumente offline (Issue #229)
       mustChange = jb(me!['must_change']);
       if (mustChange) {
         ready = true;

@@ -20,6 +20,7 @@ import '../sys.dart';
 import '../org.dart';
 import '../version.dart';
 import 'ctx.dart';
+import 'docs.dart';
 import 'hydro.dart';
 import 'skills.dart';
 import 'store.dart';
@@ -1023,6 +1024,7 @@ class _PrefsPageState extends State<PrefsPage> {
                   ?_veh(me),
                   if (s.feat('hydro')) HydroPrefs(s: s), // persönliche Messstationen (Issue #165)
                   if (s.feat('voice')) VoicePrefs(s: s), // Funk (Issue #113)
+                  if (docBtn(s)) DocPrefs(s: s, openPanel: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => Scaffold(body: SafeArea(child: DocsPanel(s: s)))))), // Dokumente (Issue #229)
                   ?_ai(me),
                   _version(me),
                   _legal(),

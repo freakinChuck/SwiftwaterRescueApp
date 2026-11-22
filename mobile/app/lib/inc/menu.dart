@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../org.dart';
 import '../version.dart';
 import 'ctx.dart';
+import 'docs.dart';
 import 'hydro.dart';
 import 'pois.dart';
 import 'skills.dart';
@@ -323,6 +324,7 @@ class _IncMenuState extends State<IncMenu> {
               padding: EdgeInsets.only(top: 4),
               child: Mut('Startet mit der vorbereiteten Meldung (Sekundäreinsätze ohne Alarm). Du leitest: du wirst nicht alarmiert und gibst die vorbereiteten Elemente frei. Teilnehmen kannst du zusätzlich.')),
         ]),
+      ?docCard(c, s, map), // Dokumente (Issue #229)
       ?_calCard(c),
       ?_sched(c),
       ?hydroCard(c, s, map, widget.openPrefs),
@@ -655,6 +657,8 @@ class _IncMenuState extends State<IncMenu> {
         const Mut('Neue Markierungen über den Kartenknopf «Rettlinge».'),
       ]));
     }
+    final dk = docCard(c, s, map); // Dokumente (Issue #229)
+    if (dk != null) out.add(dk);
     final hy = hydroCard(c, s, map, widget.openPrefs); // Pegel & Abfluss (Issue #165)
     if (hy != null) out.add(hy);
     final sm = _startMore(c);
@@ -834,6 +838,7 @@ class _IncMenuState extends State<IncMenu> {
           const Mut('Gilt für alle in diesem Einsatz. Wer sie sieht, legt die Verwaltung fest.'),
         ]),
       if (s.feat('voice')) ...voiceLeadCards(c, s), // Funk (Issue #113)
+      ?docExtCard(c, s), // Dokumente für Externe (Issue #229)
       if (s.feat('pub')) _pubSec(c, i),
       MCard(title: 'Einsatzkräfte (${act.where((p) => p['left_at'] == null).length})', children: [
         if (act.isEmpty) const Mut('Noch niemand hat den Einsatz angenommen.'),
