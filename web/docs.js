@@ -104,8 +104,11 @@ async function dkOpen(id,o={}){let d;try{d=await dkLoad(id)}catch(e){return fail
 const dkHex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 function dkB64(u8){let s='';for(let i=0;i<u8.length;i+=32768)s+=String.fromCharCode.apply(null,u8.subarray(i,i+32768));return btoa(s)}
 // f: File; to: {doc_id, major} (neue Version) oder {sug: {folder_id, doc_id, kind, title, note}}; prog(Anteil 0–1)
+// leere Datei (0 Bytes), z. B. ein Platzhalter von OneDrive o. ä.
+const dkEmpty=f=>`Die Datei «${f.name}» ist leer (0 Bytes). Liegt sie nur in der Cloud (OneDrive …)? Bitte zuerst lokal speichern.`;
 async function dkUpload(f,to,cfg,prog=()=>{}){const ext=(f.name.split('.').pop()||'').toLowerCase(),ok=(cfg.types||[]).some(t=>t.ext.includes(ext))||(cfg.free||[]).includes(ext);
   if(!ok)throw new Error(`Dateien .${ext} sind nicht erlaubt. Erlaubt: ${(cfg.types||[]).flatMap(t=>t.ext).concat(cfg.free||[]).map(x=>'.'+x).join(', ')}`);
+  if(!f.size)throw new Error(dkEmpty(f));
   if(f.size>cfg.max_mb*1048576)throw new Error(`Die Datei ist grösser als ${cfg.max_mb} MB`);
   const buf=await f.arrayBuffer(),sha=dkHex(await crypto.subtle.digest('SHA-256',buf)),u8=new Uint8Array(buf),ch=cfg.chunk||1048576,up=dkHex(crypto.getRandomValues(new Uint8Array(8))),n=Math.ceil(u8.length/ch);
   // Datei nicht (ganz) lesbar, z. B. nur in der Cloud abgelegt oder inzwischen geändert: nicht hochladen

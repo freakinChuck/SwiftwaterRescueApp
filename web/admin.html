@@ -2590,7 +2590,7 @@ function dkDocDlg(o){const M=DKA,isNew=!o.id,k=o.kind,cfg=me.docs_cfg;const revD
       const r=$('#dR',d).value,body={id:o.id||0,folder_id:+$('#dF',d).value,kind:k,title:$('#dT',d).value,descr:$('#dD',d).value,tags:$('#dG',d).value,kinds:[...d.querySelectorAll('[data-dk]:checked')].map(i=>+i.dataset.dk),places:[...d.querySelectorAll('[data-dpl]:checked')].map(i=>+i.dataset.dpl),
         offline:+$('#dO',d).value,review_at:r?Math.floor(new Date(r+'T12:00').getTime()/1000):null,active:$('#dA',d)?($('#dA',d).checked?1:0):1,major:$('#dMj',d)&&$('#dMj',d).checked?1:0};
       if(k==='page')body.body=$('#dB',d).value;if(k==='link')body.url=$('#dU',d).value;const fl=$('#dFl',d)&&$('#dFl',d).files[0];
-      if(isNew&&k==='file'&&!fl)throw new Error('Bitte eine Datei wählen');if(!body.title&&fl)body.title=fl.name.replace(/\.[^.]+$/,'');
+      if(isNew&&k==='file'&&!fl)throw new Error('Bitte eine Datei wählen');if(fl&&!fl.size)throw new Error(dkEmpty(fl));if(!body.title&&fl)body.title=fl.name.replace(/\.[^.]+$/,'');
       const res=await api('doc/save',body);if(fl){try{await dkUpload(fl,{doc_id:res.id},cfg,p=>$('#dFp',d).textContent='Wird hochgeladen … '+Math.round(p*100)+' %')}catch(e){toast('Eintrag gespeichert, die Datei aber nicht: '+e.message,'err');loadDocs();return}}
       toast('Gespeichert.','ok');loadDocs()});d.firstElementChild.classList.add('wide');
   const pq=$('#dPq',d);if(pq)pq.oninput=()=>{const t=pq.value.toLowerCase();d.querySelectorAll('[data-dpl]').forEach(i=>i.parentNode.hidden=!!t&&!i.parentNode.textContent.toLowerCase().includes(t))};
