@@ -59,6 +59,8 @@ Die Arten von Einsätzen, zum Beispiel «Einsatz», «Übung» oder «Pikettprob
 - aufbietbare und vorausgewählte Einsatzgruppen, Einzelpersonen erlaubt, für Nicht-Aufgebotene sichtbar,
 - vorbereitete Übungen erlaubt, Vorauswahl «Aufzeichnen».
 
+**Ton bei kritischem Alarm** (oben in der Liste): Vorgabe der Organisation für alle Typen ohne eigenen Ton, standardmässig das Martinshorn (Zweiklanghorn). Im Dialog eines Typs gilt «Vorgabe der Organisation», bis du einen anderen Ton oder «Ton des Systems» wählst. Jede Person kann in der nativen App im Profil einen eigenen Ton wählen; die Web-App spielt immer ihren eigenen Ton.
+
 Ein neuer Typ übernimmt die Einstellungen eines bestehenden. Gelöschte Typen bleiben bei ihren Einsätzen erhalten.
 
 ![Einsatztypen](img/admin-einsatztypen.jpg)

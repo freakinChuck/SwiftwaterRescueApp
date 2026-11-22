@@ -197,7 +197,7 @@ foreach ([
 try { $db->exec("ALTER TABLE roles ADD COLUMN is_post INT DEFAULT 0"); $db->exec("UPDATE roles SET is_post=1 WHERE name LIKE 'Sicherungs%'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN lead_rights INT DEFAULT 0"); $db->exec("UPDATE modes SET lead_rights=1 WHERE code='coordinator'"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE modes ADD COLUMN counts INT DEFAULT 1"); $db->exec("UPDATE modes SET counts=0 WHERE code='coordinator'"); } catch (Throwable $e) {}
-// Ton für kritische Alarme (Issue #171): inc_kinds.snd = Vorgabe des Typs (NULL = Ton des Systems), push_native.snd = Wahl des Geräts je Typ (JSON {Typ-ID: Schlüssel})
+// Ton für kritische Alarme (Issue #171): inc_kinds.snd = Vorgabe des Typs (NULL = Vorgabe der Organisation snd_default, Issue #223; 'system' = Ton des Systems), push_native.snd = Wahl des Geräts je Typ (JSON {Typ-ID: Schlüssel})
 // Sekundäreinsätze (Issue #164): inc_kinds.sec = Kategorie (0 Primäreinsatz, 1 Sekundäreinsatz ohne Alarm, Alarmstufe immer «Keine»), inc_kinds.ref = Bezug auf einen früheren Einsatz
 // (0 kein, 1 optional, 2 Pflicht; 2 = Freies Ereignis: Alarmstufe frei, eigene Einrückoptionen/Spezialrollen, Bezug wie Sekundäreinsatz), incidents.parent_id = Folgeeinsatz zu diesem Einsatz; roles.sec/modes.sec = Spezialrolle bzw. Einrückoption gilt für Sekundäreinsätze;
 // ex_plans.doc = Einsatzplan (JSON, planDocIn), ex_plans.parent_id = Bezug eines geplanten Sekundäreinsatzes
@@ -400,13 +400,16 @@ const ALARM_SOUNDS = ['horn2' => ['Zweiklanghorn (Martinshorn)', 'horn'], 'horn2
   'beep3' => ['Dreifachton', 'tone'], 'clock' => ['Digitalwecker', 'tone'], 'bell' => ['Alarmglocke', 'tone'], 'gong' => ['Gong-Dreiklang', 'tone'], 'pager' => ['Pager', 'tone'], 'rising' => ['Aufsteigende Tonfolge', 'tone']];
 const SND_GROUPS = ['horn' => 'Signalhörner', 'siren' => 'Sirenen', 'tone' => 'Melodien und Signale'];
 // Wahl eines Geräts ({Typ-ID: Schlüssel}); Schlüssel nur nach Muster geprüft, damit neue Töne einer neueren App ohne Änderung am Server gehen
+// Vorgabe der Organisation (Issue #223): Einstellung snd_default, gilt für Typen ohne eigenen Ton (inc_kinds.snd NULL); Standard Martinshorn, 'system' = Ton des Systems
+const SND_DEFAULT = 'horn2';
+function sndDefault() { $v = (string)setting('snd_default', SND_DEFAULT); return $v === 'system' || isset(ALARM_SOUNDS[$v]) ? $v : SND_DEFAULT; }
 function sndIn($v) { $r = []; foreach (is_array($v) ? $v : [] as $k => $x) if (ctype_digit((string)$k) && is_string($x) && preg_match('/^[a-z0-9_]{1,30}$/', $x) && count($r) < 100) $r[(string)$k] = $x; return $r; }
 // Dateiname für APNs (iOS sucht ihn in Library/Sounds der App); fehlt die Datei, spielt iOS den Standardton
 function sndApns($k) { return $k && $k !== 'system' && preg_match('/^[a-z0-9_]{1,30}$/', $k) ? "alarm_$k.wav" : 'default'; }
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func', 'sym' => 'cfg_inc',
-  'coord_sys' => 'cfg_map', 'place_near_km' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'maps' => 'cfg_map', 'map_kinds' => 'cfg_map', 'applog_days' => 'applog', 'app_min' => 'versions', 'beacon' => 'cfg_map', 'phone' => 'cfg_func']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
+  'coord_sys' => 'cfg_map', 'place_near_km' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'maps' => 'cfg_map', 'map_kinds' => 'cfg_map', 'applog_days' => 'applog', 'app_min' => 'versions', 'beacon' => 'cfg_map', 'phone' => 'cfg_func', 'snd_default' => 'cfg_inc']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
@@ -1940,7 +1943,7 @@ function needUserEditable($id) { if (!userEditable($id)) fail('Diese Person hat 
 function pwCheck($p) { if (!is_string($p) || $p === '') fail('Das Passwort darf nicht leer sein'); }
 // Einsatztypen (Issue #90): alle Zeilen, auch gelöschte (bisherige Einsätze behalten ihre Einstellungen); $KINDS = Zwischenspeicher je Anfrage
 $KINDS = null;
-function kinds() { global $db, $KINDS; if ($KINDS === null) { $KINDS = []; foreach ($db->query("SELECT * FROM inc_kinds ORDER BY pos, name")->fetchAll() as $k) { $k = ints($k, ['id', 'pos', 'active', 'deleted', 'mode_up', 'rec', 'air', 'persons', 'open_all', 'plans', 'sec', 'ref']); if ($k['sec'] === 1) { $k['alarm'] = 'none'; $k['mode_up'] = 0; } elseif (!$k['sec']) $k['ref'] = 0; foreach (['feat_off', 'grp_off', 'grp_def', 'map_off'] as $c) $k[$c] = json_decode($k[$c] ?? '[]', true) ?: []; $KINDS[$k['id']] = $k; } } return $KINDS; }
+function kinds() { global $db, $KINDS; if ($KINDS === null) { $KINDS = []; foreach ($db->query("SELECT * FROM inc_kinds ORDER BY pos, name")->fetchAll() as $k) { $k = ints($k, ['id', 'pos', 'active', 'deleted', 'mode_up', 'rec', 'air', 'persons', 'open_all', 'plans', 'sec', 'ref']); if ($k['sec'] === 1) { $k['alarm'] = 'none'; $k['mode_up'] = 0; } elseif (!$k['sec']) $k['ref'] = 0; foreach (['feat_off', 'grp_off', 'grp_def', 'map_off'] as $c) $k[$c] = json_decode($k[$c] ?? '[]', true) ?: []; $k['snd_own'] = $k['snd']; $k['snd'] = $k['snd'] ?? sndDefault(); $KINDS[$k['id']] = $k; } } return $KINDS; }
 function kindsActive() { return array_filter(kinds(), fn($k) => $k['active'] && !$k['deleted']); }
 function kindOf($inc) { $ks = kinds(); return $ks[(int)($inc['kind_id'] ?? 0)] ?? reset($ks); }
 function kindAdd($r) { $k = kindOf($r); $r['kind_id'] = $k['id']; $r['kind_name'] = $k['name']; $r['kind_color'] = $k['color']; return $r; }
@@ -5156,8 +5159,8 @@ switch ($route) {
  case 'kinds': need('cfg_inc'); // Einsatztypen (Issue #90), auch deaktivierte, ohne gelöschte; dazu Alarmstufen und Einsatzgruppen fürs Formular
   $uc = []; foreach ($db->query("SELECT kind_id,COUNT(*) c FROM incidents GROUP BY kind_id")->fetchAll() as $x) $uc[(int)$x['kind_id']] = (int)$x['c'];
   out(['kinds' => array_values(array_map(fn($k) => array_merge($k, ['used' => $uc[$k['id']] ?? 0, 'msg_lvl' => kindLvl($k, 'msg'), 'end_lvl' => kindLvl($k, 'end')]), array_filter(kinds(), fn($k) => !$k['deleted']))), 'levels' => array_map(fn($k, $v) => ['k' => $k, 'name' => $v[0], 'hint' => $v[1]], array_keys(ALARM_LEVELS), ALARM_LEVELS), 'groups' => grpRows(),
-   'sounds' => array_map(fn($k, $v) => ['k' => $k, 'name' => $v[0], 'group' => $v[1]], array_keys(ALARM_SOUNDS), ALARM_SOUNDS), 'snd_groups' => SND_GROUPS]);
- case 'kind/save': need('cfg_inc'); // anlegen oder ändern: id, name, color, alarm, mode_up, msg_lvl, end_lvl (Issue #168), persons, open_all, plans, rec (Vorauswahl «Aufzeichnen», Issue #136), snd (Ton kritischer Alarme, Issue #171, '' = System, fehlt = unverändert bzw. von der Vorlage), grp_off, grp_def, active, sec (Sekundäreinsatz ohne Alarm, Issue #164, fehlt = unverändert bzw. von der Vorlage); neu zusätzlich copy_from (Funktionen, Vorauswahl, Fristen und Startrecht der Rollen übernehmen)
+   'sounds' => array_map(fn($k, $v) => ['k' => $k, 'name' => $v[0], 'group' => $v[1]], array_keys(ALARM_SOUNDS), ALARM_SOUNDS), 'snd_groups' => SND_GROUPS, 'snd_default' => sndDefault()]);
+ case 'kind/save': need('cfg_inc'); // anlegen oder ändern: id, name, color, alarm, mode_up, msg_lvl, end_lvl (Issue #168), persons, open_all, plans, rec (Vorauswahl «Aufzeichnen», Issue #136), snd (Ton kritischer Alarme, Issue #171, '' = Vorgabe der Organisation snd_default (Issue #223), system = Ton des Systems, fehlt = unverändert bzw. von der Vorlage), grp_off, grp_def, active, sec (Sekundäreinsatz ohne Alarm, Issue #164, fehlt = unverändert bzw. von der Vorlage); neu zusätzlich copy_from (Funktionen, Vorauswahl, Fristen und Startrecht der Rollen übernehmen)
   $nm = mb_substr(trim((string)($in['name'] ?? '')), 0, 80); if ($nm === '') fail('Name fehlt');
   $col = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($in['color'] ?? '')) ? $in['color'] : '#2563eb'; if (!isset(ALARM_LEVELS[$in['alarm'] ?? ''])) fail('Unbekannte Alarmstufe');
   $lvIn = fn($t) => array_key_exists($t, $in) ? (isset(ALARM_LEVELS[$in[$t] ?? '']) ? $in[$t] : fail('Unbekannte Stufe')) : null; $ml = $lvIn('msg_lvl'); $el = $lvIn('end_lvl'); // Issue #168, fehlt = unverändert bzw. von der Vorlage
@@ -5174,7 +5177,7 @@ switch ($route) {
   $sec = array_key_exists('sec', $in) ? secIn($in['sec']) : null; $sec0 = $sec ?? ($id ? (kinds()[$id]['sec'] ?? 0) : (kinds()[(int)($in['copy_from'] ?? 0)]['sec'] ?? 0));
   $ref = array_key_exists('ref', $in) ? max(0, min(2, (int)$in['ref'])) : null; // Bezug auf einen früheren Einsatz (0 kein, 1 optional, 2 Pflicht), fehlt = unverändert
   if ($sec0 === 1) { $vals[2] = 'none'; $vals[3] = 0; }
-  $snd = array_key_exists('snd', $in) ? (string)$in['snd'] : false; if ($snd !== false && $snd !== '' && !isset(ALARM_SOUNDS[$snd])) fail('Unbekannter Ton');
+  $snd = array_key_exists('snd', $in) ? (string)$in['snd'] : false; if ($snd !== false && $snd !== '' && $snd !== 'system' && !isset(ALARM_SOUNDS[$snd])) fail('Unbekannter Ton'); // '' = Vorgabe der Organisation (Issue #223), system = Ton des Systems
   if ($id) { $db->prepare("UPDATE inc_kinds SET name=?,color=?,alarm=?,mode_up=?,persons=?,open_all=?,plans=?,grp_off=?,grp_def=?,active=? WHERE id=?")->execute(array_merge($vals, [$id]));
     if ($rec !== null) $db->prepare("UPDATE inc_kinds SET rec=? WHERE id=?")->execute([$rec, $id]);
     if ($sec !== null) $db->prepare("UPDATE inc_kinds SET sec=? WHERE id=?")->execute([$sec, $id]);
@@ -5184,7 +5187,7 @@ switch ($route) {
   else { $from = kinds()[(int)($in['copy_from'] ?? 0)] ?? null; if (!$from || $from['deleted']) fail('Bitte wählen, von welchem Einsatztyp die Einstellungen übernommen werden');
     $db->beginTransaction();
     $db->prepare("INSERT INTO inc_kinds(name,color,alarm,mode_up,persons,open_all,plans,grp_off,grp_def,active,pos,perm,rec,air,feat_off,msg_lvl,end_lvl) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute(array_merge($vals, [(int)$db->query("SELECT COALESCE(MAX(pos),0)+1 m FROM inc_kinds")->fetch()['m'], '', $rec ?? $from['rec'], $from['air'], json_encode($from['feat_off']), $ml ?? $from['msg_lvl'], $el ?? $from['end_lvl']])); $id = (int)$db->lastInsertId();
-    $db->prepare("UPDATE inc_kinds SET perm=?, snd=?, map_off=?, map_def=?, sec=?, ref=? WHERE id=?")->execute(['start_' . $id, $snd === false ? ($from['snd'] ?? null) : ($snd === '' ? null : $snd), json_encode($from['map_off']), $from['map_def'], $sec0, $ref ?? ($from['sec'] ? $from['ref'] : 1), $id]);
+    $db->prepare("UPDATE inc_kinds SET perm=?, snd=?, map_off=?, map_def=?, sec=?, ref=? WHERE id=?")->execute(['start_' . $id, $snd === false ? ($from['snd_own'] ?? null) : ($snd === '' ? null : $snd), json_encode($from['map_off']), $from['map_def'], $sec0, $ref ?? ($from['sec'] ? $from['ref'] : 1), $id]);
  // Kartenanbieter (Issue #106) mit übernehmen
     // Fristen der Anonymisierung übernehmen, damit Personendaten eines neuen Typs nicht unbemerkt nie anonymisiert werden
     $ac0 = anonCfg(); foreach ($ac0 as $st0 => &$x0) $x0['days'][$id] = $x0['days'][$from['id']] ?? null; unset($x0); setSetting('anon_cfg', json_encode($ac0));
@@ -5322,6 +5325,7 @@ switch ($route) {
   }
   foreach (['air_kinds' => 'air'] as $k => $col) if (isset($in[$k]) && is_array($in[$k])) { foreach ($in[$k] as $id => $v) $db->prepare("UPDATE inc_kinds SET $col=? WHERE id=?")->execute([empty($v) ? 0 : 1, (int)$id]); $KINDS = null; } // Vorauswahl je Einsatztyp
   foreach (['msg_no_role', 'msg_read_all', 'overpass_on'] as $k) if (isset($in[$k])) setSetting($k, empty($in[$k]) ? '0' : '1');
+  if (isset($in['snd_default'])) { $v = (string)$in['snd_default']; if ($v !== 'system' && !isset(ALARM_SOUNDS[$v])) fail('Unbekannter Ton'); setSetting('snd_default', $v); $KINDS = null; } // Ton kritischer Alarme der Organisation (Issue #223)
   if (isset($in['nav_off'])) { // ausgeschaltete Navigations-Apps, mindestens eine bleibt
     $v = array_values(array_intersect(array_keys(NAV_APPS), array_filter((array)$in['nav_off'], 'is_string')));
     if (count($v) >= count(NAV_APPS)) fail('Mindestens eine Navigations-App muss eingeschaltet bleiben');

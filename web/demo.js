@@ -24,8 +24,8 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const now=()=>Math.floor(Date.now()/1000);
   // ---------- feste Daten ----------
   let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1,geo:0,veh:1,vehp:1,call:0}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server, Direktanruf (#44) keine echten Nummern
-  let KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'high',alarm_name:'Hoch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT},
-               {id:2,name:'Übung',color:'#1d7fd1',alarm:'normal',alarm_name:'Normal',mode_up:1,msg_lvl:'normal',end_lvl:'normal',rec:1,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:null,can:1,no_grp:0,features:FEAT}];
+  let KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'high',alarm_name:'Hoch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:'horn2',can:1,no_grp:0,features:FEAT},
+               {id:2,name:'Übung',color:'#1d7fd1',alarm:'normal',alarm_name:'Normal',mode_up:1,msg_lvl:'normal',end_lvl:'normal',rec:1,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:'horn2',can:1,no_grp:0,features:FEAT}];
   let ROLES=[{id:1,name:'Einsatzleitung',color:'#d62828',is_lead:1,is_post:0,can_message:1},{id:2,name:'Rettungsboot',color:'#1d7fd1',is_lead:0,is_post:0,can_message:1},
                {id:3,name:'Rettungsschlitten',color:'#e6a100',is_lead:0,is_post:0,can_message:1},{id:4,name:'Sicherungs- und Beobachtungsposten',color:'#2a9d5c',is_lead:0,is_post:1,can_message:1}];
   let MODES=[{id:1,code:'base',name:'Anfahrt via Stützpunkt',share_location:1,active:1,lead_rights:0,counts:1},{id:2,code:'direct',name:'Anfahrt direkt',share_location:1,active:1,lead_rights:0,counts:1},

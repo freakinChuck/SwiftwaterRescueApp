@@ -215,7 +215,7 @@ class _PrefsPageState extends State<PrefsPage> {
     return [
       const Mut('Gilt für dieses Backend auf diesem Gerät. Android spielt ihn als Wecker in Schleife, iOS einmal (höchstens 30 s).'),
       ...ks.map((k) {
-        final id = '${ji(k['id'])}', def = sndKnown(js(k['snd'])) ? js(k['snd']) : sndSystem, own = _snd[id], eff = sndKnown(own) || own == sndSystem ? own! : def;
+        final id = '${ji(k['id'])}', def = sndDef(k['snd'] as String?), own = _snd[id], eff = sndKnown(own) || own == sndSystem ? own! : def;
         return Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Row(children: [

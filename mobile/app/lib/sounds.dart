@@ -2,7 +2,8 @@
 // kopiert die App beim Start an den Ort, von dem das System sie spielt: Android in den App-Ordner (Weckton über sw_sys, alarmStart),
 // iOS nach Library/Sounds (dort sucht iOS den Ton einer lokalen Meldung und von APNs, «sound.name»).
 // Wahl je Konto (Backend) und Einsatztyp, gespeichert auf dem Gerät (snd_<Konto> = {Typ-ID: Schlüssel}); fehlt sie, gilt die Vorgabe
-// des Einsatztyps aus der Verwaltung (kindPub snd, Push ksnd), sonst der Ton des Systems. Gleicher Katalog: ALARM_SOUNDS in web/api/index.php.
+// des Einsatztyps aus der Verwaltung (kindPub snd, Push ksnd; der Server setzt dort die Vorgabe der Organisation ein, Issue #223),
+// ohne Angabe (älterer Server) das Martinshorn (sndFallback). Gleicher Katalog: ALARM_SOUNDS in web/api/index.php.
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,6 +14,12 @@ import 'monitor.dart' show prefs;
 
 /// Ton des Systems (Android Wecker, iOS Standardton); auch Rückfall für unbekannte Schlüssel.
 const sndSystem = 'system';
+
+/// Standard ohne Angabe des Servers (Issue #223), wie SND_DEFAULT in web/api/index.php.
+const sndFallback = 'horn2';
+
+/// Vorgabe eines Einsatztyps: fehlt sie, das Martinshorn; 'system' oder Unbekanntes = Ton des Systems.
+String sndDef(String? s) => s == null || s.isEmpty ? sndFallback : (sndKnown(s) ? s : sndSystem);
 
 class AlarmSound {
   const AlarmSound(this.key, this.name, this.group);
@@ -102,9 +109,9 @@ Future<void> setSndChoice(String acc, int kind, String? k) async {
 
 Future<void> forgetSnd(String acc) => prefs.remove('snd_$acc');
 
-/// Ton eines kritischen Alarms: eigene Wahl für den Typ, sonst die Vorgabe des Typs (def), sonst der Ton des Systems.
+/// Ton eines kritischen Alarms: eigene Wahl für den Typ, sonst die Vorgabe des Typs (def, ohne Angabe das Martinshorn).
 Future<String> alarmSnd(String acc, int? kind, String? def) async {
   final own = kind == null ? null : (await sndChoice(acc))['$kind'];
-  final k = own ?? def;
-  return sndKnown(k) ? k! : sndSystem;
+  if (own != null) return sndKnown(own) ? own : sndSystem;
+  return sndDef(def);
 }
