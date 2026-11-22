@@ -34,7 +34,8 @@ if (-not (Test-Path $Config)) {
   if ($alt) { $Config = $alt } else { throw "Konfiguration $Config nicht gefunden (Vorlage: scripts\deploy.example.json)" }
 }
 $c = Get-Content $Config -Raw | ConvertFrom-Json
-# Webroot im Repo, die Dateiliste ist relativ dazu (deploy-dev.ps1 liest beides aus diesem Skript)
+# Webroot im Repo, die Dateiliste ist relativ dazu. deploy-dev.ps1 und deploy.ps1 selbst lesen beides aus dem deploy.ps1 des ausgelieferten Stands;
+# diese Werte gelten nur als Rückfall, wenn der Stand kein solches Skript hat. Format beibehalten (eine Zeile je Variable, Einträge in '…').
 $web = 'web'
 $files ='index.html', 'admin.html', 'public.html', 'funk.html', 'dok.html', 'legal.html', 'hilfe.html', 'hilfe', 'common.js', 'demo.js', 'common.css', 'voice.js', 'docs.js', '.htaccess', 'manifest.webmanifest', 'sw.js', 'changes.json', 'img', 'api/index.php', 'api/fed.php', 'api/docs.php', 'api/data/.htaccess'
 $opt = @('-i', $c.key, '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes')
@@ -44,8 +45,59 @@ if ($envName -notin "dev", "test", "prod") { throw "Unbekanntes System in env: $
 
 git fetch -q origin; Check 'git fetch'
 $sha = (git rev-parse --short $Ref); Check "Stand $Ref"
+
+# Webroot und Dateiliste aus dem deploy.ps1 des ausgelieferten Stands, nicht aus der Arbeitskopie (wie deploy-dev.ps1).
+# Vorfall vom 22.11.2026: Mit einer älteren Arbeitskopie fehlten in v1.4.0 docs.js, dok.html und api/docs.php, alle Routen lieferten 500.
+# Ältere Stände: deploy.ps1 im Hauptordner (vor Issue #109), dort ohne $web (Webroot = Hauptordner). Ohne Skript im Stand gilt die Liste oben.
+function Get-RefText($spec) {
+  $ErrorActionPreference = 'Continue'
+  $t = git show $spec 2>$null | Out-String
+  $ok = $LASTEXITCODE -eq 0
+  $global:LASTEXITCODE = 0
+  if ($ok) { return $t } else { return $null }
+}
+$refScript = Get-RefText "${Ref}:scripts/deploy.ps1"
+if (-not $refScript) { $refScript = Get-RefText "${Ref}:deploy.ps1" }
+$m = if ($refScript) { [regex]::Match($refScript, '\$files\s*=\s*([^\r\n]+)') } else { $null }
+if ($m -and $m.Success) {
+  $files = @([regex]::Matches($m.Groups[1].Value, "'([^']+)'") | ForEach-Object { $_.Groups[1].Value })
+  $w = [regex]::Match($refScript, "(?m)^\`$web\s*=\s*'([^']+)'")
+  $web = if ($w.Success) { $w.Groups[1].Value } else { '' }
+  Write-Host "Dateiliste aus deploy.ps1 von $Ref ($($files.Count) Eintraege)"
+} else {
+  Write-Warning "Kein deploy.ps1 mit Dateiliste in $Ref, verwende die Liste der Arbeitskopie"
+}
+$tree = if ($web) { "${Ref}:$web" } else { $Ref }
+$src = if ($web) { "${Ref}:$web/" } else { "${Ref}:" }
+
 $tar = Join-Path $env:TEMP "swiftwater-deploy-$sha.tar"
-git archive --format=tar -o $tar "${Ref}:$web" @files; Check 'git archive'
+git archive --format=tar -o $tar $tree @files; Check 'git archive'
+
+# Sicherheitsprüfung: Jede per require/require_once eingebundene PHP-Datei der API muss im Archiv sein, sonst bricht die API ab.
+# Geprüft wird ab api/index.php des Stands, auch Einbindungen in eingebundenen Dateien. config.php bleibt auf dem Server und fehlt absichtlich.
+$inTar = @{}
+tar -tf $tar | ForEach-Object { $inTar[($_ -replace '^\./', '')] = $true }; Check 'tar -tf'
+$todo = New-Object System.Collections.Queue
+$todo.Enqueue('api/index.php')
+$seen = @{}
+$missing = @()
+while ($todo.Count) {
+  $p = $todo.Dequeue()
+  if ($seen[$p]) { continue }
+  $seen[$p] = $true
+  if (-not $inTar[$p]) { $missing += $p; continue }
+  $code = Get-RefText "$src$p"
+  if (-not $code) { continue }
+  $dir = ($p -replace '[^/]*$', '')
+  foreach ($r in [regex]::Matches($code, "(?m)^[^/#\r\n]*?\b(?:require|include)(?:_once)?\s*\(?\s*__DIR__\s*\.\s*'/([^']+)'")) {
+    $t = "$dir$($r.Groups[1].Value)"
+    if ($t -ne 'api/config.php') { $todo.Enqueue($t) }
+  }
+}
+if ($missing.Count) {
+  Remove-Item $tar
+  throw "Abbruch: Im Archiv fehlen eingebundene Dateien: $($missing -join ', '). Dateiliste `$files in scripts/deploy.ps1 von $Ref ergaenzen."
+}
 # api/data/version.json (Issue #175): angezeigte Version, Commit (= ?v= der Seiten) und System; liest die API (verInfo)
 $ver = Get-SwVersion $Ref $sha
 $vj = Join-Path $env:TEMP "swiftwater-version-$sha.json"
