@@ -77,8 +77,8 @@ async function dkView(el,d,blob,o={}){el.innerHTML='';el.className='dkv';
       el.querySelectorAll('[data-dkz]').forEach(x=>x.onclick=()=>{z=Math.max(.5,Math.min(3,z+(+x.dataset.dkz)*.25));pages.forEach(c=>{if(c._z)draw(c)})});
       if(o.page>1&&pages[o.page-1])setTimeout(()=>pages[o.page-1].scrollIntoView(),50);return}
     catch(e){el.innerHTML=`<div class="mut">Das PDF lässt sich hier nicht anzeigen (${esc(e.message)}).</div><p><a class="btn" href="${u}" target="_blank" rel="noopener">Im Browser öffnen</a></p>`;return}}
-  el.innerHTML=`<div class="dkmd"><p>${esc(d.file.name)} (${dkSize(d.file.bytes)}) lässt sich hier nicht anzeigen.</p><p><button class="pri" data-dkdl>Herunterladen</button></p></div>`;
-  el.querySelector('[data-dkdl]').onclick=()=>dkSave(b,d.file.name)}
+  el.innerHTML=`<div class="dkmd"><p>${esc(d.file.name)} (${dkSize(d.file.bytes)}) lässt sich hier nicht anzeigen.</p>${o.nodl?'<p class="mut">Herunterladen ist für Externe ausgeschaltet.</p>':'<p><button class="pri" data-dkdl>Herunterladen</button></p>'}</div>`;
+  if(!o.nodl)el.querySelector('[data-dkdl]').onclick=()=>dkSave(b,d.file.name)}
 function dkSave(b,name){if(typeof saveBlob==='function')return saveBlob(b,name);const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click()}
 // Vollbild-Ansicht eines Eintrags (Einsatz-App, Verwaltung): Kopf mit Pfad, Favorit, Lesebestätigung, Vorschlag, Herunterladen
 // o: {page, onChange, edit (Verwaltung: Funktion zum Bearbeiten), noFav}
@@ -123,7 +123,8 @@ function dkSugDlg(o){const d=o.doc,cfg=(typeof me!=='undefined'&&me.docs_cfg)||{
   const sync=()=>{$('#sgFl',x).hidden=$('#sgK',x).value==='note'};$('#sgK',x).onchange=sync;sync();return x}
 /* ---------- Fenster «Dokumente» (Einsatz-App) ---------- */
 // L: Antwort von docs; ctx: {kid, inc: incident/state docs (Einsatztyp, Standorte), places: [{id, name}], mineOnly}
-const dkSecsFor=(L,kid)=>{const c=L.cfg,my=L.my_view||{},own=c.own&&(my[kid]||my['0']);return(own||c.view[kid]||c.view['0']||[]).filter(s=>s.on)};
+// eigene Reihenfolge (doc/view) vor der Vorgabe des Einsatztyps; Abschnitte, die dort fehlen (z. B. neu), kommen aus der Vorgabe dazu
+const dkSecsFor=(L,kid)=>{const c=L.cfg,my=L.my_view||{},own=c.own&&(my[kid]||my['0']),def=c.view[kid]||c.view['0']||[];return(own?own.concat(def.filter(d=>!own.some(o=>o.k===d.k))):def).filter(s=>s.on)};
 function dkRow(d,o={}){const m=d.mine,ack=m&&m.st!=='ok';return`<button class="dkr${d.active?'':' off'}" data-dkid="${d.id}"${o.page?` data-dkpage="${o.page}"`:''}><span class="dki">${dkIco(d)}</span><span class="dkn"><b>${esc(d.title)}</b>${d.fav?' <span class="dkfav">★</span>':''}${ack?` <span class="dkchip ${m.st}">${m.st==='over'?'überfällig':'bestätigen'}${m.due?' bis '+dkDate(m.due):''}</span>`:''}${d.review?' <span class="dkchip rev">prüfen</span>':''}${o.off?' <span class="dkchip">offline</span>':''}
   <small class="mut">${o.snip?o.snip:esc(dkKindTxt(d)+(d.updated?' · '+dkDate(d.updated):''))}</small></span></button>`}
 function dkPanel(el,L,ctx={}){const st={f:null,q:'',hits:null};let qT=0;
@@ -145,14 +146,31 @@ function dkPanel(el,L,ctx={}){const st={f:null,q:'',hits:null};let qT=0;
   const draw=()=>{const f=st.f!=null?fold.find(x=>x.id===st.f):null;let body;
     if(st.q.trim().length>=2){const h=st.hits;body=h==null?'<div class="mut">Wird gesucht …</div>':h.length?h.map(x=>{const d=byId.get(x.id);return d?dkRow(d,{page:x.page,snip:(x.page?'S. '+x.page+': ':'')+esc(x.snip||'').replace(new RegExp('('+st.q.trim().split(/\s+/).filter(w=>w.length>1).map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')','gi'),'<mark>$1</mark>')}):''}).join(''):'<div class="mut">Keine Treffer.</div>'}
     else if(f)body=`<div class="dkcrumb"><a href="#" data-dkf="">Dokumente</a>${path(f.id).map(p=>` › <a href="#" data-dkf="${p.id}">${esc(p.name)}</a>`).join('')}</div>${f.descr?`<div class="mut">${esc(f.descr)}</div>`:''}${folderList(f.id)}${f.sug?`<div class="row"><button data-dksugf="${f.id}">+ Eintrag vorschlagen</button></div>`:''}`;
-    else body=secs()||'<div class="mut">Noch keine Dokumente.</div>';
+    else body=(secs()||'<div class="mut">Noch keine Dokumente.</div>')+(L.cfg.own?'<div class="row"><button data-dkord>Abschnitte anordnen</button></div>':'');
     el.querySelector('.dkres').innerHTML=body};
   el.innerHTML=`<div class="row dkq"><input type="search" placeholder="In Dokumenten suchen (auch im Text der PDF)" aria-label="In Dokumenten suchen" autocomplete="off"></div><div class="dkres"></div>`;
   const q=el.querySelector('input');q.oninput=()=>{st.q=q.value;clearTimeout(qT);if(st.q.trim().length<2){st.hits=null;draw();return}st.hits=null;draw();
     qT=setTimeout(async()=>{const v=st.q;try{const r=await api('docs&q='+encodeURIComponent(v));if(v===st.q){st.hits=r.hits;draw()}}catch(e){ // ohne Verbindung: nur Titel, Beschreibung, Schlagwörter
       const w=v.toLowerCase().split(/\s+/).filter(x=>x.length>1);st.hits=docs.filter(d=>w.every(x=>(d.title+' '+d.descr+' '+d.tags).toLowerCase().includes(x))).map(d=>({id:d.id,snip:d.descr}));draw()}},300)};
-  el.onclick=e=>{const a=e.target.closest('[data-dkf],[data-dkid],[data-dksugf]');if(!a)return;e.preventDefault();
+  el.onclick=e=>{const a=e.target.closest('[data-dkf],[data-dkid],[data-dksugf],[data-dkord]');if(!a)return;e.preventDefault();
+    if(a.dataset.dkord!=null)return dkOrdDlg(L,kid,ctx.onChange);
     if(a.dataset.dksugf)return dkSugDlg({folder_id:+a.dataset.dksugf});
     if(a.dataset.dkf!=null){st.f=a.dataset.dkf?+a.dataset.dkf:null;st.q='';q.value='';draw();return}
     dkOpen(+a.dataset.dkid,{page:+a.dataset.dkpage||0,onChange:ctx.onChange})};
   draw();return{draw,openFolder:id=>{st.f=id;draw()}}}
+// eigene Reihenfolge und Auswahl der Abschnitte (je Einsatztyp, 0 = ohne Einsatz); «Vorgabe» löscht die eigene
+function dkOrdDlg(L,kid,done){const c=L.cfg,my=L.my_view||{},def=c.view[kid]||c.view['0']||[],own=my[kid]||my['0'];let ls=(own?own.concat(def.filter(d=>!own.some(o=>o.k===d.k))):def).map(x=>({...x}));
+  const x=dlg('Abschnitte anordnen','<div class="mut">Reihenfolge und Auswahl gelten nur für dich'+(kid?' und diesen Einsatztyp':' ohne Einsatz')+'.</div><div id="dkOl"></div><div class="row"><button id="dkOd">Vorgabe der Verwaltung</button></div>',async()=>{await api('doc/view',{kid,secs:ls.map(s=>({k:s.k,on:s.on?1:0}))});L.my_view=Object.assign(L.my_view||{},{[kid]:ls});done&&done()});
+  const draw=()=>{$('#dkOl',x).innerHTML=ls.map((s,i)=>`<div class="dkvr"><label class="row" style="align-items:center;flex:1;margin:0"><input type="checkbox" data-i="${i}" ${s.on?'checked':''}> <span>${esc(c.secs[s.k]||s.k)}</span></label><button data-u="${i}" ${i?'':'disabled'} aria-label="nach oben">↑</button><button data-d="${i}" ${i<ls.length-1?'':'disabled'} aria-label="nach unten">↓</button></div>`).join('')};
+  x.addEventListener('click',e=>{const b=e.target.closest('[data-u],[data-d]');if(!b)return;const i=+(b.dataset.u??b.dataset.d),j=b.dataset.u!=null?i-1:i+1;[ls[i],ls[j]]=[ls[j],ls[i]];draw()});
+  x.addEventListener('change',e=>{if(e.target.dataset.i!=null)ls[+e.target.dataset.i].on=e.target.checked});
+  $('#dkOd',x).onclick=async()=>{try{await api('doc/view',{kid});if(L.my_view)delete L.my_view[kid];x.remove();done&&done()}catch(e){fail(e)}};draw()}
+/* ---------- Externe (Funk-Gastseite, eigener Link dok.html) ---------- */
+// d: Antwort von guest/doc bzw. ext/doc; blob(dl) lädt die Datei; el = Behälter (dok.html) oder leer = Vollbild über der Seite
+function dkExtOpen(d,blob,el){let ov=el;const own=!el;if(own){ov=document.createElement('div');ov.className='dkov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-label',d.title);document.body.appendChild(ov)}
+  const close=()=>{ov.remove();removeEventListener('keydown',key)},key=e=>{if(e.key==='Escape'&&own)close()};if(own)addEventListener('keydown',key);
+  ov.innerHTML=`<div class="dkhd">${own?'<button data-dkx aria-label="Schliessen">✕</button>':''}<div class="dkt"><b>${dkIco(d)} ${esc(d.title)}</b><div class="mut">${esc(dkKindTxt(d))}${d.ver>1?' · Version '+d.ver:''}</div></div>
+    <div class="dkbt">${d.kind==='file'&&d.file&&d.dl?'<button data-dkdl title="Herunterladen">⤓</button>':''}</div></div>${d.descr&&d.kind!=='link'?`<div class="dkds mut">${esc(d.descr)}</div>`:''}<div class="dkbody"></div>`;
+  if(own)ov.querySelector('[data-dkx]').onclick=close;const dl=ov.querySelector('[data-dkdl]');if(dl)dl.onclick=async()=>{try{dkSave(await blob(true),d.file.name)}catch(e){toast(e.message,'err')}};
+  ov.querySelector('.dkbody').addEventListener('click',e=>{if(e.target.closest('[data-dkopen]'))e.preventDefault()}); // Verweise auf andere Einträge gelten für Externe nicht
+  dkView(ov.querySelector('.dkbody'),d,blob,{nodl:!d.dl});return ov}

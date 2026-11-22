@@ -52,6 +52,11 @@ self.addEventListener('notificationclick',e=>{e.notification.close();const inc=/
   // f: Feedback-Anfrage zum AAR (Issue #103) öffnet «Meine Einsätze»
   if(/^f:/.test(e.notification.tag||''))return e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>c.url.includes('admin.html'));
     if(c&&'navigate'in c)return c.navigate(new URL('admin.html#meine',self.registration.scope).href).then(w=>(w||c).focus()).catch(()=>c.focus());return self.clients.openWindow('admin.html#meine')}));
+  // Dokumente (Issue #229): g: neuer Vorschlag → Eingang der Verwaltung; d: Lesebestätigung → Eintrag; s: Vorschlag erledigt → Fenster «Dokumente»
+  const tg=e.notification.tag||'';if(/^g:/.test(tg))return e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>c.url.includes('admin.html'));
+    if(c&&'navigate'in c)return c.navigate(new URL('admin.html#dokumente-eingang',self.registration.scope).href).then(w=>(w||c).focus()).catch(()=>c.focus());return self.clients.openWindow('admin.html#dokumente-eingang')}));
+  if(/^[ds]:/.test(tg)){const id=tg[0]==='d'?+tg.slice(2):-1;return e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>new URL(c.url).pathname.endsWith('/')||c.url.includes('index.html'));
+    if(c){c.postMessage({sw:'doc',id});return c.focus()}return self.clients.openWindow('./?'+(id>0?'doc='+id:'docs=1'))}))}
   e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>new URL(c.url).pathname.endsWith('/')||c.url.includes('index.html'));
     const iid=(/^i:(\d+)$/.exec(e.notification.tag||'')||[])[1]; // Alarm: diesen Einsatz anzeigen (parallele Einsätze, Issue #167)
     if(c){if(inc)c.postMessage({sw:'focus',inc:iid?+iid:0});return c.focus()}

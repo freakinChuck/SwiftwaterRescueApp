@@ -21,11 +21,12 @@ html,body{height:100%}body{display:flex;flex-direction:column}
 <div id="vxBar" class="vxbar" hidden role="status" aria-live="polite"></div>
 <script src="common.js?v=0"></script>
 <script src="voice.js?v=0"></script>
+<script src="docs.js?v=0"></script>
 <script>
 // Daten über die Routen guest/* (ohne Anmeldung, Schlüssel k im Link); Abruf alle 3 s, während man zuhört alle 1.5 s.
 // Einsatzkräfte erscheinen nur mit Spezialrolle bzw. Einrückoption, Externe mit der Bezeichnung ihres Links. Aufnahme, Wiedergabe und Konferenz wie in der Einsatz-App (voice.js).
 const K=new URLSearchParams(location.search).get('k')||'';
-let G=null,timer=null,fkey='',confWas=false;
+let G=null,timer=null,fkey='',confWas=false,GD=[],gdAt=0; // GD: von der Einsatzleitung freigegebene Dokumente (Issue #229), alle 30 s neu
 const gApi=async(r,body)=>{const res=await fetch(`${API}?r=${r}&k=${encodeURIComponent(K)}`,body?{method:'POST',body:JSON.stringify(body)}:{});const j=await res.json().catch(()=>({error:'Serverfehler'}));if(j.error){const e=new Error(j.error);e.status=res.status;throw e}return j};
 const io={me:null,upload:b=>gApi('guest/voice',b),audio:async id=>{const r=await fetch(`${API}?r=guest/voice/get&k=${encodeURIComponent(K)}&id=${id}`);if(!r.ok)throw new Error('Aufnahme nicht verfügbar');return r.blob()},
   join:()=>gApi('guest/voice/join'),conf:()=>{},change:()=>draw(),poll:()=>poll()};
@@ -33,7 +34,8 @@ const ini=n=>String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0])
 function stop(msg){clearTimeout(timer);vxConfLeave();$('#gFoot').innerHTML='';$('#vxBar').hidden=true;$('#gMain').innerHTML=`<div id="gMsg" class="gcard"><h2>Funk</h2><div class="mut">${esc(msg)}</div></div>`}
 async function poll(){try{const r=await gApi(`guest/state&vs=${VX.vs}${VX.conf?'&vc=1':confWas?'&vc=0':''}`);confWas=!!VX.conf;
     if(r.ended)return stop(`Der Einsatz ist beendet. Danke für die Unterstützung, ${r.label}.`);
-    G=r;io.me=null;io.guestName=r.label+' (extern)';vxInit(io,'g'+K.slice(0,8),1);VX.max=r.max_s;VX.ann=r.ann!==0;vxMerge(r.voice,r.now);vxConfSync(r.conf_list);if(vxQueued())vxFlush();draw()}
+    G=r;io.me=null;io.guestName=r.label+' (extern)';vxInit(io,'g'+K.slice(0,8),1);VX.max=r.max_s;VX.ann=r.ann!==0;vxMerge(r.voice,r.now);vxConfSync(r.conf_list);if(vxQueued())vxFlush();
+    if(Date.now()-gdAt>30000){gdAt=Date.now();gApi('guest/docs').then(x=>{GD=x.docs||[];draw()}).catch(()=>{})}draw()}
   catch(e){if(e instanceof TypeError){$('#gWho').textContent='Keine Verbindung – versuche es weiter …';return}if(e.status===404||e.status===403)return stop(e.message);toast(e.message,'err')}}
 function loop(){timer=setTimeout(()=>poll().finally(loop),VX.conf||VX.listen?1500:3000)}
 function draw(){if(!G)return;const r=VX.rec,cf=VX.conf,it=VX.playing&&VX.items.get(VX.playing);
@@ -46,11 +48,13 @@ function draw(){if(!G)return;const r=VX.rec,cf=VX.conf,it=VX.playing&&VX.items.g
       ${cl.map(x=>`<div class="vxpp${vxSpeaking(x.ident)?' spk':''}"><span class="av${vxSpeaking(x.ident)?' sp':''}">${esc(ini(x.name))}</span><div class="nm">${esc(x.name)}${x.guest_id&&x.name===io.guestName?' (ich)':''}<small>${cf?vxConfState(x):x.muted?'stumm geschaltet':''}</small></div>${vxSpeaking(x.ident)?'<span class="vxspk" title="spricht">🔊</span>':''}</div>`).join('')}
       <div class="row">${cf?`${cf.speak?`<label class="vxsw"><input type="checkbox" id="gOpen" ${cf.open?'checked':''}> Mikrofon offen</label>`:''}<button id="gLeave">Verlassen</button>`:`<button class="pri" id="gJoin" ${cf&&cf.state==='connecting'?'disabled':''}>Konferenz beitreten</button>`}</div>
       <div class="mut">${cf?(cf.state==='on'?(cf.muted?'Verbunden · von der Einsatzleitung stumm geschaltet':cf.speak?'Verbunden · Senden über die Sprechtaste oder «Mikrofon offen»':'Verbunden · nur zuhören'):'Verbinde …'):'Echtzeit, solange diese Seite offen ist. Sonst erhältst du die Durchsagen unten.'}</div></div>`:''}
+    ${GD.length?`<div class="gcard"><h2>Dokumente</h2>${GD.map(d=>`<button class="dkr" data-gd="${d.id}"><span class="dki">${DK_ICON[d.kind==='file'?'dl':d.kind]||'📄'}</span><span class="dkn"><b>${esc(d.title)}</b><small class="mut">von der Einsatzleitung freigegeben</small></span></button>`).join('')}</div>`:''}
     <div class="gcard"><h2>Durchsagen</h2>${items.map(x=>`<div class="vxit${!VX.heard.has(x.id)?' new':''}"><div class="h"><span class="vxdot" style="background:${esc(x.color||(x.guest?'#9b8cff':'#4b6f80'))}"></span><b>${x.name===io.guestName?'Du':esc(x.name)}</b><span class="mut">${fmtT(x.at)}</span></div>
       <div class="p">${x.audio?`<button data-p="${x.id}" aria-label="Abspielen">${VX.playing===x.id?'❚❚':'▶'}</button>`:'<button disabled>–</button>'}${vxWave(x)}<span class="mut">${vxDur(x.dur)}</span></div>${x.tr?`<div class="tr">«${esc(x.tr)}»</div>`:''}</div>`).join('')||'<div class="mut">Noch keine Durchsagen.</div>'}</div>
     <div class="mut" style="font-size:.8rem">Namen der Einsatzkräfte werden Externen nicht gezeigt (nur Spezialrolle bzw. Einrückoption). Keine Karte, keine Standorte. <a href="legal.html#datenschutz" target="_blank" rel="noopener">Datenschutz</a></div>`;
   if(h!==fkey){fkey=h;const m=$('#gMain'),end=m.scrollHeight-m.scrollTop-m.clientHeight<40;m.innerHTML=h;if(end)m.scrollTop=m.scrollHeight;
-    $('#gLis').onchange=e=>vxSetListen(e.target.checked);m.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const id=+b.dataset.p;VX.playing===id?vxStop():vxPlay(id)});
+    $('#gLis').onchange=e=>vxSetListen(e.target.checked);
+    m.querySelectorAll('[data-gd]').forEach(b=>b.onclick=async()=>{const id=+b.dataset.gd;try{const d=await gApi('guest/doc&id='+id);dkExtOpen(d,async dl=>{const r=await fetch(`${API}?r=guest/doc/get&k=${encodeURIComponent(K)}&id=${id}${dl?'&dl=1':''}`);if(!r.ok){let t='Datei nicht verfügbar';try{t=(await r.json()).error||t}catch(e){}throw new Error(t)}return r.blob()})}catch(e){toast(e.message,'err')}});m.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const id=+b.dataset.p;VX.playing===id?vxStop():vxPlay(id)});
     if($('#gJoin'))$('#gJoin').onclick=()=>vxConfJoin(G.ch.id);if($('#gLeave'))$('#gLeave').onclick=()=>vxConfLeave();if($('#gOpen'))$('#gOpen').onchange=e=>vxConfOpen(e.target.checked)}
   const f=$('#gFoot');if(!VX.ann&&f.firstChild&&!(cf&&cf.speak))f.innerHTML=''; // Durchsagen aus: Sprechtaste nur in der Konferenz
   if(G.speak&&(VX.ann||cf&&cf.speak)&&!f.firstChild){f.innerHTML=`<div class="vxfoot"><button class="vxptt" id="gPtt" aria-label="Sprechtaste">🎙</button><div><b id="gPttT"></b><div class="mut">Kanal «${esc(G.ch.name)}» · höchstens ${VX.max} s · du erscheinst als «${esc(io.guestName)}»</div></div></div>`;vxPttBind($('#gPtt'),()=>G.ch.id)}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><!-- der Link enthält den geheimen Schlüssel ?k=…; nie einen Referer senden -->
+<title>Swiftwater Rescue – Dokument</title>
+<link rel="icon" href="img/icon-192.png">
+<link rel="stylesheet" href="common.css?v=0">
+<style>
+/* Dokument für Externe (Issue #229): ein einzelner Eintrag, freigegeben von der Einsatzleitung über einen eigenen Link (?k=), ohne Anmeldung, gültig bis zum Einsatzende */
+html,body{height:100%}body{display:flex;flex-direction:column}
+#dHead{display:flex;gap:.7rem;align-items:center;padding:.6rem 1rem;padding-top:calc(.6rem + env(safe-area-inset-top));border-bottom:1px solid var(--line)}#dHead img{width:40px;height:40px}#dHead h1{margin:0;font-size:1.05rem}
+#dMain{flex:1;min-height:0;display:flex;flex-direction:column}
+#dMsg{max-width:420px;margin:12vh auto;padding:1.2rem;text-align:center;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+#dFoot{padding:.4rem 1rem calc(.4rem + env(safe-area-inset-bottom));font-size:.8rem;border-top:1px solid var(--line)}
+</style></head><body>
+<div id="dHead"><img src="img/icon-192.png" alt=""><div style="flex:1;min-width:0"><h1>Swiftwater Rescue – Dokument</h1><div class="mut" id="dWho">Freigegeben für Externe</div></div></div>
+<div id="dMain"><div class="mut" style="padding:1rem">Wird geladen …</div></div>
+<div id="dFoot" class="mut">Von der Einsatzleitung für Externe freigegeben, gültig bis zum Einsatzende. <a href="legal.html#datenschutz" target="_blank" rel="noopener">Datenschutz</a></div>
+<script src="common.js?v=0"></script>
+<script src="docs.js?v=0"></script>
+<script>
+// Daten über ext/doc und ext/doc/get (ohne Anmeldung, Schlüssel k im Link); jeder Abruf der Datei zählt (Begrenzung je Stunde, erster Abruf im Einsatzlog)
+const K=new URLSearchParams(location.search).get('k')||'';
+const stop=m=>{$('#dMain').innerHTML=`<div id="dMsg"><h2 style="margin-top:0">Dokument</h2><div class="mut">${esc(m)}</div></div>`};
+async function load(){let r,j;try{r=await fetch(`${API}?r=ext/doc&k=${encodeURIComponent(K)}`);j=await r.json()}catch(e){return stop('Keine Verbindung zum Server. Bitte später nochmals versuchen.')}
+  if(j.error)return stop(j.error);if(j.ended)return stop('Der Einsatz ist beendet. Das Dokument ist nicht mehr freigegeben.');
+  document.title=j.title+' – Swiftwater Rescue';const i=j.incident||{};$('#dWho').innerHTML=`<span class="badge" style="background:${esc(i.kind_color||'#4b6f80')}">${esc(i.kind_name||'Einsatz')}</span> seit ${esc(fmtDT(i.alarm_at))}`;
+  const m=$('#dMain');m.innerHTML='';const box=document.createElement('div');box.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column';m.appendChild(box);
+  dkExtOpen(j,async dl=>{const x=await fetch(`${API}?r=ext/doc/get&k=${encodeURIComponent(K)}${dl?'&dl=1':''}`);if(!x.ok){let t='Datei nicht verfügbar';try{t=(await x.json()).error||t}catch(e){}throw new Error(t)}return x.blob()},box)}
+if(!/^[0-9a-f]{32}$/.test(K))stop('Dieser Link ist ungültig.');else load();
+</script></body></html>
