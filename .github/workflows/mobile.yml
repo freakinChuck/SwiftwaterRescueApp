@@ -11,7 +11,8 @@
 # Version (Issue #175): gemeinsame Version aus der Datei VERSION. Ein Release-Tag «v<Version>» (Workflow release.yml, startet diesen Workflow auf dem Tag)
 # baut genau diese Version, lädt sie wie main nach TestFlight bzw. Google Play und hängt die Pakete an den GitHub-Release; «mobile-v<Version>» geht weiterhin.
 # Die App erhält Version und Build über --dart-define=APP_VERSION/APP_BUILD (lib/version.dart).
-# Build-Nummer (Issue #230): einmal je Lauf im Job «check» bestimmt, Android und iOS erhalten dieselbe (siehe dort).
+# Build-Nummer (Issue #230): die Laufnummer dieses Workflows, Android und iOS erhalten dieselbe (siehe Job «check»).
+# Nur iOS nach TestFlight (testflight.yml) startet diesen Workflow mit ios_only, damit es nur einen Zähler gibt.
 name: Native Apps
 
 on:
@@ -22,6 +23,11 @@ on:
   pull_request:
     paths: ['mobile/**', '.github/workflows/mobile.yml', '.github/workflows/ios.yml']
   workflow_dispatch:
+    inputs:
+      ios_only:
+        description: Nur iOS bauen und nach TestFlight laden (ohne Prüfung und Android, auch ausserhalb von main)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -35,6 +41,7 @@ defaults:
 
 jobs:
   check:
+    if: ${{ !inputs.ios_only }}
     runs-on: ubuntu-latest
     outputs:
       build: ${{ steps.build.outputs.build }}
@@ -44,10 +51,10 @@ jobs:
         shell: bash
         working-directory: .
         run: |
-          # Gemeinsame Build-Nummer für Android und iOS (Issue #230): Datum und Zeit des Laufs (UTC) als JJMMTThhmm minus 2 000 000 000,
-          # z. B. 21.11.2026 15:30 → 611211530. Android erlaubt als versionCode höchstens 2 100 000 000 (reicht bis 2040),
-          # App Store Connect und Google Play verlangen eine höhere Nummer als die zuletzt hochgeladene; gleiche Formel in ios.yml (TestFlight von Hand)
-          b=$(( $(date -u +%y%m%d%H%M) - 2000000000 )); echo "build=$b" >> "$GITHUB_OUTPUT"; echo "::notice::Build $b (Android und iOS)"
+          # Gemeinsame Build-Nummer für Android und iOS (Issue #230): die Laufnummer dieses Workflows, steigt mit jedem Lauf um 1.
+          # Google Play warnt bei grossen Sprüngen («deutlich höher als dein vorheriger Versionscode»), deshalb kein Datum mehr.
+          # Nur iOS (ios_only, aus testflight.yml) nutzt denselben Zähler; «Re-run» behält die Nummer des Laufs.
+          b=${{ github.run_number }}; echo "build=$b" >> "$GITHUB_OUTPUT"; echo "::notice::Build $b (Android und iOS)"
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
@@ -60,6 +67,7 @@ jobs:
 
   android:
     needs: check
+    if: ${{ !inputs.ios_only }}
     env:
       BUILD: ${{ needs.check.outputs.build }}
     runs-on: ubuntu-latest
@@ -154,10 +162,12 @@ jobs:
 
   ios:
     needs: check
+    # ohne Prüfung bei ios_only (Job «check» übersprungen)
+    if: ${{ !cancelled() && (inputs.ios_only || needs.check.result == 'success') }}
     uses: ./.github/workflows/ios.yml
     with:
-      # Upload nach TestFlight nur auf main und bei Release-Tags vX.Y.Z
-      upload: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
-      # dieselbe Build-Nummer wie Android (Issue #230)
-      build: ${{ needs.check.outputs.build }}
+      # Upload nach TestFlight auf main, bei Release-Tags vX.Y.Z und bei ios_only (beliebiger Branch)
+      upload: ${{ inputs.ios_only || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
+      # dieselbe Build-Nummer wie Android (Issue #230): die Laufnummer
+      build: ${{ github.run_number }}
     secrets: inherit

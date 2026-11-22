@@ -1,5 +1,6 @@
 # Nur iOS bauen und nach TestFlight hochladen, von Hand: Actions → «TestFlight» → «Run workflow», Branch wählen.
-# Ohne Prüfung (flutter analyze/test) und ohne Android; lädt vom gewählten Branch hoch, auch ausserhalb von main.
+# Startet «Native Apps» (mobile.yml) auf diesem Branch mit ios_only: ohne Prüfung (flutter analyze/test) und ohne Android,
+# lädt auch ausserhalb von main hoch. So zählt die Build-Nummer (Laufnummer von mobile.yml) über alle Builds weiter (Issue #230).
 # Geheimnisse wie in mobile.yml (IOS_*, ASC_*, FCM_*).
 name: TestFlight
 
@@ -7,11 +8,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  actions: write
 
 jobs:
-  ios:
-    uses: ./.github/workflows/ios.yml
-    with:
-      upload: true
-    secrets: inherit
+  start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: «Native Apps» nur für iOS starten
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run mobile.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f ios_only=true
+          echo "::notice::«Native Apps» mit ios_only auf $GITHUB_REF_NAME gestartet, Build und Upload laufen dort"
