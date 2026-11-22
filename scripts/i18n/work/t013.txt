@@ -1,0 +1,240 @@
+3120 ‖ Operation feedback requested automatically ‖ Retour sur l'intervention demandé automatiquement ‖ Feedback sull'intervento richiesto automaticamente
+3121 ‖ Response group deleted ‖ Groupe d'intervention supprimé ‖ Gruppo d'intervento eliminato
+3122 ‖ Response group saved ‖ Groupe d'intervention enregistré ‖ Gruppo d'intervento salvato
+3123 ‖ Response group not found ‖ Groupe d'intervention introuvable ‖ Gruppo d'intervento non trovato
+3124 ‖ Manage response groups ‖ Gérer les groupes d'intervention ‖ Gestire i gruppi d'intervento
+3125 ‖ responder appears in past operations ‖ intervenant figure dans des interventions passées ‖ soccorritore compare in interventi passati
+3126 ‖ Responder {0} ‖ Intervenant {0} ‖ Soccorritore {0}
+3127 ‖ Responders ({0} ‖ Intervenants ({0} ‖ Soccorritori ({0}
+3128 ‖ responders appear in past operations ‖ intervenants figurent dans des interventions passées ‖ soccorritori compaiono in interventi passati
+3129 ‖ =
+3130 ‖ Operation record anonymised {0} ‖ Procès-verbal d'intervention anonymisé {0} ‖ Verbale dell'intervento anonimizzato {0}
+3131 ‖ Pseudonymise operation record ‖ Pseudonymiser le procès-verbal d'intervention ‖ Pseudonimizza il verbale dell'intervento
+3132 ‖ Operation statistics, log and replay of all operations ‖ Statistique, journal et replay de toutes les interventions ‖ Statistica, registro e replay di tutti gli interventi
+3133 ‖ Operation type deleted ‖ Type d'intervention supprimé ‖ Tipo d'intervento eliminato
+3134 ‖ Operation type saved ‖ Type d'intervention enregistré ‖ Tipo d'intervento salvato
+3135 ‖ Operation type not found ‖ Type d'intervention introuvable ‖ Tipo d'intervento non trovato
+3136 ‖ Operation type “ ‖ Type d'intervention « ‖ Tipo d'intervento «
+3137 ‖ Operation type “{0} ‖ Type d'intervention « {0} ‖ Tipo d'intervento «{0}
+3138 ‖ Operation types (alarm level, response groups that can be called out), response options, special roles, messages, templates for external responders ‖ Types d'intervention (niveau d'alarme, groupes mobilisables), options d'engagement, rôles spéciaux, messages, modèles pour intervenants externes ‖ Tipi d'intervento (livello d'allarme, gruppi d'intervento convocabili), opzioni d'intervento, ruoli speciali, messaggi, modelli per soccorritori esterni
+3139 ‖ Configure view for responders ‖ Configurer la consultation pour les intervenants ‖ Configurare la consultazione per i soccorritori
+3140 ‖ Document repository settings saved ‖ Paramètres de la gestion documentaire enregistrés ‖ Impostazioni dell'archivio documenti salvate
+3141 ‖ Settings saved ‖ Paramètres enregistrés ‖ Impostazioni salvate
+3142 ‖ operations ‖ interventions ‖ interventi
+3143 ‖ Document repository entry ‖ Entrée de la gestion documentaire ‖ Voce dell'archivio documenti
+3144 ‖ Document repository entry saved ‖ Entrée de la gestion documentaire enregistrée ‖ Voce dell'archivio documenti salvata
+3145 ‖ entry will be ‖ entrée sera ‖ voce sarà
+3146 ‖ Document repository entries ‖ Entrées de la gestion documentaire ‖ Voci dell'archivio documenti
+3147 ‖ entries will be ‖ entrées seront ‖ voci saranno
+3148 ‖ Launching possible ‖ Mise à l'eau possible ‖ Messa in acqua possibile
+3149 ‖ You may only call out individuals from your own response groups ‖ Vous ne pouvez mobiliser des personnes individuelles que de vos groupes d'intervention ‖ Puoi convocare singole persone solo dai tuoi gruppi d'intervento
+3150 ‖ Element not found ‖ Élément introuvable ‖ Elemento non trovato
+3151 ‖ Plan elements ‖ Éléments des planifications ‖ Elementi delle pianificazioni
+3152 ‖ =
+3153 ‖ Drafts for the text fields from operation data and operation log; accompanying: draft for the empty fields on opening ‖ Brouillons pour les champs de texte à partir des données et du journal d'intervention ; d'accompagnement : brouillon pour les champs vides à l'ouverture ‖ Bozze per i campi di testo dai dati e dal registro dell'intervento; d'accompagnamento: bozza per i campi vuoti all'apertura
+3154 ‖ Event lead ‖ Direction de l'événement ‖ Direzione dell'evento
+3155 ‖ Findings ‖ Enseignements ‖ Insegnamenti
+3156 ‖ First acceptance: {0} ‖ Première acceptation : {0} ‖ Prima accettazione: {0}
+3157 ‖ =
+3158 ‖ =
+3159 ‖ Parts of the PDF are missing ‖ Des parties du PDF manquent ‖ Mancano parti del PDF
+3160 ‖ There are vehicles of this type. Deactivate the type instead or first assign the vehicles to another type. ‖ Il existe des véhicules de ce type. Désactivez plutôt le type ou attribuez d'abord les véhicules à un autre type. ‖ Esistono veicoli di questo tipo. Disattiva invece il tipo o assegna prima i veicoli a un altro tipo.
+3161 ‖ There are no finished operations yet ‖ Il n'y a pas encore d'interventions terminées ‖ Non ci sono ancora interventi terminati
+3162 ‖ It is a standard option; it is not created again. ‖ C'est une option standard ; elle n'est pas recréée. ‖ È un'opzione standard; non viene ricreata.
+3163 ‖ An operation of this type is currently running ‖ Une intervention de ce type est en cours ‖ È in corso un intervento di questo tipo
+3164 ‖ All people have already been called out ‖ Toutes les personnes sont déjà mobilisées ‖ Tutte le persone sono già convocate
+3165 ‖ No questions are set up for the feedback ‖ Aucune question n'est configurée pour le retour ‖ Non sono configurate domande per il feedback
+3166 ‖ =
+3167 ‖ Choose an external responder of this exercise ‖ Choisir un intervenant externe de cet exercice ‖ Scegli un soccorritore esterno di questa esercitazione
+3168 ‖ External responders: ‖ Intervenants externes : ‖ Soccorritori esterni:
+3169 ‖ FCM: no access token ‖ FCM : pas de jeton d'accès ‖ FCM: nessun token d'accesso
+3170 ‖ FCM: private key of the service account invalid ‖ FCM : clé privée du compte de service invalide ‖ FCM: chiave privata dell'account di servizio non valida
+3171 ‖ vehicle of this type will be ‖ véhicule de ce type sera ‖ veicolo di questo tipo sarà
+3172 ‖ Vehicle type ‖ Type de véhicule ‖ Tipo di veicolo
+3173 ‖ Vehicle type not found ‖ Type de véhicule introuvable ‖ Tipo di veicolo non trovato
+3174 ‖ Choose vehicle type ‖ Choisir le type de véhicule ‖ Scegli il tipo di veicolo
+3175 ‖ Reporting vehicles outside operations is switched off ‖ Le signalement des véhicules hors interventions est désactivé ‖ La segnalazione dei veicoli fuori dagli interventi è disattivata
+3176 ‖ See vehicles outside operations ‖ Voir les véhicules hors interventions ‖ Vedere i veicoli fuori dagli interventi
+3177 ‖ vehicles of this type will be ‖ véhicules de ce type seront ‖ veicoli di questo tipo saranno
+3178 ‖ =
+3179 ‖ Favourites and read confirmations ‖ Favoris et confirmations de lecture ‖ Preferiti e conferme di lettura
+3180 ‖ Responders' feedback ‖ Retours des intervenants ‖ Feedback dei soccorritori
+3181 ‖ Feedback on the {0} ‖ Retour sur l'{0} ‖ Feedback sull'{0}
+3182 ‖ Fields, document title, organisation, logo, included sections and allowed formats ‖ Champs, titre du document, organisation, logo, sections fournies et formats autorisés ‖ Campi, titolo del documento, organizzazione, logo, sezioni incluse e formati ammessi
+3183 ‖ Fixed locations: ‖ Sites fixes : ‖ Luoghi fissi:
+3184 ‖ =
+3185 ‖ Flow speed: {0} ‖ Vitesse du courant : {0} ‖ Velocità della corrente: {0}
+3186 ‖ River closure / not passable ‖ Fermeture de la rivière / infranchissable ‖ Chiusura del fiume / non transitabile
+3187 ‖ Follow-up operation to “{0} ‖ Intervention de suivi de « {0} ‖ Intervento successivo a «{0}
+3188 ‖ Photos, sketches, map sections ‖ Photos, croquis, extraits de carte ‖ Foto, schizzi, porzioni di mappa
+3189 ‖ =
+3190 ‖ Free questions ‖ Questions libres ‖ Domande libere
+3191 ‖ Free questions to the AI assistant are not enabled for you here ‖ Les questions libres à l'assistant IA ne vous sont pas ouvertes ici ‖ Le domande libere all'assistente IA qui non sono abilitate per te
+3192 ‖ Free event “ ‖ Événement libre « ‖ Evento libero «
+3193 ‖ Sharing with external parties withdrawn ‖ Partage avec les externes retiré ‖ Condivisione con esterni ritirata
+3194 ‖ Released elements cannot be removed ‖ Les éléments libérés ne peuvent pas être retirés ‖ Gli elementi rilasciati non si possono rimuovere
+3195 ‖ Released elements can no longer be changed ‖ Les éléments libérés ne peuvent plus être modifiés ‖ Gli elementi rilasciati non si possono più modificare
+3196 ‖ Feedback deadline: 1 to 90 days ‖ Délai pour le retour : 1 à 90 jours ‖ Termine per il feedback: da 1 a 90 giorni
+3197 ‖ Deadline: 1 to 90 days ‖ Délai : 1 à 90 jours ‖ Termine: da 1 a 90 giorni
+3198 ‖ Radio & conference configured ‖ Radio & conférence configurées ‖ Radio & conferenza configurate
+3199 ‖ Radio (announcements and live conference) ‖ Radio (annonces et conférence en direct) ‖ Radio (annunci e conferenza in diretta)
+3200 ‖ Radio is switched off for this operation ‖ La radio est désactivée pour cette intervention ‖ La radio è disattivata per questo intervento
+3201 ‖ Radio links for external parties ‖ Liens radio pour les externes ‖ Link radio per esterni
+3202 ‖ Radio channels ‖ Canaux radio ‖ Canali radio
+3203 ‖ Radio channels lose the role in “Listen” and “Speak”. ‖ Les canaux radio perdent le rôle dans « Écouter » et « Parler ». ‖ I canali radio perdono il ruolo in «Ascoltare» e «Parlare».
+3204 ‖ Configure functions ‖ Configurer les fonctions ‖ Configurare le funzioni
+3205 ‖ Functions and recording per operation type, river distance, navigation ‖ Fonctions et enregistrement par type d'intervention, distance fluviale, navigation ‖ Funzioni e registrazione per tipo d'intervento, distanza fluviale, navigazione
+3206 ‖ Training skill removed ‖ Compétence de formation retirée ‖ Competenza di formazione rimossa
+3207 ‖ Training skill saved ‖ Compétence de formation enregistrée ‖ Competenza di formazione salvata
+3208 ‖ Skills (training) ‖ Compétences (formation) ‖ Competenze (formazione)
+3209 ‖ Set up the skills of the training control (validity, advance warning, groups) and record and remove the entries of all people (everyone may record their own for skills enabled for this) ‖ Configurer les compétences du contrôle de formation (validité, préavis, groupes) et saisir et retirer les entrées de toutes les personnes (chacun peut saisir les siennes pour les compétences ouvertes à cet effet) ‖ Configurare le competenze del controllo della formazione (validità, preavviso, gruppi) e registrare e rimuovere le voci di tutte le persone (ognuno può registrare le proprie per le competenze abilitate)
+3210 ‖ For Anthropic, please store an API key first ‖ Pour Anthropic, veuillez d'abord enregistrer une clé API ‖ Per Anthropic registra prima una chiave API
+3211 ‖ No API key is stored for Anthropic ‖ Aucune clé API n'est enregistrée pour Anthropic ‖ Per Anthropic non è registrata alcuna chiave API
+3212 ‖ OpenAI-compatible providers need a base URL ‖ Les fournisseurs compatibles OpenAI ont besoin d'une URL de base ‖ I fornitori compatibili con OpenAI necessitano di un URL di base
+3213 ‖ Retrieval needs host and username of the mailbox (or use only the webhook and switch off retrieval) ‖ La récupération a besoin de l'hôte et du nom d'utilisateur de la boîte (ou n'utiliser que le webhook et désactiver la récupération) ‖ Il recupero necessita di host e nome utente della casella (o usa solo il webhook e disattiva il recupero)
+3214 ‖ For sign-up the exercise needs a date ‖ Pour l'inscription, l'exercice a besoin d'une date ‖ Per l'iscrizione l'esercitazione necessita di una data
+3215 ‖ There is no sign-up for this exercise ‖ Il n'y a pas d'inscription pour cet exercice ‖ Per questa esercitazione non c'è iscrizione
+3216 ‖ Only members of certain response groups can sign up for this exercise ‖ Seuls les membres de certains groupes d'intervention peuvent s'inscrire à cet exercice ‖ A questa esercitazione possono iscriversi solo membri di determinati gruppi d'intervento
+3217 ‖ There is no recording for this operation ‖ Il n'y a pas d'enregistrement pour cette intervention ‖ Per questo intervento non c'è registrazione
+3218 ‖ There is no suggestion for this field ‖ Il n'y a pas de proposition pour ce champ ‖ Per questo campo non c'è proposta
+3219 ‖ E-mail alarm is not switched on for any operation type ‖ L'alarme par e-mail n'est activée pour aucun type d'intervention ‖ L'allarme via e-mail non è attivo per alcun tipo d'intervento
+3220 ‖ For “{0} ‖ Pour « {0} ‖ Per «{0}
+3221 ‖ Deleted person ‖ Personne supprimée ‖ Persona eliminata
+3222 ‖ Joint operations ‖ Interventions communes ‖ Interventi comuni
+3223 ‖ Joint message channel ‖ Canal de messages commun ‖ Canale di messaggi comune
+3224 ‖ Geodata taken over as fixed locations ‖ Géodonnées reprises comme sites fixes ‖ Geodati ripresi come luoghi fissi
+3225 ‖ Geodata not reachable ‖ Géodonnées injoignables ‖ Geodati non raggiungibili
+3226 ‖ Geodata not available: {0} ‖ Géodonnées indisponibles : {0} ‖ Geodati non disponibili: {0}
+3227 ‖ Take over and compare geodata ‖ Reprendre et comparer des géodonnées ‖ Riprendere e confrontare geodati
+3228 ‖ Geodata layer (objects on the water from OpenStreetMap, optional) ‖ Couche de géodonnées (objets au bord de l'eau d'OpenStreetMap, activable) ‖ Livello di geodati (oggetti lungo i corsi d'acqua da OpenStreetMap, attivabile)
+3229 ‖ Device sessions ‖ Sessions d'appareils ‖ Sessioni dei dispositivi
+3230 ‖ Speeds must be between 1 and 200 km/h ‖ Les vitesses doivent être entre 1 et 200 km/h ‖ Le velocità devono essere tra 1 e 200 km/h
+3231 ‖ Saved After Action Reviews ‖ After Action Reviews sauvegardées ‖ After Action Review salvati
+3232 ‖ Retrieve saved After Action Reviews ‖ Récupérer les After Action Reviews sauvegardées ‖ Recuperare gli After Action Review salvati
+3233 ‖ Free only for non-commercial use (research, non-profit purposes). Without an account only about 400 queries per day, which does not last long for an operation. Therefore off by default, intended as a last fallback. ‖ Gratuit seulement pour un usage non commercial (recherche, buts d'utilité publique). Sans compte seulement env. 400 requêtes par jour, ce qui ne suffit pas longtemps pour une intervention. Désactivé par défaut, prévu comme dernier recours. ‖ Gratuito solo per uso non commerciale (ricerca, scopi di pubblica utilità). Senza account solo circa 400 richieste al giorno, che per un intervento non bastano a lungo. Perciò disattivato di default, pensato come ultima riserva.
+3234 ‖ Free, without a key, at most 1 query per second. Only for non-commercial use. ‖ Gratuit, sans clé, au plus 1 requête par seconde. Seulement pour un usage non commercial. ‖ Gratuito, senza chiave, al massimo 1 richiesta al secondo. Solo per uso non commerciale.
+3235 ‖ Free, without a key, privately operated (Existenz.ch), provides the FOEN data as an interface: discharge, water level, water temperature, without danger level. No claim to availability. Takes precedence. ‖ Gratuit, sans clé, exploité à titre privé (Existenz.ch), met les données de l'OFEV à disposition sous forme d'interface : débit, niveau, température de l'eau, sans degré de danger. Aucun droit à la disponibilité. Prioritaire. ‖ Gratuito, senza chiave, gestito privatamente (Existenz.ch), mette a disposizione i dati dell'UFAM come interfaccia: portata, livello, temperatura dell'acqua, senza grado di pericolo. Nessun diritto alla disponibilità. Ha la precedenza.
+3236 ‖ Free, without a key. Data under the Open Database License (ODbL), source attribution on the map. Intended for non-commercial use; the operator can change the limits at any time. ‖ Gratuit, sans clé. Données sous Open Database License (ODbL), mention de la source sur la carte. Prévu pour un usage non commercial, l'exploitant peut modifier les limites à tout moment. ‖ Gratuito, senza chiave. Dati con Open Database License (ODbL), indicazione della fonte sulla mappa. Pensato per uso non commerciale, il gestore può modificare i limiti in qualsiasi momento.
+3237 ‖ Create, change and deactivate groups and determine their members ‖ Créer, modifier et désactiver des groupes et définir leurs membres ‖ Creare, modificare e disattivare gruppi e stabilirne i membri
+3238 ‖ Valid until the end of the calendar year ‖ Valable jusqu'à la fin de l'année civile ‖ Valida fino alla fine dell'anno civile
+3239 ‖ Valid for a number of months ‖ Valable pendant un certain nombre de mois ‖ Valida per un numero di mesi
+3240 ‖ Validity: 0 to 20 following years ‖ Validité : 0 à 20 années suivantes ‖ Validità: da 0 a 20 anni successivi
+3241 ‖ Validity: 1 to 240 months ‖ Validité : 1 à 240 mois ‖ Validità: da 1 a 240 mesi
+3242 ‖ Retention: 0 to 10080 minutes ‖ Durée de conservation : 0 à 10080 minutes ‖ Durata di conservazione: da 0 a 10080 minuti
+3243 ‖ Helicopters without an operation are switched off ‖ Les hélicoptères sans intervention sont désactivés ‖ Gli elicotteri senza intervento sono disattivati
+3244 ‖ Helicopters are not enabled for you ‖ Les hélicoptères ne vous sont pas ouverts ‖ Gli elicotteri non sono abilitati per te
+3245 ‖ Helicopters are not shown in the public view. ‖ Les hélicoptères ne sont pas affichés dans la vue publique. ‖ Gli elicotteri non vengono mostrati nella vista pubblica.
+3246 ‖ Helicopter data are switched off in the administration ‖ Les données d'hélicoptères sont désactivées dans l'administration ‖ I dati degli elicotteri sono disattivati nell'amministrazione
+3247 ‖ =
+3248 ‖ Notice with a short tone, normal push ‖ Avis avec un son bref, push normal ‖ Avviso con suono breve, push normale
+3249 ‖ Notice without sound and vibration, silent push ‖ Avis sans son ni vibration, push silencieux ‖ Avviso senza suono né vibrazione, push silenzioso
+3250 ‖ Give host, database and user ‖ Indiquer l'hôte, la base de données et l'utilisateur ‖ Indica host, banca dati e utente
+3251 ‖ At most 1000 operations at once ‖ Au plus 1000 interventions à la fois ‖ Al massimo 1000 interventi alla volta
+3252 ‖ At most 40 channels ‖ Au plus 40 canaux ‖ Al massimo 40 canali
+3253 ‖ At most 5 further UUIDs ‖ Au plus 5 autres UUID ‖ Al massimo 5 altri UUID
+3254 ‖ At most 8 Overpass servers ‖ Au plus 8 serveurs Overpass ‖ Al massimo 8 server Overpass
+3255 ‖ At most {0} images per review ‖ Au plus {0} images par review ‖ Al massimo {0} immagini per review
+3256 ‖ At most {0} fields ‖ Au plus {0} champs ‖ Al massimo {0} campi
+3257 ‖ At most {0} gauging stations ‖ Au plus {0} stations de mesure ‖ Al massimo {0} stazioni di misura
+3258 ‖ At most {0} navigation points per location ‖ Au plus {0} points de navigation par site ‖ Al massimo {0} punti di navigazione per luogo
+3259 ‖ At most {0} rules per person ‖ Au plus {0} règles par personne ‖ Al massimo {0} regole per persona
+3260 ‖ In the subject or text ‖ Dans l'objet ou le texte ‖ Nell'oggetto o nel testo
+3261 ‖ Configure legal notice & privacy ‖ Configurer les mentions légales & la protection des données ‖ Configurare note legali & protezione dei dati
+3262 ‖ The entry fcm is missing in config.php (path to the JSON file of the Firebase service account) ‖ L'entrée fcm manque dans config.php (chemin du fichier JSON du compte de service Firebase) ‖ In config.php manca la voce fcm (percorso del file JSON dell'account di servizio Firebase)
+3263 ‖ In the operation statistics, record the details per finished operation, mark as not relevant, view and download (without “Evaluate all operations” only list and key figures, without log and replay) ‖ Dans la statistique d'intervention, saisir les informations par intervention terminée, marquer comme non pertinent, consulter et télécharger (sans « Évaluer toutes les interventions », seulement liste et indicateurs, sans journal ni replay) ‖ Nella statistica degli interventi registrare i dati per ogni intervento terminato, segnare come non rilevante, visualizzare e scaricare (senza «Valutare tutti gli interventi» solo elenco e indicatori, senza registro e replay)
+3264 ‖ You may not speak in this channel ‖ Vous ne pouvez pas parler dans ce canal ‖ Non puoi parlare in questo canale
+3265 ‖ In {0} ‖ Dans {0} ‖ Tra {0}
+3266 ‖ =
+3267 ‖ Yes/No ‖ Oui/Non ‖ Sì/No
+3268 ‖ Lead any operation ‖ Diriger toute intervention ‖ Dirigere qualsiasi intervento
+3269 ‖ Each channel needs a name ‖ Chaque canal a besoin d'un nom ‖ Ogni canale necessita di un nome
+3270 ‖ Each field needs a label ‖ Chaque champ a besoin d'une désignation ‖ Ogni campo necessita di una denominazione
+3271 ‖ Now: {0} ‖ Maintenant : {0} ‖ Ora: {0}
+3272 ‖ Tile servers of the OSM Foundation, a free offer without assurance: no heavy traffic, no preloading of whole areas. Source attribution mandatory. ‖ Serveurs de tuiles de la Fondation OSM, offre gratuite sans garantie : pas de trafic intense, pas de préchargement de régions entières. Mention de la source obligatoire. ‖ Server di tile della OSM Foundation, offerta gratuita senza garanzia: niente traffico intenso, niente precaricamento di intere zone. Indicazione della fonte obbligatoria.
+3273 ‖ Channel “{0}”: who hears it? ‖ Canal « {0} » : qui l'entend ? ‖ Canale «{0}»: chi lo ascolta?
+3274 ‖ Configure map & data ‖ Configurer carte & données ‖ Configurare mappa & dati
+3275 ‖ Category not found ‖ Catégorie introuvable ‖ Categoria non trovata
+3276 ‖ Categories of fixed locations ‖ Catégories des sites fixes ‖ Categorie dei luoghi fissi
+3277 ‖ No alarm and no push; the operation only appears in the app ‖ Pas d'alarme ni de push, l'intervention n'apparaît que dans l'app ‖ Nessun allarme e nessun push, l'intervento appare solo nell'app
+3278 ‖ No operation type allows prepared exercises ‖ Aucun type d'intervention ne permet d'exercices préparés ‖ Nessun tipo d'intervento consente esercitazioni preparate
+3279 ‖ No PLS for the search area ‖ Pas de PLS pour la zone de recherche ‖ Nessun PLS per l'area di ricerca
+3280 ‖ No keyword ‖ Pas de mot-clé ‖ Nessuna parola chiave
+3281 ‖ No transcription service set up ‖ Aucun service de transcription configuré ‖ Nessun servizio di trascrizione configurato
+3282 ‖ No access to this operation ‖ Pas d'accès à cette intervention ‖ Nessun accesso a questo intervento
+3283 ‖ No active operation type allows prepared exercises (Administration → Operation types) ‖ Aucun type d'intervention actif ne permet d'exercices préparés (Administration → Types d'intervention) ‖ Nessun tipo d'intervento attivo consente esercitazioni preparate (Amministrazione → Tipi d'intervento)
+3284 ‖ No saved PDF ‖ Pas de PDF sauvegardé ‖ Nessun PDF salvato
+3285 ‖ No deviation ‖ Aucun écart ‖ Nessuno scostamento
+3286 ‖ No answer from the AI provider: {0} ‖ Pas de réponse du fournisseur IA : {0} ‖ Nessuna risposta dal fornitore IA: {0}
+3287 ‖ No data source switched on (Administration → Helicopters) ‖ Aucune source de données activée (Administration → Hélicoptères) ‖ Nessuna fonte di dati attivata (Amministrazione → Elicotteri)
+3288 ‖ No data source switched on (Administration → Water level & discharge) ‖ Aucune source de données activée (Administration → Niveau & débit) ‖ Nessuna fonte di dati attivata (Amministrazione → Livello & portata)
+3289 ‖ No data source reachable, another attempt will follow ‖ Aucune source de données joignable, nouvel essai à suivre ‖ Nessuna fonte di dati raggiungibile, seguirà un nuovo tentativo
+3290 ‖ No responders with an active account who could be asked ‖ Aucun intervenant avec compte actif qui pourrait être interrogé ‖ Nessun soccorritore con account attivo che si potrebbe interpellare
+3291 ‖ No operations selected ‖ Aucune intervention choisie ‖ Nessun intervento scelto
+3292 ‖ No geodata source set up (Administration → Geodata sources) ‖ Aucune source de géodonnées configurée (Administration → Sources de géodonnées) ‖ Nessuna fonte di geodati configurata (Amministrazione → Fonti di geodati)
+3293 ‖ No backup for this operation ‖ Pas de sauvegarde pour cette intervention ‖ Nessun salvataggio per questo intervento
+3294 ‖ No connection to {0} ‖ Pas de connexion à {0} ‖ Nessuna connessione a {0}
+3295 ‖ No active fixed locations ‖ Aucun site fixe actif ‖ Nessun luogo fisso attivo
+3296 ‖ No people who can be called out ‖ Aucune personne mobilisable ‖ Nessuna persona convocabile
+3297 ‖ No or too many objects (at most 500) ‖ Aucun objet ou trop d'objets (au plus 500) ‖ Nessun oggetto o troppi oggetti (al massimo 500)
+3298 ‖ No prepared exercise active ‖ Aucun exercice préparé actif ‖ Nessuna esercitazione preparata attiva
+3299 ‖ Configure connectivity ‖ Configurer la connectivité ‖ Configurare la connettività
+3300 ‖ Account, logins, roles, response groups, absences, training, exercise sign-ups, feedback and profile picture are deleted. ‖ Compte, connexions, rôles, groupes d'intervention, absences, formation, inscriptions aux exercices, retours et photo de profil sont supprimés. ‖ Account, accessi, ruoli, gruppi d'intervento, assenze, formazione, iscrizioni alle esercitazioni, feedback e immagine del profilo vengono eliminati.
+3301 ‖ Coordinates, geodata sources (PostGIS, Overpass), helicopters, water level & discharge, fixed locations, vehicles (BLE beacons) ‖ Coordonnées, sources de géodonnées (PostGIS, Overpass), hélicoptères, niveau & débit, sites fixes, véhicules (balises BLE) ‖ Coordinate, fonti di geodati (PostGIS, Overpass), elicotteri, livello & portata, luoghi fissi, veicoli (beacon BLE)
+3302 ‖ Copy of {0} ‖ Copie de {0} ‖ Copia di {0}
+3303 ‖ Short situation summary during the operation (☰ menu); accompanying: new at most every 5 minutes ‖ Bref résumé de la situation pendant l'intervention (menu ☰) ; d'accompagnement : nouveau au plus toutes les 5 minutes ‖ Breve riepilogo della situazione durante l'intervento (menu ☰); d'accompagnamento: nuovo al massimo ogni 5 minuti
+3304 ‖ Situation summary during the operation ‖ Résumé de la situation en intervention ‖ Riepilogo della situazione durante l'intervento
+3305 ‖ National map grey (swisstopo) ‖ Carte nationale grise (swisstopo) ‖ Carta nazionale grigia (swisstopo)
+3306 ‖ National maps in colour. Source attribution “© swisstopo” mandatory, “fair use”. ‖ Cartes nationales en couleur. Mention de la source « © swisstopo » obligatoire, « fair use ». ‖ Carte nazionali a colori. Indicazione della fonte «© swisstopo» obbligatoria, «fair use».
+3307 ‖ National maps in greyscale; coloured markers are easy to read on them. Source attribution “© swisstopo” mandatory, “fair use”. ‖ Cartes nationales en niveaux de gris, les marqueurs colorés y sont bien lisibles. Mention de la source « © swisstopo » obligatoire, « fair use ». ‖ Carte nazionali in scala di grigi, i marcatori colorati vi si leggono bene. Indicazione della fonte «© swisstopo» obbligatoria, «fair use».
+3308 ‖ Layer without property {0} ‖ Couche sans propriété {0} ‖ Livello senza proprietà {0}
+3309 ‖ Layer without idColumn: the ways get their own IDs ‖ Couche sans idColumn : les tronçons reçoivent leurs propres ID ‖ Livello senza idColumn: i tratti ricevono ID propri
+3310 ‖ Danger to life (hydraulic, backwash) ‖ Danger de mort (rouleau, contre-courant) ‖ Pericolo di morte (rullo, riflusso)
+3311 ‖ Empty e-mail ‖ E-mail vide ‖ E-mail vuota
+3312 ‖ Event lead ‖ Direction de l'événement ‖ Direzione dell'evento
+3313 ‖ Secondary operation lead ‖ Direction de l'intervention secondaire ‖ Direzione dell'intervento secondario
+3314 ‖ Read confirmation configured ‖ Confirmation de lecture configurée ‖ Conferma di lettura configurata
+3315 ‖ read confirmation goes ‖ confirmation de lecture va ‖ conferma di lettura va
+3316 ‖ read confirmations go ‖ confirmations de lecture vont ‖ conferme di lettura vanno
+3317 ‖ =
+3318 ‖ Link for external parties removed ‖ Lien pour externes retiré ‖ Link per esterni rimosso
+3319 ‖ Link for external parties created ‖ Lien pour externes créé ‖ Link per esterni creato
+3320 ‖ Link for external parties “{0} ‖ Lien pour externes « {0} ‖ Link per esterni «{0}
+3321 ‖ Link not found ‖ Lien introuvable ‖ Link non trovato
+3322 ‖ Links for external parties are for “{0} ‖ Les liens pour externes sont pour « {0} ‖ I link per esterni sono per «{0}
+3323 ‖ =
+3324 ‖ Log, replay and After Action Review only show labels such as “Responder 3”, “Casualty 1” for everyone (in “My operations” the person themselves with name). The data remain unchanged; the stage can be lifted. ‖ Journal, replay et After Action Review ne montrent plus à tous que des désignations comme « Intervenant 3 », « Victime 1 » (dans « Mes interventions » la personne elle-même avec son nom). Les données restent inchangées, l'étape peut être levée. ‖ Registro, replay e After Action Review mostrano a tutti solo denominazioni come «Soccorritore 3», «Vittima 1» (in «I miei interventi» la persona stessa con il nome). I dati restano invariati, la tappa si può revocare.
+3325 ‖ Log entries and messages lose the link to the user accounts, names in the text are replaced, descriptions of casualties are dropped. The replacement does not recognise first names alone or nicknames. ‖ Les entrées du journal et les messages perdent le lien avec les comptes d'utilisateur, les noms dans le texte sont remplacés, les descriptions des victimes supprimées. Le remplacement ne reconnaît pas les prénoms seuls ni les surnoms. ‖ Le voci del registro e i messaggi perdono il collegamento con gli account utente, i nomi nel testo vengono sostituiti, le descrizioni delle vittime eliminate. La sostituzione non riconosce nomi propri da soli né soprannomi.
+3326 ‖ Aerial image worldwide (Sentinel-2) ‖ Image aérienne mondiale (Sentinel-2) ‖ Immagine aerea mondiale (Sentinel-2)
+3327 ‖ Major and minor between 0 and 65535 ‖ Major et minor entre 0 et 65535 ‖ Major e minor tra 0 e 65535
+3328 ‖ Marker/area/line ‖ Marqueur/zone/ligne ‖ Marcatore/area/linea
+3329 ‖ Markers & areas ‖ Marqueurs & zones ‖ Marcatori & aree
+3330 ‖ Markers, areas and lines ‖ Marqueurs, zones et lignes ‖ Marcatori, aree e linee
+3331 ‖ Measures ‖ Mesures ‖ Misure
+3332 ‖ Media server not fully set up (switched on, address, API key and secret) ‖ Serveur média pas entièrement configuré (activé, adresse, clé API et secret) ‖ Server multimediale non completamente configurato (attivo, indirizzo, chiave API e secret)
+3333 ‖ Media server: {0} ‖ Serveur média : {0} ‖ Server multimediale: {0}
+3334 ‖ Message missing ‖ Message manquant ‖ Messaggio mancante
+3335 ‖ FOEN gauging stations not retrievable ‖ Stations de mesure de l'OFEV indisponibles ‖ Stazioni di misura dell'UFAM non disponibili
+3336 ‖ FOEN measurements not retrievable ‖ Mesures de l'OFEV indisponibles ‖ Valori misurati dell'UFAM non disponibili
+3337 ‖ At least one operation type must remain active ‖ Au moins un type d'intervention doit rester actif ‖ Almeno un tipo d'intervento deve restare attivo
+3338 ‖ At least one channel must remain active ‖ Au moins un canal doit rester actif ‖ Almeno un canale deve restare attivo
+3339 ‖ At least one channel must remain ‖ Au moins un canal doit rester ‖ Almeno un canale deve restare
+3340 ‖ At least one map provider must remain switched on ‖ Au moins un fournisseur de cartes doit rester activé ‖ Almeno un fornitore di mappe deve restare attivo
+3341 ‖ At least one response option for {0} ‖ Au moins une option d'engagement pour {0} ‖ Almeno un'opzione d'intervento per {0}
+3342 ‖ Call out at least one response group or person or alert “All” ‖ Mobiliser au moins un groupe d'intervention ou une personne, ou alarmer « Tous » ‖ Convoca almeno un gruppo d'intervento o una persona o allarma «Tutti»
+3343 ‖ At least one navigation app must remain switched on ‖ Au moins une app de navigation doit rester activée ‖ Almeno un'app di navigazione deve restare attiva
+3344 ‖ Choose at least one person as exercise lead ‖ Choisir au moins une personne comme direction d'exercice ‖ Scegli almeno una persona come direzione dell'esercitazione
+3345 ‖ At least one active person must keep the system administrator role ‖ Au moins une personne active doit conserver le rôle d'administrateur système ‖ Almeno una persona attiva deve mantenere il ruolo di amministratore di sistema
+3346 ‖ Choose at least one weekday ‖ Choisir au moins un jour de semaine ‖ Scegli almeno un giorno della settimana
+3347 ‖ Minimum version: e.g. 0.4.0, empty = no notice ‖ Version minimale : p. ex. 0.4.0, vide = pas d'avis ‖ Versione minima: p. es. 0.4.0, vuoto = nessun avviso
+3348 ‖ With all data ‖ Avec toutes les données ‖ Con tutti i dati
+3349 ‖ Members of the response groups ‖ Membres des groupes d'intervention ‖ Membri dei gruppi d'intervento
+3350 ‖ Members of joint operations ‖ Membres d'interventions communes ‖ Membri di interventi comuni
+3351 ‖ Moderation ‖ Modération ‖ Moderazione
+3352 ‖ Follow-up processing failed: {0} ‖ Échec du traitement ultérieur : {0} ‖ Elaborazione successiva non riuscita: {0}
+3353 ‖ Message to {0}: ‖ Message à {0} : ‖ Messaggio a {0}:
+3354 ‖ Messages (with map markers) ‖ Messages (avec marqueurs de carte) ‖ Messaggi (con marcatori sulla mappa)
+3355 ‖ Name of the casualty missing ‖ Nom de la victime manquant ‖ Nome della vittima mancante
+3356 ‖ Names and descriptions of casualties and external responders are also replaced in the operation data, labels of markers and areas anonymised and message texts deleted. The operation record is pseudonymised beforehand. ‖ Les noms et descriptions des victimes et des intervenants externes sont aussi remplacés dans les données d'intervention, les désignations des marqueurs et zones anonymisées et les textes des messages supprimés. Le procès-verbal d'intervention est pseudonymisé auparavant. ‖ Nomi e descrizioni di vittime e soccorritori esterni vengono sostituiti anche nei dati d'intervento, le denominazioni di marcatori e aree anonimizzate e i testi dei messaggi eliminati. Il verbale dell'intervento viene pseudonimizzato prima.
+3357 ‖ Navigation (pass destinations to a navigation app) ‖ Navigation (transmettre des destinations à une app de navigation) ‖ Navigazione (passare destinazioni a un'app di navigazione)
+3358 ‖ New key for cron job and webhook ‖ Nouvelle clé pour la tâche cron et le webhook ‖ Nuova chiave per cron job e webhook
+3359 ‖ Not logged in ‖ Pas connecté ‖ Non connesso

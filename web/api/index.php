@@ -1787,7 +1787,7 @@ function i18nDict($l) { global $I18N; if (isset($I18N[$l])) return $I18N[$l];
     if (!preg_match('/\{\d+\}/', $k)) { $d['ex'][$k] = $v; continue; }
     $lit = preg_split('/\{\d+\}/', $k); preg_match_all('/\{(\d+)\}/', $k, $m); $long = ''; foreach ($lit as $x) if (mb_strlen($x) > mb_strlen($long)) $long = $x;
     if (strlen(preg_replace('/[^A-Za-z]/', '', $long)) < 3) continue;
-    $d['tp'][] = ['re' => '/^' . implode('(.+?)', array_map(fn($x) => preg_quote($x, '/'), $lit)) . '$/su', 'idx' => array_map('intval', $m[1]), 'out' => $v, 'long' => $long, 'n' => mb_strlen(implode('', $lit))]; }
+    $d['tp'][] = ['re' => '/^' . implode('(.*?)', array_map(fn($x) => preg_quote($x, '/'), $lit)) . '$/su', 'idx' => array_map('intval', $m[1]), 'out' => $v, 'long' => $long, 'n' => mb_strlen(implode('', $lit))]; }
   usort($d['tp'], fn($a, $b) => $b['n'] <=> $a['n']);
   return $I18N[$l] = $d; }
 // einen Text übersetzen (wie tr in i18n.js), unbekannte bleiben deutsch
@@ -1797,7 +1797,7 @@ function i18nTr($l, $s) { $s = (string)$s; if ($l === 'de' || !langOk($l) || tri
   if (isset($d['ex'][$k])) return $d['ex'][$k];
   foreach ($d['tp'] as $t) { if (mb_strlen($k) < $t['n'] || ($t['long'] !== '' && strpos($k, $t['long']) === false) || !preg_match($t['re'], $k, $m)) continue;
     $cap = []; foreach ($t['idx'] as $i => $n) $cap[$n] = $m[$i + 1];
-    return preg_replace_callback('/\{(\d+)\}/', function ($x) use ($cap, $d) { $v = $cap[(int)$x[1]] ?? $x[0]; $vk = trim($v); return $d['ex'][$vk] ?? $v; }, $t['out']); }
+    return preg_replace_callback('/\{(\d+)\}/', function ($x) use ($cap, $d) { $v = $cap[(int)$x[1]] ?? $x[0]; $vk = trim($v); if (!isset($d['ex'][$vk])) return $v; preg_match('/^\s*/u', $v, $p); preg_match('/\s*$/u', $v, $q); return $p[0] . $d['ex'][$vk] . $q[0]; }, $t['out']); }
   return $s; }
 // Grossbuchstaben (Titel von Push «EINSATZ»): in gemischter Schreibweise übersetzen, dann wieder gross
 function i18nUp($l, $s) { return mb_strtoupper(i18nTr($l, $s)); }

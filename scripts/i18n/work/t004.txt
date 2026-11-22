@@ -1,0 +1,240 @@
+960 ‖ Search area no longer ends here (only in this operation) ‖ La zone de recherche ne s'arrête plus ici (seulement dans cette intervention) ‖ L'area di ricerca non termina più qui (solo in questo intervento)
+961 ‖ Search area ends here again ‖ La zone de recherche s'arrête à nouveau ici ‖ L'area di ricerca termina di nuovo qui
+962 ‖ Search symbol … ‖ Rechercher un symbole … ‖ Cerca simbolo …
+963 ‖ Phone number removed ‖ Numéro de téléphone retiré ‖ Numero di telefono rimosso
+964 ‖ Phone number saved ‖ Numéro de téléphone enregistré ‖ Numero di telefono salvato
+965 ‖ Test alarm in 30 s. Without push on this device it only arrives while the app is open. ‖ Alarme test dans 30 s. Sans push sur cet appareil, elle n'arrive que si l'app est ouverte. ‖ Allarme di prova tra 30 s. Senza push su questo dispositivo arriva solo ad app aperta.
+966 ‖ Test alarm “{0}” in {1} s{2} ‖ Alarme test « {0} » dans {1} s{2} ‖ Allarme di prova «{0}» tra {1} s{2}
+967 ‖ Documents: fact sheets, plans, checklists ‖ Documentation : fiches, plans, listes de contrôle ‖ Documentazione: schede, piani, liste di controllo
+968 ‖ Open administration (users, settings, evaluation, exercises) ‖ Ouvrir l'administration (utilisateurs, paramètres, évaluation, exercices) ‖ Apri l'amministrazione (utenti, impostazioni, valutazione, esercitazioni)
+969 ‖ Blocked by the browser. Allow notifications for this page in the browser or device settings. ‖ Bloqué par le navigateur. Autorisez les notifications pour cette page dans les paramètres du navigateur ou de l'appareil. ‖ Bloccato dal browser. Consenti le notifiche per questa pagina nelle impostazioni del browser o del dispositivo.
+970 ‖ More actions for {0} ‖ Autres actions pour {0} ‖ Altre azioni per {0}
+971 ‖ Who has replied? ‖ Qui a répondu ? ‖ Chi ha risposto?
+972 ‖ Time of the PLS (start of drift): empty = now, minutes before (e.g. 15) or time (e.g. 14:20) ‖ Heure du PLS (début de la dérive) : vide = maintenant, minutes avant (p. ex. 15) ou heure (p. ex. 14:20) ‖ Ora del PLS (inizio della deriva): vuoto = ora, minuti prima (p. es. 15) o ora (p. es. 14:20)
+973 ‖ To “ ‖ Vers « ‖ A «
+974 ‖ Set the flow speed first. ‖ Définissez d'abord la vitesse du courant. ‖ Imposta prima la velocità della corrente.
+975 ‖ Access denied. Allow location sharing in the browser (HTTPS required). ‖ Accès refusé. Autorisez le partage de la position dans le navigateur (HTTPS nécessaire). ‖ Accesso negato. Consenti la condivisione della posizione nel browser (HTTPS necessario).
+976 ‖ Recently used ‖ Utilisés récemment ‖ Usati di recente
+977 ‖ Also take part ‖ Participer en plus ‖ Partecipa anche
+978 ‖ Between ‖ Entre ‖ Tra
+979 ‖ to “ ‖ à « ‖ a «
+980 ‖ tap to start and stop ‖ toucher pour démarrer et arrêter ‖ tocca per avviare e fermare
+981 ‖ =
+982 ‖ on this device: alarms, messages to you and end of operation also arrive while the app is closed. ‖ sur cet appareil : les alarmes, messages pour vous et fins d'intervention arrivent aussi quand l'app est fermée. ‖ su questo dispositivo: allarmi, messaggi per te e fine dell'intervento arrivano anche ad app chiusa.
+983 ‖ on “ ‖ sur « ‖ su «
+984 ‖ =
+985 ‖ =
+986 ‖ that of the operation{0} ‖ celui de l'intervention{0} ‖ quello dell'intervento{0}
+987 ‖ the fixed locations ‖ les sites fixes ‖ i luoghi fissi
+988 ‖ this device ‖ cet appareil ‖ questo dispositivo
+989 ‖ =
+990 ‖ hold to speak ‖ maintenir pour parler ‖ tieni premuto per parlare
+991 ‖ =
+992 ‖ cannot be determined ‖ non déterminable ‖ non determinabile
+993 ‖ not reachable ‖ injoignable ‖ non raggiungibile
+994 ‖ not allowed (allow location access in the browser) ‖ non autorisé (autorisez l'accès à la position dans le navigateur) ‖ non consentito (consenti l'accesso alla posizione nel browser)
+995 ‖ not in the conference{0} ‖ pas dans la conférence{0} ‖ non nella conferenza{0}
+996 ‖ not available ‖ indisponible ‖ non disponibile
+997 ‖ to {0} ‖ vers {0} ‖ a {0}
+998 ‖ {0} (default: now) ‖ {0} (par défaut : maintenant) ‖ {0} (predefinito: ora)
+999 ‖ {0} (fixed location) ‖ {0} (site fixe) ‖ {0} (luogo fisso)
+1000 ‖ {0} read confirmation ‖ {0} confirmation de lecture ‖ {0} conferma di lettura
+1001 ‖ Call {0} ‖ Appeler {0} ‖ Chiama {0}
+1002 ‖ Show {0} on the map ‖ Afficher {0} sur la carte ‖ Mostra {0} sulla mappa
+1003 ‖ Centre {0} on the map ‖ Centrer {0} sur la carte ‖ Centra {0} sulla mappa
+1004 ‖ Remove {0} from the operation ‖ Retirer {0} de l'intervention ‖ Rimuovi {0} dall'intervento
+1005 ‖ Edit {0} ‖ Modifier {0} ‖ Modifica {0}
+1006 ‖ {0} of the situation, visible to everyone. ‖ {0} de la situation, visibles par tous. ‖ {0} della situazione, visibili a tutti.
+1007 ‖ {0} of {1} ‖ {0} du {1} ‖ {0} del {1}
+1008 ‖ {0} from here · ‖ {0} d'ici · ‖ {0} da qui ·
+1009 ‖ {0} “{1}”: tap {2} ({3}) ‖ {0} « {1} » : toucher {2} ({3}) ‖ {0} «{1}»: tocca {2} ({3})
+1010 ‖ {0} · partner organisation ‖ {0} · organisation partenaire ‖ {0} · organizzazione partner
+1011 ‖ Take over {0} ‖ Reprendre {0} ‖ Riprendi {0}
+1012 ‖ {0}: show all locations ‖ {0} : afficher tous les sites ‖ {0}: mostra tutti i luoghi
+1013 ‖ {0}Auto overview ‖ {0}Vue d'ensemble auto ‖ {0}Panoramica automatica
+1014 ‖ {0}Live conference ‖ {0}Conférence en direct ‖ {0}Conferenza in diretta
+1015 ‖ {0}{1} from the location{2} ‖ {0}{1} de la position{2} ‖ {0}{1} dalla posizione{2}
+1016 ‖ Undo “rescued” ‖ Annuler « sauvée » ‖ Annulla «salvata»
+1017 ‖ · accuracy approx. {0} m ‖ · précision env. {0} m ‖ · precisione ca. {0} m
+1018 ‖ · receives announcements ‖ · reçoit les annonces ‖ · riceve gli annunci
+1019 ‖ · external ‖ · externe ‖ · esterno
+1020 ‖ · {0} km from the PLS ‖ · à {0} km du PLS ‖ · a {0} km dal PLS
+1021 ‖ ” join ‖ » rejoindre ‖ » partecipa
+1022 ‖ ” switch ‖ » changer ‖ » cambia
+1023 ‖ ← Back ‖ ← Retour ‖ ← Indietro
+1024 ‖ ▴ less ‖ ▴ moins ‖ ▴ meno
+1025 ‖ ▸ Details ‖ ▸ Détails ‖ ▸ Dettagli
+1026 ‖ ⚠ In the search area: {0} ‖ ⚠ Dans la zone de recherche : {0} ‖ ⚠ Nell'area di ricerca: {0}
+1027 ‖ ⚠ Offline – last state from {0}{1}. Updated as soon as the connection is back. ‖ ⚠ Hors ligne – dernier état de {0}{1}. Mis à jour dès le retour de la connexion. ‖ ⚠ Offline – ultimo stato delle {0}{1}. Viene aggiornato non appena torna la connessione.
+1028 ‖ ⚠ Route passes: {0} ‖ ⚠ Le trajet passe : {0} ‖ ⚠ Il percorso passa: {0}
+1029 ‖ ✨ Situation summary ready ‖ ✨ Résumé de la situation prêt ‖ ✨ Riepilogo della situazione pronto
+1030 ‖ ✨ Situation summary{0} ‖ ✨ Résumé de la situation{0} ‖ ✨ Riepilogo della situazione{0}
+1031 ‖ ✨ Transcript ‖ ✨ Transcription ‖ ✨ Trascrizione
+1032 ‖ 🔇 Mute ‖ 🔇 Couper ‖ 🔇 Silenzia
+1033 ‖ 🧭 With {0} ‖ 🧭 Avec {0} ‖ 🧭 Con {0}
+1034 ‖ Log in ‖ Se connecter ‖ Accedi
+1035 ‖ Username ‖ Nom d'utilisateur ‖ Nome utente
+1036 ‖ Password ‖ Mot de passe ‖ Password
+1037 ‖ =
+1038 ‖ , ends {0}. ‖ , s'arrête {0}. ‖ , termina {0}.
+1039 ‖ , {0} as a circle ‖ , {0} en cercle ‖ , {0} come cerchio
+1040 ‖ , {0} without area ‖ , {0} sans zone ‖ , {0} senza area
+1041 ‖ River network not available ({0}), another attempt will follow. ‖ Réseau hydrographique indisponible ({0}), nouvel essai à suivre. ‖ Rete idrografica non disponibile ({0}), seguirà un nuovo tentativo.
+1042 ‖ Loading river network. ‖ Chargement du réseau hydrographique. ‖ Caricamento della rete idrografica.
+1043 ‖ No water body near the PLS. ‖ Aucun cours d'eau près du PLS. ‖ Nessun corso d'acqua vicino al PLS.
+1044 ‖ No response ‖ Pas de réponse ‖ Nessuna risposta
+1045 ‖ Search area from PLS{0} ({1}): ‖ Zone de recherche dès le PLS{0} ({1}) : ‖ Area di ricerca dal PLS{0} ({1}):
+1046 ‖ Search area: ‖ Zone de recherche : ‖ Area di ricerca:
+1047 ‖ Search area: all casualties found. ‖ Zone de recherche : toutes les victimes trouvées. ‖ Area di ricerca: tutte le vittime trovate.
+1048 ‖ Search area: flow speed missing. ‖ Zone de recherche : vitesse du courant manquante. ‖ Area di ricerca: manca la velocità della corrente.
+1049 ‖ Search area: no PLS set. ‖ Zone de recherche : aucun PLS défini. ‖ Area di ricerca: nessun PLS impostato.
+1050 ‖ Invalid response ‖ Réponse invalide ‖ Risposta non valida
+1051 ‖ Timeout ‖ Délai dépassé ‖ Tempo scaduto
+1052 ‖ at post {0} ‖ au poste {0} ‖ al posto {0}
+1053 ‖ at a river barrier ‖ à une barrière fluviale ‖ a uno sbarramento fluviale
+1054 ‖ {0}The time of the PLS is in the future. ‖ {0}L'heure du PLS est dans le futur. ‖ {0}L'ora del PLS è nel futuro.
+1055 ‖ Saved. ‖ Enregistré. ‖ Salvato.
+1056 ‖ Current password ‖ Mot de passe actuel ‖ Password attuale
+1057 ‖ Hide all ‖ Tout masquer ‖ Nascondi tutto
+1058 ‖ Show all ‖ Tout afficher ‖ Mostra tutto
+1059 ‖ View ‖ Affichage ‖ Vista
+1060 ‖ On the map ‖ Sur la carte ‖ Sulla mappa
+1061 ‖ Base map ‖ Carte de base ‖ Mappa di base
+1062 ‖ Altitude ? ‖ Altitude ? ‖ Altitudine ?
+1063 ‖ Aircraft ‖ Aéronef ‖ Aeromobile
+1064 ‖ New password ‖ Nouveau mot de passe ‖ Nuova password
+1065 ‖ Repeat new password ‖ Répéter le nouveau mot de passe ‖ Ripeti la nuova password
+1066 ‖ Rescue helicopter ‖ Hélicoptère de sauvetage ‖ Elicottero di soccorso
+1067 ‖ on the ground ‖ au sol ‖ a terra
+1068 ‖ Tue ‖ Ma ‖ Ma
+1069 ‖ Thu ‖ Je ‖ Gi
+1070 ‖ Created ‖ Créé ‖ Creato
+1071 ‖ Fri ‖ Ve ‖ Ve
+1072 ‖ Saved suggestion from ‖ Proposition enregistrée du ‖ Proposta salvata del
+1073 ‖ Copied to the clipboard. ‖ Copié dans le presse-papiers. ‖ Copiato negli appunti.
+1074 ‖ Copy ‖ Copier ‖ Copia
+1075 ‖ Wed ‖ Me ‖ Me
+1076 ‖ Mon ‖ Lu ‖ Lu
+1077 ‖ Sat ‖ Sa ‖ Sa
+1078 ‖ Sun ‖ Di ‖ Do
+1079 ‖ Additional request (optional) ‖ Souhait supplémentaire (facultatif) ‖ Richiesta aggiuntiva (facoltativa)
+1080 ‖ until further notice ‖ jusqu'à nouvel avis ‖ fino a nuovo avviso
+1081 ‖ no user role ‖ aucun rôle d'utilisateur ‖ nessun ruolo utente
+1082 ‖ e.g. shorter, more on alerting ‖ p. ex. plus court, davantage sur l'alarme ‖ p. es. più breve, più sull'allarme
+1083 ‖ · names replaced by labels ‖ · noms remplacés par des désignations ‖ · nomi sostituiti da denominazioni
+1084 ‖ =
+1085 ‖ ↻ New ‖ ↻ Nouveau ‖ ↻ Nuovo
+1086 ‖ ✨ The AI assistant is writing … ‖ ✨ L'assistant IA écrit … ‖ ✨ L'assistente IA sta scrivendo …
+1087 ‖ The colour fills the marker, the border shows the special role. ‖ La couleur remplit le marqueur, le bord indique le rôle spécial. ‖ Il colore riempie il marcatore, il bordo indica il ruolo speciale.
+1088 ‖ Abbreviation (max. 4 characters, on the marker) ‖ Abréviation (max. 4 caractères, sur le marqueur) ‖ Sigla (max. 4 caratteri, sul marcatore)
+1089 ‖ e.g. FB ‖ p. ex. SP ‖ p. es. VF
+1090 ‖ No entries. ‖ Aucune entrée. ‖ Nessuna voce.
+1091 ‖ Line, approx. {0} km ‖ Ligne, env. {0} km ‖ Linea, ca. {0} km
+1092 ‖ (over midnight) ‖ (après minuit) ‖ (oltre la mezzanotte)
+1093 ‖ 1 week ‖ 1 semaine ‖ 1 settimana
+1094 ‖ Absent ‖ Absent ‖ Assente
+1095 ‖ Record absence ‖ Saisir une absence ‖ Registra assenza
+1096 ‖ Ended. ‖ Terminé. ‖ Terminato.
+1097 ‖ Both have the same effect: not called out and no alarm. Running operations remain visible, joining voluntarily is possible. ‖ Les deux ont le même effet : pas de mobilisation ni d'alarme. Les interventions en cours restent visibles, rejoindre volontairement est possible. ‖ Entrambi hanno lo stesso effetto: nessuna convocazione e nessun allarme. Gli interventi in corso restano visibili, è possibile partecipare volontariamente.
+1098 ‖ Until ‖ Jusqu'à ‖ Fino a
+1099 ‖ Until (empty = until further notice) ‖ Jusqu'à (vide = jusqu'à nouvel avis) ‖ Fino a (vuoto = fino a nuovo avviso)
+1100 ‖ Until further notice ‖ Jusqu'à nouvel avis ‖ Fino a nuovo avviso
+1101 ‖ Until tomorrow 06:00 ‖ Jusqu'à demain 06:00 ‖ Fino a domani alle 06:00
+1102 ‖ The new passwords do not match. ‖ Les nouveaux mots de passe ne correspondent pas. ‖ Le nuove password non corrispondono.
+1103 ‖ Availability suspended ‖ Disponibilité suspendue ‖ Disponibilità sospesa
+1104 ‖ Availability time ‖ Horaire de disponibilité ‖ Orario di disponibilità
+1105 ‖ Availability time: if you have such rules, you are only alerted during these times. Regularly suspended: no alarm during these times (e.g. work). Acts like an absence; running operations remain visible. ‖ Horaire de disponibilité : si vous avez de telles règles, vous n'êtes alarmé que pendant ces heures. Régulièrement suspendu : pas d'alarme pendant ces heures (p. ex. travail). Agit comme une absence ; les interventions en cours restent visibles. ‖ Orario di disponibilità: se hai tali regole, vieni allarmato solo in questi orari. Sospeso regolarmente: nessun allarme in questi orari (p. es. lavoro). Agisce come un'assenza; gli interventi in corso restano visibili.
+1106 ‖ Remove entry? ‖ Retirer l'entrée ? ‖ Rimuovere la voce?
+1107 ‖ End entry now? ‖ Terminer l'entrée maintenant ? ‖ Terminare ora la voce?
+1108 ‖ Change entry ‖ Modifier l'entrée ‖ Modifica voce
+1109 ‖ Removed. ‖ Retiré. ‖ Rimosso.
+1110 ‖ No regular availability times. ‖ Aucun horaire de disponibilité régulier. ‖ Nessun orario di disponibilità regolare.
+1111 ‖ Mon–Fri ‖ Lu–Ve ‖ Lu–Ve
+1112 ‖ Password changed. ‖ Mot de passe modifié. ‖ Password modificata.
+1113 ‖ Remove rule? ‖ Retirer la règle ? ‖ Rimuovere la regola?
+1114 ‖ Change rule ‖ Modifier la règle ‖ Modifica regola
+1115 ‖ Regularly suspended ‖ Régulièrement suspendu ‖ Sospeso regolarmente
+1116 ‖ Record regular availability time ‖ Saisir un horaire de disponibilité régulier ‖ Registra orario di disponibilità regolare
+1117 ‖ Sat, Sun ‖ Sa, Di ‖ Sa, Do
+1118 ‖ Daily ‖ Quotidien ‖ Ogni giorno
+1119 ‖ From ‖ De ‖ Da
+1120 ‖ Weekdays ‖ Jours de semaine ‖ Giorni della settimana
+1121 ‖ whole day ‖ toute la journée ‖ tutto il giorno
+1122 ‖ daily ‖ quotidien ‖ ogni giorno
+1123 ‖ e.g. work, on call ‖ p. ex. travail, piquet ‖ p. es. lavoro, picchetto
+1124 ‖ e.g. holidays, illness ‖ p. ex. vacances, maladie ‖ p. es. vacanze, malattia
+1125 ‖ “Until” before “From” = over midnight (counts for the chosen day), same time = whole day. ‖ « Jusqu'à » avant « De » = après minuit (compte pour le jour choisi), même heure = toute la journée. ‖ «Fino a» prima di «Da» = oltre la mezzanotte (conta per il giorno scelto), stessa ora = tutto il giorno.
+1126 ‖ + Record refresher ‖ + Saisir un recyclage ‖ + Registra aggiornamento
+1127 ‖ + Record training ‖ + Saisir une formation ‖ + Registra formazione
+1128 ‖ 1 year ‖ 1 an ‖ 1 anno
+1129 ‖ Training recorded. ‖ Formation saisie. ‖ Formazione registrata.
+1130 ‖ Entry removed. ‖ Entrée retirée. ‖ Voce rimossa.
+1131 ‖ Recorded by the administration. ‖ Saisi par l'administration. ‖ Registrata dall'amministrazione.
+1132 ‖ No training is stored for you. ‖ Aucune formation n'est enregistrée pour vous. ‖ Per te non è registrata alcuna formazione.
+1133 ‖ No training recorded yet ‖ Aucune formation saisie pour l'instant ‖ Ancora nessuna formazione registrata
+1134 ‖ History ({0}) ‖ Historique ({0}) ‖ Cronologia ({0})
+1135 ‖ until the end of next year ‖ jusqu'à la fin de l'année suivante ‖ fino alla fine dell'anno successivo
+1136 ‖ until the end of the calendar year ‖ jusqu'à la fin de l'année civile ‖ fino alla fine dell'anno civile
+1137 ‖ until the end of the {0}th following year ‖ jusqu'à la fin de la {0}e année suivante ‖ fino alla fine del {0}° anno successivo
+1138 ‖ missing (mandatory) ‖ manquante (obligatoire) ‖ mancante (obbligatoria)
+1139 ‖ valid ‖ valable ‖ valida
+1140 ‖ expires soon ‖ expire bientôt ‖ scade presto
+1141 ‖ not recorded ‖ non saisie ‖ non registrata
+1142 ‖ e.g. course, place, instructor ‖ p. ex. cours, lieu, formateur ‖ p. es. corso, luogo, istruttore
+1143 ‖ {0} years ‖ {0} ans ‖ {0} anni
+1144 ‖ {0} months ‖ {0} mois ‖ {0} mesi
+1145 ‖ {0} expired ‖ {0} expirée(s) ‖ {0} scaduta/e
+1146 ‖ {0} expires soon ‖ {0} expire(nt) bientôt ‖ {0} scade/scadono presto
+1147 ‖ {0} · validity {1}{2} ‖ {0} · validité {1}{2} ‖ {0} · validità {1}{2}
+1148 ‖ Geodata (OpenStreetMap) ‖ Géodonnées (OpenStreetMap) ‖ Geodati (OpenStreetMap)
+1149 ‖ National map (swisstopo) ‖ Carte nationale (swisstopo) ‖ Carta nazionale (swisstopo)
+1150 ‖ Aerial image (swisstopo) ‖ Image aérienne (swisstopo) ‖ Immagine aerea (swisstopo)
+1151 ‖ Message markers ‖ Marqueurs de messages ‖ Marcatori dei messaggi
+1152 ‖ =
+1153 ‖ WGS84 decimal degrees ‖ WGS84 degrés décimaux ‖ WGS84 gradi decimali
+1154 ‖ WGS84 degrees, minutes, seconds ‖ WGS84 degrés, minutes, secondes ‖ WGS84 gradi, minuti, secondi
+1155 ‖ outside availability time ‖ hors de l'horaire de disponibilité ‖ fuori dall'orario di disponibilità
+1156 ‖ regularly suspended ‖ régulièrement suspendu ‖ sospeso regolarmente
+1157 ‖ Battery ‖ Batterie ‖ Batteria
+1158 ‖ Vehicle ‖ Véhicule ‖ Veicolo
+1159 ‖ on {0} ‖ le {0} ‖ il {0}
+1160 ‖ never seen ‖ jamais vu ‖ mai visto
+1161 ‖ {0} h {1} min ago ‖ il y a {0} h {1} min ‖ {0} h {1} min fa
+1162 ‖ ⚠ Battery low ‖ ⚠ Batterie faible ‖ ⚠ Batteria scarica
+1163 ‖ Play announcement ‖ Lire l'annonce ‖ Riproduci annuncio
+1164 ‖ Organisation logo ‖ Logo de l'organisation ‖ Logo dell'organizzazione
+1165 ‖ No details. ‖ Aucune indication. ‖ Nessuna indicazione.
+1166 ‖ =
+1167 ‖ Anonymous ‖ Anonyme ‖ Anonimo
+1168 ‖ Operation log ‖ Journal d'intervention ‖ Registro dell'intervento
+1169 ‖ Speed ‖ Vitesse ‖ Velocità
+1170 ‖ No entries ‖ Aucune entrée ‖ Nessuna voce
+1171 ‖ Mandatory ‖ Obligatoire ‖ Obbligatoria
+1172 ‖ Discard ‖ Rejeter ‖ Scarta
+1173 ‖ for ‖ pour ‖ per
+1174 ‖ Suggestion ‖ Proposition ‖ Proposta
+1175 ‖ (no operation data here) ‖ (pas de données d'intervention ici) ‖ (qui nessun dato d'intervento)
+1176 ‖ , advance warning {0} days before ‖ , préavis {0} jours avant ‖ , preavviso {0} giorni prima
+1177 ‖ . Set the PLS of the operation or the casualties. ‖ . Définissez le PLS de l'intervention ou des victimes. ‖ . Imposta il PLS dell'intervento o delle vittime.
+1178 ‖ All entries ‖ Toutes les entrées ‖ Tutte le voci
+1179 ‖ Close view ‖ Fermer la vue ‖ Chiudi la vista
+1180 ‖ Join / leave ‖ Arrivée / départ ‖ Ingresso / uscita
+1181 ‖ Ctrl+Enter or “↻ New” creates a new suggestion with this request. ‖ Ctrl+Entrée ou « ↻ Nouveau » crée une nouvelle proposition avec ce souhait. ‖ Ctrl+Invio o «↻ Nuovo» crea una nuova proposta con questa richiesta.
+1182 ‖ Displayed as a circle, radius {0} m. ‖ Représentation en cercle, rayon {0} m. ‖ Rappresentazione come cerchio, raggio {0} m.
+1183 ‖ Date of the training or refresher ‖ Date de la formation ou du recyclage ‖ Data della formazione o dell'aggiornamento
+1184 ‖ Date missing ‖ Date manquante ‖ Data mancante
+1185 ‖ Your password has been reset. Please set your own password now. ‖ Votre mot de passe a été réinitialisé. Veuillez maintenant définir votre propre mot de passe. ‖ La tua password è stata reimpostata. Imposta ora una password tua.
+1186 ‖ Your question ‖ Votre question ‖ La tua domanda
+1187 ‖ The map library could not be loaded (connection?) ‖ La bibliothèque cartographique n'a pas pu être chargée (connexion ?) ‖ Non è stato possibile caricare la libreria della mappa (connessione?)
+1188 ‖ Remove this entry? ‖ Retirer cette entrée ? ‖ Rimuovere questa voce?
+1189 ‖ Distance to the PLS ‖ Distance au PLS ‖ Distanza dal PLS
+1190 ‖ Your own question on it (free input) ‖ Question personnelle à ce sujet (saisie libre) ‖ Domanda propria al riguardo (inserimento libero)
+1191 ‖ Operation / flow speed / recording / public ‖ Intervention / vitesse du courant / enregistrement / public ‖ Intervento / velocità della corrente / registrazione / pubblico
+1192 ‖ Remove entry ‖ Retirer l'entrée ‖ Rimuovi voce
+1193 ‖ Start password received ‖ Mot de passe initial reçu ‖ Password iniziale ricevuta
+1194 ‖ There is no answer yet ‖ Il n'y a pas encore de réponse ‖ Non c'è ancora una risposta
+1195 ‖ There is no suggestion yet ‖ Il n'y a pas encore de proposition ‖ Non c'è ancora una proposta
+1196 ‖ Trips / search area ‖ Trajets / zone de recherche ‖ Tragitti / area di ricerca
+1197 ‖ Filter ‖ Filtre ‖ Filtro
+1198 ‖ Questions ‖ Questions ‖ Domande
+1199 ‖ Questions and answers are not saved. ‖ Les questions et réponses ne sont pas enregistrées. ‖ Domande e risposte non vengono salvate.

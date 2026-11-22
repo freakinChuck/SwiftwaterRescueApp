@@ -1,0 +1,240 @@
+2160 ‖ So that the operation lead sees your location during an operation even with the screen locked or the app closed, ‖ Pour que la direction d'intervention voie votre position même écran verrouillé ou app fermée, ‖ Affinché la direzione dell'intervento veda la tua posizione anche a schermo bloccato o ad app chiusa,
+2161 ‖ The new passwords do not match ‖ Les nouveaux mots de passe ne correspondent pas ‖ Le nuove password non corrispondono
+2162 ‖ Set own password ‖ Définir son propre mot de passe ‖ Imposta una password tua
+2163 ‖ Try again ‖ Réessayer ‖ Riprova
+2164 ‖ Follow: {0} ‖ Suivre : {0} ‖ Segui: {0}
+2165 ‖ Rescued {0} ‖ Sauvée {0} ‖ Salvata {0}
+2166 ‖ Separated at the same place ‖ Séparés au même endroit ‖ Separati nello stesso luogo
+2167 ‖ Helicopters: {0} of {1} km around operation and search area ‖ Hélicoptères : {0} dans un rayon de {1} km autour de l'intervention et de la zone de recherche ‖ Elicotteri: {0} entro {1} km dall'intervento e dall'area di ricerca
+2168 ‖ Altitude {0}{1} ‖ Altitude {0}{1} ‖ Altitudine {0}{1}
+2169 ‖ No search area ‖ Pas de zone de recherche ‖ Nessuna area di ricerca
+2170 ‖ No responders with location ‖ Aucun intervenant avec position ‖ Nessun soccorritore con posizione
+2171 ‖ Tap at least three corners ‖ Touchez au moins trois sommets ‖ Tocca almeno tre vertici
+2172 ‖ Tap at least two points ‖ Touchez au moins deux points ‖ Tocca almeno due punti
+2173 ‖ Align to north ‖ Orienter au nord ‖ Orienta a nord
+2174 ‖ Just acknowledge ‖ Seulement acquitter ‖ Solo conferma
+2175 ‖ Offline · last connected {0} ‖ Hors ligne · dernière connexion {0} ‖ Offline · ultima connessione {0}
+2176 ‖ Password changed ‖ Mot de passe modifié ‖ Password modificata
+2177 ‖ Acknowledge ‖ Acquitter ‖ Conferma
+2178 ‖ Casualty – {0} · {1} ‖ Victime – {0} · {1} ‖ Vittima – {0} · {1}
+2179 ‖ Location “Always allow”? ‖ Position « Toujours autoriser » ? ‖ Posizione «Consenti sempre»?
+2180 ‖ FOEN station page ‖ Page de la station OFEV ‖ Pagina della stazione UFAM
+2181 ‖ Connection to {0} failed ‖ Échec de la connexion à {0} ‖ Connessione a {0} non riuscita
+2182 ‖ On the next page choose “Always allow”. ‖ Sur la page suivante, choisissez « Toujours autoriser ». ‖ Nella pagina successiva scegli «Consenti sempre».
+2183 ‖ Choose “Always allow” or “Always” in the settings. ‖ Choisissez « Toujours autoriser » ou « Toujours » dans les paramètres. ‖ Scegli «Consenti sempre» o «Sempre» nelle impostazioni.
+2184 ‖ the app needs the location “Always”. It is only shared while you take part in an operation and your response option shares the location. ‖ l'app a besoin de la position « Toujours ». Elle n'est partagée que tant que vous participez à une intervention et que votre option d'engagement partage la position. ‖ l'app necessita della posizione «Sempre». Viene condivisa solo finché partecipi a un intervento e la tua opzione d'intervento condivide la posizione.
+2185 ‖ does not count for the search area ‖ ne compte pas pour la zone de recherche ‖ non conta per l'area di ricerca
+2186 ‖ Remove {0}? ‖ Retirer {0} ? ‖ Rimuovere {0}?
+2187 ‖ {0} You can change it at any time in the app settings. ‖ {0} Vous pouvez le modifier à tout moment dans les paramètres de l'app. ‖ {0} Puoi modificarlo in qualsiasi momento nelle impostazioni dell'app.
+2188 ‖ {0} ▴ less ‖ {0} ▴ moins ‖ {0} ▴ meno
+2189 ‖ {0} ▸ details ‖ {0} ▸ détails ‖ {0} ▸ dettagli
+2190 ‖ {0}{1}. Low-flying helicopters may be missing. ‖ {0}{1}. Les hélicoptères volant bas peuvent manquer. ‖ {0}{1}. Gli elicotteri a bassa quota possono mancare.
+2191 ‖ =
+2192 ‖ 🧭 Navigate ({0} destinations) ‖ 🧭 Naviguer ({0} destinations) ‖ 🧭 Naviga ({0} destinazioni)
+2193 ‖ Alarm received: ‖ Réception de l'alarme : ‖ Ricezione dell'allarme:
+2194 ‖ All people{0} ‖ Toutes les personnes{0} ‖ Tutte le persone{0}
+2195 ‖ The last loaded state is shown. Actions fail until the connection is back. ‖ Le dernier état chargé est affiché. Les actions échouent jusqu'au retour de la connexion. ‖ Viene mostrato l'ultimo stato caricato. Le azioni non riescono finché non torna la connessione.
+2196 ‖ Training: {0} ‖ Formation : {0} ‖ Formazione: {0}
+2197 ‖ Start: ‖ Début : ‖ Inizio:
+2198 ‖ Please enter a flow speed in m/s ‖ Veuillez saisir une vitesse du courant en m/s ‖ Inserisci una velocità della corrente in m/s
+2199 ‖ Browser not available ‖ Navigateur indisponible ‖ Browser non disponibile
+2200 ‖ Your reply: {0}{1} ‖ Votre réponse : {0}{1} ‖ La tua risposta: {0}{1}
+2201 ‖ Take over the missing casualty ‖ Reprendre la victime disparue ‖ Riprendi la vittima dispersa
+2202 ‖ Take over the {0} missing casualties ‖ Reprendre les {0} victimes disparues ‖ Riprendi le {0} vittime disperse
+2203 ‖ Own organisation ‖ Propre organisation ‖ Propria organizzazione
+2204 ‖ Accept operation {0} ‖ Accepter l'intervention {0} ‖ Accetta l'intervento {0}
+2205 ‖ Responders on the map ‖ Intervenants sur la carte ‖ Soccorritori sulla mappa
+2206 ‖ Operation plan{0} ‖ Plan d'intervention{0} ‖ Piano d'intervento{0}
+2207 ‖ Switch on ‖ Activer ‖ Attiva
+2208 ‖ Follow-up operation to (optional) ‖ Intervention de suivi de (facultatif) ‖ Intervento successivo a (facoltativo)
+2209 ‖ Now ‖ Maintenant ‖ Ora
+2210 ‖ No connection to the server{0} ‖ Pas de connexion au serveur{0} ‖ Nessuna connessione al server{0}
+2211 ‖ Switch accounts / servers ‖ Changer de compte / serveur ‖ Cambia account / server
+2212 ‖ LV95, LV03 or WGS84 ‖ LV95, LV03 ou WGS84 ‖ LV95, LV03 o WGS84
+2213 ‖ My special role ‖ Mon rôle spécial ‖ Il mio ruolo speciale
+2214 ‖ PLS (optional) ‖ PLS (facultatif) ‖ PLS (facoltativo)
+2215 ‖ PLS (optional): choose on the map or enter coordinates. Without a PLS the search area only arises with the PLS of a casualty. ‖ PLS (facultatif) : choisir sur la carte ou saisir des coordonnées. Sans PLS, la zone de recherche n'apparaît qu'avec le PLS d'une victime. ‖ PLS (facoltativo): scegli sulla mappa o inserisci le coordinate. Senza PLS l'area di ricerca nasce solo con il PLS di una vittima.
+2216 ‖ PLS not recognised: LV95, LV03 or WGS84 decimal ‖ PLS non reconnu : LV95, LV03 ou WGS84 décimal ‖ PLS non riconosciuto: LV95, LV03 o WGS84 decimale
+2217 ‖ PLS at {0}{1} ‖ PLS à {0}{1} ‖ PLS alle {0}{1}
+2218 ‖ Profile{0} ‖ Profil{0} ‖ Profilo{0}
+2219 ‖ Tap the map to set the PLS. ‖ Touchez la carte pour définir le PLS. ‖ Tocca la mappa per impostare il PLS.
+2220 ‖ Suggestion of the AI assistant: please check it before you take it over. Only the data of this view go to the provider. ‖ Proposition de l'assistant IA : veuillez la vérifier avant de la reprendre. Seules les données de cette vue sont transmises au fournisseur. ‖ Proposta dell'assistente IA: verificala prima di riprenderla. Al fornitore vanno solo i dati di questa vista.
+2221 ‖ Time of the PLS (start of drift) ‖ Heure du PLS (début de la dérive) ‖ Ora del PLS (inizio della deriva)
+2222 ‖ Also take part {0} ‖ Participer en plus {0} ‖ Partecipa anche {0}
+2223 ‖ now (default) ‖ maintenant (par défaut) ‖ ora (predefinito)
+2224 ‖ empty = now, minutes before (e.g. 15) or time (e.g. 14:20) ‖ vide = maintenant, minutes avant (p. ex. 15) ou heure (p. ex. 14:20) ‖ vuoto = ora, minuti prima (p. es. 15) o ora (p. es. 14:20)
+2225 ‖ set manually (test) ‖ défini manuellement (test) ‖ impostata manualmente (test)
+2226 ‖ is not determined with this response option ‖ n'est pas déterminée avec cette option d'engagement ‖ non viene determinata con questa opzione d'intervento
+2227 ‖ {0} Who has replied? ‖ {0} Qui a répondu ? ‖ {0} Chi ha risposto?
+2228 ‖ {0} of {1}{2} ‖ {0} du {1}{2} ‖ {0} del {1}{2}
+2229 ‖ {0}You are reported absent and were not alerted, but you can still take part. ‖ {0}Vous êtes annoncé absent et n'avez pas été alarmé, mais vous pouvez quand même participer. ‖ {0}Sei segnalato assente e non sei stato allarmato, ma puoi comunque partecipare.
+2230 ‖ · alerted ‖ · alarmé ‖ · allarmato
+2231 ‖ · last connection {0} ‖ · dernière connexion {0} ‖ · ultima connessione {0}
+2232 ‖ · not reachable ‖ · injoignable ‖ · non raggiungibile
+2233 ‖ Older entries in the administration's log. ‖ Entrées plus anciennes dans le journal de l'administration. ‖ Voci più vecchie nel registro dell'amministrazione.
+2234 ‖ ✨ Situation summary ‖ ✨ Résumé de la situation ‖ ✨ Riepilogo della situazione
+2235 ‖ 📝 Feedback requested on {0} ‖ 📝 Retour demandé sur {0} ‖ 📝 Feedback richiesto su {0}
+2236 ‖ All ‖ Tous ‖ Tutti
+2237 ‖ As a marker on the map (choose point) ‖ Comme marqueur sur la carte (choisir un point) ‖ Come marcatore sulla mappa (scegli un punto)
+2238 ‖ As a marker on the map (at own location) ‖ Comme marqueur sur la carte (à sa propre position) ‖ Come marcatore sulla mappa (alla propria posizione)
+2239 ‖ To: {0} ‖ À : {0} ‖ A: {0}
+2240 ‖ Nobody else has accepted the operation. ‖ Personne d'autre n'a accepté l'intervention. ‖ Nessun altro ha accettato l'intervento.
+2241 ‖ Current colour ‖ Couleur actuelle ‖ Colore attuale
+2242 ‖ No vehicles. ‖ Aucun véhicule. ‖ Nessun veicolo.
+2243 ‖ Operation lead rights (no special role) ‖ Droits de la direction d'intervention (sans rôle spécial) ‖ Diritti della direzione dell'intervento (senza ruolo speciale)
+2244 ‖ Black ‖ Noir ‖ Nero
+2245 ‖ Special role ‖ Rôle spécial ‖ Ruolo speciale
+2246 ‖ Special role of {0} ‖ Rôle spécial de {0} ‖ Ruolo speciale di {0}
+2247 ‖ Change special role … ‖ Modifier le rôle spécial … ‖ Modifica ruolo speciale …
+2248 ‖ White ‖ Blanc ‖ Bianco
+2249 ‖ Area “{0}”: tap corners ‖ Zone « {0} » : touchez les sommets ‖ Area «{0}»: tocca i vertici
+2250 ‖ Area, approx. {0} ha ‖ Zone, env. {0} ha ‖ Area, ca. {0} ha
+2251 ‖ Line “{0}”: tap points ‖ Ligne « {0} » : touchez les points ‖ Linea «{0}»: tocca i punti
+2252 ‖ Navigation point {0} ‖ Point de navigation {0} ‖ Punto di navigazione {0}
+2253 ‖ {0} from the location ‖ {0} de la position ‖ {0} dalla posizione
+2254 ‖ {0} from here ‖ {0} d'ici ‖ {0} da qui
+2255 ‖ {0}Then tap the point on the map. ‖ {0}Ensuite, touchez le point sur la carte. ‖ {0}Poi tocca il punto sulla mappa.
+2256 ‖ (UUID not registered) ‖ (UUID non enregistré) ‖ (UUID non registrato)
+2257 ‖ =
+2258 ‖ App settings ‖ Paramètres de l'app ‖ Impostazioni dell'app
+2259 ‖ Teach beacon ‖ Apprendre une balise ‖ Registra beacon
+2260 ‖ Teach beacon … ‖ Apprendre une balise … ‖ Registra beacon …
+2261 ‖ Ready, provided Bluetooth is switched on. ‖ Prêt, si le Bluetooth est activé. ‖ Pronto, se il Bluetooth è attivo.
+2262 ‖ Choose image ‖ Choisir une image ‖ Scegli immagine
+2263 ‖ Image could not be processed ‖ L'image n'a pas pu être traitée ‖ Non è stato possibile elaborare l'immagine
+2264 ‖ Bluetooth ready. ‖ Bluetooth prêt. ‖ Bluetooth pronto.
+2265 ‖ Allow Bluetooth ‖ Autoriser le Bluetooth ‖ Consenti il Bluetooth
+2266 ‖ Bluetooth is off or missing: the app sees no vehicles. ‖ Le Bluetooth est désactivé ou absent : l'app ne voit pas de véhicules. ‖ Il Bluetooth è disattivato o assente: l'app non vede veicoli.
+2267 ‖ Bluetooth is off or not allowed ‖ Le Bluetooth est désactivé ou non autorisé ‖ Il Bluetooth è disattivato o non consentito
+2268 ‖ The operating system searches for the beacons itself, which uses little battery. During an operation the app always reports the vehicles while you share your location. ‖ Le système d'exploitation cherche lui-même les balises, ce qui consomme peu de batterie. En intervention, l'app signale toujours les véhicules tant que vous partagez votre position. ‖ Il sistema operativo cerca da sé i beacon, consumando poca batteria. Durante un intervento l'app segnala sempre i veicoli finché condividi la posizione.
+2269 ‖ The strongest signal is at the top. Tap it and choose the vehicle. ‖ Le signal le plus fort est en haut. Touchez-le et choisissez le véhicule. ‖ Il segnale più forte è in cima. Toccalo e scegli il veicolo.
+2270 ‖ The app may not use Bluetooth yet. ‖ L'app ne peut pas encore utiliser le Bluetooth. ‖ L'app non può ancora usare il Bluetooth.
+2271 ‖ The app may not use the location yet: without it, iOS sees no beacons. ‖ L'app ne peut pas encore utiliser la position : sans elle, iOS ne voit pas de balises. ‖ L'app non può ancora usare la posizione: senza di essa iOS non vede beacon.
+2272 ‖ The app detects the beacons in the vehicles and reports their location without your name, at most every {0} min. ‖ L'app détecte les balises des véhicules et signale leur position sans votre nom, au plus toutes les {0} min. ‖ L'app riconosce i beacon nei veicoli e ne segnala la posizione senza il tuo nome, al massimo ogni {0} min.
+2273 ‖ Record ‖ Saisir ‖ Registra
+2274 ‖ Take photo ‖ Prendre une photo ‖ Scatta foto
+2275 ‖ Allow precise location ‖ Autoriser la position exacte ‖ Consenti la posizione precisa
+2276 ‖ Applies to this backend on this device. Android plays it as an alarm clock in a loop, iOS once (at most 30 s). ‖ S'applique à ce backend sur cet appareil. Android le joue en boucle comme réveil, iOS une fois (au plus 30 s). ‖ Vale per questo backend su questo dispositivo. Android lo riproduce in loop come sveglia, iOS una volta (al massimo 30 s).
+2277 ‖ No beacon found. Hold the phone close to the beacon. ‖ Aucune balise trouvée. Tenez le téléphone près de la balise. ‖ Nessun beacon trovato. Tieni il telefono vicino al beacon.
+2278 ‖ No beacon found. iOS only sees beacons with a registered UUID (Administration → Vehicles). ‖ Aucune balise trouvée. iOS ne voit que les balises avec un UUID enregistré (Administration → Véhicules). ‖ Nessun beacon trovato. iOS vede solo beacon con un UUID registrato (Amministrazione → Veicoli).
+2279 ‖ No operation type alerts critically. ‖ Aucun type d'intervention n'alarme de manière critique. ‖ Nessun tipo d'intervento allarma in modo critico.
+2280 ‖ After 30 seconds triggers an alarm of the chosen level only for you, without an operation. Then close the app or lock the screen to check sound and notification. ‖ Déclenche après 30 secondes une alarme du niveau choisi pour vous seul, sans intervention. Fermez ensuite l'app ou verrouillez l'écran pour vérifier le son et la notification. ‖ Dopo 30 secondi attiva un allarme del livello scelto solo per te, senza intervento. Poi chiudi l'app o blocca lo schermo per verificare suono e notifica.
+2281 ‖ Search again ‖ Rechercher à nouveau ‖ Cerca di nuovo
+2282 ‖ Not allowed: the app can neither show nor share the location. ‖ Non autorisé : l'app ne peut ni afficher ni partager la position. ‖ Non consentito: l'app non può né mostrare né condividere la posizione.
+2283 ‖ Only approximate location: iOS finds no beacons this way. Settings → Swiftwater Rescue → Location → switch on “Precise Location”. ‖ Position approximative seulement : iOS ne trouve ainsi aucune balise. Réglages → Swiftwater Rescue → Position → activer « Position exacte ». ‖ Solo posizione approssimativa: così iOS non trova beacon. Impostazioni → Swiftwater Rescue → Posizione → attiva «Posizione esatta».
+2284 ‖ Only allowed while using: with the screen locked or the app closed, the location is not shared. ‖ Autorisé seulement pendant l'utilisation : écran verrouillé ou app fermée, la position n'est pas partagée. ‖ Consentito solo durante l'uso: a schermo bloccato o ad app chiusa la posizione non viene condivisa.
+2285 ‖ Test: {0} ‖ Essai : {0} ‖ Prova: {0}
+2286 ‖ Profile picture saved ‖ Photo de profil enregistrée ‖ Immagine del profilo salvata
+2287 ‖ This is how a critical alarm of this type sounds. ‖ Voici le son d'une alarme critique de ce type. ‖ Così suona un allarme critico di questo tipo.
+2288 ‖ Always allow location ‖ Toujours autoriser la position ‖ Consenti sempre la posizione
+2289 ‖ Test alarm in 30 s (in the demo only while the app is open). ‖ Alarme test dans 30 s (dans la démo seulement avec l'app ouverte). ‖ Allarme di prova tra 30 s (nella demo solo ad app aperta).
+2290 ‖ Test alarm “{0}” in {1} s ‖ Alarme test « {0} » dans {1} s ‖ Allarme di prova «{0}» tra {1} s
+2291 ‖ Sound for critical alarms ‖ Son en cas d'alarme critique ‖ Suono per allarme critico
+2292 ‖ System sound ‖ Son du système ‖ Suono del sistema
+2293 ‖ Default: {0} ‖ Par défaut : {0} ‖ Predefinito: {0}
+2294 ‖ Which vehicle? ‖ Quel véhicule ? ‖ Quale veicolo?
+2295 ‖ iOS only finds beacons with precise location ‖ iOS ne trouve les balises qu'avec la position exacte ‖ iOS trova i beacon solo con la posizione precisa
+2296 ‖ =
+2297 ‖ “{0}” now has this beacon ‖ « {0} » a maintenant cette balise ‖ «{0}» ha ora questo beacon
+2298 ‖ · battery {0} % ‖ · batterie {0} % ‖ · batteria {0} %
+2299 ‖ · this device ‖ · cet appareil ‖ · questo dispositivo
+2300 ‖ · belongs to “{0}” ‖ · appartient à « {0} » ‖ · appartiene a «{0}»
+2301 ‖ · not yet assigned to any vehicle ‖ · pas encore attribuée à un véhicule ‖ · non ancora assegnato a un veicolo
+2302 ‖ ■ Stop ‖ ■ Arrêt ‖ ■ Stop
+2303 ‖ ▶ Test ‖ ▶ Essai ‖ ▶ Prova
+2304 ‖ ✓ Always allowed: during operations the location is shared even with the screen locked. ‖ ✓ Toujours autorisé : en intervention, la position est partagée même écran verrouillé. ‖ ✓ Sempre consentito: durante l'intervento la posizione viene condivisa anche a schermo bloccato.
+2305 ‖ The “River distance” tool is switched off. ‖ L'outil « Distance fluviale » est désactivé. ‖ Lo strumento «Distanza fluviale» è disattivato.
+2306 ‖ River distance: tap start point A on the map ‖ Distance fluviale : touchez le point de départ A sur la carte ‖ Distanza fluviale: tocca il punto di partenza A sulla mappa
+2307 ‖ River distance: tap destination point B on the map ‖ Distance fluviale : touchez le point d'arrivée B sur la carte ‖ Distanza fluviale: tocca il punto d'arrivo B sulla mappa
+2308 ‖ =
+2309 ‖ Drift from ‖ Dérive dès ‖ Deriva da
+2310 ‖ Own PLS{0} ‖ PLS propre{0} ‖ PLS proprio{0}
+2311 ‖ No running operation. ‖ Aucune intervention en cours. ‖ Nessun intervento in corso.
+2312 ‖ New markers via “📍 Found here” on the casualty. ‖ Nouveaux marqueurs via « 📍 Lieu de découverte » chez la victime. ‖ Nuovi marcatori tramite «📍 Luogo di ritrovamento» presso la vittima.
+2313 ‖ that of the operation{0}, drift from {1} ‖ celui de l'intervention{0}, dérive dès {1} ‖ quello dell'intervento{0}, deriva da {1}
+2314 ‖ (recorded by {0}) ‖ (saisi par {0}) ‖ (registrato da {0})
+2315 ‖ 1 mandatory training missing ‖ 1 formation obligatoire manquante ‖ Manca 1 formazione obbligatoria
+2316 ‖ Date of the training ‖ Date de la formation ‖ Data della formazione
+2317 ‖ Remove the entry of {0}? ‖ Retirer l'entrée du {0} ? ‖ Rimuovere la voce del {0}?
+2318 ‖ Last {0}{1} ‖ Dernière fois {0}{1} ‖ Ultima volta {0}{1}
+2319 ‖ {0} mandatory trainings missing ‖ {0} formations obligatoires manquantes ‖ Mancano {0} formazioni obbligatorie
+2320 ‖ Bluetooth is off. ‖ Le Bluetooth est désactivé. ‖ Il Bluetooth è disattivato.
+2321 ‖ The app may not use Bluetooth (allow “Nearby devices”). ‖ L'app ne peut pas utiliser le Bluetooth (autoriser « Appareils à proximité »). ‖ L'app non può usare il Bluetooth (consenti «Dispositivi nelle vicinanze»).
+2322 ‖ The app may not use the location; without it, iOS sees no beacons. ‖ L'app ne peut pas utiliser la position, sans elle iOS ne voit pas de balises. ‖ L'app non può usare la posizione, senza di essa iOS non vede beacon.
+2323 ‖ =
+2324 ‖ =
+2325 ‖ There are no beacons in demo mode. ‖ Il n'y a pas de balises en mode démo. ‖ In modalità demo non ci sono beacon.
+2326 ‖ No vehicle found nearby. ‖ Aucun véhicule trouvé à proximité. ‖ Nessun veicolo trovato nelle vicinanze.
+2327 ‖ Reported with your location during the operation. ‖ Signalé avec votre position en intervention. ‖ Segnalato con la tua posizione durante l'intervento.
+2328 ‖ Not reported: there is already a newer sighting. ‖ Non signalé : il existe déjà un repérage plus récent. ‖ Non segnalato: c'è già un avvistamento più recente.
+2329 ‖ Not reported: {0} ‖ Non signalé : {0} ‖ Non segnalato: {0}
+2330 ‖ =
+2331 ‖ Location reported (without your name). ‖ Position signalée (sans votre nom). ‖ Posizione segnalata (senza il tuo nome).
+2332 ‖ Location is being shared ({0}) ‖ La position est partagée ({0}) ‖ La posizione viene condivisa ({0})
+2333 ‖ =
+2334 ‖ iOS only finds beacons with precise location (Settings → Swiftwater Rescue → Location → “Precise Location”). ‖ iOS ne trouve les balises qu'avec la position exacte (Réglages → Swiftwater Rescue → Position → « Position exacte »). ‖ iOS trova i beacon solo con la posizione precisa (Impostazioni → Swiftwater Rescue → Posizione → «Posizione esatta»).
+2335 ‖ not allowed (allow location in the app settings) ‖ non autorisé (autoriser la position dans les paramètres de l'app) ‖ non consentito (consenti la posizione nelle impostazioni dell'app)
+2336 ‖ not available ({0}) ‖ indisponible ({0}) ‖ non disponibile ({0})
+2337 ‖ =
+2338 ‖ ({0} of {1} occupied) ‖ ({0} sur {1} occupés) ‖ ({0} di {1} occupati)
+2339 ‖ The app searches for the vehicles' beacons for a few seconds. ‖ L'app cherche les balises des véhicules pendant quelques secondes. ‖ L'app cerca per alcuni secondi i beacon dei veicoli.
+2340 ‖ Scan again ‖ Scanner à nouveau ‖ Scansiona di nuovo
+2341 ‖ Vehicle {0} ‖ Véhicule {0} ‖ Veicolo {0}
+2342 ‖ Scan vehicles now ‖ Scanner les véhicules maintenant ‖ Scansiona i veicoli ora
+2343 ‖ Scan vehicles ‖ Scanner les véhicules ‖ Scansiona i veicoli
+2344 ‖ Accuracy approx. {0} m ‖ Précision env. {0} m ‖ Precisione ca. {0} m
+2345 ‖ Send their battery level but belong to no vehicle. The MAC address can be entered for the vehicle in the administration. ‖ Envoient le niveau de batterie, mais n'appartiennent à aucun véhicule. L'adresse MAC peut être saisie pour le véhicule dans l'administration. ‖ Inviano il livello della batteria, ma non appartengono ad alcun veicolo. L'indirizzo MAC si può inserire per il veicolo nell'amministrazione.
+2346 ‖ Signal {0}{1} ‖ Signal {0}{1} ‖ Segnale {0}{1}
+2347 ‖ Other beacons nearby ‖ Autres balises à proximité ‖ Altri beacon nelle vicinanze
+2348 ‖ =
+2349 ‖ Recording not possible: {0} ‖ Enregistrement impossible : {0} ‖ Registrazione non possibile: {0}
+2350 ‖ Announcement could not be played: {0} ‖ L'annonce n'a pas pu être lue : {0} ‖ Non è stato possibile riprodurre l'annuncio: {0}
+2351 ‖ Announcement “{0}” · at most {1} s{2}{3} ‖ Annonce « {0} » · au plus {1} s{2}{3} ‖ Annuncio «{0}» · al massimo {1} s{2}{3}
+2352 ‖ Announcements ({0}) ‖ Annonces ({0}) ‖ Annunci ({0})
+2353 ‖ One announcement sent later. ‖ Une annonce envoyée ultérieurement. ‖ Un annuncio inviato successivamente.
+2354 ‖ Radio “{0}”: {1} ‖ Radio « {0} » : {1} ‖ Radio «{0}»: {1}
+2355 ‖ Joint ‖ Commun ‖ Comune
+2356 ‖ Applies to this device. For recordings and the conference the app needs access to the microphone. ‖ S'applique à cet appareil. Pour les enregistrements et la conférence, l'app a besoin d'accéder au micro. ‖ Vale per questo dispositivo. Per le registrazioni e la conferenza l'app necessita dell'accesso al microfono.
+2357 ‖ No radio in this operation. ‖ Pas de radio dans cette intervention. ‖ Nessuna radio in questo intervento.
+2358 ‖ No access to the microphone: please allow it in the phone settings. ‖ Pas d'accès au micro : veuillez l'autoriser dans les réglages du téléphone. ‖ Nessun accesso al microfono: consentilo nelle impostazioni del telefono.
+2359 ‖ Conference: {0} ‖ Conférence : {0} ‖ Conferenza: {0}
+2360 ‖ Live conference ‖ Conférence en direct ‖ Conferenza in diretta
+2361 ‖ Microphone is open, tap to mute ‖ Le micro est ouvert, touchez pour le couper ‖ Il microfono è aperto, tocca per silenziare
+2362 ‖ Open the microphone without holding the button ‖ Ouvrir le micro sans maintenir la touche ‖ Apri il microfono senza tenere premuto il tasto
+2363 ‖ Microphone: {0} ‖ Micro : {0} ‖ Microfono: {0}
+2364 ‖ Play new announcements immediately while the operations app is open ‖ Lire immédiatement les nouvelles annonces tant que l'app d'intervention est ouverte ‖ Riproduci subito i nuovi annunci finché l'app d'intervento è aperta
+2365 ‖ Tap the push-to-talk button instead of holding it ‖ Toucher la touche de parole au lieu de la maintenir ‖ Tocca il tasto di conversazione invece di tenerlo premuto
+2366 ‖ Mute ‖ Couper ‖ Silenzia
+2367 ‖ Default of the operation type ‖ Valeur par défaut du type d'intervention ‖ Predefinito del tipo d'intervento
+2368 ‖ E.g. with gloves: tap once = start recording, tap again = send ‖ P. ex. avec des gants : toucher une fois = démarrer l'enregistrement, toucher encore = envoyer ‖ P. es. con i guanti: un tocco = avvia registrazione, altro tocco = invia
+2369 ‖ Too short. ‖ Trop court. ‖ Troppo breve.
+2370 ‖ Switch to “{0}” ‖ Passer à « {0} » ‖ Passa a «{0}»
+2371 ‖ not in the conference ‖ pas dans la conférence ‖ non nella conferenza
+2372 ‖ not in the conference · receives announcements ‖ pas dans la conférence · reçoit les annonces ‖ non nella conferenza · riceve gli annunci
+2373 ‖ {0} announcements sent later. ‖ {0} annonces envoyées ultérieurement. ‖ {0} annunci inviati successivamente.
+2374 ‖ Join “{0}” ‖ Rejoindre « {0} » ‖ Partecipa a «{0}»
+2375 ‖ ● Live conference ‖ ● Conférence en direct ‖ ● Conferenza in diretta
+2376 ‖ {0} could not be saved. ‖ {0} n'a pas pu être enregistré. ‖ Non è stato possibile salvare {0}.
+2377 ‖ Please log in again at {0}, otherwise no alarms will arrive. ‖ Veuillez vous reconnecter à {0}, sinon aucune alarme n'arrivera. ‖ Accedi di nuovo a {0}, altrimenti non arriveranno allarmi.
+2378 ‖ New announcement on the radio ‖ Nouvelle annonce à la radio ‖ Nuovo annuncio alla radio
+2379 ‖ Sharing location failed: {0} ‖ Échec du partage de la position : {0} ‖ Condivisione della posizione non riuscita: {0}
+2380 ‖ =
+2381 ‖ Open the app to play ‖ Ouvrez l'app pour lire ‖ Apri l'app per riprodurre
+2382 ‖ Alarm (critical) ‖ Alarme (critique) ‖ Allarme (critico)
+2383 ‖ Alarm (critical, also with “Do not disturb”) ‖ Alarme (critique, aussi avec « Ne pas déranger ») ‖ Allarme (critico, anche con «Non disturbare»)
+2384 ‖ Alerting with continuous tone, also with “Do not disturb” if allowed ‖ Alarme avec son continu, aussi avec « Ne pas déranger » si autorisé ‖ Allarme con suono continuo, anche con «Non disturbare» se consentito
+2385 ‖ Alerting with continuous tone, bypasses “Do not disturb” ‖ Alarme avec son continu, contourne « Ne pas déranger » ‖ Allarme con suono continuo, aggira «Non disturbare»
+2386 ‖ Alerting with a single tone ‖ Alarme avec un son unique ‖ Allarme con suono singolo
+2387 ‖ Alarm level “low”: without sound ‖ Niveau d'alarme « bas » : sans son ‖ Livello d'allarme «basso»: senza suono
+2388 ‖ Standby ‖ Disponibilité ‖ Prontezza
+2389 ‖ Permanent display while the app receives alarms ‖ Affichage permanent tant que l'app reçoit des alarmes ‖ Visualizzazione permanente finché l'app riceve allarmi
+2390 ‖ Messages during operations, end of operation ‖ Messages en intervention, fin d'intervention ‖ Messaggi durante l'intervento, fine dell'intervento
+2391 ‖ Messages and notices ‖ Messages et avis ‖ Messaggi e avvisi
+2392 ‖ Silent notices ‖ Avis silencieux ‖ Avvisi silenziosi
+2393 ‖ Registration with the server failed ({0}) ‖ Échec de l'enregistrement auprès du serveur ({0}) ‖ Registrazione presso il server non riuscita ({0})
+2394 ‖ =
+2395 ‖ Firebase cannot be started ({0}) ‖ Firebase ne peut pas démarrer ({0}) ‖ Impossibile avviare Firebase ({0})
+2396 ‖ =
+2397 ‖ Notifications are switched off for the app in the iOS settings ‖ Les notifications sont désactivées pour l'app dans les réglages iOS ‖ Le notifiche sono disattivate per l'app nelle impostazioni di iOS
+2398 ‖ =
+2399 ‖ no Firebase token ({0}) ‖ pas de jeton Firebase ({0}) ‖ nessun token Firebase ({0})

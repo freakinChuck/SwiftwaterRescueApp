@@ -29,7 +29,7 @@ def ph(n):
 
 
 # ---------------------------------------------------------------- Prüfung, ob ein Stück Text angezeigt wird
-SQL = re.compile(r'\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|FROM|WHERE|JOIN|VALUES|PRAGMA|DROP|INDEX|TABLE|ORDER BY|GROUP BY)\b')
+SQL = re.compile(r'\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|FROM|WHERE|JOIN|VALUES|PRAGMA|DROP|INDEX|TABLE|ORDER BY|GROUP BY|NULL|INTEGER|BIGINT|TEXT NULL|DEFAULT)\b')
 CODE = re.compile(r'=>|\bfunction\b|\breturn\b|\bconst\b|\blet\b|;\s*$|^\s*[.#\[][\w-]|\$\(|\)\s*\{|^[\w-]+:\s*[\w#-]+;|[{}]\s*$|^\s*@media|https?://|^data:|\\[dws]|\(\?:')
 
 
@@ -45,6 +45,8 @@ def textual(s):
         # ein Wort: nur «Grossbuchstabe + klein» (deutsches Nomen/Label) zählt, nicht ascii klein/kamelfall
         if not re.fullmatch(r'[A-ZÄÖÜ][a-zäöüß]+(?:[-/][A-ZÄÖÜa-zäöüß][a-zäöüß]+)*[.:!?]?', raw):
             return False
+    if re.fullmatch(r'[a-z0-9_\-]+(?: [a-z0-9_\-]+)+', raw) and re.search(r'[-_]', raw):  # CSS-Klassen
+        return False
     if re.search(r'\b(px|rem|em|vh|vw)\b', raw) and re.search(r'\d(px|rem|em)', raw):
         return False
     return True

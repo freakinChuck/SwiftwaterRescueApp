@@ -1,0 +1,240 @@
+1680 ‖ Source attribution on the map; the operator can change the limits at any time. ‖ Mention de la source sur la carte, l'exploitant peut modifier les limites à tout moment. ‖ Indicazione della fonte sulla mappa, il gestore può modificare i limiti in qualsiasi momento.
+1681 ‖ Source attribution “FOEN” mandatory. Raw data, unverified and without guarantee. {0} The server asks free of charge and without a key and caches the values for 5 minutes. ‖ Mention de la source « OFEV » obligatoire. Données brutes, non vérifiées et sans garantie. {0} Le serveur interroge gratuitement et sans clé et met les valeurs en cache 5 minutes. ‖ Indicazione della fonte «UFAM» obbligatoria. Dati grezzi, non verificati e senza garanzia. {0} Il server interroga gratuitamente e senza chiave e memorizza i valori per 5 minuti.
+1682 ‖ Source attribution “© OpenStreetMap” mandatory. The tile servers are a free offer of the OSM Foundation without assurance; no heavy traffic, no preloading of whole areas. With a lot of use, choose your own provider. ‖ Mention de la source « © OpenStreetMap » obligatoire. Les serveurs de tuiles sont une offre gratuite de la Fondation OSM sans garantie ; pas de trafic intense, pas de préchargement de régions entières. En cas d'utilisation importante, choisir un fournisseur propre. ‖ Indicazione della fonte «© OpenStreetMap» obbligatoria. I server di tile sono un'offerta gratuita della OSM Foundation senza garanzia; niente traffico intenso, niente precaricamento di intere zone. Con un uso intenso scegli un fornitore proprio.
+1683 ‖ Source attribution “© swisstopo” on the map is mandatory. Services wmts.geo.admin.ch under “fair use”: no mass downloads. ‖ La mention de la source « © swisstopo » sur la carte est obligatoire. Services wmts.geo.admin.ch selon le « fair use » : pas de téléchargements en masse. ‖ L'indicazione della fonte «© swisstopo» sulla mappa è obbligatoria. Servizi wmts.geo.admin.ch secondo il «fair use»: niente download di massa.
+1684 ‖ Source attribution, “fair use”. ‖ Mention de la source, « fair use ». ‖ Indicazione della fonte, «fair use».
+1685 ‖ REST service in front of the own PostGIS database for the river network ‖ Service REST devant la propre base PostGIS pour le réseau hydrographique ‖ Servizio REST davanti alla propria banca dati PostGIS per la rete idrografica
+1686 ‖ Casualties and external responders ‖ Victimes et intervenants externes ‖ Vittime e soccorritori esterni
+1687 ‖ =
+1688 ‖ =
+1689 ‖ Location on the device (location sharing during operations, also with the screen locked) ‖ Position sur l'appareil (partage de position en intervention, aussi écran verrouillé) ‖ Posizione sul dispositivo (condivisione della posizione durante l'intervento, anche a schermo bloccato)
+1690 ‖ Location: ‖ Position : ‖ Posizione:
+1691 ‖ Locations, search area and drift times are estimates. ‖ Positions, zone de recherche et temps de dérive sont des estimations. ‖ Posizioni, area di ricerca e tempi di deriva sono stime.
+1692 ‖ Search area along the river, river distance ‖ Zone de recherche le long de la rivière, distance fluviale ‖ Area di ricerca lungo il fiume, distanza fluviale
+1693 ‖ Search area and river distance. ‖ Zone de recherche et distance fluviale. ‖ Area di ricerca e distanza fluviale.
+1694 ‖ Swiftwater Rescue is a web app for water rescue response groups: alerting, coordination and situation overview when searching for missing persons in rivers and during exercises. It is intended for the members of the operating organisation; accounts are issued by the administration. ‖ Swiftwater Rescue est une app web pour les groupes d'intervention de sauvetage aquatique : alarme, coordination et vue d'ensemble de la situation lors de la recherche de personnes disparues dans les cours d'eau et lors d'exercices. Elle s'adresse aux membres de l'organisation exploitante ; l'administration attribue les comptes. ‖ Swiftwater Rescue è una web app per i gruppi d'intervento del soccorso acquatico: allarme, coordinamento e panoramica della situazione nella ricerca di persone disperse nei corsi d'acqua e durante le esercitazioni. Si rivolge ai membri dell'organizzazione che la gestisce; gli account li assegna l'amministrazione.
+1695 ‖ Swiftwater Rescue – Legal notice, licences & privacy ‖ Swiftwater Rescue – Mentions légales, licences & protection des données ‖ Swiftwater Rescue – Note legali, licenze & protezione dei dati
+1696 ‖ Symbols for markers (casualty collection point, first-aid post, operation lead, etc.), redrawn ‖ Symboles pour marqueurs (nid de blessés, poste sanitaire, direction d'intervention, etc.), redessinés ‖ Simboli per marcatori (punto di raccolta feriti, posto sanitario, direzione dell'intervento ecc.), ridisegnati
+1697 ‖ Synthetically generated, no recordings; horns and sirens only imitate the sound. The “water alarm” siren tone is greatly shortened and does not replace alerting the population. ‖ Générés synthétiquement, pas d'enregistrements ; avertisseurs et sirènes n'imitent que le son. Le son de sirène « alarme eau » est fortement raccourci et ne remplace pas l'alarme de la population. ‖ Generati sinteticamente, nessuna registrazione; trombe e sirene ne imitano solo il suono. Il suono della sirena «allarme acqua» è fortemente abbreviato e non sostituisce l'allarme alla popolazione.
+1698 ‖ Tables in PDF documents ‖ Tableaux dans les documents PDF ‖ Tabelle nei documenti PDF
+1699 ‖ Technical application log ‖ Journal technique de l'application ‖ Registro tecnico dell'applicazione
+1700 ‖ Participation in operations and exercises ‖ Participation aux interventions et exercices ‖ Partecipazione a interventi ed esercitazioni
+1701 ‖ Text, recipients, time, location of the sender (if shared), optional map marker. ‖ Texte, destinataires, heure, position de l'expéditeur (si partagée), marqueur de carte facultatif. ‖ Testo, destinatari, ora, posizione del mittente (se condivisa), marcatore facoltativo sulla mappa.
+1702 ‖ =
+1703 ‖ Conference audio in real time (transmitted encrypted), label (special role or response option) and identifier of the participants, IP address. Nothing is recorded. ‖ Son de la conférence en temps réel (transmis chiffré), désignation (rôle spécial ou option d'engagement) et identifiant des participants, adresse IP. Rien n'est enregistré. ‖ Audio della conferenza in tempo reale (trasmesso cifrato), denominazione (ruolo speciale o opzione d'intervento) e identificativo dei partecipanti, indirizzo IP. Non viene registrato nulla.
+1704 ‖ Transcription service ({0}) ‖ Service de transcription ({0}) ‖ Servizio di trascrizione ({0})
+1705 ‖ Sounds for critical alarms (horns, sirens, melodies), selectable in the profile per server and operation type (Issue #171) ‖ Sons pour les alarmes critiques (avertisseurs, sirènes, mélodies), à choisir dans le profil par serveur et type d'intervention (Issue #171) ‖ Suoni per gli allarmi critici (trombe, sirene, melodie), selezionabili nel profilo per server e tipo d'intervento (Issue #171)
+1706 ‖ Responsible ‖ Responsable ‖ Responsabile
+1707 ‖ History: until 30 newer e-mails have arrived or it is cleared. Operation log: like the other operation data (anonymisation). ‖ Historique : jusqu'à l'arrivée de 30 e-mails plus récents ou jusqu'à ce qu'il soit vidé. Journal d'intervention : comme les autres données d'intervention (anonymisation). ‖ Cronologia: finché non arrivano 30 e-mail più recenti o non viene svuotata. Registro dell'intervento: come gli altri dati d'intervento (anonimizzazione).
+1708 ‖ Encrypted notification (alarm, message, end of operation); the service only sees time and size. ‖ Notification chiffrée (alarme, message, fin d'intervention) ; le service ne voit que l'heure et la taille. ‖ Notifica cifrata (allarme, messaggio, fine dell'intervento); il servizio vede solo ora e dimensione.
+1709 ‖ Show administration, “My operations” and legal pages in the app ‖ Afficher l'administration, « Mes interventions » et les informations légales dans l'app ‖ Mostrare l'amministrazione, «I miei interventi» e le note legali nell'app
+1710 ‖ Use ‖ Utilisation ‖ Utilizzo
+1711 ‖ Restrictions of use and liability ‖ Restrictions d'utilisation et responsabilité ‖ Limitazioni d'uso e responsabilità
+1712 ‖ Further services ‖ Autres services ‖ Altri servizi
+1713 ‖ Which data are stored ‖ Quelles données sont enregistrées ‖ Quali dati vengono salvati
+1714 ‖ Who sees the data ‖ Qui voit les données ‖ Chi vede i dati
+1715 ‖ Values of the gauging stations around the PLS at the start and end of the operation, in the operation log (no personal data). ‖ Valeurs des stations de mesure autour du PLS au début et à la fin de l'intervention, dans le journal d'intervention (pas de données personnelles). ‖ Valori delle stazioni di misura attorno al PLS all'inizio e alla fine dell'intervento, nel registro dell'intervento (nessun dato personale).
+1716 ‖ How long ‖ Combien de temps ‖ Per quanto tempo
+1717 ‖ Where the data are ‖ Où se trouvent les données ‖ Dove si trovano i dati
+1718 ‖ Word documents (After Action Review) ‖ Documents Word (After Action Review) ‖ Documenti Word (After Action Review)
+1719 ‖ During operations with helicopters switched on{0}. ‖ Pendant les interventions avec hélicoptères activés{0}. ‖ Durante gli interventi con elicotteri attivati{0}.
+1720 ‖ During a joint operation triggered by one of the organisations. ‖ Pendant une intervention commune déclenchée par l'une des organisations. ‖ Durante un intervento comune avviato da una delle organizzazioni.
+1721 ‖ Currently switched off. ‖ Actuellement désactivé. ‖ Attualmente disattivato.
+1722 ‖ Currently not set up. ‖ Actuellement pas configuré. ‖ Attualmente non configurato.
+1723 ‖ Purpose ‖ But ‖ Scopo
+1724 ‖ Cache on the server ‖ Cache sur le serveur ‖ Cache sul server
+1725 ‖ or the PostGIS API ‖ ou l'API PostGIS ‖ o l'API PostGIS
+1726 ‖ or around the fixed locations ‖ ou autour des sites fixes ‖ o attorno ai luoghi fissi
+1727 ‖ cdnjs (Cloudflare) and jsDelivr ‖ cdnjs (Cloudflare) et jsDelivr ‖ cdnjs (Cloudflare) e jsDelivr
+1728 ‖ =
+1729 ‖ the operating organisation ‖ l'organisation exploitante ‖ l'organizzazione che gestisce l'app
+1730 ‖ =
+1731 ‖ for completeness and currency ({0}). ‖ quant à l'exhaustivité et l'actualité ({0}). ‖ per completezza e attualità ({0}).
+1732 ‖ for everyone who has accepted the operation, ‖ pour toutes les personnes ayant accepté l'intervention, ‖ per tutti coloro che hanno accettato l'intervento,
+1733 ‖ according to the setting ‖ selon le paramètre ‖ secondo l'impostazione
+1734 ‖ right after the end of the operation ‖ juste après la fin de l'intervention ‖ subito dopo la fine dell'intervento
+1735 ‖ at most 1 query/s ‖ au plus 1 requête/s ‖ al massimo 1 richiesta/s
+1736 ‖ =
+1737 ‖ =
+1738 ‖ never automatically ‖ jamais automatiquement ‖ mai automaticamente
+1739 ‖ only when choosing a profile picture or an image for an After Action Review. ‖ seulement lors du choix d'une photo de profil ou d'une image pour une After Action Review. ‖ solo alla scelta di un'immagine del profilo o di un'immagine per un After Action Review.
+1740 ‖ only for the operation lead ‖ seulement pour la direction d'intervention ‖ solo per la direzione dell'intervento
+1741 ‖ only if you switch on push in the settings. ‖ seulement si vous activez le push dans les paramètres. ‖ solo se attivi il push nelle impostazioni.
+1742 ‖ only during an operation and only with response options that share location. Without an operation the location is at most shown in the menu but not sent. ‖ seulement pendant une intervention et seulement avec des options d'engagement partageant la position. Sans intervention, la position est au plus affichée dans le menu, mais pas envoyée. ‖ solo durante un intervento e solo con opzioni d'intervento con condivisione della posizione. Senza intervento la posizione viene al massimo mostrata nel menu, ma non inviata.
+1743 ‖ only to detect the beacons in the vehicles; the app does not connect to any device. Outside operations only if you switch on “Report vehicles” in the profile. ‖ seulement pour détecter les balises des véhicules ; l'app ne se connecte à aucun appareil. Hors des interventions, seulement si vous activez « Signaler les véhicules » dans le profil. ‖ solo per riconoscere i beacon nei veicoli; l'app non si collega ad alcun dispositivo. Fuori dagli interventi solo se attivi «Segnalare i veicoli» nel profilo.
+1744 ‖ only if you switch it on yourself in your profile, and without your name: only the vehicle's last location is stored ‖ seulement si vous l'activez vous-même dans votre profil, et sans votre nom : seule la dernière position du véhicule est enregistrée ‖ solo se lo attivi tu stesso nel profilo, e senza il tuo nome: viene salvata solo l'ultima posizione del veicolo
+1745 ‖ or {0} ‖ ou {0} ‖ o {0}
+1746 ‖ without an operation and for all operation types ‖ sans intervention et pour tous les types d'intervention ‖ senza intervento e per tutti i tipi d'intervento
+1747 ‖ =
+1748 ‖ come from open ADS-B receiver networks run by volunteers. They are incomplete (low-flying helicopters in valleys are often missing), delayed and must not be used for air traffic control or collision avoidance. ‖ proviennent de réseaux ouverts de récepteurs ADS-B de bénévoles. Elles sont incomplètes (les hélicoptères volant bas dans les vallées manquent souvent), retardées et ne doivent pas servir au contrôle aérien ni à l'évitement des collisions. ‖ provengono da reti aperte di ricevitori ADS-B di volontari. Sono incompleti (gli elicotteri a bassa quota nelle valli spesso mancano), in ritardo e non devono essere usati per il controllo del traffico aereo o per evitare collisioni.
+1749 ‖ swisstopo (Confederation) or OpenStreetMap Foundation ‖ swisstopo (Confédération) ou OpenStreetMap Foundation ‖ swisstopo (Confederazione) o OpenStreetMap Foundation
+1750 ‖ swisstopo aerial image (SWISSIMAGE) and national map ‖ Image aérienne swisstopo (SWISSIMAGE) et carte nationale ‖ Immagine aerea swisstopo (SWISSIMAGE) e carta nazionale
+1751 ‖ swisstopo directory of localities (api3.geo.admin.ch) ‖ Répertoire des localités swisstopo (api3.geo.admin.ch) ‖ Elenco delle località swisstopo (api3.geo.admin.ch)
+1752 ‖ =
+1753 ‖ and objects on the water ‖ et objets au bord de l'eau ‖ e oggetti lungo i corsi d'acqua
+1754 ‖ and around the fixed locations ‖ et autour des sites fixes ‖ e attorno ai luoghi fissi
+1755 ‖ by the administration ‖ par l'administration ‖ dall'amministrazione
+1756 ‖ by you in the profile or by the administration ‖ par vous dans le profil ou par l'administration ‖ da te nel profilo o dall'amministrazione
+1757 ‖ optional geodata layer of the operations app ‖ couche de géodonnées activable de l'app d'intervention ‖ livello di geodati attivabile dell'app d'intervento
+1758 ‖ {0} Afterwards or at the latest according to the periods below (stage “Delete voice recordings”); transcripts like messages. ‖ {0} Ensuite ou au plus tard selon les délais ci-dessous (étape « Supprimer les enregistrements vocaux ») ; transcriptions comme les messages. ‖ {0} Dopo o al più tardi secondo i termini sotto (tappa «Elimina registrazioni vocali»); trascrizioni come i messaggi.
+1759 ‖ {0} days after the end of the operation ‖ {0} jours après la fin de l'intervention ‖ {0} giorni dopo la fine dell'intervento
+1760 ‖ {0}, then deleted automatically. ‖ {0}, puis supprimé automatiquement. ‖ {0}, poi eliminato automaticamente.
+1761 ‖ {0}Per device the address at the browser's push service and the keys for encryption, linked to your account. ‖ {0}Par appareil, l'adresse auprès du service push du navigateur et les clés de chiffrement, liées à votre compte. ‖ {0}Per dispositivo l'indirizzo presso il servizio push del browser e le chiavi di cifratura, collegati al tuo account.
+1762 ‖ Transfer to third parties ‖ Transmission à des tiers ‖ Trasmissione a terzi
+1763 ‖ Adopted fixed locations ({0}) ‖ Sites fixes repris ({0}) ‖ Luoghi fissi ripresi ({0})
+1764 ‖ Monitoring of the servers in the background (Android) ‖ Surveillance des serveurs en arrière-plan (Android) ‖ Monitoraggio dei server in background (Android)
+1765 ‖ (symbol {0}) ‖ (symbole {0}) ‖ (simbolo {0})
+1766 ‖ , with recording ‖ , avec enregistrement ‖ , con registrazione
+1767 ‖ , with helicopters ‖ , avec hélicoptères ‖ , con elicotteri
+1768 ‖ , without PLS ‖ , sans PLS ‖ , senza PLS
+1769 ‖ Barrier ‖ Barrage ‖ Sbarramento
+1770 ‖ =
+1771 ‖ =
+1772 ‖ General ‖ Général ‖ Generale
+1773 ‖ Ambulance ‖ Ambulance ‖ Ambulanza
+1774 ‖ Direct approach ‖ Trajet direct ‖ Arrivo diretto
+1775 ‖ Approach via base ‖ Trajet via la base ‖ Arrivo via la base
+1776 ‖ Trailer ‖ Remorque ‖ Rimorchio
+1777 ‖ Trailer 1 ‖ Remorque 1 ‖ Rimorchio 1
+1778 ‖ =
+1779 ‖ =
+1780 ‖ Observation from the Reussbühl bridge ‖ Observation depuis le pont de Reussbühl ‖ Osservazione dal ponte di Reussbühl
+1781 ‖ Observation post ‖ Poste d'observation ‖ Posto d'osservazione
+1782 ‖ Staging area ‖ Zone de mise en place ‖ Area di approntamento
+1783 ‖ Care ‖ Prise en charge ‖ Assistenza
+1784 ‖ Care point (Betreu Stel) ‖ Poste de prise en charge (Betreu Stel) ‖ Posto di assistenza (Betreu Stel)
+1785 ‖ Name missing ‖ Désignation manquante ‖ Denominazione mancante
+1786 ‖ On my way to the PLS and taking over the operation lead on site. ‖ En route vers le PLS, je reprends la direction d'intervention sur place. ‖ Sono in viaggio verso il PLS e assumo la direzione dell'intervento sul posto.
+1787 ‖ Boat ‖ Bateau ‖ Barca
+1788 ‖ Boat 1 ‖ Bateau 1 ‖ Barca 1
+1789 ‖ Boat 1 leaving base for the Reusszopf launch site, ETA 3 min. ‖ Bateau 1 parti de la base vers la mise à l'eau de Reusszopf, ETA 3 min. ‖ Barca 1 partita dalla base verso lo scivolo di Reusszopf, ETA 3 min.
+1790 ‖ Boat 1 in the water, searching upstream towards the Geissmatt bridge. ‖ Bateau 1 à l'eau, recherche vers l'amont en direction du pont de Geissmatt. ‖ Barca 1 in acqua, cerca a monte verso il ponte di Geissmatt.
+1791 ‖ Boat in action ‖ Bateau en intervention ‖ Barca in intervento
+1792 ‖ Boat being prepared at base, ETA approx. 8 min. ‖ Bateau en préparation à la base, ETA env. 8 min. ‖ Barca in preparazione alla base, ETA ca. 8 min.
+1793 ‖ Boats, sledges and equipment. Fictitious location for demo mode. ‖ Bateaux, luges et matériel. Site fictif pour le mode démo. ‖ Barche, slitte e materiale. Luogo fittizio per la modalità demo.
+1794 ‖ Boat trailer (demo) ‖ Remorque à bateau (démo) ‖ Rimorchio per barche (demo)
+1795 ‖ Boat launch site ‖ Mise à l'eau de bateaux ‖ Scivolo per barche
+1796 ‖ Reusszopf boat launch site (demo) ‖ Mise à l'eau de Reusszopf (démo) ‖ Scivolo di Reusszopf (demo)
+1797 ‖ =
+1798 ‖ =
+1799 ‖ Thanks everyone. Casualty handed over to the ambulance service. Return to base, check equipment. ‖ Merci à tous. Victime remise au service de secours. Retour à la base, contrôler le matériel. ‖ Grazie a tutti. Vittima consegnata al servizio di soccorso. Rientro alla base, controllare il materiale.
+1800 ‖ =
+1801 ‖ Blankets and heat packs ready at the CP. ‖ Couvertures et chaufferettes prêtes au PC. ‖ Coperte e scaldini pronti al PC.
+1802 ‖ Your location is not known: allow location sharing or choose a position on the map ‖ Votre position n'est pas connue : autorisez le partage de position ou choisissez une position sur la carte ‖ La tua posizione non è nota: consenti la condivisione della posizione o scegli una posizione sulla mappa
+1803 ‖ Demo (simulated) ‖ Démo (simulée) ‖ Demo (simulata)
+1804 ‖ Demo mode · {0} ‖ Mode démo · {0} ‖ Modalità demo · {0}
+1805 ‖ The AI assistant is not available in demo mode. ‖ L'assistant IA n'existe pas en mode démo. ‖ L'assistente IA non è disponibile in modalità demo.
+1806 ‖ The “Vehicles” function is switched off ‖ La fonction « Véhicules » est désactivée ‖ La funzione «Veicoli» è disattivata
+1807 ‖ The message is mandatory ‖ Le message est obligatoire ‖ Il messaggio è obbligatorio
+1808 ‖ The person is not in the operation ‖ La personne n'est pas dans l'intervention ‖ La persona non è nell'intervento
+1809 ‖ The selected people have not accepted the operation ‖ Les personnes choisies n'ont pas accepté l'intervention ‖ Le persone scelte non hanno accettato l'intervento
+1810 ‖ The public view is not available in demo mode. ‖ La vue publique n'existe pas en mode démo. ‖ La vista pubblica non è disponibile in modalità demo.
+1811 ‖ This symbol is not available for selection ‖ Ce symbole n'est pas disponible ‖ Questo simbolo non è selezionabile
+1812 ‖ Documents are not available in demo mode. ‖ Les documents n'existent pas en mode démo. ‖ I documenti non sono disponibili in modalità demo.
+1813 ‖ Dark jacket sighted in the bushes on the right bank, marker set. ‖ Veste sombre aperçue dans les buissons de la rive droite, marqueur placé. ‖ Giacca scura avvistata nei cespugli della riva destra, marcatore impostato.
+1814 ‖ An area needs 3 to 200 points ‖ Une zone a besoin de 3 à 200 points ‖ Un'area necessita di 3–200 punti
+1815 ‖ A line needs 2 to 200 points ‖ Une ligne a besoin de 2 à 200 points ‖ Una linea necessita di 2–200 punti
+1816 ‖ Responder (demo) ‖ Intervenant (démo) ‖ Soccorritore (demo)
+1817 ‖ Operation lead (Ei Ltg) ‖ Direction d'intervention (Ei Ltg) ‖ Direzione dell'intervento (Ei Ltg)
+1818 ‖ Entry not found ‖ Entrée introuvable ‖ Voce non trovata
+1819 ‖ Boat launch site, access via the riverside road. Fictitious. ‖ Mise à l'eau pour bateaux, accès par la route riveraine. Fictif. ‖ Scivolo per barche, accesso dalla strada lungo la riva. Fittizio.
+1820 ‖ =
+1821 ‖ An operation is already running ‖ Une intervention est déjà en cours ‖ È già in corso un intervento
+1822 ‖ =
+1823 ‖ External responder not found ‖ Intervenant externe introuvable ‖ Soccorritore esterno non trovato
+1824 ‖ =
+1825 ‖ Operation lead vehicle (demo) ‖ Véhicule de la direction d'intervention (démo) ‖ Veicolo della direzione dell'intervento (demo)
+1826 ‖ Vehicle not found ‖ Véhicule introuvable ‖ Veicolo non trovato
+1827 ‖ Fire brigade ‖ Pompiers ‖ Pompieri
+1828 ‖ Lucerne fire brigade ‖ Pompiers de Lucerne ‖ Pompieri di Lucerna
+1829 ‖ Fire brigade – observation post ‖ Pompiers – poste d'observation ‖ Pompieri – posto d'osservazione
+1830 ‖ Flow speed must be between 0 and 15 m/s ‖ La vitesse du courant doit être entre 0 et 15 m/s ‖ La velocità della corrente deve essere tra 0 e 15 m/s
+1831 ‖ Object found ‖ Lieu de découverte d'un objet ‖ Luogo di ritrovamento di un oggetto
+1832 ‖ Command ‖ Conduite ‖ Condotta
+1833 ‖ The marker needs a location: choose a position on the map ‖ Le marqueur a besoin d'une position : choisissez une position sur la carte ‖ Per il marcatore serve una posizione: scegli una posizione sulla mappa
+1834 ‖ A marker needs exactly one point ‖ Un marqueur a besoin d'exactement un point ‖ Un marcatore necessita di esattamente un punto
+1835 ‖ Hazards ‖ Dangers ‖ Pericoli
+1836 ‖ Hazard (weir, sill) ‖ Endroit dangereux (barrage, seuil) ‖ Punto pericoloso (sbarramento, soglia)
+1837 ‖ Load river network from the device ‖ Charger le réseau hydrographique depuis l'appareil ‖ Carica la rete idrografica dal dispositivo
+1838 ‖ Helicopters without an operation are not available in demo mode. ‖ Les hélicoptères sans intervention n'existent pas en mode démo. ‖ Gli elicotteri senza intervento non sono disponibili in modalità demo.
+1839 ‖ Helicopter landing site ‖ Place d'atterrissage pour hélicoptères ‖ Piazzola d'atterraggio per elicotteri
+1840 ‖ Helicopter landing site (Helipl) ‖ Place d'atterrissage pour hélicoptères (Helipl) ‖ Piazzola d'atterraggio per elicotteri (Helipl)
+1841 ‖ There is no password in demo mode. ‖ Il n'y a pas de mot de passe en mode démo. ‖ In modalità demo non c'è una password.
+1842 ‖ There are no push notifications in demo mode. ‖ Il n'y a pas de notifications push en mode démo. ‖ In modalità demo non ci sono notifiche push.
+1843 ‖ Not available in demo mode ‖ Indisponible en mode démo ‖ Non disponibile in modalità demo
+1844 ‖ In demo mode all people are already called out. ‖ En mode démo, toutes les personnes sont déjà mobilisées. ‖ In modalità demo tutte le persone sono già convocate.
+1845 ‖ CP at the Spreuer bridge. Boats via base, launch at Reusszopf. Sledge searches the left bank from the Geissmatt bridge. ‖ PC au pont de la Spreuer. Bateaux via la base, mise à l'eau à Reusszopf. La luge fouille la rive gauche depuis le pont de Geissmatt. ‖ PC al ponte Spreuer. Barche via la base, messa in acqua a Reusszopf. La slitta perlustra la riva sinistra dal ponte di Geissmatt.
+1846 ‖ =
+1847 ‖ I'll check and get back to you. ‖ Je vérifie et je vous redis. ‖ Verifico e ti faccio sapere.
+1848 ‖ Command vehicle ‖ Véhicule de commandement ‖ Veicolo di comando
+1849 ‖ Command post ‖ Poste de commandement ‖ Posto di comando
+1850 ‖ Rear CP coordinator ‖ Coordinateur PC arrière ‖ Coordinatore PC retrovia
+1851 ‖ Logistics ‖ Logistique ‖ Logistica
+1852 ‖ Lucerne, Geissmatt bridge (demo) ‖ Lucerne, pont de Geissmatt (démo) ‖ Lucerna, ponte di Geissmatt (demo)
+1853 ‖ Man, approx. 40 years, dark jacket, jeans. Seen by passers-by at the needle weir. ‖ Homme, env. 40 ans, veste sombre, jeans. Vu par des passants au barrage à aiguilles. ‖ Uomo, ca. 40 anni, giacca scura, jeans. Visto da passanti presso lo sbarramento ad aghi.
+1854 ‖ Crew bus with tow bar (demo) ‖ Bus d'équipage avec attelage (démo) ‖ Bus per squadra con gancio di traino (demo)
+1855 ‖ Marker not found ‖ Marqueur introuvable ‖ Marcatore non trovato
+1856 ‖ Equipment depot ‖ Dépôt de matériel ‖ Deposito materiale
+1857 ‖ Media meeting point (Medien Tpt) ‖ Point de rencontre médias (Medien Tpt) ‖ Punto d'incontro media (Medien Tpt)
+1858 ‖ There is no special role with this response option ‖ Il n'y a pas de rôle spécial avec cette option d'engagement ‖ Con questa opzione d'intervento non c'è un ruolo speciale
+1859 ‖ Message not found ‖ Message introuvable ‖ Messaggio non trovato
+1860 ‖ Only people who have accepted the operation can send messages ‖ Seules les personnes ayant accepté l'intervention peuvent envoyer des messages ‖ Solo chi ha accettato l'intervento può inviare messaggi
+1861 ‖ Name missing ‖ Nom manquant ‖ Nome mancante
+1862 ‖ Not in the operation ‖ Pas dans l'intervention ‖ Non nell'intervento
+1863 ‖ Only people taking part in the operation ‖ Seulement les personnes participant à l'intervention ‖ Solo persone che partecipano all'intervento
+1864 ‖ Only people taking part in the operation can set the flow speed ‖ Seules les personnes participant à l'intervention peuvent définir la vitesse du courant ‖ Solo chi partecipa all'intervento può impostare la velocità della corrente
+1865 ‖ Only people who have accepted the operation can mark casualties as rescued ‖ Seules les personnes ayant accepté l'intervention peuvent marquer des victimes comme sauvées ‖ Solo chi ha accettato l'intervento può segnare vittime come salvate
+1866 ‖ Only people who have accepted the operation can record casualties ‖ Seules les personnes ayant accepté l'intervention peuvent saisir des victimes ‖ Solo chi ha accettato l'intervento può registrare vittime
+1867 ‖ Only people who have accepted the operation can do that ‖ Seules les personnes ayant accepté l'intervention peuvent le faire ‖ Solo chi ha accettato l'intervento può farlo
+1868 ‖ Only people who have accepted the operation can mark the location ‖ Seules les personnes ayant accepté l'intervention peuvent marquer la position ‖ Solo chi ha accettato l'intervento può segnare la posizione
+1869 ‖ Only the operation lead can remove responders ‖ Seule la direction d'intervention peut retirer des intervenants ‖ Solo la direzione dell'intervento può rimuovere soccorritori
+1870 ‖ Only the operation lead can switch river barriers on and off ‖ Seule la direction d'intervention peut activer et désactiver les barrières fluviales ‖ Solo la direzione dell'intervento può attivare e disattivare gli sbarramenti fluviali
+1871 ‖ Only the operation lead can remove markers and areas ‖ Seule la direction d'intervention peut retirer des marqueurs et des zones ‖ Solo la direzione dell'intervento può rimuovere marcatori e aree
+1872 ‖ Only the operation lead can place markers and areas ‖ Seule la direction d'intervention peut placer des marqueurs et des zones ‖ Solo la direzione dell'intervento può impostare marcatori e aree
+1873 ‖ Only the operation lead can remove casualties ‖ Seule la direction d'intervention peut retirer des victimes ‖ Solo la direzione dell'intervento può rimuovere vittime
+1874 ‖ Only the operation lead can change other people's special roles ‖ Seule la direction d'intervention peut modifier les rôles spéciaux d'autres personnes ‖ Solo la direzione dell'intervento può modificare i ruoli speciali di altre persone
+1875 ‖ Only the operation lead can do that ‖ Seule la direction d'intervention peut le faire ‖ Solo la direzione dell'intervento può farlo
+1876 ‖ Only the operation lead can end the operation ‖ Seule la direction d'intervention peut terminer l'intervention ‖ Solo la direzione dell'intervento può terminare l'intervento
+1877 ‖ Only the operation lead can change the operation PLS ‖ Seule la direction d'intervention peut modifier le PLS de l'intervention ‖ Solo la direzione dell'intervento può modificare il PLS dell'intervento
+1878 ‖ Only the operation lead can control the recording ‖ Seule la direction d'intervention peut gérer l'enregistrement ‖ Solo la direzione dell'intervento può gestire la registrazione
+1879 ‖ Only the operation lead can remove external responders ‖ Seule la direction d'intervention peut retirer des intervenants externes ‖ Solo la direzione dell'intervento può rimuovere soccorritori esterni
+1880 ‖ Only the operation lead can record external responders ‖ Seule la direction d'intervention peut saisir des intervenants externes ‖ Solo la direzione dell'intervento può registrare soccorritori esterni
+1881 ‖ Only the sender or the operation lead can remove the marker ‖ Seul l'expéditeur ou la direction d'intervention peut retirer le marqueur ‖ Solo il mittente o la direzione dell'intervento può rimuovere il marcatore
+1882 ‖ Vehicle parking ‖ Parking des véhicules ‖ Parcheggio veicoli
+1883 ‖ =
+1884 ‖ Casualty collection point ‖ Nid de blessés ‖ Punto di raccolta feriti
+1885 ‖ Casualty collection point (Pat Sst) ‖ Nid de blessés (Pat Sst) ‖ Punto di raccolta feriti (Pat Sst)
+1886 ‖ Person fell into the Reuss at the needle weir, drifting downstream towards Reusszopf. Water rescue operation. ‖ Personne tombée dans la Reuss au barrage à aiguilles, dérive vers l'aval en direction de Reusszopf. Intervention de sauvetage aquatique. ‖ Persona caduta nella Reuss presso lo sbarramento ad aghi, deriva a valle verso Reusszopf. Intervento di soccorso acquatico.
+1887 ‖ Person recovered, responsive, severely hypothermic. Handover to the ambulance service at the Reusszopf launch site. ‖ Personne récupérée, consciente, fortement hypothermique. Remise au service de secours à la mise à l'eau de Reusszopf. ‖ Persona recuperata, cosciente, in forte ipotermia. Consegna al servizio di soccorso presso lo scivolo di Reusszopf.
+1888 ‖ Police ‖ Police ‖ Polizia
+1889 ‖ Police boat ‖ Bateau de police ‖ Battello della polizia
+1890 ‖ Post downstream taken up. ‖ Poste en aval occupé. ‖ Posto a valle occupato.
+1891 ‖ =
+1892 ‖ Regular availability times are not available in demo mode. ‖ Les horaires de disponibilité réguliers n'existent pas en mode démo. ‖ Gli orari di disponibilità regolari non sono disponibili in modalità demo.
+1893 ‖ Casualty sighted on the left bank, holding on to a branch! Boat 1, please come. ‖ Victime aperçue sur la rive gauche, elle se tient à une branche ! Bateau 1, venez. ‖ Vittima avvistata sulla riva sinistra, si tiene a un ramo! Barca 1, venite.
+1894 ‖ Casualty not found ‖ Victime introuvable ‖ Vittima non trovata
+1895 ‖ Rescue boat ‖ Bateau de sauvetage ‖ Barca di soccorso
+1896 ‖ Rescue boat (demo) ‖ Bateau de sauvetage (démo) ‖ Barca di soccorso (demo)
+1897 ‖ Rescue sledge ‖ Luge de sauvetage ‖ Slitta di soccorso
+1898 ‖ Bank rescue point ‖ Point de sauvetage rive ‖ Punto di soccorso riva
+1899 ‖ =
+1900 ‖ Uninjured collection point (Sst Unv) ‖ Point de rassemblement des indemnes (Sst Unv) ‖ Punto di raccolta illesi (Sst Unv)
+1901 ‖ Medical ‖ Sanitaire ‖ Sanità
+1902 ‖ First-aid post ‖ Poste sanitaire ‖ Posto sanitario
+1903 ‖ First-aid post (San Hist) ‖ Poste sanitaire (San Hist) ‖ Posto sanitario (San Hist)
+1904 ‖ Lucerne lake police ‖ Police du lac de Lucerne ‖ Polizia lacuale di Lucerna
+1905 ‖ Rope belay / traverse ‖ Assurage par corde / traversée ‖ Assicurazione a corda / traversata
+1906 ‖ Safety and observation posts ‖ Postes de sécurité et d'observation ‖ Posti di sicurezza e d'osservazione
+1907 ‖ Safety post ‖ Poste de sécurité ‖ Posto di sicurezza
+1908 ‖ Safety post at the Emme mouth taken up, throw bag ready. ‖ Poste de sécurité à l'embouchure de l'Emme occupé, sac de lancer prêt. ‖ Posto di sicurezza alla foce dell'Emme occupato, sacca da lancio pronta.
+1909 ‖ Location missing ‖ Position manquante ‖ Posizione mancante
+1910 ‖ Location not found ‖ Site introuvable ‖ Luogo non trovato
+1911 ‖ Debris collection point (Streugut Sst) ‖ Point de collecte des effets (Streugut Sst) ‖ Punto di raccolta effetti (Streugut Sst)
+1912 ‖ Water rescue base (demo) ‖ Base de sauvetage aquatique (démo) ‖ Base del soccorso acquatico (demo)
+1913 ‖ Search sector boat 1 ‖ Secteur de recherche bateau 1 ‖ Settore di ricerca barca 1
+1914 ‖ =
+1915 ‖ Tactical symbols ‖ Symboles tactiques ‖ Simboli tattici
+1916 ‖ Text missing ‖ Texte manquant ‖ Testo mancante
+1917 ‖ Deceased collection point (TSst) ‖ Dépôt mortuaire (TSst) ‖ Punto di raccolta salme (TSst)
+1918 ‖ Meeting point / assembly area ‖ Point de rencontre / lieu de rassemblement ‖ Punto d'incontro / luogo di raccolta
+1919 ‖ Carrier not found ‖ Véhicule porteur introuvable ‖ Veicolo portante non trovato

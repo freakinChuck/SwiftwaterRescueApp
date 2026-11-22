@@ -86,7 +86,7 @@ class I18n {
       final lit = k.split(ph);
       final long = lit.fold('', (a, b) => b.length > a.length ? b : a);
       if (long.replaceAll(RegExp(r'[^A-Za-zÀ-ÿ]'), '').length < 3) return;
-      _tp.add(_Tp(RegExp('^${lit.map(RegExp.escape).join('(.+?)')}\$', dotAll: true), ph.allMatches(k).map((x) => int.parse(x.group(1)!)).toList(), v, long,
+      _tp.add(_Tp(RegExp('^${lit.map(RegExp.escape).join('(.*?)')}\$', dotAll: true), ph.allMatches(k).map((x) => int.parse(x.group(1)!)).toList(), v, long,
           lit.join().length));
     });
     _tp.sort((a, b) => b.n - a.n);
@@ -121,7 +121,9 @@ class I18n {
         }
         r = t.out.replaceAllMapped(RegExp(r'\{(\d+)\}'), (x) {
           final v = cap[int.parse(x.group(1)!)];
-          return v == null ? x.group(0)! : (_ex[_norm(v)] ?? v);
+          if (v == null) return x.group(0)!;
+          final t = _ex[_norm(v)];
+          return t == null ? v : '${RegExp(r'^\s*').firstMatch(v)!.group(0)}$t${RegExp(r'\s*\$').firstMatch(v)!.group(0)}';
         });
         break;
       }

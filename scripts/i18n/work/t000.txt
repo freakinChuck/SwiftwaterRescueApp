@@ -1,0 +1,240 @@
+0 ‖ No connection to the server ‖ Pas de connexion au serveur ‖ Nessuna connessione al server
+1 ‖ Demo mode ‖ Mode démo ‖ Modalità demo
+2 ‖ Operation ‖ Intervention ‖ Intervento
+3 ‖ Operation lead ‖ Direction d'intervention ‖ Direzione dell'intervento
+4 ‖ High ‖ Élevé ‖ Alto
+5 ‖ No active operation ‖ Aucune intervention en cours ‖ Nessun intervento in corso
+6 ‖ Critical ‖ Critique ‖ Critico
+7 ‖ Quiet ‖ Silencieux ‖ Silenzioso
+8 ‖ Normal ‖ Normal ‖ Normale
+9 ‖ Unknown casualty ‖ Victime inconnue ‖ Vittima sconosciuta
+10 ‖ Exercise ‖ Exercice ‖ Esercitazione
+11 ‖ End demo ‖ Quitter la démo ‖ Termina demo
+12 ‖ With sample data ‖ Avec données d'exemple ‖ Con dati di esempio
+13 ‖ Without data ‖ Sans données ‖ Senza dati
+14 ‖ Operation lead rights ‖ Droits de la direction d'intervention ‖ Diritti della direzione dell'intervento
+15 ‖ Close ‖ Fermer ‖ Chiudi
+16 ‖ of {0} ‖ de {0} ‖ di {0}
+17 ‖ Cancel ‖ Annuler ‖ Annulla
+18 ‖ =
+19 ‖ Name ‖ Désignation ‖ Denominazione
+20 ‖ Settings ‖ Paramètres ‖ Impostazioni
+21 ‖ Remove ‖ Retirer ‖ Rimuovi
+22 ‖ Organisation ‖ Organisation ‖ Organizzazione
+23 ‖ Save ‖ Enregistrer ‖ Salva
+24 ‖ =
+25 ‖ What's new ‖ Nouveautés ‖ Novità
+26 ‖ {0} min ago ‖ il y a {0} min ‖ {0} min fa
+27 ‖ Open ‖ Ouvrir ‖ Apri
+28 ‖ Operation PLS ‖ PLS de l'intervention ‖ PLS dell'intervento
+29 ‖ invalid response ‖ réponse invalide ‖ risposta non valida
+30 ‖ (initiating) ‖ (déclenchante) ‖ (promotrice)
+31 ‖ Other app (choose) ‖ Autre app (choix) ‖ Altra app (scelta)
+32 ‖ Apple Maps ‖ Plans d'Apple ‖ Mappe di Apple
+33 ‖ Blue ‖ Bleu ‖ Blu
+34 ‖ The partner organisation cannot be reached at the moment. ‖ L'organisation partenaire n'est pas joignable pour le moment. ‖ L'organizzazione partner al momento non è raggiungibile.
+35 ‖ Yellow ‖ Jaune ‖ Giallo
+36 ‖ =
+37 ‖ Green ‖ Vert ‖ Verde
+38 ‖ Navigate ‖ Naviguer ‖ Naviga
+39 ‖ Orange ‖ Orange ‖ Arancione
+40 ‖ Red ‖ Rouge ‖ Rosso
+41 ‖ Purple ‖ Violet ‖ Viola
+42 ‖ =
+43 ‖ Centre ‖ Centrer ‖ Centra
+44 ‖ Destination ‖ Destination ‖ Destinazione
+45 ‖ 📞 Call ‖ 📞 Appeler ‖ 📞 Chiama
+46 ‖ + Share document ‖ + Partager un document ‖ + Condividi documento
+47 ‖ All documents ‖ Tous les documents ‖ Tutti i documenti
+48 ‖ All radio links ‖ Tous les liens radio ‖ Tutti i link radio
+49 ‖ On the radio guest page ‖ Sur la page radio des invités ‖ Sulla pagina radio per ospiti
+50 ‖ Shared on the radio guest page. ‖ Partagé sur la page radio des invités. ‖ Condiviso sulla pagina radio per ospiti.
+51 ‖ Confirm ‖ Confirmer ‖ Conferma
+52 ‖ Document ‖ Document ‖ Documento
+53 ‖ Share document with external parties ‖ Partager le document avec des externes ‖ Condividi documento con esterni
+54 ‖ Documents ‖ Documents ‖ Documenti
+55 ‖ Own link (no login, for sharing) ‖ Lien propre (sans connexion, à partager) ‖ Link proprio (senza accesso, da condividere)
+56 ‖ Withdraw sharing ‖ Retirer le partage ‖ Ritira la condivisione
+57 ‖ Share ‖ Partager ‖ Condividi
+58 ‖ For ‖ Pour ‖ Per
+59 ‖ Pass individual documents to external parties without the app: {0}. Sharing applies to the current version, until the end of the operation or until you withdraw it. ‖ Transmettez des documents à des externes sans app : {0}. Le partage vaut pour la version actuelle, jusqu'à la fin de l'intervention ou jusqu'à ce que vous le retiriez. ‖ Inoltra singoli documenti a esterni senza app: {0}. La condivisione vale per la versione attuale, fino alla fine dell'intervento o finché non la ritiri.
+60 ‖ Save offline now ‖ Enregistrer hors ligne maintenant ‖ Salva offline ora
+61 ‖ No documents to share. ‖ Aucun document à partager. ‖ Nessun documento da condividere.
+62 ‖ Read and confirm ‖ Lire et confirmer ‖ Leggi e conferma
+63 ‖ Link ‖ Lien ‖ Link
+64 ‖ My suggestions ‖ Mes propositions ‖ Le mie proposte
+65 ‖ New entry ‖ Nouvelle entrée ‖ Nuova voce
+66 ‖ No suggestions yet. You can make a suggestion in the “Documents” window on an entry or folder. ‖ Aucune proposition pour l'instant. Vous pouvez en faire dans la fenêtre « Documents » sur une entrée ou un dossier. ‖ Ancora nessuna proposta. Puoi proporre qualcosa nella finestra «Documenti» su una voce o una cartella.
+67 ‖ Only folders that the administration has shared with external parties. ‖ Seulement les dossiers que l'administration a partagés avec des externes. ‖ Solo cartelle che l'amministrazione ha condiviso con esterni.
+68 ‖ Offline ‖ Hors ligne ‖ Offline
+69 ‖ Entries marked by the editors for this are saved offline, as well as your favourites if the entry allows it. ‖ Sont enregistrées hors ligne les entrées que la rédaction a marquées, ainsi que vos favoris si l'entrée le permet. ‖ Vengono salvate offline le voci contrassegnate dalla redazione e i tuoi preferiti, se la voce lo consente.
+70 ‖ Offline copy updated. ‖ Copie hors ligne mise à jour. ‖ Copia offline aggiornata.
+71 ‖ Send ‖ Envoyer ‖ Invia
+72 ‖ As of {0} ‖ État au {0} ‖ Stato al {0}
+73 ‖ Location ‖ Position ‖ Posizione
+74 ‖ Share ‖ Partager ‖ Condividi
+75 ‖ Withdraw suggestion? ‖ Retirer la proposition ? ‖ Ritirare la proposta?
+76 ‖ Loading … ‖ Chargement … ‖ Caricamento …
+77 ‖ For this operation ‖ Pour cette intervention ‖ Per questo intervento
+78 ‖ Withdrawn. ‖ Retiré. ‖ Ritirato.
+79 ‖ Undo ‖ Annuler ‖ Annulla
+80 ‖ Withdraw ‖ Retirer ‖ Ritira
+81 ‖ all radio links ‖ tous les liens radio ‖ tutti i link radio
+82 ‖ on the radio guest page ‖ sur la page radio des invités ‖ sulla pagina radio per ospiti
+83 ‖ confirm ‖ confirmer ‖ confermare
+84 ‖ until {0} ‖ jusqu'au {0} ‖ fino al {0}
+85 ‖ own link ‖ lien propre ‖ link proprio
+86 ‖ nothing open ‖ rien en attente ‖ nulla in sospeso
+87 ‖ {0} entries ({1}) ‖ {0} entrées ({1}) ‖ {0} voci ({1})
+88 ‖ {0} open ‖ {0} en attente ‖ {0} in sospeso
+89 ‖ {0} · {1} access{2} ‖ {0} · {1} accès{2} ‖ {0} · {1} accesso{2}
+90 ‖ · as of {0} ‖ · état au {0} ‖ · stato al {0}
+91 ‖ via a separate link ‖ via un lien propre ‖ tramite un link proprio
+92 ‖ overdue ‖ en retard ‖ scaduto
+93 ‖ taken over ‖ repris ‖ ripreso
+94 ‖ … and {0} more ‖ … et {0} autres ‖ … e altri {0}
+95 ‖ ★ = favourite · ⬇ = saved offline on this device ‖ ★ = favori · ⬇ = enregistré hors ligne sur cet appareil ‖ ★ = preferito · ⬇ = salvato offline su questo dispositivo
+96 ‖ ⬇ offline ‖ ⬇ hors ligne ‖ ⬇ offline
+97 ‖ 📚 Documents ‖ 📚 Documents ‖ 📚 Documenti
+98 ‖ 📚 Documents for external parties ‖ 📚 Documents pour les externes ‖ 📚 Documenti per esterni
+99 ‖ 📚 Documents for this location ‖ 📚 Documents pour ce site ‖ 📚 Documenti per questo luogo
+100 ‖ 📚 Documents ‖ 📚 Documentation ‖ 📚 Documentazione
+101 ‖ Objects on the water from OpenStreetMap (weirs, bridges, launch sites …), for orientation only. ‖ Objets au bord de l'eau issus d'OpenStreetMap (barrages, ponts, mises à l'eau …), uniquement pour s'orienter. ‖ Oggetti lungo i corsi d'acqua da OpenStreetMap (sbarramenti, ponti, scivoli …), solo per orientamento.
+102 ‖ Visible when zoomed in (zoom level {0}). ‖ Visible avec un zoom plus proche (niveau {0}). ‖ Visibile con zoom più vicino (livello {0}).
+103 ‖ {0} objects in view · © OpenStreetMap contributors ‖ {0} objets à l'écran · © contributeurs d'OpenStreetMap ‖ {0} oggetti visibili · © contributori di OpenStreetMap
+104 ‖ Start ‖ Début ‖ Inizio
+105 ‖ At the PLS ‖ Au PLS ‖ Al PLS
+106 ‖ End ‖ Fin ‖ Fine
+107 ‖ River ‖ Rivière ‖ Fiume
+108 ‖ Danger level {0} ‖ Degré de danger {0} ‖ Grado di pericolo {0}
+109 ‖ None selected. In your profile you can choose gauging stations that you see here and on the map. ‖ Aucune choisie. Dans votre profil, vous pouvez choisir des stations de mesure affichées ici et sur la carte. ‖ Nessuna scelta. Nel profilo puoi scegliere le stazioni di misura che vedi qui e sulla mappa.
+110 ‖ No matching station. ‖ Aucune station correspondante. ‖ Nessuna stazione corrispondente.
+111 ‖ My gauging stations ‖ Mes stations de mesure ‖ Le mie stazioni di misura
+112 ‖ Add gauging station ‖ Ajouter une station de mesure ‖ Aggiungi stazione di misura
+113 ‖ Gauging stations ‖ Stations de mesure ‖ Stazioni di misura
+114 ‖ Show gauging stations on the map ‖ Afficher les stations de mesure sur la carte ‖ Mostra le stazioni di misura sulla mappa
+115 ‖ FOEN gauging stations that you see in the menu and on the map (category “Gauging stations” in the “View” window). ‖ Stations de mesure de l'OFEV affichées dans le menu et sur la carte (catégorie « Stations de mesure » dans la fenêtre « Affichage »). ‖ Stazioni di misura dell'UFAM che vedi nel menu e sulla mappa (categoria «Stazioni di misura» nella finestra «Vista»).
+116 ‖ Choose gauging stations ‖ Choisir des stations de mesure ‖ Scegli stazioni di misura
+117 ‖ Loading measurements … ‖ Chargement des mesures … ‖ Caricamento dei valori misurati …
+118 ‖ Move up ‖ Vers le haut ‖ Sposta su
+119 ‖ No values recorded yet (no gauging station nearby or FOEN not reachable, see log). ‖ Aucune valeur enregistrée (pas de station à proximité ou OFEV injoignable, voir le journal). ‖ Ancora nessun valore registrato (nessuna stazione nelle vicinanze o UFAM non raggiungibile, vedi registro).
+120 ‖ None selected yet. ‖ Aucune choisie pour l'instant. ‖ Ancora nessuna scelta.
+121 ‖ Place, water body or number ‖ Lieu, cours d'eau ou numéro ‖ Luogo, corso d'acqua o numero
+122 ‖ Water level & discharge ‖ Niveau & débit ‖ Livello & portata
+123 ‖ Source: FOEN (via api.existenz.ch or hydrodaten.admin.ch). Values unverified. Danger levels 1–5 according to FOEN. ‖ Source : OFEV (via api.existenz.ch ou hydrodaten.admin.ch). Valeurs non vérifiées. Degrés de danger 1–5 selon l'OFEV. ‖ Fonte: UFAM (tramite api.existenz.ch o hydrodaten.admin.ch). Valori non verificati. Gradi di pericolo 1–5 secondo l'UFAM.
+124 ‖ Source: FOEN. Values unverified. ‖ Source : OFEV. Valeurs non vérifiées. ‖ Fonte: UFAM. Valori non verificati.
+125 ‖ Lake ‖ Lac ‖ Lago
+126 ‖ Station {0} ‖ Station {0} ‖ Stazione {0}
+127 ‖ Loading stations … ‖ Chargement des stations … ‖ Caricamento delle stazioni …
+128 ‖ Already at the top. ‖ Déjà en haut. ‖ Già in cima.
+129 ‖ Recorded as soon as a PLS is known. At the end of the operation the values of the same stations follow. ‖ Enregistrées dès qu'un PLS est connu. À la fin de l'intervention suivent les valeurs des mêmes stations. ‖ Vengono registrati non appena è noto un PLS. Alla fine dell'intervento seguono i valori delle stesse stazioni.
+130 ‖ Show ‖ Afficher ‖ Mostra
+131 ‖ no measurements ‖ aucune mesure ‖ nessun valore misurato
+132 ‖ · measured {0} ‖ · mesure {0} ‖ · misurazione {0}
+133 ‖ (not reachable) ‖ (injoignable) ‖ (non raggiungibile)
+134 ‖ (no location) ‖ (sans position) ‖ (senza posizione)
+135 ‖ Log out ‖ Se déconnecter ‖ Esci
+136 ‖ Add as marker ‖ Reprendre comme marqueur ‖ Riprendi come marcatore
+137 ‖ Add as fixed location ‖ Reprendre comme site fixe ‖ Riprendi come luogo fisso
+138 ‖ Added as fixed location ‖ Repris comme site fixe ‖ Ripreso come luogo fisso
+139 ‖ Accept: {0}{1} ‖ Accepter : {0}{1} ‖ Accetta: {0}{1}
+140 ‖ Tap to choose the response option. ‖ Touchez pour choisir l'option d'engagement. ‖ Tocca per scegliere l'opzione d'intervento.
+141 ‖ Auto overview ‖ Vue d'ensemble auto ‖ Panoramica automatica
+142 ‖ Operator: {0} ‖ Exploitant : {0} ‖ Gestore: {0}
+143 ‖ Show this operation ‖ Afficher cette intervention ‖ Mostra questo intervento
+144 ‖ You are taking part in “{0}: {1}”. Accept this operation and leave the other one? ‖ Vous participez à « {0} : {1} ». Accepter cette intervention et quitter l'autre ? ‖ Partecipi a «{0}: {1}». Accettare questo intervento e lasciare l'altro?
+145 ‖ You are no longer taking part in this operation. ‖ Vous ne participez plus à cette intervention. ‖ Non partecipi più a questo intervento.
+146 ‖ Vertices ‖ Sommets ‖ Vertici
+147 ‖ Operation not yet accepted. ‖ Intervention pas encore acceptée. ‖ Intervento non ancora accettato.
+148 ‖ Responders ‖ Intervenants ‖ Soccorritori
+149 ‖ External responder ‖ Intervenant externe ‖ Soccorritore esterno
+150 ‖ Vehicles ‖ Véhicules ‖ Veicoli
+151 ‖ Done ‖ Terminé ‖ Fatto
+152 ‖ Fixed locations ‖ Sites fixes ‖ Luoghi fissi
+153 ‖ Fixed location ‖ Site fixe ‖ Luogo fisso
+154 ‖ River distance ‖ Distance fluviale ‖ Distanza fluviale
+155 ‖ Follow ‖ Suivre ‖ Segui
+156 ‖ Following ‖ Suivi ‖ Seguito
+157 ‖ Radio ‖ Radio ‖ Radio
+158 ‖ Geodata © OpenStreetMap contributors, not verified ‖ Géodonnées © contributeurs d'OpenStreetMap, non vérifiées ‖ Geodati © contributori di OpenStreetMap, non verificati
+159 ‖ Helicopters ‖ Hélicoptères ‖ Elicotteri
+160 ‖ Helicopters hidden. ‖ Hélicoptères masqués. ‖ Elicotteri nascosti.
+161 ‖ Altitude: {0} ‖ Altitude : {0} ‖ Altitudine: {0}
+162 ‖ Close info window ‖ Fermer la fenêtre d'info ‖ Chiudi la finestra informazioni
+163 ‖ Camera focus ‖ Cadrage ‖ Inquadratura
+164 ‖ Hide map buttons ‖ Masquer les boutons de la carte ‖ Nascondi i pulsanti della mappa
+165 ‖ Show map buttons ‖ Afficher les boutons de la carte ‖ Mostra i pulsanti della mappa
+166 ‖ Remove the map marker of this message? The message itself remains. ‖ Retirer le marqueur de ce message sur la carte ? Le message lui-même est conservé. ‖ Rimuovere il marcatore di questo messaggio dalla mappa? Il messaggio stesso rimane.
+167 ‖ Loading air situation … ‖ Chargement de la situation aérienne … ‖ Caricamento della situazione aerea …
+168 ‖ Marker ‖ Marqueur ‖ Marcatore
+169 ‖ Remove marker ‖ Retirer le marqueur ‖ Rimuovi marcatore
+170 ‖ Marker by {0} ‖ Marqueur de {0} ‖ Marcatore di {0}
+171 ‖ Markers ‖ Marqueurs ‖ Marcatori
+172 ‖ Menu ‖ Menu ‖ Menu
+173 ‖ Message · {0} ‖ Message · {0} ‖ Messaggio · {0}
+174 ‖ Messages ‖ Messages ‖ Messaggi
+175 ‖ Names on the map ‖ Noms sur la carte ‖ Nomi sulla mappa
+176 ‖ No. {0} ‖ N° {0} ‖ N. {0}
+177 ‖ No special role ‖ Sans rôle spécial ‖ Senza ruolo speciale
+178 ‖ Partner organisation (own linked operation) ‖ Organisation partenaire (intervention liée propre) ‖ Organizzazione partner (intervento collegato proprio)
+179 ‖ Points ‖ Points ‖ Punti
+180 ‖ Casualty ‖ Victime ‖ Vittima
+181 ‖ Casualty {0} ‖ Victime {0} ‖ Vittima {0}
+182 ‖ Casualties ‖ Victimes ‖ Vittime
+183 ‖ Undo ‖ Annuler ‖ Annulla
+184 ‖ Later ‖ Plus tard ‖ Più tardi
+185 ‖ Administration default ‖ Par défaut de l'administration ‖ Predefinito dell'amministrazione
+186 ‖ Location known ‖ Position connue ‖ Posizione nota
+187 ‖ Location {0} ‖ Position {0} ‖ Posizione {0}
+188 ‖ Search area ‖ Zone de recherche ‖ Area di ricerca
+189 ‖ Search area “{0}” ‖ Zone de recherche « {0} » ‖ Area di ricerca «{0}»
+190 ‖ Next ‖ Suivant ‖ Avanti
+191 ‖ Other operations ‖ Autres interventions ‖ Altri interventi
+192 ‖ none nearby ‖ aucune à proximité ‖ nessuna nelle vicinanze
+193 ‖ running ‖ en cours ‖ in corso
+194 ‖ manual (operation lead) ‖ manuel (direction d'intervention) ‖ manuale (direzione dell'intervento)
+195 ‖ {0} (vehicle) ‖ {0} (véhicule) ‖ {0} (veicolo)
+196 ‖ {0} (external) ‖ {0} (externe) ‖ {0} (esterno)
+197 ‖ {0} nearby ‖ {0} à proximité ‖ {0} nelle vicinanze
+198 ‖ © OpenStreetMap contributors ‖ © contributeurs d'OpenStreetMap ‖ © contributori di OpenStreetMap
+199 ‖ · source {0} ‖ · source {0} ‖ · fonte {0}
+200 ‖ Taken over ‖ Repris ‖ Ripreso
+201 ‖ ⛔ Lift barrier (operation) ‖ ⛔ Lever la barrière (intervention) ‖ ⛔ Rimuovi lo sbarramento (intervento)
+202 ‖ ⛔ Consider barrier again ‖ ⛔ Tenir à nouveau compte de la barrière ‖ ⛔ Considera di nuovo lo sbarramento
+203 ‖ (operation lead rights) ‖ (droits de la direction d'intervention) ‖ (diritti della direzione dell'intervento)
+204 ‖ (operation lead rights, no special role) ‖ (droits de la direction d'intervention, sans rôle spécial) ‖ (diritti della direzione dell'intervento, senza ruolo speciale)
+205 ‖ (no messages, no operation log) ‖ (pas de messages, pas de journal d'intervention) ‖ (nessun messaggio, nessun registro dell'intervento)
+206 ‖ (critical for people with exercise mode) ‖ (critique pour les personnes en mode exercice) ‖ (critico per le persone con modalità esercitazione)
+207 ‖ (set manually) ‖ (défini manuellement) ‖ (impostato manualmente)
+208 ‖ ({0} min ago) ‖ (il y a {0} min) ‖ ({0} min fa)
+209 ‖ , drift from {0} min before release ‖ , dérive dès {0} min avant la libération ‖ , deriva da {0} min prima del rilascio
+210 ‖ , you enter the time on release ‖ , vous indiquez l'heure lors de la libération ‖ , indichi l'ora al momento del rilascio
+211 ‖ , of which {0} absent ‖ , dont {0} absents ‖ , di cui {0} assenti
+212 ‖ , of which {0} absent (not alerted) ‖ , dont {0} absents (non alarmés) ‖ , di cui {0} assenti (non allarmati)
+213 ‖ , plus the operation log with the messages ‖ , avec le journal d'intervention et les messages ‖ , con il registro dell'intervento e i messaggi
+214 ‖ , no messages and no operation log ‖ , pas de messages ni de journal d'intervention ‖ , nessun messaggio e nessun registro dell'intervento
+215 ‖ , as soon as the casualty is released ‖ , dès que la victime est libérée ‖ , non appena la vittima è rilasciata
+216 ‖ , as soon as the external responder is released ‖ , dès que l'intervenant externe est libéré ‖ , non appena il soccorritore esterno è rilasciato
+217 ‖ , {0} not ‖ , {0} non ‖ , {0} no
+218 ‖ : new, {0} ‖ : nouveau, {0} ‖ : nuovo, {0}
+219 ‖ : unknown ‖ : inconnu ‖ : sconosciuto
+220 ‖ Signed off ‖ Désinscrit ‖ Cancellato
+221 ‖ Absences, regular availability times, operations, planned exercises and expiring training at a glance. ‖ Absences, horaires de disponibilité réguliers, interventions, exercices prévus et formations arrivant à échéance en un coup d'œil. ‖ Assenze, orari di disponibilità regolari, interventi, esercitazioni pianificate e formazioni in scadenza a colpo d'occhio.
+222 ‖ Alarm ‖ Alarme ‖ Allarme
+223 ‖ Trigger alarm ‖ Déclencher l'alarme ‖ Attiva l'allarme
+224 ‖ Alerts only the newly called-out people. Those already called out get no further alarm. ‖ N'alarme que les personnes nouvellement mobilisées. Les personnes déjà mobilisées ne reçoivent pas d'autre alarme. ‖ Allarma solo le persone appena convocate. Chi è già convocato non riceve un altro allarme.
+225 ‖ Alarm level ‖ Niveau d'alarme ‖ Livello d'allarme
+226 ‖ Alarm level {0}{1}. ‖ Niveau d'alarme {0}{1}. ‖ Livello d'allarme {0}{1}.
+227 ‖ All people ‖ Toutes les personnes ‖ Tutte le persone
+228 ‖ Alert all people of this organisation ‖ Alarmer toutes les personnes de cette organisation ‖ Allarma tutte le persone di questa organizzazione
+229 ‖ Alert all people who can be called out ‖ Alarmer toutes les personnes mobilisables ‖ Allarma tutte le persone convocabili
+230 ‖ All selected ‖ Tous sélectionnés ‖ Tutti selezionati
+231 ‖ All will be ‖ Tous seront ‖ Tutti saranno
+232 ‖ Allow everyone to join? Everyone will then see the operation and can accept it (without alarm). ‖ Permettre à tous de rejoindre ? Toutes les personnes verront l'intervention et pourront l'accepter (sans alarme). ‖ Consentire a tutti di partecipare? Tutte le persone vedranno l'intervento e potranno accettarlo (senza allarme).
+233 ‖ Details ‖ Données ‖ Dati
+234 ‖ Signed up ‖ Inscrit ‖ Iscritto
+235 ‖ Only members of {0} can sign up. ‖ Seuls les membres de {0} peuvent s'inscrire. ‖ Possono iscriversi solo i membri di {0}.
+236 ‖ Sign-up deadline {0} ‖ Clôture des inscriptions {0} ‖ Termine d'iscrizione {0}
+237 ‖ Sign-ups ‖ Inscriptions ‖ Iscrizioni
+238 ‖ Anonymous: hide names (only special role or response option) ‖ Anonyme : masquer les noms (seulement le rôle spécial ou l'option d'engagement) ‖ Anonimo: nascondi i nomi (solo ruolo speciale o opzione d'intervento)
+239 ‖ View ‖ Voir ‖ Visualizza

@@ -1,0 +1,240 @@
+480 ‖ The selected people are notified (no selection = everyone). Everyone in the operation can read. ‖ Les personnes choisies sont notifiées (aucune sélection = tous). Tous dans l'intervention peuvent lire. ‖ Vengono avvisate le persone scelte (nessuna selezione = tutti). Tutti nell'intervento possono leggere.
+481 ‖ Your role may not send messages. ‖ Votre rôle ne peut pas envoyer de messages. ‖ Il tuo ruolo non può inviare messaggi.
+482 ‖ You ‖ Vous ‖ Tu
+483 ‖ Message ‖ Message ‖ Messaggio
+484 ‖ Only people who have accepted the operation see messages. ‖ Seules les personnes ayant accepté l'intervention voient les messages. ‖ Solo chi ha accettato l'intervento vede i messaggi.
+485 ‖ Show message markers on the map ‖ Afficher les marqueurs de messages sur la carte ‖ Mostra i marcatori dei messaggi sulla mappa
+486 ‖ No messages yet. ‖ Aucun message pour l'instant. ‖ Ancora nessun messaggio.
+487 ‖ Tap the map to place the marker for the message. ‖ Touchez la carte pour placer le marqueur du message. ‖ Tocca la mappa per impostare il marcatore del messaggio.
+488 ‖ Accept the operation first to send. ‖ Acceptez d'abord l'intervention pour envoyer. ‖ Per inviare accetta prima l'intervento.
+489 ‖ {0} · to {1} ‖ {0} · à {1} ‖ {0} · a {1}
+490 ‖ ✉ Marker{0} ‖ ✉ Marqueur{0} ‖ ✉ Marcatore{0}
+491 ‖ 📍 Location{0} ‖ 📍 Position{0} ‖ 📍 Posizione{0}
+492 ‖ + External responder ‖ + Intervenant externe ‖ + Soccorritore esterno
+493 ‖ Description (organisation, radio channel, phone …) ‖ Description (organisation, canal radio, téléphone …) ‖ Descrizione (organizzazione, canale radio, telefono …)
+494 ‖ Please enter a name. ‖ Veuillez saisir un nom. ‖ Inserisci un nome.
+495 ‖ Then tap the location on the map. ‖ Ensuite, touchez la position sur la carte. ‖ Poi tocca la posizione sulla mappa.
+496 ‖ Responders with app ‖ Intervenants avec app ‖ Soccorritori con app
+497 ‖ External ‖ Externe ‖ Esterno
+498 ‖ Edit external responder ‖ Modifier l'intervenant externe ‖ Modifica soccorritore esterno
+499 ‖ Record external responder ‖ Saisir un intervenant externe ‖ Registra soccorritore esterno
+500 ‖ Remove external responder “{0}” for everyone? ‖ Retirer l'intervenant externe « {0} » pour tous ? ‖ Rimuovere il soccorritore esterno «{0}» per tutti?
+501 ‖ External responders ‖ Intervenants externes ‖ Soccorritori esterni
+502 ‖ External responders ({0}) ‖ Intervenants externes ({0}) ‖ Soccorritori esterni ({0})
+503 ‖ External{0} ‖ Externe{0} ‖ Esterno{0}
+504 ‖ Colour ‖ Couleur ‖ Colore
+505 ‖ Remove for everyone ‖ Retirer pour tous ‖ Rimuovi per tutti
+506 ‖ Recorded in this operation ‖ Saisis dans cette intervention ‖ Registrati in questo intervento
+507 ‖ None recorded. ‖ Aucun saisi. ‖ Nessuno registrato.
+508 ‖ With a post role the search area ends at this location. ‖ Avec un rôle de poste, la zone de recherche s'arrête à cet endroit. ‖ Con un ruolo di posto, l'area di ricerca termina in questo luogo.
+509 ‖ Name ‖ Nom ‖ Nome
+510 ‖ Change name, description, special role, abbreviation, colour and location ‖ Modifier nom, description, rôle spécial, abréviation, couleur et position ‖ Modificare nome, descrizione, ruolo speciale, sigla, colore e posizione
+511 ‖ New without template ‖ Nouveau sans modèle ‖ Nuovo senza modello
+512 ‖ Nobody in the operation yet. ‖ Personne dans l'intervention pour l'instant. ‖ Ancora nessuno nell'intervento.
+513 ‖ Set location on the map ‖ Définir la position sur la carte ‖ Imposta la posizione sulla mappa
+514 ‖ Set location again on the map ‖ Redéfinir la position sur la carte ‖ Reimposta la posizione sulla mappa
+515 ‖ Tap the map to place “{0}”. ‖ Touchez la carte pour placer « {0} ». ‖ Tocca la mappa per impostare «{0}».
+516 ‖ Tap a template, then choose the location on the map. Templates with a location are placed there directly. ‖ Touchez un modèle, puis choisissez la position sur la carte. Les modèles avec position y sont placés directement. ‖ Tocca un modello, poi scegli la posizione sulla mappa. I modelli con posizione vengono impostati direttamente lì.
+517 ‖ Templates ‖ Modèles ‖ Modelli
+518 ‖ no location ‖ pas de position ‖ nessuna posizione
+519 ‖ e.g. fire brigade, bridge post ‖ p. ex. pompiers, poste du pont ‖ p. es. pompieri, posto ponte
+520 ‖ · with location{0} ‖ · avec position{0} ‖ · con posizione{0}
+521 ‖ ℹ Info ‖ ℹ Info ‖ ℹ Info
+522 ‖ (by straight-line distance from own location) ‖ (selon la distance à vol d'oiseau depuis sa position) ‖ (secondo la distanza in linea d'aria dalla propria posizione)
+523 ‖ + Area ‖ + Zone ‖ + Area
+524 ‖ + Line ‖ + Ligne ‖ + Linea
+525 ‖ + Marker ‖ + Marqueur ‖ + Marcatore
+526 ‖ , centre ‖ , centre ‖ , centro
+527 ‖ Outside the operation area ‖ Hors de la zone d'intervention ‖ Fuori dall'area d'intervento
+528 ‖ Area ‖ Zone ‖ Area
+529 ‖ Mark area ‖ Marquer une zone ‖ Segna area
+530 ‖ Areas ‖ Zones ‖ Aree
+531 ‖ Please choose a symbol. ‖ Veuillez choisir un symbole. ‖ Scegli un simbolo.
+532 ‖ Please enter a name. ‖ Veuillez saisir une désignation. ‖ Inserisci una denominazione.
+533 ‖ Then tap the corners of the area on the map. ‖ Ensuite, touchez les sommets de la zone sur la carte. ‖ Poi tocca i vertici dell'area sulla mappa.
+534 ‖ Then tap the points of the line in order on the map. ‖ Ensuite, touchez dans l'ordre les points de la ligne sur la carte. ‖ Poi tocca in ordine i punti della linea sulla mappa.
+535 ‖ Fixed locations ({0}) ‖ Sites fixes ({0}) ‖ Luoghi fissi ({0})
+536 ‖ In the operation area ‖ Dans la zone d'intervention ‖ Nell'area d'intervento
+537 ‖ No PLS set ‖ Aucun PLS défini ‖ Nessun PLS impostato
+538 ‖ No symbol found ‖ Aucun symbole trouvé ‖ Nessun simbolo trovato
+539 ‖ None ‖ Aucun ‖ Nessuno
+540 ‖ Situation ‖ Situation ‖ Situazione
+541 ‖ Line ‖ Ligne ‖ Linea
+542 ‖ Draw line ‖ Tracer une ligne ‖ Disegna linea
+543 ‖ Lines ‖ Lignes ‖ Linee
+544 ‖ Place marker ‖ Placer un marqueur ‖ Imposta marcatore
+545 ‖ Choose navigation point ‖ Choisir un point de navigation ‖ Scegli punto di navigazione
+546 ‖ Choose navigation point{0}: ‖ Choisir un point de navigation{0} : ‖ Scegli punto di navigazione{0}:
+547 ‖ Navigate: {0} ‖ Naviguer : {0} ‖ Naviga: {0}
+548 ‖ No category ‖ Sans catégorie ‖ Senza categoria
+549 ‖ No symbol ‖ Sans symbole ‖ Senza simbolo
+550 ‖ Without a name of its own, the name of the symbol is used. ‖ Sans désignation propre, le nom du symbole est utilisé. ‖ Senza denominazione propria vale il nome del simbolo.
+551 ‖ =
+552 ‖ Point ‖ Point ‖ Punto
+553 ‖ Search symbol ‖ Rechercher un symbole ‖ Cerca simbolo
+554 ‖ e.g. riverside path closure ‖ p. ex. barrage du chemin riverain ‖ p. es. chiusura sentiero lungo la riva
+555 ‖ e.g. search sector north ‖ p. ex. secteur de recherche nord ‖ p. es. settore di ricerca nord
+556 ‖ e.g. boat meeting point ‖ p. ex. point de rencontre bateaux ‖ p. es. punto d'incontro barche
+557 ‖ =
+558 ‖ Remove {0} “{1}” for everyone? ‖ Retirer {0} « {1} » pour tous ? ‖ Rimuovere {0} «{1}» per tutti?
+559 ‖ {0}drift from {1}{2} ‖ {0}dérive dès {1}{2} ‖ {0}deriva da {1}{2}
+560 ‖ · centre ‖ · centre ‖ · centro
+561 ‖ · does not count for the search area ‖ · ne compte pas pour la zone de recherche ‖ · non conta per l'area di ricerca
+562 ‖ ⛔ on ‖ ⛔ actif ‖ ⛔ attivo
+563 ‖ ⛔ off ‖ ⛔ inactif ‖ ⛔ disattivato
+564 ‖ + Record absence ‖ + Saisir une absence ‖ + Registra assenza
+565 ‖ + Add rule ‖ + Ajouter une règle ‖ + Aggiungi regola
+566 ‖ Absent or availability suspended: no call-out and no alarm. Running operations remain visible. ‖ Absent ou disponibilité suspendue : pas de mobilisation ni d'alarme. Les interventions en cours restent visibles. ‖ Assente o disponibilità sospesa: nessuna convocazione e nessun allarme. Gli interventi in corso restano visibili.
+567 ‖ Absences not available (no connection). ‖ Absences indisponibles (pas de connexion). ‖ Assenze non disponibili (nessuna connessione).
+568 ‖ Alerting ‖ Alarme ‖ Allarme
+569 ‖ Logged-in apps ‖ Apps connectées ‖ App connesse
+570 ‖ Display ‖ Affichage ‖ Visualizzazione
+571 ‖ App logged out ‖ App déconnectée ‖ App disconnessa
+572 ‖ Log out the app on this device? It will then no longer receive alarms. ‖ Déconnecter l'app sur cet appareil ? Elle ne recevra plus d'alarmes. ‖ Disconnettere l'app su questo dispositivo? Non riceverà più allarmi.
+573 ‖ On request (button ✨) ‖ Sur demande (bouton ✨) ‖ Su richiesta (pulsante ✨)
+574 ‖ User guide ‖ Mode d'emploi ‖ Istruzioni per l'uso
+575 ‖ Accompanying (suggestion prepared on opening) ‖ D'accompagnement (proposition préparée dès l'ouverture) ‖ D'accompagnamento (proposta preparata già all'apertura)
+576 ‖ Notifications ‖ Notifications ‖ Notifiche
+577 ‖ Notifications come via the app. Switch them on and off in the settings of the app or device. ‖ Les notifications passent par l'app. Activez-les ou désactivez-les dans les paramètres de l'app ou de l'appareil. ‖ Le notifiche arrivano tramite l'app. Attivale e disattivale nelle impostazioni dell'app o del dispositivo.
+578 ‖ Availability ‖ Disponibilité ‖ Disponibilità
+579 ‖ Alert critically for operation types that provide for it (e.g. exercises) ‖ Alarmer de manière critique pour les types d'intervention qui le prévoient (p. ex. exercices) ‖ Allarmare in modo critico per i tipi d'intervento che lo prevedono (p. es. esercitazioni)
+580 ‖ Report vehicles outside operations too ‖ Signaler les véhicules aussi hors des interventions ‖ Segnalare i veicoli anche fuori dagli interventi
+581 ‖ For direct calls during operations ‖ Pour l'appel direct en intervention ‖ Per la chiamata diretta durante gli interventi
+582 ‖ During a running operation {0} see it with the responders{1}.{2} ‖ Pendant une intervention en cours, {0} le voient chez les intervenants{1}.{2} ‖ Durante un intervento in corso {0} lo vedono presso i soccorritori{1}.{2}
+583 ‖ Per weekday and time: be alerted only during these times (availability) or be regularly suspended. ‖ Par jour de semaine et heure : n'être alarmé que pendant ces heures (disponibilité) ou être régulièrement suspendu. ‖ Per giorno della settimana e ora: essere allarmato solo in questi orari (disponibilità) o essere sospeso regolarmente.
+584 ‖ Do not show coordinates ‖ Ne pas afficher de coordonnées ‖ Non mostrare coordinate
+585 ‖ Account ‖ Compte ‖ Account
+586 ‖ Coordinate system ‖ Système de coordonnées ‖ Sistema di coordinate
+587 ‖ Leave empty if you do not want to be called. ‖ Laissez vide si vous ne voulez pas être appelé. ‖ Lascia vuoto se non vuoi essere chiamato.
+588 ‖ My response groups ‖ Mes groupes d'intervention ‖ I miei gruppi d'intervento
+589 ‖ Navigation app (button 🧭) ‖ App de navigation (bouton 🧭) ‖ App di navigazione (pulsante 🧭)
+590 ‖ Change password ‖ Changer le mot de passe ‖ Cambia password
+591 ‖ Change profile picture ‖ Changer la photo de profil ‖ Cambia immagine del profilo
+592 ‖ Legal ‖ Informations légales ‖ Note legali
+593 ‖ Regular availability times ‖ Horaires de disponibilité réguliers ‖ Orari di disponibilità regolari
+594 ‖ Default: {0} ‖ Par défaut : {0} ‖ Predefinito: {0}
+595 ‖ Phone number ‖ Numéro de téléphone ‖ Numero di telefono
+596 ‖ Test alarm ‖ Alarme test ‖ Allarme di prova
+597 ‖ Test alarm cancelled ‖ Alarme test annulée ‖ Allarme di prova annullato
+598 ‖ Test alarm triggered ‖ Alarme test déclenchée ‖ Allarme di prova attivato
+599 ‖ Test alarm in 30 s ‖ Alarme test dans 30 s ‖ Allarme di prova tra 30 s
+600 ‖ Test alarm in 30 s. Now close the app or lock the screen. ‖ Alarme test dans 30 s. Fermez maintenant l'app ou verrouillez l'écran. ‖ Allarme di prova tra 30 s. Ora chiudi l'app o blocca lo schermo.
+601 ‖ Texts that the AI assistant creates on request. “Accompanying” prepares them on opening. ‖ Textes que l'assistant IA crée sur demande. « D'accompagnement » les prépare dès l'ouverture. ‖ Testi che l'assistente IA crea su richiesta. «D'accompagnamento» li prepara già all'apertura.
+602 ‖ Version ‖ Version ‖ Versione
+603 ‖ Who operates the app, which data it stores and which licences apply. ‖ Qui exploite l'app, quelles données elle enregistre et quelles licences s'appliquent. ‖ Chi gestisce l'app, quali dati salva e quali licenze valgono.
+604 ‖ Checking … ‖ Vérification … ‖ Verifica in corso …
+605 ‖ everyone who has accepted the operation ‖ toutes les personnes ayant accepté l'intervention ‖ tutti coloro che hanno accettato l'intervento
+606 ‖ logged in {0} · last {1} ‖ connecté {0} · dernière fois {1} ‖ connesso {0} · ultima volta {1}
+607 ‖ the operation lead ‖ la direction d'intervention ‖ la direzione dell'intervento
+608 ‖ none stored ‖ aucun enregistré ‖ nessuno registrato
+609 ‖ and can call you directly ‖ et peuvent vous appeler directement ‖ e possono chiamarti direttamente
+610 ‖ Change via the administration. ‖ Modifier via l'administration. ‖ Modifica tramite l'amministrazione.
+611 ‖ Exercise mode ‖ Mode exercice ‖ Modalità esercitazione
+612 ‖ ✓ available ‖ ✓ disponible ‖ ✓ disponibile
+613 ‖ 📅 Calendar ‖ 📅 Calendrier ‖ 📅 Calendario
+614 ‖ (straight line {0}) ‖ (à vol d'oiseau {0}) ‖ (in linea d'aria {0})
+615 ‖ =
+616 ‖ B is downstream of A ‖ B est en aval de A ‖ B è a valle di A
+617 ‖ B is upstream of A ‖ B est en amont de A ‖ B è a monte di A
+618 ‖ The points are {0} apart (straight line); at most {1} km is possible. ‖ Les points sont distants de {0} (à vol d'oiseau), {1} km au maximum sont possibles. ‖ I punti distano {0} (in linea d'aria), sono possibili al massimo {1} km.
+619 ‖ Enter flow speed ‖ Saisir la vitesse du courant ‖ Inserisci la velocità della corrente
+620 ‖ River distance A → B: {0} ‖ Distance fluviale A → B : {0} ‖ Distanza fluviale A → B: {0}
+621 ‖ River network not available: {0} ‖ Réseau hydrographique indisponible : {0} ‖ Rete idrografica non disponibile: {0}
+622 ‖ Loading river network … ‖ Chargement du réseau hydrographique … ‖ Caricamento della rete idrografica …
+623 ‖ No water body within {0} m of point A. ‖ Aucun cours d'eau dans un rayon de {0} m autour du point A. ‖ Nessun corso d'acqua entro {0} m dal punto A.
+624 ‖ No water body within {0} m of point B. ‖ Aucun cours d'eau dans un rayon de {0} m autour du point B. ‖ Nessun corso d'acqua entro {0} m dal punto B.
+625 ‖ No continuous flow direction: drift time only as a guide. ‖ Pas de sens d'écoulement continu : temps de dérive seulement indicatif. ‖ Nessuna direzione di flusso continua: tempo di deriva solo indicativo.
+626 ‖ At {0} km/h ‖ À {0} km/h ‖ A {0} km/h
+627 ‖ Measure again ‖ Mesurer à nouveau ‖ Misura di nuovo
+628 ‖ Tap start point A on the map ‖ Touchez le point de départ A sur la carte ‖ Tocca il punto di partenza A sulla mappa
+629 ‖ Drift time with the flow speed: from B to A (downstream). ‖ Temps de dérive avec la vitesse du courant : de B à A (en aval). ‖ Tempo di deriva con la velocità della corrente: da B ad A (a valle).
+630 ‖ Connection not in one flow direction (e.g. via a confluence) ‖ Liaison pas dans un seul sens d'écoulement (p. ex. via une confluence) ‖ Collegamento non in un'unica direzione di flusso (p. es. attraverso una confluenza)
+631 ‖ Tap destination point B on the map ‖ Touchez le point d'arrivée B sur la carte ‖ Tocca il punto d'arrivo B sulla mappa
+632 ‖ There is no connection between A and B via the river network. ‖ Il n'y a pas de liaison entre A et B via le réseau hydrographique. ‖ Non c'è collegamento tra A e B tramite la rete idrografica.
+633 ‖ downstream ‖ en aval ‖ a valle
+634 ‖ upstream ‖ en amont ‖ a monte
+635 ‖ =
+636 ‖ =
+637 ‖ + Record casualty ‖ + Saisir une victime ‖ + Registra vittima
+638 ‖ From this time the drift distance is calculated with the flow speed. ‖ À partir de ce moment, la distance de dérive est calculée avec la vitesse du courant. ‖ Da questo momento la distanza di deriva viene calcolata con la velocità della corrente.
+639 ‖ Choose on the map ‖ Choisir sur la carte ‖ Scegli sulla mappa
+640 ‖ Description (features, clothing, age …) ‖ Description (signes distinctifs, vêtements, âge …) ‖ Descrizione (caratteristiche, abbigliamento, età …)
+641 ‖ Then set own PLS on the map ‖ Ensuite, définir un PLS propre sur la carte ‖ Poi imposta un PLS proprio sulla mappa
+642 ‖ Set own PLS on the map ‖ Définir un PLS propre sur la carte ‖ Imposta un PLS proprio sulla mappa
+643 ‖ Own PLS{0} · drift from {1} ‖ PLS propre{0} · dérive dès {1} ‖ PLS proprio{0} · deriva da {1}
+644 ‖ Where “{0}” was found ‖ Lieu de découverte de « {0} » ‖ Luogo di ritrovamento di «{0}»
+645 ‖ Reset the place where “{0}” was found? The casualty is then considered missing again. ‖ Réinitialiser le lieu de découverte de « {0} » ? La victime est alors à nouveau considérée comme disparue. ‖ Reimpostare il luogo di ritrovamento di «{0}»? La vittima sarà di nuovo considerata dispersa.
+646 ‖ Reset place found ‖ Réinitialiser le lieu de découverte ‖ Reimposta il luogo di ritrovamento
+647 ‖ Rescued ‖ Sauvée ‖ Salvata
+648 ‖ Rescued {0} · {1} ‖ Sauvée {0} · {1} ‖ Salvata {0} · {1}
+649 ‖ No PLS ‖ Pas de PLS ‖ Nessun PLS
+650 ‖ No location yet ‖ Pas encore de position ‖ Ancora nessuna posizione
+651 ‖ No casualties recorded yet. ‖ Aucune victime saisie pour l'instant. ‖ Ancora nessuna vittima registrata.
+652 ‖ PLS of “{0}” ‖ PLS de « {0} » ‖ PLS di «{0}»
+653 ‖ Edit casualty ‖ Modifier la victime ‖ Modifica vittima
+654 ‖ Record casualty ‖ Saisir une victime ‖ Registra vittima
+655 ‖ Remove casualty “{0}” for everyone? ‖ Retirer la victime « {0} » pour tous ? ‖ Rimuovere la vittima «{0}» per tutti?
+656 ‖ Location {0} · {1} ‖ Position {0} · {1} ‖ Posizione {0} · {1}
+657 ‖ Use the operation PLS instead ‖ Reprendre plutôt le PLS de l'intervention ‖ Usa invece il PLS dell'intervento
+658 ‖ Tap the map to set where “{0}” was found. ‖ Touchez la carte pour définir le lieu de découverte de « {0} ». ‖ Tocca la mappa per impostare il luogo di ritrovamento di «{0}».
+659 ‖ Tap the map to set the {0}. ‖ Touchez la carte pour définir le {0}. ‖ Tocca la mappa per impostare il {0}.
+660 ‖ Missing ‖ Disparue ‖ Dispersa
+661 ‖ More actions ‖ Autres actions ‖ Altre azioni
+662 ‖ Where was the casualty found? ‖ Où la victime a-t-elle été trouvée ? ‖ Dove è stata trovata la vittima?
+663 ‖ Time (start of drift) ‖ Heure (début de la dérive) ‖ Ora (inizio della deriva)
+664 ‖ To the PLS ‖ Vers le PLS ‖ Al PLS
+665 ‖ empty = unknown casualty ‖ vide = victime inconnue ‖ vuoto = vittima sconosciuta
+666 ‖ none yet (the operation has no PLS) ‖ aucun pour l'instant (l'intervention n'a pas de PLS) ‖ ancora nessuno (l'intervento non ha un PLS)
+667 ‖ Undo “rescued” for “{0}”? ‖ Annuler « sauvée » pour « {0} » ? ‖ Annullare «salvata» per «{0}»?
+668 ‖ Report “{0}” as rescued? ‖ Signaler « {0} » comme sauvée ? ‖ Segnalare «{0}» come salvata?
+669 ‖ ✎ Edit ‖ ✎ Modifier ‖ ✎ Modifica
+670 ‖ ✕ Remove ‖ ✕ Retirer ‖ ✕ Rimuovi
+671 ‖ 📍 Found here ‖ 📍 Lieu de découverte ‖ 📍 Luogo di ritrovamento
+672 ‖ 📍 My location ‖ 📍 Ma position ‖ 📍 La mia posizione
+673 ‖ Training ‖ Formation ‖ Formazione
+674 ‖ Training not available (no connection). ‖ Formation indisponible (pas de connexion). ‖ Formazione non disponibile (nessuna connessione).
+675 ‖ Your training with validity. If one expires or a mandatory training is missing, a notice appears in the menu. ‖ Vos formations avec leur validité. Si l'une expire ou qu'une formation obligatoire manque, un avis apparaît dans le menu. ‖ Le tue formazioni con validità. Se una scade o manca una formazione obbligatoria, appare un avviso nel menu.
+676 ‖ The operation lead has removed you from the operation. ‖ La direction d'intervention vous a retiré de l'intervention. ‖ La direzione dell'intervento ti ha rimosso dall'intervento.
+677 ‖ Message from {0} ‖ Message de {0} ‖ Messaggio da {0}
+678 ‖ Sending location failed: {0} ‖ Échec de l'envoi de la position : {0} ‖ Invio della posizione non riuscito: {0}
+679 ‖ {0} ended. ‖ {0} terminée. ‖ {0} terminato.
+680 ‖ just now ‖ à l'instant ‖ proprio ora
+681 ‖ {0} h ago ‖ il y a {0} h ‖ {0} h fa
+682 ‖ Unhitch ‖ Dételer ‖ Sgancia
+683 ‖ Unload ‖ Décharger ‖ Scarica
+684 ‖ On board: {0} ‖ À bord : {0} ‖ A bordo: {0}
+685 ‖ Centre on the map ‖ Centrer sur la carte ‖ Centra sulla mappa
+686 ‖ Reload … ‖ Transborder … ‖ Trasborda …
+687 ‖ Load … ‖ Charger … ‖ Carica …
+688 ‖ last seen ‖ vu pour la dernière fois ‖ visto l'ultima volta
+689 ‖ {0} in vehicle “{1}” ‖ {0} dans le véhicule « {1} » ‖ {0} nel veicolo «{1}»
+690 ‖ “{0}” is travelling with “{1}”, but there is no room left. Please load by hand. ‖ « {0} » voyage avec « {1} », mais il n'y a plus de place. Veuillez charger manuellement. ‖ «{0}» viaggia con «{1}», ma non c'è più posto. Carica a mano.
+691 ‖ Load or hitch “{0}” ‖ Charger ou atteler « {0} » ‖ Carica o aggancia «{0}»
+692 ‖ – full ‖ – plein ‖ – pieno
+693 ‖ (optionally also speak) ‖ (au choix aussi parler) ‖ (a scelta anche parlare)
+694 ‖ ({0} new) ‖ ({0} nouveaux) ‖ ({0} nuovi)
+695 ‖ + Link for external parties ‖ + Lien pour externes ‖ + Link per esterni
+696 ‖ Play ‖ Lire ‖ Riproduci
+697 ‖ Tap = speak live ‖ Toucher = parler en direct ‖ Tocca = parla in diretta
+698 ‖ Tap to speak ‖ Touchez pour parler ‖ Tocca per parlare
+699 ‖ Retention ‖ Conservation ‖ Conservazione
+700 ‖ Recorded {0} without connection, sent {1} ‖ Enregistré {0} sans connexion, envoyé {1} ‖ Registrato {0} senza connessione, inviato {1}
+701 ‖ Lift ‖ Lever ‖ Revoca
+702 ‖ Recording deleted ‖ Enregistrement supprimé ‖ Registrazione eliminata
+703 ‖ Recording and transcript ‖ Enregistrement et transcription ‖ Registrazione e trascrizione
+704 ‖ Recording is discarded ‖ L'enregistrement est abandonné ‖ La registrazione viene scartata
+705 ‖ Recording {0} s / {1} s ‖ Enregistrement {0} s / {1} s ‖ Registrazione {0} s / {1} s
+706 ‖ Name (organisation) ‖ Désignation (organisation) ‖ Denominazione (organizzazione)
+707 ‖ Your microphone is open ‖ Votre micro est ouvert ‖ Il tuo microfono è aperto
+708 ‖ Join conference “{0}” ‖ Rejoindre la conférence « {0} » ‖ Partecipa alla conferenza «{0}»
+709 ‖ You are listening · hold the live button or open the microphone to speak ‖ Vous écoutez · pour parler, maintenez le bouton direct ou ouvrez le micro ‖ Stai ascoltando · per parlare tieni premuto il pulsante live o apri il microfono
+710 ‖ You are speaking ‖ Vous parlez ‖ Stai parlando
+711 ‖ You are speaking live · {0} s ‖ Vous parlez en direct · {0} s ‖ Stai parlando in diretta · {0} s
+712 ‖ Announcement ‖ Annonce ‖ Annuncio
+713 ‖ Announcement “{0}” ‖ Annonce « {0} » ‖ Annuncio «{0}»
+714 ‖ Announcement “{0}” · {1}{2} ‖ Annonce « {0} » · {1}{2} ‖ Annuncio «{0}» · {1}{2}
+715 ‖ An announcement is waiting ‖ Une annonce attend ‖ Un annuncio è in attesa
+716 ‖ Create ‖ Créer ‖ Crea
+717 ‖ External parties only listen (setting of the operation type). ‖ Les externes ne font qu'écouter (paramètre du type d'intervention). ‖ Gli esterni ascoltano soltanto (impostazione del tipo d'intervento).
+718 ‖ External parties without the app (e.g. police, fire brigade) listen in via a link in the browser, without logging in{0}. A link applies to one channel, until the end of the operation or until you remove it. No map, no locations. ‖ Les externes sans app (p. ex. police, pompiers) écoutent via un lien dans le navigateur, sans connexion{0}. Un lien vaut pour un canal, jusqu'à la fin de l'intervention ou jusqu'à ce que vous le retiriez. Pas de carte, pas de positions. ‖ Gli esterni senza app (p. es. polizia, pompieri) ascoltano tramite un link nel browser, senza accesso{0}. Un link vale per un canale, fino alla fine dell'intervento o finché non lo rimuovi. Nessuna mappa, nessuna posizione.
+719 ‖ Radio for external parties ‖ Radio pour les externes ‖ Radio per esterni

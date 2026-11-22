@@ -1,0 +1,240 @@
+720 ‖ Radio for external parties (link) ‖ Radio pour les externes (lien) ‖ Radio per esterni (link)
+721 ‖ Radio channels of this operation ‖ Canaux radio de cette intervention ‖ Canali radio di questo intervento
+722 ‖ Hold = speak live ‖ Maintenir = parler en direct ‖ Tieni premuto = parla in diretta
+723 ‖ Hold to speak ‖ Maintenir pour parler ‖ Tieni premuto per parlare
+724 ‖ In this channel you may only listen. ‖ Dans ce canal, vous pouvez seulement écouter. ‖ In questo canale puoi solo ascoltare.
+725 ‖ Someone ‖ Quelqu'un ‖ Qualcuno
+726 ‖ Channel ‖ Canal ‖ Canale
+727 ‖ Announcement channel ‖ Canal des annonces ‖ Canale degli annunci
+728 ‖ Conference channel ‖ Canal de la conférence ‖ Canale della conferenza
+729 ‖ Channel “{0}” · {1} · {2} ‖ Canal « {0} » · {1} · {2} ‖ Canale «{0}» · {1} · {2}
+730 ‖ Channels ‖ Canaux ‖ Canali
+731 ‖ Adjust channels ‖ Adapter les canaux ‖ Adatta i canali
+732 ‖ No channel. ‖ Aucun canal. ‖ Nessun canale.
+733 ‖ Conference ‖ Conférence ‖ Conferenza
+734 ‖ Leave conference “{0}” ‖ Quitter la conférence « {0} » ‖ Lascia la conferenza «{0}»
+735 ‖ Remove link ‖ Retirer le lien ‖ Rimuovi link
+736 ‖ Link for external parties ‖ Lien pour les externes ‖ Link per esterni
+737 ‖ Remove the link for “{0}”? It will then no longer work. ‖ Retirer le lien pour « {0} » ? Il ne fonctionnera plus. ‖ Rimuovere il link per «{0}»? Non funzionerà più.
+738 ‖ Share link ‖ Partager le lien ‖ Condividi link
+739 ‖ Speak live in the conference ‖ Parler en direct dans la conférence ‖ Parla in diretta nella conferenza
+740 ‖ Release = discard ‖ Relâcher = abandonner ‖ Rilascia = scarta
+741 ‖ Microphone open ‖ Micro ouvert ‖ Microfono aperto
+742 ‖ Listen in ‖ Écoute ‖ Ascolto
+743 ‖ No announcements in this channel yet. ‖ Aucune annonce dans ce canal pour l'instant. ‖ Ancora nessun annuncio in questo canale.
+744 ‖ Nobody connected yet. ‖ Personne de connecté pour l'instant. ‖ Ancora nessuno connesso.
+745 ‖ Announcement push-to-talk ‖ Touche de parole annonce ‖ Tasto di conversazione annuncio
+746 ‖ Push-to-talk on the map ‖ Touche de parole sur la carte ‖ Tasto di conversazione sulla mappa
+747 ‖ Transcript to follow … ‖ Transcription à suivre … ‖ Trascrizione in arrivo …
+748 ‖ Connecting … ‖ Connexion … ‖ Connessione …
+749 ‖ Connection interrupted, reconnecting … ‖ Connexion interrompue, reconnexion … ‖ Connessione interrotta, riconnessione …
+750 ‖ Connected · only listening in this channel ‖ Connecté · seulement écouter dans ce canal ‖ Connesso · in questo canale solo ascolto
+751 ‖ Leave ‖ Quitter ‖ Lascia
+752 ‖ Which channels exist in this operation. The administration decides who hears them and speaks in them. ‖ Quels canaux existent dans cette intervention. L'administration détermine qui les entend et y parle. ‖ Quali canali esistono in questo intervento. L'amministrazione stabilisce chi li ascolta e chi vi parla.
+753 ‖ Stop playback ‖ Arrêter la lecture ‖ Interrompi la riproduzione
+754 ‖ may also speak ‖ peut aussi parler ‖ può anche parlare
+755 ‖ opened {0} ‖ ouvert {0} ‖ aperto {0}
+756 ‖ listen and speak ‖ écouter et parler ‖ ascoltare e parlare
+757 ‖ live in the conference ‖ en direct dans la conférence ‖ in diretta nella conferenza
+758 ‖ not set up ‖ pas configuré ‖ non configurato
+759 ‖ nothing after the end of the operation ‖ rien après la fin de l'intervention ‖ niente dopo la fine dell'intervento
+760 ‖ not opened yet ‖ pas encore ouvert ‖ non ancora aperto
+761 ‖ recording only ‖ enregistrement seulement ‖ solo registrazione
+762 ‖ transcript only ‖ transcription seulement ‖ solo trascrizione
+763 ‖ listen only ‖ écouter seulement ‖ solo ascolto
+764 ‖ muted ‖ coupé ‖ silenziato
+765 ‖ e.g. Bern cantonal police – operations centre ‖ p. ex. Police cantonale bernoise – centrale d'engagement ‖ p. es. Polizia cantonale bernese – centrale operativa
+766 ‖ {0} announcements waiting ‖ {0} annonces en attente ‖ {0} annunci in attesa
+767 ‖ {0} s · release = send, swipe aside = discard ‖ {0} s · relâcher = envoyer, glisser de côté = abandonner ‖ {0} s · rilascia = invia, scorri di lato = scarta
+768 ‖ {0} connected ‖ {0} connecté(s) ‖ {0} connesso/i
+769 ‖ {0} connected{1} ‖ {0} connecté(s){1} ‖ {0} connesso/i{1}
+770 ‖ {0} · conference “{1}” ‖ {0} · conférence « {1} » ‖ {0} · conferenza «{1}»
+771 ‖ · you are in “{0}” ‖ · vous êtes dans « {0} » ‖ · sei in «{0}»
+772 ‖ · also goes live into the conference ‖ · passe aussi en direct dans la conférence ‖ · va anche in diretta nella conferenza
+773 ‖ · {0} left ‖ · encore {0} ‖ · ancora {0}
+774 ‖ · sending … ‖ · envoi … ‖ · invio in corso …
+775 ‖ – listen only ‖ – écouter seulement ‖ – solo ascolto
+776 ‖ ⏳ Connecting … ‖ ⏳ Connexion … ‖ ⏳ Connessione …
+777 ‖ ⏳ {0} waiting for the connection. ‖ ⏳ {0} attend(ent) la connexion. ‖ ⏳ {0} in attesa della connessione.
+778 ‖ ● connected ‖ ● connecté ‖ ● connesso
+779 ‖ ✕ Leave ‖ ✕ Quitter ‖ ✕ Lascia
+780 ‖ 🎙 Radio ‖ 🎙 Radio ‖ 🎙 Radio
+781 ‖ 🎙 Radio & conference ‖ 🎙 Radio & conférence ‖ 🎙 Radio & conferenza
+782 ‖ 🎙 Mic open ‖ 🎙 Micro ouvert ‖ 🎙 Micro aperto
+783 ‖ 🎧 Join ‖ 🎧 Rejoindre ‖ 🎧 Partecipa
+784 ‖ 🔇 Mic closed ‖ 🔇 Micro fermé ‖ 🔇 Micro chiuso
+785 ‖ 🔇 Muted by the operation lead ‖ 🔇 Coupé par la direction d'intervention ‖ 🔇 Silenziato dalla direzione dell'intervento
+786 ‖ (no location) ‖ (pas de position) ‖ (nessuna posizione)
+787 ‖ =
+788 ‖ Active ‖ Actif ‖ Attivo
+789 ‖ Alarm received ‖ Réception de l'alarme ‖ Ricezione dell'allarme
+790 ‖ Guide ‖ Mode d'emploi ‖ Istruzioni
+791 ‖ View: base map and map elements ‖ Affichage : carte de base et éléments de carte ‖ Vista: mappa di base ed elementi della mappa
+792 ‖ View: show and hide base map and map elements ‖ Affichage : afficher et masquer la carte de base et les éléments de carte ‖ Vista: mostra e nascondi mappa di base ed elementi della mappa
+793 ‖ End auto overview ‖ Terminer la vue d'ensemble auto ‖ Termina panoramica automatica
+794 ‖ Announcements{0} ‖ Annonces{0} ‖ Annunci{0}
+795 ‖ Operation plan ‖ Plan d'intervention ‖ Piano d'intervento
+796 ‖ =
+797 ‖ =
+798 ‖ Surface ‖ Surface ‖ Superficie
+799 ‖ Stop following ‖ Arrêter de suivre ‖ Smetti di seguire
+800 ‖ Following: {0} ‖ Suivi : {0} ‖ Segue: {0}
+801 ‖ Map follows this person ‖ La carte suit cette personne ‖ La mappa segue questa persona
+802 ‖ Map continuously shows all visible active positions and follows them ‖ La carte montre en continu toutes les positions actives visibles et les suit ‖ La mappa mostra continuamente tutte le posizioni attive visibili e le segue
+803 ‖ Navigation point ‖ Point de navigation ‖ Punto di navigazione
+804 ‖ Profile picture ‖ Photo de profil ‖ Immagine del profilo
+805 ‖ Push notifications ‖ Notifications push ‖ Notifiche push
+806 ‖ Symbol ‖ Symbole ‖ Simbolo
+807 ‖ Access: {0} ‖ Accès : {0} ‖ Accesso: {0}
+808 ‖ =
+809 ‖ Remove {0} ‖ Retirer {0} ‖ Rimuovi {0}
+810 ‖ Apply ‖ Reprendre ‖ Applica
+811 ‖ ✨ Ask a question ‖ ✨ Poser une question ‖ ✨ Fai una domanda
+812 ‖ =
+813 ‖ (without push: only while the app is open) ‖ (sans push : seulement avec l'app ouverte) ‖ (senza push: solo ad app aperta)
+814 ‖ , drift from {0} ‖ , dérive dès {0} ‖ , deriva da {0}
+815 ‖ , {0} of {1} occupied ‖ , {0} sur {1} occupés ‖ , {0} di {1} occupati
+816 ‖ =
+817 ‖ Attention ‖ Attention ‖ Attenzione
+818 ‖ =
+819 ‖ Current: {0}{1}{2} ‖ Actuel : {0}{1}{2} ‖ Attuale: {0}{1}{2}
+820 ‖ Show all responders with location ‖ Afficher tous les intervenants avec position ‖ Mostra tutti i soccorritori con posizione
+821 ‖ Show all markers of the situation ‖ Afficher tous les marqueurs de la situation ‖ Mostra tutti i marcatori della situazione
+822 ‖ Show all fixed locations ‖ Afficher tous les sites fixes ‖ Mostra tutti i luoghi fissi
+823 ‖ Show all {0} ‖ Afficher tous les {0} ‖ Mostra tutti i {0}
+824 ‖ As area ‖ Comme zone ‖ Come area
+825 ‖ As line ‖ Comme ligne ‖ Come linea
+826 ‖ As marker ‖ Comme marqueur ‖ Come marcatore
+827 ‖ As a marker on the map (at own location, otherwise choose a point) ‖ Comme marqueur sur la carte (à sa propre position, sinon choisir un point) ‖ Come marcatore sulla mappa (alla propria posizione, altrimenti scegli un punto)
+828 ‖ Stop ‖ Arrêter ‖ Ferma
+829 ‖ Install app ‖ Installer l'app ‖ Installa app
+830 ‖ Onto or to ‖ Sur ou à ‖ Su o a
+831 ‖ On iPhone/iPad, first install via “Share → Add to Home Screen” and open the app from there (iOS 16.4 or later). ‖ Sur iPhone/iPad, installez d'abord via « Partager → Sur l'écran d'accueil » et ouvrez l'app depuis là (dès iOS 16.4). ‖ Su iPhone/iPad installa prima tramite «Condividi → Aggiungi alla schermata Home» e apri l'app da lì (da iOS 16.4).
+832 ‖ Show on the map ‖ Afficher sur la carte ‖ Mostra sulla mappa
+833 ‖ Reset to the default of the operation type ‖ Rétablir la valeur par défaut du type d'intervention ‖ Ripristina il predefinito del tipo d'intervento
+834 ‖ Off. Without push you only learn of alarms while the app is open. ‖ Désactivé. Sans push, vous n'apprenez les alarmes que lorsque l'app est ouverte. ‖ Disattivato. Senza push vieni a sapere degli allarmi solo mentre l'app è aperta.
+835 ‖ User guide for this window ‖ Mode d'emploi de cette fenêtre ‖ Istruzioni per questa finestra
+836 ‖ User guide for the profile ‖ Mode d'emploi du profil ‖ Istruzioni per il profilo
+837 ‖ Area, approx. {0} ha{1} ‖ Zone, env. {0} ha{1} ‖ Area, ca. {0} ha{1}
+838 ‖ Menu sections ‖ Sections du menu ‖ Sezioni del menu
+839 ‖ Please enter a time. ‖ Veuillez saisir une heure. ‖ Inserisci un'ora.
+840 ‖ Latitude (PLS, optional) ‖ Latitude (PLS, facultatif) ‖ Latitudine (PLS, facoltativa)
+841 ‖ Then tap the point on the map. ‖ Ensuite, touchez le point sur la carte. ‖ Poi tocca il punto sulla mappa.
+842 ‖ The search area of this casualty has not yet been calculated. ‖ La zone de recherche de cette victime n'est pas encore calculée. ‖ L'area di ricerca di questa vittima non è ancora calcolata.
+843 ‖ The search area has not yet been calculated. ‖ La zone de recherche n'est pas encore calculée. ‖ L'area di ricerca non è ancora calcolata.
+844 ‖ Your reply: ‖ Votre réponse : ‖ La tua risposta:
+845 ‖ Control demo mode ‖ Gérer le mode démo ‖ Gestisci la modalità demo
+846 ‖ The missing casualty ‖ La victime disparue ‖ La vittima dispersa
+847 ‖ Try the operations app with sample data, without real operations, data or alarms. Opens in a separate tab. ‖ Essayez l'app d'intervention avec des données d'exemple, sans interventions, données ni alarmes réelles. S'ouvre dans un onglet séparé. ‖ Prova l'app d'intervento con dati di esempio, senza interventi, dati o allarmi reali. Si apre in una scheda separata.
+848 ‖ The native app detects the beacons in the vehicles and reports the vehicle's location, even without a running operation, at most every {0} min and without your name. This uses little battery (the operating system searches for the beacons itself). During an operation the app always reports the vehicles while you share your location. The browser cannot detect them. ‖ L'app native détecte les balises des véhicules et signale la position du véhicule, même sans intervention en cours, au plus toutes les {0} min et sans votre nom. Cela consomme peu de batterie (le système d'exploitation cherche lui-même les balises). En intervention, l'app signale toujours les véhicules tant que vous partagez votre position. Le navigateur ne peut pas les détecter. ‖ L'app nativa riconosce i beacon nei veicoli e segnala la posizione del veicolo, anche senza intervento in corso, al massimo ogni {0} min e senza il tuo nome. Consuma poca batteria (il sistema operativo cerca da sé i beacon). Durante un intervento l'app segnala sempre i veicoli finché condividi la posizione. Il browser non li riconosce.
+849 ‖ The {0} missing casualties ‖ Les {0} victimes disparues ‖ Le {0} vittime disperse
+850 ‖ This browser does not support push notifications. ‖ Ce navigateur ne prend pas en charge les notifications push. ‖ Questo browser non supporta le notifiche push.
+851 ‖ This device cannot determine its location (test: set manually). ‖ Cet appareil ne peut pas déterminer sa position (test : définir manuellement). ‖ Questo dispositivo non può determinare la posizione (test: impostala manualmente).
+852 ‖ Distance and times between two points along the water ‖ Distance et temps entre deux points le long du cours d'eau ‖ Distanza e tempi tra due punti lungo il corso d'acqua
+853 ‖ Documents not available ‖ Documents indisponibles ‖ Documenti non disponibili
+854 ‖ You are reported absent and were not alerted, but you can still take part. ‖ Vous êtes annoncé absent et n'avez pas été alarmé, mais vous pouvez quand même participer. ‖ Sei segnalato assente e non sei stato allarmato, ma puoi comunque partecipare.
+855 ‖ You are in demo mode: everything runs only in this browser tab, nothing goes to the server. ‖ Vous êtes en mode démo : tout se passe uniquement dans cet onglet, rien n'est envoyé au serveur. ‖ Sei in modalità demo: tutto avviene solo in questa scheda del browser, niente va al server.
+856 ‖ Announcement “{0}” · at most {1} s ‖ Annonce « {0} » · au plus {1} s ‖ Annuncio «{0}» · al massimo {1} s
+857 ‖ Announcement “{0}”: {1} ‖ Annonce « {0} » : {1} ‖ Annuncio «{0}»: {1}
+858 ‖ Your own question to the AI assistant about the running operation ‖ Question personnelle à l'assistant IA sur l'intervention en cours ‖ Domanda propria all'assistente IA sull'intervento in corso
+859 ‖ Own organisation{0} ‖ Propre organisation{0} ‖ Propria organizzazione{0}
+860 ‖ Own PLS{0}, drift from ‖ PLS propre{0}, dérive dès ‖ PLS proprio{0}, deriva da
+861 ‖ Accept operation ‖ Accepter l'intervention ‖ Accetta l'intervento
+862 ‖ Operation and search area ‖ Intervention et zone de recherche ‖ Intervento e area di ricerca
+863 ‖ Operation log – {0} ‖ Journal d'intervention – {0} ‖ Registro dell'intervento – {0}
+864 ‖ Availability times not available (no connection). ‖ Horaires de disponibilité indisponibles (pas de connexion). ‖ Orari di disponibilità non disponibili (nessuna connessione).
+865 ‖ Close settings ‖ Fermer les paramètres ‖ Chiudi impostazioni
+866 ‖ Recipients (no selection = everyone) ‖ Destinataires (aucune sélection = tous) ‖ Destinatari (nessuna selezione = tutti)
+867 ‖ Flag in one colour ‖ Drapeau d'une couleur ‖ Bandiera di un colore
+868 ‖ Vehicles ({0}) ‖ Véhicules ({0}) ‖ Veicoli ({0})
+869 ‖ Vehicles: location, combination, loaded ‖ Véhicules : position, convoi, chargement ‖ Veicoli: posizione, convoglio, carico
+870 ‖ Feedback requested ‖ Retour demandé ‖ Feedback richiesto
+871 ‖ Search area error: {0} ‖ Erreur zone de recherche : {0} ‖ Errore area di ricerca: {0}
+872 ‖ Flow speed in m/s ‖ Vitesse du courant en m/s ‖ Velocità della corrente in m/s
+873 ‖ River distance: ‖ Distance fluviale : ‖ Distanza fluviale:
+874 ‖ River barrier: limits the search area ‖ Barrière fluviale : limite la zone de recherche ‖ Sbarramento fluviale: limita l'area di ricerca
+875 ‖ Follow-up operation to{0} ‖ Intervention de suivi de{0} ‖ Intervento successivo a{0}
+876 ‖ Question about the operation ‖ Question sur l'intervention ‖ Domanda sull'intervento
+877 ‖ Withdraw sharing of “{0}”? External parties will then no longer see the document. ‖ Retirer le partage de « {0} » ? Les externes ne verront plus le document. ‖ Ritirare la condivisione di «{0}»? Gli esterni non vedranno più il documento.
+878 ‖ Place found = my location or choose on the map ‖ Lieu de découverte = ma position ou choisir sur la carte ‖ Luogo di ritrovamento = la mia posizione o scegli sulla mappa
+879 ‖ Tap the place found on the map ‖ Touchez le lieu de découverte sur la carte ‖ Tocca il luogo di ritrovamento sulla mappa
+880 ‖ Remove place found, the casualty is considered missing again ‖ Retirer le lieu de découverte, la victime est à nouveau considérée comme disparue ‖ Rimuovi il luogo di ritrovamento, la vittima è di nuovo considerata dispersa
+881 ‖ Close radio ‖ Fermer la radio ‖ Chiudi radio
+882 ‖ Radio “{0}” ‖ Radio « {0} » ‖ Radio «{0}»
+883 ‖ Radio link “{0} ‖ Lien radio « {0} ‖ Link radio «{0}
+884 ‖ Radio: announcements and live conference ‖ Radio : annonces et conférence en direct ‖ Radio: annunci e conferenza in diretta
+885 ‖ For alarms while the app is closed: “Share → Add to Home Screen”, then open the app from there and switch on push. ‖ Pour les alarmes avec l'app fermée : « Partager → Sur l'écran d'accueil », puis ouvrez l'app depuis là et activez le push. ‖ Per gli allarmi ad app chiusa: «Condividi → Aggiungi alla schermata Home», poi apri l'app da lì e attiva il push.
+886 ‖ Show the whole search area ‖ Afficher toute la zone de recherche ‖ Mostra tutta l'area di ricerca
+887 ‖ Goes live into the conference and as an announcement to everyone not connected ‖ Passe en direct dans la conférence et en annonce à tous ceux qui ne sont pas connectés ‖ Va in diretta nella conferenza e come annuncio a tutti coloro che non sono connessi
+888 ‖ Goes only live into the conference (announcements are switched off) ‖ Passe seulement en direct dans la conférence (les annonces sont désactivées) ‖ Va solo in diretta nella conferenza (gli annunci sono disattivati)
+889 ‖ Applies to this device. For recordings the app needs access to the microphone. ‖ S'applique à cet appareil. Pour les enregistrements, l'app a besoin d'accéder au micro. ‖ Vale per questo dispositivo. Per le registrazioni l'app necessita dell'accesso al microfono.
+890 ‖ Large mode ‖ Mode agrandi ‖ Modalità grande
+891 ‖ Helicopters: {0} of {1} km around {2}{3}{4}. Low-flying helicopters may be missing. ‖ Hélicoptères : {0} dans un rayon de {1} km autour de {2}{3}{4}. Les hélicoptères volant bas peuvent manquer. ‖ Elicotteri: {0} entro {1} km da {2}{3}{4}. Gli elicotteri a bassa quota possono mancare.
+892 ‖ There are no push notifications in demo mode. Alarms and messages appear while the app is open. ‖ Il n'y a pas de notifications push en mode démo. Les alarmes et messages apparaissent tant que l'app est ouverte. ‖ In modalità demo non ci sono notifiche push. Allarmi e messaggi appaiono finché l'app è aperta.
+893 ‖ Mute in the conference (until you lift it) ‖ Couper dans la conférence (jusqu'à ce que vous le leviez) ‖ Silenzia nella conferenza (finché non lo revochi)
+894 ‖ Show info window on the map ‖ Afficher la fenêtre d'info sur la carte ‖ Mostra la finestra informazioni sulla mappa
+895 ‖ Install: “Share → Add to Home Screen”. ‖ Installer : « Partager → Sur l'écran d'accueil ». ‖ Installa: «Condividi → Aggiungi alla schermata Home».
+896 ‖ Announcement channel ‖ Canal de l'annonce ‖ Canale dell'annuncio
+897 ‖ Rotate map: drag (phone: two fingers). Click: north up ‖ Tourner la carte : glisser (téléphone : deux doigts). Clic : nord en haut ‖ Ruota la mappa: trascina (telefono: due dita). Clic: nord in alto
+898 ‖ Align map to north ‖ Orienter la carte au nord ‖ Orienta la mappa a nord
+899 ‖ Choose map section ‖ Choisir le cadrage de la carte ‖ Scegli la porzione di mappa
+900 ‖ Show map marker ‖ Afficher le marqueur sur la carte ‖ Mostra il marcatore sulla mappa
+901 ‖ Show category {0} ‖ Afficher la catégorie {0} ‖ Mostra la categoria {0}
+902 ‖ Show category {0} in this section ‖ Afficher la catégorie {0} dans cette section ‖ Mostra la categoria {0} in questa sezione
+903 ‖ Category, properties, abbreviation and colour according to the administration's defaults (“Take over geodata”). The location then appears in every operation; edit it in the administration under “Fixed locations”. ‖ Catégorie, propriétés, abréviation et couleur selon les valeurs par défaut de l'administration (« Reprendre des géodonnées »). Le site apparaît ensuite dans chaque intervention ; à modifier dans l'administration sous « Sites fixes ». ‖ Categoria, proprietà, sigla e colore secondo i predefiniti dell'amministrazione («Riprendi geodati»). Il luogo appare poi in ogni intervento; da modificare nell'amministrazione sotto «Luoghi fissi».
+904 ‖ None ‖ Aucun ‖ Nessuno
+905 ‖ No responders with known location. ‖ Aucun intervenant avec position connue. ‖ Nessun soccorritore con posizione nota.
+906 ‖ Situation summary ‖ Résumé de la situation ‖ Riepilogo della situazione
+907 ‖ Line, approx. {0} km{1} ‖ Ligne, env. {0} km{1} ‖ Linea, ca. {0} km{1}
+908 ‖ Copy or share link ‖ Copier ou partager le lien ‖ Copia o condividi il link
+909 ‖ Link copied: {0} ‖ Lien copié : {0} ‖ Link copiato: {0}
+910 ‖ Link to the document ‖ Lien vers le document ‖ Link al documento
+911 ‖ Link to the public view ‖ Lien vers la vue publique ‖ Link alla vista pubblica
+912 ‖ List of all responders ‖ Liste de tous les intervenants ‖ Elenco di tutti i soccorritori
+913 ‖ List of fixed locations ‖ Liste des sites fixes ‖ Elenco dei luoghi fissi
+914 ‖ Close list ‖ Fermer la liste ‖ Chiudi elenco
+915 ‖ Speak live in conference “{0}” ‖ Parler en direct dans la conférence « {0} » ‖ Parla in diretta nella conferenza «{0}»
+916 ‖ Speak live ‖ Parler en direct ‖ Parla in diretta
+917 ‖ Longitude (PLS, optional) ‖ Longitude (PLS, facultatif) ‖ Longitudine (PLS, facoltativa)
+918 ‖ After 30 seconds triggers an alarm of the chosen level only for you, without an operation. Then close the app or lock the screen to check sound and push. ‖ Déclenche après 30 secondes une alarme du niveau choisi pour vous seul, sans intervention. Fermez ensuite l'app ou verrouillez l'écran pour vérifier le son et le push. ‖ Dopo 30 secondi attiva un allarme del livello scelto solo per te, senza intervento. Poi chiudi l'app o blocca lo schermo per verificare suono e push.
+919 ‖ Markers and areas of the operation lead ‖ Marqueurs et zones de la direction d'intervention ‖ Marcatori e aree della direzione dell'intervento
+920 ‖ Marker{0} ‖ Marqueur{0} ‖ Marcatore{0}
+921 ‖ My operations: log and replay of the operations you took part in ‖ Mes interventions : journal et replay des interventions auxquelles vous avez participé ‖ I miei interventi: registro e replay degli interventi a cui hai partecipato
+922 ‖ My special role{0} ‖ Mon rôle spécial{0} ‖ Il mio ruolo speciale{0}
+923 ‖ FOEN gauging station {0} ‖ Station de mesure OFEV {0} ‖ Stazione di misura UFAM {0}
+924 ‖ Gauging stations water level & discharge (FOEN) ‖ Stations de mesure niveau & débit (OFEV) ‖ Stazioni di misura livello & portata (UFAM)
+925 ‖ Microphone is open: tap to mute ‖ Le micro est ouvert : touchez pour le couper ‖ Il microfono è aperto: tocca per silenziare
+926 ‖ Open the microphone without holding the button (until you close it again) ‖ Ouvrir le micro sans maintenir la touche (jusqu'à ce que vous le refermiez) ‖ Apri il microfono senza tenere premuto il tasto (finché non lo richiudi)
+927 ‖ Drive there with a navigation app ‖ S'y rendre avec une app de navigation ‖ Raggiungi con un'app di navigazione
+928 ‖ Listen in: play new announcements immediately while the app is open ‖ Écoute : lire immédiatement les nouvelles annonces tant que l'app est ouverte ‖ Ascolto: riproduci subito i nuovi annunci finché l'app è aperta
+929 ‖ Read and send messages ‖ Lire et envoyer des messages ‖ Leggi e invia messaggi
+930 ‖ Close messages ‖ Fermer les messages ‖ Chiudi messaggi
+931 ‖ Change name, description and PLS ‖ Modifier nom, description et PLS ‖ Modifica nome, descrizione e PLS
+932 ‖ Navigate (centre) ‖ Naviguer (centre) ‖ Naviga (centro)
+933 ‖ Navigate ({0} destinations) ‖ Naviguer ({0} destinations) ‖ Naviga ({0} destinazioni)
+934 ‖ Play new announcements immediately while the app is open ‖ Lire immédiatement les nouvelles annonces tant que l'app est ouverte ‖ Riproduci subito i nuovi annunci finché l'app è aperta
+935 ‖ =
+936 ‖ Set on the map the place and time at which the casualty was last seen (PLS) ‖ Définir sur la carte le lieu et l'heure où la victime a été vue pour la dernière fois (PLS) ‖ Imposta sulla mappa luogo e ora in cui la vittima è stata vista l'ultima volta (PLS)
+937 ‖ PLS (optional): tap the map or enter coordinates. Without a PLS the search area only arises with the PLS of a casualty. ‖ PLS (facultatif) : touchez la carte ou saisissez des coordonnées. Sans PLS, la zone de recherche n'apparaît qu'avec le PLS d'une victime. ‖ PLS (facoltativo): tocca la mappa o inserisci le coordinate. Senza PLS l'area di ricerca nasce solo con il PLS di una vittima.
+938 ‖ PLS at {0} ‖ PLS à {0} ‖ PLS alle {0}
+939 ‖ Person info ‖ Info personne ‖ Info persona
+940 ‖ Personal settings (account, alerting, display) ‖ Paramètres personnels (compte, alarme, affichage) ‖ Impostazioni personali (account, allarme, visualizzazione)
+941 ‖ =
+942 ‖ Profile ‖ Profil ‖ Profilo
+943 ‖ Switch off push ‖ Désactiver le push ‖ Disattiva push
+944 ‖ Switch on push ‖ Activer le push ‖ Attiva push
+945 ‖ Push is off on this device: alarms only arrive while the app is open. ‖ Le push est désactivé sur cet appareil : les alarmes n'arrivent que lorsque l'app est ouverte. ‖ Il push è disattivato su questo dispositivo: gli allarmi arrivano solo ad app aperta.
+946 ‖ Push is not available on this server. ‖ Le push n'est pas disponible sur ce serveur. ‖ Il push non è disponibile su questo server.
+947 ‖ Casualty – ‖ Victime – ‖ Vittima –
+948 ‖ Casualties: mark location or “rescued” ‖ Victimes : marquer la position ou « sauvée » ‖ Vittime: segna posizione o «salvata»
+949 ‖ =
+950 ‖ Special role{0} ‖ Rôle spécial{0} ‖ Ruolo speciale{0}
+951 ‖ Language{0} ‖ Langue{0} ‖ Lingua{0}
+952 ‖ Tap the push-to-talk button instead of holding it (e.g. with gloves): tap once = start recording, tap again = send ‖ Toucher la touche de parole au lieu de la maintenir (p. ex. avec des gants) : toucher une fois = démarrer l'enregistrement, toucher encore = envoyer ‖ Tocca il tasto di conversazione invece di tenerlo premuto (p. es. con i guanti): un tocco = avvia registrazione, altro tocco = invia
+953 ‖ Show location on the map when sending ‖ Afficher la position sur la carte lors de l'envoi ‖ Mostra la posizione sulla mappa all'invio
+954 ‖ Location not available: ‖ Position indisponible : ‖ Posizione non disponibile:
+955 ‖ Choose the location on the map instead ‖ Choisir plutôt la position sur la carte ‖ Scegli invece la posizione sulla mappa
+956 ‖ Location is being shared ({0} ‖ La position est partagée ({0} ‖ La posizione viene condivisa ({0}
+957 ‖ Unmute ‖ Réactiver le son ‖ Riattiva l'audio
+958 ‖ Show search area from this PLS ‖ Afficher la zone de recherche à partir de ce PLS ‖ Mostra l'area di ricerca da questo PLS
+959 ‖ Show search area of this casualty ‖ Afficher la zone de recherche de cette victime ‖ Mostra l'area di ricerca di questa vittima

@@ -29,10 +29,10 @@ function setDict(o){D=new Map();TP=[];C=new Map();
   for(const k in o){const v=o[k];if(typeof v!=='string'||!v)continue;
     if(/\{\d+\}/.test(k)){const lit=k.split(/\{\d+\}/),idx=[...k.matchAll(/\{(\d+)\}/g)].map(m=>+m[1]);
       const long=lit.reduce((a,b)=>b.length>a.length?b:a,'');if(long.replace(/[^A-Za-zÀ-ÿ]/g,'').length<3)continue;
-      TP.push({re:new RegExp('^'+lit.map(RX).join('(.+?)')+'$','s'),idx,out:v,long,n:lit.join('').length})}
+      TP.push({re:new RegExp('^'+lit.map(RX).join('(.*?)')+'$','s'),idx,out:v,long,n:lit.join('').length})}
     else D.set(k,v)}
   TP.sort((a,b)=>b.n-a.n);ready=true}
-function sub(v){const k=norm(v);return D.has(k)?D.get(k):v}
+function sub(v){const k=norm(v);if(!D.has(k))return v;return v.match(/^\s*/)[0]+D.get(k)+v.match(/\s*$/)[0]} // Leerraum um den Teil behalten
 /* tr: übersetzt einen ganzen Text (ohne führenden/folgenden Leerraum), null = unverändert */
 function tr(s){if(!s||L==='de'||!ready)return null;
   if(/\n\s*\n/.test(s)){let any=false;const o=s.split(/\n\s*\n/).map(p=>{const r=tr(p);if(r!=null){any=true;return r}return norm(p)});return any?o.join('\n\n'):null}

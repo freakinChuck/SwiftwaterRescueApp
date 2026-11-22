@@ -1,0 +1,240 @@
+3360 ‖ Not reachable for all operation areas, another attempt will follow ‖ Injoignable pour toutes les zones d'intervention, nouvel essai à suivre ‖ Non raggiungibile per tutte le aree d'intervento, seguirà un nuovo tentativo
+3361 ‖ Not found ‖ Introuvable ‖ Non trovato
+3362 ‖ Nothing (delete recording and transcript after the end of the operation) ‖ Rien (supprimer l'enregistrement et la transcription après la fin de l'intervention) ‖ Niente (eliminare registrazione e trascrizione dopo la fine dell'intervento)
+3363 ‖ Nobody (the last location remains for the next operation) ‖ Personne (la dernière position reste pour la prochaine intervention) ‖ Nessuno (l'ultima posizione resta per il prossimo intervento)
+3364 ‖ No reference point yet: helicopters appear as soon as a PLS or locations are known. ‖ Pas encore de point de référence : les hélicoptères apparaissent dès qu'un PLS ou des positions sont connus. ‖ Ancora nessun punto di riferimento: gli elicotteri compaiono non appena sono noti un PLS o delle posizioni.
+3365 ‖ Display only ‖ Affichage seulement ‖ Solo visualizzazione
+3366 ‖ Recording only (without transcription) ‖ Enregistrement seulement (sans transcription) ‖ Solo registrazione (senza trascrizione)
+3367 ‖ Operation lead only ‖ Direction d'intervention seulement ‖ Solo direzione dell'intervento
+3368 ‖ Only the operation lead, administrators or the person who started the operation can remove responders ‖ Seuls la direction d'intervention, les administrateurs ou la personne ayant démarré l'intervention peuvent retirer des intervenants ‖ Solo la direzione dell'intervento, gli amministratori o la persona che ha avviato l'intervento possono rimuovere soccorritori
+3369 ‖ Only the operation lead, administrators or the person who started the operation can end the operation ‖ Seuls la direction d'intervention, les administrateurs ou la personne ayant démarré l'intervention peuvent terminer l'intervention ‖ Solo la direzione dell'intervento, gli amministratori o la persona che ha avviato l'intervento possono terminare l'intervento
+3370 ‖ Only PNG or JPEG images ‖ Seulement des images PNG ou JPEG ‖ Solo immagini PNG o JPEG
+3371 ‖ Only people who have accepted the operation can mark ‖ Seules les personnes ayant accepté l'intervention peuvent marquer ‖ Solo chi ha accettato l'intervento può segnare
+3372 ‖ Rescue helicopters only (list below) ‖ Seulement les hélicoptères de sauvetage (liste ci-dessous) ‖ Solo elicotteri di soccorso (elenco sotto)
+3373 ‖ Transcript only (delete recording after the end of the operation) ‖ Transcription seulement (supprimer l'enregistrement après la fin de l'intervention) ‖ Solo trascrizione (eliminare la registrazione dopo la fine dell'intervento)
+3374 ‖ Only numbers are allowed (km/h) ‖ Seuls des nombres sont autorisés (km/h) ‖ Sono ammessi solo numeri (km/h)
+3375 ‖ Only finished operations can be anonymised ‖ Seules les interventions terminées peuvent être anonymisées ‖ Si possono anonimizzare solo interventi terminati
+3376 ‖ Only the operation lead ‖ Seulement la direction d'intervention ‖ Solo la direzione dell'intervento
+3377 ‖ Only the operation lead can remove links for external parties ‖ Seule la direction d'intervention peut retirer des liens pour externes ‖ Solo la direzione dell'intervento può rimuovere link per esterni
+3378 ‖ Only the operation lead can create links for external parties ‖ Seule la direction d'intervention peut créer des liens pour externes ‖ Solo la direzione dell'intervento può creare link per esterni
+3379 ‖ Only the operation lead can change that ‖ Seule la direction d'intervention peut modifier cela ‖ Solo la direzione dell'intervento può modificarlo
+3380 ‖ Only the operation lead can switch the helicopters on and off ‖ Seule la direction d'intervention peut activer et désactiver les hélicoptères ‖ Solo la direzione dell'intervento può attivare e disattivare gli elicotteri
+3381 ‖ Only the operation lead can adjust the channels ‖ Seule la direction d'intervention peut adapter les canaux ‖ Solo la direzione dell'intervento può adattare i canali
+3382 ‖ Only the operation lead can set the position manually ‖ Seule la direction d'intervention peut définir la position manuellement ‖ Solo la direzione dell'intervento può impostare la posizione manualmente
+3383 ‖ Only the operation lead can control the public view ‖ Seule la direction d'intervention peut gérer la vue publique ‖ Solo la direzione dell'intervento può gestire la vista pubblica
+3384 ‖ Only the operation lead can remove other people's markers ‖ Seule la direction d'intervention peut retirer les marqueurs d'autres personnes ‖ Solo la direzione dell'intervento può rimuovere marcatori altrui
+3385 ‖ Only the operation lead can mute in the conference ‖ Seule la direction d'intervention peut couper le son dans la conférence ‖ Solo la direzione dell'intervento può silenziare nella conferenza
+3386 ‖ Only the operation lead can call out more ‖ Seule la direction d'intervention peut mobiliser en plus ‖ Solo la direzione dell'intervento può convocare altri
+3387 ‖ Only the exercise lead of this exercise can start it ‖ Seule la direction de cet exercice peut le démarrer ‖ Solo la direzione di questa esercitazione può avviarla
+3388 ‖ Only the exercise lead can release prepared elements ‖ Seule la direction d'exercice peut libérer les éléments préparés ‖ Solo la direzione dell'esercitazione può rilasciare elementi preparati
+3389 ‖ Only in the subject ‖ Seulement dans l'objet ‖ Solo nell'oggetto
+3390 ‖ Only with the right “See vehicles outside operations” ‖ Seulement avec le droit « Voir les véhicules hors interventions » ‖ Solo con il diritto «Vedere i veicoli fuori dagli interventi»
+3391 ‖ Encrypted only ‖ Seulement chiffré ‖ Solo cifrato
+3392 ‖ Only the sender of the message or the operation lead can remove the marker ‖ Seul l'expéditeur du message ou la direction d'intervention peut retirer le marqueur ‖ Solo chi ha inviato il messaggio o la direzione dell'intervento può rimuovere il marcatore
+3393 ‖ AI assistant usage ‖ Utilisation de l'assistant IA ‖ Uso dell'assistente IA
+3394 ‖ =
+3395 ‖ =
+3396 ‖ OSM map (own server) ‖ Carte OSM (serveur propre) ‖ Mappa OSM (server proprio)
+3397 ‖ Take over objects on the water (weirs, power plants, bridges …) from OpenStreetMap as fixed locations, also into prepared exercises, and check and take over deviations from the source ‖ Reprendre des objets au bord de l'eau (barrages, centrales, ponts …) d'OpenStreetMap comme sites fixes, aussi dans les exercices préparés, et vérifier et reprendre les écarts par rapport à la source ‖ Riprendere oggetti lungo i corsi d'acqua (sbarramenti, centrali, ponti …) da OpenStreetMap come luoghi fissi, anche in esercitazioni preparate, e verificare e riprendere gli scostamenti dalla fonte
+3398 ‖ Without a switched-on symbol, markers without symbol must remain allowed ‖ Sans symbole activé, les marqueurs sans symbole doivent rester autorisés ‖ Senza simbolo attivo, i marcatori senza simbolo devono restare ammessi
+3399 ‖ OpenAI-compatible (Chat Completions, also Ollama, LM Studio) ‖ Compatible OpenAI (Chat Completions, aussi Ollama, LM Studio) ‖ Compatibile con OpenAI (Chat Completions, anche Ollama, LM Studio)
+3400 ‖ Document repository folder ‖ Dossier de la gestion documentaire ‖ Cartella dell'archivio documenti
+3401 ‖ Document repository folder saved ‖ Dossier de la gestion documentaire enregistré ‖ Cartella dell'archivio documenti salvata
+3402 ‖ Create folders with sharing and editors, edit all entries, configure read confirmations and suggestions of all folders, file types, storage, display and passing on to external parties (Issue #229) ‖ Créer des dossiers avec partages et rédaction, modifier toutes les entrées, configurer confirmations de lecture et propositions de tous les dossiers, types de fichiers, stockage, affichage et transmission aux externes (Issue #229) ‖ Creare cartelle con condivisioni e redazione, modificare tutte le voci, configurare conferme di lettura e proposte di tutte le cartelle, tipi di file, archiviazione, visualizzazione e inoltro a esterni (Issue #229)
+3403 ‖ Overpass does not respond ‖ Overpass ne répond pas ‖ Overpass non risponde
+3404 ‖ Overpass is switched off in the administration ‖ Overpass est désactivé dans l'administration ‖ Overpass è disattivato nell'amministrazione
+3405 ‖ Overpass servers ‖ Serveurs Overpass ‖ Server Overpass
+3406 ‖ PHP without openssl or curl ‖ PHP sans openssl ni curl ‖ PHP senza openssl o curl
+3407 ‖ PHP extension curl is missing on the server ‖ L'extension PHP curl manque sur le serveur ‖ Sul server manca l'estensione PHP curl
+3408 ‖ PHP extension pdo_pgsql is missing on the server ‖ L'extension PHP pdo_pgsql manque sur le serveur ‖ Sul server manca l'estensione PHP pdo_pgsql
+3409 ‖ PLS (point last seen) of the operation: {0} ‖ PLS (dernier point connu) de l'intervention : {0} ‖ PLS (ultimo punto noto) dell'intervento: {0}
+3410 ‖ PLS for the search area: ‖ PLS pour la zone de recherche : ‖ PLS per l'area di ricerca:
+3411 ‖ Partner organisations not called out: {0} ‖ Organisations partenaires non mobilisées : {0} ‖ Organizzazioni partner non convocate: {0}
+3412 ‖ Password reset ‖ Mot de passe réinitialisé ‖ Password reimpostata
+3413 ‖ Water level & discharge (FOEN) ‖ Niveau & débit (OFEV) ‖ Livello & portata (UFAM)
+3414 ‖ Water level & discharge is switched off ‖ Niveau & débit est désactivé ‖ Livello & portata è disattivato
+3415 ‖ Water level and discharge {0} – ‖ Niveau et débit {0} – ‖ Livello e portata {0} –
+3416 ‖ Water level and discharge {0}: FOEN measurements not retrievable ‖ Niveau et débit {0} : mesures de l'OFEV indisponibles ‖ Livello e portata {0}: valori misurati dell'UFAM non disponibili
+3417 ‖ Water level and discharge {0}: no FOEN gauging station within {1} km of the PLS ‖ Niveau et débit {0} : aucune station de mesure de l'OFEV dans un rayon de {1} km autour du PLS ‖ Livello e portata {0}: nessuna stazione di misura dell'UFAM entro {1} km dal PLS
+3418 ‖ Water level {0} ‖ Niveau {0} ‖ Livello {0}
+3419 ‖ Person not found ‖ Personne introuvable ‖ Persona non trovata
+3420 ‖ People in the vehicle (assignment via the beacons) ‖ Personnes dans le véhicule (attribution via les balises) ‖ Persone nel veicolo (assegnazione tramite i beacon)
+3421 ‖ Remove personal details and free texts ‖ Supprimer les données personnelles et textes libres ‖ Rimuovi dati personali e testi liberi
+3422 ‖ Personal details and free texts removed {0} ‖ Données personnelles et textes libres supprimés {0} ‖ Dati personali e testi liberi rimossi {0}
+3423 ‖ Person info (info window when tapping a responder) ‖ Info personne (fenêtre d'info en touchant un intervenant) ‖ Info persona (finestra informazioni toccando un soccorritore)
+3424 ‖ Personal test alarm requested ‖ Alarme test personnelle demandée ‖ Allarme di prova personale richiesto
+3425 ‖ Personal test alarm, level “{0} ‖ Alarme test personnelle, niveau « {0} ‖ Allarme di prova personale, livello «{0}
+3426 ‖ Mandatory: choose at least one response group ‖ Obligatoire : choisir au moins un groupe d'intervention ‖ Obbligatorio: scegli almeno un gruppo d'intervento
+3427 ‖ Plans (prepared exercises) ‖ Planifications (exercices préparés) ‖ Pianificazioni (esercitazioni preparate)
+3428 ‖ =
+3429 ‖ PostGIS or the PostGIS API does not respond, and Overpass is switched off in the administration ‖ PostGIS ou l'API PostGIS ne répond pas, et Overpass est désactivé dans l'administration ‖ PostGIS o l'API PostGIS non risponde e Overpass è disattivato nell'amministrazione
+3430 ‖ Mailbox reports: {0} ‖ La boîte aux lettres signale : {0} ‖ La casella di posta segnala: {0}
+3431 ‖ Primary operation ‖ Intervention primaire ‖ Intervento primario
+3432 ‖ Problems, uncertainties, equipment ‖ Problèmes, incertitudes, matériel ‖ Problemi, incertezze, materiale
+3433 ‖ Production ‖ Production ‖ Produzione
+3434 ‖ =
+3435 ‖ Checksum does not match ‖ La somme de contrôle ne correspond pas ‖ Il checksum non corrisponde
+3436 ‖ =
+3437 ‖ Push triggered ‖ Push déclenché ‖ Push attivato
+3438 ‖ App push ‖ Push des apps ‖ Push delle app
+3439 ‖ Push for the app is not set up on this server ‖ Le push de l'app n'est pas configuré sur ce serveur ‖ Il push per l'app non è configurato su questo server
+3440 ‖ Push is not available on this server (PHP without openssl/curl) ‖ Le push n'est pas disponible sur ce serveur (PHP sans openssl/curl) ‖ Il push non è disponibile su questo server (PHP senza openssl/curl)
+3441 ‖ Source without answer: ‖ Source sans réponse : ‖ Fonte senza risposta:
+3442 ‖ Rake / debris trap ‖ Râteau / grille à débris ‖ Griglia / trappola per detriti
+3443 ‖ Operation lead rights in every operation the person takes part in ‖ Droits de la direction d'intervention dans chaque intervention à laquelle la personne participe ‖ Diritti della direzione dell'intervento in ogni intervento a cui la persona partecipa
+3444 ‖ Replay anonymised {0} ‖ Replay anonymisé {0} ‖ Replay anonimizzato {0}
+3445 ‖ Pseudonymise replay ‖ Pseudonymiser le replay ‖ Pseudonimizza il replay
+3446 ‖ Choose casualty: new, unknown or a casualty of this exercise ‖ Choisir la victime : nouvelle, inconnue ou une victime de cet exercice ‖ Scegli la vittima: nuova, sconosciuta o una vittima di questa esercitazione
+3447 ‖ Casualty marker ‖ Marqueur de victime ‖ Marcatore della vittima
+3448 ‖ Casualties: ‖ Victimes : ‖ Vittime:
+3449 ‖ Rescue point ‖ Point de sauvetage ‖ Punto di soccorso
+3450 ‖ Life ring ‖ Bouée de sauvetage ‖ Salvagente
+3451 ‖ Direction ‖ Direction ‖ Direzione
+3452 ‖ Create, change and remove roles ‖ Créer, modifier et retirer des rôles ‖ Creare, modificare e rimuovere ruoli
+3453 ‖ Feedback {0} ‖ Retour {0} ‖ Feedback {0}
+3454 ‖ =
+3455 ‖ =
+3456 ‖ =
+3457 ‖ STARTTLS failed ‖ Échec de STARTTLS ‖ STARTTLS non riuscito
+3458 ‖ SWISSIMAGE, resolution up to 10 cm. Source attribution “© swisstopo” mandatory, service under “fair use” (no mass downloads). Empty outside Switzerland and Liechtenstein. ‖ SWISSIMAGE, résolution jusqu'à 10 cm. Mention de la source « © swisstopo » obligatoire, service selon le « fair use » (pas de téléchargements en masse). Vide hors de Suisse et du Liechtenstein. ‖ SWISSIMAGE, risoluzione fino a 10 cm. Indicazione della fonte «© swisstopo» obbligatoria, servizio secondo il «fair use» (niente download di massa). Vuoto fuori da Svizzera e Liechtenstein.
+3459 ‖ Cloud-free satellite image, resolution 10 m: rivers, lakes and forests are recognisable, houses and paths hardly. Only for non-commercial use, source attribution mandatory. ‖ Image satellite sans nuages, résolution 10 m : cours d'eau, lacs et forêts sont reconnaissables, maisons et chemins à peine. Seulement pour un usage non commercial, mention de la source obligatoire. ‖ Immagine satellitare senza nuvole, risoluzione 10 m: fiumi, laghi e boschi sono riconoscibili, case e sentieri appena. Solo per uso non commerciale, indicazione della fonte obbligatoria.
+3460 ‖ Lock ‖ Écluse ‖ Chiusa
+3461 ‖ Already processed ‖ Déjà traité ‖ Già elaborato
+3462 ‖ Switzerland and Liechtenstein ‖ Suisse et Liechtenstein ‖ Svizzera e Liechtenstein
+3463 ‖ Secondary operation ‖ Intervention secondaire ‖ Intervento secondario
+3464 ‖ Secondary operation “{0} ‖ Intervention secondaire « {0} ‖ Intervento secondario «{0}
+3465 ‖ Sending failed: {0} ‖ Échec de l'envoi : {0} ‖ Invio non riuscito: {0}
+3466 ‖ =
+3467 ‖ Server error, please try again ‖ Erreur du serveur, veuillez réessayer ‖ Errore del server, riprova
+3468 ‖ Server error: {0} ‖ Erreur du serveur : {0} ‖ Errore del server: {0}
+3469 ‖ Vehicle sightings ‖ Repérages des véhicules ‖ Avvistamenti dei veicoli
+3470 ‖ Signal threshold combination (dBm) ‖ Seuil de signal convoi (dBm) ‖ Soglia del segnale convoglio (dBm)
+3471 ‖ Signal threshold “in vehicle” (dBm) ‖ Seuil de signal « dans le véhicule » (dBm) ‖ Soglia del segnale «nel veicolo» (dBm)
+3472 ‖ Session not found ‖ Session introuvable ‖ Sessione non trovata
+3473 ‖ Slipway / launch site ‖ Rampe / mise à l'eau ‖ Scivolo / messa in acqua
+3474 ‖ Column geom has SRID {0} ‖ La colonne geom a le SRID {0} ‖ La colonna geom ha SRID {0}
+3475 ‖ Special role saved ‖ Rôle spécial enregistré ‖ Ruolo speciale salvato
+3476 ‖ Special roles: ‖ Rôles spéciaux : ‖ Ruoli speciali:
+3477 ‖ Voice recordings deleted {0} ‖ Enregistrements vocaux supprimés {0} ‖ Registrazioni vocali eliminate {0}
+3478 ‖ Delete voice recordings ‖ Supprimer les enregistrements vocaux ‖ Elimina registrazioni vocali
+3479 ‖ Responders' locations: ‖ Positions des intervenants : ‖ Posizioni dei soccorritori:
+3480 ‖ Locations of the vehicles (BLE beacons) on the map even without a running operation, if the administration has set this under “Vehicles” ‖ Positions des véhicules (balises BLE) sur la carte même sans intervention en cours, si l'administration l'a paramétré sous « Véhicules » ‖ Posizioni dei veicoli (beacon BLE) sulla mappa anche senza intervento in corso, se l'amministrazione l'ha impostato in «Veicoli»
+3481 ‖ Location histories, recorded periods and helicopter tracks are deleted; there is no replay afterwards. ‖ Les historiques de position, périodes enregistrées et traces d'hélicoptères sont supprimés, il n'y a plus de replay ensuite. ‖ Cronologie delle posizioni, periodi registrati e tracce degli elicotteri vengono eliminati, poi non c'è più un replay.
+3482 ‖ Geodata source statistics ‖ Statistique des sources de géodonnées ‖ Statistica delle fonti di geodati
+3483 ‖ Geodata source statistics reset ‖ Statistique des sources de géodonnées réinitialisée ‖ Statistica delle fonti di geodati reimpostata
+3484 ‖ Statistics in words ‖ Statistique en mots ‖ Statistica a parole
+3485 ‖ Dam ‖ Barrage-poids / digue ‖ Diga / argine
+3486 ‖ Jetty / landing stage ‖ Ponton / débarcadère ‖ Pontile / approdo
+3487 ‖ Mutes ‖ Coupures de son ‖ Silenziamenti
+3488 ‖ Chunk not found ‖ Partie introuvable ‖ Parte non trovata
+3489 ‖ =
+3490 ‖ Search area first reached: {0} ‖ Zone de recherche atteinte pour la première fois : {0} ‖ Area di ricerca raggiunta per la prima volta: {0}
+3491 ‖ Boat search team ‖ Équipe de recherche bateau ‖ Squadra di ricerca barca
+3492 ‖ Bank search team ‖ Équipe de recherche rive ‖ Squadra di ricerca riva
+3493 ‖ System administrator ‖ Administrateur système ‖ Amministratore di sistema
+3494 ‖ Table {0} ‖ Table {0} ‖ Tabella {0}
+3495 ‖ Days: 0 to 36500 or empty (never) ‖ Jours : 0 à 36500 ou vide (jamais) ‖ Giorni: da 0 a 36500 o vuoto (mai)
+3496 ‖ Daily limit of the AI assistant reached ( ‖ Limite journalière de l'assistant IA atteinte ( ‖ Limite giornaliero dell'assistente IA raggiunto (
+3497 ‖ Tactical symbols for the incident site (fire brigade, medical, police) ‖ Symboles tactiques pour la place sinistrée (pompiers, sanitaire, police) ‖ Simboli tattici per il luogo del sinistro (pompieri, sanità, polizia)
+3498 ‖ Technical application log with events, warnings and errors of the server and devices; configure retention ‖ Journal technique de l'application avec événements, avertissements et erreurs du serveur et des appareils ; configurer la conservation ‖ Registro tecnico dell'applicazione con eventi, avvisi ed errori del server e dei dispositivi; configurare la conservazione
+3499 ‖ Participation missing ‖ Participation manquante ‖ Partecipazione mancante
+3500 ‖ Participations missing ‖ Participations manquantes ‖ Partecipazioni mancanti
+3501 ‖ Participations detached from the account {0} ‖ Participations détachées du compte {0} ‖ Partecipazioni scollegate dall'account {0}
+3502 ‖ Detach participations from the account ‖ Détacher les participations du compte ‖ Scollega partecipazioni dall'account
+3503 ‖ Review participants ‖ Participants à la review ‖ Partecipanti al review
+3504 ‖ Participants and operation lead ‖ Participants et direction d'intervention ‖ Partecipanti e direzione dell'intervento
+3505 ‖ Single-line text ‖ Texte sur une ligne ‖ Testo su una riga
+3506 ‖ Multi-line text ‖ Texte sur plusieurs lignes ‖ Testo su più righe
+3507 ‖ Title missing ‖ Titre manquant ‖ Titolo mancante
+3508 ‖ =
+3509 ‖ Transcription failed: ‖ Échec de la transcription : ‖ Trascrizione non riuscita:
+3510 ‖ Transcription: ‖ Transcription : ‖ Trascrizione:
+3511 ‖ Debris trap (rake) ‖ Grille à débris (râteau) ‖ Trappola per detriti (griglia)
+3512 ‖ =
+3513 ‖ Time ‖ Heure ‖ Ora
+3514 ‖ Portage point ‖ Point de portage ‖ Punto di trasbordo
+3515 ‖ Valid indefinitely ‖ Validité illimitée ‖ Validità illimitata
+3516 ‖ Unknown type ‖ Type inconnu ‖ Tipo sconosciuto
+3517 ‖ Unknown user role ‖ Rôle d'utilisateur inconnu ‖ Ruolo utente sconosciuto
+3518 ‖ Unknown file ‖ Fichier inconnu ‖ File sconosciuto
+3519 ‖ Unknown data source ‖ Source de données inconnue ‖ Fonte di dati sconosciuta
+3520 ‖ Unknown response group ‖ Groupe d'intervention inconnu ‖ Gruppo d'intervento sconosciuto
+3521 ‖ Unknown function ‖ Fonction inconnue ‖ Funzione sconosciuta
+3522 ‖ Unknown validity ‖ Validité inconnue ‖ Validità sconosciuta
+3523 ‖ Unknown gauging station ‖ Station de mesure inconnue ‖ Stazione di misura sconosciuta
+3524 ‖ Unknown person ‖ Personne inconnue ‖ Persona sconosciuta
+3525 ‖ Unknown person in the exercise lead of a partner organisation ‖ Personne inconnue dans la direction d'exercice d'une organisation partenaire ‖ Persona sconosciuta nella direzione dell'esercitazione di un'organizzazione partner
+3526 ‖ Unknown special role ‖ Rôle spécial inconnu ‖ Ruolo speciale sconosciuto
+3527 ‖ Unknown language ‖ Langue inconnue ‖ Lingua sconosciuta
+3528 ‖ Unknown level ‖ Niveau inconnu ‖ Livello sconosciuto
+3529 ‖ Unknown table ‖ Table inconnue ‖ Tabella sconosciuta
+3530 ‖ Unknown or deactivated response group ‖ Groupe d'intervention inconnu ou désactivé ‖ Gruppo d'intervento sconosciuto o disattivato
+3531 ‖ Unknown or deactivated skill ‖ Compétence inconnue ou désactivée ‖ Competenza sconosciuta o disattivata
+3532 ‖ Unknown or deactivated person ‖ Personne inconnue ou désactivée ‖ Persona sconosciuta o disattivata
+3533 ‖ Unknown or deactivated person among those called out ‖ Personne inconnue ou désactivée parmi les mobilisés ‖ Persona sconosciuta o disattivata tra i convocati
+3534 ‖ Unknown or deactivated person in the exercise lead ‖ Personne inconnue ou désactivée dans la direction d'exercice ‖ Persona sconosciuta o disattivata nella direzione dell'esercitazione
+3535 ‖ Unknown provider ‖ Fournisseur inconnu ‖ Fornitore sconosciuto
+3536 ‖ Unknown channel ‖ Canal inconnu ‖ Canale sconosciuto
+3537 ‖ Unknown map provider ‖ Fournisseur de cartes inconnu ‖ Fornitore di mappe sconosciuto
+3538 ‖ Unknown sound ‖ Son inconnu ‖ Suono sconosciuto
+3539 ‖ Unknown or deactivated operation type ‖ Type d'intervention inconnu ou désactivé ‖ Tipo d'intervento sconosciuto o disattivato
+3540 ‖ Unknown audio format ‖ Format audio inconnu ‖ Formato audio sconosciuto
+3541 ‖ Unknown image field ‖ Champ d'images inconnu ‖ Campo immagini sconosciuto
+3542 ‖ Unknown coordinate system ‖ Système de coordonnées inconnu ‖ Sistema di coordinate sconosciuto
+3543 ‖ Unknown right ‖ Droit inconnu ‖ Diritto sconosciuto
+3544 ‖ Unexpected server greeting ‖ Salutation inattendue du serveur ‖ Saluto inatteso del server
+3545 ‖ Invalid action ‖ Action invalide ‖ Azione non valida
+3546 ‖ Invalid details ‖ Données invalides ‖ Dati non validi
+3547 ‖ Invalid response (no JSON) ‖ Réponse invalide (pas de JSON) ‖ Risposta non valida (nessun JSON)
+3548 ‖ Invalid response (no FeatureCollection) ‖ Réponse invalide (pas de FeatureCollection) ‖ Risposta non valida (nessuna FeatureCollection)
+3549 ‖ Invalid number of chunks ‖ Nombre de parties invalide ‖ Numero di parti non valido
+3550 ‖ Invalid setting ‖ Paramètre invalide ‖ Impostazione non valida
+3551 ‖ Invalid setting for the map providers ‖ Paramètre invalide pour les fournisseurs de cartes ‖ Impostazione non valida per i fornitori di mappe
+3552 ‖ Invalid settings for helicopters ‖ Paramètres invalides pour les hélicoptères ‖ Impostazioni non valide per gli elicotteri
+3553 ‖ Invalid field type ‖ Type de champ invalide ‖ Tipo di campo non valido
+3554 ‖ Invalid tile ‖ Tuile invalide ‖ Tile non valida
+3555 ‖ Invalid coordinates for the PLS ‖ Coordonnées invalides pour le PLS ‖ Coordinate non valide per il PLS
+3556 ‖ Invalid navigation points ‖ Points de navigation invalides ‖ Punti di navigazione non validi
+3557 ‖ Invalid order ‖ Ordre invalide ‖ Ordine non valido
+3558 ‖ Invalid table (lowercase letters, digits, “_”, optionally with schema: schema.table) ‖ Table invalide (minuscules, chiffres, « _ », éventuellement avec schéma : schema.table) ‖ Tabella non valida (minuscole, cifre, «_», facoltativamente con schema: schema.tabella)
+3559 ‖ Invalid phone number ‖ Numéro de téléphone invalide ‖ Numero di telefono non valido
+3560 ‖ Invalid time ‖ Heure invalide ‖ Ora non valida
+3561 ‖ Invalid encryption ‖ Chiffrement invalide ‖ Cifratura non valida
+3562 ‖ Invalid effect ‖ Effet invalide ‖ Effetto non valido
+3563 ‖ Invalid credentials ‖ Identifiants invalides ‖ Credenziali non valide
+3564 ‖ Invalid further UUID: {0} ‖ Autre UUID invalide : {0} ‖ Altro UUID non valido: {0}
+3565 ‖ Invalid API key ‖ Clé API invalide ‖ Chiave API non valida
+3566 ‖ Invalid API key ‖ Clé API invalide ‖ Chiave API non valida
+3567 ‖ Invalid sender “{0}” (address such as alarm@example.ch or domain such as example.ch) ‖ Expéditeur invalide « {0} » (adresse comme alarm@exemple.ch ou domaine comme exemple.ch) ‖ Mittente non valido «{0}» (indirizzo come alarm@esempio.ch o dominio come esempio.ch)
+3568 ‖ Invalid section ‖ Secteur invalide ‖ Porzione non valida
+3569 ‖ Invalid entry in the list of rescue helicopters: “{0}” (identifier 2–8 characters A–Z, 0–9, “-”, name required) ‖ Entrée invalide dans la liste des hélicoptères de sauvetage : « {0} » (identifiant 2–8 caractères A–Z, 0–9, « - », désignation nécessaire) ‖ Voce non valida nell'elenco degli elicotteri di soccorso: «{0}» (identificativo 2–8 caratteri A–Z, 0–9, «-», denominazione necessaria)
+3570 ‖ Invalid host ‖ Hôte invalide ‖ Host non valido
+3571 ‖ Invalid mailbox host ‖ Hôte de la boîte aux lettres invalide ‖ Host della casella di posta non valido
+3572 ‖ Invalid layer (letters, digits, “_”, “-”, “.”) ‖ Couche invalide (lettres, chiffres, « _ », « - », « . ») ‖ Livello non valido (lettere, cifre, «_», «-», «.»)
+3573 ‖ Invalid name: {0} ‖ Nom invalide : {0} ‖ Nome non valido: {0}
+3574 ‖ Invalid navigation point ‖ Point de navigation invalide ‖ Punto di navigazione non valido
+3575 ‖ Invalid port ‖ Port invalide ‖ Porta non valida
+3576 ‖ Invalid location ‖ Position invalide ‖ Posizione non valida
+3577 ‖ Invalid status ‖ Statut invalide ‖ Stato non valido
+3578 ‖ Invalid token ‖ Jeton invalide ‖ Token non valido
+3579 ‖ Invalid value ‖ Valeur invalide ‖ Valore non valido
+3580 ‖ Invalid value for {0} ({1} to {2}) ‖ Valeur invalide pour {0} ({1} à {2}) ‖ Valore non valido per {0} (da {1} a {2})
+3581 ‖ Invalid period ‖ Période invalide ‖ Periodo non valido
+3582 ‖ Invalid planned start ‖ Début prévu invalide ‖ Inizio previsto non valido
+3583 ‖ Invalid subscription ‖ Abonnement invalide ‖ Abbonamento non valido
+3584 ‖ Invalid field ‖ Champ invalide ‖ Campo non valido
+3585 ‖ Invalid river network ‖ Réseau hydrographique invalide ‖ Rete idrografica non valida
+3586 ‖ Invalid object ‖ Objet invalide ‖ Oggetto non valido
+3587 ‖ Invalid geodata object ‖ Objet de géodonnées invalide ‖ Oggetto di geodati non valido
+3588 ‖ subfolders will be ‖ sous-dossiers seront ‖ sottocartelle saranno
+3589 ‖ subfolder will be ‖ sous-dossier sera ‖ sottocartella sarà
+3590 ‖ Support (without location) ‖ Soutien (sans position) ‖ Supporto (senza posizione)
+3591 ‖ Unencrypted (only in your own network) ‖ Non chiffré (seulement dans le réseau propre) ‖ Non cifrato (solo nella propria rete)
+3592 ‖ Unencrypted (only for testing) ‖ Non chiffré (seulement pour tester) ‖ Non cifrato (solo per test)
+3593 ‖ Incomplete response ({0} of {1} water bodies) ‖ Réponse incomplète ({0} sur {1} cours d'eau) ‖ Risposta incompleta ({0} di {1} corsi d'acqua)
+3594 ‖ =
+3595 ‖ =
+3596 ‖ Vector map from OpenStreetMap data as a file on your own web server (scripts/tiles/), water highlighted. No map sections go to third parties. Selectable as soon as the file is uploaded; not yet in the native app. ‖ Carte vectorielle à partir des données OpenStreetMap comme fichier sur le serveur web propre (scripts/tiles/), cours d'eau mis en évidence. Aucun secteur de carte n'est transmis à des tiers. Sélectionnable dès que le fichier est téléversé ; pas encore dans l'app native. ‖ Mappa vettoriale dai dati OpenStreetMap come file sul proprio server web (scripts/tiles/), corsi d'acqua evidenziati. Nessuna porzione di mappa va a terzi. Selezionabile non appena il file è caricato; non ancora nell'app nativa.
+3597 ‖ Connection to the mailbox interrupted ‖ Connexion à la boîte aux lettres interrompue ‖ Connessione alla casella di posta interrotta
+3598 ‖ Vehicle combination ‖ Convoi des véhicules ‖ Convoglio dei veicoli
+3599 ‖ Requested read confirmations ‖ Confirmations de lecture demandées ‖ Conferme di lettura richieste

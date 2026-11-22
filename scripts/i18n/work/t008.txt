@@ -1,0 +1,240 @@
+1920 ‖ Radius or section missing ‖ Rayon ou secteur manquant ‖ Raggio o porzione mancante
+1921 ‖ Unknown action ‖ Action inconnue ‖ Azione sconosciuta
+1922 ‖ Unknown alarm level ‖ Niveau d'alarme inconnu ‖ Livello d'allarme sconosciuto
+1923 ‖ Invalid selection ‖ Sélection invalide ‖ Selezione non valida
+1924 ‖ Invalid coordinates ‖ Coordonnées invalides ‖ Coordinate non valide
+1925 ‖ Invalid radius ‖ Rayon invalide ‖ Raggio non valido
+1926 ‖ Understood. ‖ Compris. ‖ Ricevuto.
+1927 ‖ On site at the PLS. Please share your location and search the search area according to the map. ‖ Sur place au PLS. Veuillez partager votre position et fouiller la zone de recherche selon la carte. ‖ Sul posto al PLS. Condividete la posizione e perlustrate l'area di ricerca secondo la mappa.
+1928 ‖ Prepared exercises are not available in demo mode. ‖ Les exercices préparés n'existent pas en mode démo. ‖ Le esercitazioni preparate non sono disponibili in modalità demo.
+1929 ‖ Hydraulic / backwash ‖ Rouleau / contre-courant ‖ Rullo / riflusso
+1930 ‖ Rescue resources waiting area (Warterm) ‖ Zone d'attente des moyens de sauvetage (Warterm) ‖ Area d'attesa mezzi di soccorso (Warterm)
+1931 ‖ Water rescue ‖ Sauvetage aquatique ‖ Soccorso acquatico
+1932 ‖ Water rescue land ‖ Sauvetage aquatique terre ‖ Soccorso acquatico terra
+1933 ‖ Water rescue city ‖ Sauvetage aquatique ville ‖ Soccorso acquatico città
+1934 ‖ Civil protection ‖ Protection civile ‖ Protezione civile
+1935 ‖ To leave, use the “Leave operation” button ‖ Pour quitter, utilisez le bouton « Quitter l'intervention » ‖ Per uscire usa il pulsante «Lascia l'intervento»
+1936 ‖ unhitched ‖ dételé ‖ sganciato
+1937 ‖ at own location ‖ à sa propre position ‖ alla propria posizione
+1938 ‖ hitched ‖ attelé ‖ agganciato
+1939 ‖ on the map ‖ sur la carte ‖ sulla mappa
+1940 ‖ ends the recording ‖ termine l'enregistrement ‖ termina la registrazione
+1941 ‖ no longer takes the river barriers of fixed locations into account in the search area ‖ ne tient plus compte des barrières fluviales des sites fixes dans la zone de recherche ‖ non considera più gli sbarramenti fluviali dei luoghi fissi nell'area di ricerca
+1942 ‖ takes the river barriers of fixed locations into account in the search area again ‖ tient à nouveau compte des barrières fluviales des sites fixes dans la zone de recherche ‖ considera di nuovo gli sbarramenti fluviali dei luoghi fissi nell'area di ricerca
+1943 ‖ removes the area “ ‖ retire la zone « ‖ rimuove l'area «
+1944 ‖ removes the operation PLS ‖ retire le PLS de l'intervention ‖ rimuove il PLS dell'intervento
+1945 ‖ removes the casualty “{0}” ‖ retire la victime « {0} » ‖ rimuove la vittima «{0}»
+1946 ‖ removes the map marker of a message ‖ retire le marqueur de carte d'un message ‖ rimuove il marcatore di un messaggio dalla mappa
+1947 ‖ removes the line “ ‖ retire la ligne « ‖ rimuove la linea «
+1948 ‖ removes the marker “ ‖ retire le marqueur « ‖ rimuove il marcatore «
+1949 ‖ removes the special role of {0} ‖ retire le rôle spécial de {0} ‖ rimuove il ruolo speciale di {0}
+1950 ‖ removes the external responder “{0}” ‖ retire l'intervenant externe « {0} » ‖ rimuove il soccorritore esterno «{0}»
+1951 ‖ records the casualty “{0}”{1} ‖ saisit la victime « {0} »{1} ‖ registra la vittima «{0}»{1}
+1952 ‖ records the external responder “{0}” ({1}, {2}, {3}) ‖ saisit l'intervenant externe « {0} » ({1}, {2}, {3}) ‖ registra il soccorritore esterno «{0}» ({1}, {2}, {3})
+1953 ‖ has reached the search area ‖ a atteint la zone de recherche ‖ ha raggiunto l'area di ricerca
+1954 ‖ has declined the operation ‖ a refusé l'intervention ‖ ha rifiutato l'intervento
+1955 ‖ has accepted the operation ‖ a accepté l'intervention ‖ ha accettato l'intervento
+1956 ‖ has ended the operation ‖ a terminé l'intervention ‖ ha terminato l'intervento
+1957 ‖ started the operation (operation, with helicopters): {0} ‖ a démarré l'intervention (intervention, avec hélicoptères) : {0} ‖ ha avviato l'intervento (intervento, con elicotteri): {0}
+1958 ‖ started the operation ({0}{1}{2}{3}): {4} ‖ a démarré l'intervention ({0}{1}{2}{3}) : {4} ‖ ha avviato l'intervento ({0}{1}{2}{3}): {4}
+1959 ‖ has left the operation ‖ a quitté l'intervention ‖ ha lasciato l'intervento
+1960 ‖ removed {0} from the operation ‖ a retiré {0} de l'intervention ‖ ha rimosso {0} dall'intervento
+1961 ‖ hitches {0} to “{1}” ‖ attelle {0} à « {1} » ‖ aggancia {0} a «{1}»
+1962 ‖ unhitches {0} from “{1}” ‖ dételle {0} de « {1} » ‖ sgancia {0} da «{1}»
+1963 ‖ has rejoined ‖ est revenu ‖ è rientrato
+1964 ‖ drops the special role ‖ abandonne le rôle spécial ‖ lascia il ruolo speciale
+1965 ‖ unloads {0} from “{1}” ‖ décharge {0} de « {1} » ‖ scarica {0} da «{1}»
+1966 ‖ marks the area “{0}” ({1} points, approx. {2} ha) ‖ marque la zone « {0} » ({1} points, env. {2} ha) ‖ segna l'area «{0}» ({1} punti, ca. {2} ha)
+1967 ‖ marks the location of “{0}” {1} ({2}, {3}) ‖ marque la position de « {0} » {1} ({2}, {3}) ‖ segna la posizione di «{0}» {1} ({2}, {3})
+1968 ‖ reports “{0}” as rescued ‖ signale « {0} » comme sauvée ‖ segnala «{0}» come salvata
+1969 ‖ resumes the recording ‖ reprend l'enregistrement ‖ riprende la registrazione
+1970 ‖ undoes “rescued” for “{0}” ‖ annule « sauvée » pour « {0} » ‖ annulla «salvata» per «{0}»
+1971 ‖ without special role ‖ sans rôle spécial ‖ senza ruolo speciale
+1972 ‖ pauses the recording ‖ met l'enregistrement en pause ‖ mette in pausa la registrazione
+1973 ‖ switches the helicopters off ‖ désactive les hélicoptères ‖ disattiva gli elicotteri
+1974 ‖ switches the helicopters on ‖ active les hélicoptères ‖ attiva gli elicotteri
+1975 ‖ resets the place where “{0}” was found ‖ réinitialise le lieu de découverte de « {0} » ‖ reimposta il luogo di ritrovamento di «{0}»
+1976 ‖ sets the PLS of “{0}” ({1}, {2}, {3}) ‖ définit le PLS de « {0} » ({1}, {2}, {3}) ‖ imposta il PLS di «{0}» ({1}, {2}, {3})
+1977 ‖ continues the recording ‖ poursuit l'enregistrement ‖ continua la registrazione
+1978 ‖ sets the flow speed to 1.8 m/s ‖ définit la vitesse du courant à 1.8 m/s ‖ imposta la velocità della corrente a 1.8 m/s
+1979 ‖ sets the flow speed to {0} m/s ‖ définit la vitesse du courant à {0} m/s ‖ imposta la velocità della corrente a {0} m/s
+1980 ‖ places the marker “{0}”{1} ({2}, {3}) ‖ place le marqueur « {0} »{1} ({2}, {3}) ‖ imposta il marcatore «{0}»{1} ({2}, {3})
+1981 ‖ starts the recording ‖ démarre l'enregistrement ‖ avvia la registrazione
+1982 ‖ assigns {0} the role {1} ‖ attribue à {0} le rôle {1} ‖ assegna a {0} il ruolo {1}
+1983 ‖ loads {0} onto “{1}” ‖ charge {0} sur « {1} » ‖ carica {0} su «{1}»
+1984 ‖ moves the external responder “{0}” ({1}, {2}) ‖ déplace l'intervenant externe « {0} » ({1}, {2}) ‖ sposta il soccorritore esterno «{0}» ({1}, {2})
+1985 ‖ draws the line “{0}” ({1} points, approx. {2} km) ‖ trace la ligne « {0} » ({1} points, env. {2} km) ‖ disegna la linea «{0}» ({1} punti, ca. {2} km)
+1986 ‖ to “{0}” ‖ vers « {0} » ‖ a «{0}»
+1987 ‖ {0} the operation PLS ({1}, {2}, {3}) ‖ {0} le PLS de l'intervention ({1}, {2}, {3}) ‖ {0} il PLS dell'intervento ({1}, {2}, {3})
+1988 ‖ {0} from “{1}” {2} (automatic) ‖ {0} de « {1} » {2} (automatique) ‖ {0} da «{1}» {2} (automatico)
+1989 ‖ {0} {1} “{2}” {3} (automatic) ‖ {0} {1} « {2} » {3} (automatique) ‖ {0} {1} «{2}» {3} (automatico)
+1990 ‖ “Until” must be after “From” and in the future ‖ « Jusqu'à » doit être après « De » et dans le futur ‖ «Fino a» deve essere dopo «Da» e nel futuro
+1991 ‖ “{0}” seen ({1}, {2}) ‖ « {0} » vu ({1}, {2}) ‖ «{0}» visto ({1}, {2})
+1992 ‖ “{0}” is full ‖ « {0} » est plein ‖ «{0}» è pieno
+1993 ‖ “{0}” cannot take “{1}” ‖ « {0} » ne peut pas recevoir « {1} » ‖ «{0}» non può accogliere «{1}»
+1994 ‖ “{0}” is itself carried by “{1}” ‖ « {0} » est lui-même porté par « {1} » ‖ «{0}» è a sua volta trasportato da «{1}»
+1995 ‖ · map marker {0}, {1}{2} ‖ · marqueur de carte {0}, {1}{2} ‖ · marcatore sulla mappa {0}, {1}{2}
+1996 ‖ · location {0}, {1} ‖ · position {0}, {1} ‖ · posizione {0}, {1}
+1997 ‖ changes ‖ modifie ‖ modifica
+1998 ‖ changes the casualty “{0}” to “{1}” ‖ modifie la victime « {0} » en « {1} » ‖ modifica la vittima «{0}» in «{1}»
+1999 ‖ changes the description of “{0}” ‖ modifie la description de « {0} » ‖ modifica la descrizione di «{0}»
+2000 ‖ takes over the role {0} ‖ reprend le rôle {0} ‖ assume il ruolo {0}
+2001 ‖ takes over the operation PLS for “{0}” ‖ reprend le PLS de l'intervention pour « {0} » ‖ riprende il PLS dell'intervento per «{0}»
+2002 ‖ Let's go ‖ C'est parti ‖ Si parte
+2003 ‖ Restart with sample data ‖ Recommencer avec données d'exemple ‖ Ricomincia con dati di esempio
+2004 ‖ Restart without data ‖ Recommencer sans données ‖ Ricomincia senza dati
+2005 ‖ Taken over{0}: fixed locations, operation types, special roles, response options, gauging stations and your settings (read only, as at the start of the demo). ‖ Repris{0} : sites fixes, types d'intervention, rôles spéciaux, options d'engagement, stations de mesure et vos paramètres (en lecture seule, état au démarrage de la démo). ‖ Ripresi{0}: luoghi fissi, tipi d'intervento, ruoli speciali, opzioni d'intervento, stazioni di misura e le tue impostazioni (solo lettura, stato all'avvio della demo).
+2006 ‖ 🎓 Demo mode ‖ 🎓 Mode démo ‖ 🎓 Modalità demo
+2007 ‖ ” no longer in the search area ‖ » plus dans la zone de recherche ‖ » non più nell'area di ricerca
+2008 ‖ ” in the search area again ‖ » à nouveau dans la zone de recherche ‖ » di nuovo nell'area di ricerca
+2009 ‖ ”. No operation, just acknowledge. ‖ ». Pas d'intervention, il suffit d'acquitter. ‖ ». Nessun intervento, basta confermare.
+2010 ‖ changes the external responder “{0}” ‖ modifie l'intervenant externe « {0} » ‖ modifica il soccorritore esterno «{0}»
+2011 ‖ Simulate other responders (acceptances, locations, messages) ‖ Simuler d'autres intervenants (acceptations, positions, messages) ‖ Simula altri soccorritori (accettazioni, posizioni, messaggi)
+2012 ‖ Sample data: ‖ Données d'exemple : ‖ Dati di esempio:
+2013 ‖ Demo · {0} ‖ Démo · {0} ‖ Demo · {0}
+2014 ‖ Demo mode: settings, restart or end ‖ Mode démo : paramètres, recommencer ou quitter ‖ Modalità demo: impostazioni, ricomincia o termina
+2015 ‖ =
+2016 ‖ An operation on the Reuss in Lucerne is already running (fictitious). Accept it via the ☰ menu and watch how the simulated responders approach, send messages and find the casualty. ‖ Une intervention sur la Reuss à Lucerne est déjà en cours (fictive). Acceptez-la via le menu ☰ et observez comment les intervenants simulés arrivent, envoient des messages et trouvent la victime. ‖ È già in corso un intervento sulla Reuss a Lucerna (fittizio). Accettalo tramite il menu ☰ e osserva come i soccorritori simulati arrivano, inviano messaggi e trovano la vittima.
+2017 ‖ No operation is running. Start your own via ☰ and set a PLS on a river; simulated responders accept and travel there. ‖ Aucune intervention en cours. Démarrez-en une via ☰ et définissez un PLS sur une rivière ; des intervenants simulés acceptent et s'y rendent. ‖ Nessun intervento in corso. Avviane uno tramite ☰ e imposta un PLS su un fiume; i soccorritori simulati accettano e vi si recano.
+2018 ‖ Error in demo mode: {0} ‖ Erreur en mode démo : {0} ‖ Errore in modalità demo: {0}
+2019 ‖ Here you can try out the operations app safely. Everything runs only in this browser tab: nothing is saved on the server (when logged in, the demo only fetches the river network from there), nobody is alerted, and your real operations and settings remain untouched. If you close the tab, the demo state is gone. ‖ Ici, vous pouvez essayer l'app d'intervention sans risque. Tout se passe uniquement dans cet onglet : rien n'est enregistré sur le serveur (connecté, la démo y récupère seulement le réseau hydrographique), personne n'est alarmé, et vos vraies interventions et paramètres restent intacts. Si vous fermez l'onglet, l'état de la démo disparaît. ‖ Qui puoi provare l'app d'intervento senza rischi. Tutto avviene solo in questa scheda del browser: nulla viene salvato sul server (con l'accesso la demo vi recupera solo la rete idrografica), nessuno viene allarmato e i tuoi interventi e impostazioni reali restano intatti. Se chiudi la scheda, lo stato della demo sparisce.
+2020 ‖ Empty: ‖ Vide : ‖ Vuoto:
+2021 ‖ After accepting, with operation lead rights (all functions). Unticked, like an ordinary responder. ‖ Après acceptation, avec les droits de la direction d'intervention (toutes les fonctions). Sans coche, comme un intervenant ordinaire. ‖ Dopo l'accettazione con i diritti della direzione dell'intervento (tutte le funzioni). Senza spunta come un normale soccorritore.
+2022 ‖ Message to {0}: {1} ‖ Message à {0} : {1} ‖ Messaggio a {0}: {1}
+2023 ‖ Not in demo mode ‖ Pas en mode démo ‖ Non in modalità demo
+2024 ‖ Personal test alarm, level “ ‖ Alarme test personnelle, niveau « ‖ Allarme di prova personale, livello «
+2025 ‖ takes the river barrier “{0} into account ‖ tient compte de la barrière fluviale « {0} ‖ considera lo sbarramento fluviale «{0}
+2026 ‖ =
+2027 ‖ =
+2028 ‖ Login failed ‖ Échec de la connexion ‖ Accesso non riuscito
+2029 ‖ Error {0} ‖ Erreur {0} ‖ Errore {0}
+2030 ‖ No connection to the server ({0}) ‖ Pas de connexion au serveur ({0}) ‖ Nessuna connessione al server ({0})
+2031 ‖ Secure connection to the server failed ‖ Échec de la connexion sécurisée au serveur ‖ Connessione sicura al server non riuscita
+2032 ‖ Invalid response from the server ({0}) ‖ Réponse invalide du serveur ({0}) ‖ Risposta non valida dal server ({0})
+2033 ‖ No Swiftwater Rescue server is running at this address ‖ Aucun serveur Swiftwater Rescue ne fonctionne à cette adresse ‖ A questo indirizzo non c'è alcun server Swiftwater Rescue
+2034 ‖ =
+2035 ‖ Without location the app cannot report the vehicles. ‖ Sans position, l'app ne peut pas signaler les véhicules. ‖ Senza posizione l'app non può segnalare i veicoli.
+2036 ‖ Message to {0}: {1}{2} ‖ Message à {0} : {1}{2} ‖ Messaggio a {0}: {1}{2}
+2037 ‖ Personal test alarm, level “{0}”. No operation, just acknowledge. ‖ Alarme test personnelle, niveau « {0} ». Pas d'intervention, il suffit d'acquitter. ‖ Allarme di prova personale, livello «{0}». Nessun intervento, basta confermare.
+2038 ‖ Role {0} ‖ Rôle {0} ‖ Ruolo {0}
+2039 ‖ Unknown casualty {0} ‖ Victime inconnue {0} ‖ Vittima sconosciuta {0}
+2040 ‖ =
+2041 ‖ takes the river barrier “{0}”{1} into account ‖ tient compte de la barrière fluviale « {0} »{1} ‖ considera lo sbarramento fluviale «{0}»{1}
+2042 ‖ no longer in the search area ‖ plus dans la zone de recherche ‖ non più nell'area di ricerca
+2043 ‖ in the search area again ‖ à nouveau dans la zone de recherche ‖ di nuovo nell'area di ricerca
+2044 ‖ changes the external responder “{0}”{1} ‖ modifie l'intervenant externe « {0} »{1} ‖ modifica il soccorritore esterno «{0}»{1}
+2045 ‖ Simulate other responders ‖ Simuler d'autres intervenants ‖ Simula altri soccorritori
+2046 ‖ Acceptances, locations, messages ‖ Acceptations, positions, messages ‖ Accettazioni, posizioni, messaggi
+2047 ‖ Sample data: an operation on the Reuss in Lucerne is already running (fictitious). Accept it via the menu and watch how the simulated ‖ Données d'exemple : une intervention sur la Reuss à Lucerne est déjà en cours (fictive). Acceptez-la via le menu et observez comment les ‖ Dati di esempio: è già in corso un intervento sulla Reuss a Lucerna (fittizio). Accettalo tramite il menu e osserva come i
+2048 ‖ Try out the operations app without an account and without a server: nobody is alerted, nothing is saved or sent. ‖ Essayez l'app d'intervention sans compte et sans serveur : personne n'est alarmé, rien n'est enregistré ni envoyé. ‖ Prova l'app d'intervento senza account e senza server: nessuno viene allarmato, nulla viene salvato o inviato.
+2049 ‖ responders approach, send messages and find the casualty. ‖ intervenants simulés arrivent, envoient des messages et trouvent la victime. ‖ soccorritori simulati arrivano, inviano messaggi e trovano la vittima.
+2050 ‖ Fixed locations, operation types, special roles, response options and your settings are only read; nothing is sent. ‖ Les sites fixes, types d'intervention, rôles spéciaux, options d'engagement et vos paramètres sont seulement lus, rien n'est envoyé. ‖ Luoghi fissi, tipi d'intervento, ruoli speciali, opzioni d'intervento e le tue impostazioni vengono solo letti, nulla viene inviato.
+2051 ‖ Here you can try out the operations app safely. Everything runs only in this app: nothing goes to a server, ‖ Ici, vous pouvez essayer l'app d'intervention sans risque. Tout se passe uniquement dans cette app : rien n'est envoyé à un serveur, ‖ Qui puoi provare l'app d'intervento senza rischi. Tutto avviene solo in questa app: nulla va a un server,
+2052 ‖ After accepting, all functions; off = like an ordinary responder ‖ Après acceptation, toutes les fonctions ; désactivé = comme un intervenant ordinaire ‖ Dopo l'accettazione tutte le funzioni; disattivato = come un normale soccorritore
+2053 ‖ Without data: no operation is running. Start your own via the menu and set a PLS on a river; simulated responders accept and travel there. ‖ Sans données : aucune intervention en cours. Démarrez-en une via le menu et définissez un PLS sur une rivière ; des intervenants simulés acceptent et s'y rendent. ‖ Senza dati: nessun intervento in corso. Avviane uno tramite il menu e imposta un PLS su un fiume; i soccorritori simulati accettano e vi si recano.
+2054 ‖ Without defaults (demo data) ‖ Sans valeurs par défaut (données de démo) ‖ Senza predefiniti (dati demo)
+2055 ‖ Use defaults ‖ Reprendre les valeurs par défaut ‖ Riprendi i predefiniti
+2056 ‖ Continue ‖ Poursuivre ‖ Continua
+2057 ‖ nobody is alerted, and your accounts remain untouched. The next time the app starts, the demo begins again. ‖ personne n'est alarmé, et vos comptes restent intacts. Au prochain démarrage de l'app, la démo recommence. ‖ nessuno viene allarmato e i tuoi account restano intatti. Al prossimo avvio dell'app la demo ricomincia.
+2058 ‖ Polling interval ‖ Intervalle d'interrogation ‖ Intervallo di interrogazione
+2059 ‖ Polled {0} ‖ Interrogé {0} ‖ Interrogato {0}
+2060 ‖ Logged out – please log in again ‖ Déconnecté – veuillez vous reconnecter ‖ Disconnesso – accedi di nuovo
+2061 ‖ Exclude from battery optimisation ‖ Exclure de l'optimisation de la batterie ‖ Escludi dall'ottimizzazione della batteria
+2062 ‖ Update ‖ Mettre à jour ‖ Aggiorna
+2063 ‖ Alarm – not yet accepted ‖ Alarme – pas encore acceptée ‖ Allarme – non ancora accettato
+2064 ‖ Alarms come via push. Without push and during an operation the app polls the active accounts in the background (notice “Ready for alarms”). ‖ Les alarmes arrivent par push. Sans push et pendant une intervention, l'app interroge les comptes actifs en arrière-plan (avis « Prêt pour les alarmes »). ‖ Gli allarmi arrivano tramite push. Senza push e durante un intervento l'app interroga gli account attivi in background (avviso «Pronto per gli allarmi»).
+2065 ‖ Alarms, messages and end of operation ‖ Alarmes, messages et fin d'intervention ‖ Allarmi, messaggi e fine dell'intervento
+2066 ‖ Accepted ‖ Acceptée ‖ Accettato
+2067 ‖ App version {0} ‖ Version de l'app {0} ‖ Versione dell'app {0}
+2068 ‖ Off: with push, alarms come without a permanent notification; background polling only happens without push and during an operation. ‖ Désactivé : avec push, les alarmes arrivent sans notification permanente ; l'interrogation en arrière-plan n'a lieu que sans push et pendant une intervention. ‖ Disattivato: con il push gli allarmi arrivano senza notifica permanente; l'interrogazione in background avviene solo senza push e durante un intervento.
+2069 ‖ Automatic ‖ Automatique ‖ Automatico
+2070 ‖ Add backend ‖ Ajouter un backend ‖ Aggiungi backend
+2071 ‖ With the app closed, alarms only come via push, provided the server has set it up. ‖ Avec l'app fermée, les alarmes n'arrivent que par push, si le serveur l'a configuré. ‖ Ad app chiusa gli allarmi arrivano solo tramite push, se il server l'ha configurato.
+2072 ‖ Allow notifications ‖ Autoriser les notifications ‖ Consenti le notifiche
+2073 ‖ Name (optional) ‖ Désignation (facultatif) ‖ Denominazione (facoltativa)
+2074 ‖ Please fill in all fields. ‖ Veuillez remplir tous les champs. ‖ Compila tutti i campi.
+2075 ‖ So that critical alarms also ring with “Do not disturb” ‖ Pour que les alarmes critiques sonnent aussi avec « Ne pas déranger » ‖ Affinché gli allarmi critici suonino anche con «Non disturbare»
+2076 ‖ The address is the same as that of your organisation's web app. The app gets its own login; the browser and other devices remain logged in. ‖ L'adresse est la même que celle de l'app web de votre organisation. L'app reçoit sa propre connexion ; le navigateur et les autres appareils restent connectés. ‖ L'indirizzo è lo stesso della web app della tua organizzazione. L'app riceve un proprio accesso; il browser e gli altri dispositivi restano connessi.
+2077 ‖ The app polls all active backends in a foreground service, even with the app closed and after a restart. ‖ L'app interroge tous les backends actifs dans un service de premier plan, même avec l'app fermée et après un redémarrage. ‖ L'app interroga tutti i backend attivi in un servizio in primo piano, anche ad app chiusa e dopo un riavvio.
+2078 ‖ On: additionally permanently, with the notification “Ready for alarms” (for devices that hold back push). {0} ‖ Activé : en plus en permanence, avec la notification « Prêt pour les alarmes » (pour les appareils qui retiennent le push). {0} ‖ Attivato: in più in modo permanente, con la notifica «Pronto per gli allarmi» (per dispositivi che trattengono il push). {0}
+2079 ‖ Error: {0} · last reached {1} ‖ Erreur : {0} · joint pour la dernière fois {1} ‖ Errore: {0} · raggiunto l'ultima volta {1}
+2080 ‖ For location sharing during operations ‖ Pour le partage de position en intervention ‖ Per la condivisione della posizione durante l'intervento
+2081 ‖ Applies to the app and the notifications of all accounts. ‖ S'applique à l'app et aux notifications de tous les comptes. ‖ Vale per l'app e le notifiche di tutti gli account.
+2082 ‖ Always poll in the background ‖ Toujours interroger en arrière-plan ‖ Interroga sempre in background
+2083 ‖ Always: during operations the location is shared even with the screen locked ‖ Toujours : en intervention, la position est partagée même écran verrouillé ‖ Sempre: durante l'intervento la posizione viene condivisa anche a schermo bloccato
+2084 ‖ No operation ‖ Pas d'intervention ‖ Nessun intervento
+2085 ‖ Remove account? ‖ Retirer le compte ? ‖ Rimuovere l'account?
+2086 ‖ Running operation ‖ Intervention en cours ‖ Intervento in corso
+2087 ‖ Running operation without call-out ‖ Intervention en cours sans mobilisation ‖ Intervento in corso senza convocazione
+2088 ‖ Empty = {0} ‖ Vide = {0} ‖ Vuoto = {0}
+2089 ‖ Not running at the moment. ‖ Ne fonctionne pas actuellement. ‖ Non attivo al momento.
+2090 ‖ Running at the moment. ‖ Fonctionne actuellement. ‖ Attivo al momento.
+2091 ‖ Log in to your organisation with “Add backend”. You can add several backends and be active on all of them at the same time. ‖ Connectez-vous à votre organisation avec « Ajouter un backend ». Vous pouvez ajouter plusieurs backends et être actif sur tous simultanément. ‖ Accedi alla tua organizzazione con «Aggiungi backend». Puoi aggiungere più backend ed essere attivo su tutti contemporaneamente.
+2092 ‖ Name in the account list ‖ Nom dans la liste des comptes ‖ Nome nell'elenco degli account
+2093 ‖ Name in the account list, empty = the server's organisation ‖ Nom dans la liste des comptes, vide = organisation du serveur ‖ Nome nell'elenco degli account, vuoto = organizzazione del server
+2094 ‖ Log in again ‖ Se reconnecter ‖ Accedi di nuovo
+2095 ‖ Not active: no alarms from this backend ‖ Inactif : pas d'alarmes de ce backend ‖ Non attivo: nessun allarme da questo backend
+2096 ‖ Not allowed: location sharing during operations does not work. Tap to allow. ‖ Non autorisé : le partage de position en intervention ne fonctionne pas. Touchez pour autoriser. ‖ Non consentito: la condivisione della posizione durante l'intervento non funziona. Tocca per consentire.
+2097 ‖ No backend yet ‖ Pas encore de backend ‖ Ancora nessun backend
+2098 ‖ Only while using: with the screen locked, the operation lead does not see your location. Tap and choose “Always allow”. ‖ Seulement pendant l'utilisation : écran verrouillé, la direction d'intervention ne voit pas votre position. Touchez et choisissez « Toujours autoriser ». ‖ Solo durante l'uso: a schermo bloccato la direzione dell'intervento non vede la tua posizione. Tocca e scegli «Consenti sempre».
+2099 ‖ Push: not set up on this server{0} ‖ Push : non configuré sur ce serveur{0} ‖ Push: non configurato su questo server{0}
+2100 ‖ Push: not built into this app (Firebase details were missing at build time) – alarms only while the app is open ‖ Push : non intégré à cette app (données Firebase manquantes lors de la compilation) – alarmes seulement avec l'app ouverte ‖ Push: non integrato in questa app (mancavano i dati Firebase durante la compilazione) – allarmi solo ad app aperta
+2101 ‖ Push: not registered yet{0} ‖ Push : pas encore enregistré{0} ‖ Push: non ancora registrato{0}
+2102 ‖ =
+2103 ‖ =
+2104 ‖ Server address ‖ Adresse du serveur ‖ Indirizzo del server
+2105 ‖ How often the app polls all active backends in the background. ‖ Fréquence à laquelle l'app interroge tous les backends actifs en arrière-plan. ‖ Frequenza con cui l'app interroga tutti i backend attivi in background.
+2106 ‖ How often the app polls while it is open. ‖ Fréquence d'interrogation avec l'app ouverte. ‖ Frequenza d'interrogazione ad app aperta.
+2107 ‖ Otherwise Android may stop background polling ‖ Sinon, Android peut arrêter l'interrogation en arrière-plan ‖ Altrimenti Android può interrompere l'interrogazione in background
+2108 ‖ Language ‖ Langue ‖ Lingua
+2109 ‖ Location “Always allow” ‖ Position « Toujours autoriser » ‖ Posizione «Consenti sempre»
+2110 ‖ Location: error: {0} · last sent {1} ‖ Position : erreur : {0} · dernier envoi {1} ‖ Posizione: errore: {0} · ultimo invio {1}
+2111 ‖ Location: not yet sent ‖ Position : pas encore envoyée ‖ Posizione: non ancora inviata
+2112 ‖ Location: not shared{0} ‖ Position : non partagée{0} ‖ Posizione: non condivisa{0}
+2113 ‖ Location: last sent {0} ‖ Position : dernier envoi {0} ‖ Posizione: ultimo invio {0}
+2114 ‖ App system settings ‖ Paramètres système de l'app ‖ Impostazioni di sistema dell'app
+2115 ‖ Rename ‖ Renommer ‖ Rinomina
+2116 ‖ Add a backend first ‖ Ajoutez d'abord un backend ‖ Aggiungi prima un backend
+2117 ‖ iOS does not allow background polling: with the app closed, alarms only come via push. Critical alarms only bypass “Do not disturb” with the permission for critical alerts. ‖ iOS n'autorise pas l'interrogation en arrière-plan : avec l'app fermée, les alarmes n'arrivent que par push. Les alarmes critiques ne contournent « Ne pas déranger » qu'avec l'autorisation pour les alertes critiques. ‖ iOS non consente l'interrogazione in background: ad app chiusa gli allarmi arrivano solo tramite push. Gli allarmi critici aggirano «Non disturbare» solo con l'autorizzazione per gli avvisi critici.
+2118 ‖ built into this app, active on all backends that have set it up ‖ intégré à cette app, actif sur tous les backends qui l'ont configuré ‖ integrato in questa app, attivo su tutti i backend che l'hanno configurato
+2119 ‖ not built into this app ‖ non intégré à cette app ‖ non integrato in questa app
+2120 ‖ never ‖ jamais ‖ mai
+2121 ‖ at {0}:{1} ‖ à {0}:{1} ‖ alle {0}:{1}
+2122 ‖ e.g. SLRG Bern ‖ p. ex. SSS Berne ‖ p. es. SSS Berna
+2123 ‖ {0} ({1}) will be removed from this device and logged out. Alarms from this backend will then no longer arrive. ‖ {0} ({1}) sera retiré de cet appareil et déconnecté. Les alarmes de ce backend n'arriveront plus. ‖ {0} ({1}) verrà rimosso da questo dispositivo e disconnesso. Gli allarmi di questo backend non arriveranno più.
+2124 ‖ Bypass “Do not disturb” ‖ Contourner « Ne pas déranger » ‖ Aggira «Non disturbare»
+2125 ‖ – alarms only while the app is open ‖ – alarmes seulement avec l'app ouverte ‖ – allarmi solo ad app aperta
+2126 ‖ =
+2127 ‖ =
+2128 ‖ =
+2129 ‖ Search area from {0} PLS: {1} along the water{2}{3} ‖ Zone de recherche dès {0} PLS : {1} le long du cours d'eau{2}{3} ‖ Area di ricerca da {0} PLS: {1} lungo il corso d'acqua{2}{3}
+2130 ‖ Search area: no PLS for {0}. Set the PLS of the operation or the casualties. ‖ Zone de recherche : pas de PLS pour {0}. Définissez le PLS de l'intervention ou des victimes. ‖ Area di ricerca: nessun PLS per {0}. Imposta il PLS dell'intervento o delle vittime.
+2131 ‖ to “{0}”{1} ‖ à « {0} »{1} ‖ a «{0}»{1}
+2132 ‖ {0}{1} Displayed as a circle, radius {2} m. ‖ {0}{1} Représentation en cercle, rayon {2} m. ‖ {0}{1} Rappresentazione come cerchio, raggio {2} m.
+2133 ‖ {0}{1} km of river from PLS (drift distance {2} m), bank area {3} m each side{4} ‖ {0}{1} km de cours d'eau dès le PLS (distance de dérive {2} m), zone riveraine {3} m de chaque côté{4} ‖ {0}{1} km di corso d'acqua dal PLS (distanza di deriva {2} m), fascia di riva {3} m per lato{4}
+2134 ‖ Please confirm ‖ Veuillez confirmer ‖ Conferma
+2135 ‖ In demo mode there are no server pages (administration, my operations, legal). ‖ En mode démo, il n'y a pas de pages du serveur (administration, mes interventions, informations légales). ‖ In modalità demo non ci sono pagine del server (amministrazione, i miei interventi, note legali).
+2136 ‖ Navigation app not available ‖ App de navigation indisponible ‖ App di navigazione non disponibile
+2137 ‖ Phone app not available ‖ App téléphone indisponible ‖ App telefono non disponibile
+2138 ‖ Navigate to {0} ‖ Naviguer vers {0} ‖ Naviga verso {0}
+2139 ‖ {0} · partner organisation{1} ‖ {0} · organisation partenaire{1} ‖ {0} · organizzazione partner{1}
+2140 ‖ 🧭 Navigate with {0} ‖ 🧭 Naviguer avec {0} ‖ 🧭 Naviga con {0}
+2141 ‖ The folder's editors receive your suggestion in their inbox and decide whether to take it over. You will be notified. You suggest files (e.g. a new version) in the browser. ‖ La rédaction du dossier reçoit votre proposition dans sa boîte de réception et décide de la reprendre ou non. Vous serez notifié. Les fichiers (p. ex. une nouvelle version) se proposent dans le navigateur. ‖ La redazione della cartella riceve la tua proposta in entrata e decide se riprenderla. Verrai avvisato. I file (p. es. una nuova versione) si propongono nel browser.
+2142 ‖ The editors will no longer see it. ‖ La rédaction ne la verra plus. ‖ La redazione non la vedrà più.
+2143 ‖ External parties will then no longer see the document. ‖ Les externes ne verront plus le document. ‖ Gli esterni non vedranno più il documento.
+2144 ‖ Withdraw sharing of “{0}”? ‖ Retirer le partage de « {0} » ? ‖ Ritirare la condivisione di «{0}»?
+2145 ‖ Radio link “{0}” ‖ Lien radio « {0} » ‖ Link radio «{0}»
+2146 ‖ Applies to this operation type. ‖ S'applique à ce type d'intervention. ‖ Vale per questo tipo d'intervento.
+2147 ‖ Applies without an operation. ‖ S'applique sans intervention. ‖ Vale senza intervento.
+2148 ‖ Share / save ‖ Partager / enregistrer ‖ Condividi / salva
+2149 ‖ Default ‖ Par défaut ‖ Predefinito
+2150 ‖ · review due ‖ · révision due ‖ · revisione dovuta
+2151 ‖ Opens in the device's PDF viewer. ‖ S'ouvre dans la visionneuse PDF de l'appareil. ‖ Si apre nel visualizzatore PDF del dispositivo.
+2152 ‖ Opens in a suitable app on the device. ‖ S'ouvre dans une app adaptée de l'appareil. ‖ Si apre in un'app adatta del dispositivo.
+2153 ‖ Current: {0} ‖ Actuel : {0} ‖ Attuale: {0}
+2154 ‖ FOEN gauging station {0}{1} ‖ Station de mesure OFEV {0}{1} ‖ Stazione di misura UFAM {0}{1}
+2155 ‖ {0} km from the PLS ‖ à {0} km du PLS ‖ a {0} km dal PLS
+2156 ‖ Accept ‖ Accepter ‖ Accetta
+2157 ‖ Start of drift {0} ‖ Début de la dérive {0} ‖ Inizio della deriva {0}
+2158 ‖ Logged out of {0}. Please log in again. ‖ Déconnecté de {0}. Veuillez vous reconnecter. ‖ Disconnesso da {0}. Accedi di nuovo.
+2159 ‖ Please set your own password first. ‖ Veuillez d'abord définir votre propre mot de passe. ‖ Imposta prima una password tua.
