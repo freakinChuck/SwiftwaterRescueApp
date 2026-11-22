@@ -105,6 +105,10 @@ The comparison speeds with which the river distance tool calculates travel times
 
 Which navigation apps are available and which one is the default.
 
+### Water time {#wasserzeit}
+
+Guidelines for the water time in minutes per **thermal protection** (none, wetsuit, drysuit) and **water temperature** (bands freely selectable). The defaults are a suggestion for active work in the current; compare them with your organisation's training documents (**Insert defaults** restores them). Also the early warning in percent, the level of the notifications and the automatic detection (distance to the river axis, time until "in the water" or "ashore") as well as the radius for the gauging station with water temperature. Per incident type you switch the function on and off under [Functions](#funktionen).
+
 ### Language {#sprache}
 
 The app is available in German, English, French and Italian. Here you set the **organisation default**. It applies to persons who have not chosen a language themselves and whose device uses none of these languages, as well as to push notifications to persons who have never opened the app.
@@ -165,7 +169,7 @@ Title, logo, fields of the review, included sections, permitted documents per st
 
 ### Statistics per person {#personenstatistik}
 
-Evaluation per person with filter, charts and CSV.
+Evaluation per person with filter, charts and CSV, including the water time (total time in the water).
 
 ### View for responders {#einsicht}
 

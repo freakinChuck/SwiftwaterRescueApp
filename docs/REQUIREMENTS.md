@@ -489,3 +489,15 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **ML-05** – Datum und Zahlen erscheinen im Format der gewählten Sprache; der AI-Assistent antwortet in der Sprache der Person (#66).
 - **ML-06** – Übersetzt werden die Texte der App; Eingaben der Organisation (Einsatztypen, Rollen, Meldungen, Dokumente usw.), Namen und das gespeicherte Einsatzlog bleiben in der Sprache, in der sie erfasst wurden. Fehlende Übersetzungen erscheinen deutsch (#66).
 - **ML-07** – Kapitel der Bedienungsanleitung können je Sprache übersetzt vorliegen; fehlt ein Kapitel, erscheint das deutsche (#66).
+
+## 35. Wasserzeit (WZT)
+
+- **WZT-01** – Wer im Wasser arbeitet, startet im Einsatz die Wasserzeit («Ich gehe ins Wasser») und beendet sie («Zurück an Land»); die Einsatzleitung kann sie für andere starten und beenden. Funktion je Einsatztyp ein- und ausschaltbar (#241).
+- **WZT-02** – Beim Start wählt die Person ihren Kälteschutz (ohne, Neoprenanzug, Trockenanzug); die App merkt sich die letzte Wahl (#241).
+- **WZT-03** – Der Richtwert in Minuten hängt vom Kälteschutz und von der Wassertemperatur ab; die Tabelle (Temperaturstufen und Minuten) ist in der Verwaltung einstellbar, mit einem Vorschlag als Vorgabe (#241, AG: konfigurierbar, Vorschläge für Neopren und Trockenanzug).
+- **WZT-04** – Die Wassertemperatur kommt von der nächsten BAFU-Station mit Wassertemperatur; die Einsatzleitung kann sie von Hand setzen. Ohne Temperatur gilt die kälteste Stufe (#241).
+- **WZT-05** – Die laufende Zeit steht bei der Person im Fenster «Einsatzkräfte», in der Personeninfo, als Chip unter dem Marker und die eigene oben auf der Karte; gelb ab der Vorwarnung (Standard 75 %), rot ab 100 % (#241).
+- **WZT-06** – Bei der Vorwarnung und beim Erreichen des Richtwerts erhalten die Person und die Einsatzleitung eine Meldung (Stufe einstellbar, Standard «Hoch»); beides steht im Einsatzlog (#241).
+- **WZT-07** – Optional erkennt die App den Aufenthalt im Wasser selbst über den Standort nahe der Gewässerachse (ohne Fahrzeug, nicht in Fahrt) und beendet automatisch gestartete Wasserzeiten wieder an Land; die Person erhält beim automatischen Start einen Hinweis (#241, AG: ja).
+- **WZT-08** – Die Wasserzeit je Person erscheint in der Statistik pro Person (auch «Meine Statistik») und im After Action Review (Abschnitt «Wasserzeiten») (#241).
+- **WZT-09** – Austritt, Entfernen aus dem Einsatz und Einsatzende beenden eine laufende Wasserzeit. Im Demo-Modus ist die Funktion aus (#241).

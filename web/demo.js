@@ -23,7 +23,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   try{Object.defineProperty(window,'localStorage',{configurable:true,get:()=>store})}catch(e){console.warn('Demo: localStorage nicht umgeleitet',e)}
   const now=()=>Math.floor(Date.now()/1000);
   // ---------- feste Daten ----------
-  let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1,geo:0,veh:1,vehp:1,call:0}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server, Direktanruf (#44) keine echten Nummern
+  let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1,geo:0,veh:1,vehp:1,call:0,wtime:0}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server, Direktanruf (#44) keine echten Nummern, Wasserzeit (#241) nicht simuliert
   let KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'high',alarm_name:'Hoch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:'horn2',can:1,no_grp:0,features:FEAT},
                {id:2,name:'Übung',color:'#1d7fd1',alarm:'normal',alarm_name:'Normal',mode_up:1,msg_lvl:'normal',end_lvl:'normal',rec:1,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:'horn2',can:1,no_grp:0,features:FEAT}];
   let ROLES=[{id:1,name:'Einsatzleitung',color:'#d62828',is_lead:1,is_post:0,can_message:1},{id:2,name:'Rettungsboot',color:'#1d7fd1',is_lead:0,is_post:0,can_message:1},
@@ -75,7 +75,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     // alle festen Standorte (demo/places); ältere Server ohne die Route: wie bisher aus incident/state
     const st=dp&&Array.isArray(dp.places)?dp:await realGet('incident/state');
     const A=x=>Array.isArray(x)?x:null,ks=(A(me.kinds)||[]).map(k=>({...k,alarm:k.alarm==='crit'?'high':k.alarm,alarm_name:k.alarm==='crit'?'Hoch':k.alarm_name,plans:0,persons:0,open_all:0,
-      grp_off:[],grp_def:[],can:1,no_grp:0,features:{...FEAT,...(k.features||{}),pub:0,geo:0,call:0}})),md=(A(mo)||[]).filter(x=>x.active);
+      grp_off:[],grp_def:[],can:1,no_grp:0,features:{...FEAT,...(k.features||{}),pub:0,geo:0,call:0,wtime:0}})),md=(A(mo)||[]).filter(x=>x.active);
     const pick=(o,ks)=>Object.fromEntries(ks.filter(k=>o[k]!==undefined).map(k=>[k,o[k]]));
     return{name:me.org||'',at:now(),me:pick(me,['name','photo','coord_sys','nav_app','place_view','hydro','exercise_mode']),
       cfg:pick(me,['coord_default','rd_speeds','nav_apps','nav_default','symbols','sym_free','sym_sets']),maps:me.maps||null,map_def:me.map_def||null,version:me.version||null,
@@ -109,7 +109,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const needLead=m=>{needInc();if(!canManage())fail(m||'Nur die Einsatzleitung kann das',403)};
   const needPart=m=>{needInc();if(!active()&&!canManage())fail(m||'Nur Personen, die den Einsatz angenommen haben, können das',403)};
   const ptsIn=v=>(Array.isArray(v)?v:[]).map(q=>{if(!Array.isArray(q)||q.length!==2||!isFinite(q[0])||!isFinite(q[1]))fail('Ungültige Koordinaten');return[+(+q[0]).toFixed(7),+(+q[1]).toFixed(7)]});
-  const featOf=k=>({...FEAT,...(k&&k.features||{}),pub:0,geo:0,call:0}),featAll=()=>Object.fromEntries(KINDS.map(k=>[k.id,featOf(k)]));
+  const featOf=k=>({...FEAT,...(k&&k.features||{}),pub:0,geo:0,call:0,wtime:0}),featAll=()=>Object.fromEntries(KINDS.map(k=>[k.id,featOf(k)]));
   const kindOf=i=>KINDS.find(k=>k.id===i.kind_id)||KINDS[0];
   const unknownName=()=>{const n=I().res.filter(r=>r.name.startsWith('Unbekannter Rettling')).length;return n?'Unbekannter Rettling '+(n+1):'Unbekannter Rettling'};
   function newInc(o){const t=o.alarm_at||now();return{id:++S.seq.inc,message:o.message,lat:o.lat??null,lon:o.lon??null,pls_at:null,alarm_at:t,ended_at:null,flow_ms:null,created_by:o.by,kind_id:o.kind_id||1,

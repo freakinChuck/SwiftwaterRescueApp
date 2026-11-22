@@ -17,7 +17,7 @@ LANGS = ['en', 'fr', 'it']
 SRC = (
     [f'web/{f}' for f in ('index.html', 'admin.html', 'public.html', 'funk.html', 'dok.html', 'legal.html', 'hilfe.html',
                           'common.js', 'demo.js', 'voice.js', 'docs.js', 'sw.js')]
-    + ['web/api/index.php', 'web/api/fed.php', 'web/api/docs.php']
+    + ['web/api/index.php', 'web/api/fed.php', 'web/api/docs.php', 'web/api/wtime.php']
 )
 DART_DIR = 'mobile/app/lib'
 

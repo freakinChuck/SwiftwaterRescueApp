@@ -113,6 +113,11 @@ Future<AccState> pollOne(Account a) async {
     j['blocked'] = r['blocked'] == 1;
     final ta = r['test_alarm']; // persönlicher Testalarm (Issue #218)
     if (ta is Map) await report(a, '${ta['tag']}', '${ta['t'] ?? 'TESTALARM'}', '${ta['b'] ?? ''}', '${ta['lvl'] ?? 'crit'}');
+    // Wasserzeit (Issue #241): Warnungen an die Person und die Einsatzleitung; wt_auto = automatische Erkennung an (track.dart meldet dann wd)
+    for (final x in (r['alerts'] as List? ?? const [])) {
+      if (x is Map) await report(a, '${x['tag']}', '${x['t'] ?? ''}', '${x['b'] ?? ''}', '${x['lvl'] ?? 'normal'}');
+    }
+    j['wt_auto'] = r['wtime'] is Map && (r['wtime'] as Map)['auto'] == 1;
     final il = r['incidents'] is List ? (r['incidents'] as List).whereType<Map>().toList() : null;
     if (il != null) await _watchAll(a, st, j, il, r['kinds']);
     if (inc != null) {

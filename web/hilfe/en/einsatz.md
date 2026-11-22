@@ -73,6 +73,22 @@ With the ticks you hide individual entries or whole groups on the map; **Show** 
 
 In the “Operation” tab all participants set the **flow speed** in m/s. From it the app calculates the length of the search area. The gauging stations at the PLS (see below) help with the estimate.
 
+## Water time {#wasserzeit}
+
+**Water time** monitors how long someone is in the water (swimmers, boat crew in the water), similar to breathing apparatus monitoring. Nobody stays in cold water too long without being noticed.
+
+1. In the "Operation" tab, card **Water time**, choose your **thermal protection** (none, wetsuit, drysuit).
+2. Tap **🌊 I am going into the water**. The time runs and is shown at the top of the map with the button **Ashore**.
+3. Back on land: tap **Back ashore**.
+
+The **guideline** depends on the thermal protection and the water temperature. The temperature comes from the nearest FOEN gauging station; the operation lead can set it manually. Without a temperature, the guideline of the coldest band applies.
+
+The time is shown with the person in the "Responders" panel, in the person info and as a chip below their marker on the map: **blue** running, **yellow** from the early warning (default 75 %), **red** from the guideline. At the early warning and when the guideline is reached, you and the operation lead receive a notification; both are recorded in the operation log.
+
+> Depending on the settings, the app also detects the stay in the water by itself: if your location is very close to the river axis for a while (not in a vehicle and not moving fast), the water time starts and you get a notice. If that is wrong, tap **Back ashore**. This needs the river network (function "Search area").
+
+The operation lead also starts and ends the water time for others (buttons **🌊 Into the water** and **Ashore** in the "Responders" panel and in the person info) and sets the water temperature in the "Water time" card.
+
 ## River distance {#flussdistanz}
 
 The **River distance** tool measures the distance between two points along the water. You find it as a map button and in the menu under “Tools”, also without an operation.

@@ -105,6 +105,10 @@ Le velocità di confronto con cui lo strumento Distanza fluviale calcola i tempi
 
 Quali app di navigazione sono disponibili e quale è quella predefinita.
 
+### Tempo in acqua {#wasserzeit}
+
+Valori indicativi del tempo in acqua in minuti per **protezione termica** (nessuna, muta in neoprene, muta stagna) e **temperatura dell'acqua** (livelli liberamente definibili). I valori predefiniti sono una proposta per il lavoro attivo nella corrente; confrontali con la documentazione di formazione dell'organizzazione (**Inserisci i predefiniti** li ripristina). Inoltre il preavviso in percentuale, il livello delle notifiche e il riconoscimento automatico (distanza dall'asse del corso d'acqua, durata fino a «in acqua» o «a terra») nonché il raggio per la stazione di misura con temperatura dell'acqua. Per tipo d'intervento attivi e disattivi la funzione in [Funzioni](#funktionen).
+
 ### Lingua {#sprache}
 
 L'app esiste in tedesco, inglese, francese e italiano. Qui imposti l'**impostazione predefinita dell'organizzazione**. Vale per le persone che non hanno scelto una lingua e il cui dispositivo non usa nessuna di queste lingue, nonché per le notifiche push a persone che non hanno mai aperto l'app.

@@ -421,7 +421,7 @@ const SETTING_PERMS = ['lang' => 'cfg_func', 'msg_no_role' => 'cfg_inc', 'msg_re
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
 const AAR_TYPES = ['head' => 'Zwischentitel', 'text' => 'Text einzeilig', 'area' => 'Text mehrzeilig', 'date' => 'Datum', 'time' => 'Uhrzeit', 'number' => 'Zahl', 'select' => 'Auswahl', 'check' => 'Ja/Nein', 'img' => 'Bilder'];
 const AAR_IMG_MAX = 50; // Bilder je Review, je höchstens 3 MB (der Browser verkleinert auf 1600 px JPEG)
-const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'fb' => 'Feedback der Einsatzkräfte', 'log' => 'Einsatzlog'];
+const AAR_AUTO = ['inc' => 'Einsatzdaten (Art, Zeiten, Kennzahlen)', 'people' => 'Einsatzkräfte', 'res' => 'Rettlinge', 'ext' => 'Externe Einsatzkräfte', 'wt' => 'Wasserzeiten', 'fb' => 'Feedback der Einsatzkräfte', 'log' => 'Einsatzlog'];
 // Einsatzfeedback (Issue #103): Fragen an die Einsatzkräfte nach dem Einsatz, Antworten fürs After Action Review. Arten wie im Review ohne Bilder.
 // on = Anfragen möglich, intro = Text über den Fragen, days = Frist (Tage), anon = Antworten in Review und Dokument ohne Namen («Rückmeldung N»),
 // kinds = Einsatztypen, bei denen das Einsatzende das Feedback automatisch anfordert; seq wie im Review (nie wieder vergebene Feld-IDs)
@@ -439,7 +439,7 @@ const AAR_DL = ['docx' => 'Word (.docx)', 'pdf' => 'PDF']; // Download je Format
 const AAR_DL_ST = ['wip' => 'In Arbeit', 'rel' => 'Freigegeben', 'nr' => 'Nicht relevant']; // «noch kein AAR» zählt als in Arbeit
 // dl je Format und Zustand; die frühere Einstellung (nur Format ein/aus) gilt für «Freigegeben»
 function aarDlNorm($d) { $r = []; foreach (AAR_DL as $k => $_) { $v = $d[$k] ?? null; foreach (AAR_DL_ST as $s => $__) $r[$k][$s] = is_array($v) ? (int)!empty($v[$s]) : ($s === 'rel' ? (int)($v ?? 1) : 0); } return $r; }
-const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 13, 'auto' => ['inc' => 1, 'people' => 1, 'res' => 1, 'ext' => 1, 'fb' => 1, 'log' => 0], 'dl' => ['docx' => ['wip' => 0, 'rel' => 1, 'nr' => 0], 'pdf' => ['wip' => 0, 'rel' => 1, 'nr' => 0]], 'fields' => [
+const AAR_DEFAULT = ['title' => 'After Action Review', 'org' => '', 'seq' => 13, 'auto' => ['inc' => 1, 'people' => 1, 'res' => 1, 'ext' => 1, 'wt' => 1, 'fb' => 1, 'log' => 0], 'dl' => ['docx' => ['wip' => 0, 'rel' => 1, 'nr' => 0], 'pdf' => ['wip' => 0, 'rel' => 1, 'nr' => 0]], 'fields' => [
   ['id' => 'f1', 'type' => 'date', 'label' => 'Datum des Reviews', 'hint' => ''],
   ['id' => 'f2', 'type' => 'text', 'label' => 'Moderation', 'hint' => ''],
   ['id' => 'f3', 'type' => 'area', 'label' => 'Teilnehmende am Review', 'hint' => ''],
@@ -473,6 +473,7 @@ function psRows($only = null) { global $db, $now; $only = $only === null ? null 
    $k = $i . ':' . $u; $l = $last[$k] ?? null;
    if ($l && (int)$r['ts'] - (int)$l['ts'] <= 120) $tr[$k] = ($tr[$k] ?? 0) + hav((float)$l['lat'], (float)$l['lon'], (float)$r['lat'], (float)$r['lon']);
    $last[$k] = $r; }
+  $wt = wtPs(); // Wasserzeit (Issue #241)
   $rows = [];
   foreach ($db->query("SELECT p.incident_id,p.user_id,p.mode,p.left_at,u.name,u.username,u.active,m.name mode_name FROM participants p JOIN users u ON u.id=p.user_id LEFT JOIN modes m ON m.code=p.mode" . ($only === null ? '' : ' WHERE p.user_id=' . (int)$only)) as $p) {
    $i = $inc[(int)$p['incident_id']] ?? null; if (!$i) continue;
@@ -487,7 +488,7 @@ function psRows($only = null) { global $db, $now; $only = $only === null ? null 
    if ($open !== null && !$dec) $dur += max(0, $stop - $open);
    $row = ['incident_id' => $i['id'], 'kind_id' => $i['kind_id'], 'kind_name' => $i['kind_name'], 'kind_color' => $i['kind_color'], 'alarm_at' => $i['alarm_at'], 'declined' => $dec ? 1 : 0,
     'dur' => $dec ? 0 : $dur, 'react' => $first === null || (kindOf($i)['sec'] ?? 0) === 1 ? null : max(0, $first - $i['alarm_at']), 'area' => $area === null ? null : max(0, $area - $i['alarm_at']),
-    'trips' => $trips, 'km' => round($km, 1), 'track_km' => isset($tr[$k]) ? round($tr[$k] / 1000, 1) : null, 'mode_name' => $dec ? null : $p['mode_name']];
+    'trips' => $trips, 'km' => round($km, 1), 'track_km' => isset($tr[$k]) ? round($tr[$k] / 1000, 1) : null, 'wt' => $wt[$k][0] ?? 0, 'wt_n' => $wt[$k][1] ?? 0, 'mode_name' => $dec ? null : $p['mode_name']];
    $row += ['user_id' => (int)$p['user_id'], 'name' => $p['name'], 'username' => $p['username'], 'active' => (int)$p['active']];
    $rows[] = $row; }
 
@@ -570,6 +571,7 @@ function aarDoc($inc, $c, $anon, $forced, $mine, $self) { global $db; $id = (int
     'anon' => $anon, 'forced' => $forced, 'people' => $parts, 'rescuees' => $res, 'externals' => $ext, 'log' => $mine && !myBtns()['log'] ? [] : logRows($id, true, $anon, $self), 'my_anon' => $mine && myRuns() === 'anon',
     'data' => $a ? (json_decode($a['data'], true) ?: (object)[]) : (object)[], 'updated' => $a && $a['updated'] !== null ? (int)$a['updated'] : null, 'updated_by' => $a ? $nm($a['updated_by']) : null,
     'status' => $a ? (int)$a['status'] : 0, 'rel_at' => $a && $a['rel_at'] !== null ? (int)$a['rel_at'] : null, 'rel_by' => $a ? $nm($a['rel_by']) : null,
+    'wt' => wtDoc($id, $c), // Wasserzeiten (Issue #241)
     'fb' => fbAnswers($id, $c), // Einsatzfeedback (Issue #103), Fragen in der Einstellung (aarCfg()['fb'])
     'imgs' => array_map(fn($r) => ints($r, ['id', 'w', 'h']), $q("SELECT id,field_id field,caption,w,h FROM aar_img WHERE incident_id=? ORDER BY id"))]; } // Bilder ohne Inhalt, der kommt einzeln über aar/img
 // Sicherung vor dem Anonymisieren: Ein freigegebenes Review bleibt als PDF vollständig erhalten (Tabelle aar_arch, Recht aar_arch). Das PDF entsteht im Browser (jsPDF), die automatische Anonymisierung läuft aber ohne Browser:
@@ -621,7 +623,7 @@ function aarIn($in) { $old = aarCfg(); $s = fn($v, $n) => mb_substr(trim(preg_re
   return ['title' => $s($in['title'] ?? '', 120) ?: AAR_DEFAULT['title'], 'org' => $s($in['org'] ?? '', 120), 'seq' => $seq, 'auto' => $a, 'dl' => $d, 'fields' => $f,
     'fb' => isset($in['fb']) && is_array($in['fb']) ? fbIn($in['fb'], $old['fb']) : $old['fb']]; }
 const FEATURES = ['area' => 'Suchgebiet', 'res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
-                  'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)', 'place' => 'Feste Standorte', 'hydro' => 'Pegel & Abfluss (BAFU)', 'pinfo' => 'Personeninfo (Infofenster beim Antippen einer Einsatzkraft)', 'geo' => 'Geodaten-Ebene (Objekte am Gewässer aus OpenStreetMap, zuschaltbar)', 'voice' => 'Funk (Durchsagen und Live-Konferenz)', 'veh' => 'Fahrzeuge (BLE-Beacons)', 'vehp' => 'Personen im Fahrzeug (Zuordnung über die Beacons)', 'call' => 'Direktanruf (Telefonnummer der Einsatzkräfte)', 'docs' => 'Dokumente (Unterlagen im Einsatz, an festen Standorten, für Externe)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
+                  'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)', 'place' => 'Feste Standorte', 'hydro' => 'Pegel & Abfluss (BAFU)', 'pinfo' => 'Personeninfo (Infofenster beim Antippen einer Einsatzkraft)', 'geo' => 'Geodaten-Ebene (Objekte am Gewässer aus OpenStreetMap, zuschaltbar)', 'voice' => 'Funk (Durchsagen und Live-Konferenz)', 'veh' => 'Fahrzeuge (BLE-Beacons)', 'vehp' => 'Personen im Fahrzeug (Zuordnung über die Beacons)', 'call' => 'Direktanruf (Telefonnummer der Einsatzkräfte)', 'docs' => 'Dokumente (Unterlagen im Einsatz, an festen Standorten, für Externe)', 'wtime' => 'Wasserzeit (Überwachung der Zeit im Wasser, Issue #241)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
 // Navigations-Apps (Funktion «nav»): in der Verwaltung einzeln ausschaltbar (nav_off), Standard nav_default, pro Person users.nav_app
 const NAV_APPS = ['google' => 'Google Maps', 'apple' => 'Apple Karten', 'waze' => 'Waze', 'geo' => 'Andere App (nur Android: Auswahl der Karten-Apps)'];
 // Direktanruf (Issue #44): Telefonnummer je Person (users.phone), im Einsatz bei den Einsatzkräften (Funktion «call»). Einstellung phone: show = Nummer anzeigen,
@@ -664,7 +666,7 @@ function navDefault() { $a = navApps(); $d = setting('nav_default', 'google'); r
 const FEATURE_ROUTES = ['incident/doc/ext/save' => 'docs', 'incident/doc/ext/remove' => 'docs', 'incident/mark' => 'res', 'incident/mark/remove' => 'res', 'incident/rescuee/save' => 'res', 'incident/rescuee/locate' => 'res', 'incident/rescuee/rescued' => 'res', 'incident/rescuee/remove' => 'res',
                         'incident/message' => 'msg', 'incident/message/unmark' => 'msg', 'incident/poi' => 'poi', 'incident/poi/remove' => 'poi',
                         'incident/external/save' => 'ext', 'incident/external/remove' => 'ext', 'incident/public' => 'pub', 'incident/record' => 'rec', 'incident/event' => 'area', 'incident/stops' => 'area',
-                        'incident/voice' => 'voice', 'incident/voice/join' => 'voice', 'incident/voice/conf' => 'voice', 'incident/voice/mute' => 'voice', 'incident/voice/channels' => 'voice', 'incident/voice/guest/save' => 'voice', 'incident/voice/guest/remove' => 'voice', 'incident/vehicle/link' => 'veh'];
+                        'incident/voice' => 'voice', 'incident/voice/join' => 'voice', 'incident/voice/conf' => 'voice', 'incident/voice/mute' => 'voice', 'incident/voice/channels' => 'voice', 'incident/voice/guest/save' => 'voice', 'incident/voice/guest/remove' => 'voice', 'incident/vehicle/link' => 'veh', 'incident/wtime/start' => 'wtime', 'incident/wtime/stop' => 'wtime', 'incident/wtime/temp' => 'wtime'];
 /* ---------- Fahrzeuge mit BLE-Beacons (Issue #177) ---------- */
 // Ein Beacon (iBeacon: UUID, Major, Minor) sendet nur seine Kennung; den Standort liefert das Handy, das es sieht (nur die native App scannt).
 // Einstellung beacon (JSON, beaconCfg/beaconIn): uuid = Standard-UUID der Organisation (beim ersten Bedarf erzeugt), uuids = höchstens 5 weitere für Beacons mit fester UUID
@@ -1892,6 +1894,7 @@ if ($route === 'public/state') {
 }
 
 require __DIR__ . '/docs.php'; // Dokumentenablage (Issue #229): Tabellen, Routen ohne Anmeldung (ext/doc, guest/docs), docRoute()
+require __DIR__ . '/wtime.php'; // Wasserzeit-Überwachung (Issue #241): Tabelle water_time, wtState, wtLoc, wtRoute()
 
 // Funk für Externe (Issue #113): Gastseite funk.html?k=<token> ohne Anmeldung, nur der Kanal des Links; keine Karte, keine Standorte, Einsatzkräfte nur mit Spezialrolle bzw. Einrückoption
 if (strncmp($route, 'guest/', 6) === 0) {
@@ -3369,7 +3372,7 @@ const DSAR_TABLES = ['users' => ['Personen', 'id'], 'uroles' => ['Benutzerrollen
   'absences' => ['Abwesenheiten', 'id'], 'avail_rules' => ['Regelmässige Einsatzzeiten', 'id'], 'skills' => ['Fähigkeiten (Ausbildung)', 'id'], 'user_skills' => ['Ausbildung je Person', 'id'],
   'inc_kinds' => ['Einsatztypen', 'id'], 'modes' => ['Einrückoptionen', 'id'], 'roles' => ['Spezialrollen', 'id'], 'incidents' => ['Einsätze', 'id'], 'participants' => ['Teilnahmen', 'id'],
   'incident_log' => ['Einsatzlog', 'id'], 'messages' => ['Nachrichten', 'id'], 'track' => ['Aufzeichnung (Standortverlauf)', 'id'], 'rec_periods' => ['Aufgezeichnete Zeiträume', 'id'],
-  'air_track' => ['Aufzeichnung Luftfahrzeuge', 'id'], 'rescuees' => ['Rettlinge', 'id'], 'rescuee_marks' => ['Frühere Rettling-Markierungen', 'id'], 'externals' => ['Externe Einsatzkräfte', 'id'],
+  'air_track' => ['Aufzeichnung Luftfahrzeuge', 'id'], 'rescuees' => ['Rettlinge', 'id'], 'rescuee_marks' => ['Frühere Rettling-Markierungen', 'id'], 'water_time' => ['Wasserzeiten', 'id'], 'externals' => ['Externe Einsatzkräfte', 'id'],
   'pois' => ['Markierungen, Bereiche und Linien', 'id'], 'inc_hydro' => ['Pegel und Abfluss im Einsatz', 'id'], 'voice' => ['Durchsagen (Funk)', 'id'], 'voice_channels' => ['Funkkanäle', 'id'],
   'voice_guests' => ['Funk-Links für Externe', 'id'], 'voice_conf' => ['Anwesenheit in der Konferenz', 'incident_id,ident'], 'voice_mute' => ['Stummschaltungen', 'incident_id,channel_id,ident'],
   'ex_plans' => ['Planungen (vorbereitete Übungen)', 'id'], 'ex_injects' => ['Elemente der Planungen', 'id'], 'ex_signups' => ['Anmeldungen zu Übungen', 'id'], 'ext_templates' => ['Vorlagen externe Einsatzkräfte', 'id'],
@@ -3439,6 +3442,7 @@ function dsarUser($id) { global $db;
       'lat' => $r['lat'] === null ? null : (float)$r['lat'], 'lon' => $r['lon'] === null ? null : (float)$r['lon'], 'mark' => (int)$r['mark'] ? [(float)$r['mark_lat'], (float)$r['mark_lon']] : null]),
     'received' => $recv,
     'jmsg' => $rows("SELECT j.incident_id,m.at,m.text FROM fed_jmsg m JOIN fed_joint j ON j.id=m.joint_id WHERE m.src=0 AND m.uid=? ORDER BY m.at", fn($r) => ['incident_id' => (int)$r['incident_id'], 'at' => (int)$r['at'], 'text' => $r['text']]), // gemeinsamer Kanal (Issue #60)
+    'wtime' => $rows("SELECT w.* FROM water_time w JOIN participants p ON p.id=w.part_id WHERE p.user_id=? ORDER BY w.start_at", fn($r) => ['incident_id' => (int)$r['incident_id'], 'start_at' => (int)$r['start_at'], 'end_at' => $t($r['end_at']), 'suit' => wtSuitName($r['suit']), 'temp' => $r['temp'] === null ? null : (float)$r['temp'], 'limit_min' => intdiv((int)$r['lim_s'], 60), 'auto' => (int)$r['auto']]), // Wasserzeit (Issue #241)
     'track' => $rows("SELECT * FROM track WHERE user_id=? ORDER BY incident_id,ts", fn($r) => ['incident_id' => (int)$r['incident_id'], 'ts' => (int)$r['ts'], 'lat' => (float)$r['lat'], 'lon' => (float)$r['lon'], 'vehicle_id' => isset($r['veh_id']) && $r['veh_id'] !== null ? (int)$r['veh_id'] : null]),
     'voice' => $rows("SELECT * FROM voice WHERE user_id=? ORDER BY rec_at", fn($r) => ['id' => (int)$r['id'], 'incident_id' => (int)$r['incident_id'], 'rec_at' => (int)$r['rec_at'], 'dur_s' => round((int)$r['dur_ms'] / 1000, 1), 'channel' => $ch[(int)$r['channel_id']] ?? null,
       'transcript' => $r['transcript'], 'audio' => ($p = voicePath($r)) && is_file($p) ? 1 : 0, 'mime' => $r['mime']]),
@@ -3464,7 +3468,7 @@ const PURGE_KINDS = ['incident' => ['Einsatz', 'stats'], 'user' => ['Benutzer', 
   'ext_template' => ['Vorlage externe Einsatzkraft', 'cfg_inc'], 'skill' => ['Fähigkeit', 'skills'], 'veh_kind' => ['Fahrzeugart', 'cfg_map'], 'vehicle' => ['Fahrzeug', 'cfg_map'], 'doc' => ['Eintrag der Dokumentenablage', 'docs'], 'doc_folder' => ['Ordner der Dokumentenablage', 'docs']];
 // Tabellen mit Daten eines Einsatzes (Spalte incident_id); neue Tabellen mit incident_id hier aufnehmen
 const PURGE_INC_TABLES = ['participants', 'incident_log', 'messages', 'track', 'rec_periods', 'air_track', 'rescuees', 'rescuee_marks', 'externals', 'pois', 'inc_hydro',
-  'voice', 'voice_guests', 'voice_conf', 'voice_mute', 'aar', 'aar_img', 'aar_arch', 'aar_arch_img', 'aar_arch_part', 'fb_req', 'fb_ans', 'vehicle_seen', 'veh_links', 'fed_joint', 'doc_ext'];
+  'voice', 'voice_guests', 'voice_conf', 'voice_mute', 'aar', 'aar_img', 'aar_arch', 'aar_arch_img', 'aar_arch_part', 'fb_req', 'fb_ans', 'vehicle_seen', 'veh_links', 'fed_joint', 'doc_ext', 'water_time'];
 function purgeCnt($sql, $p) { global $db; try { $s = $db->prepare($sql); $s->execute($p); return (int)$s->fetchColumn(); } catch (Throwable $e) { return 0; } }
 // Element laden und prüfen; liefert [Name, Folgen (Liste von Sätzen)]
 function purgeInfo($k, $id) {
@@ -3578,6 +3582,7 @@ try { if (!$me['must_change']) geoAuto(); } catch (Throwable $e) { alog('err', '
 if (strncmp($route, 'fed/', 4) === 0) $FED ? fedServe($route) : fedAdmin($route); // Verbund (Issue #60)
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 docRoute($route); // Dokumentenablage (Issue #229), beendet die Anfrage bei eigenen Routen
+wtRoute($route); // Wasserzeit (Issue #241), ebenso
 switch ($route) {
  case 'me': out(['me' => $me + mapsFor(null) + ['lang_default' => langDefault(), 'langs' => LANGS, 'phone_cfg' => phoneCfg(), 'coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid), 'docs' => docMe(), 'docs_cfg' => docCfgPub()]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message', 'can_voice', 'sec']), $db->query("SELECT id,name,color,is_lead,is_post,can_message,can_voice,sec FROM roles WHERE active=1 ORDER BY id")->fetchAll())); // sec: Spezialrolle für Sekundäreinsätze (Issue #164)
@@ -3878,6 +3883,7 @@ switch ($route) {
       $vo['guest_links'] = $vk['guests'] ? array_map(fn($g) => ints($g, ['id', 'ch', 'speak', 'created', 'opened_at']), $s->fetchAll()) : []; } }
   unset($inc['voice_ch'], $inc['voice_anon']);
   $il = incList(); $oth = isset($_GET['oth']) && count($il) > 1 ? array_values(array_map('incOther', array_filter(runningIncidents(), fn($r) => (int)$r['id'] !== $id && in_array((int)$r['id'], array_column($il, 'id'), true)))) : [];
+  [$wt, $wal] = $F['wtime'] ? wtState($inc) : [null, []]; foreach (['wt_temp', 'wt_temp_at', 'wt_temp_by', 'wt_bafu', 'wt_bafu_txt', 'wt_bafu_at'] as $k) unset($inc[$k]); // Wasserzeit (Issue #241)
   $joint = fedJointState($inc, $F, $canRead, $oth); // gemeinsamer Einsatz mit Partnerorganisationen (Issue #60): Lage auf der Karte, gemeinsamer Kanal und Konferenz
   out(['test_alarm' => testAlarmDue($uid), 'joint' => $joint, 'incident' => $inc, 'incidents' => $il, 'others' => $oth, 'my_inc' => myIncPub(), 'start_plans' => exStartable(), 'kinds' => kindsPub(), 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'docs' => docState($inc, $ipl), 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
        'phone_cfg' => $phSee ? ['show' => phoneCfg()['show'], 'call' => phoneCfg()['call']] : null, // Direktanruf (Issue #44): null = keine Nummern
@@ -3885,7 +3891,7 @@ switch ($route) {
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
        'air' => airAllowed($inc) ? 1 : 0, 'air_inc' => airCfg()['on'] ? (airInc($inc) ? 1 : 0) : null, 'ex_lead' => $xl, 'ex_title' => $inc['plan_id'] && ($xl || planner()) ? (exPlan($inc)['title'] ?? null) : null, 'plan' => $inc['plan_id'] && $inc['kind']['sec'] && ($xp0 = exPlan($inc)) ? ['title' => $xp0['title'], 'doc' => json_decode((string)$xp0['doc'], true) ?: null] : null, // Einsatzplan eines geplanten Sekundäreinsatzes (Issue #164), für alle
  'ex_injects' => $inc['plan_id'] && ($xl || planner()) ? exInjects((int)$inc['plan_id']) : [],
-       'log' => $cf ? array_values(array_filter(logRows($id), fn($l) => $l['kind'] !== 'voice' || $vcm || in_array($l['ch'], $vmids, true))) : null, 'veh' => vehVisible($inc) ? vehState($inc) : null, 'hydro' => $F['hydro'] ? hydroInc($id) : [], 'now' => $now] + mapsFor($inc['kind_id'])); // maps/map_def: Kartenanbieter des Einsatztyps (Issue #106)
+       'log' => $cf ? array_values(array_filter(logRows($id), fn($l) => $l['kind'] !== 'voice' || $vcm || in_array($l['ch'], $vmids, true))) : null, 'veh' => vehVisible($inc) ? vehState($inc) : null, 'hydro' => $F['hydro'] ? hydroInc($id) : [], 'wtime' => $wt, 'alerts' => $wal, 'now' => $now] + mapsFor($inc['kind_id'])); // maps/map_def: Kartenanbieter des Einsatztyps (Issue #106)
 
  case 'incident/invite/add': // Nachbieten (Issue #90, Einsatzleitung): groups, persons (wenn der Typ das erlaubt) oder all=1; Alarm nur an die neu Aufgebotenen
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz'); if (!canManage($inc)) fail('Nur die Einsatzleitung kann nachbieten', 403);
@@ -3954,6 +3960,7 @@ switch ($route) {
   $p = part($inc['id']);
   $db->prepare("UPDATE participants SET left_at=?, role_id=NULL WHERE incident_id=? AND user_id=?")->execute([$now, $inc['id'], $uid]);
   if ($p && $p['left_at'] === null && $p['mode'] !== 'declined') logev($inc['id'], $uid, 'leave', 'hat den Einsatz verlassen');
+  if ($p) wtClose($inc['id'], $p['id']); // laufende Wasserzeit endet (Issue #241)
   if (!exLead($inc)) voiceKick($inc['id'], 'u' . $uid); // Live-Konferenz (Issue #113): ohne Teilnahme kein Funk (die Übungsleitung bleibt)
   out(['ok' => true]);
 
@@ -4009,6 +4016,7 @@ switch ($route) {
   // batt = Batteriestand der Beacons [{id, pct, mac?}] (Issue #224)
   if (isset($in['batt']) && feature($inc, 'veh')) vehBatt($in['batt']);
   $vf = $dt >= 4 && empty($in['manual']) && hav((float)$p['lat'], (float)$p['lon'], $la, $lo) / $dt >= VEHICLE_MS; // fährt (auch auf dem Wasser)
+  wtLoc($inc, $p, $in, $vf); // Wasserzeit (Issue #241): automatisch erkennen über wd (Abstand zur Gewässerachse)
   $sk = array_key_exists('beacons', $in) || $p['veh_id'] !== null ? vehReport($inc, $p, $la, $lo, isset($in['acc']) ? min(10000, max(0, (float)$in['acc'])) : null, array_key_exists('beacons', $in) ? (is_array($in['beacons']) ? array_slice($in['beacons'], 0, 50) : []) : null, $vf, !empty($in['water'])) : [];
   out(['ok' => true] + ($sk ? ['skip' => (object)$sk] : []));
 
@@ -4213,6 +4221,7 @@ switch ($route) {
   $db->prepare("UPDATE participants SET left_at=?, role_id=NULL WHERE incident_id=? AND user_id=?")->execute([$now, $inc['id'], $t]);
   $s = $db->prepare("SELECT name FROM users WHERE id=?"); $s->execute([$t]);
   logev($inc['id'], $uid, 'kick', 'hat ' . ($s->fetch()['name'] ?? '?') . ' aus dem Einsatz entfernt');
+  wtClose($inc['id'], $p['id']); // laufende Wasserzeit endet (Issue #241)
   voiceKick($inc['id'], 'u' . $t); // auch aus der Live-Konferenz (Issue #113)
   out(['ok' => true]);
 
@@ -4415,6 +4424,7 @@ switch ($route) {
   if ((int)$inc['record']) setRec((int)$inc['id'], 0); // laufende Aufzeichnung endet mit dem Einsatz
   $db->prepare("UPDATE incidents SET ended_at=? WHERE id=?")->execute([$now, $inc['id']]);
   logev($inc['id'], $uid, 'end', 'hat den Einsatz beendet');
+  wtClose($inc['id']); // laufende Wasserzeiten enden mit dem Einsatz (Issue #241)
   voiceCloseAll($inc['id']); voiceEnd($inc); // Funk (Issue #113): Konferenzräume schliessen, Aufbewahrung der Durchsagen gemäss Einsatztyp
   fedJointEnd($inc); // gemeinsamer Einsatz (Issue #60): beendet die auslösende Organisation, enden die verknüpften Einsätze der Partner mit
   if (feature($inc, 'hydro')) { $hid = (int)$inc['id']; after(fn() => hydroLog($hid, 'end')); } // Pegel und Abfluss am Einsatzende (Issue #125), nach der Antwort
@@ -5155,6 +5165,7 @@ switch ($route) {
     if ($p && $p['left_at'] === null && $p['mode'] !== 'declined') {
       $db->prepare("UPDATE participants SET left_at=?, role_id=NULL WHERE incident_id=? AND user_id=?")->execute([$now, $inc['id'], $id]);
       logev($inc['id'], $uid, 'kick', 'hat ' . $u['name'] . ' aus dem Einsatz entfernt (Konto deaktiviert)');
+      wtClose($inc['id'], $p['id']); // Wasserzeit (Issue #241)
     }
     voiceKick($inc['id'], 'u' . $id); // Live-Konferenz (Issue #113)
   }

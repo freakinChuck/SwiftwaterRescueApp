@@ -105,6 +105,10 @@ Die Vergleichsgeschwindigkeiten, mit denen das Werkzeug Flussdistanz Fahrzeiten 
 
 Welche Navigations-Apps zur Wahl stehen und welche der Standard ist.
 
+### Wasserzeit {#wasserzeit}
+
+Richtwerte der Wasserzeit in Minuten je **Kälteschutz** (ohne, Neoprenanzug, Trockenanzug) und **Wassertemperatur** (Stufen frei wählbar). Die Vorgaben sind ein Vorschlag für aktive Arbeit in der Strömung; gleiche sie mit den Ausbildungsunterlagen der Organisation ab (**Vorgaben einsetzen** stellt sie wieder her). Dazu die Vorwarnung in Prozent, die Stufe der Meldungen und die automatische Erkennung (Abstand zur Gewässerachse, Dauer bis «im Wasser» bzw. «an Land») sowie der Umkreis für die Messstation mit Wassertemperatur. Je Einsatztyp schaltest du die Funktion unter [Funktionen](#funktionen) ein und aus.
+
 ### Sprache {#sprache}
 
 Die App gibt es auf Deutsch, Englisch, Französisch und Italienisch. Hier stellst du die **Vorgabe der Organisation** ein. Sie gilt für Personen, die selbst keine Sprache gewählt haben und deren Gerät keine dieser Sprachen nutzt, sowie für Push-Meldungen an Personen, die die App noch nie geöffnet haben.
@@ -165,7 +169,7 @@ Titel, Logo, Felder des Reviews, mitgelieferte Abschnitte, erlaubte Dokumente je
 
 ### Statistik pro Person {#personenstatistik}
 
-Auswertung je Person mit Filter, Diagrammen und CSV.
+Auswertung je Person mit Filter, Diagrammen und CSV, auch mit der Wasserzeit (Summe der Zeiten im Wasser).
 
 ### Einsicht für Einsatzkräfte {#einsicht}
 

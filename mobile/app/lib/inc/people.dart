@@ -9,6 +9,7 @@ import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
 import 'veh.dart';
+import 'wtime.dart';
 import '../i18n.dart';
 
 class PeoplePanel extends StatefulWidget {
@@ -301,12 +302,14 @@ class _PeoplePanelState extends State<PeoplePanel> {
       lead: _mk(p),
       title: '${js(p['name'])}${me ? ' (du)' : ''}',
       lines: ['${js(s.modeOf(js(p['mode']))['name'])} · ${has ? 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}' : 'kein Standort'}', ?vehOfPerson(s, p), ?telTxt(s, p), if (cs.isNotEmpty) cs],
+      extra: wtLine(s, p),
       buttons: [
         if (has) smallBtn('Zentrieren', () => _center(p)),
         if (has && uid != null) smallBtn(f ? 'Folgt' : 'Folgen', () => _follow(uid), primary: f),
         ?_infoBtn(p),
         ?nav,
         ?telBtn(s, p),
+        ?wtBtn(context, s, p),
       ],
       trailing: mgr,
     );
@@ -345,7 +348,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
     );
   }
 
-  Widget _entry({required Widget lead, required String title, required List<String> lines, required List<Widget> buttons, Widget? trailing}) => Padding(
+  Widget _entry({required Widget lead, required String title, required List<String> lines, required List<Widget> buttons, Widget? trailing, Widget? extra}) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(padding: const EdgeInsets.only(top: 2), child: lead),
@@ -354,6 +357,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
           for (final l in lines) Mut(l, size: 12),
+          ?extra, // Wasserzeit (Issue #241)
           if (buttons.isNotEmpty)
             Padding(padding: const EdgeInsets.only(top: 4), child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: buttons)),
         ])),

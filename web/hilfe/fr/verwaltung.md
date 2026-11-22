@@ -105,6 +105,10 @@ Les vitesses de comparaison avec lesquelles l'outil Distance fluviale calcule le
 
 Quelles apps de navigation sont disponibles et laquelle est la valeur par défaut.
 
+### Temps dans l'eau {#wasserzeit}
+
+Valeurs indicatives du temps dans l'eau en minutes par **protection thermique** (aucune, combinaison néoprène, combinaison étanche) et **température de l'eau** (paliers librement définissables). Les valeurs par défaut sont une proposition pour un travail actif dans le courant ; compare-les avec les documents de formation de l'organisation (**Insérer les valeurs par défaut** les rétablit). En outre le préavertissement en pour cent, le niveau des notifications et la détection automatique (distance à l'axe du cours d'eau, durée jusqu'à « dans l'eau » ou « à terre ») ainsi que le rayon pour la station de mesure avec température de l'eau. Par type d'intervention, tu actives ou désactives la fonction sous [Fonctions](#funktionen).
+
 ### Langue {#sprache}
 
 L'app existe en allemand, anglais, français et italien. Ici, vous définissez la **valeur par défaut de l'organisation**. Elle vaut pour les personnes qui n'ont pas choisi de langue elles-mêmes et dont l'appareil n'utilise aucune de ces langues, ainsi que pour les notifications push aux personnes qui n'ont jamais ouvert l'app.

@@ -103,6 +103,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   J? me;
   List<J> roles = [], modes = [];
   J? st; // letzter Stand von incident/state
+  double wtSkew = 0; // Wasserzeit (Issue #241): Serverzeit minus Gerätezeit, damit die Zeiten sekundengenau laufen
   final msgs = <J>[];
   int _lastMsg = 0;
 
@@ -609,6 +610,11 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         final t = jm(nx['test_alarm']);
         notify(js(t['t']), js(t['b']), js(t['tag']), js(t['lvl']));
       }
+      // Wasserzeit (Issue #241): Warnungen an die Person und die Einsatzleitung, entdoppelt über den Schlüssel w:<id>:<Stufe>
+      if (jn(nx['now']) != null) wtSkew = jn(nx['now'])! - DateTime.now().millisecondsSinceEpoch / 1000;
+      for (final a in jl(nx['alerts'])) {
+        notify(js(a['t']), js(a['b']), js(a['tag']), js(a['lvl']));
+      }
       final i = nx['incident'] is Map ? jm(nx['incident']) : null;
       if (i != null) {
         final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']);
@@ -986,6 +992,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         if (manualPos == null && devPos != null) 'acc': devPos!.accuracy,
         // Gewässer nur, wenn der angezeigte Einsatz der eigene ist (sonst ist das Gewässernetz eines anderen geladen, Issue #167)
         'water': !otherShown && waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()) < waterM ? 1 : 0,
+        // Wasserzeit (Issue #241): Abstand zur Gewässerachse, nur mit geladenem Gewässernetz des eigenen Einsatzes
+        if (!otherShown && nets.values.any((n) => n.net != null)) 'wd': waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()).clamp(0, 9999).round(),
         'manual': manualPos != null ? 1 : 0
       });
       locStatus = 'Standort wird geteilt (${fmtT(DateTime.now().millisecondsSinceEpoch / 1000)})';
