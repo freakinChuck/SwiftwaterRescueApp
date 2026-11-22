@@ -188,6 +188,41 @@ Für Auskunftsbegehren nach dem Datenschutzgesetz. Zwei getrennte Rechte, beide 
 
 Einsätze, deren Teilnahmen anonymisiert und vom Konto gelöst wurden, sind der Person nicht mehr zugeordnet und fehlen deshalb im Auszug.
 
+## Dokumente {#dokumente-kat}
+
+Die Dokumentenablage hält Unterlagen bereit, die man im Einsatz, in der Übung und in der Ausbildung braucht: Einsatzpläne, Checklisten, Merkblätter, Reglemente. Alles Nötige sehen Personen mit dem Recht «Dokumentenablage verwalten». Wer zur **Redaktion** eines Ordners gehört, sieht die Ablage und den Eingang nur für seine Ordner. Die Funktion «Dokumente» lässt sich je Einsatztyp unter [Funktionen](#funktionen) ausschalten.
+
+### Ablage {#dokumente}
+
+Links steht der **Ordnerbaum** mit der Zahl der Einträge je Ordner (samt Unterordnern), dazu «Alle Dokumente» und «Überprüfung fällig». 🔒 kennzeichnet Ordner, die nicht alle sehen. Rechts steht oben die Karte des gewählten Ordners mit seinen **Zugriffen** in einer Zeile (wer ihn sieht, Redaktion, Vorschläge, für wie viele Personen er sichtbar ist), darunter seine Einträge als Karten: Art (PDF, TEXT, LINK …), Version, Offline, Bilder, Lesebestätigung, «Überprüfung fällig», Datei bzw. Adresse, wo er im Einsatz erscheint und der Stand.
+
+- **+ Eintrag** öffnet den Dialog mit den Registern Datei, Seite und Link; **Hochladen …** legt mehrere Dateien auf einmal im gewählten Ordner an (Titel = Dateiname); **+ Ordner** legt einen Unterordner des gewählten an.
+- **Ziehen**: Einträge in einen anderen Ordner ziehen verschiebt sie; Ordner (mit dem Recht «Dokumentenablage verwalten») lassen sich in einen anderen Ordner oder auf «Alle Dokumente» (oberste Ebene) ziehen. Aufgeklappte Ordner merkt sich das Gerät.
+- **Suche** «In allen Ordnern suchen …» findet Titel, Schlagwörter, Beschreibung und den Text der Seiten und PDFs, mit Fundstelle.
+
+Ein Eintrag ist eine **Datei** (mit Versionen), eine **Seite** (Text direkt in der App, Markdown wie in dieser Anleitung, mit Bildern) oder ein **Link**. Je Eintrag: Titel, Beschreibung, Schlagwörter, Einsatztypen («Für diesen Einsatz»), feste Standorte (das Dokument erscheint im Popup des Standorts), «Überprüfen bis», Offline und Lesebestätigung.
+
+- **Ordner** («Ordner bearbeiten»): links Name, übergeordneter Ordner, Beschreibung und wer ihn sieht (alle Angemeldeten oder nur bestimmte Einsatzgruppen bzw. Benutzerrollen, mit der Zahl der Personen); ein Unterordner kann nur weiter einschränken. Rechts die **Redaktion** (darf Einträge anlegen und ändern), wer **vorschlagen** darf und ob der Ordner **mit Externen teilbar** ist.
+- **Eintrag** («Bearbeiten»): links Art, Titel, Ordner, Schlagwörter, Beschreibung und der Inhalt (Datei mit Versionen, Text der Seite oder Adresse), rechts «Im Einsatz anbieten» (Einsatztypen und feste Standorte über «+ Standort»), «Überprüfen bis», Lesebestätigung («Einstellen …», «Stand ansehen») und Offline («darf offline gespeichert werden», «für alle Lesenden automatisch offline speichern»). Deaktivieren und Aktivieren direkt an der Karte.
+- **Versionen**: Eine neue Datei ersetzt die bisherige. Frühere Fassungen bleiben gemäss [Einstellungen](#dokumente-einstellungen) erhalten und lassen sich wiederherstellen. Der Text von PDFs wird beim Hochladen für die Suche ausgelesen.
+- **Lesebestätigung**: von allen, die den Eintrag sehen, nur von bestimmten Einsatzgruppen oder Benutzerrollen oder wie die Pflicht einer Fähigkeit der [Ausbildung](#ausbildung). Später Hinzukommende müssen wahlweise auch bestätigen (mit eigener Frist ab Eintritt) oder nicht. Frist in Tagen mit Erinnerung per Push. Eine neue Version verlangt die Bestätigung erneut, wahlweise nur bei wesentlichen Änderungen. Mit einer Fähigkeit trägt die Bestätigung die Ausbildung bei der Person ein. Die Übersicht zeigt Offene, Bestätigte und Freiwillige, mit «Erinnern» und CSV.
+
+> Wer einen Eintrag sehen darf, regelt der Ordner. Wer ihn bestätigen muss, regelt der Eintrag. Alle übrigen Lesenden können freiwillig bestätigen.
+
+### Eingang {#dokumente-eingang}
+
+Vorschläge von Einsatzkräften: ein neuer Eintrag, eine neue Version oder ein Hinweis («Funkgerät fehlt auf der Checkliste»). Sie sieht nur die Redaktion des Ordners. **Übernehmen** legt den Eintrag bzw. die Version an, **Ablehnen** mit Begründung, Hinweise markiert man als **erledigt**. Die vorschlagende Person wird benachrichtigt (Push) und sieht den Stand im Profil.
+
+### Anzeige {#dokumente-anzeige}
+
+Welche Abschnitte im Fenster «Dokumente» der Einsatz-App erscheinen und in welcher Reihenfolge: Lesebestätigung offen, Favoriten, An Standorten im Einsatzgebiet, Für diesen Einsatz, Zuletzt geöffnet, Neu und geändert, Ordner. Es gibt eine Vorgabe (auch ohne Einsatz) und auf Wunsch eine eigene je Einsatztyp. Dazu die Zahl der Einträge je Abschnitt, die Zahl in der Menükarte «Unterlagen» und ob Personen die Abschnitte für sich anordnen dürfen.
+
+### Einstellungen {#dokumente-einstellungen}
+
+- **Dateitypen**: Katalog fester Typen, je ein- und ausschaltbar, dazu freie Endungen. Freie Endungen zeigt die App nie an, sie werden nur heruntergeladen. Ausführbare und aktive Dateien (z. B. `.exe`, `.js`, `.html`, `.svg`) sind nie erlaubt. Der Server prüft den Inhalt, nicht nur die Endung.
+- **Speicher**: Höchstgrösse je Datei, Speicher insgesamt, Anzahl früherer Versionen, offline je Gerät.
+- **Externe**: ob die Einsatzleitung Dokumente an Externe freigeben darf, auf der Gastseite des Funks und bzw. oder über einen eigenen Link, ob Externe herunterladen dürfen und wie viele Abrufe je Stunde erlaubt sind.
+
 ## Konnektivität {#konnektivitaet}
 
 ### E-Mail-Alarm {#emailalarm}

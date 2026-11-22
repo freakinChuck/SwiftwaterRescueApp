@@ -1824,6 +1824,11 @@ class Demo {
         final a = abs.where((x) => '${x['id']}' == '${b['id']}' && x['removed'] == 0).firstOrNull ?? _fail('Eintrag nicht gefunden', 404);
         a['removed'] = 1;
         return {'ok': true};
+      // Dokumente (Issue #229): im Demo keine Ablage (docBtn ist im Demo aus)
+      case 'docs':
+        return {'folders': [], 'docs': [], 'cfg': {'view': {}, 'secs': {}, 'n': 5, 'menu_n': 5, 'own': 0}, 'my_view': null};
+      case 'doc':
+        _fail('Dokumente gibt es im Demo-Modus nicht.', 404);
       case 'hydro':
         final ids = b['ids'] is List ? (b['ids'] as List).map((x) => '$x').toList() : _hy.map((h) => '${h['id']}').toList();
         return {
