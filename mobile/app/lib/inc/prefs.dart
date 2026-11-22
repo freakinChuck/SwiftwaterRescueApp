@@ -8,7 +8,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:flutter/material.dart' as m show Text;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,6 +28,7 @@ import 'store.dart';
 import 'util.dart';
 import 'veh.dart';
 import 'voice.dart';
+import '../i18n.dart';
 
 /// Arten der Abwesenheit (ABS_KIND)
 const _absKind = {'abs': 'Abwesend', 'sus': 'Einsatzfähigkeit ausgesetzt'};
@@ -330,9 +332,9 @@ class _PrefsPageState extends State<PrefsPage> {
                     content: SizedBox(
                         width: 420,
                         child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          TextField(controller: o, obscureText: true, autofillHints: const [AutofillHints.password], decoration: const InputDecoration(labelText: 'Aktuelles Passwort')),
-                          TextField(controller: n, obscureText: true, autofillHints: const [AutofillHints.newPassword], decoration: const InputDecoration(labelText: 'Neues Passwort')),
-                          TextField(controller: r, obscureText: true, decoration: const InputDecoration(labelText: 'Neues Passwort wiederholen')),
+                          TextField(controller: o, obscureText: true, autofillHints: const [AutofillHints.password], decoration: InputDecoration(labelText: trn('Aktuelles Passwort'))),
+                          TextField(controller: n, obscureText: true, autofillHints: const [AutofillHints.newPassword], decoration: InputDecoration(labelText: trn('Neues Passwort'))),
+                          TextField(controller: r, obscureText: true, decoration: InputDecoration(labelText: trn('Neues Passwort wiederholen'))),
                           if (err != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(err!, style: const TextStyle(color: accRed))),
                         ])),
                     actions: [
@@ -388,7 +390,7 @@ class _PrefsPageState extends State<PrefsPage> {
                           keyboardType: TextInputType.phone,
                           autofillHints: const [AutofillHints.telephoneNumber],
                           maxLength: 30,
-                          decoration: const InputDecoration(labelText: 'Für den Direktanruf im Einsatz', hintText: '+41 79 123 45 67')),
+                          decoration: InputDecoration(labelText: trn('Für den Direktanruf im Einsatz'), hintText: trn('+41 79 123 45 67'))),
                       const Mut('Leer lassen, wenn du nicht angerufen werden willst.', size: 12),
                     ])),
                 actions: [
@@ -482,7 +484,7 @@ class _PrefsPageState extends State<PrefsPage> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
                         DropdownButtonFormField<String>(
                             initialValue: kind,
-                            decoration: const InputDecoration(labelText: 'Art'),
+                            decoration: InputDecoration(labelText: trn('Art')),
                             items: _absKind.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                             onChanged: (v) => kind = v ?? 'abs'),
                         const SizedBox(height: 6),
@@ -511,7 +513,7 @@ class _PrefsPageState extends State<PrefsPage> {
                           smallBtn('1 Woche', () => quick('w')),
                           smallBtn('Bis auf Weiteres', () => quick('x')),
                         ]),
-                        TextField(controller: note, maxLength: 200, decoration: const InputDecoration(labelText: 'Bemerkung (optional)', hintText: 'z. B. Ferien, Krankheit')),
+                        TextField(controller: note, maxLength: 200, decoration: InputDecoration(labelText: trn('Bemerkung (optional)'), hintText: trn('z. B. Ferien, Krankheit'))),
                         if (err != null) Text(err!, style: const TextStyle(color: accRed)),
                       ])),
                   actions: [
@@ -584,7 +586,7 @@ class _PrefsPageState extends State<PrefsPage> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
                         DropdownButtonFormField<String>(
                             initialValue: mode,
-                            decoration: const InputDecoration(labelText: 'Art'),
+                            decoration: InputDecoration(labelText: trn('Art')),
                             items: _ruleMode.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                             onChanged: (v) => mode = v ?? 'off'),
                         const SizedBox(height: 6),
@@ -612,7 +614,7 @@ class _PrefsPageState extends State<PrefsPage> {
                                   contentPadding: EdgeInsets.zero, title: const Text('Bis'), subtitle: Text(_hm(to)), trailing: const Icon(Icons.schedule), onTap: () => pick(false))),
                         ]),
                         const Mut('«Bis» vor «Von» = über Mitternacht (zählt zum gewählten Tag), gleiche Zeit = ganzer Tag.', size: 12),
-                        TextField(controller: note, maxLength: 200, decoration: const InputDecoration(labelText: 'Bemerkung (optional)', hintText: 'z. B. Arbeit, Pikett')),
+                        TextField(controller: note, maxLength: 200, decoration: InputDecoration(labelText: trn('Bemerkung (optional)'), hintText: trn('z. B. Arbeit, Pikett'))),
                         if (err != null) Text(err!, style: const TextStyle(color: accRed)),
                       ])),
                   actions: [
@@ -795,10 +797,21 @@ class _PrefsPageState extends State<PrefsPage> {
     final na = js(me['nav_app']);
     return MCard(title: 'Anzeige', children: [
       DropdownButtonFormField<String>(
+            key: ValueKey('lg${I18n.chosen}'),
+            isExpanded: true,
+            initialValue: langs.containsKey(I18n.chosen) ? I18n.chosen : '',
+            decoration: InputDecoration(labelText: trn('Sprache')),
+            items: [
+              DropdownMenuItem(value: '', child: Text('🌐 ${tr('Automatisch')} (${langs[I18n.device()]})', overflow: TextOverflow.ellipsis)),
+              ...langs.entries.map((e) => DropdownMenuItem(value: e.key, child: m.Text(e.value))),
+            ],
+            onChanged: (v) => langSet(v ?? '')),
+      const SizedBox(height: 8),
+      DropdownButtonFormField<String>(
           key: ValueKey('cs$cs'),
           isExpanded: true,
           initialValue: cs == 'none' || coordSys.containsKey(cs) ? cs : '',
-          decoration: const InputDecoration(labelText: 'Koordinatensystem'),
+          decoration: InputDecoration(labelText: trn('Koordinatensystem')),
           items: [
             DropdownMenuItem(value: '', child: Text('Standard: ${coordSys[cd] ?? coordSys['lv95']}', overflow: TextOverflow.ellipsis)),
             ...coordSys.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))),
@@ -811,7 +824,7 @@ class _PrefsPageState extends State<PrefsPage> {
             key: ValueKey('na$na'),
             isExpanded: true,
             initialValue: navs.contains(na) ? na : '',
-            decoration: const InputDecoration(labelText: 'Navigations-App (Knopf 🧭)'),
+            decoration: InputDecoration(labelText: trn('Navigations-App (Knopf 🧭)')),
             items: [
               DropdownMenuItem(value: '', child: Text('Standard: ${navApps[js(me['nav_default'])] ?? navApps['google']}', overflow: TextOverflow.ellipsis)),
               ...navs.map((k) => DropdownMenuItem(value: k, child: Text(navApps[k] ?? k))),
@@ -837,7 +850,7 @@ class _PrefsPageState extends State<PrefsPage> {
                 key: ValueKey('ai${e.key}$ch'),
                 isExpanded: true,
                 initialValue: opts.contains(ch) ? ch : '',
-                decoration: InputDecoration(labelText: js(f['name'])),
+                decoration: InputDecoration(labelText: trn(js(f['name']))),
                 items: [
                   DropdownMenuItem(value: '', child: Text('Standard: ${_aiMn[mx] ?? mx}', overflow: TextOverflow.ellipsis)),
                   ...opts.map((m) => DropdownMenuItem(value: m, child: Text(_aiMn[m]!, overflow: TextOverflow.ellipsis))),

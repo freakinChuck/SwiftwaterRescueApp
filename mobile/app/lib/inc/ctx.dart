@@ -2,13 +2,14 @@
 // Rückfragen und Eingaben, Navigation (navGo/navTo), Farbwahl, Admin-Bereich im Browser.
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'store.dart';
 import 'web.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 /// Was die Fenster von der Karte brauchen (umgesetzt in map_page.dart).
 abstract class MapCtl {
@@ -157,7 +158,7 @@ Future<String?> inputDlg(BuildContext c, String title, {String label = '', Strin
                   keyboardType: type ?? (multi ? TextInputType.multiline : null),
                   maxLines: multi ? 5 : 1,
                   minLines: 1,
-                  decoration: InputDecoration(labelText: label.isEmpty ? null : label, hintText: hint)),
+                  decoration: InputDecoration(labelText: trn(label.isEmpty ? null : label), hintText: trn(hint))),
               actions: [
                 TextButton(onPressed: () => Navigator.pop(d), child: const Text('Abbrechen')),
                 FilledButton(onPressed: () => Navigator.pop(d, t.text), child: Text(ok)),
@@ -248,7 +249,7 @@ Widget? navBtn(IncStore s, dynamic lat, dynamic lon, String name, {String? label
   final a = jd(lat), b = jd(lon);
   if (!s.feat('nav') || a == null || b == null) return null;
   return label == null
-      ? IconButton(tooltip: 'Zu $name navigieren', icon: const Text('🧭', style: TextStyle(fontSize: 18)), onPressed: () => navGo(s, a, b, name), visualDensity: VisualDensity.compact)
+      ? IconButton(tooltip: trn('Zu $name navigieren'), icon: const Text('🧭', style: TextStyle(fontSize: 18)), onPressed: () => navGo(s, a, b, name), visualDensity: VisualDensity.compact)
       : OutlinedButton(onPressed: () => navGo(s, a, b, name), child: Text('🧭 $label'));
 }
 
@@ -307,7 +308,7 @@ class PanelHead extends StatelessWidget {
       child: Row(children: [
         Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
         ...actions,
-        IconButton(onPressed: onClose, icon: const Icon(Icons.close), tooltip: 'Schliessen'),
+        IconButton(onPressed: onClose, icon: const Icon(Icons.close), tooltip: trn('Schliessen')),
       ]));
 }
 

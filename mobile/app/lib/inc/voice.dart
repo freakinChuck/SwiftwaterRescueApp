@@ -8,7 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
@@ -24,6 +24,7 @@ import '../service.dart';
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 String vxDur(num? ms) {
   final s = ((ms ?? 0) / 1000).round();
@@ -795,7 +796,7 @@ Widget? voiceBar(BuildContext c, VoiceStore vx) {
                           : 'Durchsage «${vx.chName(ji(it!['ch']))}» · ${vxDur(jn(it['dur']))}${vx.queue.isNotEmpty ? ' · noch ${vx.queue.length}' : ''}',
                   style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ])),
-            if (it != null && !rec) IconButton(onPressed: vx.stop, icon: const Icon(Icons.stop, color: Colors.white), tooltip: 'Wiedergabe beenden'),
+            if (it != null && !rec) IconButton(onPressed: vx.stop, icon: const Icon(Icons.stop, color: Colors.white), tooltip: trn('Wiedergabe beenden')),
           ])));
 }
 
@@ -841,7 +842,7 @@ class _VoicePanelState extends State<VoicePanel> {
             IconButton.filledTonal(
                 onPressed: jb(it['audio']) ? () => vx.playing == id ? vx.stop() : vx.play(id) : null,
                 icon: Icon(vx.playing == id ? Icons.pause : Icons.play_arrow),
-                tooltip: jb(it['audio']) ? 'Abspielen' : 'Aufnahme gelöscht'),
+                tooltip: trn(jb(it['audio']) ? 'Abspielen' : 'Aufnahme gelöscht')),
             const SizedBox(width: 6),
             Mut(vxDur(jn(it['dur']))),
           ]),
@@ -856,7 +857,7 @@ class _VoicePanelState extends State<VoicePanel> {
       child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
         Expanded(
             child: InputDecorator(
-                decoration: InputDecoration(labelText: label, isDense: true, border: const OutlineInputBorder(), contentPadding: const EdgeInsets.fromLTRB(10, 6, 6, 6)),
+                decoration: InputDecoration(labelText: trn(label), isDense: true, border: const OutlineInputBorder(), contentPadding: const EdgeInsets.fromLTRB(10, 6, 6, 6)),
                 child: DropdownButtonHideUnderline(child: DropdownButton<int>(value: val, isDense: true, isExpanded: true, items: items, onChanged: (v) => v == null ? null : on(v))))),
         if (trailing != null) ...[const SizedBox(width: 8), trailing],
       ]));
@@ -1069,10 +1070,10 @@ List<Widget> voiceLeadCards(BuildContext c, IncStore s) {
               c,
               'Link für Externe',
               (d, ss) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    TextField(controller: lb, maxLength: 80, decoration: const InputDecoration(labelText: 'Bezeichnung (Organisation)', hintText: 'z. B. Kapo Bern – Einsatzzentrale')),
+                    TextField(controller: lb, maxLength: 80, decoration: InputDecoration(labelText: trn('Bezeichnung (Organisation)'), hintText: trn('z. B. Kapo Bern – Einsatzzentrale'))),
                     DropdownButtonFormField<int>(
                         initialValue: chSel,
-                        decoration: const InputDecoration(labelText: 'Kanal'),
+                        decoration: InputDecoration(labelText: trn('Kanal')),
                         items: on.map((x) => DropdownMenuItem(value: ji(x['id']), child: Text(js(x['name'])))).toList(),
                         onChanged: (x) => ss(() => chSel = x)),
                     if (jb(v['guest_speak']))
@@ -1094,7 +1095,7 @@ List<Widget> voiceLeadCards(BuildContext c, IncStore s) {
             title: Text(js(g['label']), style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text('Kanal «${s.vx.chName(ji(g['ch']))}» · ${jb(g['speak']) ? 'hören und sprechen' : 'nur hören'} · ${g['opened_at'] != null ? 'geöffnet ${fmtT(jn(g['opened_at']))}' : 'noch nicht geöffnet'}'),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              IconButton(onPressed: () => share(js(g['token']), js(g['label'])), icon: const Icon(Icons.share), tooltip: 'Link teilen'),
+              IconButton(onPressed: () => share(js(g['token']), js(g['label'])), icon: const Icon(Icons.share), tooltip: trn('Link teilen')),
               IconButton(
                   onPressed: () async {
                     if (await confirmDlg(c, 'Link für «${js(g['label'])}» entfernen? Er funktioniert danach nicht mehr.', ok: 'Entfernen', danger: true)) {
@@ -1102,7 +1103,7 @@ List<Widget> voiceLeadCards(BuildContext c, IncStore s) {
                     }
                   },
                   icon: const Icon(Icons.close),
-                  tooltip: 'Link entfernen'),
+                  tooltip: trn('Link entfernen')),
             ]))),
       ]),
   ];
@@ -1136,5 +1137,5 @@ Widget? voiceLogBtn(IncStore s, J l) {
       visualDensity: VisualDensity.compact,
       onPressed: () => s.vx.playing == id ? s.vx.stop() : s.vx.play(id),
       icon: Icon(s.vx.playing == id ? Icons.pause : Icons.play_arrow, size: 20),
-      tooltip: 'Durchsage abspielen');
+      tooltip: trn('Durchsage abspielen'));
 }

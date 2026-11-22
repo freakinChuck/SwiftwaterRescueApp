@@ -10,7 +10,7 @@ const DK_BCOL={pdf:'#d93b3b',img:'#2f9e62',text:'#5b6b7d',audio:'#8a5cd6',video:
 const dkBadge=d=>{const f=d.kind==='file'?d.file:null,t=d.kind==='page'?'TEXT':d.kind==='link'?'LINK':f?f.ext.toUpperCase().slice(0,4):'–';return`<span class="dkbg" style="background:${DK_BCOL[d.kind==='file'?(f&&f.show)||'dl':d.kind]}">${esc(t)}</span>`};
 const dkArt=d=>d.kind==='page'?'Seite':d.kind==='link'?'Link':d.file?d.file.ext.toUpperCase():'Datei';
 const dkSize=b=>b==null?'':b<1024?b+' B':b<1048576?Math.round(b/1024)+' KB':(b/1048576).toFixed(b<10485760?1:0).replace('.',',')+' MB';
-const dkDate=t=>t?new Date(t*1000).toLocaleDateString('de-CH'):'';
+const dkDate=t=>t?new Date(t*1000).toLocaleDateString(LOC):'';
 const dkKindTxt=d=>d.kind==='page'?'Seite':d.kind==='link'?'Link':d.file?d.file.ext.toUpperCase()+(d.file.pages?', '+d.file.pages+' S.':'')+', '+dkSize(d.file.bytes):'Datei (noch leer)';
 let dkPdfP=null;
 function dkPdfLib(){if(window.pdfjsLib)return Promise.resolve(pdfjsLib);return dkPdfP=dkPdfP||new Promise((ok,no)=>{const s=document.createElement('script');s.src=DK_PDF+'pdf.min.js';

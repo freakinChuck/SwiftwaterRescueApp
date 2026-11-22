@@ -2,12 +2,13 @@
 // st.veh vom Server ({kinds, list, hints, stale_min, can_link}, null = für diese Person nicht sichtbar). Ketten (Verbund: Anhänger am Zugfahrzeug,
 // Boot auf dem Anhänger) als ein Marker beim obersten Fahrzeug. Verladen/abladen dürfen alle Teilnehmenden und die Einsatzleitung, ohne Einsatz die Verwaltung.
 import 'dart:ui' as ui;
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:latlong2/latlong.dart';
 
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 J? vehOf(IncStore s) => s.st?['veh'] is Map ? jm(s.st!['veh']) : null;
 List<J> vehList(IncStore s) => jl(vehOf(s)?['list']);
@@ -251,7 +252,7 @@ List<Widget> vehRows(BuildContext context, IncStore s, MapCtl map) {
                 child: Wrap(spacing: 6, runSpacing: 4, children: [
                   if (!kid && ll != null)
                     IconButton(
-                        tooltip: 'Auf der Karte zentrieren',
+                        tooltip: trn('Auf der Karte zentrieren'),
                         icon: const Icon(Icons.my_location, size: 20),
                         visualDensity: VisualDensity.compact,
                         onPressed: () {

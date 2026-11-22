@@ -7,7 +7,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -18,6 +18,7 @@ import '../api.dart';
 import '../push.dart';
 import '../service.dart';
 import 'store.dart';
+import '../i18n.dart';
 
 class WebPage extends StatefulWidget {
   const WebPage({super.key, required this.s, required this.page});

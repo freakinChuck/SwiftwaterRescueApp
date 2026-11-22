@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="de"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script src="i18n.js?v=0"></script><!-- Mehrsprachigkeit (Issue #66), vor allen anderen Skripten -->
 <title>Swiftwater Rescue – Verwaltung</title>
 <link rel="stylesheet" href="common.css?v=0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
@@ -22,6 +23,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:1.2rem}main>section[hi
 .ngi{display:none;margin:.1rem 0 .35rem 1.25rem;padding-left:.35rem;border-left:1px solid var(--line)}.ngw.open .ngi,.ngw.q .ngi{display:block}.ngw.cur>.ng{color:#8cc4f2}
 #nav a{display:flex;gap:.5rem;align-items:center;padding:.35rem .6rem;border-radius:6px;color:inherit;text-decoration:none;border-left:3px solid transparent;font-size:.93rem}.ngw.one>a{font-weight:600;font-size:1rem;padding:.45rem .6rem}#nav a:hover{background:var(--panel)}#nav a[aria-current=page]{background:var(--panel);border-left-color:var(--ex);font-weight:600}
 .um{position:relative}#umL{position:absolute;right:0;top:calc(100% + .3rem);z-index:20;min-width:13rem;display:grid;gap:.35rem;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.5rem;box-shadow:0 4px 16px #000a}#umL[hidden]{display:none}#umL a{text-align:center;font-size:.85rem;padding:.2rem}#umL>.mut{font-size:.8rem;padding:0 .2rem}#bUm span{max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
+.umlang{display:flex;align-items:center;gap:.4rem}.umlang select{margin:0;padding:.25rem .4rem} /* Sprache im Konto-Menü (Issue #66) */
 @media(max-width:760px){#wrap{grid-template-columns:minmax(0,1fr)}#nav{position:static}#navSel{display:block}.navl{display:none}}
 main>section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:1rem} /* nur die Abschnitte: Leaflet baut die Kartenauswahl ebenfalls als section (Issue #26) */
 h2{margin:0 0 .6rem;font-size:1.1rem}h3{margin:1rem 0 .3rem;font-size:1rem}
@@ -211,7 +213,7 @@ const NAV=[
   ['Personen',[['benutzer','sU','Benutzer',loadUsers],['benutzerrollen','sUR','Benutzerrollen',loadURoles],['einsatzgruppen','sG','Einsatzgruppen',loadGroups],['abwesenheiten','sAb','Abwesenheiten',loadAbs],['ausbildung','sSk','Ausbildung',loadSkills]]],
   ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt],['symbole','sSy','Einsatzsymbole',loadSym]]],
   ['Planungen',[['planungen','sEx','Planungen',loadEx]]],
-  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['direktanruf','sTel','Direktanruf',loadTel],['ai','sAi','AI-Assistent',loadAi]]],
+  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['direktanruf','sTel','Direktanruf',loadTel],['sprache','sLng','Sprache',loadLng],['ai','sAi','AI-Assistent',loadAi]]],
   ['Karte & Daten',[['karten','sMp','Kartenanbieter',loadMaps],['koordinaten','sC','Koordinaten',loadCoords],['geoquellen','sO','Geodaten-Quellen',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['geodaten','sGeo','Geodaten übernehmen',loadGeo],['fahrzeuge','sVeh','Fahrzeuge',loadVeh]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal],['datenschutzauszug','sDs','Datenschutzauszug',loadDsar]]],
@@ -220,7 +222,7 @@ const NAV=[
   ['System',[['applog','sAL','Applikationslog',loadAppLog],['versionen','sVer','Versionen',loadVer]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',ausbildung:'skills',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',planungen:'ex_plan',funktionen:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',direktanruf:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',datenschutzauszug:['dsar','dsar_org'],emailalarm:'cfg_conn',funk:'cfg_conn',partner:'cfg_conn',applog:'applog',versionen:'versions',dokumente:['docs','docs_ed'],'dokumente-eingang':['docs','docs_ed'],'dokumente-anzeige':'docs','dokumente-einstellungen':'docs'};
+const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',ausbildung:'skills',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',planungen:'ex_plan',funktionen:'cfg_func',sprache:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',direktanruf:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',datenschutzauszug:['dsar','dsar_org'],emailalarm:'cfg_conn',funk:'cfg_conn',partner:'cfg_conn',applog:'applog',versionen:'versions',dokumente:['docs','docs_ed'],'dokumente-eingang':['docs','docs_ed'],'dokumente-anzeige':'docs','dokumente-einstellungen':'docs'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(p=>p==='docs_ed'?!!(me&&me.docs&&me.docs.edit):can(p)))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -239,7 +241,7 @@ function navWire(){const n=$('#nav'),s=navOGet();n.querySelectorAll('.ngw:not(.o
     w.querySelectorAll('a').forEach(a=>{const h=!t||gm||a.textContent.toLowerCase().includes(t);a.hidden=!h;if(h)hit++});w.hidden=!!t&&!hit;w.classList.toggle('q',!!t&&!!hit);any+=hit});n.querySelector('.nq0').hidden=!t||any>0};
   q.onkeydown=e=>{if(e.key==='Enter'){const a=[...n.querySelectorAll('.navl a')].find(a=>!a.hidden&&!a.closest('.ngw').hidden);if(a){location.hash=a.dataset.k;q.value='';q.oninput();q.blur()}}else if(e.key==='Escape'){q.value='';q.oninput()}}}
 // Konto-Menü in der Kopfzeile (Issue #128): Name, Passwort ändern, Abmelden, Impressum
-const userMenu=()=>`<div class="um"><button id="bUm" aria-expanded="false" aria-haspopup="menu" aria-controls="umL" title="Konto">👤 <span>${esc(me.name)}</span> ▾</button><div id="umL" role="menu" hidden><div class="mut">${esc(me.username)}</div><button id="bPw" role="menuitem">Passwort ändern</button><button id="bOut" role="menuitem">Abmelden</button><button id="bChg" role="menuitem">Was ist neu</button><a class="mut" href="hilfe.html" target="_blank" rel="noopener" role="menuitem">Bedienungsanleitung</a><a class="mut" href="legal.html" target="_blank" rel="noopener" role="menuitem">Impressum · Datenschutz</a>${me.version?`<div class="mut">Version ${esc(verTxt(me.version))}</div>`:''}</div></div>`;
+const userMenu=()=>`<div class="um"><button id="bUm" aria-expanded="false" aria-haspopup="menu" aria-controls="umL" title="Konto">👤 <span>${esc(me.name)}</span> ▾</button><div id="umL" role="menu" hidden><div class="mut">${esc(me.username)}</div><button id="bPw" role="menuitem">Passwort ändern</button><button id="bOut" role="menuitem">Abmelden</button><button id="bChg" role="menuitem">Was ist neu</button>${window.I18N?`<label class="mut umlang">🌐 ${I18N.select('umLang',me.lang||'')}</label>`:''}<a class="mut" href="hilfe.html" target="_blank" rel="noopener" role="menuitem">Bedienungsanleitung</a><a class="mut" href="legal.html" target="_blank" rel="noopener" role="menuitem">Impressum · Datenschutz</a>${me.version?`<div class="mut">Version ${esc(verTxt(me.version))}</div>`:''}</div></div>`;
 // Organisation mit Logo in der Kopfzeile und Fusszeile mit Impressum, Lizenzen, Datenschutz, Version (Issue #123)
 const orgHd=()=>orgMark(me.org_info,'orghd');
 const adminFoot=()=>`<footer id="aFoot" class="legalf">${me.org_info&&me.org_info.name?`<span>© ${esc(me.org_info.name)}</span>`:''}<span>${legalLinks()}</span>${me.version?`<span>Swiftwater Rescue ${esc(verTxt(me.version))}</span>`:''}<a href="#" id="fChg">Was ist neu</a></footer>`;
@@ -247,7 +249,8 @@ function footWire(){const c=$('#fChg');if(c)c.onclick=e=>{e.preventDefault();cha
 let umDoc=false;
 // Anleitung zum geöffneten Bereich (Issue #37): Abschnitt = Schlüssel in NAV, siehe hilfe/verwaltung.md
 function hlpWire(){const b=$('#bHlp');if(b)b.onclick=()=>{const k=location.hash.slice(1).split('?')[0];hilfe(k==='kalender'?'profil/kalender':MY||k==='meine'?'auswertung/meine':k==='planungen'?'planung/vorbereiten':'verwaltung'+(k?'/'+k:''))}}
-function userMenuWire(){hlpWire();const b=$('#bUm'),l=$('#umL'),set=o=>{l.hidden=!o;b.setAttribute('aria-expanded',o)};b.onclick=e=>{e.stopPropagation();set(l.hidden)};
+function userMenuWire(){hlpWire();const ul=$('#umLang');if(ul){ul.onclick=e=>e.stopPropagation();ul.onchange=async()=>{try{await api('me/settings',{lang:ul.value});I18N.set(ul.value)}catch(x){fail(x)}}} // Sprache (Issue #66)
+  const b=$('#bUm'),l=$('#umL'),set=o=>{l.hidden=!o;b.setAttribute('aria-expanded',o)};b.onclick=e=>{e.stopPropagation();set(l.hidden)};
   if(!umDoc){umDoc=true;document.addEventListener('click',e=>{const m=$('#umL');if(m&&!e.target.closest('.um')){m.hidden=true;$('#bUm').setAttribute('aria-expanded',false)}})}
   l.onkeydown=e=>{if(e.key==='Escape'){set(false);b.focus()}};
   $('#bPw').onclick=()=>{set(false);pwDialog(false)};$('#bChg').onclick=()=>{set(false);changesDlg()};$('#bOut').onclick=()=>{logout();start()}}
@@ -275,7 +278,7 @@ const chip=(t,c,ti)=>`<span class="pchip"${c?` style="border-color:${esc(c)};col
 const abbrB=(a,c)=>`<span class="abb"${c?` style="background:${esc(c)}"`:''}>${esc(a||'')}</span>`; // Kürzel auf Farbe (Externe, Standorte, Fahrzeuge)
 const empty=t=>`<div class="ent0">${t}</div>`;
 // Zahlenfeld mit Einheit, Bereich und Standard wie bei «Helikopter» (.anums); geänderte Werte farbig (data-nd = Standard)
-const numCard=(id,l,v,u,lo,hi,st=1,d=null,h='')=>`<div class="anum${d!=null&&+v!==+d?' chg':''}"><label for="${id}">${esc(l)}</label>${h?`<div class="h">${esc(h)}</div>`:''}<div class="ai"><input type="number" id="${id}" min="${lo}" max="${hi}" step="${st}" value="${esc(String(v??''))}" ${d!=null?`data-nd="${d}"`:''}><span>${esc(u)}</span></div><small>Bereich ${lo.toLocaleString('de-CH')}–${hi.toLocaleString('de-CH')}${d!=null?' · Standard '+(+d).toLocaleString('de-CH'):''}</small></div>`;
+const numCard=(id,l,v,u,lo,hi,st=1,d=null,h='')=>`<div class="anum${d!=null&&+v!==+d?' chg':''}"><label for="${id}">${esc(l)}</label>${h?`<div class="h">${esc(h)}</div>`:''}<div class="ai"><input type="number" id="${id}" min="${lo}" max="${hi}" step="${st}" value="${esc(String(v??''))}" ${d!=null?`data-nd="${d}"`:''}><span>${esc(u)}</span></div><small>Bereich ${lo.toLocaleString(LOC)}–${hi.toLocaleString(LOC)}${d!=null?' · Standard '+(+d).toLocaleString(LOC):''}</small></div>`;
 document.addEventListener('input',e=>{const t=e.target;if(t.dataset&&t.dataset.nd!=null){const c=t.closest('.anum');if(c)c.classList.toggle('chg',+t.value!==+t.dataset.nd)}});
 // Eintrag als Karte: t/th Name (Text/HTML), ic Symbol/Kürzel (HTML), c Farbstreifen, off deaktiviert, ch Chips (HTML), d Beschreibung, rows Angaben (stRows), kv Kennzahlen [[Bezeichnung, Wert]],
 // btns weitere Aktionen (HTML), ed [Schlüssel, ID] «Bearbeiten», mv [Schlüssel, ID, Index, Anzahl] ↑/↓, del [Schlüssel, ID, Text] zuletzt, q Suchtext, cls weitere Klassen
@@ -320,7 +323,7 @@ window.addEventListener('hashchange',async()=>{if(dirtyNow()&&!await ask('Ungesp
 function genPw(){const c='abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=crypto.getRandomValues(new Uint32Array(10));return[...r].map(x=>c[x%c.length]).join('')}
 async function loadUsers(){const el=$('#sU');let gs;try{[users,uroles,gs]=await Promise.all([api('users'),api('uroles'),api('groups').catch(()=>[])])}catch(e){return secErr(el,'Benutzer',e)}
   // eine Karte pro Person wie in der Einsatzstatistik: Kopf (Name, Benutzername, Rollen), Kennzahlen, Knöpfe
-  const dt=t=>t?new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'vor der Erfassung';
+  const dt=t=>t?new Date(t*1000).toLocaleString(LOC,{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'vor der Erfassung';
   const ugs=u=>(u.groups||[]).map(id=>gs.find(g=>g.id===id)).filter(Boolean);
   // Profilbild (nur Data-URLs von Bildern, sonst Platzhalter)
   const uav=u=>/^data:image\//.test(u.photo||'')?`<img class="uav" src="${esc(u.photo)}" alt="" loading="lazy">`:'<span class="uav" aria-hidden="true">👤</span>';
@@ -449,7 +452,7 @@ let CALV=false,CAL={m:null,sel:null,data:null};
 function calF(){let f={};try{f=JSON.parse(localStorage.getItem('sw_calf')||'{}')||{}}catch(e){}return{hide:Array.isArray(f.hide)?f.hide:[],view:f.view==='l'?'l':'m',all:f.all?1:0}}
 function calFSet(f){try{localStorage.setItem('sw_calf',JSON.stringify(f))}catch(e){}}
 const calDay=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate()),calAdd=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n),calTs=d=>Math.floor(d.getTime()/1000);
-const calHm=ts=>new Date(ts*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+const calHm=ts=>new Date(ts*1000).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'});
 function calView(a){CALV=true;MY=false;const adm=nav().length>0;
   a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Kalender</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine">📋 Meine Einsätze</a>':''}${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}<button id="bHlp" title="Bedienungsanleitung zu diesem Bereich" aria-label="Anleitung">?</button>${userMenu()}</header>
     <div id="wrap" class="my"><main><section id="sCal"><h2>Kalender</h2><div class="mut">Wird geladen …</div></section></main></div>${adminFoot()}`;
@@ -480,7 +483,7 @@ const planner=()=>can('ex_plan');
 function calOn(items,d){const a=calTs(d),b=calTs(calAdd(d,1));return items.filter(x=>x.f<b&&(x.t>a||(x.t===x.f&&x.f>=a))).map(x=>({...x,tl:x.t===x.f?calHm(x.f):x.open?(x.f>=a?'ab '+calHm(x.f):'ganztags'):x.f<=a&&x.t>=b?'ganztags':(x.f<a?'bis '+calHm(x.t):x.t>b?'ab '+calHm(x.f):calHm(x.f)+'–'+calHm(x.t))}))}
 const calEv=x=>`<span class="cev" style="border-color:${esc(x.col)};--c:${esc(x.col)}${x.dash?';border-left-style:dashed':''}" title="${esc(x.tl+' · '+x.tt+(x.sub?' · '+x.sub:''))}">${x.tl!=='ganztags'?esc(x.tl.replace(/–.*/,''))+' ':''}${esc(x.tt)}</span>`;
 const calLi=x=>`<div class="cli" style="border-color:${esc(x.col)}${x.dash?';border-left-style:dashed':''}"><span class="t">${esc(x.tl)}</span><span style="flex:1"><b>${esc(x.tt)}</b>${x.sub?`<br><small class="mut">${esc(x.sub)}</small>`:''}</span>${x.su?`<span class="row" style="margin:0;flex:0 0 auto">${x.su.mine!=='yes'?`<button class="pri" data-csu="${x.su.id}" data-v="yes">Ich nehme teil</button>`:''}${x.su.mine!=='no'?`<button data-csu="${x.su.id}" data-v="no">Ich nehme nicht teil</button>`:''}${x.su.mine?`<button data-csu="${x.su.id}" data-v="">Zurückziehen</button>`:''}</span>`:''}${x.href?`<a class="btn" href="${esc(x.href)}">Öffnen</a>`:''}</div>`;
-const calDN=d=>d.toLocaleDateString('de-CH',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const calDN=d=>d.toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 function calDraw(){const el=$('#sCal');if(!el||!CAL.data)return;const f=calF(),[s,e]=calRange(),items=calItems(),td=calDay(new Date()),mon=CAL.m.getMonth();
   const days=[];for(let d=s;d<e;d=calAdd(d,1))days.push(d);
   const inMon=days.filter(d=>d.getMonth()===mon);if(!CAL.sel||CAL.sel.getMonth()!==mon)CAL.sel=td.getMonth()===mon&&td.getFullYear()===CAL.m.getFullYear()?td:CAL.m;
@@ -489,7 +492,7 @@ function calDraw(){const el=$('#sCal');if(!el||!CAL.data)return;const f=calF(),[
   const dayL=d=>{const its=calOn(items,d);return `<h3>${esc(calDN(d))}</h3>${its.length?its.map(calLi).join(''):'<div class="mut">Keine Einträge.</div>'}`};
   const list=inMon.filter(d=>calOn(items,d).length).map(d=>`<div class="calday">${dayL(d)}</div>`).join('')||'<div class="mut">In diesem Monat gibt es keine Einträge.</div>';
   el.innerHTML=`<h2>Kalender</h2><div class="mut">Alle Termine an einem Ort: Abwesenheiten und regelmässige Einsatzzeiten${f.all&&can('avail')?' aller Personen':''}, ${can('stats')?'alle Einsätze':'deine Einsätze'}, geplante Übungen und Einsätze sowie ablaufende Ausbildungen. Erfassen und ändern im Profil der Einsatz-App${can('avail')?' bzw. unter <a href="#abwesenheiten">Abwesenheiten</a>':''}.</div>
-    <div class="calbar"><button id="calP" aria-label="Vorheriger Monat">‹</button><h3>${esc(CAL.m.toLocaleDateString('de-CH',{month:'long',year:'numeric'}))}</h3><button id="calN" aria-label="Nächster Monat">›</button><button id="calT">Heute</button><span class="sp"></span>
+    <div class="calbar"><button id="calP" aria-label="Vorheriger Monat">‹</button><h3>${esc(CAL.m.toLocaleDateString(LOC,{month:'long',year:'numeric'}))}</h3><button id="calN" aria-label="Nächster Monat">›</button><button id="calT">Heute</button><span class="sp"></span>
       <button id="calVm" aria-pressed="${f.view==='m'}">Monat</button><button id="calVl" aria-pressed="${f.view==='l'}">Liste</button>${can('avail')?`<select id="calA" aria-label="Personen"><option value="0">Nur ich</option><option value="1" ${f.all?'selected':''}>Alle Personen</option></select>`:''}</div>
     <div class="calf">${CAL_CATS.map(([k,l,c])=>`<label><input type="checkbox" data-cc="${k}" ${f.hide.includes(k)?'':'checked'}><i style="background:${c}"></i>${esc(l)}</label>`).join('')}</div>
     ${f.view==='m'?grid+`<div class="calday" id="calSel">${dayL(CAL.sel)}</div>`:list}`;
@@ -512,7 +515,7 @@ async function loadSkills(){const el=$('#sSk');let c,m;try{[c,m]=await Promise.a
   const gus=m.users.filter(u=>!f.g||(u.groups||[]).includes(f.g)),ks=f.g?m.skills.filter(k=>gus.some(u=>cell(u.id,k.id))):m.skills;
   const cnt={exp:0,warn:0,miss:0};gus.forEach(u=>ks.forEach(k=>{const x=cell(u.id,k.id);if(x&&cnt[x.state]!=null)cnt[x.state]++}));
   const bad=u=>ks.some(k=>{const x=cell(u.id,k.id);return x&&(x.state==='exp'||x.state==='warn'||x.state==='miss')});
-  const short=ts=>new Date(ts*1000).toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'2-digit'});
+  const short=ts=>new Date(ts*1000).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit',year:'2-digit'});
   const matrix=()=>{const q=f.q.trim().toLowerCase(),us=gus.filter(u=>(!q||u.name.toLowerCase().includes(q))&&(!f.bad||bad(u)));
     if(f.g&&!gus.length)return'<div class="mut">Diese Einsatzgruppe hat keine aktiven Mitglieder.</div>';if(!ks.length)return`<div class="mut">${f.g?'Für diese Einsatzgruppe gilt keine Fähigkeit.':'Noch keine Fähigkeit eingerichtet.'}</div>`;if(!us.length)return'<div class="mut">Keine Person gefunden.</div>';
     return`<div class="tw"><table class="skmx"><thead><tr><th>Person</th>${ks.map(k=>`<th title="${esc(k.name+' – Gültigkeit '+skValid(k)+(k.req?' – Pflicht'+skReqTxt(k,gn):''))}">${esc(k.name)}${k.req?' ★':''}</th>`).join('')}</tr></thead><tbody>${us.map(u=>`<tr><th><a href="#" data-sku="${u.id}">${nmG(u.name,u.id)}</a></th>${ks.map(k=>{const x=cell(u.id,k.id);
@@ -560,7 +563,7 @@ async function loadSkills(){const el=$('#sSk');let c,m;try{[c,m]=await Promise.a
 let alF=(()=>{try{return JSON.parse(localStorage.getItem('sw_alf')||'{}')||{}}catch(e){return{}}})(),alD=null,alT=null,alOpen=new Set();
 const alSave=()=>{try{localStorage.setItem('sw_alf',JSON.stringify(alF))}catch(e){}};
 const alQ=(x={})=>({lvl:alF.lvl||'',cat:alF.cat||'',q:alF.q||'',...x});
-const alDt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const alDt=t=>new Date(t*1000).toLocaleString(LOC,{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
 async function loadAppLog(){const el=$('#sAL');clearInterval(alT);alT=null;
   try{alD=await api('applog',alQ())}catch(e){return secErr(el,'Applikationslog',e)}
   alOpen=new Set();renderAL();alAuto()}
@@ -895,7 +898,7 @@ async function loadGeo(){const el=$('#sGeo'),pq=new URLSearchParams(location.has
     if(planId){const ps=await api('ex/plans');plan=ps.find(p=>p.id===planId);if(!plan)throw new Error('Übung nicht gefunden');if(plan.incident_id!=null)throw new Error('Die Übung wurde bereits gestartet; Standorte lassen sich nicht mehr ergänzen.');fs=plan.own_places}
     else fs=geoD.can_map?await api('places'):[]}
   catch(e){return secErr(el,'Geodaten übernehmen',e)}
-  const c=geoD.cfg,K=geoD.kinds,dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–';let kf;try{kf=new Set(JSON.parse(localStorage.getItem('sw_geof')||'null')||K.map(k=>k.k))}catch(e){kf=new Set(K.map(k=>k.k))}
+  const c=geoD.cfg,K=geoD.kinds,dt=t=>t?esc(new Date(t*1000).toLocaleString(LOC)):'–';let kf;try{kf=new Set(JSON.parse(localStorage.getItem('sw_geof')||'null')||K.map(k=>k.k))}catch(e){kf=new Set(K.map(k=>k.k))}
   const have=ref=>geoD.linked.filter(l=>srcRefs(l.src_ref).includes(ref)&&(planId?l.plan_id===planId:l.plan_id==null));
   el.innerHTML=`<h2>Geodaten übernehmen</h2><div class="mut">Objekte am Gewässer aus OpenStreetMap (Wehre, Kraftwerke, Brücken über Gewässer, Slipanlagen, Rettungspunkte …) im Kartenausschnitt suchen und als feste Standorte übernehmen. Übernommene Standorte bleiben mit der Quelle verknüpft: Ein Abgleich prüft sie täglich, Abweichungen erscheinen unter «Feste Standorte» und werden nie automatisch übernommen. Quellen in der Reihenfolge unter «Geodaten-Quellen»: ${geoD.sources.length?esc(geoD.sources.map(x=>x.name).join(', ')):'<b>keine eingerichtet</b> (Verwaltung → Geodaten-Quellen)'}. Daten © OpenStreetMap-Mitwirkende (ODbL).</div>
     ${plan?`<div class="inc" style="display:block;padding:.6rem .8rem;margin:.6rem 0">Übernahme in die vorbereitete Übung <b>${esc(plan.title)}</b> (eigene Standorte der Übung). <a href="#planungen">Zurück zu den Planungen</a>${geoD.can_map?' · <a href="#geodaten">Permanente Standorte</a>':''}</div>`:geoD.can_map?'':'<div class="mut">⚠ Ohne das Recht «Karte & Daten einstellen» sind die bestehenden Standorte hier nicht sichtbar.</div>'}
@@ -973,7 +976,7 @@ let mailD=null;
 let fedD=null;
 async function loadFed(){const el=$('#sFed');try{fedD=await api('fed/cfg')}catch(e){return secErr(el,'Partnerorganisationen',e)}
   const D=fedD,kn=id=>(D.kinds.find(k=>k.id===id)||{}).name,gn=id=>(D.groups.find(g=>g.id===id)||{}).name;
-  const dt=t=>t?new Date(t*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'}):'';
+  const dt=t=>t?new Date(t*1000).toLocaleString(LOC,{dateStyle:'short',timeStyle:'short'}):'';
   const card=p=>{const i=p.info||{},km=Object.entries(p.kinds||{}),e=p.last_err;
     return ent({t:p.name,off:!p.active,ch:p.last_ok&&(!e||e.at<p.last_ok)?chip('verbunden','var(--ok)'):e?chip('Fehler','var(--alarm)'):chip('noch nicht getestet'),
       rows:[['Adresse',`<span>${esc(p.url)}</span>`],['Installation dort',i.name?`<span>${esc(i.name)}${i.version?' · Version '+esc(i.version):''}${i.at?' · Stand '+esc(dt(i.at)):''}</span>`:''],
@@ -1020,7 +1023,7 @@ function fedDlg(p){const D=fedD,ks=(p.info&&p.info.kinds)||[],km=p.kinds||{};
   const sy=()=>{$('#fS',d).hidden=$('[name=fK]:checked',d).value!=='in';$('#fGb',d).hidden=$('[name=fG]:checked',d).value!=='sel'};
   d.querySelectorAll('[name=fK],[name=fG]').forEach(r=>r.onchange=sy);sy();return d}
 async function loadMail(){const el=$('#sMail');try{mailD=await api('mail/cfg')}catch(e){return secErr(el,'E-Mail-Alarm',e)}
-  const s=mailD,c=s.cfg,dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',lines=a=>esc((a||[]).join('\n'));
+  const s=mailD,c=s.cfg,dt=t=>t?esc(new Date(t*1000).toLocaleString(LOC)):'–',lines=a=>esc((a||[]).join('\n'));
   const base=location.origin+location.pathname.replace(/[^/]*$/,'')+'api/index.php',cron=`${base}?r=mail/poll&key=${s.key}`,hook=`${base}?r=mail/hook&key=${s.key}`;
   const st=s.st?`Letzter Abruf ${dt(s.st.at)}${s.st.manual?' (von Hand)':''}: ${s.st.ok?`✓ ${s.st.n===1?'1 neue E-Mail':s.st.n+' neue E-Mails'} in ${s.st.ms} ms`:'✗ '+esc(s.st.err||'Fehler')}`:'Noch nie abgerufen';
   const kcard=k=>{const r=c.kinds[k.id]||{on:0,words:[],from:[],groups:null},gs=s.groups.filter(g=>!k.grp_off.includes(g.id));
@@ -1090,7 +1093,7 @@ async function loadLegal(){const el=$('#sLg');let s;try{s=await api('legal')}cat
 /* ---------- Datenschutzauszug (Issue #199) ---------- */
 // Auszug je Person (Recht dsar) und Datenexport der Organisation (Recht dsar_org). Der Server liefert die Daten (dsar/user, dsar/org, dsar/org/table, dsar/file),
 // PDF (aarPdf, jsPDF mit AutoTable) und ZIP (JSZip) entstehen hier im Browser. Jeder Auszug steht im Verlauf.
-const dsT=ts=>ts?new Date(ts*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
+const dsT=ts=>ts?new Date(ts*1000).toLocaleString(LOC,{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
 const dsD=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
 const dsFn=s=>String(s||'').replace(/[^\p{L}\p{N}]+/gu,'_').replace(/^_+|_+$/g,'').slice(0,40)||'Auszug';
 const dsC=(la,lo)=>la==null?'–':fmtC(la,lo,me.coord_sys&&me.coord_sys!=='none'?me.coord_sys:me.coord_default||'lv95')+` (WGS84 ${(+la).toFixed(5)}, ${(+lo).toFixed(5)})`;
@@ -1233,6 +1236,14 @@ async function loadTel(){const el=$('#sTel');let s;try{s=await api('settings')}c
     <div class="mut">Die Nummer erscheint nur bei Personen, die den Einsatz angenommen haben und noch dabei sind, und nur für Personen, die selbst teilnehmen (bzw. die Einsatzleitung). Nicht in der öffentlichen Ansicht und nicht im Replay. Die Nummern erfasst man unter Personen → «Benutzer».</div>${sbar('tlSv')}`;dirtyWire(el);
   $('#tlSv').onclick=()=>{const p={who:$('#tlW').value};el.querySelectorAll('[data-tk]').forEach(c=>p[c.dataset.tk]=c.checked?1:0);
     api('settings/save',{phone:p}).then(()=>{toast('Gespeichert.','ok');loadTel()}).catch(fail)}}
+/* ---------- Sprache (Issue #66): Vorgabe der Organisation (Einstellung lang, Recht cfg_func) ---------- */
+// Gilt für Personen ohne eigene Wahl, deren Gerät keine der Sprachen nutzt, und für Push an Personen, die die App noch nie geöffnet haben
+async function loadLng(){const el=$('#sLng');let s;try{s=await api('settings')}catch(e){return secErr(el,'Sprache',e)}
+  const ls=s.langs||{de:'Deutsch',en:'English',fr:'Français',it:'Italiano'};
+  el.innerHTML=`<h2>Sprache</h2><div class="mut">Die App gibt es auf Deutsch, Englisch, Französisch und Italienisch. Jede Person wählt die Sprache im Profil bzw. im Konto-Menü; ohne eigene Wahl gilt die Sprache des Geräts, sonst diese Vorgabe. Push-Meldungen kommen in der Sprache, die die Person zuletzt verwendet hat.</div>
+    <div class="scard"><label class="mut">Vorgabe der Organisation<select id="lgDef" translate="no">${Object.entries(ls).map(([k,v])=>`<option value="${k}" ${k===s.lang?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="mut">Eingaben der Organisation (Einsatztypen, Rollen, Einrückoptionen, Meldungen, Dokumente usw.) und das Einsatzlog bleiben in der Sprache, in der sie erfasst wurden; übersetzt werden die Texte der App.</div>${sbar('lgSv')}</div>`;dirtyWire(el);
+  $('#lgSv').onclick=()=>api('settings/save',{lang:$('#lgDef').value}).then(()=>{toast('Gespeichert.','ok');loadLng()}).catch(fail)}
 /* ---------- Einsatzsymbole (Issue #146): Sets und einzelne Symbole für Markierungen ein-/ausschalten, Markierungen ohne Symbol erlauben ---------- */
 // Einstellung sym (settings/save, Recht cfg_inc): sets, off, free; gilt sofort für neue Markierungen, bestehende behalten ihr Symbol
 async function loadSym(){const el=$('#sSy');let s;try{s=await api('settings')}catch(e){return secErr(el,'Einsatzsymbole',e)}
@@ -1260,7 +1271,7 @@ async function loadAi(){const el=$('#sAi');try{aiS=await api('ai/cfg')}catch(e){
   aiC=JSON.parse(JSON.stringify(aiS.cfg));['matrix','anon','round_loc'].forEach(k=>{if(!aiC[k]||Array.isArray(aiC[k]))aiC[k]={}});drawAi()}
 // Freigabe und Datenschutz je Bereich (Einsatztyp oder Verwaltung, Auswahl oben, gemerkt in aiCx): Zeilen = Funktionen, Spalten = Benutzerrollen und im Einsatz die Spezialrollen
 let aiCx=null;
-function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'}),n=x=>(x||0).toLocaleString('de-CH');
+function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000).toLocaleString(LOC,{dateStyle:'short',timeStyle:'short'}),n=x=>(x||0).toLocaleString(LOC);
   const CX=[...s.kinds.map(k=>({id:String(k.id),name:k.name,color:k.color})),{id:'adm',name:'Verwaltung (ohne Einsatz)'}];
   if(!CX.some(x=>x.id===aiCx))aiCx=CX[0].id;const X=aiCx,isK=X!=='adm',kx=s.kinds.find(k=>String(k.id)===X);
   const F=Object.entries(s.fn).filter(([f])=>(s.ctx[f]||[]).includes(X)),mv=(r,f,k)=>((c.matrix[r]||{})[f]||{})[k]||'off';
@@ -1292,7 +1303,7 @@ function drawAi(){const el=$('#sAi'),s=aiS,c=aiC,U=s.usage,dt=t=>new Date(t*1000
     <h3>Grenzen</h3>
     <div class="anums">${Object.entries(AI_NUM).map(([k,[l,u,a,b,h]])=>`<div class="anum"><label for="ain_${k}">${esc(l)}</label><div class="h">${esc(h)}</div>
       <div class="ai"><input type="number" id="ain_${k}" data-ain="${k}" min="${a}" max="${b}" step="1" value="${esc(String(c[k]))}" inputmode="numeric"><span>${esc(u)}</span></div>
-      <small>Bereich ${a.toLocaleString('de-CH')}–${b.toLocaleString('de-CH')}</small></div>`).join('')}</div>
+      <small>Bereich ${a.toLocaleString(LOC)}–${b.toLocaleString(LOC)}</small></div>`).join('')}</div>
     <h3>Freigabe und Datenschutz je Einsatztyp</h3>
     <div class="mut">Eine Person erhält den höchsten Modus ihrer Benutzerrollen und, im Einsatz, ihrer Spezialrolle (nur mit Teilnahme). «Auf Abruf» = Knopf ✨, «Begleitend» = der Vorschlag wird beim Öffnen schon vorbereitet (Knopf leuchtet). «Freie Fragen» erlaubt eigene Eingaben im Fenster des AI-Assistenten. Jede Person kann in ihrem Profil weniger wählen.</div>
     <div class="aisel">${CX.map(x=>`<button data-aicx="${x.id}" aria-pressed="${x.id===X}">${x.color?`<span class="gdot" style="background:${esc(x.color)}"></span>`:''}${esc(x.name)}</button>`).join('')}</div>
@@ -1335,9 +1346,9 @@ async function loadMaps(){const el=$('#sMp');try{mpS=await api('settings')}catch
 function mpTile(S){const b=S.bounds,la=b?(b[0][0]+b[1][0])/2:46.948,lo=b?(b[0][1]+b[1][1])/2:7.447,z=Math.min(13,S.nat||13),n=2**z,r=la*Math.PI/180;
   const x=Math.floor((lo+180)/360*n),y=Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n);
   return S.url.replace('{s}',(S.sub||'a')[0]).replace('{z}',z).replace('{x}',x).replace('{y}',y)}
-const mpMB=b=>b<1048576?Math.ceil(b/1024)+' KB':(b/1048576).toLocaleString('de-CH',{maximumFractionDigits:0})+' MB';
+const mpMB=b=>b<1048576?Math.ceil(b/1024)+' KB':(b/1048576).toLocaleString(LOC,{maximumFractionDigits:0})+' MB';
 function mpOwnInfo(){const o=mpS.map_own;if(!o)return'<div class="mut">⚠ Datei <code>tiles/osm.pmtiles</code> fehlt im Webroot. Erzeugen und hochladen mit den Skripten in <code>scripts/tiles/</code>; bis dahin ist diese Karte nicht wählbar.</div>';
-  const b=o.bounds;return`<div class="mut">Datei vorhanden: ${mpMB(o.size)}, Stand ${new Date(o.mtime*1000).toLocaleDateString('de-CH')}, Zoom ${o.minz}–${o.maxz}, Ausschnitt ${b[0]}–${b[2]}° N, ${b[1]}–${b[3]}° O${o.type!==1?' · <b>⚠ keine Vektorkacheln (MVT), nicht wählbar</b>':''}</div>`}
+  const b=o.bounds;return`<div class="mut">Datei vorhanden: ${mpMB(o.size)}, Stand ${new Date(o.mtime*1000).toLocaleDateString(LOC)}, Zoom ${o.minz}–${o.maxz}, Ausschnitt ${b[0]}–${b[2]}° N, ${b[1]}–${b[3]}° O${o.type!==1?' · <b>⚠ keine Vektorkacheln (MVT), nicht wählbar</b>':''}</div>`}
 function drawMaps(){const el=$('#sMp'),c=mpC,ks=mpS.kinds||[];
   const row=(k,i)=>{const S=mpSrc(k);if(!S)return'';const on=c.on.includes(k);
     return`<div class="inc mpr${on?'':' off'}" style="display:block;padding:.5rem .7rem"><label class="chk" style="margin:0"><input type="checkbox" data-mo="${k}" ${on?'checked':''}> <b>${esc(S.label)}</b> <span class="chip">${MP_KIND[S.kind]||S.kind}</span> <span class="mut">${esc(S.area)}</span></label>
@@ -1383,15 +1394,15 @@ const airNumL={radius_km:['Umkreis','km','um PLS (plus Driftdistanz), Einsatzkr�
   max_age_s:['Höchstes Alter einer Position','s','ältere Positionen werden nicht mehr gezeigt'],trail_min:['Spur','min','zurückgelegter Weg hinter dem Symbol, 0 = keine Spur'],cache_s:['Abfrage höchstens alle','s','eine Abfrage für alle Geräte zusammen'],
   home_km:['Umkreis ohne Einsatz','km','um die aktiven permanenten festen Standorte (Karte & Daten → Feste Standorte), auch ohne laufenden Einsatz für alle Angemeldeten (ausser «Wer sieht die Helikopter» steht auf «Niemand»); 0 = ohne Einsatz keine Helikopter']};
 const AIR_GRP=[['Relevanzzone',['radius_km','max_alt_ft']],['Anzeige',['max_age_s','trail_min']],['Abfrage',['cache_s']],['Ohne Einsatz',['home_km']]];
-const airNumX=(k,v)=>k==='max_alt_ft'&&v!==''&&!isNaN(v)?'≈ '+Math.round(v*.3048).toLocaleString('de-CH')+' m':''; // Flughöhe zusätzlich in Metern
+const airNumX=(k,v)=>k==='max_alt_ft'&&v!==''&&!isNaN(v)?'≈ '+Math.round(v*.3048).toLocaleString(LOC)+' m':''; // Flughöhe zusätzlich in Metern
 function airNumCard(k){const[l,u,h]=airNumL[k],[d,lo,hi]=airS.air_num[k],v=airC[k],x=airNumX(k,v);
   return`<div class="anum${+v!==d?' chg':''}" data-anc="${k}"><label for="an_${k}">${esc(l)}</label><div class="h">${esc(h)}</div>
     <div class="ai"><input type="number" id="an_${k}" data-an="${k}" min="${lo}" max="${hi}" step="1" value="${esc(String(v))}" inputmode="numeric"><span>${esc(u)}</span><span data-anx="${k}">${x}</span></div>
-    <small>Bereich ${lo.toLocaleString('de-CH')}–${hi.toLocaleString('de-CH')} · Standard ${d.toLocaleString('de-CH')}${+v!==d?' · <b>geändert</b>':''}</small></div>`}
+    <small>Bereich ${lo.toLocaleString(LOC)}–${hi.toLocaleString(LOC)} · Standard ${d.toLocaleString(LOC)}${+v!==d?' · <b>geändert</b>':''}</small></div>`}
 let airK={}; // Vorauswahl je Einsatztyp, gespeichert mit dem Rest
 async function loadAir(){const el=$('#sH');try{airS=await api('settings')}catch(e){return secErr(el,'Helikopter',e)}
   airC=JSON.parse(JSON.stringify(airS.air));airK={};(airS.kinds||[]).forEach(k=>airK[k.id]=k.air);drawAir()}
-function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?new Date(t*1000).toLocaleString('de-CH'):'–';
+function drawAir(){const el=$('#sH'),s=airS,c=airC,st=s.air_status||{},dt=t=>t?new Date(t*1000).toLocaleString(LOC):'–';
   const srcRow=(k,i)=>{const S=s.air_sources[k],x=st[k],on=c.src.includes(k);
     return`<div class="inc" style="display:block;padding:.5rem .7rem"><div class="row" style="align-items:center;margin:0"><label class="chk" style="flex:1"><input type="checkbox" data-as="${k}" ${on?'checked':''}> <b>${esc(S.name)}</b> <a href="${esc(S.site)}" target="_blank" rel="noopener" class="mut">${esc(S.site.replace(/^https:\/\//,''))}</a></label>
       <button data-au="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button data-ad="${i}" ${i<c.order.length-1?'':'disabled'} aria-label="Nach unten">↓</button><button data-at="${k}">Testen</button></div>
@@ -1477,7 +1488,7 @@ function pgaHtml(s){const p=s.pgapi;if(!p)return'';
 function pgaBind(){const v=()=>({on:$('#paOn').checked?1:0,url:$('#paU').value.trim(),layer:$('#paL').value.trim(),flayer:$('#paFL').value.trim(),key:$('#paK').value});
   $('#paSv').onclick=()=>api('settings/save',{pgapi:v()}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.','ok');loadOp()}).catch(fail);
   $('#paTs').onclick=async e=>{const b=e.target,o=$('#paR');b.disabled=true;o.textContent='Wird getestet …';
-    try{const r=await api('pgapi/test',{cfg:v()});o.innerHTML=r.ok?`✓ Erreichbar in ${r.health_ms} ms${r.version?' (Version '+esc(r.version)+')':''}, Layer ${esc(r.geom)} mit SRID ${r.srid}${r.max?', höchstens '+r.max.toLocaleString('de-CH')+' je Antwort':''}. Beispiel 5 km um Bern: ${r.ways} Wege in ${r.query_ms} ms${r.names.length?' ('+esc(r.names.join(', '))+')':''}.${r.warn?' ⚠ '+esc(r.warn)+'.':''} Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}
+    try{const r=await api('pgapi/test',{cfg:v()});o.innerHTML=r.ok?`✓ Erreichbar in ${r.health_ms} ms${r.version?' (Version '+esc(r.version)+')':''}, Layer ${esc(r.geom)} mit SRID ${r.srid}${r.max?', höchstens '+r.max.toLocaleString(LOC)+' je Antwort':''}. Beispiel 5 km um Bern: ${r.ways} Wege in ${r.query_ms} ms${r.names.length?' ('+esc(r.names.join(', '))+')':''}.${r.warn?' ⚠ '+esc(r.warn)+'.':''} Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}
     catch(x){o.textContent='✗ '+x.message}b.disabled=false};
   if($('#paKx'))$('#paKx').onclick=async()=>{if(await ask('Gespeicherten API-Key der PostGIS-API entfernen?'))api('settings/save',{pgapi:{...v(),key:'',key_clear:1}}).then(loadOp).catch(fail)}}
 // PostGIS als Hauptquelle (Issue #131): Verbindung (Passwort nie angezeigt, leer = behalten), Test mit Beispielabfrage um Bern
@@ -1493,11 +1504,11 @@ function pgHtml(s){const p=s.postgis;if(!p)return'';
 function pgBind(){const v=()=>({on:$('#pgOn').checked?1:0,host:$('#pgH').value.trim(),port:+$('#pgP').value||5432,db:$('#pgD').value.trim(),user:$('#pgU').value.trim(),table:$('#pgT').value.trim(),ftable:$('#pgFT').value.trim(),ssl:$('#pgS').value,pass:$('#pgW').value});
   $('#pgSv').onclick=()=>api('settings/save',{postgis:v()}).then(()=>{toast('Gespeichert. Gilt ab der nächsten Abfrage.','ok');loadOp()}).catch(fail);
   $('#pgTs').onclick=async e=>{const b=e.target,o=$('#pgR');b.disabled=true;o.textContent='Wird getestet …';
-    try{const r=await api('postgis/test',{cfg:v()});o.innerHTML=r.ok?`✓ Verbunden in ${r.connect_ms} ms (PostGIS ${esc(r.postgis)}), Tabelle mit rund ${r.rows.toLocaleString('de-CH')} Gewässern. Beispiel 5 km um Bern: ${r.ways} Wege in ${r.query_ms} ms${r.names.length?' ('+esc(r.names.join(', '))+')':''}. Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}
+    try{const r=await api('postgis/test',{cfg:v()});o.innerHTML=r.ok?`✓ Verbunden in ${r.connect_ms} ms (PostGIS ${esc(r.postgis)}), Tabelle mit rund ${r.rows.toLocaleString(LOC)} Gewässern. Beispiel 5 km um Bern: ${r.ways} Wege in ${r.query_ms} ms${r.names.length?' ('+esc(r.names.join(', '))+')':''}. Noch nicht gespeichert, falls geändert.`:'✗ '+esc(r.err||'Fehler')}
     catch(x){o.textContent='✗ '+x.message}b.disabled=false};
   if($('#pgWx'))$('#pgWx').onclick=async()=>{if(await ask('Gespeichertes Passwort für PostGIS entfernen?'))api('settings/save',{postgis:{...v(),pass:'',pass_clear:1}}).then(loadOp).catch(fail)}}
 // Statistik je Server (Issue #45): Versuche vom Server (Hosting) und direkt vom Gerät (Rückfall), Abfragen aus dem Zwischenspeicher zählen nicht; PostGIS (Issue #131) als eigene Zeile «postgis»
-function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',SP={postgis:'<b>PostGIS</b> (eigene Datenbank)',pgapi:'<b>PostGIS-API</b>'},
+function opStats(os,urls){const SRC={server:'Server',device:'Gerät'},dt=t=>t?esc(new Date(t*1000).toLocaleString(LOC)):'–',SP={postgis:'<b>PostGIS</b> (eigene Datenbank)',pgapi:'<b>PostGIS-API</b>'},
     us=[...Object.keys(SP).filter(k=>os.rows.some(r=>r.url===k)),...urls,...[...new Set(os.rows.map(r=>r.url))].filter(u=>!SP[u]&&!urls.includes(u))];
   const rows=us.flatMap(u=>{const rs=os.rows.filter(r=>r.url===u);return(rs.length?rs:[{url:u,src:'',uses:0,ok:0,fails:0}]).map((r,k)=>`<tr>${k?'':`<td rowspan="${rs.length||1}" style="overflow-wrap:anywhere">${SP[u]||esc(u)+(urls.includes(u)?'':' <span class="mut">(nicht mehr hinterlegt)</span>')}</td>`}
     <td>${SRC[r.src]||'–'}</td><td>${r.uses}</td><td>${r.ok}</td><td>${r.fails}</td><td>${r.uses?Math.round(r.ok/r.uses*100)+' %':'–'}</td><td>${r.ok?(r.ok_ms/r.ok/1000).toFixed(1)+' s':'–'}</td>
@@ -1590,7 +1601,7 @@ function vehLinkDlg(v){const by=Object.fromEntries(vehD.vehicles.map(x=>[x.id,x]
   dlg(`Verbund von «${v.name}»`,`<label class="mut">Verladen auf bzw. angehängt an<select id="vlC"><option value="">– nicht verladen –</option>${cs.map(c=>`<option value="${c.id}" ${c.id===v.carrier_id?'selected':''}>${vehKN(c.kind_id).sym} ${esc(c.name)}</option>`).join('')}</select></label>${cs.length?'':'<div class="mut">Kein Fahrzeug kann diese Art aufnehmen (siehe Fahrzeugarten).</div>'}`,
     async x=>{const c=$('#vlC',x).value;await api('vehicle/link',{id:v.id,carrier:c===''?null:+c});loadVeh()},'Übernehmen')}
 async function loadHydro(){const el=$('#sHy');let s,h;try{[s,h]=await Promise.all([api('settings'),api('hydro/status',{})])}catch(e){return secErr(el,'Pegel & Abfluss',e)}
-  const c=s.hydro,N=s.hydro_num,dt=t=>t?esc(new Date(t*1000).toLocaleString('de-CH')):'–',on=Object.values(s.feat_on||{}).some(f=>f.hydro);
+  const c=s.hydro,N=s.hydro_num,dt=t=>t?esc(new Date(t*1000).toLocaleString(LOC)):'–',on=Object.values(s.feat_on||{}).some(f=>f.hydro);
   const st=x=>`${x.stations} Messstationen (${x.rivers} an Fliessgewässern), aktuelle Werte für ${x.values}${x.at?`, Stand ${dt(x.at)}`:''}${x.fail_at?` · ⚠ letzter Fehlschlag ${dt(x.fail_at)}`:''}. Die Werte werden 5 Minuten zwischengespeichert (das BAFU misst alle 10 Minuten).`;
   // Datenquellen (Feedback zu #125): Schnittstelle mit Vorrang, Webseite ergänzt und springt ein; je ein-/ausschaltbar mit Lizenz, Hinweis, Stand und «Testen»
   const SS=s.hydro_sources,ks=Object.keys(SS),srcSt=k=>{const x=(h.status||{})[k];return x?`Letzte Abfrage ${dt(x.at)}: ${x.ok?`✓ ${x.ms} ms, ${x.stations} Stationen, Werte für ${x.values}`:`✗ ${esc(x.err||'Fehler')}`}${!x.ok&&x.ok_at?` · letzter Erfolg ${dt(x.ok_at)}`:''}`:'Noch nicht abgefragt'};
@@ -1636,7 +1647,7 @@ async function loadEx(){const el=$('#sEx');let ps,us,ros,xt,gs,fp;try{[ps,us,ros
   const pkSec=p=>((me&&me.kinds)||[]).find(k=>k.id===p.kind_id)?.sec||0,PKN=['Vorbereitete Übung','Geplanter Sekundäreinsatz','Geplantes freies Ereignis'],fq=features('place'),
 un=id=>(us.find(u=>u.id===id)||{}).name||'?',stat=p=>p.incident_id==null?['vorbereitet','']:p.ended_at==null?['läuft','run']:['beendet','done'];
   // Elemente, eigene Standorte, Durchführungen und Anmeldungen als Unterkarten der Planung (Issue #95)
-  const dt=t=>esc(new Date(t*1000).toLocaleString('de-CH'));
+  const dt=t=>esc(new Date(t*1000).toLocaleString(LOC));
   const rn=id=>(ros.find(r=>r.id===id)||{}).name,inj=(p,j)=>{const ref=(j.kind==='seen'||j.kind==='extdel')&&p.injects.find(x=>x.id===j.ref_id),xk=j.kind==='ext'||j.kind==='extdel',ed=!(j.released||p.ended_at);
     return ent({t:j.label,cls:'sub',c:EXC[j.kind],ic:`<i class="exdot" style="background:${EXC[j.kind]}"></i>`,
       ch:chip(EXK[j.kind])+(j.released?chip('freigegeben','var(--ok)'):chip(j.auto==null?'Freigabe von Hand':'automatisch '+j.auto+' min nach dem Start')),
@@ -1646,18 +1657,18 @@ un=id=>(us.find(u=>u.id===id)||{}).name||'?',stat=p=>p.incident_id==null?['vorbe
       btns:ed?`<button data-ji="${j.id}" data-p="${p.id}">Bearbeiten</button>`:'',del:ed?['jr',j.id]:null})};
   const ownPl=(p,f)=>ent({t:f.name,cls:'sub',c:f.color,ic:f.abbr||f.color?abbrB(f.abbr,f.color):'',d:f.descr,rows:[['Standort',`<span>${esc(fmtC(f.lat,f.lon,'lv95'))}</span>`]],
     btns:p.incident_id==null?`<button data-fpe="${f.id}" data-p="${p.id}">Bearbeiten</button>`:'',del:p.incident_id==null?['fpr',f.id+'" data-p="'+p.id]:null});
-  const run=(p,r)=>ent({t:new Date(r.alarm_at*1000).toLocaleString('de-CH'),cls:'sub',ch:r.ended_at?'':chip('läuft','var(--ok)'),d:r.id===p.incident_id?'':'vor dem Zurücksetzen',kv:[['Dauer',r.ended_at?Math.round((r.ended_at-r.alarm_at)/60)+' min':'läuft']],
+  const run=(p,r)=>ent({t:new Date(r.alarm_at*1000).toLocaleString(LOC),cls:'sub',ch:r.ended_at?'':chip('läuft','var(--ok)'),d:r.id===p.incident_id?'':'vor dem Zurücksetzen',kv:[['Dauer',r.ended_at?Math.round((r.ended_at-r.alarm_at)/60)+' min':'läuft']],
     btns:`<button data-xl="${r.id}" data-p="${p.id}">Log</button>${r.recorded?`<button data-rp="${r.id}">Replay</button>`:''}`});
   const su=x=>ent({th:nmG(x.name,x.user_id),cls:'sub',ch:x.status==='yes'?chip('nimmt teil','var(--ok)'):chip('nimmt nicht teil'),d:x.note,rows:[['Am',`<span>${dt(x.at)}</span>`]]});
   const sh=(t,n,b)=>`<div class="exsh"><h4>${t} <span class="mut">(${n})</span></h4>${b||''}</div>`;
   el.innerHTML=`<h2>Planungen</h2><div class="mut">Vorbereitete Übungen, geplante Sekundäreinsätze und freie Ereignisse (Einsatztypen mit «Planung erlaubt»). Die eingetragene Leitung startet sie in der Einsatz-App (☰ → Planungen) und gibt dort die Elemente frei. Starten kann nur, wer als Übungsleitung eingetragen ist. Sie hat die Rechte der Einsatzleitung und wird nicht alarmiert, kann aber zusätzlich als Einsatzkraft teilnehmen. Erst freigegebene Elemente sind für die Teilnehmenden sichtbar und zählen fürs Suchgebiet. Der öffentliche Link lässt sich schon vorher öffnen und zeigt bis zum Start eine Warteseite. Sekundäreinsätze und freie Ereignisse erhalten zusätzlich einen Einsatzplan und optional einen Bezug auf einen früheren Einsatz; Sekundäreinsätze starten ohne Alarm.</div>
     ${newBar('exA','Neue Planung',ps.length>5?qIn('exQ','Planung suchen'):'')}
-    ${ps.map(p=>{const[s,c]=stat(p);return`<div class="exp" data-q="${esc((p.title+' '+p.message).toLowerCase())}"><h3>${esc(p.title)} <span class="badge ${c}">${s}</span>${p.alarm_at?` <span class="mut" style="font-weight:400">${esc(new Date(p.alarm_at*1000).toLocaleString('de-CH'))}</span>`:''}</h3>
+    ${ps.map(p=>{const[s,c]=stat(p);return`<div class="exp" data-q="${esc((p.title+' '+p.message).toLowerCase())}"><h3>${esc(p.title)} <span class="badge ${c}">${s}</span>${p.alarm_at?` <span class="mut" style="font-weight:400">${esc(new Date(p.alarm_at*1000).toLocaleString(LOC))}</span>`:''}</h3>
       <div class="mut">${pkSec(p)?PKN[pkSec(p)]+' · Meldung':'Aufgebotsmeldung'}: ${esc(p.message)}</div>
-      ${pkSec(p)?`<div class="mut">Einsatzplan: ${[p.doc?.at?'Beginn '+esc(new Date(p.doc.at*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'})):'',p.doc?.meet?'Treffpunkt '+esc(p.doc.meet):'',p.doc?.tasks?.length?p.doc.tasks.length+(p.doc.tasks.length===1?' Auftrag':' Aufträge'):'',p.parent_id?'Bezug auf Einsatz #'+p.parent_id:''].filter(Boolean).join(' · ')||'noch leer'}</div>`:''}
+      ${pkSec(p)?`<div class="mut">Einsatzplan: ${[p.doc?.at?'Beginn '+esc(new Date(p.doc.at*1000).toLocaleString(LOC,{dateStyle:'short',timeStyle:'short'})):'',p.doc?.meet?'Treffpunkt '+esc(p.doc.meet):'',p.doc?.tasks?.length?p.doc.tasks.length+(p.doc.tasks.length===1?' Auftrag':' Aufträge'):'',p.parent_id?'Bezug auf Einsatz #'+p.parent_id:''].filter(Boolean).join(' · ')||'noch leer'}</div>`:''}
       <div class="mut">Übungsleitung: ${p.leads.map(id=>nmG(un(id),id)).join(', ')} · Alarmiert: ${p.invite||p.grp_ids.length?[...p.grp_ids.map(id=>gs.find(g=>g.id===id)).filter(Boolean).map(g=>'Gruppe '+esc(g.name)),p.invite&&p.invite.length?esc(p.invite.length+(p.invite.length===1?' Person: ':' Personen: '))+p.invite.map(id=>nmG(un(id),id)).join(', '):''].filter(Boolean).join(', ')||'niemand':'alle'} · Aufzeichnung: ${p.record?'ja':'nein'} · Öffentliche Ansicht: ${p.public_token?(p.public_anon?'ja, anonym':'ja, mit Namen'):'nein'}</div>
       ${xoTxt(p)?`<div class="mut">Partnerorganisationen (eigener, verknüpfter Einsatz): ${xoTxt(p)}</div>`:''}
-      ${p.sched||p.plan_at?`<div class="mut">Übungsplan: ${p.sched?'sichtbar':'nicht sichtbar'}${p.plan_at?' · '+esc(new Date(p.plan_at*1000).toLocaleString('de-CH',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+(p.plan_end?' bis '+esc(new Date(p.plan_end*1000).toLocaleString('de-CH',{hour:'2-digit',minute:'2-digit'})):''):''}${p.plan_loc?' · '+esc(p.plan_loc):''}${p.su_on?' · Anmeldung'+(p.su_grp?' für '+(p.su_grp.map(id=>gs.find(g=>g.id===id)).filter(Boolean).map(g=>esc(g.name)).join(', ')||'niemand'):'')+(p.su_until?' bis '+esc(new Date(p.su_until*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})):'')+(p.su_inv?', Angemeldete werden alarmiert':''):''}</div>`:''}
+      ${p.sched||p.plan_at?`<div class="mut">Übungsplan: ${p.sched?'sichtbar':'nicht sichtbar'}${p.plan_at?' · '+esc(new Date(p.plan_at*1000).toLocaleString(LOC,{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+(p.plan_end?' bis '+esc(new Date(p.plan_end*1000).toLocaleString(LOC,{hour:'2-digit',minute:'2-digit'})):''):''}${p.plan_loc?' · '+esc(p.plan_loc):''}${p.su_on?' · Anmeldung'+(p.su_grp?' für '+(p.su_grp.map(id=>gs.find(g=>g.id===id)).filter(Boolean).map(g=>esc(g.name)).join(', ')||'niemand'):'')+(p.su_until?' bis '+esc(new Date(p.su_until*1000).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})):'')+(p.su_inv?', Angemeldete werden alarmiert':''):''}</div>`:''}
       ${p.public_token&&!p.ended_at?`<div class="row"><input readonly value="${esc(pubLink(p.public_token))}" aria-label="Öffentlicher Link" onfocus="this.select()"><a class="btn" href="${esc(pubLink(p.public_token))}" target="_blank" rel="noopener">Öffnen</a></div>`:''}
       ${fq?`<div class="mut">Feste Standorte: ${p.places==null?'alle aktiven':p.places.length?esc(fp.filter(f=>f.active&&p.places.includes(f.id)).map(f=>f.name).join(', ')||'keine'):'keine'}</div>`:''}
       ${sh('Elemente',p.injects.length,p.ended_at?'':`<button data-ja="${p.id}">+ Element</button>`)}${p.injects.map(j=>inj(p,j)).join('')||empty('Noch keine Elemente. Beispiel: «Rettling treibt ab» mit PLS an der Brücke.')}
@@ -1667,7 +1678,7 @@ un=id=>(us.find(u=>u.id===id)||{}).name||'?',stat=p=>p.incident_id==null?['vorbe
       <div data-mapbox="${p.id}" hidden><div class="exmap"></div><div class="mut exleg">${Object.entries(EXK).map(([k,t])=>`<span><i style="background:${EXC[k]}"></i>${t}</span>`).join('')}${fq?'<span><i style="background:'+PLACE_COL+';border-radius:2px"></i>Fester Standort</span>':''}<span>blass = freigegeben · gestrichelt = Sichtung des Rettlings</span></div></div>
       <div class="row exbtns">${p.injects.length||fq&&exPlaces(p,fp).length?`<button data-pm="${p.id}" aria-pressed="false">Karte</button>`:''}<button data-pc="${p.id}">Kopieren</button>${aiOn('plan',aiPk(p))?`<button class="aib" data-pai="${p.id}" title="Vorschläge des AI-Assistenten zur Übung">✨ Vorschläge</button>`:''}${p.ended_at?`<button data-pz="${p.id}" title="Wieder vorbereitet, alle Elemente nicht freigegeben">Zurücksetzen</button>`:''}${p.incident_id==null?`<button data-pe="${p.id}">Bearbeiten</button>`:''}${p.incident_id!=null&&!p.ended_at?'':`<button class="sec" data-pr="${p.id}">Entfernen</button>`}</div></div>`}).join('')||empty('Noch keine Planungen. Beispiel: «Übung Reuss Mai» mit drei Rettlingen und einem Posten.')}`;
   if(xpp.length)el.insertAdjacentHTML('beforeend',`<h3>Gemeinsame Übungen von Partnerorganisationen</h3><div class="mut">Du bist dort als Übungsleitung dieser Organisation eingetragen. Vorbereitet wird in der Verwaltung der führenden Organisation; beim Start entsteht hier ein eigener, verknüpfter Einsatz.</div>`+xpp.map(x=>ent({t:x.title,c:x.kind_color,ch:chip(x.org_name)+chip(x.state==='run'?'läuft':x.state==='done'?'beendet':'vorbereitet',x.state==='run'?'var(--ok)':''),d:x.message,
-    rows:[['Einsatztyp',`<span>${esc(x.kind_name||'')}</span>`],['Datum',x.plan_at?`<span>${esc(new Date(x.plan_at*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'}))}${x.plan_end?' bis '+esc(new Date(x.plan_end*1000).toLocaleString('de-CH',{timeStyle:'short'})):''}</span>`:''],['Ort',x.plan_loc?`<span>${esc(x.plan_loc)}</span>`:''],['Übungsleitung',`<span>${esc((x.leads||[]).join(', '))}</span>`],["Elemente",`<span>${Array.isArray(x.injects)?x.injects.length:x.injects|0}</span>`],['Hinweise',x.plan_info?`<span>${esc(x.plan_info)}</span>`:'']]})).join(''));
+    rows:[['Einsatztyp',`<span>${esc(x.kind_name||'')}</span>`],['Datum',x.plan_at?`<span>${esc(new Date(x.plan_at*1000).toLocaleString(LOC,{dateStyle:'short',timeStyle:'short'}))}${x.plan_end?' bis '+esc(new Date(x.plan_end*1000).toLocaleString(LOC,{timeStyle:'short'})):''}</span>`:''],['Ort',x.plan_loc?`<span>${esc(x.plan_loc)}</span>`:''],['Übungsleitung',`<span>${esc((x.leads||[]).join(', '))}</span>`],["Elemente",`<span>${Array.isArray(x.injects)?x.injects.length:x.injects|0}</span>`],['Hinweise',x.plan_info?`<span>${esc(x.plan_info)}</span>`:'']]})).join(''));
   qWire(el,'exQ');
   // Personenauswahl (Übungsleitung, Aufgebotene): Suchfeld mit Trefferliste statt Häkchen pro Person, damit es auch mit vielen Benutzern übersichtlich bleibt
   // x = Präfix der Element-IDs, sel = Auswahl, skip = zusätzlich nicht wählbar; liefert die aktuelle Auswahl
@@ -1710,7 +1721,7 @@ un=id=>(us.find(u=>u.id===id)||{}).name||'?',stat=p=>p.incident_id==null?['vorbe
     const addTask=(t={})=>{const r=document.createElement('div');r.className='row ptask';r.innerHTML=`<input data-tw maxlength="120" placeholder="Wer, z. B. Boot 1" value="${esc(t.who||'')}" style="flex:0 1 12rem" aria-label="Wer"><input data-tt maxlength="1000" placeholder="Auftrag" value="${esc(t.task||'')}" aria-label="Auftrag"><button type="button" class="sec" aria-label="Auftrag entfernen" title="Entfernen">✕</button>`;r.querySelector('button').onclick=()=>r.remove();$('#pDt',d).append(r)};
     (p.doc?.tasks||[]).forEach(addTask);$('#pDta',d).onclick=()=>addTask();
     let pars=null;const parDraw=()=>{const k=curK(),s=$('#pPa',d),v=s.value||String(p.parent_id||'');$('#pPw',d).hidden=!k.ref;if(!pars)return;
-      s.innerHTML=(k.ref===2?'<option value="">– bitte wählen –</option>':'<option value="">Kein Bezug</option>')+pars.map(x=>`<option value="${x.id}">${esc(x.kind_name)} · ${esc(x.message||'')} · ${esc(new Date(x.alarm_at*1000).toLocaleDateString('de-CH'))}${x.ended_at?'':' (läuft)'}</option>`).join('');s.value=v;if(s.value!==v)s.value='';tkSync()};
+      s.innerHTML=(k.ref===2?'<option value="">– bitte wählen –</option>':'<option value="">Kein Bezug</option>')+pars.map(x=>`<option value="${x.id}">${esc(x.kind_name)} · ${esc(x.message||'')} · ${esc(new Date(x.alarm_at*1000).toLocaleDateString(LOC))}${x.ended_at?'':' (läuft)'}</option>`).join('');s.value=v;if(s.value!==v)s.value='';tkSync()};
     const tkSync=()=>{const x=(pars||[]).find(y=>y.id===+$('#pPa',d).value);d.querySelectorAll('[data-ptk]').forEach(c=>{const ok=!!x&&(c.dataset.ptk==='res'?x.missing>0||!x.ended_at:x.ended_at?!!x[c.dataset.ptk]:1);c.disabled=!x;c.parentElement.style.opacity=ok?'':'.5'})};
     $('#pPa',d).onchange=tkSync;
     const secSync=()=>{const on=isSec();$('#pEp',d).hidden=!on;$('#pMl',d).textContent=noAl()?'Meldung beim Start (ohne Alarm)':'Aufgebotsmeldung (Alarm beim Start)';$('#pLl',d).textContent=on?'Leitung (startet den Einsatz, Rechte der Einsatzleitung)':'Übungsleitung (Rechte der Einsatzleitung, nimmt nicht teil)';$('#pIl',d).textContent=noAl()?'Aufgeboten beim Start (ohne Alarm: sie sehen den Einsatz in der App und treten selbst bei). Nur wer einer beim Einsatztyp aufbietbaren Einsatzgruppe angehört; «Alle» meint alle diese Personen.':'Alarmieren beim Start. Alarmiert wird nur, wer einer beim Einsatztyp aufbietbaren Einsatzgruppe angehört; «Alle» meint alle diese Personen.';if(on&&!pars)api('ex/parents').then(r=>{pars=r;if(p.parent_id&&!r.some(x=>x.id===p.parent_id))pars=[{id:p.parent_id,kind_name:'Einsatz',message:'#'+p.parent_id,alarm_at:0,ended_at:1},...r];parDraw()}).catch(e=>{pars=[];parDraw();fail(e)});else parDraw()};
@@ -1809,7 +1820,7 @@ function renderStats(){const el=$('#stats'),all=statsData.incidents,rows=all.fil
   const av=a=>{a=a.filter(x=>x!=null);return a.length?Math.round(a.reduce((s,x)=>s+x,0)/a.length*10)/10:null};
   // Kennzahlen je Einsatztyp, damit z. B. Übungen die Werte der Einsätze nicht verfälschen
   const sum=k=>{const r=all.filter(x=>x.kind_id===k.id),e=r.filter(x=>x.ended_at);return`<div style="--k:${esc(k.color)}"><h3>${esc(k.name)}</h3><div class="kv"><span><small>Anzahl</small>${r.length} (beendet ${e.length})</span><span><small>Ø Dauer</small>${min(av(e.map(x=>x.ended_at-x.alarm_at)))}</span><span><small>Ø Teilnehmende</small>${av(r.map(x=>x.accepted))??'–'}</span><span><small>Ø bis 1. Annahme</small>${min(av(r.map(x=>x.first_accept==null?null:x.first_accept-x.alarm_at)))}</span><span><small>Ø bis Suchgebiet</small>${min(av(r.map(x=>x.first_area==null?null:x.first_area-x.alarm_at)))}</span></div></div>`};
-  const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const dt=t=>new Date(t*1000).toLocaleString(LOC,{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
   // eine Karte pro Einsatz: Kopf (Art, Zeit, Meldung, Status), Kennzahlen, Knöpfe; bricht um statt seitlich zu scrollen
   const card=x=>{const fl=stRows([['Aufzeichnung',x.record===1?'<span class="on">● läuft</span>':x.record===2?'<span>❚❚ pausiert</span>':x.recorded?'<span>● aufgezeichnet</span>':''],['Anonymisierung',anonChips(x)],['AAR',aar&&x.ended_at?aarChip(x):'']]);
     return`<div class="inc stc" ${kindCss(x)}><div class="ih">${kindBadge(x)} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl}</div>
@@ -1840,8 +1851,8 @@ const PS_METRIC={n:'Anzahl Einsätze',dur:'Einsatzzeit',km:'Fahrtkilometer',trac
 let psData=null,psF=(()=>{try{return Object.assign({art:'all',per:'all',from:'',to:'',inc:'',m:'n'},JSON.parse(localStorage.getItem('sw_psf')||'{}'))}catch(e){return{art:'all',per:'all',from:'',to:'',inc:'',m:'n'}}})();
 async function loadPS(){const el=$('#sPS');try{const[p,s]=await Promise.all([api('stats/people'),api('stats')]);psData={rows:p.rows,inc:s.incidents}}
   catch(e){el.innerHTML='<h2>Statistik pro Person</h2><div class="mut">Statistik nicht verfügbar: '+esc(e.message)+'</div>';return}renderPS()}
-const psHrs=s=>s==null?'–':s<3600?Math.round(s/60)+' min':(Math.round(s/360)/10).toLocaleString('de-CH')+' h';
-const psKm=k=>k==null?'–':(Math.round(k*10)/10).toLocaleString('de-CH')+' km';
+const psHrs=s=>s==null?'–':s<3600?Math.round(s/60)+' min':(Math.round(s/360)/10).toLocaleString(LOC)+' h';
+const psKm=k=>k==null?'–':(Math.round(k*10)/10).toLocaleString(LOC)+' km';
 // Zeitraum: alle, ein Kalenderjahr oder frei (von/bis, Datum inklusive)
 function psRange(f=psF){if(/^\d{4}$/.test(f.per))return[new Date(+f.per,0,1)/1000,new Date(+f.per+1,0,1)/1000];
   if(f.per==='custom'){const a=f.from?new Date(f.from+'T00:00')/1000:-Infinity,b=f.to?new Date(f.to+'T00:00')/1000+86400:Infinity;return[a,b]}return[-Infinity,Infinity]}
@@ -1857,7 +1868,7 @@ function renderPS(){const el=$('#sPS'),f=psF,[a,b]=psRange(),save=()=>{try{local
   psKinds=artList(sel,true);const ppl=[...P.values()],val=p=>f.m==='n'?p.n:f.m==='dur'?p.dur:f.m==='km'?p.km:p.track,fmt=v=>f.m==='n'?String(v):f.m==='dur'?psHrs(v):psKm(v);
   ppl.sort((x,y)=>val(y)-val(x)||y.n-x.n||x.name.localeCompare(y.name,'de'));
   const avg=l=>l.length?l.reduce((s,x)=>s+x,0)/l.length:null,sumF=k=>acc.reduce((s,r)=>s+(r[k]||0),0);
-  const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const dt=t=>new Date(t*1000).toLocaleString(LOC,{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
   el.innerHTML=`<h2>Statistik pro Person</h2>
     <div class="row psf"><label class="mut">Art<select id="psArt">${artOpts(psData.inc,f.art)}</select></label>
       <label class="mut">Zeitraum<select id="psPer"><option value="all">Gesamte Zeit</option>${years.map(y=>`<option value="${y}" ${String(y)===f.per?'selected':''}>${y}</option>`).join('')}<option value="custom" ${f.per==='custom'?'selected':''}>Von – bis …</option></select></label>
@@ -1886,7 +1897,7 @@ const psLeg=()=>psKinds.length?`<div class="pslg">${psKinds.map(k=>`<span><i sty
 function psMonths(sel){if(!sel.length)return'';const k=t=>{const d=new Date(t*1000);return d.getFullYear()*12+d.getMonth()},ks=sel.map(x=>k(x.alarm_at));
   let lo=Math.min(...ks),hi=Math.max(...ks);if(hi-lo>35)lo=hi-35;const n=hi-lo+1,M=[];for(let i=0;i<n;i++)M.push({k:lo+i,c:{},t:0});
   sel.forEach(x=>{const i=k(x.alarm_at)-lo;if(i>=0){M[i].c[x.kind_id]=(M[i].c[x.kind_id]||0)+1;M[i].t++}});
-  const W=psW(),H=140,pl=26,pb=22,pt=8,mx=Math.max(1,...M.map(m=>m.t)),bw=(W-pl)/n,y=v=>(H-pb-pt)*v/mx,mn=m=>new Date(Math.floor(m.k/12),m.k%12,1).toLocaleDateString('de-CH',{month:'short',year:'2-digit'});
+  const W=psW(),H=140,pl=26,pb=22,pt=8,mx=Math.max(1,...M.map(m=>m.t)),bw=(W-pl)/n,y=v=>(H-pb-pt)*v/mx,mn=m=>new Date(Math.floor(m.k/12),m.k%12,1).toLocaleDateString(LOC,{month:'short',year:'2-digit'});
   const step=Math.ceil(n/Math.max(1,Math.floor(W/62))),ticks=[...new Set([0,Math.ceil(mx/2),mx])];
   const bar=(m,i)=>{const w=Math.max(2,Math.min(44,bw*.64)),x=pl+i*bw+(bw-w)/2,base=H-pb,tip=`${mn(m)}: ${psKinds.filter(q=>m.c[q.id]).map(q=>`${m.c[q.id]} ${q.name}`).join(', ')||'keine'}`,sg=psKinds.filter(q=>m.c[q.id]);
     const seg=(h,y0,c,top)=>h<=0?'':top?`<path d="M${x},${y0} v${-(h-Math.min(4,h))} q0,${-Math.min(4,h)} ${Math.min(4,w/2)},${-Math.min(4,h)} h${w-2*Math.min(4,w/2)} q${Math.min(4,w/2)},0 ${Math.min(4,w/2)},${Math.min(4,h)} v${h-Math.min(4,h)} z" fill="${c}"/>`:`<rect x="${x}" y="${y0-h}" width="${w}" height="${h}" fill="${c}"/>`;
@@ -1911,8 +1922,8 @@ function psTips(el){let t=$('#psTip');if(!t){t=document.createElement('div');t.i
 let aarC=null; // Einstellungen (aar/cfg), geladen mit der Einsatzstatistik
 const AAR_LIB={zip:'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',pdf:'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',at:'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'};
 const aarJs={};const loadJs=u=>aarJs[u]=aarJs[u]||new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>{delete aarJs[u];no(new Error('Bibliothek für das Dokument konnte nicht geladen werden (Verbindung?)'))};document.head.appendChild(s)});
-const aarDt=t=>t?new Date(t*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
-const aarTm=t=>t?new Date(t*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'}):'–';
+const aarDt=t=>t?new Date(t*1000).toLocaleString(LOC,{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
+const aarTm=t=>t?new Date(t*1000).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'}):'–';
 const aarMin=s=>s==null?'–':Math.round(s/60)+' min';
 // Status in der Einsatzstatistik: rel = freigegeben, nr = nicht relevant, wip = in Arbeit (Angaben gespeichert), open = noch nichts
 const aarSt=x=>x.aar_st===1?'rel':x.aar_st===2?'nr':x.aar_at?'wip':'open';
@@ -1996,7 +2007,7 @@ function aarSide(el,x,id,row,changed){const i=x.inc;let tab='inc',fb=null,q='';t
 // Fenster breit: Anforderungen zuoberst, rechts eine Vorschaukarte mit den bestehenden Elementen und festen Standorten (exMap) und den angehakten Vorschlägen (gestrichelt).
 function aiPlan(p,fp){const can=!p.ended_at;let cur=null,d=null,m=null,lay=null;
   const dist=e=>{const m=Math.round(Math.hypot(e.east_m,e.north_m));if(m<10)return'bei';const c=['N','NO','O','SO','S','SW','W','NW'][Math.round(((Math.atan2(e.east_m,e.north_m)*180/Math.PI+360)%360)/45)%8];
-    return`ca. ${m>=1000?(m/1000).toLocaleString('de-CH',{maximumFractionDigits:1})+' km':m+' m'} ${c} von`};
+    return`ca. ${m>=1000?(m/1000).toLocaleString(LOC,{maximumFractionDigits:1})+' km':m+' m'} ${c} von`};
   const ok=e=>!!e.ll&&!e.done;
   const info=e=>[e.kind==='extdel'?`bei «${esc(e.at)}»`:e.ll?`${dist(e)} «${esc(e.at)}»`:'<span class="aierr">ohne Bezugspunkt, nicht übernehmbar</span>',
     e.kind==='seen'?(e.of==='new'?`neuer Rettling «${esc(e.name)}»`:e.of==='unk'?'unbekannter Rettling':`Rettling «${esc(e.of_label)}»`):'',
@@ -2339,7 +2350,7 @@ function myFb(box,F){if(!box)return;if(!F||!F.items.length){box.innerHTML='';ret
     try{await api('my/fb/save',{id:+b.dataset.fbs,data});toast('Danke für dein Feedback.','ok');myFb(box,await api('my/fb'))}catch(e){fail(e);b.disabled=false}})}
 async function loadMy(){const el=$('#sMy');let r;const F=await api('my/fb').catch(()=>null);
   try{r=await api('my/incidents');myPs=await api('my/stats').then(x=>x.rows).catch(()=>null);if(r.incidents.some(x=>x.aar_rel))aarC=await api('aar/cfg')}catch(e){el.innerHTML='<h2>Meine Einsätze</h2><div id="myFb"></div>'+(F&&F.items.length?'':'<div class="mut">Nicht verfügbar: '+esc(e.message)+'</div>');myFb($('#myFb'),F);return}
-  const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),forced=r.mode==='anon';myB=r.btns;const B=myB,bAar=B.aar||B.docx||B.pdf;
+  const dt=t=>new Date(t*1000).toLocaleString(LOC,{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),forced=r.mode==='anon';myB=r.btns;const B=myB,bAar=B.aar||B.docx||B.pdf;
   const anyAn=x=>x.view_anon||x.rp_anon||x.log_anon||x.txt_anon;
   const card=x=>{const fl=stRows([['Anonymisierung',anyAn(x)?'<span>anonymisiert</span>':''],['AAR',x.aar_at?`<span class="rv" title="Freigegeben am ${aarDt(x.aar_at)}">freigegeben</span>`:'']]),aa=(x.aar_rel&&aarC?(B.aar?`<button data-mv="${x.id}">Ansehen</button>`:'')+aarDlBtns(x.id,'m','rel',k=>B[k]):'')+(x.aar_arch?`<button data-mc="${x.id}" title="Als PDF herunterladen">PDF</button>`:'');
     return`<div class="inc stc" ${kindCss(x)}><div class="ih">${kindBadge(x)} <span class="mut">${dt(x.alarm_at)}</span><b>${esc(x.message)}</b>${fl}</div>
@@ -2382,7 +2393,7 @@ let anonD=null,anonSel=new Set(),anonF=(()=>{try{return Object.assign({art:'all'
 async function loadAnon(){const el=$('#sAnon');try{anonD=await api('anon/cfg')}catch(e){return secErr(el,'Anonymisierung',e)}
   const ok=new Set(anonD.incidents.map(x=>x.id));anonSel=new Set([...anonSel].filter(id=>ok.has(id)));renderAnon();aarArchSync()}
 function renderAnon(){const el=$('#sAnon'),D=anonD,C=D.cfg,f=anonF,[a,b]=psRange(f),save=()=>{try{localStorage.setItem('sw_anf',JSON.stringify(anonF))}catch(_){}};
-  const dt=t=>new Date(t*1000).toLocaleString('de-CH',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),now=Date.now()/1000;
+  const dt=t=>new Date(t*1000).toLocaleString(LOC,{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),now=Date.now()/1000;
   const years=[...new Set(D.incidents.map(x=>new Date(x.alarm_at*1000).getFullYear()))].sort((x,y)=>y-x);
   const list=D.incidents.filter(x=>isArt(x,f.art)&&x.alarm_at>=a&&x.alarm_at<b),sel=D.incidents.filter(x=>anonSel.has(x.id));
   const on=D.steps.filter(s=>C[s.key].on),st=f.st.filter(k=>on.some(s=>s.key===k));
@@ -2528,7 +2539,7 @@ function seek(t){if(!rp)return;rp.t=Math.max(rp.t0,Math.min(rp.t1,t));drawReplay
 document.addEventListener('keydown',e=>{if(!rp)return;if(e.key==='Escape'){const b=$('#replay #viewBox');if(b&&!b.hidden){rpViewBox(false);return $('#rpView').focus()}return closeReplay()}
   if(e.key===' '&&!e.target.closest('input,textarea,select,button')){e.preventDefault();playReplay(!rp.play)}});
 function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==null||t<b);
-  $('#rpRange').value=Math.floor(t);$('#rpTime').textContent=new Date(t*1000).toLocaleString('de-CH')+' · T+'+durT(t-i.alarm_at);
+  $('#rpRange').value=Math.floor(t);$('#rpTime').textContent=new Date(t*1000).toLocaleString(LOC)+' · T+'+durT(t-i.alarm_at);
   // Personen: Position zum Zeitpunkt t (zwischen zwei Meldungen interpoliert), Spur bis t
   const info=[];
   const pi=rp.perIdx(t),rec=pi>=0; // zum Zeitpunkt t aufgezeichnet?
@@ -2809,7 +2820,7 @@ async function loadDocIn(){const el=$('#sDkI');let L;try{L=(await api('doc/sugs'
   const K={new:'Neuer Eintrag',ver:'Neue Version',note:'Hinweis'},S={open:'offen',taken:'übernommen',done:'erledigt',rejected:'abgelehnt'};
   const card=x=>ent({ic:x.kind==='note'?'💬':x.kind==='ver'?'📎':'➕',t:x.title||x.doc_title||(x.file&&x.file.name)||K[x.kind],off:x.state!=='open',
     ch:chip(K[x.kind])+chip(x.folder)+(x.state!=='open'?chip(S[x.state]):''),dh:x.note?`<div class="dknote">${esc(x.note)}</div>`:'',
-    rows:[['Von',x.user?nmG(x.user,x.user_id):'(gelöscht)'],['Eingegangen',esc(new Date(x.at*1000).toLocaleString('de-CH'))],x.doc_title?['Zu',esc(x.doc_title)]:null,x.file?['Datei',esc(x.file.name+' ('+dkSize(x.file.bytes)+')')]:null,x.reason?['Begründung',esc(x.reason)]:null].filter(Boolean),
+    rows:[['Von',x.user?nmG(x.user,x.user_id):'(gelöscht)'],['Eingegangen',esc(new Date(x.at*1000).toLocaleString(LOC))],x.doc_title?['Zu',esc(x.doc_title)]:null,x.file?['Datei',esc(x.file.name+' ('+dkSize(x.file.bytes)+')')]:null,x.reason?['Begründung',esc(x.reason)]:null].filter(Boolean),
     btns:x.state==='open'?`${x.file?`<button data-sf="${x.id}">Datei ansehen</button>`:''}${x.doc_id?`<button data-sd="${x.doc_id}">Eintrag ansehen</button>`:''}${x.kind!=='note'?`<button class="pri" data-st="${x.id}">Übernehmen</button>`:''}<button data-sk="${x.id}">Erledigt</button><button class="sec" data-sr="${x.id}">Ablehnen</button>`:x.result_id?`<button data-sd="${x.result_id}">Ergebnis ansehen</button>`:'',q:(x.title||'')+' '+(x.note||'')+' '+(x.user||'')});
   const op=L.filter(x=>x.state==='open'),dn=L.filter(x=>x.state!=='open');
   el.innerHTML=`<h2>Eingang</h2><div class="mut">Vorschläge der Einsatzkräfte für die Ordner, in denen du Redaktion bist: neue Einträge, neue Versionen und Hinweise. Wer vorgeschlagen hat, wird über das Ergebnis benachrichtigt. Abgelehnte werden nach 30 Tagen gelöscht.</div>
@@ -2848,7 +2859,7 @@ async function loadDocCfg(){const el=$('#sDkC');let C;try{C=await api('docs/cfg'
       <div class="dktypes">${Object.entries(C.types).map(([k,t])=>`<label class="chk"><input type="checkbox" data-dty="${k}" ${c.types[k]?'checked':''}> <b>${esc(t.label)}</b> <span class="mut">${t.ext.map(x=>'.'+x).join(' ')}${t.show==='dl'?' · nur herunterladen':' · Anzeige in der App'}</span></label>`).join('')}</div>
       <label class="mut">Weitere Endungen (durch Komma getrennt, nur herunterladen; Endungen der Dateitypen oben zählen dort)<input id="dtF" value="${esc(c.free)}" placeholder="z. B. dwg, ics"></label><div class="mut">Nie erlaubt: ${esc(C.never.map(x=>'.'+x).join(' '))}</div>${sbar('dtS')}</div>
     <div class="scard"><h3>Grenzen und Versionen</h3><div class="anums">${numCard('dcM','Grösse je Datei',c.max_mb,'MB',1,500,1,25)}${numCard('dcQ','Speicher insgesamt',c.quota_mb,'MB',10,1000000,10,5120,'Alle Dateien und Vorschläge zusammen')}${numCard('dcK','Frühere Versionen behalten',c.keep,'Versionen',0,50,1,5,'Ältere werden beim Hochladen entfernt')}${numCard('dcO','Offline je Gerät',c.off_mb,'MB',0,5000,10,300,'0 = nichts offline speichern')}</div>
-      <div class="mut">Belegt: ${mb(C.usage)} MB von ${c.quota_mb.toLocaleString('de-CH')} MB in ${C.n_docs} Einträgen.</div>${sbar('dcS')}</div>
+      <div class="mut">Belegt: ${mb(C.usage)} MB von ${c.quota_mb.toLocaleString(LOC)} MB in ${C.n_docs} Einträgen.</div>${sbar('dcS')}</div>
     <div class="scard"><h3>Externe</h3><div class="mut">Die Einsatzleitung kann im laufenden Einsatz einzelne Einträge für Externe freigeben: auf der Funk-Gastseite und als eigener Link. Beides endet mit dem Einsatz.</div>
       <label class="chk"><input type="checkbox" id="deOn" ${c.ext.on?'checked':''}> Freigabe für Externe erlauben</label><div id="deW" style="margin-left:1.4rem">
       <label class="chk"><input type="checkbox" id="deF" ${c.ext.folder_only?'checked':''}> Nur Einträge aus Ordnern, die das erlauben</label>

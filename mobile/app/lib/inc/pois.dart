@@ -5,7 +5,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +14,7 @@ import 'area.dart' show SearchArea, bankM;
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 const _placeCol = '#1d7fd1'; // PLACE_COL
 
@@ -287,7 +288,7 @@ Widget? placeNavBtn(BuildContext c, IncStore s, J f, {String? label}) {
   if (!s.feat('nav') || jd(f['lat']) == null) return null;
   final n = placeNav(f).length;
   return label == null
-      ? IconButton(tooltip: n > 1 ? 'Navigationspunkt wählen' : 'Zu ${js(f['name'])} navigieren', icon: const Text('🧭', style: TextStyle(fontSize: 18)), onPressed: () => placeNavGo(c, s, f), visualDensity: VisualDensity.compact)
+      ? IconButton(tooltip: trn(n > 1 ? 'Navigationspunkt wählen' : 'Zu ${js(f['name'])} navigieren'), icon: const Text('🧭', style: TextStyle(fontSize: 18)), onPressed: () => placeNavGo(c, s, f), visualDensity: VisualDensity.compact)
       : OutlinedButton(onPressed: () => placeNavGo(c, s, f), child: Text('🧭 $label'));
 }
 
@@ -407,7 +408,7 @@ class _PoisPanelState extends State<PoisPanel> {
         area ? 'Bereich markieren' : line ? 'Linie zeichnen' : 'Markierung setzen',
         (d, ss) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
               if (syms.isNotEmpty) ...[
-                TextField(controller: q, onChanged: (_) => ss(() {}), decoration: const InputDecoration(labelText: 'Symbol suchen', isDense: true)),
+                TextField(controller: q, onChanged: (_) => ss(() {}), decoration: InputDecoration(labelText: trn('Symbol suchen'), isDense: true)),
                 const SizedBox(height: 6),
                 grid(ss),
               ],
@@ -416,7 +417,7 @@ class _PoisPanelState extends State<PoisPanel> {
                   autofocus: syms.isEmpty,
                   maxLength: 80,
                   decoration: InputDecoration(
-                      labelText: 'Bezeichnung', hintText: sym != null ? symName(sym) : area ? 'z. B. Suchsektor Nord' : line ? 'z. B. Absperrung Uferweg' : 'z. B. Treffpunkt Boote')),
+                      labelText: trn('Bezeichnung'), hintText: trn(sym != null ? symName(sym) : area ? 'z. B. Suchsektor Nord' : line ? 'z. B. Absperrung Uferweg' : 'z. B. Treffpunkt Boote'))),
               if (sym == null) ...[
                 const Padding(padding: EdgeInsets.only(top: 6, bottom: 6), child: Mut('Farbe')),
                 ColorPick(value: color, onChanged: (c) => ss(() => color = c)),
@@ -588,7 +589,7 @@ class _PoisPanelState extends State<PoisPanel> {
           if (c != null) ?navBtn(s, c.latitude, c.longitude, js(p['name'])),
           if (s.canManage)
             IconButton(
-                tooltip: 'Für alle entfernen', visualDensity: VisualDensity.compact, icon: const Icon(Icons.close, size: 20), onPressed: () => _remove(p)),
+                tooltip: trn('Für alle entfernen'), visualDensity: VisualDensity.compact, icon: const Icon(Icons.close, size: 20), onPressed: () => _remove(p)),
         ]);
   }
 

@@ -6,7 +6,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -33,6 +33,7 @@ import 'store.dart';
 import 'util.dart';
 import 'veh.dart';
 import 'voice.dart';
+import '../i18n.dart';
 
 const _fitPad = EdgeInsets.fromLTRB(50, 90, 80, 50);
 const _homeWaitMs = 20000, _areaWaitMs = 30000;
@@ -818,7 +819,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                                     top: 0,
                                     right: 0,
                                     child: IconButton(
-                                        tooltip: 'Infofenster schliessen',
+                                        tooltip: trn('Infofenster schliessen'),
                                         icon: const Icon(Icons.close, size: 18),
                                         visualDensity: VisualDensity.compact,
                                         onPressed: () => setState(() => _pinfo = null))),
@@ -1476,7 +1477,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       child: Stack(clipBehavior: Clip.none, children: [
         FloatingActionButton.small(
             heroTag: tip,
-            tooltip: tip,
+            tooltip: trn(tip),
             backgroundColor: active ? const Color(0xFF1D7FD1) : appBlue,
             foregroundColor: Colors.white,
             onPressed: onTap,
@@ -1572,7 +1573,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
             padding: const EdgeInsets.all(8),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Column(children: [
-                FloatingActionButton.small(heroTag: 'menu', tooltip: 'Menü', backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: () => _sk.currentState?.openDrawer(), child: const Icon(Icons.menu)),
+                FloatingActionButton.small(heroTag: 'menu', tooltip: trn('Menü'), backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: () => _sk.currentState?.openDrawer(), child: const Icon(Icons.menu)),
                 if (s.demo) Padding(padding: const EdgeInsets.only(top: 6), child: DemoBadge(onChanged: _demoChanged)), // Demo-Modus (Issue #74)
               ]),
               const SizedBox(width: 8),
@@ -1598,7 +1599,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                           onDeleted: _stopFollow)),
               ])),
               const SizedBox(width: 8),
-              FloatingActionButton.small(heroTag: 'view', tooltip: 'Ansicht', backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: _viewBox, child: const Icon(Icons.layers)),
+              FloatingActionButton.small(heroTag: 'view', tooltip: trn('Ansicht'), backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: _viewBox, child: const Icon(Icons.layers)),
             ])));
   }
 
@@ -1643,10 +1644,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
               child: Row(children: [
                 Expanded(child: Text(_draw != null ? '$_pickHint (${_drawPts.length} ${_drawLine ? 'Punkte' : 'Eckpunkte'})' : _pickHint!, style: const TextStyle(color: Colors.white))),
                 if (_draw != null) ...[
-                  IconButton(tooltip: 'Rückgängig', color: Colors.white, onPressed: _drawPts.isEmpty ? null : () => setState(() => _drawPts.removeLast()), icon: const Icon(Icons.undo)),
-                  IconButton(tooltip: 'Fertig', color: Colors.white, onPressed: _finishDraw, icon: const Icon(Icons.check)),
+                  IconButton(tooltip: trn('Rückgängig'), color: Colors.white, onPressed: _drawPts.isEmpty ? null : () => setState(() => _drawPts.removeLast()), icon: const Icon(Icons.undo)),
+                  IconButton(tooltip: trn('Fertig'), color: Colors.white, onPressed: _finishDraw, icon: const Icon(Icons.check)),
                 ],
-                IconButton(tooltip: 'Abbrechen', color: Colors.white, onPressed: _cancelPick, icon: const Icon(Icons.close)),
+                IconButton(tooltip: trn('Abbrechen'), color: Colors.white, onPressed: _cancelPick, icon: const Icon(Icons.close)),
               ])));
     }
     final a = s.area;
@@ -1910,9 +1911,9 @@ class _MustChangeState extends State<_MustChange> {
       appBar: AppBar(title: const Text('Eigenes Passwort setzen')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         const Text('Bitte setze zuerst ein eigenes Passwort.'),
-        TextField(controller: _old, obscureText: true, decoration: const InputDecoration(labelText: 'Aktuelles Passwort')),
-        TextField(controller: _n1, obscureText: true, decoration: const InputDecoration(labelText: 'Neues Passwort')),
-        TextField(controller: _n2, obscureText: true, decoration: const InputDecoration(labelText: 'Neues Passwort wiederholen')),
+        TextField(controller: _old, obscureText: true, decoration: InputDecoration(labelText: trn('Aktuelles Passwort'))),
+        TextField(controller: _n1, obscureText: true, decoration: InputDecoration(labelText: trn('Neues Passwort'))),
+        TextField(controller: _n2, obscureText: true, decoration: InputDecoration(labelText: trn('Neues Passwort wiederholen'))),
         const SizedBox(height: 16),
         FilledButton(onPressed: _busy ? null : _save, child: const Text('Speichern')),
         TextButton(onPressed: widget.onLogout, child: const Text('Abmelden')),

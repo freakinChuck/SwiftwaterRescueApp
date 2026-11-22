@@ -1,6 +1,7 @@
 /* Gemeinsamer Code für Einsatz-App (index.html) und Verwaltung (admin.html) */
 const API='api/index.php';
 const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+if(!window.LOC)window.LOC='de-CH';if(!window.T)window.T=s=>String(s??''); // Mehrsprachigkeit (Issue #66): i18n.js setzt LOC (Datumsformat) und T (Übersetzen ausserhalb des DOM)
 var DEMO=window.DEMO||null; // Demo-Modus (Issue #74): gesetzt von demo.js (nur index.html lädt es, nur mit ?demo), sonst null
 let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt die jeweilige Seite
 // Native App (Issue #108): Die Flutter-Hülle zeigt die Web-App in einer WebView und hängt «SwiftwaterRescueApp/<Version>» an den User-Agent an.
@@ -12,9 +13,11 @@ function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHan
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download=name;document.body.appendChild(l);l.click();setTimeout(()=>{URL.revokeObjectURL(l.href);l.remove()},3000)}
 // Parallele Einsätze (Issue #167): INC_SEL = in der Einsatz-App angezeigter Einsatz, geht als X-Inc mit (0 = der Server wählt; Verwaltung, öffentliche Ansicht)
 let INC_SEL=0;
-async function api(r,body){const o={headers:{'X-Token':token||''}};if(INC_SEL)o.headers['X-Inc']=String(INC_SEL);if(body){o.method='POST';o.body=JSON.stringify(body)}
+async function api(r,body){const o={headers:{'X-Token':token||'','X-Lang':window.LANG||'de'}};if(INC_SEL)o.headers['X-Inc']=String(INC_SEL);if(body){o.method='POST';o.body=JSON.stringify(body)}
   const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:'Serverfehler'}));
-  if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}return j}
+  if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}
+  if(r==='me'&&j.me&&window.I18N&&!DEMO)I18N.me(j.me,l=>api('me/settings',{lang:l}).catch(()=>{})); // Sprache des Kontos übernehmen bzw. die bei der Anmeldung gewählte speichern (Issue #66)
+  return j}
 // Applikationslog (Issue #139): Skriptfehler an den Server melden (nur angemeldet, höchstens 5 je Seitenaufruf, gleiche Meldung einmal; der Server begrenzt zusätzlich).
 // Nicht gemeldet: Fehler fremder Skripte ohne Angaben («Script error.»), Verbindungsabbrüche (offline) und abgelehnte API-Antworten (stehen schon im Log bzw. sind Eingabefehler).
 const CERR={n:0,seen:new Set()};
@@ -132,7 +135,7 @@ function airSync(map,layer,list,now,fc){const m=layer._air||(layer._air=new Map(
 function airRot(map,layer){const b=map.getBearing?map.getBearing():0;(layer._air||new Map()).forEach(x=>{const e=x.mk.getElement&&x.mk.getElement(),s=e&&e.querySelector('.airr');if(s)s.style.transform=`rotate(${Math.round((x.a.trk||0)-b)}deg)`})}
 // Quellenangabe der Datenquelle unten auf der Karte (ODbL u. a.)
 function airAttr(map,d){const ac=map.attributionControl;if(!ac)return;const t=d&&d.src&&(d.air||[]).length?`Luftlage: <a href="${esc(d.src.site)}" target="_blank" rel="noopener">${esc(d.src.name)}</a>`:'';if(map._airAt===t)return;if(map._airAt)ac.removeAttribution(map._airAt);if(t)ac.addAttribution(t);map._airAt=t}
-const fmtT=ts=>new Date(ts*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const fmtT=ts=>new Date(ts*1000).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 /* ---------- Suchgebiet entlang des Flusslaufs (Einsatz-App und öffentliche Ansicht) ---------- */
 const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
 const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
@@ -220,7 +223,7 @@ function riverArea(net,i,D,posts,stops){let best=null,bd=1e12;net.ways.forEach(w
 const srcKey=s=>s.lat.toFixed(6)+','+s.lon.toFixed(6);
 // Schlüssel eines Teilgebiets: PLS mit Zeitpunkt, wie die Zusammenfassung in plsSources()
 const partKey=(lat,lon,at)=>lat.toFixed(6)+','+lon.toFixed(6)+'@'+at;
-const fmtDT=ts=>new Date(ts*1000).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const fmtDT=ts=>new Date(ts*1000).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys:[],lines:[],circles:[],info:[],parts:[]};
   if(!srcs.length){const miss=(rs||[]).filter(x=>!x.rescued_at&&x.lat==null);
     r.info.push(!(rs||[]).length?'Suchgebiet: Kein PLS gesetzt.':miss.length?'Suchgebiet: Kein PLS für '+miss.map(x=>'«'+x.name+'»').join(', ')+'. PLS des Einsatzes oder der Rettlinge setzen.':'Suchgebiet: Alle Rettlinge gefunden.');return r}
@@ -300,12 +303,12 @@ function orgMark(o,cls,fb){const n=(o&&o.name)||fb||'',u=orgLogo(o);if(!n&&!u)re
 // Links auf Impressum, Lizenzen und Datenschutz (Fusszeilen der Verwaltung und des Menüs der Einsatz-App)
 const legalLinks=()=>[['impressum','Impressum'],['lizenzen','Lizenzen'],['datenschutz','Datenschutz']].map(([h,l])=>`<a href="legal.html#${h}" target="_blank" rel="noopener">${l}</a>`).join(' · ');
 /* ---------- Anmeldung ---------- */
-function loginView(el,title,done){el.innerHTML=`<div class="card"><div id="lgOrg"></div><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button><a class="mut lglk" href="index.html?demo">🎓 Demo ausprobieren (ohne Anmeldung)</a><a class="mut lglk" href="hilfe.html" target="_blank" rel="noopener">📖 Bedienungsanleitung</a><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
+function loginView(el,title,done){el.innerHTML=`<div class="card"><div id="lgOrg"></div><h1>${esc(title)}</h1><input id="u" placeholder="Benutzername" autocomplete="username"><input id="p" type="password" placeholder="Passwort" autocomplete="current-password"><button class="pri" id="go">Anmelden</button>${window.I18N?`<label class="mut lglang">🌐 ${I18N.select('lgLang',I18N.chosen())}</label>`:''}<a class="mut lglk" href="index.html?demo">🎓 Demo ausprobieren (ohne Anmeldung)</a><a class="mut lglk" href="hilfe.html" target="_blank" rel="noopener">📖 Bedienungsanleitung</a><a class="mut lglk" href="legal.html">Impressum · Lizenzen · Datenschutz</a><div class="mut lglk" id="lgVer"></div></div>`;
   // Organisation mit Logo (Issue #123) und Version (Issue #175) ohne Anmeldung; ältere Server ohne Route org: nur die Version
   fetch(`${API}?r=org`).then(r=>r.ok?r.json():fetch(`${API}?r=version`).then(r=>r.json()).then(v=>({version:v}))).then(o=>{const e=$('#lgVer'),g=$('#lgOrg'),v=o.version;
-    if(e&&v&&v.version)e.textContent='Version '+verTxt(v);if(g&&!DEMO)g.innerHTML=orgMark(o,'orgbig')}).catch(()=>{});
+    if(e&&v&&v.version)e.textContent='Version '+verTxt(v);if(o.lang&&window.I18N)I18N.orgDef(o.lang);if(g&&!DEMO)g.innerHTML=orgMark(o,'orgbig')}).catch(()=>{});
   const go=async()=>{try{token=(await api('login',{username:$('#u').value,password:$('#p').value})).token;localStorage.setItem('sw_token',token);done()}catch(e){fail(e)}};
-  $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
+  $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()};const lg=$('#lgLang');if(lg)lg.onchange=()=>I18N.set(lg.value)}
 /* ---------- Dialoge ---------- */
 // Einfacher modaler Dialog; save(d) wirft bei Fehlern, dann bleibt der Dialog offen
 // Kürzel und Farbe externer Einsatzkräfte und ihrer Vorlagen (Issue #39): Felder im Dialog, Wert lesen; Farbe ohne Häkchen = keine
@@ -347,7 +350,7 @@ function showCopy(title,text){const d=dlg(title,`<input readonly value="${esc(te
   const f=$('input',d);f.focus();f.select()}
 /* ---------- Abwesenheiten (Issue #91): abwesend bzw. Einsatzfähigkeit ausgesetzt = nicht aufgeboten, kein Alarm; laufende Einsätze bleiben sichtbar ---------- */
 const ABS_KIND={abs:'Abwesend',sus:'Einsatzfähigkeit ausgesetzt'};
-const absDT=ts=>new Date(ts*1000).toLocaleString('de-CH',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+const absDT=ts=>new Date(ts*1000).toLocaleString(LOC,{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
 // a = laufende Abwesenheit {kind, until, note} (me.absent, users[].absent, my_abs)
 // kind rule = regelmässige Einsatzzeiten (Issue #180): why on = ausserhalb der Einsatzzeiten, off = regelmässig ausgesetzt; until = wieder einsatzfähig ab
 const absWord=a=>a.kind==='rule'?(a.why==='on'?'ausserhalb Einsatzzeit':'regelmässig ausgesetzt'):a.kind==='sus'?'ausgesetzt':'abwesend';
@@ -409,7 +412,7 @@ function pwDialog(forced,done){
     'Speichern',forced?'Abmelden':'Abbrechen',forced?()=>{logout();done&&done()}:null)}
 /* ---------- Ausbildungskontrolle (Issue #117): Fähigkeiten mit Datum der letzten Ausbildung, Ablauf und Vorwarnung; gemeinsam für Profil (Einsatz-App) und Verwaltung ---------- */
 const SK_ST={ok:['gültig','ok'],warn:['läuft bald ab','warn'],exp:['abgelaufen','exp'],miss:['fehlt (Pflicht)','warn'],none:['nicht erfasst','none']};
-const skD=ts=>ts?new Date(ts*1000).toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+const skD=ts=>ts?new Date(ts*1000).toLocaleDateString(LOC,{day:'2-digit',month:'2-digit',year:'numeric'}):'';
 const skDay=ts=>new Date(ts*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10),skTs=v=>v?Math.floor(new Date(v+'T12:00').getTime()/1000)||0:0; // Datum = Mittag Ortszeit
 // Gültigkeit in Worten (exp none|months|year, n)
 function skValid(k){if(k.exp==='months')return k.n%12?`${k.n} Monate`:(k.n===12?'1 Jahr':`${k.n/12} Jahre`);if(k.exp==='year')return!k.n?'bis Ende des Kalenderjahres':k.n===1?'bis Ende des Folgejahres':`bis Ende des ${k.n}. Folgejahres`;return'unbegrenzt'} // n: 0 = laufendes Jahr, 1 = Folgejahr …
@@ -462,7 +465,7 @@ function renderBigLog(){const o=$('#bigLog');if(!big||!o)return;const got=big.ge
   const g=KIND_GROUPS[big.filter][1],all=big.cache,l=all.filter(x=>!g||g.includes(x.kind)).sort((a,b)=>(big.desc?-1:1)*(a.ts-b.ts||a.id-b.id)); // Log und Nachrichten gemischt, daher nach Zeit
   $('#bigT').textContent=`${big.title} · ${l.length} von ${all.length} Einträgen${big.live&&!got?' · Einsatz beendet':''}`;
   $('#bigS').textContent=big.desc?'Neueste zuerst':'Älteste zuerst';
-  $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString('de-CH')}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}${vplayBtn(x)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
+  $('#bigList').innerHTML=l.map(x=>`<div class="lg" style="border-left-color:${KIND_COL[x.kind]||'#888'}"><span class="t">${big.live?fmtT(x.ts):new Date(x.ts*1000).toLocaleString(LOC)}</span><b>${esc(x.name||'System')}</b><span>${esc(x.text)}${vplayBtn(x)}</span></div>`).join('')||'<div class="mut">Keine Einträge</div>'}
 /* ---------- AI-Assistent (Issue #111): Fenster mit Vorschlag, Übernehmen / Verwerfen / Neu, zusätzlichem Wunsch und freien Fragen ---------- */
 // Modus der Person je Funktion und Bereich (Einsatztyp-ID oder 'adm'; me.ai vom Server: aiMe, schon begrenzt auf das Erlaubte und die eigene Wahl): off, cmd (auf Abruf), comp (begleitend)
 const aiM=(fn,ctx)=>(typeof me!=='undefined'&&me&&me.ai&&me.ai[fn]&&me.ai[fn].modes[String(ctx)])||'off';
@@ -471,7 +474,7 @@ const aiOn=(fn,ctx)=>aiM(fn,ctx)!=='off';
 const aiMi=(fn,x)=>x&&x.ai?(x.ai[fn]||'off'):aiM(fn,x&&x.kind_id);
 // Antworttext: Zeilenumbrüche bleiben, **fett** und Zwischentitel (#) werden hervorgehoben, sonst nur Text (kein HTML vom Anbieter)
 const aiFmt=t=>esc(t||'').replace(/^#{1,6}\s*(.+)$/gm,'<b>$1</b>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');
-const aiMeta=r=>`${r.cached?'Gespeicherter Vorschlag vom ':'Erstellt '}${new Date(r.ts*1000).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'})}${r.tokens?` · ${r.tokens.toLocaleString('de-CH')} Tokens`:''}${r.anon?' · Namen ersetzt durch Bezeichnungen':''}`;
+const aiMeta=r=>`${r.cached?'Gespeicherter Vorschlag vom ':'Erstellt '}${new Date(r.ts*1000).toLocaleString(LOC,{dateStyle:'short',timeStyle:'short'})}${r.tokens?` · ${r.tokens.toLocaleString(LOC)} Tokens`:''}${r.anon?' · Namen ersetzt durch Bezeichnungen':''}`;
 const aiCopy=async t=>{try{await navigator.clipboard.writeText(t||'');toast('In die Zwischenablage kopiert.')}catch(e){throw new Error('Kopieren nicht möglich, bitte den Text markieren')}};
 // o: title, req (fn, id, field, all …), my (Meine Einsätze), pre (bereits geladener Vorschlag), show(r) → HTML, apply(r) (ohne: Kopieren), applyText
 // chat: freie Fragen zu den Daten von req (about = req.fn); chatOnly: nur freie Fragen, ohne Auftrag (req null = ohne Daten)

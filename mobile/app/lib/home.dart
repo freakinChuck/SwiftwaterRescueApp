@@ -2,7 +2,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:flutter/material.dart' as m show Text;
 import 'package:flutter_background_service/flutter_background_service.dart';
 
 import 'accounts.dart';
@@ -18,6 +19,7 @@ import 'service.dart';
 import 'sys.dart';
 import 'track.dart';
 import 'version.dart';
+import 'i18n.dart';
 
 void snack(BuildContext c, String t) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(t), duration: const Duration(seconds: 3)));
 
@@ -164,7 +166,7 @@ class _HomeState extends State<HomePage> {
                   controller: c,
                   autofocus: true,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(labelText: 'Name in der Kontenliste', hintText: a.org.isNotEmpty ? a.org : hostPath(a.base), helperText: 'Leer = ${a.org.isNotEmpty ? 'Organisation' : 'Server-Adresse'}', border: const OutlineInputBorder()),
+                  decoration: InputDecoration(labelText: trn('Name in der Kontenliste'), hintText: trn(a.org.isNotEmpty ? a.org : hostPath(a.base)), helperText: trn('Leer = ${a.org.isNotEmpty ? 'Organisation' : 'Server-Adresse'}'), border: const OutlineInputBorder()),
                   onSubmitted: (t) => Navigator.pop(d, t)),
               actions: [TextButton(onPressed: () => Navigator.pop(d), child: const Text('Abbrechen')), FilledButton(onPressed: () => Navigator.pop(d, c.text), child: const Text('Speichern'))],
             ));
@@ -275,7 +277,7 @@ class _HomeState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Swiftwater Rescue'), actions: [
         IconButton(
-            tooltip: 'Einstellungen',
+            tooltip: trn('Einstellungen'),
             icon: const Icon(Icons.settings),
             onPressed: () async {
               await Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsPage(onIntervalChanged: widget.onIntervalChanged)));
@@ -400,19 +402,19 @@ class _LoginState extends State<LoginPage> {
               enabled: !re,
               keyboardType: TextInputType.url,
               autocorrect: false,
-              decoration: const InputDecoration(labelText: 'Server-Adresse', hintText: 'z. B. https://example.ch/swiftwater/', border: OutlineInputBorder())),
+              decoration: InputDecoration(labelText: trn('Server-Adresse'), hintText: trn('z. B. https://example.ch/swiftwater/'), border: OutlineInputBorder())),
           const SizedBox(height: 12),
           TextField(
               controller: _alias,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(labelText: 'Bezeichnung (optional)', hintText: 'z. B. SLRG Bern', helperText: 'Name in der Kontenliste, leer = Organisation des Servers', border: OutlineInputBorder())),
+              decoration: InputDecoration(labelText: trn('Bezeichnung (optional)'), hintText: trn('z. B. SLRG Bern'), helperText: trn('Name in der Kontenliste, leer = Organisation des Servers'), border: OutlineInputBorder())),
           const SizedBox(height: 12),
-          TextField(controller: _u, autocorrect: false, decoration: const InputDecoration(labelText: 'Benutzername', border: OutlineInputBorder()), autofillHints: const [AutofillHints.username]),
+          TextField(controller: _u, autocorrect: false, decoration: InputDecoration(labelText: trn('Benutzername'), border: OutlineInputBorder()), autofillHints: const [AutofillHints.username]),
           const SizedBox(height: 12),
           TextField(
               controller: _p,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Passwort', border: OutlineInputBorder()),
+              decoration: InputDecoration(labelText: trn('Passwort'), border: OutlineInputBorder()),
               autofillHints: const [AutofillHints.password],
               onSubmitted: (_) => _go()),
           if (_err != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_err!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
@@ -481,6 +483,18 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(title: const Text('Einstellungen')),
       body: ListView(children: [
+        ListTile(
+          title: const Text('Sprache'),
+          subtitle: Text(tr('Gilt für die App und die Meldungen aller Konten.'), style: hint),
+          trailing: DropdownButton<String>(
+              value: langs.containsKey(I18n.chosen) ? I18n.chosen : '',
+              items: [
+                DropdownMenuItem(value: '', child: Text('🌐 ${tr('Automatisch')}')),
+                ...langs.entries.map((e) => DropdownMenuItem(value: e.key, child: m.Text(e.value))),
+              ],
+              onChanged: (v) => langSet(v ?? '')),
+        ),
+        const Divider(),
         ListTile(
           title: const Text('Abfrage-Intervall'),
           subtitle: Text(Platform.isAndroid ? 'So oft fragt die App alle aktiven Backends im Hintergrund ab.' : 'So oft fragt die App bei offener App ab.'),

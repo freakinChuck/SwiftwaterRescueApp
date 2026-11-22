@@ -4,7 +4,7 @@
 // Parallele Einsätze (Issue #167): Karte «Laufende Einsätze» über den Registern (incSwitch), «Weiteren Einsatz starten» im Register «Einsatz» (startMore).
 // MCard (ctx.dart) zeigt «buttons» unter «children»; die Reihenfolge der Argumente folgt der Anzeige.
 // ignore_for_file: sort_child_properties_last
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,6 +18,7 @@ import 'skills.dart';
 import 'store.dart';
 import 'util.dart';
 import 'voice.dart';
+import '../i18n.dart';
 
 /// Rechte mit einem Bereich in der Verwaltung (ADMIN_PERMS in common.js)
 const _adminPerms = ['users', 'uroles', 'groups', 'avail', 'cfg_inc', 'ex_plan', 'cfg_func', 'cfg_ai', 'cfg_map', 'stats', 'cfg_my', 'aar', 'aar_rel', 'aar_cfg', 'aar_arch', 'legal', 'dsar', 'dsar_org', 'anon', 'cfg_conn', 'applog', 'versions', 'docs'];
@@ -148,15 +149,15 @@ class _IncMenuState extends State<IncMenu> {
                           const Icon(Icons.swap_horiz, size: 18),
                         ]))))),
         IconButton(
-            tooltip: 'Profil${me != null ? ' (${js(me['name'])})' : ''}',
+            tooltip: trn('Profil${me != null ? ' (${js(me['name'])})' : ''}'),
             icon: const Text('👤', style: TextStyle(fontSize: 20)),
             onPressed: () {
               map.closeMenu();
               widget.openPrefs();
             }),
-        if (my) IconButton(tooltip: 'Meine Einsätze', icon: const Text('📋', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html#meine')),
-        if (adm) IconButton(tooltip: 'Verwaltung', icon: const Text('⚙', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html')),
-        IconButton(tooltip: 'Menü schliessen', icon: const Icon(Icons.close), onPressed: map.closeMenu),
+        if (my) IconButton(tooltip: trn('Meine Einsätze'), icon: const Text('📋', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html#meine')),
+        if (adm) IconButton(tooltip: trn('Verwaltung'), icon: const Text('⚙', style: TextStyle(fontSize: 20)), onPressed: () => openWeb(context, s, 'admin.html')),
+        IconButton(tooltip: trn('Menü schliessen'), icon: const Icon(Icons.close), onPressed: map.closeMenu),
       ]),
     );
   }
@@ -639,7 +640,7 @@ class _IncMenuState extends State<IncMenu> {
                   controller: _fl,
                   focusNode: _flFocus,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Fliessgeschwindigkeit (m/s)', isDense: true),
+                  decoration: InputDecoration(labelText: trn('Fliessgeschwindigkeit (m/s)'), isDense: true),
                   onSubmitted: (_) => _setFlow())),
           const SizedBox(width: 8),
           FilledButton(onPressed: _busy.contains('flow') ? null : _setFlow, child: Text(area ? 'Setzen & berechnen' : 'Setzen')),
@@ -762,7 +763,7 @@ class _IncMenuState extends State<IncMenu> {
                     maxLength: 2000,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => send(),
-                    decoration: const InputDecoration(hintText: 'Nachricht an alle Organisationen', counterText: '', isDense: true))),
+                    decoration: InputDecoration(hintText: trn('Nachricht an alle Organisationen'), counterText: '', isDense: true))),
             const SizedBox(width: 8),
             smallBtn('Senden', _busy.contains('jm') ? null : send),
           ]),
@@ -809,7 +810,7 @@ class _IncMenuState extends State<IncMenu> {
       key: ValueKey('rs$cur'),
       initialValue: ids.contains(cur) ? cur : null,
       isExpanded: true,
-      decoration: InputDecoration(labelText: label, isDense: true),
+      decoration: InputDecoration(labelText: trn(label), isDense: true),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('Keine Spezialrolle')),
         ...s.iRoles.map((r) => DropdownMenuItem<int?>(value: ji(r['id']), child: Text(js(r['name']), overflow: TextOverflow.ellipsis))),
@@ -960,7 +961,7 @@ class _IncMenuState extends State<IncMenu> {
             width: 40,
             child: !left && uid != s.uid
                 ? IconButton(
-                    tooltip: 'Aus dem Einsatz entfernen',
+                    tooltip: trn('Aus dem Einsatz entfernen'),
                     icon: const Icon(Icons.close, size: 18),
                     onPressed: () async {
                       if (await confirmDlg(c, '${js(p['name'])} aus dem Einsatz entfernen?', ok: 'Entfernen', danger: true)) s.act('incident/kick', {'user_id': uid});
@@ -1154,8 +1155,8 @@ class _IncMenuState extends State<IncMenu> {
                 controller: t,
                 autofocus: true,
                 keyboardType: TextInputType.datetime,
-                decoration: const InputDecoration(
-                    labelText: 'Zeitpunkt des PLS (Beginn der Drift)', hintText: 'jetzt', helperText: 'leer = jetzt, Minuten vorher (z. B. 15) oder Uhrzeit (z. B. 14:20)', helperMaxLines: 2),
+                decoration: InputDecoration(
+                    labelText: trn('Zeitpunkt des PLS (Beginn der Drift)'), hintText: trn('jetzt'), helperText: trn('leer = jetzt, Minuten vorher (z. B. 15) oder Uhrzeit (z. B. 14:20)'), helperMaxLines: 2),
                 onChanged: (_) => ss(() {})),
             const SizedBox(height: 6),
             Mut(a == null || a > 1440
@@ -1348,7 +1349,7 @@ class _InvPick extends StatelessWidget {
             TextField(
                 controller: v.q,
                 enabled: !v.all,
-                decoration: const InputDecoration(labelText: 'Einzelpersonen', hintText: 'Liste filtern: Name', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
+                decoration: InputDecoration(labelText: trn('Einzelpersonen'), hintText: trn('Liste filtern: Name'), isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
                 onChanged: (_) => ss(() {}),
                 onSubmitted: (_) {
                   if (match.isNotEmpty) ss(() => v.persons.add(ji(match.first['id'])!));
@@ -1553,7 +1554,7 @@ class _StartPageState extends State<_StartPage> {
       DropdownButtonFormField<int?>(
           isExpanded: true,
           initialValue: d.parent,
-          decoration: InputDecoration(labelText: ref == 2 ? 'Folgeeinsatz zu' : 'Folgeeinsatz zu (optional)', isDense: true),
+          decoration: InputDecoration(labelText: trn(ref == 2 ? 'Folgeeinsatz zu' : 'Folgeeinsatz zu (optional)'), isDense: true),
           items: [
             if (ref != 2) const DropdownMenuItem<int?>(value: null, child: Text('– kein Bezug –')),
             for (final p in ps)
@@ -1587,7 +1588,7 @@ class _StartPageState extends State<_StartPage> {
               : 'Alarmstufe ${js(k['alarm_name'])}${jb(k['mode_up']) && alarm != 'crit' ? ' (kritisch bei Personen mit Übungsmodus)' : ''}.'),
           ..._parPick(),
           const SizedBox(height: 10),
-          TextField(controller: d.msg, minLines: 2, maxLines: 5, autofocus: true, decoration: const InputDecoration(labelText: 'Meldung', border: OutlineInputBorder())),
+          TextField(controller: d.msg, minLines: 2, maxLines: 5, autofocus: true, decoration: InputDecoration(labelText: trn('Meldung'), border: OutlineInputBorder())),
           const SizedBox(height: 10),
           if (_recOn) ...[
             CheckboxListTile(
@@ -1611,7 +1612,7 @@ class _StartPageState extends State<_StartPage> {
             Expanded(
                 child: TextField(
                     controller: d.pls,
-                    decoration: const InputDecoration(labelText: 'PLS (optional)', hintText: 'LV95, LV03 oder WGS84', isDense: true))),
+                    decoration: InputDecoration(labelText: trn('PLS (optional)'), hintText: trn('LV95, LV03 oder WGS84'), isDense: true))),
             const SizedBox(width: 8),
             OutlinedButton(onPressed: () => Navigator.pop(context, 'pick'), child: const Text('Karte')),
           ]),
@@ -1705,7 +1706,7 @@ class _AiSitDlgState extends State<_AiSitDlg> {
               minLines: 1,
               maxLines: 3,
               maxLength: 2000,
-              decoration: const InputDecoration(labelText: 'Zusätzlicher Wunsch (optional)', hintText: 'z. B. kürzer, mehr zur Alarmierung', isDense: true)),
+              decoration: InputDecoration(labelText: trn('Zusätzlicher Wunsch (optional)'), hintText: trn('z. B. kürzer, mehr zur Alarmierung'), isDense: true)),
           const Mut('Vorschlag des AI-Assistenten: bitte prüfen, bevor du ihn übernimmst. Es gehen nur die Daten dieser Ansicht an den Anbieter.', size: 12),
           const SizedBox(height: 8),
           if (_busy)

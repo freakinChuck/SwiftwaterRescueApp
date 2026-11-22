@@ -1,13 +1,14 @@
 // Fenster «Rettlinge» der nativen Einsatz-App (Gegenstück zu renderRes, editRes, resFound, plsPick in web/index.html):
 // Gruppen Vermisst / Standort bekannt / Gerettet (einklappbar, pro Gerät gemerkt), Fundort, «gerettet», Suchgebiet je Rettling,
 // PLS des Einsatzes bzw. eines Rettlings (Ort auf der Karte, danach Zeitpunkt), frühere Rettling-Markierungen.
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'area.dart';
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 const _resSt = {'miss': 'Vermisst', 'loc': 'Standort bekannt', 'ok': 'Gerettet'};
 
@@ -56,7 +57,7 @@ Future<DateTime?> _pickDT(BuildContext c, DateTime init) async {
 Widget _dtField(BuildContext c, String label, DateTime v, ValueChanged<DateTime> set) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 6),
     child: InputDecorator(
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true),
+        decoration: InputDecoration(labelText: trn(label), border: const OutlineInputBorder(), isDense: true),
         child: InkWell(
             onTap: () async {
               final d = await _pickDT(c, v);
@@ -123,14 +124,14 @@ Future<void> _editRes(BuildContext c, IncStore s, MapCtl map, int id) async {
       c,
       id != 0 ? 'Rettling bearbeiten' : 'Rettling erfassen',
       (d, ss) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: n, maxLength: 80, decoration: const InputDecoration(labelText: 'Name', hintText: 'leer = Unbekannter Rettling')),
+            TextField(controller: n, maxLength: 80, decoration: InputDecoration(labelText: trn('Name'), hintText: trn('leer = Unbekannter Rettling'))),
             TextField(
                 controller: ds,
                 maxLength: 1000,
                 minLines: 2,
                 maxLines: 5,
                 keyboardType: TextInputType.multiline,
-                decoration: const InputDecoration(labelText: 'Beschreibung (Merkmale, Kleidung, Alter …)')),
+                decoration: InputDecoration(labelText: trn('Beschreibung (Merkmale, Kleidung, Alter …)'))),
             if (own) ...[
               Mut('Eigener PLS${s.fcs(r['pls_lat'], r['pls_lon'])}'),
               if (!takeInc) _dtField(d, 'Drift ab', t, (v) => ss(() => t = v)),

@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'sounds.dart';
 import 'sys.dart';
+import 'i18n.dart';
 
 final notes = FlutterLocalNotificationsPlugin();
 
@@ -106,6 +107,8 @@ Future<bool> _pushShows(String acc, String tag) async {
 Future<void> showNote(String acc, String tag, String title, String body, String lvl, {String? sub, int? kind, String? ksnd, String? snd}) async {
   await initNotes();
   if (await _pushShows(acc, tag)) return;
+  title = trUp(title); // Mehrsprachigkeit (Issue #66)
+  body = tr(body);
   final crit = lvl == 'crit', high = lvl == 'high', low = lvl == 'low' || lvl == 'none';
   final tone = crit ? (snd ?? await alarmSnd(acc, kind, ksnd)) : sndSystem;
   final ch = crit ? (_dnd ? chCritDnd : chCrit) : (high ? chHigh : (low ? chLow : chNormal));

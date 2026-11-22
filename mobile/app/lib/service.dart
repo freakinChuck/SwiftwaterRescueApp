@@ -19,6 +19,7 @@ import 'notify.dart';
 import 'push.dart';
 import 'sys.dart';
 import 'track.dart';
+import 'i18n.dart';
 
 final service = FlutterBackgroundService();
 
@@ -106,6 +107,7 @@ Future<void> syncService() async {
 Future<void> serviceMain(ServiceInstance s) async {
   DartPluginRegistrant.ensureInitialized();
   WidgetsFlutterBinding.ensureInitialized();
+  await I18n.load(); // Mehrsprachigkeit (Issue #66): Meldungen in der gewählten Sprache
   await initNotes();
   var busy = false, stop = false;
   Timer? t;
@@ -113,6 +115,7 @@ Future<void> serviceMain(ServiceInstance s) async {
     if (busy || stop) return;
     busy = true;
     try {
+      await I18n.load(); // Wahl in der App übernehmen
       await refreshChannels(); // «Nicht stören» umgehen, sobald der Zugriff erteilt ist
       final n = await pollAll();
       if (n == 0 || !await serviceNeeded()) {
@@ -127,8 +130,8 @@ Future<void> serviceMain(ServiceInstance s) async {
       if (s is AndroidServiceInstance) {
         await notes.show(
             id: serviceNoteId,
-            title: 'Bereit für Alarme',
-            body: txt,
+            title: tr('Bereit für Alarme'),
+            body: tr(txt),
             notificationDetails: const NotificationDetails(
                 android: AndroidNotificationDetails(chService, 'Bereitschaft', icon: 'ic_stat_sw', ongoing: true, importance: Importance.min, priority: Priority.min, showWhen: false, silent: true)));
       }

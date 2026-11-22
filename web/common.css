@@ -77,6 +77,7 @@ button.aib{border-color:#a78bfa88;flex:0 0 auto;width:auto}button.aib.ico{font-s
 .abschip{display:inline-block;font-size:.8em;padding:.05rem .45rem;border-radius:999px;background:#7c4a0033;border:1px solid #d9822b;color:#ffcf99;white-space:nowrap}
 .absrow{display:flex;gap:.5rem;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:.35rem 0}.absrow:first-child{border-top:0}
 .lglk{display:block;text-align:center;font-size:.85rem;margin-top:.4rem}header .lglk{display:inline;margin:0;font-size:.8rem}
+.lglang{display:flex;align-items:center;justify-content:center;gap:.4rem;font-size:.85rem;margin-top:.6rem}.lglang select{width:auto;margin:0;padding:.25rem .5rem} /* Sprachwahl bei der Anmeldung (Issue #66) */
 
 /* Auswahl der Grundkarte in kleinen Karten der Verwaltung (addBases, #96) */
 .basesel select{font-size:.8rem;padding:.2rem .3rem;border:0;border-radius:4px;background:#fff;color:#122;max-width:11rem}

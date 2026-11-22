@@ -2,7 +2,7 @@
 // web/index.html): Liste der Messstationen (im Einsatz «Beim PLS» mit Beginn/Ende/aktuell, dann «Meine Messstationen»), gemeinsam für
 // die Karte im Menü und das Seitenfenster «Messstationen» (Kartenknopf, Issue #147), Marker auf der Karte (Kategorie hydro) und die
 // Auswahl der persönlichen Messstationen im Profil. Daten und Abfrage in store.dart (hyPoll).
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 String hyName(J s) => '${js(s['water']).isNotEmpty ? '${js(s['water'])}, ' : ''}${js(s['name'])}';
 
@@ -263,7 +264,7 @@ class _HydroPrefsState extends State<HydroPrefs> {
                 Mut(hyNow(s, m[k]), size: 12),
               ])),
               IconButton(
-                  tooltip: 'Nach oben',
+                  tooltip: trn('Nach oben'),
                   visualDensity: VisualDensity.compact,
                   onPressed: k == 0
                       ? null
@@ -275,13 +276,13 @@ class _HydroPrefsState extends State<HydroPrefs> {
                           s.hySave(l);
                         },
                   icon: const Icon(Icons.arrow_upward)),
-              IconButton(tooltip: 'Entfernen', visualDensity: VisualDensity.compact, onPressed: () => s.hySave(m.where((x) => x != m[k]).toList()), icon: const Icon(Icons.close)),
+              IconButton(tooltip: trn('Entfernen'), visualDensity: VisualDensity.compact, onPressed: () => s.hySave(m.where((x) => x != m[k]).toList()), icon: const Icon(Icons.close)),
             ])),
       if (m.length < 20) ...[
         const SizedBox(height: 6),
         TextField(
             controller: _q,
-            decoration: const InputDecoration(labelText: 'Messstation hinzufügen', hintText: 'Ort, Gewässer oder Nummer', isDense: true),
+            decoration: InputDecoration(labelText: trn('Messstation hinzufügen'), hintText: trn('Ort, Gewässer oder Nummer'), isDense: true),
             onTap: _load,
             onChanged: (_) {
               _load();
