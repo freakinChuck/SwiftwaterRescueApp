@@ -6,6 +6,7 @@ web/api/data/overpass/
 web/api/data/air/
 web/api/data/voice/
 web/api/data/geo/
+web/api/data/docs/
 web/api/data/mail.lock
 web/api/data/deployed.txt
 # Deploy-Konfigurationen (Test, Prod, …) nur lokal, Vorlage scripts/deploy.example.json bleibt im Repo
