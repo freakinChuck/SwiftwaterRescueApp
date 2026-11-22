@@ -1,0 +1,240 @@
+240 ‖ Reply withdrawn ‖ Réponse retirée ‖ Risposta ritirata
+241 ‖ Replies ‖ Réponses ‖ Risposte
+242 ‖ Show ‖ Afficher ‖ Mostra
+243 ‖ Type ‖ Type ‖ Tipo
+244 ‖ Call-out ‖ Mobilisation ‖ Convocazione
+245 ‖ Mission and goal ‖ Mission et objectif ‖ Incarico e obiettivo
+246 ‖ Tasks ‖ Tâches ‖ Compiti
+247 ‖ Record (replay in the administration) ‖ Enregistrer (replay dans l'administration) ‖ Registra (replay nell'amministrazione)
+248 ‖ Recording ‖ Enregistrement ‖ Registrazione
+249 ‖ Start recording ‖ Démarrer l'enregistrement ‖ Avvia registrazione
+250 ‖ Off ‖ Désactivé ‖ Disattivato
+251 ‖ Remove from operation ‖ Retirer de l'intervention ‖ Rimuovi dall'intervento
+252 ‖ Nobody from your own organisation is alerted, only the selected partner organisations. ‖ Personne de votre organisation n'est alarmé, seulement les organisations partenaires choisies. ‖ Nessuno della tua organizzazione viene allarmato, solo le organizzazioni partner scelte.
+253 ‖ Triggered by a partner organisation. ‖ Déclenchée par une organisation partenaire. ‖ Avviato da un'organizzazione partner.
+254 ‖ End ‖ Terminer ‖ Termina
+255 ‖ Ends the operation for everyone. Log and replay remain in the administration. ‖ Termine l'intervention pour tous. Le journal et le replay restent dans l'administration. ‖ Termina l'intervento per tutti. Registro e replay restano nell'amministrazione.
+256 ‖ Ended. The recording so far is kept for the replay. ‖ Terminé. L'enregistrement effectué est conservé pour le replay. ‖ Terminato. La registrazione finora effettuata resta per il replay.
+257 ‖ Allow everyone to join (people not called out also see the operation and can accept it, without alarm) ‖ Permettre à tous de rejoindre (les personnes non mobilisées voient aussi l'intervention et peuvent l'accepter, sans alarme) ‖ Consenti a tutti di partecipare (anche chi non è convocato vede l'intervento e può accettarlo, senza allarme)
+258 ‖ Comment (optional) ‖ Remarque (facultatif) ‖ Osservazione (facoltativa)
+259 ‖ User role with “Lead any operation” ‖ Rôle d'utilisateur avec « Diriger toute intervention » ‖ Ruolo utente con «Dirigere qualsiasi intervento»
+260 ‖ Please select at least one response group ‖ Veuillez choisir au moins un groupe d'intervention ‖ Scegli almeno un gruppo d'intervento
+261 ‖ The search area ends there as at a safety post. Individual locations can be excluded in the popup or in the “Markers” window, e.g. if the person may have passed a weir. ‖ La zone de recherche s'y arrête comme à un poste de sécurité. On exclut des sites individuels dans la fenêtre contextuelle ou dans la fenêtre « Marqueurs », p. ex. si la personne a pu franchir un barrage. ‖ L'area di ricerca termina lì come a un posto di sicurezza. I singoli luoghi si escludono nel popup o nella finestra «Marcatori», p. es. se la persona potrebbe aver superato uno sbarramento.
+262 ‖ Privacy ‖ Protection des données ‖ Protezione dei dati
+263 ‖ Date still open ‖ Date encore ouverte ‖ Data ancora aperta
+264 ‖ Your organisation triggered this operation. ‖ Votre organisation a déclenché cette intervention. ‖ La tua organizzazione ha avviato questo intervento.
+265 ‖ Join the joint conference ‖ Rejoindre la conférence commune ‖ Partecipa alla conferenza comune
+266 ‖ Sign-up is closed. ‖ Les inscriptions sont closes. ‖ Le iscrizioni sono chiuse.
+267 ‖ The called-out people will be ‖ Les personnes mobilisées seront ‖ Le persone convocate saranno
+268 ‖ This operation type requires a reference, but there is no earlier operation in the last 30 days. ‖ Ce type d'intervention exige une référence, mais il n'y a pas d'intervention antérieure dans les 30 derniers jours. ‖ Questo tipo d'intervento richiede un riferimento, ma non c'è alcun intervento precedente negli ultimi 30 giorni.
+269 ‖ Distance between two points along the water with drift time (flow speed) and travel times at {0} km/h. ‖ Distance entre deux points le long du cours d'eau avec temps de dérive (vitesse du courant) et temps de trajet à {0} km/h. ‖ Distanza tra due punti lungo il corso d'acqua con tempo di deriva (velocità della corrente) e tempi di percorrenza a {0} km/h.
+270 ‖ You have not been called out for this operation, {0} ‖ Vous n'êtes pas mobilisé pour cette intervention, {0} ‖ Non sei convocato per questo intervento, {0}
+271 ‖ You may not call out any response group for “{0}”. ‖ Vous ne pouvez mobiliser aucun groupe d'intervention pour « {0} ». ‖ Non puoi convocare nessun gruppo d'intervento per «{0}».
+272 ‖ You may start {0}{1}. When there is an alarm, it appears here. ‖ Vous pouvez démarrer {0}{1}. En cas d'alarme, elle apparaît ici. ‖ Puoi avviare {0}{1}. In caso di allarme, appare qui.
+273 ‖ You receive no call-outs and no alarms. ‖ Vous ne recevez ni mobilisations ni alarmes. ‖ Non ricevi convocazioni né allarmi.
+274 ‖ You can also take part as a responder: ‖ Vous pouvez aussi participer comme intervenant : ‖ Puoi anche partecipare come soccorritore:
+275 ‖ You lead {0}{1}. ‖ Vous dirigez {0}{1}. ‖ Dirigi {0}{1}.
+276 ‖ You are also taking part as a responder. ‖ Vous participez aussi comme intervenant. ‖ Partecipi anche come soccorritore.
+277 ‖ A joint channel only exists if all organisations have enabled the “Messages” function. ‖ Un canal commun n'existe que si toutes les organisations ont activé la fonction « Messages ». ‖ Un canale comune esiste solo se tutte le organizzazioni hanno attivato la funzione «Messaggi».
+278 ‖ Response option ‖ Option d'engagement ‖ Opzione d'intervento
+279 ‖ Response option {0} ‖ Option d'engagement {0} ‖ Opzione d'intervento {0}
+280 ‖ End operation ‖ Terminer l'intervention ‖ Termina intervento
+281 ‖ End operation for everyone? ‖ Terminer l'intervention pour tous ? ‖ Terminare l'intervento per tutti?
+282 ‖ Operation in progress ‖ Intervention en cours ‖ Intervento in corso
+283 ‖ Leave operation ‖ Quitter l'intervention ‖ Lascia l'intervento
+284 ‖ Manage and end operation ‖ Gérer et terminer l'intervention ‖ Gestire e terminare l'intervento
+285 ‖ Responders ({0}) ‖ Intervenants ({0}) ‖ Soccorritori ({0})
+286 ‖ Remove responders ‖ Retirer des intervenants ‖ Rimuovere soccorritori
+287 ‖ Operation lead (manual) ‖ Direction d'intervention (manuelle) ‖ Direzione dell'intervento (manuale)
+288 ‖ Show operation log (live, with messages; anonymous like the view) ‖ Afficher le journal d'intervention (en direct, avec messages ; anonyme comme la vue) ‖ Mostra il registro dell'intervento (in diretta, con messaggi; anonimo come la vista)
+289 ‖ Operation type there: {0} ‖ Type d'intervention là-bas : {0} ‖ Tipo d'intervento lì: {0}
+290 ‖ Individual ‖ Personne individuelle ‖ Singola persona
+291 ‖ Individuals ‖ Personnes individuelles ‖ Singole persone
+292 ‖ Exercise elements: ‖ Éléments de l'exercice : ‖ Elementi dell'esercitazione:
+293 ‖ Removes the external responder “{0}”. ‖ Retire l'intervenant externe « {0} ». ‖ Rimuove il soccorritore esterno «{0}».
+294 ‖ Records the casualty “{0}” with its own PLS{1}. ‖ Saisit la victime « {0} » avec son propre PLS{1}. ‖ Registra la vittima «{0}» con un proprio PLS{1}.
+295 ‖ Records the external responder “{0}” at this location. ‖ Saisit l'intervenant externe « {0} » à cet endroit. ‖ Registra il soccorritore esterno «{0}» in questo luogo.
+296 ‖ There are no response groups. ‖ Il n'y a pas de groupes d'intervention. ‖ Non ci sono gruppi d'intervento.
+297 ‖ An operation is running for which you have not been called out. The operation lead can allow everyone to join or call you out additionally if you belong to an eligible response group. ‖ Une intervention est en cours pour laquelle vous n'êtes pas mobilisé. La direction d'intervention peut permettre à tous de rejoindre ou vous mobiliser en plus si vous appartenez à un groupe d'intervention admis. ‖ È in corso un intervento per cui non sei convocato. La direzione dell'intervento può consentire a tutti di partecipare o convocarti in aggiunta se appartieni a un gruppo d'intervento ammesso.
+298 ‖ Remove external responder ‖ Retirer l'intervenant externe ‖ Rimuovi soccorritore esterno
+299 ‖ Record external responders ‖ Saisir des intervenants externes ‖ Registrare soccorritori esterni
+300 ‖ Flow speed ‖ Vitesse courant ‖ Velocità corrente
+301 ‖ Flow speed ‖ Vitesse du courant ‖ Velocità della corrente
+302 ‖ Flow speed & search area ‖ Vitesse du courant & zone de recherche ‖ Velocità della corrente & area di ricerca
+303 ‖ Flow speed (m/s) ‖ Vitesse du courant (m/s) ‖ Velocità della corrente (m/s)
+304 ‖ Set flow speed ‖ Définir la vitesse du courant ‖ Imposta la velocità della corrente
+305 ‖ Take over flow speed ‖ Reprendre la vitesse du courant ‖ Riprendi la velocità della corrente
+306 ‖ Measure river distance ‖ Mesurer la distance fluviale ‖ Misura la distanza fluviale
+307 ‖ River barriers ‖ Barrières fluviales ‖ Sbarramenti fluviali
+308 ‖ Take river barriers of fixed locations in the search area into account ‖ Tenir compte des barrières fluviales des sites fixes dans la zone de recherche ‖ Considera gli sbarramenti fluviali dei luoghi fissi nell'area di ricerca
+309 ‖ Follow-up operation to ‖ Intervention de suivi de ‖ Intervento successivo a
+310 ‖ Continue ‖ Continuer ‖ Continua
+311 ‖ Free events ‖ Événements libres ‖ Eventi liberi
+312 ‖ Free event ‖ Événement libre ‖ Evento libero
+313 ‖ Earlier casualty markers ‖ Anciens marqueurs de victimes ‖ Marcatori precedenti delle vittime
+314 ‖ Use GPS location ‖ Utiliser la position GPS ‖ Usa la posizione GPS
+315 ‖ Leave joint conference ‖ Quitter la conférence commune ‖ Lascia la conferenza comune
+316 ‖ Joint operation ‖ Intervention commune ‖ Intervento comune
+317 ‖ Joint channel ‖ Canal commun ‖ Canale comune
+318 ‖ Planned start ‖ Début prévu ‖ Inizio previsto
+319 ‖ The location histories of all participants are saved while the recording is running (replay in the administration). ‖ Les historiques de position de tous les participants sont enregistrés tant que l'enregistrement est actif (replay dans l'administration). ‖ Vengono salvate le cronologie delle posizioni di tutti i partecipanti finché la registrazione è attiva (replay nell'amministrazione).
+320 ‖ Applies to everyone in this operation. The administration decides who sees it. ‖ S'applique à tous dans cette intervention. L'administration détermine qui la voit. ‖ Vale per tutti in questo intervento. L'amministrazione stabilisce chi lo vede.
+321 ‖ Helicopters on the map (air situation from ADS-B data) ‖ Hélicoptères sur la carte (situation aérienne d'après les données ADS-B) ‖ Elicotteri sulla mappa (situazione aerea dai dati ADS-B)
+322 ‖ I am not taking part ‖ Je ne participe pas ‖ Non partecipo
+323 ‖ I am taking part ‖ Je participe ‖ Partecipo
+324 ‖ In operation ‖ En intervention ‖ In intervento
+325 ‖ Legal notice ‖ Mentions légales ‖ Note legali
+326 ‖ Info ‖ Info ‖ Info
+327 ‖ Each selected partner organisation gets its own linked operation and alerts only the selected groups. ‖ Chaque organisation partenaire choisie reçoit sa propre intervention liée et n'alarme que les groupes choisis. ‖ Ogni organizzazione partner scelta riceve un proprio intervento collegato e allarma solo i gruppi scelti.
+328 ‖ Calendar ‖ Calendrier ‖ Calendario
+329 ‖ Map ‖ Carte ‖ Mappa
+330 ‖ No operation plan recorded. ‖ Aucun plan d'intervention saisi. ‖ Nessun piano d'intervento registrato.
+331 ‖ No special role ‖ Aucun rôle spécial ‖ Nessun ruolo speciale
+332 ‖ No matching person ‖ Aucune personne correspondante ‖ Nessuna persona corrispondente
+333 ‖ No prepared elements. ‖ Aucun élément préparé. ‖ Nessun elemento preparato.
+334 ‖ Critical (exercise mode) ‖ Critique (mode exercice) ‖ Critico (modalità esercitazione)
+335 ‖ Running operations ({0}) ‖ Interventions en cours ({0}) ‖ Interventi in corso ({0})
+336 ‖ Lead ‖ Direction ‖ Direzione
+337 ‖ Copy link ‖ Copier le lien ‖ Copia link
+338 ‖ Link copied. ‖ Lien copié. ‖ Link copiato.
+339 ‖ Filter list: name ‖ Filtrer la liste : nom ‖ Filtra l'elenco: nome
+340 ‖ Licences ‖ Licences ‖ Licenze
+341 ‖ Log ‖ Journal ‖ Registro
+342 ‖ Runs in parallel with the other operations. You can only take part in one operation at a time. ‖ Se déroule en parallèle aux autres interventions. On ne peut participer qu'à une intervention à la fois. ‖ Si svolge in parallelo agli altri interventi. Si può partecipare a un solo intervento alla volta.
+343 ‖ Place markers and areas ‖ Placer des marqueurs et des zones ‖ Impostare marcatori e aree
+344 ‖ My operation ‖ Mon intervention ‖ Il mio intervento
+345 ‖ My location ‖ Ma position ‖ La mia posizione
+346 ‖ My operations ‖ Mes interventions ‖ I miei interventi
+347 ‖ My rights in the operation ‖ Mes droits dans l'intervention ‖ I miei diritti nell'intervento
+348 ‖ Reports a sighted casualty and records it as {0} with PLS here{1}. ‖ Signale une victime aperçue et la saisit comme {0} avec PLS ici{1}. ‖ Segnala una vittima avvistata e la registra come {0} con PLS qui{1}.
+349 ‖ Reports “{0}” sighted and sets the PLS anew{1}. ‖ Signale « {0} » aperçu et redéfinit le PLS{1}. ‖ Segnala «{0}» avvistato e reimposta il PLS{1}.
+350 ‖ Message ‖ Message ‖ Messaggio
+351 ‖ Message to all: {0} ‖ Message à tous : {0} ‖ Messaggio a tutti: {0}
+352 ‖ Message: {0} ‖ Message : {0} ‖ Messaggio: {0}
+353 ‖ Close menu ‖ Fermer le menu ‖ Chiudi menu
+354 ‖ Call out more ‖ Mobiliser en plus ‖ Convoca altri
+355 ‖ Called out additionally. ‖ Mobilisés en plus. ‖ Convocati in aggiunta.
+356 ‖ Message to all organisations ‖ Message à toutes les organisations ‖ Messaggio a tutte le organizzazioni
+357 ‖ Read messages ‖ Lire les messages ‖ Leggere i messaggi
+358 ‖ Send messages ‖ Envoyer des messages ‖ Inviare messaggi
+359 ‖ New markers via the “Casualties” map button. ‖ Nouveaux marqueurs via le bouton de carte « Victimes ». ‖ Nuovi marcatori tramite il pulsante della mappa «Vittime».
+360 ‖ New external responder ‖ Nouvel intervenant externe ‖ Nuovo soccorritore esterno
+361 ‖ New casualty ‖ Nouvelle victime ‖ Nuova vittima
+362 ‖ Not recognised ‖ Non reconnu ‖ Non riconosciuto
+363 ‖ Only the exercise lead sees elements that have not been released. On release, the message goes to everyone as a message. The server releases elements with ⏱ itself at the given time; you can also release them earlier. ‖ Seule la direction d'exercice voit les éléments non libérés. À la libération, le message est envoyé à tous. Le serveur libère lui-même les éléments marqués ⏱ à l'heure indiquée ; vous pouvez aussi les libérer plus tôt. ‖ Solo la direzione dell'esercitazione vede gli elementi non rilasciati. Al rilascio il messaggio va a tutti. Il server rilascia da sé gli elementi con ⏱ all'ora indicata; puoi anche rilasciarli prima.
+364 ‖ Not set. Without an operation PLS each casualty needs its own PLS. ‖ Non défini. Sans PLS de l'intervention, chaque victime a besoin de son propre PLS. ‖ Non impostato. Senza PLS dell'intervento ogni vittima necessita di un proprio PLS.
+365 ‖ Nothing to take over (no PLS, no missing casualties). ‖ Rien à reprendre (pas de PLS, pas de victimes disparues). ‖ Niente da riprendere (nessun PLS, nessuna vittima dispersa).
+366 ‖ No entries yet. ‖ Aucune entrée pour l'instant. ‖ Ancora nessuna voce.
+367 ‖ No messages yet. Joint messages go to all participating organisations without notification and appear in their operation log. ‖ Aucun message pour l'instant. Les messages communs vont sans notification à toutes les organisations participantes et figurent dans leur journal d'intervention. ‖ Ancora nessun messaggio. I messaggi comuni vanno senza notifica a tutte le organizzazioni partecipanti e compaiono nel loro registro dell'intervento.
+368 ‖ Nobody yet ‖ Personne pour l'instant ‖ Ancora nessuno
+369 ‖ Nobody has accepted the operation yet. ‖ Personne n'a encore accepté l'intervention. ‖ Nessuno ha ancora accettato l'intervento.
+370 ‖ Without a selection all people of this organisation are alerted, unless a partner organisation is selected: then only that one. ‖ Sans sélection, toutes les personnes de cette organisation sont alarmées, sauf si une organisation partenaire est choisie : alors seulement celle-ci. ‖ Senza selezione vengono allarmate tutte le persone di questa organizzazione, salvo se è scelta un'organizzazione partner: allora solo quella.
+371 ‖ Without a selection all people of this organisation are alerted. ‖ Sans sélection, toutes les personnes de cette organisation sont alarmées. ‖ Senza selezione vengono allarmate tutte le persone di questa organizzazione.
+372 ‖ Place ‖ Lieu ‖ Luogo
+373 ‖ Remove the operation PLS? Casualties without their own PLS will then have no search area. ‖ Retirer le PLS de l'intervention ? Les victimes sans PLS propre n'auront alors plus de zone de recherche. ‖ Rimuovere il PLS dell'intervento? Le vittime senza PLS proprio non avranno più un'area di ricerca.
+374 ‖ Remove PLS ‖ Retirer le PLS ‖ Rimuovi PLS
+375 ‖ Set PLS ‖ Définir le PLS ‖ Imposta PLS
+376 ‖ Move PLS ‖ Déplacer le PLS ‖ Sposta PLS
+377 ‖ Take over PLS (with the original time if none is entered below) ‖ Reprendre le PLS (avec l'heure d'origine si aucune n'est saisie ci-dessous) ‖ Riprendi il PLS (con l'ora originale se sotto non ne è inserita nessuna)
+378 ‖ Partner organisations ‖ Organisations partenaires ‖ Organizzazioni partner
+379 ‖ Pause ‖ Pause ‖ Pausa
+380 ‖ Person ‖ Personne ‖ Persona
+381 ‖ person is ‖ personne est ‖ persona è
+382 ‖ People ‖ Personnes ‖ Persone
+383 ‖ people are ‖ personnes sont ‖ persone sono
+384 ‖ Plans ({0}) ‖ Planifications ({0}) ‖ Pianificazioni ({0})
+385 ‖ Post: search area ends at own location ‖ Poste : la zone de recherche s'arrête à sa propre position ‖ Posto: l'area di ricerca termina alla propria posizione
+386 ‖ Operation lead rights, you will not be alerted. You release the elements in the “Exercise” tab.{0} ‖ Droits de la direction d'intervention, vous n'êtes pas alarmé. Vous libérez les éléments dans l'onglet « Exercice ».{0} ‖ Diritti della direzione dell'intervento, non vieni allarmato. Rilasci gli elementi nella scheda «Esercitazione».{0}
+387 ‖ Casualty sighted ‖ Victime aperçue ‖ Vittima avvistata
+388 ‖ Remove casualties ‖ Retirer des victimes ‖ Rimuovere vittime
+389 ‖ Record casualties, mark location and “rescued” ‖ Saisir des victimes, marquer la position et « sauvée » ‖ Registrare vittime, segnare posizione e «salvata»
+390 ‖ Secondary operation (without alarm) ‖ Intervention secondaire (sans alarme) ‖ Intervento secondario (senza allarme)
+391 ‖ Secondary operation without alarm: the called-out people are not alerted but see the operation in the app and join themselves. ‖ Intervention secondaire sans alarme : les personnes mobilisées ne sont pas alarmées, mais voient l'intervention dans l'app et la rejoignent elles-mêmes. ‖ Intervento secondario senza allarme: i convocati non vengono allarmati, ma vedono l'intervento nell'app e vi partecipano da sé.
+392 ‖ Start secondary operation “{0}” now? Nobody will be alerted. ‖ Démarrer maintenant l'intervention secondaire « {0} » ? Personne ne sera alarmé. ‖ Avviare ora l'intervento secondario «{0}»? Nessuno verrà allarmato.
+393 ‖ Secondary operation, without alarm ‖ Intervention secondaire, sans alarme ‖ Intervento secondario, senza allarme
+394 ‖ Secondary operations ‖ Interventions secondaires ‖ Interventi secondari
+395 ‖ Server ‖ Serveur ‖ Server
+396 ‖ Set ‖ Définir ‖ Imposta
+397 ‖ Set & calculate ‖ Définir & calculer ‖ Imposta & calcola
+398 ‖ Sets the operation PLS{0}. ‖ Définit le PLS de l'intervention{0}. ‖ Imposta il PLS dell'intervento{0}.
+399 ‖ Visible are the map, locations, markers, areas and casualties{0}. Switching off invalidates the link. ‖ Sont visibles la carte, les positions, les marqueurs, les zones et les victimes{0}. La désactivation rend le lien invalide. ‖ Sono visibili mappa, posizioni, marcatori, aree e vittime{0}. La disattivazione rende il link non valido.
+400 ‖ Saves the location histories of all participants for later evaluation. ‖ Enregistre les historiques de position de tous les participants pour une évaluation ultérieure. ‖ Salva le cronologie delle posizioni di tutti i partecipanti per una valutazione successiva.
+401 ‖ Special role {0} ‖ Rôle spécial {0} ‖ Ruolo speciale {0}
+402 ‖ Set special roles ‖ Attribuer des rôles spéciaux ‖ Assegnare ruoli speciali
+403 ‖ Status ‖ État ‖ Stato
+404 ‖ Set location manually (test) ‖ Définir la position manuellement (test) ‖ Imposta la posizione manualmente (test)
+405 ‖ Share location ‖ Partager la position ‖ Condividi posizione
+406 ‖ Determining location … ‖ Détermination de la position … ‖ Determinazione della posizione …
+407 ‖ Start ‖ Démarrer ‖ Avvia
+408 ‖ Start without alarm: the called-out people see the operation in the app and join themselves. All functions are available. ‖ Démarrer sans alarme : les personnes mobilisées voient l'intervention dans l'app et la rejoignent elles-mêmes. Toutes les fonctions sont disponibles. ‖ Avvio senza allarme: i convocati vedono l'intervento nell'app e vi partecipano da sé. Tutte le funzioni sono disponibili.
+409 ‖ Starts with the prepared message (secondary operations without alarm). You lead: you are not alerted and you release the prepared elements. You can also take part. ‖ Démarre avec le message préparé (interventions secondaires sans alarme). Vous dirigez : vous n'êtes pas alarmé et vous libérez les éléments préparés. Vous pouvez aussi participer. ‖ Si avvia con il messaggio preparato (interventi secondari senza allarme). Dirigi: non vieni allarmato e rilasci gli elementi preparati. Puoi anche partecipare.
+410 ‖ System ‖ Système ‖ Sistema
+411 ‖ Participation ‖ Participation ‖ Partecipazione
+412 ‖ Tap the map to set your location. ‖ Touchez la carte pour définir votre position. ‖ Tocca la mappa per impostare la tua posizione.
+413 ‖ Meeting point ‖ Point de rencontre ‖ Punto d'incontro
+414 ‖ When ‖ Quand ‖ Quando
+415 ‖ Further details ‖ Autres informations ‖ Ulteriori informazioni
+416 ‖ Start another operation ‖ Démarrer une autre intervention ‖ Avvia un altro intervento
+417 ‖ Anyone with the link sees, without logging in, the map with the locations of responders, markers, areas and casualties ‖ Toute personne ayant le lien voit, sans connexion, la carte avec les positions des intervenants, les marqueurs, les zones et les victimes ‖ Chi ha il link vede, senza accesso, la mappa con le posizioni dei soccorritori, i marcatori, le aree e le vittime
+418 ‖ Tools ‖ Outils ‖ Strumenti
+419 ‖ Resume ‖ Reprendre ‖ Riprendi
+420 ‖ Time not recognised: empty, minutes (0 to 1440) or time such as 14:20 ‖ Heure non reconnue : vide, minutes (0 à 1440) ou heure comme 14:20 ‖ Ora non riconosciuta: vuoto, minuti (da 0 a 1440) o ora come 14:20
+421 ‖ Release the casualty first ‖ Libérer d'abord la victime ‖ Rilascia prima la vittima
+422 ‖ Release the external responder first ‖ Libérer d'abord l'intervenant externe ‖ Rilascia prima il soccorritore esterno
+423 ‖ Allow watching without login ‖ Permettre de regarder sans connexion ‖ Consenti la visione senza accesso
+424 ‖ certain response groups ‖ certains groupes d'intervention ‖ determinati gruppi d'intervento
+425 ‖ but the operation lead has allowed everyone to join. ‖ mais la direction d'intervention a permis à tous de rejoindre. ‖ ma la direzione dell'intervento ha consentito a tutti di partecipare.
+426 ‖ this exercise ‖ cet exercice ‖ questa esercitazione
+427 ‖ this planned secondary operation ‖ cette intervention secondaire planifiée ‖ questo intervento secondario pianificato
+428 ‖ this planned free event ‖ cet événement libre planifié ‖ questo evento libero pianificato
+429 ‖ a finished operation ‖ une intervention terminée ‖ un intervento terminato
+430 ‖ triggered ‖ a déclenché ‖ ha avviato
+431 ‖ started the operation ‖ a démarré l'intervention ‖ ha avviato l'intervento
+432 ‖ but you can still take part. ‖ mais vous pouvez quand même participer. ‖ ma puoi comunque partecipare.
+433 ‖ no operations ‖ aucune intervention ‖ nessun intervento
+434 ‖ no primary operations ‖ aucune intervention primaire ‖ nessun intervento primario
+435 ‖ according to the server ‖ selon le serveur ‖ secondo il server
+436 ‖ with names ‖ avec noms ‖ con nomi
+437 ‖ not accepted ‖ pas acceptée ‖ non accettato
+438 ‖ without names ‖ sans noms ‖ senza nomi
+439 ‖ linked ‖ liée ‖ collegato
+440 ‖ is not shared with this response option ‖ n'est pas partagée avec cette option d'engagement ‖ non viene condivisa con questa opzione d'intervento
+441 ‖ determining … ‖ en cours de détermination … ‖ in determinazione …
+442 ‖ e.g. coming a bit later ‖ p. ex. j'arrive un peu plus tard ‖ p. es. arrivo un po' più tardi
+443 ‖ {0} Applies to all casualties without their own PLS. ‖ {0} S'applique à toutes les victimes sans PLS propre. ‖ {0} Vale per tutte le vittime senza PLS proprio.
+444 ‖ {0} Each organisation runs its own operation with its own settings; its situation is shown on the map (“View” window, “Other operations”). ‖ {0} Chaque organisation mène sa propre intervention avec ses propres paramètres ; sa situation figure sur la carte (fenêtre « Affichage », « Autres interventions »). ‖ {0} Ogni organizzazione conduce il proprio intervento con impostazioni proprie; la sua situazione è sulla mappa (finestra «Vista», «Altri interventi»).
+445 ‖ {0} Time since alarm: {1} min. ‖ {0} Temps depuis l'alarme : {1} min. ‖ {0} Tempo dall'allarme: {1} min.
+446 ‖ Remove {0} from the operation? ‖ Retirer {0} de l'intervention ? ‖ Rimuovere {0} dall'intervento?
+447 ‖ {0} finished operations ‖ {0} interventions terminées ‖ {0} interventi terminati
+448 ‖ {0} taking part{1} ‖ {0} participent{1} ‖ {0} partecipano{1}
+449 ‖ {0} open, {1} released. ‖ {0} en attente, {1} libérés. ‖ {0} in sospeso, {1} rilasciati.
+450 ‖ Start {0} ‖ Démarrer {0} ‖ Avvia {0}
+451 ‖ {0} of {1}: {2} ‖ {0} du {1} : {2} ‖ {0} del {1}: {2}
+452 ‖ {0} {1} absent and {2} not alerted. ‖ {0} {1} absent(s) et {2} non alarmé(s). ‖ {0} {1} assente/i e {2} non allarmato/i.
+453 ‖ {0} · drift from {1} ‖ {0} · dérive dès {1} ‖ {0} · deriva da {1}
+454 ‖ {0} · {1} min ago ‖ {0} · il y a {1} min ‖ {0} · {1} min fa
+455 ‖ {0}: You are not in any response group that can be called out for it. ‖ {0} : vous n'êtes dans aucun groupe d'intervention mobilisable pour cela. ‖ {0}: non sei in nessun gruppo d'intervento convocabile per questo.
+456 ‖ “Unknown casualty” ‖ « Victime inconnue » ‖ «Vittima sconosciuta»
+457 ‖ Release “{0}” ‖ Libérer « {0} » ‖ Rilascia «{0}»
+458 ‖ Release “{0}”? ‖ Libérer « {0} » ? ‖ Rilasciare «{0}»?
+459 ‖ Start “{0}” now? {1} alerted according to the alarm level. ‖ Démarrer « {0} » maintenant ? {1} alarmé(s) selon le niveau d'alarme. ‖ Avviare ora «{0}»? {1} allarmato/i secondo il livello d'allarme.
+460 ‖ · special role {0} ‖ · rôle spécial {0} ‖ · ruolo speciale {0}
+461 ‖ · ended ‖ · terminée ‖ · terminato
+462 ‖ · you are taking part ‖ · vous participez ‖ · partecipi
+463 ‖ · exercise lead ‖ · direction d'exercice ‖ · direzione dell'esercitazione
+464 ‖ · exercise mode on ‖ · mode exercice activé ‖ · modalità esercitazione attiva
+465 ‖ Change ‖ Modifier ‖ Modifica
+466 ‖ Public view (without login) ‖ Vue publique (sans connexion) ‖ Vista pubblica (senza accesso)
+467 ‖ Switch on public view? ‖ Activer la vue publique ? ‖ Attivare la vista pubblica?
+468 ‖ Control public view ‖ Gérer la vue publique ‖ Gestire la vista pubblica
+469 ‖ Exercise lead ‖ Direction d'exercice ‖ Direzione dell'esercitazione
+470 ‖ Exercise schedule ({0}) ‖ Programme des exercices ({0}) ‖ Programma delle esercitazioni ({0})
+471 ‖ – no reference – ‖ – aucune référence – ‖ – nessun riferimento –
+472 ‖ ⏱ automatically at {0}{1} ‖ ⏱ automatiquement à {0}{1} ‖ ⏱ automaticamente alle {0}{1}
+473 ‖ ● Running ‖ ● En cours ‖ ● In corso
+474 ‖ ● being recorded ‖ ● en cours d'enregistrement ‖ ● in registrazione
+475 ‖ ✓ released {0}{1} ‖ ✓ libéré {0}{1} ‖ ✓ rilasciato {0}{1}
+476 ‖ ❚❚ Recording paused ‖ ❚❚ Enregistrement en pause ‖ ❚❚ Registrazione in pausa
+477 ‖ ❚❚ Paused ‖ ❚❚ En pause ‖ ❚❚ In pausa
+478 ‖ 🌐 publicly visible ({0}) ‖ 🌐 visible publiquement ({0}) ‖ 🌐 visibile pubblicamente ({0})
+479 ‖ 📅 Open calendar ‖ 📅 Ouvrir le calendrier ‖ 📅 Apri il calendario

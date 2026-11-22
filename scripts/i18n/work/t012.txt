@@ -1,0 +1,240 @@
+2880 ‖ Selection “{0}”: give 1 to 30 values ‖ Sélection « {0} » : indiquer 1 à 30 valeurs ‖ Selezione «{0}»: indica da 1 a 30 valori
+2881 ‖ Evaluation of the operation statistics in words: trends, anomalies ‖ Évaluation de la statistique d'intervention en mots : évolution, particularités ‖ Valutazione della statistica degli interventi a parole: andamento, anomalie
+2882 ‖ =
+2883 ‖ =
+2884 ‖ Automatically anonymised: {0} ‖ Anonymisé automatiquement : {0} ‖ Anonimizzato automaticamente: {0}
+2885 ‖ Automatic anonymisation failed: {0} ‖ Échec de l'anonymisation automatique : {0} ‖ Anonimizzazione automatica non riuscita: {0}
+2886 ‖ Automatic release: 0 to 1440 minutes after the start ‖ Libération automatique : 0 à 1440 minutes après le début ‖ Rilascio automatico: da 0 a 1440 minuti dopo l'avvio
+2887 ‖ =
+2888 ‖ =
+2889 ‖ =
+2890 ‖ Accompanying ‖ D'accompagnement ‖ D'accompagnamento
+2891 ‖ Limits the search area (like a safety post) ‖ Limite la zone de recherche (comme un poste de sécurité) ‖ Limita l'area di ricerca (come un posto di sicurezza)
+2892 ‖ At “{0} ‖ Chez « {0} ‖ Presso «{0}
+2893 ‖ Keep ‖ Conserver ‖ Mantieni
+2894 ‖ Users & roles ‖ Utilisateurs & rôles ‖ Utenti & ruoli
+2895 ‖ User activated ‖ Utilisateur activé ‖ Utente attivato
+2896 ‖ User activated or deactivated ‖ Utilisateur activé ou désactivé ‖ Utente attivato o disattivato
+2897 ‖ User deactivated ‖ Utilisateur désactivé ‖ Utente disattivato
+2898 ‖ User deleted ‖ Utilisateur supprimé ‖ Utente eliminato
+2899 ‖ User saved ‖ Utilisateur enregistré ‖ Utente salvato
+2900 ‖ User not found ‖ Utilisateur introuvable ‖ Utente non trovato
+2901 ‖ Manage users ‖ Gérer les utilisateurs ‖ Gestire gli utenti
+2902 ‖ Username already exists ‖ Le nom d'utilisateur existe déjà ‖ Il nome utente esiste già
+2903 ‖ Username is mandatory ‖ Le nom d'utilisateur est obligatoire ‖ Il nome utente è obbligatorio
+2904 ‖ Username or password wrong ‖ Nom d'utilisateur ou mot de passe incorrect ‖ Nome utente o password errati
+2905 ‖ User role removed ‖ Rôle d'utilisateur retiré ‖ Ruolo utente rimosso
+2906 ‖ User role saved ‖ Rôle d'utilisateur enregistré ‖ Ruolo utente salvato
+2907 ‖ User role not found ‖ Rôle d'utilisateur introuvable ‖ Ruolo utente non trovato
+2908 ‖ Manage user roles ‖ Gérer les rôles d'utilisateur ‖ Gestire i ruoli utente
+2909 ‖ External responders already recorded remain unchanged. ‖ Les intervenants externes déjà saisis restent inchangés. ‖ I soccorritori esterni già registrati restano invariati.
+2910 ‖ Image in the After Action Review ‖ Image dans l'After Action Review ‖ Immagine nell'After Action Review
+2911 ‖ Image too large ‖ Image trop grande ‖ Immagine troppo grande
+2912 ‖ Images of the After Action Reviews ‖ Images des After Action Reviews ‖ Immagini degli After Action Review
+2913 ‖ Images of saved reviews ‖ Images des reviews sauvegardées ‖ Immagini dei review salvati
+2914 ‖ Images in pages of the document repository ‖ Images dans les pages de la gestion documentaire ‖ Immagini nelle pagine dell'archivio documenti
+2915 ‖ =
+2916 ‖ =
+2917 ‖ Please give 1 to 6 speeds ‖ Veuillez indiquer 1 à 6 vitesses ‖ Indica da 1 a 6 velocità
+2918 ‖ Please give host and username ‖ Veuillez indiquer l'hôte et le nom d'utilisateur ‖ Indica host e nome utente
+2919 ‖ Please give a model ‖ Veuillez indiquer un modèle ‖ Indica un modello
+2920 ‖ Please choose a symbol ‖ Veuillez choisir un symbole ‖ Scegli un simbolo
+2921 ‖ Please give a name (e.g. organisation) ‖ Veuillez indiquer une désignation (p. ex. organisation) ‖ Indica una denominazione (p. es. organizzazione)
+2922 ‖ Please enter a question ‖ Veuillez saisir une question ‖ Inserisci una domanda
+2923 ‖ Please enter a text ‖ Veuillez saisir un texte ‖ Inserisci un testo
+2924 ‖ Please give feedback by {0} on “{1} ‖ Veuillez donner un retour d'ici au {0} sur « {1} ‖ Dai un feedback entro il {0} su «{1}
+2925 ‖ Please call out at least one response group ‖ Veuillez mobiliser au moins un groupe d'intervention ‖ Convoca almeno un gruppo d'intervento
+2926 ‖ Please answer at least one question ‖ Veuillez répondre à au moins une question ‖ Rispondi ad almeno una domanda
+2927 ‖ Please choose at least one stage ‖ Veuillez choisir au moins une étape ‖ Scegli almeno una tappa
+2928 ‖ Please choose from which operation type the settings are taken over ‖ Veuillez choisir de quel type d'intervention reprendre les paramètres ‖ Scegli da quale tipo d'intervento riprendere le impostazioni
+2929 ‖ Please set your own password first ‖ Veuillez d'abord définir votre propre mot de passe ‖ Imposta prima una password tua
+2930 ‖ Faded after (min without sighting) ‖ Pâli après (min sans repérage) ‖ Sbiadito dopo (min senza avvistamento)
+2931 ‖ Browser & app ‖ Navigateur & app ‖ Browser & app
+2932 ‖ Bridge over a water body ‖ Pont sur un cours d'eau ‖ Ponte su un corso d'acqua
+2933 ‖ CC0 (rendering), data ODbL ‖ CC0 (représentation), données ODbL ‖ CC0 (rappresentazione), dati ODbL
+2934 ‖ =
+2935 ‖ =
+2936 ‖ =
+2937 ‖ =
+2938 ‖ =
+2939 ‖ =
+2940 ‖ =
+2941 ‖ =
+2942 ‖ =
+2943 ‖ =
+2944 ‖ =
+2945 ‖ =
+2946 ‖ You lack the right “ ‖ Il vous manque le droit « ‖ Ti manca il diritto «
+2947 ‖ You lack the right “{0} ‖ Il vous manque le droit « {0} ‖ Ti manca il diritto «{0}
+2948 ‖ Rendering for humanitarian operations, run by OSM France. “Fair use”, without assurance. ‖ Représentation pour les interventions humanitaires, exploitée par OSM France. « Fair use », sans garantie. ‖ Rappresentazione per interventi umanitari, gestita da OSM France. «Fair use», senza garanzia.
+2949 ‖ The After Action Review is released. To edit it, first withdraw the release. ‖ L'After Action Review est libérée. Pour la modifier, retirez d'abord la libération. ‖ L'After Action Review è rilasciato. Per modificarlo ritira prima il rilascio.
+2950 ‖ The image is too large (at most 1.5 MB) ‖ L'image est trop grande (au plus 1.5 Mo) ‖ L'immagine è troppo grande (al massimo 1.5 MB)
+2951 ‖ The image is too large (at most 3 MB) ‖ L'image est trop grande (au plus 3 Mo) ‖ L'immagine è troppo grande (al massimo 3 MB)
+2952 ‖ Operation feedback is switched off (Evaluation → Set up After Action Review) ‖ Le retour sur l'intervention est désactivé (Évaluation → Configurer l'After Action Review) ‖ Il feedback sull'intervento è disattivato (Valutazione → Configura After Action Review)
+2953 ‖ The operation log is switched off for responders ‖ Le journal d'intervention est désactivé pour les intervenants ‖ Il registro dell'intervento è disattivato per i soccorritori
+2954 ‖ The operation record is already anonymised ‖ Le procès-verbal d'intervention est déjà anonymisé ‖ Il verbale dell'intervento è già anonimizzato
+2955 ‖ The end must be after the start ‖ La fin doit être après le début ‖ La fine deve essere dopo l'inizio
+2956 ‖ The vehicle will then also be missing from the replay and the vehicle lists of past operations ‖ Le véhicule manquera ensuite aussi dans le replay et les listes de véhicules des interventions passées ‖ Il veicolo mancherà poi anche nel replay e negli elenchi dei veicoli degli interventi passati
+2957 ‖ The PDF already exists ‖ Le PDF existe déjà ‖ Il PDF esiste già
+2958 ‖ The password must not be empty ‖ Le mot de passe ne doit pas être vide ‖ La password non può essere vuota
+2959 ‖ The replay is already anonymised ‖ Le replay est déjà anonymisé ‖ Il replay è già anonimizzato
+2960 ‖ The replay is switched off for responders ‖ Le replay est désactivé pour les intervenants ‖ Il replay è disattivato per i soccorritori
+2961 ‖ The search area is switched off. ‖ La zone de recherche est désactivée. ‖ L'area di ricerca è disattivata.
+2962 ‖ The current password is wrong ‖ Le mot de passe actuel est incorrect ‖ La password attuale è errata
+2963 ‖ Your own account cannot be deactivated ‖ Votre propre compte ne peut pas être désactivé ‖ Il proprio account non può essere disattivato
+2964 ‖ Your own account cannot be deleted ‖ Votre propre compte ne peut pas être supprimé ‖ Il proprio account non può essere eliminato
+2965 ‖ Please set your own password via “Change password” ‖ Veuillez définir votre propre mot de passe via « Changer le mot de passe » ‖ Imposta la tua password tramite «Cambia password»
+2966 ‖ The saved PDF can no longer be changed ‖ Le PDF sauvegardé ne peut plus être modifié ‖ Il PDF salvato non può più essere modificato
+2967 ‖ This is not a PDF ‖ Ce n'est pas un PDF ‖ Questo non è un PDF
+2968 ‖ Retrieve the complete PDF of a released review saved before anonymisation, with all names ‖ Récupérer le PDF complet d'une review libérée sauvegardé avant l'anonymisation, avec tous les noms ‖ Recuperare il PDF completo di un review rilasciato salvato prima dell'anonimizzazione, con tutti i nomi
+2969 ‖ Document repository file uploaded ‖ Fichier de la gestion documentaire téléversé ‖ File dell'archivio documenti caricato
+2970 ‖ Firebase service account file not readable: {0} ‖ Fichier du compte de service Firebase illisible : {0} ‖ File dell'account di servizio Firebase non leggibile: {0}
+2971 ‖ Firebase service account file invalid (project_id, client_email or private_key missing): {0} ‖ Fichier du compte de service Firebase invalide (project_id, client_email ou private_key manquant) : {0} ‖ File dell'account di servizio Firebase non valido (manca project_id, client_email o private_key): {0}
+2972 ‖ Document repository files (details) ‖ Fichiers de la gestion documentaire (informations) ‖ File dell'archivio documenti (dati)
+2973 ‖ Data of the map on the FOEN website (no documented interface, the structure may change without notice), with danger level and classification. Supplements the interface and steps in if it does not respond. ‖ Données de la carte sur le site web de l'OFEV (pas d'interface documentée, la structure peut changer sans préavis), avec degré de danger et classification. Complète l'interface et prend le relais si elle ne répond pas. ‖ Dati della mappa sul sito web dell'UFAM (nessuna interfaccia documentata, la struttura può cambiare senza preavviso), con grado di pericolo e classificazione. Integra l'interfaccia e subentra se non risponde.
+2974 ‖ Create organisation data export ‖ Créer l'export des données de l'organisation ‖ Creare l'esportazione dei dati dell'organizzazione
+2975 ‖ Organisation data export created ‖ Export des données de l'organisation créé ‖ Esportazione dei dati dell'organizzazione creata
+2976 ‖ Data protection extract created ‖ Extrait de protection des données créé ‖ Estratto sulla protezione dei dati creato
+2977 ‖ Create data protection extract per person ‖ Créer un extrait de protection des données par personne ‖ Creare un estratto sulla protezione dei dati per persona
+2978 ‖ Date of the review ‖ Date de la review ‖ Data del review
+2979 ‖ Date missing or in the future ‖ Date manquante ou dans le futur ‖ Data mancante o nel futuro
+2980 ‖ Date too far back ‖ Date trop éloignée dans le passé ‖ Data troppo indietro nel tempo
+2981 ‖ Your daily limit for the AI assistant has been reached ( ‖ Votre limite journalière pour l'assistant IA est atteinte ( ‖ Il tuo limite giornaliero per l'assistente IA è raggiunto (
+2982 ‖ Your role may not send messages ‖ Votre rôle ne peut pas envoyer de messages ‖ Il tuo ruolo non può inviare messaggi
+2983 ‖ Your feedback helps to evaluate the operation in the After Action Review. Short keywords are enough. ‖ Votre retour aide à évaluer l'intervention dans l'After Action Review. Quelques mots-clés suffisent. ‖ Il tuo feedback aiuta a valutare l'intervento nell'After Action Review. Bastano brevi parole chiave.
+2984 ‖ =
+2985 ‖ The AI provider delivered no answer ‖ Le fournisseur IA n'a pas fourni de réponse ‖ Il fornitore IA non ha fornito risposta
+2986 ‖ The AI assistant is not set up ‖ L'assistant IA n'est pas configuré ‖ L'assistente IA non è configurato
+2987 ‖ The alarm time must not be in the future ‖ La réception de l'alarme ne doit pas être dans le futur ‖ La ricezione dell'allarme non può essere nel futuro
+2988 ‖ The alarm time is more than 7 days ago ‖ La réception de l'alarme date de plus de 7 jours ‖ La ricezione dell'allarme risale a più di 7 giorni fa
+2989 ‖ The sign-up deadline must be before the start ‖ La clôture des inscriptions doit être avant le début ‖ Il termine d'iscrizione deve essere prima dell'inizio
+2990 ‖ The operation of this recording has ended ‖ L'intervention de cet enregistrement est terminée ‖ L'intervento di questa registrazione è terminato
+2991 ‖ The referenced operation has not ended or is anonymised; nothing was taken over ‖ L'intervention de référence n'est pas terminée ou est anonymisée, rien n'a été repris ‖ L'intervento di riferimento non è terminato o è anonimizzato, non è stato ripreso nulla
+2992 ‖ The referenced operation was not found ‖ L'intervention de référence est introuvable ‖ L'intervento di riferimento non è stato trovato
+2993 ‖ The operation has ended. ‖ L'intervention est terminée. ‖ L'intervento è terminato.
+2994 ‖ The operation is no longer running ‖ L'intervention n'est plus en cours ‖ L'intervento non è più in corso
+2995 ‖ The operation disappears with log, messages, recording, casualties, markers, announcements, After Action Review and feedback from all evaluations. ‖ L'intervention disparaît de toutes les évaluations avec journal, messages, enregistrement, victimes, marqueurs, annonces, After Action Review et retours. ‖ L'intervento scompare da tutte le valutazioni con registro, messaggi, registrazione, vittime, marcatori, annunci, After Action Review e feedback.
+2996 ‖ Radio for external parties is switched off for this operation. ‖ La radio pour les externes est désactivée pour cette intervention. ‖ La radio per esterni è disattivata per questo intervento.
+2997 ‖ This link's channel is no longer active in the operation. ‖ Le canal de ce lien n'est plus actif dans l'intervention. ‖ Il canale di questo link non è più attivo nell'intervento.
+2998 ‖ The default must be a map provider that is switched on ‖ La valeur par défaut doit être un fournisseur de cartes activé ‖ Il predefinito deve essere un fornitore di mappe attivato
+2999 ‖ The default must be an app that is switched on ‖ La valeur par défaut doit être une app activée ‖ Il predefinito deve essere un'app attivata
+3000 ‖ The time of the PLS must not be in the future ‖ L'heure du PLS ne doit pas être dans le futur ‖ L'ora del PLS non può essere nel futuro
+3001 ‖ The time of the PLS is more than 7 days ago ‖ L'heure du PLS date de plus de 7 jours ‖ L'ora del PLS risale a più di 7 giorni fa
+3002 ‖ Accompanying mode is not switched on for you ‖ Le mode d'accompagnement n'est pas activé pour vous ‖ La modalità d'accompagnamento non è attiva per te
+3003 ‖ The earlier operation is already anonymised ‖ L'intervention antérieure est déjà anonymisée ‖ L'intervento precedente è già anonimizzato
+3004 ‖ The earlier operation was not found ‖ L'intervention antérieure est introuvable ‖ L'intervento precedente non è stato trovato
+3005 ‖ =
+3006 ‖ You mute yourself via “Microphone open”. ‖ Vous vous coupez vous-même via « Micro ouvert ». ‖ Ti silenzi da solo tramite «Microfono aperto».
+3007 ‖ The sign-up period has expired ‖ Le délai d'inscription est échu ‖ Il termine d'iscrizione è scaduto
+3008 ‖ The AI provider's answer could not be evaluated ‖ La réponse du fournisseur IA n'a pas pu être exploitée ‖ Non è stato possibile elaborare la risposta del fornitore IA
+3009 ‖ The call-out message is mandatory ‖ Le message de mobilisation est obligatoire ‖ Il messaggio di convocazione è obbligatorio
+3010 ‖ The recording no longer exists ‖ L'enregistrement n'existe plus ‖ La registrazione non esiste più
+3011 ‖ The recording is empty ‖ L'enregistrement est vide ‖ La registrazione è vuota
+3012 ‖ The recording is too large ‖ L'enregistrement est trop volumineux ‖ La registrazione è troppo grande
+3013 ‖ The recording could not be saved ‖ L'enregistrement n'a pas pu être sauvegardé ‖ Non è stato possibile salvare la registrazione
+3014 ‖ The recording has been deleted ‖ L'enregistrement a été supprimé ‖ La registrazione è stata eliminata
+3015 ‖ The recordings of the announcements (radio) are deleted. The operation record keeps time, channel, duration and any transcript (the stages “Pseudonymise operation record” and “Remove personal details and free texts” treat transcripts like messages). ‖ Les enregistrements des annonces (radio) sont supprimés. Le procès-verbal d'intervention conserve l'heure, le canal, la durée et une éventuelle transcription (les étapes « Pseudonymiser le procès-verbal d'intervention » et « Supprimer les données personnelles et textes libres » traitent les transcriptions comme les messages). ‖ Le registrazioni degli annunci (radio) vengono eliminate. Nel verbale dell'intervento restano ora, canale, durata e un'eventuale trascrizione (le tappe «Pseudonimizza il verbale dell'intervento» e «Rimuovi dati personali e testi liberi» trattano le trascrizioni come i messaggi).
+3016 ‖ The file is not a valid image ‖ Le fichier n'est pas une image valide ‖ Il file non è un'immagine valida
+3017 ‖ Only those who may call out all groups themselves may change the restriction of response groups ‖ Seul qui peut lui-même mobiliser tous les groupes peut modifier la restriction des groupes d'intervention ‖ Può modificare la limitazione dei gruppi d'intervento solo chi può convocare tutti i gruppi
+3018 ‖ Viewing your own operations is switched off ‖ La consultation de ses propres interventions est désactivée ‖ La consultazione dei propri interventi è disattivata
+3019 ‖ The “External responders” function is switched off for exercises ‖ La fonction « Intervenants externes » est désactivée pour les exercices ‖ La funzione «Soccorritori esterni» è disattivata per le esercitazioni
+3020 ‖ The “Casualties” function is switched off for exercises ‖ La fonction « Victimes » est désactivée pour les exercices ‖ La funzione «Vittime» è disattivata per le esercitazioni
+3021 ‖ The function “{0} ‖ La fonction « {0} ‖ La funzione «{0}
+3022 ‖ The geodata layer is switched off ‖ La couche de géodonnées est désactivée ‖ Il livello di geodati è disattivato
+3023 ‖ The situation summary is only for participants ‖ Le résumé de la situation n'existe que pour les participants ‖ Il riepilogo della situazione è solo per i partecipanti
+3024 ‖ The live conference is not available for this operation ‖ La conférence en direct n'est pas disponible pour cette intervention ‖ La conferenza in diretta non è disponibile per questo intervento
+3025 ‖ The live conference is not set up. ‖ La conférence en direct n'est pas configurée. ‖ La conferenza in diretta non è configurata.
+3026 ‖ The MAC address is not in the form AA:BB:CC:DD:EE:FF ‖ L'adresse MAC n'a pas la forme AA:BB:CC:DD:EE:FF ‖ L'indirizzo MAC non ha la forma AA:BB:CC:DD:EE:FF
+3027 ‖ The system administrator role always has all rights and cannot be changed ‖ Le rôle d'administrateur système a toujours tous les droits et ne peut pas être modifié ‖ Il ruolo di amministratore di sistema ha sempre tutti i diritti e non può essere modificato
+3028 ‖ The system administrator role cannot be removed ‖ Le rôle d'administrateur système ne peut pas être retiré ‖ Il ruolo di amministratore di sistema non può essere rimosso
+3029 ‖ The role has rights that you do not have yourself ‖ Le rôle a des droits que vous n'avez pas vous-même ‖ Il ruolo ha diritti che tu non hai
+3030 ‖ The role “{0} ‖ Le rôle « {0} ‖ Il ruolo «{0}
+3031 ‖ The default map of “{0} ‖ La carte par défaut de « {0} ‖ La mappa predefinita di «{0}
+3032 ‖ The location histories lose the link to the user accounts; the replay only shows labels (with response option and special role). Only for recorded operations. ‖ Les historiques de position perdent le lien avec les comptes d'utilisateur, le replay ne montre plus que des désignations (avec option d'engagement et rôle spécial). Seulement pour les interventions enregistrées. ‖ Le cronologie delle posizioni perdono il collegamento con gli account utente, il replay mostra solo denominazioni (con opzione d'intervento e ruolo speciale). Solo per interventi registrati.
+3033 ‖ The stage “{0}” is switched off ‖ L'étape « {0} » est désactivée ‖ La tappa «{0}» è disattivata
+3034 ‖ The participations lose the link to the user accounts: the operation is then missing from the statistics per person and from the participants' “My operations”; log, replay and After Action Review only show labels. Replay and operation record are pseudonymised beforehand. The content of the After Action Review remains unchanged. ‖ Les participations perdent le lien avec les comptes d'utilisateur : l'intervention manque ensuite dans la statistique par personne et dans « Mes interventions » des participants ; journal, replay et After Action Review ne montrent plus que des désignations. Le replay et le procès-verbal d'intervention sont pseudonymisés auparavant. Le contenu de l'After Action Review reste inchangé. ‖ Le partecipazioni perdono il collegamento con gli account utente: l'intervento manca poi nella statistica per persona e in «I miei interventi» dei partecipanti; registro, replay e After Action Review mostrano solo denominazioni. Replay e verbale dell'intervento vengono pseudonimizzati prima. Il contenuto dell'After Action Review resta invariato.
+3035 ‖ The phone number is maintained by the administration ‖ Le numéro de téléphone est géré par l'administration ‖ Il numero di telefono lo gestisce l'amministrazione
+3036 ‖ The UUID is not in the form XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX ‖ L'UUID n'a pas la forme XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX ‖ L'UUID non ha la forma XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+3037 ‖ Your own system administrator role cannot be removed ‖ Votre propre rôle d'administrateur système ne peut pas être retiré ‖ Il proprio ruolo di amministratore di sistema non può essere rimosso
+3038 ‖ The selected response groups have no (further) active members ‖ Les groupes d'intervention choisis n'ont pas de membres actifs (supplémentaires) ‖ I gruppi d'intervento scelti non hanno membri attivi (ulteriori)
+3039 ‖ The prepared exercise is reset and can be carried out again. ‖ L'exercice préparé est réinitialisé et peut être refait. ‖ L'esercitazione preparata viene reimpostata e può essere ripetuta.
+3040 ‖ The exercise has ended ‖ L'exercice est terminé ‖ L'esercitazione è terminata
+3041 ‖ The exercise is already running ‖ L'exercice est déjà en cours ‖ L'esercitazione è già in corso
+3042 ‖ The exercise is still running ‖ L'exercice est encore en cours ‖ L'esercitazione è ancora in corso
+3043 ‖ The exercise is still running. End it in the operations app first. ‖ L'exercice est encore en cours. Terminez-le d'abord dans l'app d'intervention. ‖ L'esercitazione è ancora in corso. Terminala prima nell'app d'intervento.
+3044 ‖ The exercise has already been started ‖ L'exercice a déjà été démarré ‖ L'esercitazione è già stata avviata
+3045 ‖ This response option does not apply to this kind of operation ‖ Cette option d'engagement ne vaut pas pour ce genre d'intervention ‖ Questa opzione d'intervento non vale per questo genere d'intervento
+3046 ‖ You may not call out this response group ‖ Vous ne pouvez pas mobiliser ce groupe d'intervention ‖ Non puoi convocare questo gruppo d'intervento
+3047 ‖ This response group is at “{0} ‖ Ce groupe d'intervention est chez « {0} ‖ Questo gruppo d'intervento è presso «{0}
+3048 ‖ This feedback request is no longer open ‖ Cette demande de retour n'est plus ouverte ‖ Questa richiesta di feedback non è più aperta
+3049 ‖ This function of the AI assistant is not enabled for you ‖ Cette fonction de l'assistant IA ne vous est pas ouverte ‖ Questa funzione dell'assistente IA non è abilitata per te
+3050 ‖ This skill is entered by the administration ‖ Cette compétence est saisie par l'administration ‖ Questa competenza la registra l'amministrazione
+3051 ‖ This MAC address already belongs to “{0} ‖ Cette adresse MAC appartient déjà à « {0} ‖ Questo indirizzo MAC appartiene già a «{0}
+3052 ‖ This navigation app is not available ‖ Cette app de navigation n'est pas disponible ‖ Questa app di navigazione non è disponibile
+3053 ‖ This person has rights that you do not have; only someone with these rights can edit them ‖ Cette personne a des droits que vous n'avez pas ; seule une personne ayant ces droits peut la modifier ‖ Questa persona ha diritti che tu non hai; solo chi ha questi diritti può modificarla
+3054 ‖ This person has already logged in or appears in operation data; please deactivate ‖ Cette personne s'est déjà connectée ou figure dans des données d'intervention ; veuillez la désactiver ‖ Questa persona ha già effettuato l'accesso o compare in dati d'intervento; disattivala
+3055 ‖ This special role only applies to {0} ‖ Ce rôle spécial ne vaut que pour {0} ‖ Questo ruolo speciale vale solo per {0}
+3056 ‖ This UUID is not registered. Enter it above under “Further UUIDs” (iOS can only monitor known UUIDs). ‖ Cet UUID n'est pas enregistré. Saisissez-le ci-dessus sous « Autres UUID » (iOS ne peut surveiller que des UUID connus). ‖ Questo UUID non è registrato. Inseriscilo sopra in «Altri UUID» (iOS può monitorare solo UUID noti).
+3057 ‖ This exercise can no longer be started ‖ Cet exercice ne peut plus être démarré ‖ Questa esercitazione non si può più avviare
+3058 ‖ This exercise has not yet been carried out ‖ Cet exercice n'a pas encore été réalisé ‖ Questa esercitazione non è ancora stata svolta
+3059 ‖ Only the administration can remove this entry ‖ Seule l'administration peut retirer cette entrée ‖ Solo l'amministrazione può rimuovere questa voce
+3060 ‖ You do not hear this channel ‖ Vous n'entendez pas ce canal ‖ Non ascolti questo canale
+3061 ‖ This operation is anonymised; an After Action Review is no longer possible. ‖ Cette intervention est anonymisée, une After Action Review n'est plus possible. ‖ Questo intervento è anonimizzato, un After Action Review non è più possibile.
+3062 ‖ This operation type does not refer to an earlier operation ‖ Ce type d'intervention ne se réfère pas à une intervention antérieure ‖ Questo tipo d'intervento non si riferisce a un intervento precedente
+3063 ‖ This operation type does not allow prepared exercises ‖ Ce type d'intervention ne permet pas d'exercices préparés ‖ Questo tipo d'intervento non consente esercitazioni preparate
+3064 ‖ This operation type requires a reference to an earlier operation ‖ Ce type d'intervention exige une référence à une intervention antérieure ‖ Questo tipo d'intervento richiede un riferimento a un intervento precedente
+3065 ‖ This link is invalid or the public view has ended. ‖ Ce lien n'est pas valable ou la vue publique a pris fin. ‖ Questo link non è valido o la vista pubblica è terminata.
+3066 ‖ This After Action Review is saved and only available as a PDF. ‖ Cette After Action Review est sauvegardée et n'est plus disponible qu'en PDF. ‖ Questo After Action Review è salvato e disponibile solo come PDF.
+3067 ‖ This After Action Review is not released ‖ Cette After Action Review n'est pas libérée ‖ Questo After Action Review non è rilasciato
+3068 ‖ This beacon (UUID, major, minor) already belongs to “{0} ‖ Cette balise (UUID, major, minor) appartient déjà à « {0} ‖ Questo beacon (UUID, major, minor) appartiene già a «{0}
+3069 ‖ Direct call (phone number of the responders) ‖ Appel direct (numéro de téléphone des intervenants) ‖ Chiamata diretta (numero di telefono dei soccorritori)
+3070 ‖ Distance: 0 to 200 km ‖ Distance : 0 à 200 km ‖ Distanza: da 0 a 200 km
+3071 ‖ Document shared with external parties ‖ Document partagé avec les externes ‖ Documento condiviso con esterni
+3072 ‖ Documents (materials during operations, at fixed locations, for external parties) ‖ Documents (documentation en intervention, aux sites fixes, pour les externes) ‖ Documenti (documentazione durante l'intervento, nei luoghi fissi, per esterni)
+3073 ‖ Documents at fixed locations ‖ Documents aux sites fixes ‖ Documenti nei luoghi fissi
+3074 ‖ Documents for external parties ‖ Documents pour les externes ‖ Documenti per esterni
+3075 ‖ Manage document repository ‖ Gérer la gestion documentaire ‖ Gestire l'archivio documenti
+3076 ‖ You have not been called out for this operation ‖ Vous n'êtes pas mobilisé pour cette intervention ‖ Non sei convocato per questo intervento
+3077 ‖ You are not in any response group that at “{0} ‖ Vous n'êtes dans aucun groupe d'intervention qui chez « {0} ‖ Non sei in nessun gruppo d'intervento che presso «{0}
+3078 ‖ You may not write in the joint channel ‖ Vous ne pouvez pas écrire dans le canal commun ‖ Non puoi scrivere nel canale comune
+3079 ‖ You may only call out certain response groups ‖ Vous ne pouvez mobiliser que certains groupes d'intervention ‖ Puoi convocare solo determinati gruppi d'intervento
+3080 ‖ You can only grant or revoke rights that you have yourself ‖ Vous ne pouvez accorder ou retirer que des droits que vous avez vous-même ‖ Puoi assegnare o revocare solo diritti che hai tu stesso
+3081 ‖ =
+3082 ‖ Announcement on channel “ ‖ Annonce sur le canal « ‖ Annuncio sul canale «
+3083 ‖ Announcement could not be saved ‖ L'annonce n'a pas pu être enregistrée ‖ Non è stato possibile salvare l'annuncio
+3084 ‖ Announcement “{0} ‖ Annonce « {0} ‖ Annuncio «{0}
+3085 ‖ Announcements are switched off ‖ Les annonces sont désactivées ‖ Gli annunci sono disattivati
+3086 ‖ E-mail alarm configured ‖ Alarme par e-mail configurée ‖ Allarme via e-mail configurato
+3087 ‖ E-mail alarm is not set up or switched off ‖ L'alarme par e-mail n'est pas configurée ou est désactivée ‖ L'allarme via e-mail non è configurato o è disattivato
+3088 ‖ E-mail alarm: retrieval failed: {0} ‖ Alarme par e-mail : échec de la récupération : {0} ‖ Allarme via e-mail: recupero non riuscito: {0}
+3089 ‖ E-mail alarm: mailbox, keywords and allowed senders per operation type, retrieval via cron job or webhook; view the history of received e-mails. Radio & conference: media server (LiveKit), channels, transcription, retention and links for external parties per operation type. Partner organisations: agreements with other installations (address, key, shared response groups, mapping of operation types) ‖ Alarme par e-mail : boîte aux lettres, mots-clés et expéditeurs autorisés par type d'intervention, récupération par tâche cron ou webhook ; consulter l'historique des e-mails reçus. Radio & conférence : serveur média (LiveKit), canaux, transcription, conservation et liens pour externes par type d'intervention. Organisations partenaires : accords avec d'autres installations (adresse, clé, groupes d'intervention partagés, correspondance des types d'intervention) ‖ Allarme via e-mail: casella di posta, parole chiave e mittenti ammessi per tipo d'intervento, recupero tramite cron job o webhook; visualizzare la cronologia delle e-mail ricevute. Radio & conferenza: server multimediale (LiveKit), canali, trascrizione, conservazione e link per esterni per tipo d'intervento. Organizzazioni partner: accordi con altre installazioni (indirizzo, chiave, gruppi d'intervento condivisi, corrispondenza dei tipi d'intervento)
+3090 ‖ E-mail alarm: start failed: {0} ‖ Alarme par e-mail : échec du démarrage : {0} ‖ Allarme via e-mail: avvio non riuscito: {0}
+3091 ‖ E-mail alarm: {0} ‖ Alarme par e-mail : {0} ‖ Allarme via e-mail: {0}
+3092 ‖ Own display of the documents ‖ Affichage propre des documents ‖ Visualizzazione propria dei documenti
+3093 ‖ Own questions in the AI assistant's window about the data of the respective view (operation, log, exercise, statistics); in the administration also without data ‖ Questions personnelles dans la fenêtre de l'assistant IA sur les données de la vue concernée (intervention, journal, exercice, statistique) ; dans l'administration aussi sans données ‖ Domande proprie nella finestra dell'assistente IA sui dati della rispettiva vista (intervento, registro, esercitazione, statistica); nell'amministrazione anche senza dati
+3094 ‖ The app's own symbols for water rescue ‖ Symboles propres de l'app pour le sauvetage aquatique ‖ Simboli propri dell'app per il soccorso acquatico
+3095 ‖ Own password changed ‖ Propre mot de passe modifié ‖ Password propria modificata
+3096 ‖ Property not found ‖ Propriété introuvable ‖ Proprietà non trovata
+3097 ‖ Properties of fixed locations ‖ Propriétés des sites fixes ‖ Proprietà dei luoghi fissi
+3098 ‖ A retrieval is already running ‖ Une récupération est déjà en cours ‖ È già in corso un recupero
+3099 ‖ An After Action Review only exists after the end of the operation ‖ Une After Action Review n'existe qu'après la fin de l'intervention ‖ Un After Action Review esiste solo dopo la fine dell'intervento
+3100 ‖ An area needs 3–200 corners ‖ Une zone a besoin de 3 à 200 sommets ‖ Un'area necessita di 3–200 vertici
+3101 ‖ An object is selected twice ‖ Un objet est sélectionné deux fois ‖ Un oggetto è selezionato due volte
+3102 ‖ A running operation cannot be deleted; end it first ‖ Une intervention en cours ne peut pas être supprimée ; terminez-la d'abord ‖ Un intervento in corso non si può eliminare; terminalo prima
+3103 ‖ A user role with this name already exists ‖ Un rôle d'utilisateur portant ce nom existe déjà ‖ Esiste già un ruolo utente con questo nome
+3104 ‖ A response group with this name already exists ‖ Un groupe d'intervention portant ce nom existe déjà ‖ Esiste già un gruppo d'intervento con questo nome
+3105 ‖ A line needs 2–200 points ‖ Une ligne a besoin de 2 à 200 points ‖ Una linea necessita di 2–200 punti
+3106 ‖ An operation type with this name already exists ‖ Un type d'intervention portant ce nom existe déjà ‖ Esiste già un tipo d'intervento con questo nome
+3107 ‖ Response option saved ‖ Option d'engagement enregistrée ‖ Opzione d'intervento salvata
+3108 ‖ Response option not found ‖ Option d'engagement introuvable ‖ Opzione d'intervento non trovata
+3109 ‖ Operation ended ‖ Intervention terminée ‖ Intervento terminato
+3110 ‖ An operation of this type is already running (noted in the log) ‖ Une intervention de ce type est déjà en cours (notée dans le journal) ‖ È già in corso un intervento di questo tipo (annotato nel registro)
+3111 ‖ Configure operation ‖ Configurer l'intervention ‖ Configurare l'intervento
+3112 ‖ Operation started ‖ Intervention démarrée ‖ Intervento avviato
+3113 ‖ Operation started by e-mail ({0} ‖ Intervention démarrée par e-mail ({0} ‖ Intervento avviato via e-mail ({0}
+3114 ‖ Operation {0} ‖ Intervention {0} ‖ Intervento {0}
+3115 ‖ Operations app ‖ App d'intervention ‖ App d'intervento
+3116 ‖ Operation data (type, times, key figures) ‖ Données d'intervention (type, heures, indicateurs) ‖ Dati d'intervento (tipo, orari, indicatori)
+3117 ‖ Operation feedback submitted ‖ Retour sur l'intervention envoyé ‖ Feedback sull'intervento inviato
+3118 ‖ Operation feedback closed ‖ Retour sur l'intervention clôturé ‖ Feedback sull'intervento chiuso
+3119 ‖ Operation feedback requested ‖ Retour sur l'intervention demandé ‖ Feedback sull'intervento richiesto

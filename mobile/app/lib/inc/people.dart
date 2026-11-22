@@ -2,13 +2,14 @@
 // Gruppen «Einsatzkräfte mit App» und «Externe Einsatzkräfte» (zugeklappte gemerkt pro Gerät und Konto), je nach Spezialrolle,
 // Zentrieren, Folgen, Navigation; für die Einsatzleitung Spezialrolle ändern, aus dem Einsatz entfernen und Externe erfassen,
 // bearbeiten, verschieben und entfernen.
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
 import 'veh.dart';
+import '../i18n.dart';
 
 class PeoplePanel extends StatefulWidget {
   const PeoplePanel({super.key, required this.s, required this.map});
@@ -198,12 +199,12 @@ class _PeoplePanelState extends State<PeoplePanel> {
     final ok = await formDlg(context, id != null ? 'Externe Einsatzkraft bearbeiten' : 'Externe Einsatzkraft erfassen', (c, ss) {
       dss = ss;
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: n, maxLength: 80, autofocus: id == null, decoration: InputDecoration(labelText: 'Name', hintText: 'z. B. Feuerwehr, Posten Brücke', errorText: err.isEmpty ? null : err)),
-        TextField(controller: de, maxLength: 500, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Beschreibung (Organisation, Funkkanal, Telefon …)')),
+        TextField(controller: n, maxLength: 80, autofocus: id == null, decoration: InputDecoration(labelText: trn('Name'), hintText: trn('z. B. Feuerwehr, Posten Brücke'), errorText: trn(err.isEmpty ? null : err))),
+        TextField(controller: de, maxLength: 500, minLines: 2, maxLines: 4, decoration: InputDecoration(labelText: trn('Beschreibung (Organisation, Funkkanal, Telefon …)'))),
         DropdownButtonFormField<int?>(
             initialValue: s.iRoles.any((r) => ji(r['id']) == role) ? role : null,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Spezialrolle'),
+            decoration: InputDecoration(labelText: trn('Spezialrolle')),
             items: [
               const DropdownMenuItem<int?>(value: null, child: Text('Keine Spezialrolle')),
               for (final r in s.iRoles)
@@ -214,7 +215,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
             onChanged: (v) => ss(() => role = v)),
         const Padding(padding: EdgeInsets.only(top: 4), child: Mut('Mit einer Posten-Rolle endet das Suchgebiet an diesem Standort.', size: 12)),
         const SizedBox(height: 8),
-        TextField(controller: ab, maxLength: 4, decoration: const InputDecoration(labelText: 'Kürzel (max. 4 Zeichen, auf dem Marker)', hintText: 'z. B. FW')),
+        TextField(controller: ab, maxLength: 4, decoration: InputDecoration(labelText: trn('Kürzel (max. 4 Zeichen, auf dem Marker)'), hintText: trn('z. B. FW'))),
         CheckboxListTile(contentPadding: EdgeInsets.zero, dense: true, value: colOn, onChanged: (v) => ss(() => colOn = v == true), title: const Text('Farbe')),
         Opacity(
             opacity: colOn ? 1 : .4,
@@ -288,7 +289,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
     final nav = has ? navBtn(s, p['lat'], p['lon'], js(p['name'])) : null;
     final mgr = s.canManage
         ? PopupMenuButton<String>(
-            tooltip: 'Einsatzleitung',
+            tooltip: trn('Einsatzleitung'),
             icon: const Icon(Icons.more_vert, size: 20),
             onSelected: (v) => v == 'role' ? _setRole(p) : _kick(p),
             itemBuilder: (_) => [
@@ -324,7 +325,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
         ?nav,
         if (s.canManage) ...[
           IconButton(
-              tooltip: 'Name, Beschreibung, Spezialrolle, Kürzel, Farbe und Standort ändern',
+              tooltip: trn('Name, Beschreibung, Spezialrolle, Kürzel, Farbe und Standort ändern'),
               icon: const Icon(Icons.edit, size: 18),
               visualDensity: VisualDensity.compact,
               onPressed: () {
@@ -332,7 +333,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
                 if (x != null) _editExt(x);
               }),
           IconButton(
-              tooltip: 'Für alle entfernen',
+              tooltip: trn('Für alle entfernen'),
               icon: const Icon(Icons.close, size: 18),
               visualDensity: VisualDensity.compact,
               onPressed: () {

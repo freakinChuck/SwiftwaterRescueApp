@@ -1,0 +1,240 @@
+2640 ‖ You may not call out this partner organisation ‖ Vous ne pouvez pas mobiliser cette organisation partenaire ‖ Non puoi convocare questa organizzazione partner
+2641 ‖ This key already belongs to another partner ‖ Cette clé appartient déjà à un autre partenaire ‖ Questa chiave appartiene già a un altro partner
+2642 ‖ Operation not found ‖ Intervention introuvable ‖ Intervento non trovato
+2643 ‖ There is no agreement for this operation type ‖ Il n'y a pas d'accord pour ce type d'intervention ‖ Per questo tipo d'intervento non c'è un accordo
+2644 ‖ There is no agreement for this operation type with “{0} ‖ Il n'y a pas d'accord pour ce type d'intervention avec « {0} ‖ Per questo tipo d'intervento non c'è un accordo con «{0}
+2645 ‖ No key is registered for this partner ‖ Aucune clé n'est enregistrée pour ce partenaire ‖ Per questo partner non è registrata alcuna chiave
+2646 ‖ Joint operation not found ‖ Intervention commune introuvable ‖ Intervento comune non trovato
+2647 ‖ Joint operation triggered by a partner ‖ Intervention commune déclenchée par un partenaire ‖ Intervento comune avviato da un partner
+2648 ‖ No text ‖ Pas de texte ‖ Nessun testo
+2649 ‖ No joint operation ‖ Pas d'intervention commune ‖ Nessun intervento comune
+2650 ‖ No identifier ‖ Pas d'identifiant ‖ Nessun identificativo
+2651 ‖ No live conference set up ‖ Aucune conférence en direct configurée ‖ Nessuna conferenza in diretta configurata
+2652 ‖ No connection: {0} ‖ Pas de connexion : {0} ‖ Nessuna connessione: {0}
+2653 ‖ None of the organisations has set up a live conference ‖ Aucune des organisations n'a configuré de conférence en direct ‖ Nessuna delle organizzazioni ha configurato una conferenza in diretta
+2654 ‖ A joint operation is running with this partner; deactivate first or end the operation ‖ Une intervention commune est en cours avec ce partenaire ; désactivez d'abord ou terminez l'intervention ‖ Con questo partner è in corso un intervento comune; disattiva prima o termina l'intervento
+2655 ‖ Only participants can join ‖ Seuls les participants peuvent rejoindre ‖ Solo i partecipanti possono partecipare
+2656 ‖ Only at the initiating organisation ‖ Seulement chez l'organisation déclenchante ‖ Solo presso l'organizzazione promotrice
+2657 ‖ Only the initiating organisation can end it ‖ Seule l'organisation déclenchante peut terminer ‖ Solo l'organizzazione promotrice può terminare
+2658 ‖ Partner does not respond ‖ Le partenaire ne répond pas ‖ Il partner non risponde
+2659 ‖ Partner missing ‖ Partenaire manquant ‖ Partner mancante
+2660 ‖ Partner not found ‖ Partenaire introuvable ‖ Partner non trovato
+2661 ‖ Partner organisation ‖ Organisation partenaire ‖ Organizzazione partner
+2662 ‖ Partner organisation called out ‖ Organisation partenaire mobilisée ‖ Organizzazione partner convocata
+2663 ‖ Partner organisation registered ‖ Organisation partenaire enregistrée ‖ Organizzazione partner registrata
+2664 ‖ Partner organisation removed ‖ Organisation partenaire retirée ‖ Organizzazione partner rimossa
+2665 ‖ Partner organisation changed ‖ Organisation partenaire modifiée ‖ Organizzazione partner modificata
+2666 ‖ Unknown route ‖ Route inconnue ‖ Rotta sconosciuta
+2667 ‖ Invalid signature or unknown partner ‖ Signature invalide ou partenaire inconnu ‖ Firma non valida o partner sconosciuto
+2668 ‖ Invalid key ‖ Clé invalide ‖ Chiave non valida
+2669 ‖ Only the initiating organisation can call out further organisations ‖ Seule l'organisation déclenchante peut mobiliser d'autres organisations ‖ Solo l'organizzazione promotrice può convocare altre organizzazioni
+2670 ‖ =
+2671 ‖ =
+2672 ‖ =
+2673 ‖ called out: {0} ( ‖ mobilisé : {0} ( ‖ convocato: {0} (
+2674 ‖ triggered ({0} ‖ déclenchée ({0} ‖ avviato ({0}
+2675 ‖ at “{0} ‖ chez « {0} ‖ presso «{0}
+2676 ‖ the joint operation ‖ l'intervention commune ‖ l'intervento comune
+2677 ‖ the joint exercise ‖ l'exercice commun ‖ l'esercitazione comune
+2678 ‖ no response ‖ pas de réponse ‖ nessuna risposta
+2679 ‖ writes in the joint channel: {0} ‖ écrit dans le canal commun : {0} ‖ scrive nel canale comune: {0}
+2680 ‖ unchanged ‖ inchangé ‖ invariato
+2681 ‖ {0} people ‖ {0} personnes ‖ {0} persone
+2682 ‖ {0} more people ‖ {0} autres personnes ‖ altre {0} persone
+2683 ‖ {0}” on: {1} ‖ {0} » sur : {1} ‖ {0}» su: {1}
+2684 ‖ {0}” calls out more: {1} ( ‖ {0} » mobilise en plus : {1} ( ‖ {0}» convoca altri: {1} (
+2685 ‖ {0}” you may not call out ‖ {0} » vous ne pouvez pas le mobiliser ‖ {0}» non puoi convocarlo
+2686 ‖ {0}” has ‖ {0} » a ‖ {0}» ha
+2687 ‖ {0}” cannot be reached at the moment ‖ {0} » n'est pas joignable pour le moment ‖ {0}» al momento non è raggiungibile
+2688 ‖ “{0}” has ended the joint operation ‖ « {0} » a terminé l'intervention commune ‖ «{0}» ha terminato l'intervento comune
+2689 ‖ “{0}” could not be called out: {1} ‖ « {0} » n'a pas pu être mobilisé : {1} ‖ Non è stato possibile convocare «{0}»: {1}
+2690 ‖ =
+2691 ‖ =
+2692 ‖ =
+2693 ‖ =
+2694 ‖ =
+2695 ‖ (API key missing or invalid) ‖ (clé API manquante ou invalide) ‖ (chiave API mancante o non valida)
+2696 ‖ (recording ended) ‖ (enregistrement terminé) ‖ (registrazione terminata)
+2697 ‖ (layer or address not found) ‖ (couche ou adresse introuvable) ‖ (livello o indirizzo non trovato)
+2698 ‖ (as of {0} ‖ (état au {0} ‖ (stato al {0}
+2699 ‖ (text cannot be anonymised) ‖ (texte non anonymisable) ‖ (testo non anonimizzabile)
+2700 ‖ (already released) ‖ (déjà libéré) ‖ (già rilasciato)
+2701 ‖ (approx. {0} ‖ (env. {0} ‖ (ca. {0}
+2702 ‖ (no permission for the layer) ‖ (pas d'autorisation pour la couche) ‖ (nessuna autorizzazione per il livello)
+2703 ‖ =
+2704 ‖ (with recording) ‖ (avec enregistrement) ‖ (con registrazione)
+2705 ‖ (reported by the device) ‖ (signalé par l'appareil) ‖ (segnalato dal dispositivo)
+2706 ‖ (prepared exercise “ ‖ (exercice préparé « ‖ (esercitazione preparata «
+2707 ‖ ({0} sightings and connections will be deleted). ‖ ({0} repérages et liaisons seront supprimés). ‖ ({0} avvistamenti e collegamenti verranno eliminati).
+2708 ‖ (taken over: {0} ‖ (repris : {0} ‖ (ripreso: {0}
+2709 ‖ =
+2710 ‖ , alarm {0} ‖ , alarme {0} ‖ , allarme {0}
+2711 ‖ , duration {0} ‖ , durée {0} ‖ , durata {0}
+2712 ‖ , properties: {0} ‖ , propriétés : {0} ‖ , proprietà: {0}
+2713 ‖ , end {0} ‖ , fin {0} ‖ , fine {0}
+2714 ‖ , released by hand ‖ , libération manuelle ‖ , rilascio manuale
+2715 ‖ , place found reported {0} ‖ , lieu de découverte signalé {0} ‖ , luogo di ritrovamento segnalato {0}
+2716 ‖ , message: {0} ‖ , message : {0} ‖ , messaggio: {0}
+2717 ‖ , measured {0} ‖ , mesure {0} ‖ , misurazione {0}
+2718 ‖ , name {0} ‖ , nom {0} ‖ , nome {0}
+2719 ‖ , PLS from the e-mail ‖ , PLS tiré de l'e-mail ‖ , PLS dall'e-mail
+2720 ‖ , casualties ‖ , victimes ‖ , vittime
+2721 ‖ , special role {0} ‖ , rôle spécial {0} ‖ , ruolo speciale {0}
+2722 ‖ =
+2723 ‖ , search area after {0} ‖ , zone de recherche après {0} ‖ , area di ricerca dopo {0}
+2724 ‖ , alerted {0} ‖ , alarmés {0} ‖ , allarmati {0}
+2725 ‖ , taken in {0} ‖ , pris en charge {0} ‖ , accolto {0}
+2726 ‖ , left {0} ‖ , parti {0} ‖ , uscito {0}
+2727 ‖ , automatic ‖ , automatique ‖ , automatico
+2728 ‖ , calls out {0} ‖ , mobilise {0} ‖ , convoca {0}
+2729 ‖ , present from {0} ‖ , présent dès {0} ‖ , presente da {0}
+2730 ‖ , first acceptance after {0} ‖ , première acceptation après {0} ‖ , prima accettazione dopo {0}
+2731 ‖ , rescued {0} ‖ , sauvée {0} ‖ , salvata {0}
+2732 ‖ , running for {0} ‖ , en cours depuis {0} ‖ , in corso da {0}
+2733 ‖ =
+2734 ‖ , with operation record ‖ , avec procès-verbal d'intervention ‖ , con verbale dell'intervento
+2735 ‖ , without operation record ‖ , sans procès-verbal d'intervention ‖ , senza verbale dell'intervento
+2736 ‖ =
+2737 ‖ =
+2738 ‖ , on the way ‖ , en route ‖ , in viaggio
+2739 ‖ , missing ‖ , disparue ‖ , dispersa
+2740 ‖ , {0} min after the start) ‖ , {0} min après le début) ‖ , {0} min dopo l'avvio)
+2741 ‖ =
+2742 ‖ =
+2743 ‖ =
+2744 ‖ =
+2745 ‖ =
+2746 ‖ =
+2747 ‖ =
+2748 ‖ =
+2749 ‖ =
+2750 ‖ =
+2751 ‖ =
+2752 ‖ =
+2753 ‖ 1 individual ‖ 1 personne individuelle ‖ 1 singola persona
+2754 ‖ 1 person absent, not alerted ‖ 1 personne absente, non alarmée ‖ 1 persona assente, non allarmata
+2755 ‖ 1 missing casualty ‖ 1 victime disparue ‖ 1 vittima dispersa
+2756 ‖ =
+2757 ‖ ; which response groups is determined by the user role) ‖ ; quels groupes d'intervention, le rôle d'utilisateur le détermine) ‖ ; quali gruppi d'intervento, lo stabilisce il ruolo utente)
+2758 ‖ =
+2759 ‖ =
+2760 ‖ =
+2761 ‖ =
+2762 ‖ AI provider (HTTP {0}): {1} ‖ Fournisseur IA (HTTP {0}) : {1} ‖ Fornitore IA (HTTP {0}): {1}
+2763 ‖ AI assistant configured ‖ Assistant IA configuré ‖ Assistente IA configurato
+2764 ‖ Configure AI assistant ‖ Configurer l'assistant IA ‖ Configurare l'assistente IA
+2765 ‖ =
+2766 ‖ =
+2767 ‖ =
+2768 ‖ =
+2769 ‖ =
+2770 ‖ =
+2771 ‖ =
+2772 ‖ =
+2773 ‖ =
+2774 ‖ =
+2775 ‖ =
+2776 ‖ Aborted: {0} ‖ Interruption : {0} ‖ Interruzione: {0}
+2777 ‖ Discharge ‖ Débit ‖ Portata
+2778 ‖ Discharge {0} ‖ Débit {0} ‖ Portata {0}
+2779 ‖ Geodata comparison: {0} ‖ Comparaison des géodonnées : {0} ‖ Confronto dei geodati: {0}
+2780 ‖ Comparison of fixed locations with the source ‖ Comparaison des sites fixes avec la source ‖ Confronto dei luoghi fissi con la fonte
+2781 ‖ Sequence ‖ Déroulement ‖ Svolgimento
+2782 ‖ Sequence from the participants' point of view ‖ Déroulement du point de vue des participants ‖ Svolgimento dal punto di vista dei partecipanti
+2783 ‖ Section lead ‖ Direction de secteur ‖ Direzione di settore
+2784 ‖ Sender not confirmed (SPF/DKIM/DMARC) ‖ Expéditeur non confirmé (SPF/DKIM/DMARC) ‖ Mittente non confermato (SPF/DKIM/DMARC)
+2785 ‖ Sender not allowed ‖ Expéditeur non autorisé ‖ Mittente non ammesso
+2786 ‖ Interval of reports outside operations (min) ‖ Intervalle des signalements hors interventions (min) ‖ Intervallo delle segnalazioni fuori dagli interventi (min)
+2787 ‖ Interval of reports during operations per vehicle (s) ‖ Intervalle des signalements en intervention par véhicule (s) ‖ Intervallo delle segnalazioni durante l'intervento per veicolo (s)
+2788 ‖ Deviation from the source handled ‖ Écart par rapport à la source traité ‖ Scostamento dalla fonte trattato
+2789 ‖ Record and remove absences and suspended availability of all people (everyone may set their own) ‖ Saisir et retirer les absences et disponibilités suspendues de toutes les personnes (chacun peut définir les siennes) ‖ Registrare e rimuovere assenze e disponibilità sospese di tutte le persone (ognuno può impostare le proprie)
+2790 ‖ Manage absences ‖ Gérer les absences ‖ Gestire le assenze
+2791 ‖ =
+2792 ‖ =
+2793 ‖ Enter address ‖ Indiquer l'adresse ‖ Indica l'indirizzo
+2794 ‖ Address of the media server: wss://… (or ws:// only in your own network) ‖ Adresse du serveur média : wss://… (ou ws:// seulement dans le réseau propre) ‖ Indirizzo del server multimediale: wss://… (o ws:// solo nella propria rete)
+2795 ‖ After Action Review as PDF ‖ After Action Review en PDF ‖ After Action Review come PDF
+2796 ‖ After Action Review as Word ‖ After Action Review en Word ‖ After Action Review come Word
+2797 ‖ View After Action Review ‖ Voir l'After Action Review ‖ Visualizza After Action Review
+2798 ‖ After Action Review set up ‖ After Action Review configurée ‖ After Action Review configurato
+2799 ‖ After Action Review last edited ‖ After Action Review modifiée en dernier ‖ After Action Review modificato l'ultima volta
+2800 ‖ =
+2801 ‖ Create After Action Reviews ‖ Créer des After Action Reviews ‖ Creare After Action Review
+2802 ‖ Release After Action Reviews ‖ Libérer des After Action Reviews ‖ Rilasciare After Action Review
+2803 ‖ Alarm by e-mail ‖ Alarme par e-mail ‖ Allarme via e-mail
+2804 ‖ Alarm e-mail received ({0} ‖ E-mail d'alarme reçu ({0} ‖ E-mail d'allarme ricevuta ({0}
+2805 ‖ Alarm message: ‖ Message d'alarme : ‖ Messaggio d'allarme:
+2806 ‖ All logged-in users ‖ Tous les utilisateurs connectés ‖ Tutti gli utenti connessi
+2807 ‖ All data of the organisation as ZIP (JSON and CSV per table, optionally with voice recordings and saved After Action Reviews) and an overview as PDF; without passwords, keys and access tokens ‖ Toutes les données de l'organisation en ZIP (JSON et CSV par table, sur demande avec enregistrements vocaux et After Action Reviews sauvegardées) et une vue d'ensemble en PDF ; sans mots de passe, clés ni jetons d'accès ‖ Tutti i dati dell'organizzazione come ZIP (JSON e CSV per tabella, a richiesta con registrazioni vocali e After Action Review salvati) e una panoramica come PDF; senza password, chiavi né token d'accesso
+2808 ‖ Evaluate all operations ‖ Évaluer toutes les interventions ‖ Valutare tutti gli interventi
+2809 ‖ All helicopters, rescue helicopters highlighted ‖ Tous les hélicoptères, hélicoptères de sauvetage mis en évidence ‖ Tutti gli elicotteri, elicotteri di soccorso evidenziati
+2810 ‖ All aircraft (also aeroplanes, e.g. search flights) ‖ Tous les aéronefs (aussi les avions, p. ex. vols de recherche) ‖ Tutti gli aeromobili (anche aerei, p. es. voli di ricerca)
+2811 ‖ All text fields are already filled in ‖ Tous les champs de texte sont déjà remplis ‖ Tutti i campi di testo sono già compilati
+2812 ‖ All logged-in people ‖ Toutes les personnes connectées ‖ Tutte le persone connesse
+2813 ‖ Everyone who has accepted the operation ‖ Toutes les personnes ayant accepté l'intervention ‖ Tutti coloro che hanno accettato l'intervento
+2814 ‖ =
+2815 ‖ Release as completed (then locked and visible to the participants under “My operations”) and withdraw releases ‖ Libérer comme terminé (ensuite verrouillé et visible par les participants sous « Mes interventions ») et retirer les libérations ‖ Rilasciare come concluso (poi bloccato e visibile ai partecipanti sotto «I miei interventi») e ritirare i rilasci
+2816 ‖ Provider, API key, allowed modes per user role, privacy and limits of the AI assistant; view usage ‖ Fournisseur, clé API, modes autorisés par rôle d'utilisateur, protection des données et limites de l'assistant IA ; consulter l'utilisation ‖ Fornitore, chiave API, modalità consentite per ruolo utente, protezione dei dati e limiti dell'assistente IA; visualizzare l'uso
+2817 ‖ Other app (Android only: choice of map apps) ‖ Autre app (Android seulement : choix des apps de cartes) ‖ Altra app (solo Android: scelta delle app di mappe)
+2818 ‖ Only those who may call out all response groups may call out other organisations ‖ Seul qui peut mobiliser tous les groupes d'intervention peut mobiliser d'autres organisations ‖ Può convocare altre organizzazioni solo chi può convocare tutti i gruppi d'intervento
+2819 ‖ Request failed ‖ Échec de la requête ‖ Richiesta non riuscita
+2820 ‖ Operation feedback requests ‖ Demandes de retour sur l'intervention ‖ Richieste di feedback sull'intervento
+2821 ‖ Details of the operating organisation, contact and additional texts of the page “Legal notice, licences & privacy” ‖ Informations sur l'organisation exploitante, contact et textes complémentaires de la page « Mentions légales, licences & protection des données » ‖ Dati dell'organizzazione che gestisce l'app, contatto e testi aggiuntivi della pagina «Note legali, licenze & protezione dei dati»
+2822 ‖ Create, edit, reset password, deactivate, delete never-logged-in, assign user roles ‖ Créer, modifier, réinitialiser le mot de passe, désactiver, supprimer ceux jamais connectés, attribuer des rôles d'utilisateur ‖ Creare, modificare, reimpostare la password, disattivare, eliminare chi non ha mai effettuato l'accesso, assegnare ruoli utente
+2823 ‖ Signing up is only possible for exercises in the exercise schedule ‖ L'inscription n'est possible que pour les exercices du programme ‖ L'iscrizione è possibile solo per le esercitazioni nel programma
+2824 ‖ Login ‖ Connexion ‖ Accesso
+2825 ‖ Login to the mailbox failed ‖ Échec de la connexion à la boîte aux lettres ‖ Accesso alla casella di posta non riuscito
+2826 ‖ Sign-up for an exercise ‖ Inscription à un exercice ‖ Iscrizione a un'esercitazione
+2827 ‖ Anonymise and delete recordings ‖ Anonymiser et supprimer des enregistrements ‖ Anonimizzare ed eliminare registrazioni
+2828 ‖ Anonymised (except oneself) ‖ Anonymisé (sauf soi-même) ‖ Anonimizzato (tranne sé stessi)
+2829 ‖ Anonymised display lifted (administration) ‖ Affichage anonymisé levé (administration) ‖ Visualizzazione anonimizzata revocata (amministrazione)
+2830 ‖ Anonymisation applied ‖ Anonymisation appliquée ‖ Anonimizzazione applicata
+2831 ‖ Anonymisation configured ‖ Anonymisation configurée ‖ Anonimizzazione configurata
+2832 ‖ Configure anonymisation (stages, automatically after days) and apply it, also for several operations; final stages cannot be undone ‖ Configurer l'anonymisation (étapes, automatiquement après des jours) et l'appliquer, aussi pour plusieurs interventions ; les étapes définitives sont irréversibles ‖ Configurare l'anonimizzazione (tappe, automaticamente dopo giorni) e applicarla, anche a più interventi; le tappe definitive sono irreversibili
+2833 ‖ Anonymisation withdrawn ‖ Anonymisation retirée ‖ Anonimizzazione ritirata
+2834 ‖ =
+2835 ‖ =
+2836 ‖ =
+2837 ‖ =
+2838 ‖ Operation feedback answers ‖ Réponses au retour sur l'intervention ‖ Risposte al feedback sull'intervento
+2839 ‖ Presence in the conference ‖ Présence dans la conférence ‖ Presenza nella conferenza
+2840 ‖ Anonymise display ‖ Anonymiser l'affichage ‖ Anonimizzare la visualizzazione
+2841 ‖ Display anonymised {0} ‖ Affichage anonymisé {0} ‖ Visualizzazione anonimizzata {0}
+2842 ‖ App asks for push, app push is not set up ‖ L'app demande le push, le push des apps n'est pas configuré ‖ L'app chiede il push, il push delle app non è configurato
+2843 ‖ App registered for push ‖ App enregistrée pour le push ‖ App registrata per il push
+2844 ‖ App wanted to register for push, push is not set up ‖ L'app voulait s'enregistrer pour le push, le push n'est pas configuré ‖ L'app voleva registrarsi per il push, il push non è configurato
+2845 ‖ App push (FCM) rejected ‖ Push des apps (FCM) refusé ‖ Push delle app (FCM) rifiutato
+2846 ‖ App push handed over to FCM ‖ Push des apps transmis à FCM ‖ Push delle app consegnato a FCM
+2847 ‖ App push not sent ‖ Push des apps non envoyé ‖ Push delle app non inviato
+2848 ‖ App push: no device of the recipients registered for push ‖ Push des apps : aucun appareil des destinataires enregistré pour le push ‖ Push delle app: nessun dispositivo dei destinatari registrato per il push
+2849 ‖ App session logged out ‖ Session de l'app déconnectée ‖ Sessione dell'app disconnessa
+2850 ‖ Apple push (via Firebase) ‖ Push Apple (via Firebase) ‖ Push Apple (tramite Firebase)
+2851 ‖ View application log ‖ Consulter le journal de l'application ‖ Visualizzare il registro dell'applicazione
+2852 ‖ The saved PDF of the After Action Review is also deleted. ‖ Le PDF sauvegardé de l'After Action Review est aussi supprimé. ‖ Viene eliminato anche il PDF salvato dell'After Action Review.
+2853 ‖ Also delete what is otherwise only deactivated or cannot be deleted: finished operations, users with operation data, response options, special roles, templates of external responders, skills with entries, vehicle types and vehicles; only together with the right of the respective area, irreversible ‖ Supprimer aussi ce qui n'est sinon que désactivé ou non supprimable : interventions terminées, utilisateurs avec données d'intervention, options d'engagement, rôles spéciaux, modèles d'intervenants externes, compétences avec entrées, types de véhicules et véhicules ; seulement avec le droit du domaine concerné, irréversible ‖ Eliminare anche ciò che altrimenti viene solo disattivato o non è eliminabile: interventi terminati, utenti con dati d'intervento, opzioni d'intervento, ruoli speciali, modelli di soccorritori esterni, competenze con voci, tipi di veicolo e veicoli; solo insieme al diritto dell'area interessata, irreversibile
+2854 ‖ On request ‖ Sur demande ‖ Su richiesta
+2855 ‖ curl is missing on the server ‖ curl manque sur le serveur ‖ Sul server manca curl
+2856 ‖ Other elements refer to this element; remove them first ‖ D'autres éléments renvoient à cet élément ; retirez-les d'abord ‖ Altri elementi rimandano a questo elemento; rimuovili prima
+2857 ‖ Other elements refer to this element; change them first ‖ D'autres éléments renvoient à cet élément ; modifiez-les d'abord ‖ Altri elementi rimandano a questo elemento; modificali prima
+2858 ‖ Retention: 1 to 365 days ‖ Conservation : 1 à 365 jours ‖ Conservazione: da 1 a 365 giorni
+2859 ‖ Only those who belong to a group at “{0} can be called out ‖ Ne peut être mobilisé que qui appartient à un groupe chez « {0} ‖ Può essere convocato solo chi appartiene a un gruppo presso «{0}
+2860 ‖ Recorded periods ‖ Périodes enregistrées ‖ Periodi registrati
+2861 ‖ Recording not found ‖ Enregistrement introuvable ‖ Registrazione non trovata
+2862 ‖ Recordings are not available in the anonymised view ‖ Les enregistrements n'existent pas dans la vue anonymisée ‖ Le registrazioni non sono disponibili nella vista anonimizzata
+2863 ‖ Mission, intent, expected course ‖ Mission, intention, déroulement prévu ‖ Incarico, intenzione, svolgimento previsto
+2864 ‖ Recording (location history) ‖ Enregistrement (historique de position) ‖ Registrazione (cronologia delle posizioni)
+2865 ‖ Aircraft recording ‖ Enregistrement des aéronefs ‖ Registrazione degli aeromobili
+2866 ‖ Recording deleted ‖ Enregistrement supprimé ‖ Registrazione eliminata
+2867 ‖ Recording deleted {0} ‖ Enregistrement supprimé {0} ‖ Registrazione eliminata {0}
+2868 ‖ Training removed ‖ Formation retirée ‖ Formazione rimossa
+2869 ‖ Training recorded ‖ Formation saisie ‖ Formazione registrata
+2870 ‖ Training per person ‖ Formation par personne ‖ Formazione per persona
+2871 ‖ Manage training ‖ Gérer la formation ‖ Gestire la formazione
+2872 ‖ Delivered server version, versions of the logged-in apps and minimum app version (notice “Please update the app”) ‖ Version livrée du serveur, versions des apps connectées et version minimale de l'app (avis « Veuillez mettre à jour l'app ») ‖ Versione consegnata del server, versioni delle app connesse e versione minima dell'app (avviso «Aggiorna l'app»)
+2873 ‖ Triggered by: {0} ‖ Déclenchée par : {0} ‖ Avviato da: {0}
+2874 ‖ Switched off ‖ Désactivé ‖ Disattivato
+2875 ‖ Information about all stored data of a person (data subject access request under the data protection act) as PDF and as ZIP with the data in machine-readable form, with names and locations ‖ Renseignements sur toutes les données enregistrées d'une personne (demande d'accès selon la loi sur la protection des données) en PDF et en ZIP avec les données sous forme lisible par machine, avec noms et positions ‖ Informazioni su tutti i dati salvati di una persona (richiesta d'accesso secondo la legge sulla protezione dei dati) come PDF e come ZIP con i dati in forma leggibile da macchina, con nomi e posizioni
+2876 ‖ Section missing ‖ Secteur manquant ‖ Porzione mancante
+2877 ‖ Exit ‖ Sortie ‖ Uscita
+2878 ‖ Exit possible ‖ Sortie possible ‖ Uscita possibile
+2879 ‖ Selection ‖ Sélection ‖ Selezione

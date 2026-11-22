@@ -4,11 +4,12 @@
 // Hinweis «Bitte App aktualisieren» (updateNote) bei Mindestversion app_min des Servers oder höherer API-Stufe; gesperrt wird nie.
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
+import 'i18n.dart';
 
 const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '0.0.0');
 const appBuild = String.fromEnvironment('APP_BUILD', defaultValue: '0');

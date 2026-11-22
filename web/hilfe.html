@@ -2,6 +2,7 @@
 <html lang="de"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
+<script src="i18n.js?v=0"></script><!-- Mehrsprachigkeit (Issue #66), vor allen anderen Skripten -->
 <title>Swiftwater Rescue – Bedienungsanleitung</title>
 <link rel="icon" href="img/icon-192.png">
 <link rel="stylesheet" href="common.css?v=0">
@@ -89,7 +90,7 @@ function show(){const h=decodeURIComponent(location.hash.slice(1)).replace(/^\//
   const n=KAP.findIndex(x=>x[0]===k),pv=KAP[n-1],nx=KAP[n+1];
   m.innerHTML=DOC[k].html+`<div class="hlnav"><span>${pv?`<a href="#${pv[0]}">← ${esc(pv[1])}</a>`:''}</span><span>${nx?`<a href="#${nx[0]}">${esc(nx[1])} →</a>`:''}</span></div>`;
   m.querySelectorAll('figure img').forEach(im=>{const f=()=>im.closest('figure').classList.toggle('p',im.naturalHeight>im.naturalWidth);im.complete?f():im.onload=f});
-  toc(k,a);document.getElementById('hlToc').classList.remove('open');document.title='Swiftwater Rescue – '+KAP[n][1];
+  toc(k,a);document.getElementById('hlToc').classList.remove('open');document.title='Swiftwater Rescue – '+(window.T?T(KAP[n][1]):KAP[n][1]);
   const t=a&&document.getElementById(k+'/'+a);if(!t){window.scrollTo(0,0);return}
   // Bilder davor haben vor dem Laden keine Höhe: zuerst springen, nach dem Laden nochmals (höchstens 3 s, nicht mehr nach eigenem Scrollen)
   t.scrollIntoView();const gen=++JUMP;
@@ -106,7 +107,8 @@ function search(q){const w=q.toLowerCase().split(/\s+/).filter(x=>x.length>1),m=
       res.push(`<a href="#${k}${s.id?'/'+s.id:''}"><b>${esc(t)}${s.id?' › '+esc(s.title):''}</b><div class="mut">${esc(sn).replace(new RegExp('('+w.map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')','gi'),'<mark>$1</mark>')} …</div></a>`)}}}
   m.innerHTML=`<h1>Suche</h1><div class="hlres">${res.length?res.join(''):'<p class="mut">Keine Treffer.</p>'}</div>`}
 
-(async()=>{await Promise.all(KAP.map(async([k])=>{try{const r=await fetch('hilfe/'+k+'.md?v='+V);if(r.ok){MD[k]=await r.text();DOC[k]=md(MD[k],k)}}catch(e){}}));
+(async()=>{await Promise.all(KAP.map(async([k])=>{try{const L=window.LANG||'de';let r=L!=='de'?await fetch('hilfe/'+L+'/'+k+'.md?v='+V).catch(()=>null):null; // Mehrsprachigkeit (Issue #66): übersetztes Kapitel, sonst Deutsch
+    if(!r||!r.ok)r=await fetch('hilfe/'+k+'.md?v='+V);if(r.ok){MD[k]=await r.text();DOC[k]=md(MD[k],k)}}catch(e){}}));
   show();addEventListener('hashchange',show);
   const q=document.getElementById('hlQ');let tq;q.oninput=()=>{clearTimeout(tq);tq=setTimeout(()=>search(q.value),200)};
   q.onkeydown=e=>{if(e.key==='Escape'){q.value='';show()}};

@@ -1,0 +1,240 @@
+3840 ‖ Exercise planner ‖ Responsable d'exercices ‖ Responsabile delle esercitazioni
+3841 ‖ Exercise preparation ‖ Préparation d'exercice ‖ Preparazione dell'esercitazione
+3842 ‖ public view prepared ( ‖ vue publique préparée ( ‖ vista pubblica preparata (
+3843 ‖ takes over the role ‖ reprend le rôle ‖ assume il ruolo
+3844 ‖ – (none yet) ‖ – (aucun pour l'instant) ‖ – (ancora nessuno)
+3845 ‖ – note: {0} ‖ – remarque : {0} ‖ – nota: {0}
+3846 ‖ … (further entries shortened) ‖ … (autres entrées abrégées) ‖ … (altre voci abbreviate)
+3847 ‖ (1–365, default 30) ‖ (1–365, par défaut 30) ‖ (1–365, predefinito 30)
+3848 ‖ (recording deleted) ‖ (enregistrement supprimé) ‖ (registrazione eliminata)
+3849 ‖ (category, properties, abbreviation and colour on taking over; offer in the geodata layer of the operations app) ‖ (catégorie, propriétés, abréviation et couleur lors de la reprise ; offre dans la couche de géodonnées de l'app d'intervention) ‖ (categoria, proprietà, sigla e colore alla ripresa; offerta nel livello di geodati dell'app d'intervento)
+3850 ‖ (identifier {0}) ‖ (identifiant {0}) ‖ (identificativo {0})
+3851 ‖ (push-to-talk) run via this server: recording on the device, distribution on retrieval, even after a radio dead spot. The ‖ (touche de parole) passent par ce serveur : enregistrement sur l'appareil, distribution à la récupération, même après une zone blanche. La ‖ (tasto di conversazione) passano da questo server: registrazione sul dispositivo, distribuzione al recupero, anche dopo un buco di copertura. La
+3852 ‖ (version {0}) ‖ (version {0}) ‖ (versione {0})
+3853 ‖ (Administration → Geodata sources) ‖ (Administration → Sources de géodonnées) ‖ (Amministrazione → Fonti di geodati)
+3854 ‖ (automatically at the end of the operation) ‖ (automatiquement à la fin de l'intervention) ‖ (automaticamente alla fine dell'intervento)
+3855 ‖ (when starting and calling out more with this role's “… start” rights) ‖ (au démarrage et à la mobilisation supplémentaire avec les droits « … démarrer » de ce rôle) ‖ (all'avvio e alla convocazione aggiuntiva con i diritti «… avvia» di questo ruolo)
+3856 ‖ (already done) ‖ (déjà fait) ‖ (già fatto)
+3857 ‖ (until {0}) ‖ (jusqu'au {0}) ‖ (fino al {0})
+3858 ‖ (own database) ‖ (propre base de données) ‖ (propria banca dati)
+3859 ‖ (the exercise's own locations). ‖ (sites propres de l'exercice). ‖ (luoghi propri dell'esercitazione).
+3860 ‖ (final) ‖ (définitif) ‖ (definitivo)
+3861 ‖ (deleted) ‖ (supprimé) ‖ (eliminato)
+3862 ‖ (no recordings) ‖ (pas d'enregistrements) ‖ (nessuna registrazione)
+3863 ‖ (no recording) ‖ (pas d'enregistrement) ‖ (nessuna registrazione)
+3864 ‖ (none selected) ‖ (aucun choisi) ‖ (nessuno scelto)
+3865 ‖ (running) ‖ (en cours) ‖ (in corso)
+3866 ‖ (with prepared exercises) ‖ (avec exercices préparés) ‖ (con esercitazioni preparate)
+3867 ‖ (not active) ‖ (pas actif) ‖ (non attivo)
+3868 ‖ (not active: mailbox incomplete or no operation type switched on) ‖ (pas actif : boîte aux lettres incomplète ou aucun type d'intervention activé) ‖ (non attivo: casella di posta incompleta o nessun tipo d'intervento attivo)
+3869 ‖ (not set up as OpenAI-compatible) ‖ (pas configuré comme compatible OpenAI) ‖ (non configurato come compatibile con OpenAI)
+3870 ‖ (not set up or switched off) ‖ (pas configuré ou désactivé) ‖ (non configurato o disattivato)
+3871 ‖ (no longer stored) ‖ (plus enregistré) ‖ (non più registrato)
+3872 ‖ (not yet entered) ‖ (pas encore saisi) ‖ (non ancora inserito)
+3873 ‖ (switched off above) ‖ (désactivé ci-dessus) ‖ (disattivato sopra)
+3874 ‖ (without names) ‖ (sans noms) ‖ (senza nomi)
+3875 ‖ (optional, e.g. clothing) ‖ (facultatif, p. ex. vêtements) ‖ (facoltativo, p. es. abbigliamento)
+3876 ‖ (edit under “Fixed locations”) ‖ (modifier sous « Sites fixes ») ‖ (modifica in «Luoghi fissi»)
+3877 ‖ (incomplete) ‖ (incomplet) ‖ (incompleto)
+3878 ‖ (by hand) ‖ (manuellement) ‖ (a mano)
+3879 ‖ (from “{0}”) ‖ (de « {0} ») ‖ (da «{0}»)
+3880 ‖ (existing text is revised) ‖ (le texte existant est révisé) ‖ (il testo esistente viene rielaborato)
+3881 ‖ ({0} operations) ‖ ({0} interventions) ‖ ({0} interventi)
+3882 ‖ ({0} selected) ‖ ({0} choisis) ‖ ({0} scelti)
+3883 ‖ ({0} ms, {1} aircraft) ‖ ({0} ms, {1} aéronefs) ‖ ({0} ms, {1} aeromobili)
+3884 ‖ ({0} of {1} affected) ‖ ({0} sur {1} concernés) ‖ ({0} di {1} interessati)
+3885 ‖ (exercise “{0}”) ‖ (exercice « {0} ») ‖ (esercitazione «{0}»)
+3886 ‖ (across all types, empty = only limited per type) ‖ (sur tous les types, vide = limité seulement par type) ‖ (su tutti i tipi, vuoto = limitato solo per tipo)
+3887 ‖ (taken over) ‖ (repris) ‖ (ripreso)
+3888 ‖ ). The web server connects to it directly. When it is asked is determined by the order above. ‖ ). Le serveur web s'y connecte directement. L'ordre ci-dessus détermine quand elle est interrogée. ‖ ). Il server web vi si collega direttamente. Quando viene interrogata lo stabilisce l'ordine sopra.
+3889 ‖ + Task ‖ + Tâche ‖ + Compito
+3890 ‖ + Image ‖ + Image ‖ + Immagine
+3891 ‖ + Insert image ‖ + Insérer une image ‖ + Inserisci immagine
+3892 ‖ + Add images ‖ + Ajouter des images ‖ + Aggiungi immagini
+3893 ‖ + Entry ‖ + Entrée ‖ + Voce
+3894 ‖ + Element ‖ + Élément ‖ + Elemento
+3895 ‖ + Navigation point on the map ‖ + Point de navigation sur la carte ‖ + Punto di navigazione sulla mappa
+3896 ‖ + New response group ‖ + Nouveau groupe d'intervention ‖ + Nuovo gruppo d'intervento
+3897 ‖ + New skill ‖ + Nouvelle compétence ‖ + Nuova competenza
+3898 ‖ + New user ‖ + Nouvel utilisateur ‖ + Nuovo utente
+3899 ‖ + Folder ‖ + Dossier ‖ + Cartella
+3900 ‖ + Location ‖ + Site ‖ + Luogo
+3901 ‖ + from geodata ‖ + depuis les géodonnées ‖ + dai geodati
+3902 ‖ +{0} more ‖ +{0} autres ‖ +{0} altri
+3903 ‖ , signed-up people are alerted ‖ , les inscrits sont alarmés ‖ , gli iscritti vengono allarmati
+3904 ‖ , withdraw release ‖ , retirer la libération ‖ , ritirare il rilascio
+3905 ‖ , as of {0} ‖ , état au {0} ‖ , stato al {0}
+3906 ‖ , partial requests (range) work ‖ , les requêtes partielles (range) fonctionnent ‖ , le richieste parziali (range) funzionano
+3907 ‖ , text recognised ‖ , texte reconnu ‖ , testo riconosciuto
+3908 ‖ , approx. {0} km ‖ , env. {0} km ‖ , ca. {0} km
+3909 ‖ , of which ‖ , dont ‖ , di cui
+3910 ‖ , release ‖ , libérer ‖ , rilasciare
+3911 ‖ , at most {0} per response ‖ , au plus {0} par réponse ‖ , al massimo {0} per risposta
+3912 ‖ , in the ZIP ‖ , dans le ZIP ‖ , nello ZIP
+3913 ‖ , at most {0} in total ‖ , au plus {0} au total ‖ , al massimo {0} in totale
+3914 ‖ , not in the ZIP ‖ , pas dans le ZIP ‖ , non nello ZIP
+3915 ‖ , without text ‖ , sans texte ‖ , senza testo
+3916 ‖ , requested since {0} ‖ , demandée depuis {0} ‖ , richiesta da {0}
+3917 ‖ , e.g. your own Whisper server; without an address the AI assistant{0}. The recordings go to this service. ‖ , p. ex. un propre serveur Whisper ; sans adresse, l'assistant IA{0}. Les enregistrements sont envoyés à ce service. ‖ , p. es. un proprio server Whisper; senza indirizzo l'assistente IA{0}. Le registrazioni vanno a questo servizio.
+3918 ‖ , {0} points ‖ , {0} points ‖ , {0} punti
+3919 ‖ , {0} already filled in not overwritten ‖ , {0} déjà remplis non écrasés ‖ , {0} già compilati non sovrascritti
+3920 ‖ , {0} not checkable (source not reachable) ‖ , {0} non vérifiables (source injoignable) ‖ , {0} non verificabili (fonte non raggiungibile)
+3921 ‖ , {0} no longer possible due to anonymisation ‖ , {0} plus possibles à cause de l'anonymisation ‖ , {0} non più possibili a causa dell'anonimizzazione
+3922 ‖ . You configure functions, helicopters and anonymisation periods per type in the respective sections. ‖ . Les fonctions, hélicoptères et délais d'anonymisation se règlent par type dans les sections correspondantes. ‖ . Funzioni, elicotteri e termini di anonimizzazione si impostano per tipo nelle rispettive sezioni.
+3923 ‖ . Without it PostGIS remains unused and Overpass applies. ‖ . Sans elle, PostGIS reste inutilisé et Overpass s'applique. ‖ . Senza di essa PostGIS resta inutilizzato e vale Overpass.
+3924 ‖ . Without it the PostGIS API remains unused. ‖ . Sans elle, l'API PostGIS reste inutilisée. ‖ . Senza di essa l'API PostGIS resta inutilizzata.
+3925 ‖ . Which groups can be called out and are preselected per operation type, and whether people not called out see the operation, is set in the ‖ . Quels groupes sont mobilisables et présélectionnés par type d'intervention, et si les non-mobilisés voient l'intervention, se règle dans les ‖ . Quali gruppi sono convocabili e preselezionati per tipo d'intervento e se i non convocati vedono l'intervento si imposta nei
+3926 ‖ 0 = do not cache ‖ 0 = ne pas mettre en cache ‖ 0 = non memorizzare
+3927 ‖ 0 = save nothing offline ‖ 0 = ne rien enregistrer hors ligne ‖ 0 = non salvare nulla offline
+3928 ‖ 1 new e-mail ‖ 1 nouvel e-mail ‖ 1 nuova e-mail
+3929 ‖ 1 location taken over ‖ 1 site repris ‖ 1 luogo ripreso
+3930 ‖ 1st acceptance ‖ 1re acceptation ‖ 1ª accettazione
+3931 ‖ 1st in area ‖ 1er dans la zone ‖ 1° nell'area
+3932 ‖ : the operation lead can change it at the start and during the operation under “Manage operation”. ‖ : la direction d'intervention peut le modifier au démarrage et en intervention sous « Gérer l'intervention ». ‖ : la direzione dell'intervento può modificarlo all'avvio e durante l'intervento in «Gestire l'intervento».
+3933 ‖ : cannot be undone. ‖ : irréversible. ‖ : non si può annullare.
+3934 ‖ : encrypted mailboxes do not work. ‖ : les boîtes chiffrées ne fonctionnent pas. ‖ : le caselle cifrate non funzionano.
+3935 ‖ ; for a public layer it works without. ‖ ; pour une couche publique, cela fonctionne sans. ‖ ; per un livello pubblico funziona senza.
+3936 ‖ ; until then this map cannot be selected. ‖ ; d'ici là, cette carte n'est pas sélectionnable. ‖ ; fino ad allora questa mappa non è selezionabile.
+3937 ‖ ; your own system administrator role remains ‖ ; votre propre rôle d'administrateur système reste ‖ ; il proprio ruolo di amministratore di sistema resta
+3938 ‖ =
+3939 ‖ =
+3940 ‖ =
+3941 ‖ =
+3942 ‖ =
+3943 ‖ =
+3944 ‖ AAR released ‖ AAR libérée ‖ AAR rilasciato
+3945 ‖ AAR in progress ‖ AAR en cours ‖ AAR in lavorazione
+3946 ‖ AAR no longer possible ‖ AAR plus possible ‖ AAR non più possibile
+3947 ‖ AAR not relevant ‖ AAR non pertinente ‖ AAR non rilevante
+3948 ‖ Save AAR ‖ Sauvegarder l'AAR ‖ Salva AAR
+3949 ‖ Switch on AI assistant ‖ Activer l'assistant IA ‖ Attiva l'assistente IA
+3950 ‖ API key (header X-API-Key) ‖ Clé API (en-tête X-API-Key) ‖ Chiave API (header X-API-Key)
+3951 ‖ Remove API key ‖ Retirer la clé API ‖ Rimuovi chiave API
+3952 ‖ API key ‖ Clé API ‖ Chiave API
+3953 ‖ API key (if needed) ‖ Clé API (si nécessaire) ‖ Chiave API (se necessaria)
+3954 ‖ Delete API key? ‖ Supprimer la clé API ? ‖ Eliminare la chiave API?
+3955 ‖ Discharge, water level and water temperature of the FOEN gauging stations (open data, values unverified; sources below), with danger level according to the FOEN thresholds, as far as the website is switched on. During an operation, the app records the values of the nearest stations around each PLS at the start, as soon as a PLS is known, and at the end of the operation: in the operation log and in the menu of the operations app. Each person can choose their own gauging stations in the profile, which they see in the menu and on the map. ‖ Débit, niveau et température de l'eau des stations de mesure de l'OFEV (données ouvertes, valeurs non vérifiées ; sources ci-dessous), avec degré de danger selon les seuils de l'OFEV, dans la mesure où le site web est activé. En intervention, l'app enregistre au début, dès qu'un PLS est connu, et à la fin de l'intervention les valeurs des stations les plus proches autour de chaque PLS : dans le journal d'intervention et dans le menu de l'app d'intervention. Chaque personne peut choisir dans son profil ses propres stations de mesure, affichées dans le menu et sur la carte. ‖ Portata, livello e temperatura dell'acqua delle stazioni di misura dell'UFAM (dati aperti, valori non verificati; fonti sotto), con grado di pericolo secondo le soglie dell'UFAM, se il sito web è attivo. Durante un intervento l'app registra all'inizio, non appena è noto un PLS, e alla fine dell'intervento i valori delle stazioni più vicine attorno a ogni PLS: nel registro dell'intervento e nel menu dell'app d'intervento. Ogni persona può scegliere nel profilo stazioni di misura proprie, che vede nel menu e sulla mappa.
+3956 ‖ Query ‖ Requête ‖ Richiesta
+3957 ‖ Query at most every ‖ Requête au plus toutes les ‖ Richiesta al massimo ogni
+3958 ‖ Queries {0}, failed {1} · last success {2}{3}{4} ‖ Requêtes {0}, échouées {1} · dernier succès {2}{3}{4} ‖ Richieste {0}, fallite {1} · ultimo successo {2}{3}{4}
+3959 ‖ Cancelled. ‖ Annulé. ‖ Annullato.
+3960 ‖ Rejected ‖ Refusé ‖ Rifiutato
+3961 ‖ Rejected. ‖ Refusé. ‖ Rifiutato.
+3962 ‖ Closed on {0} ‖ Clôturé le {0} ‖ Chiuso il {0}
+3963 ‖ Comparison with the source ‖ Comparaison avec la source ‖ Confronto con la fonte
+3964 ‖ Repository ‖ Classement ‖ Archivio
+3965 ‖ Reject ‖ Refuser ‖ Rifiuta
+3966 ‖ Accesses per hour ‖ Accès par heure ‖ Accessi all'ora
+3967 ‖ Close ‖ Clôturer ‖ Chiudi
+3968 ‖ Sender ‖ Expéditeur ‖ Mittente
+3969 ‖ Interval of retrievals in seconds (30–3600) ‖ Intervalle des récupérations en secondes (30–3600) ‖ Intervallo dei recuperi in secondi (30–3600)
+3970 ‖ Absent people and people with suspended availability are not called out and not alerted. They still see running operations and can join voluntarily. Each person can set their own entries in the profile of the operations app; in the ‖ Les personnes absentes et celles dont la disponibilité est suspendue ne sont ni mobilisées ni alarmées. Elles voient tout de même les interventions en cours et peuvent les rejoindre volontairement. Chaque personne peut saisir ses propres entrées dans le profil de l'app d'intervention ; dans les ‖ Le persone assenti e quelle con disponibilità sospesa non vengono né convocate né allarmate. Vedono comunque gli interventi in corso e possono parteciparvi volontariamente. Ogni persona può impostare le proprie voci nel profilo dell'app d'intervento; nelle
+3971 ‖ Absence ‖ Absence ‖ Assenza
+3972 ‖ Absences, availability times, operations and plans ‖ Absences, horaires de disponibilité, interventions et planifications ‖ Assenze, orari di disponibilità, interventi e pianificazioni
+3973 ‖ Address (wss://…) ‖ Adresse (wss://…) ‖ Indirizzo (wss://…)
+3974 ‖ Address of this installation ‖ Adresse de cette installation ‖ Indirizzo di questa installazione
+3975 ‖ Address of an Overpass server ‖ Adresse d'un serveur Overpass ‖ Indirizzo di un server Overpass
+3976 ‖ Copy address ‖ Copier l'adresse ‖ Copia indirizzo
+3977 ‖ After Action Review (AAR): for each finished operation record the findings, release them (then visible to the participants under “My operations”) or mark as not relevant. Of {0} finished: {1} released, {2} in progress, {3} not relevant, {4} open{5}.{6} ‖ After Action Review (AAR) : pour chaque intervention terminée, saisir les enseignements, les libérer (ensuite visibles pour les participants sous « Mes interventions ») ou marquer comme non pertinent. Sur {0} terminées : {1} libérées, {2} en cours, {3} non pertinentes, {4} ouvertes{5}.{6} ‖ After Action Review (AAR): per ogni intervento terminato registrare gli insegnamenti, rilasciarli (poi visibili ai partecipanti sotto «I miei interventi») o segnare come non rilevante. Su {0} terminati: {1} rilasciati, {2} in lavorazione, {3} non rilevanti, {4} aperti{5}.{6}
+3978 ‖ After Action Review released. ‖ After Action Review libérée. ‖ After Action Review rilasciato.
+3979 ‖ After Action Review saved. ‖ After Action Review enregistrée. ‖ After Action Review salvato.
+3980 ‖ =
+3981 ‖ =
+3982 ‖ Active (start button in the operations app) ‖ Actif (bouton de démarrage dans l'app d'intervention) ‖ Attivo (pulsante di avvio nell'app d'intervento)
+3983 ‖ Active (selectable for locations and visible in the operations app; deactivating keeps the assignment) ‖ Actif (sélectionnable pour les sites et visible dans l'app d'intervention ; désactiver conserve l'attribution) ‖ Attivo (selezionabile per i luoghi e visibile nell'app d'intervento; disattivare mantiene l'assegnazione)
+3984 ‖ Active (selectable when accepting) ‖ Actif (sélectionnable à l'acceptation) ‖ Attivo (selezionabile all'accettazione)
+3985 ‖ Active (selectable at the start) ‖ Actif (sélectionnable au démarrage) ‖ Attivo (selezionabile all'avvio)
+3986 ‖ Active (deactivated: no new joint operations in either direction) ‖ Actif (désactivé : pas de nouvelles interventions communes dans les deux sens) ‖ Attivo (disattivato: nessun nuovo intervento comune in entrambe le direzioni)
+3987 ‖ Active (selectable during the operation) ‖ Actif (sélectionnable en intervention) ‖ Attivo (selezionabile durante l'intervento)
+3988 ‖ Active (visible in operations and exercises) ‖ Actif (visible dans les interventions et exercices) ‖ Attivo (visibile in interventi ed esercitazioni)
+3989 ‖ Activate ‖ Activer ‖ Attiva
+3990 ‖ Currency ‖ Actualité ‖ Attualità
+3991 ‖ Alert at the start. Only those who belong to a response group that can be called out for the operation type are alerted; “All” means all these people. ‖ Alarmer au démarrage. Seules les personnes appartenant à un groupe d'intervention mobilisable pour le type d'intervention sont alarmées ; « Tous » désigne toutes ces personnes. ‖ Allarmare all'avvio. Viene allarmato solo chi appartiene a un gruppo d'intervento convocabile per il tipo d'intervento; «Tutti» significa tutte queste persone.
+3992 ‖ Alarm message ‖ Message d'alarme ‖ Messaggio d'allarme
+3993 ‖ Alarm level freely selectable, e.g. event, standby, medical service; with its own response options and special roles. ‖ Niveau d'alarme librement choisi, p. ex. manifestation, piquet, service sanitaire ; avec ses propres options d'engagement et rôles spéciaux. ‖ Livello d'allarme liberamente selezionabile, p. es. manifestazione, picchetto, servizio sanitario; con opzioni d'intervento e ruoli speciali propri.
+3994 ‖ All areas ‖ Tous les domaines ‖ Tutte le aree
+3995 ‖ All files and suggestions together ‖ Tous les fichiers et propositions ensemble ‖ Tutti i file e le proposte insieme
+3996 ‖ All data of the app: one JSON and one CSV file per table, plus an overview as PDF. Passwords, keys and access tokens are removed. With many recorded operations this can take a few minutes. ‖ Toutes les données de l'app : un fichier JSON et un fichier CSV par table, plus une vue d'ensemble en PDF. Les mots de passe, clés et jetons d'accès sont retirés. Avec de nombreuses interventions enregistrées, cela peut prendre quelques minutes. ‖ Tutti i dati dell'app: un file JSON e uno CSV per tabella, più una panoramica come PDF. Password, chiavi e token d'accesso sono rimossi. Con molti interventi registrati può richiedere alcuni minuti.
+3997 ‖ All response groups ‖ Tous les groupes d'intervention ‖ Tutti i gruppi d'intervento
+3998 ‖ All device sessions ({0}) ‖ Toutes les sessions d'appareils ({0}) ‖ Tutte le sessioni dei dispositivi ({0})
+3999 ‖ All people selected ‖ Toutes les personnes choisies ‖ Tutte le persone scelte
+4000 ‖ All operation lead rights, but no special role ‖ Tous les droits de la direction d'intervention, mais pas de rôle spécial ‖ Tutti i diritti della direzione dell'intervento, ma nessun ruolo speciale
+4001 ‖ All rights, including future ones ‖ Tous les droits, aussi futurs ‖ Tutti i diritti, anche futuri
+4002 ‖ All servers are switched off. Overpass will then no longer be queried. Save anyway? ‖ Tous les serveurs sont désactivés. Overpass ne sera alors plus interrogé. Enregistrer quand même ? ‖ Tutti i server sono disattivati. Overpass non verrà più interrogato. Salvare comunque?
+4003 ‖ All stages ‖ Toutes les étapes ‖ Tutte le tappe
+4004 ‖ All participants ‖ Tous les participants ‖ Tutti i partecipanti
+4005 ‖ All dates in one place: absences and regular availability times{0}, {1}, planned exercises and operations as well as expiring training. Record and change them in the profile of the operations app{2}. ‖ Toutes les dates en un seul endroit : absences et horaires de disponibilité réguliers{0}, {1}, exercices et interventions planifiés ainsi que formations arrivant à échéance. Saisir et modifier dans le profil de l'app d'intervention{2}. ‖ Tutte le date in un solo posto: assenze e orari di disponibilità regolari{0}, {1}, esercitazioni e interventi pianificati e formazioni in scadenza. Registra e modifica nel profilo dell'app d'intervento{2}.
+4006 ‖ All active (including future ones) ‖ Tous les actifs (aussi futurs) ‖ Tutti gli attivi (anche futuri)
+4007 ‖ Remove all ‖ Tout retirer ‖ Rimuovi tutto
+4008 ‖ Everyone has already replied; deadline set anew. ‖ Tous ont déjà répondu ; délai redéfini. ‖ Tutti hanno già risposto; termine reimpostato.
+4009 ‖ All in the period ({0}) ‖ Tous dans la période ({0}) ‖ Tutti nel periodo ({0})
+4010 ‖ Select all in the period ({0}) ‖ Choisir tous dans la période ({0}) ‖ Scegli tutti nel periodo ({0})
+4011 ‖ Select all not taken over ‖ Choisir tous ceux non repris ‖ Scegli tutti quelli non ripresi
+4012 ‖ All, including “All people who can be called out” ‖ Tous, aussi « Toutes les personnes mobilisables » ‖ Tutti, anche «Tutte le persone convocabili»
+4013 ‖ Everyone who sees the entry ‖ Tous ceux qui voient l'entrée ‖ Tutti coloro che vedono la voce
+4014 ‖ Download as PDF ‖ Télécharger en PDF ‖ Scarica come PDF
+4015 ‖ Download as Word document ‖ Télécharger en document Word ‖ Scarica come documento Word
+4016 ‖ As a separate link per entry ‖ Comme lien propre par entrée ‖ Come link proprio per voce
+4017 ‖ Marked as done. ‖ Marqué comme fait. ‖ Segnato come fatto.
+4018 ‖ Take over as a new entry in the folder “{0}”? ‖ Reprendre comme nouvelle entrée dans le dossier « {0} » ? ‖ Riprendere come nuova voce nella cartella «{0}»?
+4019 ‖ Mark as not relevant? ‖ Marquer comme non pertinent ? ‖ Segnare come non rilevante?
+4020 ‖ Marked as not relevant. ‖ Marqué comme non pertinent. ‖ Segnato come non rilevante.
+4021 ‖ On ‖ Le ‖ Il
+4022 ‖ To ‖ À ‖ A
+4023 ‖ At fixed locations (popup and “Documents” if the location is in the operation area) ‖ Aux sites fixes (fenêtre contextuelle et « Documents » si le site est dans la zone d'intervention) ‖ Nei luoghi fissi (popup e «Documenti» se il luogo è nell'area d'intervento)
+4024 ‖ Provider ‖ Fournisseur ‖ Fornitore
+4025 ‖ Other people appear anonymised (e.g. “Responder 3”), you yourself with your name. ‖ Les autres personnes apparaissent anonymisées (p. ex. « Intervenant 3 »), vous-même avec votre nom. ‖ Le altre persone appaiono anonimizzate (p. es. «Soccorritore 3»), tu con il tuo nome.
+4026 ‖ Choose another image ‖ Choisir une autre image ‖ Scegli un'altra immagine
+4027 ‖ Requirements for the exercise (optional) ‖ Exigences pour l'exercice (facultatif) ‖ Requisiti per l'esercitazione (facoltativi)
+4028 ‖ Requests ‖ Requêtes ‖ Richieste
+4029 ‖ Requests 24 h ‖ Requêtes 24 h ‖ Richieste 24 h
+4030 ‖ Requests 30 days ‖ Requêtes 30 jours ‖ Richieste 30 giorni
+4031 ‖ Requests per person and day ‖ Requêtes par personne et jour ‖ Richieste per persona e giorno
+4032 ‖ Requests per day, all together ‖ Requêtes par jour, toutes ensemble ‖ Richieste al giorno, tutte insieme
+4033 ‖ Details for the exercise schedule (optional) ‖ Informations pour le programme des exercices (facultatif) ‖ Dati per il programma delle esercitazioni (facoltativi)
+4034 ‖ Offered ‖ Proposé ‖ Offerto
+4035 ‖ Requested on {0}{1}{2} ‖ Demandé le {0}{1}{2} ‖ Richiesto il {0}{1}{2}
+4036 ‖ Logged-in devices (apps) ‖ Appareils connectés (apps) ‖ Dispositivi connessi (app)
+4037 ‖ Alert signed-up people at the start (in addition to the call-out; with “All” only those signed up) ‖ Alarmer les inscrits au démarrage (en plus de la mobilisation ; avec « Tous » seulement les inscrits) ‖ Allarmare gli iscritti all'avvio (in aggiunta alla convocazione; con «Tutti» solo gli iscritti)
+4038 ‖ Displayed entries as CSV ‖ Entrées affichées en CSV ‖ Voci visualizzate come CSV
+4039 ‖ Create ‖ Créer ‖ Crea
+4040 ‖ May sign up ‖ Peuvent s'inscrire ‖ Possono iscriversi
+4041 ‖ Sign-up deadline (empty = until the start) ‖ Clôture des inscriptions (vide = jusqu'au début) ‖ Termine d'iscrizione (vuoto = fino all'avvio)
+4042 ‖ Sign-up possible ‖ Inscription possible ‖ Iscrizione possibile
+4043 ‖ Sign-up open ‖ Inscriptions ouvertes ‖ Iscrizioni aperte
+4044 ‖ Sign-ups: {0} taking part, {1} not ‖ Inscriptions : {0} participent, {1} non ‖ Iscrizioni: {0} partecipano, {1} no
+4045 ‖ Anonymous: hide names ‖ Anonyme : masquer les noms ‖ Anonimo: nascondi i nomi
+4046 ‖ Anonymise ‖ Anonymiser ‖ Anonimizza
+4047 ‖ Anonymised ‖ Anonymisé ‖ Anonimizzato
+4048 ‖ When anonymised, labels such as “Responder 1” or “Casualty 1” appear instead of names, without descriptions of the casualties. The details recorded in the review remain as they were written. Permanently anonymised operations are always anonymous. ‖ Anonymisé, des désignations comme « Intervenant 1 » ou « Victime 1 » remplacent les noms, sans descriptions des victimes. Les informations saisies dans la review restent telles qu'écrites. Les interventions anonymisées définitivement sont toujours anonymes. ‖ Anonimizzato, al posto dei nomi compaiono denominazioni come «Soccorritore 1» o «Vittima 1», senza descrizioni delle vittime. I dati registrati nel review restano come sono stati scritti. Gli interventi anonimizzati definitivamente sono sempre anonimi.
+4049 ‖ Anonymised: {0} {1} ‖ Anonymisé : {0} {1} ‖ Anonimizzato: {0} {1}
+4050 ‖ Lift anonymised display ‖ Lever l'affichage anonymisé ‖ Revoca la visualizzazione anonimizzata
+4051 ‖ Lift anonymised display ({0}) ‖ Lever l'affichage anonymisé ({0}) ‖ Revoca la visualizzazione anonimizzata ({0})
+4052 ‖ Lift anonymised display? Log, replay and After Action Review will then show names again, unless permanently anonymised. An After Action Review already saved remains available only as a PDF. ‖ Lever l'affichage anonymisé ? Journal, replay et After Action Review montreront à nouveau les noms, sauf anonymisation définitive. Une After Action Review déjà sauvegardée reste disponible seulement en PDF. ‖ Revocare la visualizzazione anonimizzata? Registro, replay e After Action Review mostreranno di nuovo i nomi, se non anonimizzati definitivamente. Un After Action Review già salvato resta disponibile solo come PDF.
+4053 ‖ Lift anonymised display for {0}? ‖ Lever l'affichage anonymisé pour {0} ? ‖ Revocare la visualizzazione anonimizzata per {0}?
+4054 ‖ View{0} ‖ Voir{0} ‖ Visualizza{0}
+4055 ‖ Answer ‖ Réponse ‖ Risposta
+4056 ‖ Change answer ‖ Modifier la réponse ‖ Modifica risposta
+4057 ‖ Answers ({0}) ‖ Réponses ({0}) ‖ Risposte ({0})
+4058 ‖ Show answers without names (“Feedback 1”, “Feedback 2” …), also in the document ‖ Afficher les réponses sans noms (« Retour 1 », « Retour 2 » …), aussi dans le document ‖ Mostra le risposte senza nomi («Feedback 1», «Feedback 2» …), anche nel documento
+4059 ‖ Apply ‖ Appliquer ‖ Applica
+4060 ‖ Number ‖ Nombre ‖ Numero
+4061 ‖ Number of operations ‖ Nombre d'interventions ‖ Numero di interventi
+4062 ‖ Display anonymised ‖ Affichage anonymisé ‖ Visualizzazione anonimizzata
+4063 ‖ Display of fixed locations ‖ Affichage des sites fixes ‖ Visualizzazione dei luoghi fissi
+4064 ‖ Apple Maps does not exist on Android, “Other app” only on Android. If the chosen app is not available on a device, the app uses the default, otherwise Google Maps. ‖ Plans d'Apple n'existe pas sous Android, « Autre app » seulement sous Android. Si l'app choisie n'est pas disponible sur un appareil, l'app prend la valeur par défaut, sinon Google Maps. ‖ Mappe di Apple non esiste su Android, «Altra app» solo su Android. Se l'app scelta non è disponibile su un dispositivo, l'app usa il predefinito, altrimenti Google Maps.
+4065 ‖ Application log (last {0} days) ‖ Journal de l'application ({0} derniers jours) ‖ Registro dell'applicazione (ultimi {0} giorni)
+4066 ‖ Also gauging stations on lakes (mostly only water level) ‖ Aussi les stations de mesure sur les lacs (surtout le niveau) ‖ Anche stazioni di misura sui laghi (per lo più solo livello)
+4067 ‖ Also people who join later (new in the group or organisation) ‖ Aussi les personnes qui arrivent plus tard (nouvelles dans le groupe ou l'organisation) ‖ Anche persone che si aggiungono più tardi (nuove nel gruppo o nell'organizzazione)
+4068 ‖ Even those who have already confirmed must confirm the current version again. ‖ Même ceux qui ont déjà confirmé doivent confirmer à nouveau la version actuelle. ‖ Anche chi ha già confermato deve confermare di nuovo la versione attuale.
+4069 ‖ Can be called out ‖ Mobilisable ‖ Convocabile
+4070 ‖ Call out: {0} ‖ Mobiliser : {0} ‖ Convoca: {0}
+4071 ‖ Call-out of own organisation ‖ Mobilisation de sa propre organisation ‖ Convocazione della propria organizzazione
+4072 ‖ Call-out of partner organisations ‖ Mobilisation d'organisations partenaires ‖ Convocazione di organizzazioni partner
+4073 ‖ Called out at the start (without alarm: they see the operation in the app and join themselves). Only those who belong to a response group that can be called out for the operation type; “All” means all these people. ‖ Mobilisés au démarrage (sans alarme : ils voient l'intervention dans l'app et la rejoignent eux-mêmes). Seulement les personnes appartenant à un groupe mobilisable pour le type d'intervention ; « Tous » désigne toutes ces personnes. ‖ Convocati all'avvio (senza allarme: vedono l'intervento nell'app e vi partecipano da sé). Solo chi appartiene a un gruppo d'intervento convocabile per il tipo d'intervento; «Tutti» significa tutte queste persone.
+4074 ‖ All people are called out (there is no active response group). ‖ Toutes les personnes sont mobilisées (il n'y a pas de groupe d'intervention actif). ‖ Vengono convocate tutte le persone (non c'è un gruppo d'intervento attivo).
+4075 ‖ Call-out message ‖ Message de mobilisation ‖ Messaggio di convocazione
+4076 ‖ Call-out message (alarm at the start) ‖ Message de mobilisation (alarme au démarrage) ‖ Messaggio di convocazione (allarme all'avvio)
+4077 ‖ Lifted ‖ Levé ‖ Revocato
+4078 ‖ Lifted: {0} {1} ‖ Levé : {0} {1} ‖ Revocato: {0} {1}
+4079 ‖ Recorded periods (gaps: paused or ended) ‖ Périodes enregistrées (lacunes : en pause ou terminé) ‖ Periodi registrati (lacune: in pausa o terminato)

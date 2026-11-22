@@ -239,7 +239,9 @@ if (setting('place_props_mig', '') === '') { if (!$db->query("SELECT COUNT(*) FR
 // Ausbildung (Issue #117): Pflicht je Einsatzgruppe (req_grp, NULL = für alle, für die die Fähigkeit gilt); Kalenderjahre neu ab 0 (0 = laufendes, 1 = Folgejahr)
 try { $db->exec("ALTER TABLE skills ADD COLUMN req_grp TEXT NULL"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE users ADD COLUMN purged INT DEFAULT 0"); } catch (Throwable $e) {}
-try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {} // persönlicher Testalarm (Issue #218): JSON {id, lvl, at} // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
+try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {}
+try { $db->exec("ALTER TABLE users ADD COLUMN lang TEXT NULL"); } catch (Throwable $e) {} // Mehrsprachigkeit (Issue #66): eigene Wahl, NULL = automatisch
+try { $db->exec("ALTER TABLE users ADD COLUMN lang_ui TEXT NULL"); } catch (Throwable $e) {} // zuletzt angezeigte Sprache (Header X-Lang), für Push // persönlicher Testalarm (Issue #218): JSON {id, lvl, at} // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
 if (setting('skill_y0_mig', '') === '') { $db->exec("UPDATE skills SET n=n-1 WHERE exp='year' AND n>0"); setSetting('skill_y0_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX voice_inc ON voice(incident_id,upd)"); } catch (Throwable $e) {}
@@ -412,7 +414,7 @@ function sndIn($v) { $r = []; foreach (is_array($v) ? $v : [] as $k => $x) if (c
 function sndApns($k) { return $k && $k !== 'system' && preg_match('/^[a-z0-9_]{1,30}$/', $k) ? "alarm_$k.wav" : 'default'; }
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
-const SETTING_PERMS = ['msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func', 'sym' => 'cfg_inc',
+const SETTING_PERMS = ['lang' => 'cfg_func', 'msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func', 'sym' => 'cfg_inc',
   'coord_sys' => 'cfg_map', 'place_near_km' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'maps' => 'cfg_map', 'map_kinds' => 'cfg_map', 'applog_days' => 'applog', 'app_min' => 'versions', 'beacon' => 'cfg_map', 'phone' => 'cfg_func', 'snd_default' => 'cfg_inc']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
@@ -522,7 +524,7 @@ function fbRequest($inc, $days, $note, $by) { global $db, $now; $id = (int)$inc[
   if ($old) $db->prepare("UPDATE fb_req SET until_at=?, note=?, users=?, closed_at=NULL, reminded=? WHERE incident_id=?")->execute([$until, $note, json_encode($users), $now, $id]);
   else $db->prepare("INSERT INTO fb_req(incident_id,created,created_by,until_at,note,users) VALUES(?,?,?,?,?,?)")->execute([$id, $now, $by, $until, $note, json_encode($users)]);
   $to = array_values(array_diff($users, fbAnswered($id), $by === null ? [] : [(int)$by]));
-  pushTo($to, ['t' => 'FEEDBACK ZUM ' . mb_strtoupper(kindOf($inc)['name']), 'b' => 'Bitte gib bis ' . fbDay($until) . ' eine Rückmeldung zu «' . mb_substr((string)$inc['message'], 0, 80) . '».', 'tag' => 'f:' . $id] + pushLvl('normal'));
+  pushTo($to, ['t' => 'Feedback zum ' . kindOf($inc)['name'], 'up' => 1, 'b' => 'Bitte gib bis ' . fbDay($until) . ' eine Rückmeldung zu «' . mb_substr((string)$inc['message'], 0, 80) . '».', 'tag' => 'f:' . $id] + pushLvl('normal'));
   return count($to); }
 // offene Anfragen an eine Person (Meine Einsätze, Hinweis in der Einsatz-App), mit der eigenen Antwort
 function fbMine($u) { global $db, $now; if (!aarCfg()['fb']['on']) return [];
@@ -1769,7 +1771,43 @@ function legalCfg() { $v = json_decode(setting('legal', ''), true); $v = is_arra
 // zum Neuladen, null = keines), org/logo das Bild selbst (zwischenspeicherbar, die Adresse ändert sich mit dem Stand).
 function orgInfo() { $l = (string)setting('aar_logo', ''); $n = legalCfg()['org']; if ($n === '') $n = trim((string)(json_decode((string)setting('aar_cfg', ''), true)['org'] ?? ''));
   return ['name' => mb_substr($n, 0, 120), 'logo' => $l !== '' ? substr(sha1($l), 0, 12) : null]; }
-if ($route === 'org') out(orgInfo() + ['version' => verPub()]);
+/* ---------- Mehrsprachigkeit (Issue #66) ----------
+   Übersetzt wird beim Anzeigen (web/i18n.js, App lib/i18n.dart); der Server liefert deutsche Texte. Ausnahme: Push, den kein Gerät mehr
+   übersetzen kann (Web-Push zeigt der Browser, iOS zeigt APNs). pushFlush übersetzt deshalb Titel und Text je Person mit demselben
+   Wörterbuch (web/i18n/<Sprache>.json, Schlüssel = deutscher Text, Vorlagen mit {0} …), Sprache = users.lang, sonst die zuletzt angezeigte
+   (users.lang_ui aus dem Header X-Lang), sonst die Vorgabe der Organisation (Einstellung lang). */
+const LANGS = ['de' => 'Deutsch', 'en' => 'English', 'fr' => 'Français', 'it' => 'Italiano'];
+const LANG_AI = ['de' => 'Deutsch in Schweizer Rechtschreibung', 'en' => 'Englisch (English)', 'fr' => 'Französisch (français)', 'it' => 'Italienisch (italiano)'];
+function langDefault() { $l = (string)setting('lang', 'de'); return isset(LANGS[$l]) ? $l : 'de'; }
+function langOk($l) { return is_string($l) && isset(LANGS[$l]); }
+$I18N = [];
+function i18nDict($l) { global $I18N; if (isset($I18N[$l])) return $I18N[$l];
+  $d = ['ex' => [], 'tp' => []]; $j = $l === 'de' ? null : json_decode((string)@file_get_contents(dirname(__DIR__) . '/i18n/' . $l . '.json'), true);
+  if (is_array($j)) foreach ($j as $k => $v) { if (!is_string($v) || $v === '') continue;
+    if (!preg_match('/\{\d+\}/', $k)) { $d['ex'][$k] = $v; continue; }
+    $lit = preg_split('/\{\d+\}/', $k); preg_match_all('/\{(\d+)\}/', $k, $m); $long = ''; foreach ($lit as $x) if (mb_strlen($x) > mb_strlen($long)) $long = $x;
+    if (strlen(preg_replace('/[^A-Za-z]/', '', $long)) < 3) continue;
+    $d['tp'][] = ['re' => '/^' . implode('(.*?)', array_map(fn($x) => preg_quote($x, '/'), $lit)) . '$/su', 'idx' => array_map('intval', $m[1]), 'out' => $v, 'long' => $long, 'n' => mb_strlen(implode('', $lit))]; }
+  usort($d['tp'], fn($a, $b) => $b['n'] <=> $a['n']);
+  return $I18N[$l] = $d; }
+// einen Text übersetzen (wie tr in i18n.js), unbekannte bleiben deutsch
+function i18nTr($l, $s) { $s = (string)$s; if ($l === 'de' || !langOk($l) || trim($s) === '') return $s;
+  if (preg_match('/\n\s*\n/', $s)) return implode("\n\n", array_map(fn($p) => i18nTr($l, $p), preg_split('/\n\s*\n/', $s)));
+  $d = i18nDict($l); $k = trim(preg_replace('/[\s\x{00a0}]+/u', ' ', $s));
+  if (isset($d['ex'][$k])) return $d['ex'][$k];
+  $best = null; $bs = -1; $bn = -1; // wie i18n.js: unter gleich langen Treffern die mit bekannten Teilen
+  foreach ($d['tp'] as $t) { if ($best && $t['n'] < $bn) break; if (mb_strlen($k) < $t['n'] || ($t['long'] !== '' && strpos($k, $t['long']) === false) || !preg_match($t['re'], $k, $m)) continue;
+    $cap = []; $sc = 0; foreach ($t['idx'] as $i => $n) { $cap[$n] = $m[$i + 1]; $v = trim($m[$i + 1]); if (isset($d['ex'][$v]) || !preg_match('/\pL{2}/u', $v)) $sc++; }
+    if ($sc > $bs) { $best = [$t, $cap]; $bs = $sc; $bn = $t['n']; } }
+  if ($best) { [$t, $cap] = $best;
+    return preg_replace_callback('/\{(\d+)\}/', function ($x) use ($cap, $d) { $v = $cap[(int)$x[1]] ?? $x[0]; $vk = trim($v); if (!isset($d['ex'][$vk])) return $v; preg_match('/^\s*/u', $v, $p); preg_match('/\s*$/u', $v, $q); return $p[0] . $d['ex'][$vk] . $q[0]; }, $t['out']); }
+  if (preg_match('/:$/u', $k) && mb_strlen($k) > 2) { $b = i18nTr($l, mb_substr($k, 0, -1)); if ($b !== mb_substr($k, 0, -1)) return $b . ($l === 'fr' ? ' :' : ':'); }
+  return $s; }
+// Grossbuchstaben (Titel von Push «EINSATZ»): in gemischter Schreibweise übersetzen, dann wieder gross
+function i18nUp($l, $s) { return mb_strtoupper(i18nTr($l, $s)); }
+// Sprache der laufenden Anfrage (für den AI-Assistenten): eigene Wahl, sonst Header X-Lang, sonst Vorgabe
+function reqLang() { global $me; $l = $me['lang'] ?? null; if (langOk($l)) return $l; $h = (string)($_SERVER['HTTP_X_LANG'] ?? ''); return langOk($h) ? $h : langDefault(); }
+if ($route === 'org') out(orgInfo() + ['version' => verPub(), 'lang' => langDefault()]);
 if ($route === 'org/logo') { $l = (string)setting('aar_logo', '');
   if (!preg_match('~^data:(image/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$~', $l, $m) || ($b = base64_decode($m[2], true)) === false) { http_response_code(404); exit; }
   $et = '"' . substr(sha1($l), 0, 16) . '"'; header('ETag: ' . $et); header('Cache-Control: public, max-age=86400');
@@ -1886,7 +1924,7 @@ if (strncmp($route, 'guest/', 6) === 0) {
 
 require __DIR__ . '/fed.php'; // Verbund eigenständiger Server (Issue #60)
 $tok = (string)($_SERVER['HTTP_X_TOKEN'] ?? ''); $sid = null; // $sid = Gerätesitzung der nativen App (Issue #108), null = Anmeldung über users.token (Browser)
-$ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.nav_app,u.place_view,u.ai_modes,u.hydro,u.beacon,u.phone';
+$ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.nav_app,u.place_view,u.ai_modes,u.hydro,u.beacon,u.phone,u.lang,u.lang_ui';
 $me = null; if ($tok !== '') { $st = $db->prepare("SELECT $ucols FROM users u WHERE u.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor(); } // Lesezugriff sofort beenden, nicht erst am Ende des Requests
 if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_seen, s.app_ver FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor();
   if ($me) { $sid = (int)$me['sid']; if ((int)$me['last_seen'] < $now - 600) $db->prepare("UPDATE sessions SET last_seen=? WHERE id=?")->execute([$now, $sid]);
@@ -1895,6 +1933,8 @@ if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_s
 // signierte Anfrage eines Partnerservers (fed/*): ohne Konto, nur die Routen in fedServe
 if (!$me && strncmp($route, 'fed/', 4) === 0 && !empty($_SERVER['HTTP_X_FED_KEY'])) { $FED = fedAuth(); $me = ['id' => 0, 'username' => '', 'name' => 'System', 'photo' => null, 'exercise_mode' => 0, 'must_change' => 0, 'coord_sys' => null, 'nav_app' => null, 'place_view' => null, 'ai_modes' => null, 'hydro' => null, 'beacon' => 0, 'phone' => null]; }
 if (!$me) fail('Nicht angemeldet', 401);
+if ($uid0 = (int)($me['id'] ?? 0)) { $hl = (string)($_SERVER['HTTP_X_LANG'] ?? ''); if (langOk($hl) && $hl !== (string)($me['lang_ui'] ?? '')) $db->prepare("UPDATE users SET lang_ui=? WHERE id=?")->execute([$hl, $uid0]); } // angezeigte Sprache für Push (Issue #66)
+unset($me['lang_ui']);
 $me = ints($me, ['id', 'exercise_mode', 'must_change', 'beacon']); $me['place_view'] = (object)placeView($me['place_view'] ?? null); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
 $me['ai_modes'] = json_decode((string)$me['ai_modes'], true) ?: []; // AI-Assistent (Issue #111): gewählter Modus je Funktion
 $me['hydro'] = array_values(array_filter((array)(json_decode((string)$me['hydro'], true) ?: []), 'is_string')); // persönliche Messstationen (Issue #125)
@@ -2624,11 +2664,18 @@ function pushEncrypt($payload, $p256dh, $auth) { // RFC 8291: ein Datensatz, aes
   return $salt . pack('N', 4096) . chr(65) . $ep . $ct . $tag; }
 // Benachrichtigung für Personen vormerken; gesendet wird in out() nach der Antwort. $msg: t (Titel), b (Text), tag (wie die Quittierschlüssel der App), crit
 function pushTo($userIds, $msg) { global $pushQ; if ((!pushOk() && !fcmOk()) || !$userIds) return; foreach (array_unique(array_map('intval', $userIds)) as $u) $pushQ[] = [$u, $msg]; }
+// Push in der Sprache der Person (Issue #66): t/b übersetzt, up = Titel gross schreiben
+function pushLang($q, $ids) { global $db; $in = implode(',', array_fill(0, count($ids), '?')); $dl = langDefault(); $ul = [];
+  try { $s = $db->prepare("SELECT id, lang, lang_ui FROM users WHERE id IN ($in)"); $s->execute($ids); foreach ($s->fetchAll() as $r) $ul[(int)$r['id']] = langOk($r['lang']) ? $r['lang'] : (langOk($r['lang_ui']) ? $r['lang_ui'] : $dl); } catch (Throwable $e) {}
+  foreach ($q as &$x) { $l = $ul[$x[0]] ?? $dl; $m = $x[1];
+    if (isset($m['t'])) $m['t'] = !empty($m['up']) ? i18nUp($l, $m['t']) : i18nTr($l, $m['t']); if (isset($m['b'])) $m['b'] = i18nTr($l, $m['b']); unset($m['up']); $x[1] = $m; }
+  return $q; }
 function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) return;
   $ids = array_values(array_unique(array_column($q, 0))); $in = implode(',', array_fill(0, count($ids), '?'));
   $subs = []; if (pushOk()) { $s = $db->prepare("SELECT s.* FROM push_subs s JOIN users u ON u.id=s.user_id WHERE u.active=1 AND s.user_id IN ($in)"); $s->execute($ids); $subs = $s->fetchAll(); }
   $mh = curl_multi_init(); $hs = []; $jwt = [];
   alog('info', 'push', 'Push ausgelöst', ['msgs' => count($q), 'users' => count($ids), 'web_subs' => count($subs), 'app' => fcmOk() ? 1 : 0]); // zeigt, dass überhaupt gesendet wird
+  $q = pushLang($q, $ids); // je Person übersetzt (Issue #66)
   $hn = fcmQueue($mh, $q, $ids); // native Apps (Issue #108), im selben curl_multi
   foreach ($q as [$u, $m]) foreach ($subs as $sub) { if ((int)$sub['user_id'] !== $u) continue;
     $pu = parse_url($sub['endpoint']); if (!$pu || !in_array($pu['scheme'] ?? '', ['https', 'http'], true)) continue;
@@ -2724,7 +2771,7 @@ function fcmDone($mh, $hn) { global $db; $ok = 0;
 // Tag t:<id> (eigener Quittierschlüssel, kein Einsatz), Stufe wie ein Alarm (crit/high Vollbild in der App).
 const TEST_ALARM_LVL = ['crit', 'high', 'normal', 'low'];
 const TEST_ALARM_S = 300;
-function testAlarmMsg($t) { return ['t' => 'TESTALARM', 'b' => 'Persönlicher Testalarm, Stufe «' . ALARM_LEVELS[$t['lvl']][0] . '». Kein Einsatz, einfach quittieren.', 'tag' => 't:' . $t['id']]; }
+function testAlarmMsg($t) { return ['t' => 'Testalarm', 'up' => 1, 'b' => 'Persönlicher Testalarm, Stufe «' . ALARM_LEVELS[$t['lvl']][0] . '». Kein Einsatz, einfach quittieren.', 'tag' => 't:' . $t['id']]; }
 function testAlarmOf($uid) { global $db; $s = $db->prepare("SELECT test_alarm FROM users WHERE id=?"); $s->execute([$uid]); $v = $s->fetchColumn(); $s->closeCursor();
   $t = $v ? json_decode($v, true) : null; return is_array($t) && isset($t['id'], $t['lvl'], $t['at']) && in_array($t['lvl'], TEST_ALARM_LVL, true) ? $t : null; }
 function testAlarmDue($uid) { global $now; $t = testAlarmOf($uid); if (!$t || $t['at'] > $now || $now - $t['at'] > TEST_ALARM_S) return null;
@@ -2733,7 +2780,7 @@ function pushAlarm($inc, $skip, $only = null) { global $db; if (!pushOk() && !fc
   foreach ($db->query("SELECT id,exercise_mode FROM users WHERE active=1")->fetchAll() as $u) { $id = (int)$u['id']; if (in_array($id, $skip, true) || ($only !== null && !in_array($id, $only, true))) continue;
     $l = alarmLvl($inc, (int)$u['exercise_mode']); if ($l === 'none') continue;
     $k = kindOf($inc); // kind/ksnd: Ton kritischer Alarme in der App (Issue #171)
-    pushTo([$id], ['t' => mb_strtoupper($k['name']), 'b' => $inc['message'], 'tag' => 'i:' . $inc['id'], 'kind' => $k['id'], 'ksnd' => $k['snd'] ?? null] + pushLvl($l)); } }
+    pushTo([$id], ['t' => $k['name'], 'up' => 1, 'b' => $inc['message'], 'tag' => 'i:' . $inc['id'], 'kind' => $k['id'], 'ksnd' => $k['snd'] ?? null] + pushLvl($l)); } }
 // Einsatzende (Issue #174): Meldungen des Einsatzes zurücknehmen statt nur eine neue zu senden. end = Einsatz (das Gerät schliesst die Meldungen
 // i:, m:, v:, k: dieses Einsatzes), rp = Schlüssel, den die Meldung ersetzt (iOS apns-collapse-id, Android collapse_key, Web Topic: ein noch nicht
 // zugestellter Alarm wird schon beim Push-Dienst ersetzt), rt = nur zurücknehmen. Teilnehmende ($pt) erhalten «beendet» gemäss end_lvl (none = nur
@@ -2741,7 +2788,7 @@ function pushAlarm($inc, $skip, $only = null) { global $db; if (!pushOk() && !fc
 // Android zeigt bei rt nichts; Web-Push muss immer etwas anzeigen (sonst sperren Browser das Abo) und iOS ersetzt den Alarm: dort still «beendet».
 function pushEnd($inc, $pt) { global $db; if (!pushOk() && !fcmOk()) return;
   $k = kindOf($inc); $id = (int)$inc['id']; $el = noteLvl($inc, 'end'); $pt = array_map('intval', $pt);
-  $m = ['t' => mb_strtoupper($k['name']) . ' BEENDET', 'b' => $k['name'] . ' beendet.', 'tag' => 'e:' . $id, 'end' => $id, 'rp' => 'i:' . $id];
+  $m = ['t' => $k['name'] . ' beendet', 'up' => 1, 'b' => $k['name'] . ' beendet.', 'tag' => 'e:' . $id, 'end' => $id, 'rp' => 'i:' . $id];
   pushTo($pt, $el !== 'none' ? $m + pushLvl($el) : $m + ['rt' => 1] + pushLvl('low'));
   $iv = incInvite($inc); $p = exPlan($inc); $lead = $p ? exLeads($p) : []; $rt = [];
   foreach ($db->query("SELECT id,exercise_mode FROM users WHERE active=1")->fetchAll() as $u) { $x = (int)$u['id'];
@@ -3149,7 +3196,7 @@ const AI_SYS = 'Du unterstützt eine Einsatzgruppe der Wasserrettung (Fliessgew�
   . 'Bezeichnungen wie «Einsatzkraft 3», «Person 1», «Rettling 2» oder «Externe Einsatzkraft 1» sind Pseudonyme: übernimm sie unverändert und versuche nie, Personen zu erraten.';
 const AI_FACTS = ' Stütze dich nur auf die gelieferten Daten und erfinde keine Fakten, Zeiten, Namen oder Zahlen; fehlt etwas, schreibe «(bitte ergänzen)».';
 // Anfrage beim Anbieter: msgs = Text oder Liste [role, content] (user/assistant abwechselnd); Rückgabe [Text, Tokens, Modell], Fehler als AiErr
-function aiCall($sys, $msgs, $maxTok = null) { $c = aiCfg(); $key = aiKey();
+function aiCall($sys, $msgs, $maxTok = null) { $c = aiCfg(); $key = aiKey(); $rl = reqLang(); if ($rl !== 'de') $sys .= ' Antworte in der Sprache ' . LANG_AI[$rl] . ' (die Daten sind deutsch; JSON-Schlüssel und Bezugspunkte unverändert).'; // Mehrsprachigkeit (Issue #66)
   if ($c['provider'] === 'anthropic' && $key === '') fail('Für Anthropic ist kein API-Schlüssel hinterlegt', 503);
   if (!function_exists('curl_init')) fail('Auf dem Server fehlt curl', 503);
   if (is_string($msgs)) $msgs = [['role' => 'user', 'content' => $msgs]];
@@ -3532,7 +3579,7 @@ if (strncmp($route, 'fed/', 4) === 0) $FED ? fedServe($route) : fedAdmin($route)
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
 docRoute($route); // Dokumentenablage (Issue #229), beendet die Anfrage bei eigenen Routen
 switch ($route) {
- case 'me': out(['me' => $me + mapsFor(null) + ['phone_cfg' => phoneCfg(), 'coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid), 'docs' => docMe(), 'docs_cfg' => docCfgPub()]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': out(['me' => $me + mapsFor(null) + ['lang_default' => langDefault(), 'langs' => LANGS, 'phone_cfg' => phoneCfg(), 'coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid), 'docs' => docMe(), 'docs_cfg' => docCfgPub()]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message', 'can_voice', 'sec']), $db->query("SELECT id,name,color,is_lead,is_post,can_message,can_voice,sec FROM roles WHERE active=1 ORDER BY id")->fetchAll())); // sec: Spezialrolle für Sekundäreinsätze (Issue #164)
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen); sec: Einrückoption für Sekundäreinsätze (Issue #164)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts', 'sec']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts,sec FROM modes ORDER BY id")->fetchAll()));
@@ -5006,6 +5053,7 @@ switch ($route) {
  case 'me/settings': // nur übergebene Werte ändern. exercise_mode: Übungen wie scharfe Einsätze kritisch alarmieren; coord_sys: '' = Standard der Verwaltung, none = ausblenden
   if (isset($in['exercise_mode'])) $db->prepare("UPDATE users SET exercise_mode=? WHERE id=?")->execute([empty($in['exercise_mode']) ? 0 : 1, $uid]);
   if (array_key_exists('phone', $in)) { if (!phoneCfg()['self']) fail('Die Telefonnummer pflegt die Verwaltung', 403); $db->prepare("UPDATE users SET phone=? WHERE id=?")->execute([phoneNorm($in['phone'] ?? ''), $uid]); } // Direktanruf (Issue #44), '' = entfernen
+  if (isset($in['lang'])) { $l = (string)$in['lang']; if ($l !== '' && !langOk($l)) fail('Unbekannte Sprache'); $db->prepare("UPDATE users SET lang=?, lang_ui=COALESCE(?, lang_ui) WHERE id=?")->execute([$l === '' ? null : $l, $l === '' ? null : $l, $uid]); } // Mehrsprachigkeit (Issue #66): '' = automatisch
   if (isset($in['beacon'])) $db->prepare("UPDATE users SET beacon=? WHERE id=?")->execute([empty($in['beacon']) ? 0 : 1, $uid]); // Fahrzeuge ausserhalb von Einsätzen melden (Issue #177, freiwillig)
   if (isset($in['coord_sys'])) {
     $c = (string)$in['coord_sys']; if ($c !== '' && $c !== 'none' && !in_array($c, COORDS, true)) fail('Unbekanntes Koordinatensystem'); // none = Koordinaten ausblenden (nur persönlich)
@@ -5234,7 +5282,7 @@ switch ($route) {
     if (isset($in['sec'])) $db->prepare("UPDATE roles SET sec=? WHERE id=?")->execute([secIn($in['sec']), $in['id']]); } // Kategorie (Issue #164), fehlt = unverändert
   else $db->prepare("INSERT INTO roles(name,color,is_lead,can_message,can_voice,is_post,sec) VALUES(?,?,?,?,?,?,?)")->execute([$in['name'], $in['color'] ?: '#888888', (int)($in['is_lead'] ?? 0), (int)($in['can_message'] ?? 1), (int)($in['can_voice'] ?? 1), (int)($in['is_post'] ?? 0), secIn($in['sec'] ?? 0)]);
   out(['ok' => true]);
- case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'place_near_km' => placeNearKm(), 'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans'], 'map_off' => $k['map_off'], 'map_def' => $k['map_def']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'phone' => phoneCfg(), 'phone_who' => PHONE_WHO, 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
+ case 'settings': need('cfg_inc', 'cfg_func', 'cfg_map', 'cfg_my'); out(['lang' => langDefault(), 'langs' => LANGS, 'my_runs' => myRuns(), 'my_runs_opts' => MY_RUNS, 'my_btns' => myBtns(), 'my_btns_opts' => MY_BTNS, 'msg_no_role' => (int)setting('msg_no_role', '1'), 'msg_read_all' => (int)setting('msg_read_all', '0'), 'coord_sys' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'place_near_km' => placeNearKm(), 'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color'], 'rec' => $k['rec'], 'air' => $k['air'], 'plans' => $k['plans'], 'map_off' => $k['map_off'], 'map_def' => $k['map_def']], kindsActive())), 'nav_apps' => array_map(fn($k) => ['k' => $k, 'name' => NAV_APPS[$k], 'on' => in_array($k, navApps(), true)], array_keys(NAV_APPS)), 'nav_default' => navDefault(), 'phone' => phoneCfg(), 'phone_who' => PHONE_WHO, 'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k]], array_keys(FEATURES)), 'feat_on' => (object)featuresAll(), 'overpass_ttl' => (int)setting('overpass_ttl', '120'), 'overpass_urls' => overpassUrls(), 'overpass_default' => OVERPASS, 'overpass_on' => (int)setting('overpass_on', '1'), 'overpass_off' => overpassOff(),
    'maps' => mapsCfg(), 'map_default' => MAP_DEFAULT, 'map_own' => mapOwn(), 'map_sources' => array_map(fn($k) => mapPub($k) + array_intersect_key(MAP_SOURCES[$k], array_flip(['site', 'terms', 'lic', 'area', 'note', 'def'])), array_keys(MAP_SOURCES)), // Kartenanbieter (Issue #106)
    'air' => airCfg(), 'air_default' => AIR_DEFAULT + array_map(fn($x) => $x[0], AIR_NUM), 'air_num' => AIR_NUM, 'air_filters' => AIR_FILTERS, 'air_app' => AIR_APP, 'air_sources' => array_map(fn($s) => ['name' => $s['name'], 'site' => $s['site'], 'note' => $s['note']], AIR_SOURCES),
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
@@ -5296,6 +5344,7 @@ switch ($route) {
  case 'settings/save': // jede übergebene Einstellung braucht ihr Recht (SETTING_PERMS)
   foreach (SETTING_PERMS as $k => $p) if (isset($in[$k])) need($p);
   if (isset($in['ai'])) fail('Den AI-Assistenten über ai/cfg/save einstellen');
+  if (isset($in['lang'])) { if (!langOk($in['lang'])) fail('Unbekannte Sprache'); setSetting('lang', $in['lang']); } // Vorgabe der Organisation (Issue #66)
   if (isset($in['legal'])) { // Impressum & Datenschutz (Issue #102): nur bekannte Felder, gekürzt
     if (!is_array($in['legal'])) fail('Ungültige Einstellung'); $v = legalCfg();
     foreach (LEGAL_FIELDS as $k => [$n]) if (array_key_exists($k, $in['legal'])) $v[$k] = mb_substr(trim((string)$in['legal'][$k]), 0, $n);

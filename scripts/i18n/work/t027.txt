@@ -1,0 +1,120 @@
+5400 ‖ never offline ‖ jamais hors ligne ‖ mai offline
+5401 ‖ takes people ‖ prend des personnes ‖ accoglie persone
+5402 ‖ no AAR yet ‖ pas encore d'AAR ‖ ancora nessun AAR
+5403 ‖ no file yet ‖ pas encore de fichier ‖ ancora nessun file
+5404 ‖ still empty ‖ encore vide ‖ ancora vuoto
+5405 ‖ not yet tested ‖ pas encore testé ‖ non ancora testato
+5406 ‖ nobody yet ‖ personne pour l'instant ‖ ancora nessuno
+5407 ‖ only members of these response groups or user roles: ‖ seulement les membres de ces groupes d'intervention ou rôles d'utilisateur : ‖ solo membri di questi gruppi d'intervento o ruoli utente:
+5408 ‖ recorded by the administration only ‖ saisi seulement par l'administration ‖ registrato solo dall'amministrazione
+5409 ‖ only these response groups or user roles: ‖ seulement ces groupes d'intervention ou rôles d'utilisateur : ‖ solo questi gruppi d'intervento o ruoli utente:
+5410 ‖ only for non-commercial use ‖ seulement pour un usage non commercial ‖ solo per uso non commerciale
+5411 ‖ only with action needed ‖ seulement avec action requise ‖ solo con azione necessaria
+5412 ‖ only with the right “Manage document repository” ‖ seulement avec le droit « Gérer la gestion documentaire » ‖ solo con il diritto «Gestire l'archivio documenti»
+5413 ‖ editable only with more rights ‖ modifiable seulement avec plus de droits ‖ modificabile solo con più diritti
+5414 ‖ exercises only ‖ exercices seulement ‖ solo esercitazioni
+5415 ‖ or tap on the map (the other elements of the exercise are drawn in grey) ‖ ou toucher la carte (les autres éléments de l'exercice sont dessinés en gris) ‖ o tocca la mappa (gli altri elementi dell'esercitazione sono disegnati in grigio)
+5416 ‖ without reference ‖ sans référence ‖ senza riferimento
+5417 ‖ without reference point, cannot be taken over ‖ sans point de référence, pas reprenable ‖ senza punto di riferimento, non riprendibile
+5418 ‖ without deadline ‖ sans délai ‖ senza termine
+5419 ‖ without comment ‖ sans commentaire ‖ senza commento
+5420 ‖ without keyword ‖ sans mot-clé ‖ senza parola chiave
+5421 ‖ without location ‖ sans position ‖ senza posizione
+5422 ‖ assigns {0} ‖ attribue {0} ‖ assegna {0}
+5423 ‖ start by e-mail ‖ démarrer par e-mail ‖ avvia via e-mail
+5424 ‖ =
+5425 ‖ absent people are marked. ‖ les absents sont signalés. ‖ gli assenti sono contrassegnati.
+5426 ‖ =
+5427 ‖ does not speak on the radio ‖ ne parle pas à la radio ‖ non parla alla radio
+5428 ‖ =
+5429 ‖ =
+5430 ‖ =
+5431 ‖ =
+5432 ‖ =
+5433 ‖ =
+5434 ‖ around PLS (plus drift distance), responders, casualties, external parties, markers and areas; at most approx. 460 km around the centre are queried (limit of the services) ‖ autour du PLS (plus distance de dérive), des intervenants, victimes, externes, marqueurs et zones ; au plus env. 460 km autour du centre sont interrogés (limite des services) ‖ attorno al PLS (più distanza di deriva), soccorritori, vittime, esterni, marcatori e aree; vengono interrogati al massimo ca. 460 km attorno al centro (limite dei servizi)
+5435 ‖ around the active permanent fixed locations (Map & data → Fixed locations), also without a running operation for all logged-in users (unless “Who sees the helicopters” is set to “Nobody”); 0 = no helicopters without an operation ‖ autour des sites fixes permanents actifs (Carte & données → Sites fixes), aussi sans intervention en cours pour tous les connectés (sauf si « Qui voit les hélicoptères » est sur « Personne ») ; 0 = pas d'hélicoptères sans intervention ‖ attorno ai luoghi fissi permanenti attivi (Mappa & dati → Luoghi fissi), anche senza intervento in corso per tutti gli utenti connessi (salvo se «Chi vede gli elicotteri» è su «Nessuno»); 0 = senza intervento nessun elicottero
+5436 ‖ unknown (before recording) ‖ inconnu (avant la saisie) ‖ sconosciuto (prima della registrazione)
+5437 ‖ unknown (older app) ‖ inconnu (ancienne app) ‖ sconosciuto (app più vecchia)
+5438 ‖ unknown casualty ‖ victime inconnue ‖ vittima sconosciuta
+5439 ‖ and as “{0}” ({1}) ‖ et comme « {0} » ({1}) ‖ e come «{0}» ({1})
+5440 ‖ from here to ‖ d'ici à ‖ da qui a
+5441 ‖ from {0}{1} ‖ de {0}{1} ‖ da {0}{1}
+5442 ‖ before resetting ‖ avant la réinitialisation ‖ prima di reimpostare
+5443 ‖ before recording ‖ avant la saisie ‖ prima della registrazione
+5444 ‖ in front of a PostGIS database, e.g. as a Docker container on your own server. For hostings without a PostgreSQL driver. The layer must have the properties ‖ devant une base de données PostGIS, p. ex. comme conteneur Docker sur un serveur propre. Pour les hébergements sans pilote PostgreSQL. La couche doit avoir les propriétés ‖ davanti a una banca dati PostGIS, p. es. come container Docker su un server proprio. Per hosting senza driver PostgreSQL. Il livello deve avere le proprietà
+5445 ‖ preselected ‖ présélectionné ‖ preselezionato
+5446 ‖ prepared exercises ‖ exercices préparés ‖ esercitazioni preparate
+5447 ‖ can neither be changed nor removed ‖ ni modifiable ni supprimable ‖ né modificabile né rimovibile
+5448 ‖ who has “{0}” as mandatory ‖ qui a « {0} » comme obligation ‖ chi ha «{0}» come obbligo
+5449 ‖ like messages ({0}) ‖ comme les messages ({0}) ‖ come i messaggi ({0})
+5450 ‖ as in OpenStreetMap (point, line or area) ‖ comme dans OpenStreetMap (point, ligne ou surface) ‖ come in OpenStreetMap (punto, linea o area)
+5451 ‖ as above ({0}) ‖ comme ci-dessus ({0}) ‖ come sopra ({0})
+5452 ‖ as “{0}” ({1}) ‖ comme « {0} » ({1}) ‖ come «{0}» ({1})
+5453 ‖ loading … ‖ chargement … ‖ caricamento …
+5454 ‖ is saved immediately ‖ est enregistré immédiatement ‖ viene salvato subito
+5455 ‖ e.g. 48:87:2D:9E:1E:F7, the app learns it itself under Android ‖ p. ex. 48:87:2D:9E:1E:F7, l'app l'apprend elle-même sous Android ‖ p. es. 48:87:2D:9E:1E:F7, su Android l'app lo impara da sé
+5456 ‖ e.g. approach with equipment ‖ p. ex. trajet avec matériel ‖ p. es. arrivo con materiale
+5457 ‖ e.g. equipment, duration, topic ‖ p. ex. équipement, durée, thème ‖ p. es. equipaggiamento, durata, tema
+5458 ‖ e.g. Aarburg boat launch site ‖ p. ex. mise à l'eau d'Aarburg ‖ p. es. scivolo di Aarburg
+5459 ‖ e.g. boat launch sites ‖ p. ex. mises à l'eau ‖ p. es. scivoli per barche
+5460 ‖ e.g. Olten boathouse, 07:30 ‖ p. ex. hangar à bateaux d'Olten, 07:30 ‖ p. es. rimessa per barche di Olten, 07:30
+5461 ‖ =
+5462 ‖ e.g. Lucerne needle weir operation plan ‖ p. ex. plan d'intervention barrage à aiguilles de Lucerne ‖ p. es. piano d'intervento sbarramento ad aghi di Lucerna
+5463 ‖ e.g. operation plans ‖ p. ex. plans d'intervention ‖ p. es. piani d'intervento
+5464 ‖ e.g. Bremgarten fire brigade, bridge post ‖ p. ex. pompiers de Bremgarten, poste du pont ‖ p. es. pompieri di Bremgarten, posto ponte
+5465 ‖ e.g. river closure / not passable ‖ p. ex. fermeture de la rivière / infranchissable ‖ p. es. chiusura del fiume / non transitabile
+5466 ‖ e.g. command vehicle ‖ p. ex. véhicule de commandement ‖ p. es. veicolo di comando
+5467 ‖ e.g. coordinates 2'635'000 / 1'244'500 ‖ p. ex. coordonnées 2'635'000 / 1'244'500 ‖ p. es. coordinate 2'635'000 / 1'244'500
+5468 ‖ e.g. Olten depot ‖ p. ex. dépôt d'Olten ‖ p. es. magazzino di Olten
+5469 ‖ e.g. boat operation fact sheet ‖ p. ex. fiche engagement bateau ‖ p. es. scheda impiego barca
+5470 ‖ e.g. Reuss Lucerne water level ‖ p. ex. niveau Reuss Lucerne ‖ p. es. livello Reuss Lucerna
+5471 ‖ e.g. Aare standby ‖ p. ex. piquet Aar ‖ p. es. picchetto Aar
+5472 ‖ e.g. standby test ‖ p. ex. test de piquet ‖ p. es. prova di picchetto
+5473 ‖ e.g. plans for weirs, power plants and launch sites per water body ‖ p. ex. plans des barrages, centrales et mises à l'eau par cours d'eau ‖ p. es. piani di sbarramenti, centrali e scivoli per corso d'acqua
+5474 ‖ e.g. bridge post ‖ p. ex. poste du pont ‖ p. es. posto ponte
+5475 ‖ e.g. lifeguard ‖ p. ex. sauveteur ‖ p. es. bagnino di salvataggio
+5476 ‖ e.g. Lucerne lake rescue service ‖ p. ex. service de sauvetage du lac de Lucerne ‖ p. es. servizio di salvataggio lacuale di Lucerna
+5477 ‖ e.g. water ‖ p. ex. eau ‖ p. es. acqua
+5478 ‖ e.g. Sampletown water rescue ‖ p. ex. sauvetage aquatique Villexemple ‖ p. es. soccorso acquatico Cittàesempio
+5479 ‖ e.g. water rescue person in the water ‖ p. ex. sauvetage aquatique personne à l'eau ‖ p. es. soccorso acquatico persona in acqua
+5480 ‖ e.g. weir, hydraulic, power plant ‖ p. ex. barrage, rouleau, centrale ‖ p. es. sbarramento, rullo, centrale
+5481 ‖ e.g. alarm@police.example.ch control.example.ch ‖ p. ex. alarm@police.example.ch centrale.example.ch ‖ p. es. alarm@polizia.example.ch centrale.example.ch
+5482 ‖ e.g. cyon AG, Basel (Switzerland) ‖ p. ex. cyon AG, Bâle (Suisse) ‖ p. es. cyon AG, Basilea (Svizzera)
+5483 ‖ =
+5484 ‖ =
+5485 ‖ =
+5486 ‖ =
+5487 ‖ e.g. two casualties, one sighted only after 30 min; fire brigade post at the bridge that withdraws after 45 min; focus on communication ‖ p. ex. deux victimes, l'une aperçue seulement après 30 min ; poste des pompiers au pont qui se retire après 45 min ; accent sur la communication ‖ p. es. due vittime, una avvistata solo dopo 30 min; posto dei pompieri al ponte che si ritira dopo 45 min; focus sulla comunicazione
+5488 ‖ e.g. Aare Olten exercise, autumn ‖ p. ex. exercice Aar Olten, automne ‖ p. es. esercitazione Aar Olten, autunno
+5489 ‖ distance travelled behind the symbol, 0 = no track ‖ chemin parcouru derrière le symbole, 0 = pas de trace ‖ percorso effettuato dietro il simbolo, 0 = nessuna traccia
+5490 ‖ does not count for “Responders” ‖ ne compte pas pour « Intervenants » ‖ non conta per «Soccorritori»
+5491 ‖ {0} (absent) ‖ {0} (absent) ‖ {0} (assente)
+5492 ‖ {0} (ended {1}) ‖ {0} (terminée {1}) ‖ {0} (terminato {1})
+5493 ‖ {0} (me) ‖ {0} (moi) ‖ {0} (io)
+5494 ‖ {0} (no longer present) ‖ {0} (n'existe plus) ‖ {0} (non più presente)
+5495 ‖ {0} retrieval in {1} ms. ‖ {0} récupération en {1} ms. ‖ {0} recupero in {1} ms.
+5496 ‖ {0} recording(s) missing in the ZIP. ‖ {0} enregistrement(s) manque(nt) dans le ZIP. ‖ {0} registrazione/i mancano nello ZIP.
+5497 ‖ {0} recording(s) could not be loaded. ‖ {0} enregistrement(s) n'ont pas pu être chargés. ‖ Non è stato possibile caricare {0} registrazione/i.
+5498 ‖ {0} file(s) missing in the ZIP. ‖ {0} fichier(s) manque(nt) dans le ZIP. ‖ {0} file mancano nello ZIP.
+5499 ‖ {0} file(s) could not be loaded. ‖ {0} fichier(s) n'ont pas pu être chargés. ‖ Non è stato possibile caricare {0} file.
+5500 ‖ {0} corner ‖ {0} sommet ‖ {0} vertice
+5501 ‖ {0} corners ‖ {0} sommets ‖ {0} vertici
+5502 ‖ {0} operations ‖ {0} interventions ‖ {0} interventi
+5503 ‖ {0} operations ‖ {0} interventions ‖ {0} interventi
+5504 ‖ {0} entries in {1} folders. Choose a folder on the left to see its access and create entries. ‖ {0} entrées dans {1} dossiers. Choisissez un dossier à gauche pour voir ses accès et créer des entrées. ‖ {0} voci in {1} cartelle. Scegli una cartella a sinistra per vederne gli accessi e creare voci.
+5505 ‖ {0} events ‖ {0} événements ‖ {0} eventi
+5506 ‖ {0} errors ‖ {0} erreurs ‖ {0} errori
+5507 ‖ {0} Each person can set their own in the profile of the operations app. All dates together are shown by the ‖ {0} Chaque personne peut saisir les siennes dans le profil de l'app d'intervention. Toutes les dates ensemble sont affichées par le ‖ {0} Ogni persona può impostare le proprie nel profilo dell'app d'intervento. Tutte le date insieme le mostra il
+5508 ‖ {0} gauging stations ({1} on rivers), current values for {2}{3}{4}. The values are cached for 5 minutes (FOEN measures every 10 minutes). ‖ {0} stations de mesure ({1} sur des cours d'eau), valeurs actuelles pour {2}{3}{4}. Les valeurs sont mises en cache 5 minutes (l'OFEV mesure toutes les 10 minutes). ‖ {0} stazioni di misura ({1} su corsi d'acqua), valori attuali per {2}{3}{4}. I valori vengono memorizzati per 5 minuti (l'UFAM misura ogni 10 minuti).
+5509 ‖ Take over {0} objects as fixed locations{1}? Category, properties, abbreviation and colour according to the defaults per object type, name and description as a suggestion. Everything can be edited afterwards. ‖ Reprendre {0} objets comme sites fixes{1} ? Catégorie, propriétés, abréviation et couleur selon les valeurs par défaut par type d'objet, nom et description comme proposition. Tout peut être modifié ensuite. ‖ Riprendere {0} oggetti come luoghi fissi{1}? Categoria, proprietà, sigla e colore secondo i predefiniti per tipo di oggetto, nome e descrizione come proposta. Tutto si può modificare dopo.
+5510 ‖ {0} objects combined ({1}) ‖ {0} objets regroupés ({1}) ‖ {0} oggetti raggruppati ({1})
+5511 ‖ {0} people reminded. ‖ {0} personnes rappelées. ‖ {0} persone ricordate.
+5512 ‖ {0} mandatory missing ‖ {0} obligatoires manquantes ‖ {0} obbligatorie mancanti
+5513 ‖ {0} point ‖ {0} point ‖ {0} punto
+5514 ‖ {0} points ‖ {0} points ‖ {0} punti
+5515 ‖ {0} replay – {1} ‖ {0} replay – {1} ‖ {0} replay – {1}
+5516 ‖ {0} locations taken over ‖ {0} sites repris ‖ {0} luoghi ripresi
+5517 ‖ {0} days for “{1}” ‖ {0} jours pour « {1} » ‖ {0} giorni per «{1}»
+5518 ‖ =
+5519 ‖ {0} matches of the selected types ‖ {0} résultats des types choisis ‖ {0} risultati dei tipi scelti

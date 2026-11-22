@@ -3,7 +3,7 @@
 // kürzester Weg zuerst in Fliessrichtung (OSM-Wege zeigen flussabwärts), sonst umgekehrt, sonst ohne Richtung. Der Server speichert nichts.
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +12,7 @@ import 'area.dart';
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 /// maximale Luftlinie zwischen den Punkten (Grösse der Overpass-Abfrage)
 const rdMaxM = 50000.0;
@@ -389,7 +390,7 @@ class _RdPanelState extends State<RdPanel> {
                   child: TextField(
                       controller: _flow,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Fliessgeschwindigkeit', suffixText: 'm/s', isDense: true),
+                      decoration: InputDecoration(labelText: trn('Fliessgeschwindigkeit'), suffixText: trn('m/s'), isDense: true),
                       onChanged: (v) {
                         _sp?.setString('rdflow', v);
                         setState(() {});

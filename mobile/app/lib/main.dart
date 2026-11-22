@@ -18,6 +18,8 @@ import 'accounts.dart';
 import 'beacon.dart';
 import 'demo.dart';
 import 'demo_ui.dart' show demoSource;
+import 'api.dart';
+import 'i18n.dart';
 
 final navKey = GlobalKey<NavigatorState>();
 
@@ -71,6 +73,16 @@ Future<void> _openNote(String? p) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await I18n.load(); // Mehrsprachigkeit (Issue #66)
+  onLang = (l) async { // eigene Wahl allen angemeldeten Konten melden (users.lang, Push in dieser Sprache), Dienst lädt sie beim nächsten Abruf
+    for (final a in await Accounts.load()) {
+      if (a.loggedOut || a.token.isEmpty) continue;
+      try {
+        await Api(a.base, a.token).call('me/settings', body: {'lang': l}, timeout: const Duration(seconds: 8));
+      } catch (_) {}
+    }
+    if (Platform.isAndroid) service.invoke('poll');
+  };
   await initNotes(onTap: (r) {
     alarmStop(); // Meldung angetippt: Weckton aus
     _openNote(r.payload);
@@ -95,6 +107,7 @@ class _AppState extends State<SwiftwaterApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    I18n.changed.addListener(() { if (mounted) setState(() {}); });
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _boot());
   }
@@ -165,6 +178,7 @@ class _AppState extends State<SwiftwaterApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     const blue = Color(0xFF0B3A5B);
     return MaterialApp(
+      key: ValueKey('lang${I18n.lang}'), // neue Sprache (Issue #66): ganz neu aufbauen, auch die const-Texte
       navigatorKey: navKey,
       title: 'Swiftwater Rescue',
       debugShowCheckedModeBanner: false,

@@ -1,12 +1,13 @@
 // Seitenfenster «Nachrichten» der nativen Einsatz-App (Gegenstück zu renderMsgs in web/index.html): Verlauf (älteste oben),
 // an mich gerichtete markiert, Standort und Kartenmarkierung je Nachricht (Zeigen, 🧭, entfernen), Häkchen für die
 // Kategorie «Nachrichten-Markierungen» und Senden mit Empfängerauswahl nach Spezialrolle (keine Auswahl = alle).
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:latlong2/latlong.dart';
 
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 class MsgsPanel extends StatefulWidget {
   const MsgsPanel({super.key, required this.s, required this.map});
@@ -250,7 +251,7 @@ class _MsgsPanelState extends State<MsgsPanel> {
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
-                decoration: const InputDecoration(hintText: 'Nachricht', isDense: true, border: OutlineInputBorder()))),
+                decoration: InputDecoration(hintText: trn('Nachricht'), isDense: true, border: OutlineInputBorder()))),
         const SizedBox(width: 8),
         FilledButton(onPressed: _busy ? null : _send, child: const Text('Senden')),
       ]),

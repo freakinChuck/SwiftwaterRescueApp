@@ -1,11 +1,12 @@
 // Demo-Modus (Issue #74): Einstieg in der Kontenliste und Steuerung über die Kennzeichnung «DEMO» in der Einsatz-App
 // (Gegenstück zu panel/badge in web/demo.js).
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import 'accounts.dart';
 import 'demo.dart';
 import 'monitor.dart' show prefs;
 import 'main.dart';
+import 'i18n.dart';
 
 const demoColor = Color(0xFF7B1FA2);
 

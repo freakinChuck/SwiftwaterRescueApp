@@ -16,7 +16,8 @@ Unter dem Knopf «Anmelden» findest du:
 
 - **Demo ausprobieren**: die App ohne Konto kennenlernen (siehe unten),
 - **Bedienungsanleitung**: diese Seite,
-- **Impressum, Lizenzen, Datenschutz** der Organisation.
+- **Impressum, Lizenzen, Datenschutz** der Organisation,
+- die Wahl der **Sprache** («Automatisch» nimmt die Sprache des Geräts).
 
 Passwort vergessen? Die Verwaltung setzt es zurück. Du erhältst wieder ein erstes Passwort und setzt danach ein eigenes.
 

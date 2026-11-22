@@ -18,6 +18,10 @@ Beim ersten Start fügst du ein Konto hinzu: Adresse des Servers, Benutzername u
 - Die Kontenliste zeigt je Konto, ob der Standort zuletzt geteilt werden konnte.
 - Über **Demo ausprobieren** in der Kontenliste startest du den [Demo-Modus](#start/demo) auch in der App.
 
+## Sprache {#sprache}
+
+Unter **Einstellungen** (Kontenliste) und im Profil, Karte «Anzeige», wählst du die Sprache der App: Deutsch, Englisch, Französisch, Italienisch oder «Automatisch» (Sprache des Geräts). Sie gilt für alle Konten und für die Meldungen; die App meldet sie den Servern, damit Push in derselben Sprache kommt.
+
 ## Alarm und Überwachung {#hintergrund}
 
 Die App fragt alle aktiven Konten regelmässig ab und meldet Alarme, Nachrichten an dich, Durchsagen und das Einsatzende. Mit eingerichtetem Push kommen die Meldungen auch bei geschlossener App sofort.

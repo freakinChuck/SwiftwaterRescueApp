@@ -1,0 +1,120 @@
+5040 ‖ Who may speak per special role (operation lead and exercise lead always): ‖ Peuvent parler par rôle spécial (direction d'intervention et d'exercice toujours) : ‖ Possono parlare per ruolo speciale (direzione dell'intervento e dell'esercitazione sempre):
+5041 ‖ Radio via the app as a supplement to the radio set. ‖ Radio via l'app en complément de l'appareil radio. ‖ Radio tramite l'app a complemento dell'apparecchio radio.
+5042 ‖ Track ‖ Trace ‖ Traccia
+5043 ‖ Track: whole history ‖ Trace : tout l'historique ‖ Traccia: tutta la cronologia
+5044 ‖ Track: last 10 min ‖ Trace : 10 dernières min ‖ Traccia: ultimi 10 min
+5045 ‖ Track: last 15 min ‖ Trace : 15 dernières min ‖ Traccia: ultimi 15 min
+5046 ‖ Track: last 2 min ‖ Trace : 2 dernières min ‖ Traccia: ultimi 2 min
+5047 ‖ Track: last 30 min ‖ Trace : 30 dernières min ‖ Traccia: ultimi 30 min
+5048 ‖ Track: last 5 min ‖ Trace : 5 dernières min ‖ Traccia: ultimi 5 min
+5049 ‖ Track: last 60 min ‖ Trace : 60 dernières min ‖ Traccia: ultimi 60 min
+5050 ‖ Track length ‖ Longueur de la trace ‖ Lunghezza della traccia
+5051 ‖ Query later ‖ Interroger plus tard ‖ Interroga più tardi
+5052 ‖ State (version {0}{1}) ‖ État (version {0}{1}) ‖ Stato (versione {0}{1})
+5053 ‖ View state ‖ Voir l'état ‖ Visualizza lo stato
+5054 ‖ Software version ‖ Version du logiciel ‖ Versione del software
+5055 ‖ Default ‖ Par défaut ‖ Predefinito
+5056 ‖ Hidden by default ‖ Masqué par défaut ‖ Nascosto di default
+5057 ‖ Shown by default ‖ Affiché par défaut ‖ Mostrato di default
+5058 ‖ Shown by default (for everyone who has not changed the category themselves) ‖ Affiché par défaut (pour tous ceux qui n'ont pas modifié la catégorie eux-mêmes) ‖ Mostrato di default (per tutti coloro che non hanno modificato la categoria)
+5059 ‖ Restore default ‖ Rétablir par défaut ‖ Ripristina predefinito
+5060 ‖ Restore default (not yet saved)? The settings per operation type remain. ‖ Rétablir par défaut (pas encore enregistré) ? Les paramètres par type d'intervention restent. ‖ Ripristinare il predefinito (non ancora salvato)? Le impostazioni per tipo d'intervento restano.
+5061 ‖ Default coordinate system {0} for display ‖ Système de coordonnées par défaut {0} pour l'affichage ‖ Sistema di coordinate predefinito {0} per la visualizzazione
+5062 ‖ Restore default servers ‖ Rétablir les serveurs par défaut ‖ Ripristina i server predefiniti
+5063 ‖ Default UUID ({0}…) ‖ UUID par défaut ({0}…) ‖ UUID predefinito ({0}…)
+5064 ‖ Restore default settings for helicopters (not yet saved)? ‖ Rétablir les paramètres par défaut des hélicoptères (pas encore enregistré) ? ‖ Ripristinare le impostazioni predefinite per gli elicotteri (non ancora salvate)?
+5065 ‖ Default map ‖ Carte par défaut ‖ Mappa predefinita
+5066 ‖ Default map for {0} ‖ Carte par défaut pour {0} ‖ Mappa predefinita per {0}
+5067 ‖ Location (PLS) ‖ Position (PLS) ‖ Posizione (PLS)
+5068 ‖ Location (optional) ‖ Position (facultative) ‖ Posizione (facoltativa)
+5069 ‖ Current location ‖ Position actuelle ‖ Posizione attuale
+5070 ‖ Edit location ‖ Modifier le site ‖ Modifica luogo
+5071 ‖ Location missing or not recognised. Examples: 2635600 / 1245500 (LV95) or 47.36, 7.91 (WGS84). ‖ Position manquante ou non reconnue. Exemples : 2635600 / 1245500 (LV95) ou 47.36, 7.91 (WGS84). ‖ Posizione mancante o non riconosciuta. Esempi: 2635600 / 1245500 (LV95) o 47.36, 7.91 (WGS84).
+5072 ‖ Location not recognised. Examples: 2635600 / 1245500 (LV95) or 47.36, 7.91 (WGS84). ‖ Position non reconnue. Exemples : 2635600 / 1245500 (LV95) ou 47.36, 7.91 (WGS84). ‖ Posizione non riconosciuta. Esempi: 2635600 / 1245500 (LV95) o 47.36, 7.91 (WGS84).
+5073 ‖ Location not recognised. Examples: 2660000 / 1250000 (LV95) or 47.38, 8.05 (WGS84). ‖ Position non reconnue. Exemples : 2660000 / 1250000 (LV95) ou 47.38, 8.05 (WGS84). ‖ Posizione non riconosciuta. Esempi: 2660000 / 1250000 (LV95) o 47.38, 8.05 (WGS84).
+5074 ‖ Search location ‖ Rechercher un site ‖ Cerca luogo
+5075 ‖ Set location by hand (e.g. depot, test without beacon) ‖ Définir la position manuellement (p. ex. dépôt, test sans balise) ‖ Imposta la posizione a mano (p. es. magazzino, test senza beacon)
+5076 ‖ Location of “{0}” ‖ Position de « {0} » ‖ Posizione di «{0}»
+5077 ‖ Location is shared ‖ La position est partagée ‖ La posizione viene condivisa
+5078 ‖ Location is neither shared nor shown ‖ La position n'est ni partagée ni affichée ‖ La posizione non viene né condivisa né mostrata
+5079 ‖ Remove location “{0}” from the exercise? ‖ Retirer le site « {0} » de l'exercice ? ‖ Rimuovere il luogo «{0}» dall'esercitazione?
+5080 ‖ Permanently remove location “{0}”? Deactivating (Edit) only hides it. ‖ Retirer définitivement le site « {0} » ? Le désactiver (Modifier) ne fait que le masquer. ‖ Rimuovere definitivamente il luogo «{0}»? Disattivarlo (Modifica) lo nasconde soltanto.
+5081 ‖ Locations ‖ Sites ‖ Luoghi
+5082 ‖ Locations of this exercise ‖ Sites de cet exercice ‖ Luoghi di questa esercitazione
+5083 ‖ Locations can be divided into categories (e.g. boat launch sites, depots), which can be shown and hidden individually in the operations app. “Shown by default” applies to everyone who has not changed the category themselves; the app saves each person's own choice. Locations without a category are shown by default. ‖ Les sites peuvent être répartis en catégories (p. ex. mises à l'eau, dépôts) que l'on affiche ou masque individuellement dans l'app d'intervention. « Affiché par défaut » vaut pour tous ceux qui n'ont pas modifié la catégorie ; l'app enregistre le choix de chaque personne. Les sites sans catégorie sont affichés par défaut. ‖ I luoghi si possono suddividere in categorie (p. es. scivoli, magazzini), che nell'app d'intervento si mostrano e nascondono singolarmente. «Mostrato di default» vale per tutti coloro che non hanno modificato la categoria; l'app salva la scelta di ogni persona. I luoghi senza categoria sono mostrati di default.
+5084 ‖ Locations are approximations from reference point and distance: check them on the map after creating and move them in the element. ‖ Les positions sont des approximations à partir du point de référence et de la distance : après la création, vérifiez-les sur la carte et déplacez-les dans l'élément. ‖ Le posizioni sono approssimazioni da punto di riferimento e distanza: dopo la creazione verificale sulla mappa e spostale nell'elemento.
+5085 ‖ Starts without alarm and without push; those called out see it in the app and join themselves ‖ Démarre sans alarme ni push ; les mobilisés la voient dans l'app et la rejoignent eux-mêmes ‖ Si avvia senza allarme né push; i convocati lo vedono nell'app e vi partecipano da sé
+5086 ‖ Start password ‖ Mot de passe initial ‖ Password iniziale
+5087 ‖ Start password copied. ‖ Mot de passe initial copié. ‖ Password iniziale copiata.
+5088 ‖ Stations ‖ Stations ‖ Stazioni
+5089 ‖ Stations during operations ‖ Stations en intervention ‖ Stazioni durante l'intervento
+5090 ‖ Stations per PLS ‖ Stations par PLS ‖ Stazioni per PLS
+5091 ‖ Reset the statistics of the Overpass servers? ‖ Réinitialiser la statistique des serveurs Overpass ? ‖ Reimpostare la statistica dei server Overpass?
+5092 ‖ Statistics not available: {0} ‖ Statistique indisponible : {0} ‖ Statistica non disponibile: {0}
+5093 ‖ Statistics per person ‖ Statistique par personne ‖ Statistica per persona
+5094 ‖ Reset statistics ‖ Réinitialiser la statistique ‖ Reimposta la statistica
+5095 ‖ Status ‖ Statut ‖ Stato
+5096 ‖ Status: ‖ Statut : ‖ Stato:
+5097 ‖ In the beacon manufacturer's app set the format iBeacon, as UUID the default UUID below, as major a freely chosen number (e.g. location) and as minor a separate number per vehicle. Transmission interval about 1 s. Beacons whose UUID cannot be changed are entered under “Further UUIDs” (at most 5). ‖ Dans l'app du fabricant de la balise, réglez le format iBeacon, comme UUID l'UUID par défaut ci-dessous, comme major un nombre librement choisi (p. ex. site) et comme minor un nombre propre par véhicule. Intervalle d'émission env. 1 s. Les balises dont l'UUID ne peut pas être modifié se saisissent sous « Autres UUID » (au plus 5). ‖ Nell'app del produttore del beacon imposta il formato iBeacon, come UUID l'UUID predefinito sotto, come major un numero liberamente scelto (p. es. luogo) e come minor un numero proprio per veicolo. Intervallo di trasmissione circa 1 s. I beacon il cui UUID non si può modificare si inseriscono in «Altri UUID» (al massimo 5).
+5098 ‖ Street, postcode town ‖ Rue, NPA localité ‖ Via, NPA località
+5099 ‖ Street map ‖ Carte routière ‖ Carta stradale
+5100 ‖ Level of the notifications for messages and the end of the operation (push and notice in the app); “None” switches them off. Exercise mode only affects the alarm. ‖ Niveau des notifications pour les messages et la fin de l'intervention (push et avis dans l'app) ; « Aucun » les désactive. Le mode exercice ne concerne que l'alarme. ‖ Livello delle notifiche per i messaggi e la fine dell'intervento (push e avviso nell'app); «Nessuno» le disattiva. La modalità esercitazione riguarda solo l'allarme.
+5101 ‖ Level {0} ‖ Niveau {0} ‖ Livello {0}
+5102 ‖ Stages ‖ Étapes ‖ Tappe
+5103 ‖ Apply stages ‖ Appliquer les étapes ‖ Applica le tappe
+5104 ‖ =
+5105 ‖ Search “{0}” ‖ Recherche « {0} » ‖ Ricerca «{0}»
+5106 ‖ Search ‖ Rechercher ‖ Cerca
+5107 ‖ Search (message, details, route, person) ‖ Rechercher (message, informations, route, personne) ‖ Cerca (messaggio, dati, rotta, persona)
+5108 ‖ Search: name, username, role, group ‖ Rechercher : nom, nom d'utilisateur, rôle, groupe ‖ Cerca: nome, nome utente, ruolo, gruppo
+5109 ‖ Search area ends at the location ‖ La zone de recherche s'arrête au site ‖ L'area di ricerca termina al luogo
+5110 ‖ Search area reached ‖ Zone de recherche atteinte ‖ Area di ricerca raggiunta
+5111 ‖ Search area reached after ‖ Zone de recherche atteinte après ‖ Area di ricerca raggiunta dopo
+5112 ‖ =
+5113 ‖ Swiftwater Rescue – Calendar ‖ Swiftwater Rescue – Calendrier ‖ Swiftwater Rescue – Calendario
+5114 ‖ Swiftwater Rescue – My operations ‖ Swiftwater Rescue – Mes interventions ‖ Swiftwater Rescue – I miei interventi
+5115 ‖ Swiftwater Rescue – Administration ‖ Swiftwater Rescue – Administration ‖ Swiftwater Rescue – Amministrazione
+5116 ‖ Swiftwater Rescue – Administration – {0} ‖ Swiftwater Rescue – Administration – {0} ‖ Swiftwater Rescue – Amministrazione – {0}
+5117 ‖ Symbol (short, e.g. emoji) ‖ Symbole (court, p. ex. emoji) ‖ Simbolo (breve, p. es. emoji)
+5118 ‖ Symbols that the operation lead can choose when placing a marker. Switched-off ones are no longer available; existing markers keep their symbol, also in replay and public view. ‖ Symboles que la direction d'intervention peut choisir en plaçant un marqueur. Ceux désactivés ne sont plus proposés ; les marqueurs existants conservent leur symbole, aussi dans le replay et la vue publique. ‖ Simboli che la direzione dell'intervento può scegliere impostando un marcatore. Quelli disattivati non sono più selezionabili; i marcatori esistenti mantengono il loro simbolo, anche nel replay e nella vista pubblica.
+5119 ‖ Table ‖ Table ‖ Tabella
+5120 ‖ Table objects on the water ‖ Table objets au bord de l'eau ‖ Tabella oggetti lungo i corsi d'acqua
+5121 ‖ Table {0} of {1}: {2} ({3} of {4}) … ‖ Table {0} sur {1} : {2} ({3} sur {4}) … ‖ Tabella {0} di {1}: {2} ({3} di {4}) …
+5122 ‖ Tables ‖ Tables ‖ Tabelle
+5123 ‖ Days for “{0}” ‖ Jours pour « {0} » ‖ Giorni per «{0}»
+5124 ‖ Days: whole number from 0 to 36500 or empty (never). ‖ Jours : nombre entier de 0 à 36500 ou vide (jamais). ‖ Giorni: numero intero da 0 a 36500 o vuoto (mai).
+5125 ‖ days ‖ jours ‖ giorni
+5126 ‖ Technical log of the server and devices: events (logins, starting and ending operations, changed users and settings), warnings (e.g. data sources without answer, rejected push messages, failed logins) and errors (server errors, script errors in the browser). For troubleshooting, not for the operation log; without passwords, keys and operation contents. Entries are deleted after {0} days. ‖ Journal technique du serveur et des appareils : événements (connexions, démarrage et fin d'interventions, utilisateurs et paramètres modifiés), avertissements (p. ex. sources de données sans réponse, messages push refusés, connexions échouées) et erreurs (erreurs du serveur, erreurs de script dans le navigateur). Pour le dépannage, pas pour le journal d'intervention ; sans mots de passe, clés ni contenus d'intervention. Les entrées sont supprimées après {0} jours. ‖ Registro tecnico del server e dei dispositivi: eventi (accessi, avvio e fine di interventi, utenti e impostazioni modificati), avvisi (p. es. fonti di dati senza risposta, messaggi push rifiutati, accessi falliti) ed errori (errori del server, errori di script nel browser). Per la ricerca di errori, non per il registro dell'intervento; senza password, chiavi né contenuti d'intervento. Le voci vengono eliminate dopo {0} giorni.
+5127 ‖ Participations in operations ‖ Participations aux interventions ‖ Partecipazioni agli interventi
+5128 ‖ Participations detached ‖ Participations détachées ‖ Partecipazioni scollegate
+5129 ‖ Phone ‖ Téléphone ‖ Telefono
+5130 ‖ Phone number (for direct calls during operations, empty = none) ‖ Numéro de téléphone (pour l'appel direct en intervention, vide = aucun) ‖ Numero di telefono (per la chiamata diretta durante l'intervento, vuoto = nessuno)
+5131 ‖ Phone number (optional, for direct calls during operations) ‖ Numéro de téléphone (facultatif, pour l'appel direct en intervention) ‖ Numero di telefono (facoltativo, per la chiamata diretta durante l'intervento)
+5132 ‖ Show phone number ‖ Afficher le numéro de téléphone ‖ Mostra il numero di telefono
+5133 ‖ Testing the saved setting … ‖ Test du paramètre enregistré … ‖ Test dell'impostazione salvata …
+5134 ‖ Test ‖ Tester ‖ Testa
+5135 ‖ Text (Markdown: # title, **bold**, - list, | table |, > note, > ! warning) ‖ Texte (Markdown : # titre, **gras**, - liste, | tableau |, > remarque, > ! avertissement) ‖ Testo (Markdown: # titolo, **grassetto**, - elenco, | tabella |, > nota, > ! avviso)
+5136 ‖ Take over the e-mail's text into the message (otherwise only the subject) ‖ Reprendre le texte de l'e-mail dans le message (sinon seulement l'objet) ‖ Riprendi il testo dell'e-mail nel messaggio (altrimenti solo l'oggetto)
+5137 ‖ Low-flying helicopters in valleys and over the river are often not visible to ground receivers and may be missing at times. Some operators (e.g. military) send no or blocked data. The display does not replace coordination by radio. ‖ Les hélicoptères volant bas dans les vallées et au-dessus de la rivière ne sont souvent pas visibles pour les récepteurs au sol et peuvent manquer par moments. Certains exploitants (p. ex. militaires) n'envoient pas de données ou des données bloquées. L'affichage ne remplace pas une concertation par radio. ‖ Gli elicotteri a bassa quota nelle valli e sopra il fiume spesso non sono visibili ai ricevitori a terra e possono mancare a tratti. Alcuni operatori (p. es. militari) non inviano dati o dati bloccati. La visualizzazione non sostituisce un coordinamento via radio.
+5138 ‖ Title (for administration, exercise lead and the public link's waiting page) ‖ Titre (pour l'administration, la direction d'exercice et la page d'attente du lien public) ‖ Titolo (per amministrazione, direzione dell'esercitazione e pagina d'attesa del link pubblico)
+5139 ‖ =
+5140 ‖ =
+5141 ‖ Tokens 24 h ‖ Jetons 24 h ‖ Token 24 h
+5142 ‖ Tokens 30 days ‖ Jetons 30 jours ‖ Token 30 giorni
+5143 ‖ Sound for critical alarms (native app){0} ‖ Son en cas d'alarme critique (app native){0} ‖ Suono per allarme critico (app nativa){0}
+5144 ‖ Sound: {0}{1} ‖ Son : {0}{1} ‖ Suono: {0}{1}
+5145 ‖ Sound{0} ‖ Son{0} ‖ Suono{0}
+5146 ‖ Transcript ‖ Transcription ‖ Trascrizione
+5147 ‖ Transcription ‖ Transcription ‖ Trascrizione
+5148 ‖ Meeting point {0} ‖ Point de rencontre {0} ‖ Punto d'incontro {0}
+5149 ‖ Type {0} ‖ Type {0} ‖ Tipo {0}
+5150 ‖ Radius ‖ Rayon ‖ Raggio
+5151 ‖ Radius without operation ‖ Rayon sans intervention ‖ Raggio senza intervento
+5152 ‖ Radius around each PLS ‖ Rayon autour de chaque PLS ‖ Raggio attorno a ogni PLS
+5153 ‖ Discard unsaved details? ‖ Rejeter les informations non enregistrées ? ‖ Scartare i dati non salvati?
+5154 ‖ Unsaved changes ‖ Modifications non enregistrées ‖ Modifiche non salvate
+5155 ‖ Discard unsaved changes in this section? ‖ Rejeter les modifications non enregistrées de cette section ? ‖ Scartare le modifiche non salvate in questa sezione?
+5156 ‖ Subfolders ({0}) inherit this and can only restrict further. ‖ Les sous-dossiers ({0}) en héritent et ne peuvent que restreindre davantage. ‖ Le sottocartelle ({0}) lo ereditano e possono solo restringere ulteriormente.
+5157 ‖ Subfolders inherit this and can only restrict further. ‖ Les sous-dossiers en héritent et ne peuvent que restreindre davantage. ‖ Le sottocartelle lo ereditano e possono solo restringere ulteriormente.
+5158 ‖ Unchanged{0} ‖ Inchangé{0} ‖ Invariato{0}
+5159 ‖ Vector map ‖ Carte vectorielle ‖ Mappa vettoriale

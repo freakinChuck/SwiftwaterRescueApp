@@ -1,0 +1,240 @@
+2400 ‖ no device token received from Apple (APNs) yet ‖ pas encore de jeton d'appareil reçu d'Apple (APNs) ‖ nessun token del dispositivo ancora ricevuto da Apple (APNs)
+2401 ‖ Ready for alarms ‖ Prêt pour les alarmes ‖ Pronto per gli allarmi
+2402 ‖ Accounts ‖ Comptes ‖ Account
+2403 ‖ {0} {1} · last {2}:{3}{4} ‖ {0} {1} · dernière fois {2}:{3}{4} ‖ {0} {1} · ultima volta {2}:{3}{4}
+2404 ‖ · location is being shared ‖ · la position est partagée ‖ · la posizione viene condivisa
+2405 ‖ Alarm bell ‖ Cloche d'alarme ‖ Campana d'allarme
+2406 ‖ Rising tone sequence ‖ Séquence ascendante ‖ Sequenza ascendente
+2407 ‖ Digital alarm clock ‖ Réveil numérique ‖ Sveglia digitale
+2408 ‖ Triple tone ‖ Triple son ‖ Triplo suono
+2409 ‖ Gong triad ‖ Gong à trois tons ‖ Gong a tre toni
+2410 ‖ Wail ‖ Hurlement (wail) ‖ Ululato (wail)
+2411 ‖ =
+2412 ‖ Mechanical siren ‖ Sirène mécanique ‖ Sirena meccanica
+2413 ‖ Melodies and signals ‖ Mélodies et signaux ‖ Melodie e segnali
+2414 ‖ =
+2415 ‖ Air horn ‖ Avertisseur pneumatique ‖ Tromba ad aria
+2416 ‖ Horns ‖ Avertisseurs ‖ Trombe
+2417 ‖ Siren “General alarm” ‖ Sirène « Alarme générale » ‖ Sirena «Allarme generale»
+2418 ‖ Siren “Water alarm” (shortened) ‖ Sirène « Alarme eau » (raccourcie) ‖ Sirena «Allarme acqua» (abbreviata)
+2419 ‖ Sirens ‖ Sirènes ‖ Sirene
+2420 ‖ =
+2421 ‖ Two-tone horn (emergency vehicle) ‖ Avertisseur deux tons (sirène de police) ‖ Tromba bitonale (sirena d'emergenza)
+2422 ‖ Two-tone horn fast ‖ Avertisseur deux tons rapide ‖ Tromba bitonale veloce
+2423 ‖ Location permission revoked ‖ Autorisation de position retirée ‖ Autorizzazione alla posizione revocata
+2424 ‖ Response option without location ‖ Option d'engagement sans position ‖ Opzione d'intervento senza posizione
+2425 ‖ Positioning failed: {0} ‖ Échec de la localisation : {0} ‖ Localizzazione non riuscita: {0}
+2426 ‖ Location services switched off ‖ Services de localisation désactivés ‖ Servizi di localizzazione disattivati
+2427 ‖ Location not allowed for the app ‖ Position non autorisée pour l'app ‖ Posizione non consentita per l'app
+2428 ‖ Location not shared during the operation: location permission missing ‖ Position non partagée en intervention : autorisation de position manquante ‖ Posizione non condivisa durante l'intervento: manca l'autorizzazione alla posizione
+2429 ‖ Location during operation: {0} ‖ Position en intervention : {0} ‖ Posizione durante l'intervento: {0}
+2430 ‖ Location could not be sent for {0} min ({1} failed attempts, last: {2}) ‖ La position n'a pas pu être envoyée pendant {0} min ({1} échecs, dernier : {2}) ‖ Non è stato possibile inviare la posizione per {0} min ({1} tentativi falliti, ultimo: {2})
+2431 ‖ Location sharing ended: {0} {1} ‖ Partage de position terminé : {0} {1} ‖ Condivisione della posizione terminata: {0} {1}
+2432 ‖ =
+2433 ‖ =
+2434 ‖ Please update the app: the server is newer than this app; some functions may be missing. ‖ Veuillez mettre à jour l'app : le serveur est plus récent que cette app, certaines fonctions peuvent manquer. ‖ Aggiorna l'app: il server è più recente di questa app, alcune funzioni possono mancare.
+2435 ‖ Please update the app: this server requires at least version {0}, {1} is installed. Alarms and operations keep working. ‖ Veuillez mettre à jour l'app : ce serveur exige au moins la version {0}, la version installée est {1}. Les alarmes et interventions continuent de fonctionner. ‖ Aggiorna l'app: questo server richiede almeno la versione {0}, è installata la {1}. Allarmi e interventi continuano a funzionare.
+2436 ‖ Development build without version ‖ Version de développement sans numéro ‖ Versione di sviluppo senza numero
+2437 ‖ =
+2438 ‖ Absences ‖ Absences ‖ Assenze
+2439 ‖ Set up After Action Review ‖ Configurer l'After Action Review ‖ Configura After Action Review
+2440 ‖ Sign-ups for exercises ‖ Inscriptions aux exercices ‖ Iscrizioni alle esercitazioni
+2441 ‖ Anonymisation ‖ Anonymisation ‖ Anonimizzazione
+2442 ‖ =
+2443 ‖ Application log ‖ Journal de l'application ‖ Registro dell'applicazione
+2444 ‖ Delete recording ‖ Supprimer l'enregistrement ‖ Elimina registrazione
+2445 ‖ Users ‖ Utilisateurs ‖ Utenti
+2446 ‖ User roles ‖ Rôles d'utilisateur ‖ Ruoli utente
+2447 ‖ Images ‖ Images ‖ Immagini
+2448 ‖ Date ‖ Date ‖ Data
+2449 ‖ This file type is not allowed ‖ Ce type de fichier n'est pas autorisé ‖ Questo tipo di file non è ammesso
+2450 ‖ Announcements (radio) ‖ Annonces (radio) ‖ Annunci (radio)
+2451 ‖ Response options ‖ Options d'engagement ‖ Opzioni d'intervento
+2452 ‖ Response groups ‖ Groupes d'intervention ‖ Gruppi d'intervento
+2453 ‖ Responder ‖ Intervenant ‖ Soccorritore
+2454 ‖ Operation types ‖ Types d'intervention ‖ Tipi d'intervento
+2455 ‖ Operations ‖ Interventions ‖ Interventi
+2456 ‖ Entry ‖ Entrée ‖ Voce
+2457 ‖ Delete permanently ‖ Supprimer définitivement ‖ Elimina definitivamente
+2458 ‖ Event ‖ Événement ‖ Evento
+2459 ‖ External ‖ Externes ‖ Esterni
+2460 ‖ Vehicle types ‖ Types de véhicules ‖ Tipi di veicolo
+2461 ‖ Error ‖ Erreur ‖ Errore
+2462 ‖ Released ‖ Libéré ‖ Rilasciato
+2463 ‖ Radio & conference ‖ Radio & conférence ‖ Radio & conferenza
+2464 ‖ Skill ‖ Compétence ‖ Competenza
+2465 ‖ Take over geodata ‖ Reprendre des géodonnées ‖ Riprendi geodati
+2466 ‖ Geodata sources ‖ Sources de géodonnées ‖ Fonti di geodati
+2467 ‖ In progress ‖ En cours ‖ In lavorazione
+2468 ‖ Contact for privacy questions ‖ Contact pour les questions de protection des données ‖ Contatto per domande sulla protezione dei dati
+2469 ‖ Navigation points ‖ Points de navigation ‖ Punti di navigazione
+2470 ‖ Not relevant ‖ Non pertinent ‖ Non rilevante
+2471 ‖ Object ‖ Objet ‖ Oggetto
+2472 ‖ Folder ‖ Dossier ‖ Cartella
+2473 ‖ =
+2474 ‖ =
+2475 ‖ PostGIS database (direct) ‖ Base de données PostGIS (directe) ‖ Banca dati PostGIS (diretta)
+2476 ‖ Post ‖ Poste ‖ Posto
+2477 ‖ Primary operations ‖ Interventions primaires ‖ Interventi primari
+2478 ‖ =
+2479 ‖ Special roles ‖ Rôles spéciaux ‖ Ruoli speciali
+2480 ‖ Participations ‖ Participations ‖ Partecipazioni
+2481 ‖ =
+2482 ‖ Text ‖ Texte ‖ Testo
+2483 ‖ Responsible person ‖ Personne responsable ‖ Persona responsabile
+2484 ‖ Warning ‖ Avertissement ‖ Avviso
+2485 ‖ =
+2486 ‖ Additional privacy text ‖ Texte complémentaire protection des données ‖ Testo aggiuntivo protezione dei dati
+2487 ‖ Additional legal notice text ‖ Texte complémentaire mentions légales ‖ Testo aggiuntivo note legali
+2488 ‖ at the end of the operation ‖ à la fin de l'intervention ‖ alla fine dell'intervento
+2489 ‖ with {0} ‖ avec {0} ‖ con {0}
+2490 ‖ after the end of the operation ‖ après la fin de l'intervention ‖ dopo la fine dell'intervento
+2491 ‖ not taking part ‖ ne participe pas ‖ non partecipa
+2492 ‖ taking part ‖ participe ‖ partecipa
+2493 ‖ {0} min before release ‖ {0} min avant la libération ‖ {0} min prima del rilascio
+2494 ‖ Exercise not found ‖ Exercice introuvable ‖ Esercitazione non trovata
+2495 ‖ =
+2496 ‖ =
+2497 ‖ =
+2498 ‖ Everyone who sees the folder ‖ Tous ceux qui voient le dossier ‖ Tutti coloro che vedono la cartella
+2499 ‖ At locations in the operation area ‖ Aux sites dans la zone d'intervention ‖ Nei luoghi dell'area d'intervento
+2500 ‖ =
+2501 ‖ =
+2502 ‖ You cannot choose user roles with rights you do not have yourself ‖ Vous ne pouvez pas choisir des rôles d'utilisateur avec des droits que vous n'avez pas vous-même ‖ Non puoi scegliere ruoli utente con diritti che non hai tu stesso
+2503 ‖ Certain response groups or user roles ‖ Certains groupes d'intervention ou rôles d'utilisateur ‖ Determinati gruppi d'intervento o ruoli utente
+2504 ‖ Image not found ‖ Image introuvable ‖ Immagine non trovata
+2505 ‖ Please by {0} ‖ Veuillez d'ici au {0} ‖ Entro il {0}
+2506 ‖ Please give a reason ‖ Veuillez indiquer une justification ‖ Indica una motivazione
+2507 ‖ Please choose a skill ‖ Veuillez choisir une compétence ‖ Scegli una competenza
+2508 ‖ Please enter a name (at most 100 characters) ‖ Veuillez saisir un nom (au plus 100 caractères) ‖ Inserisci un nome (al massimo 100 caratteri)
+2509 ‖ Please enter a title (at most 200 characters) ‖ Veuillez saisir un titre (au plus 200 caractères) ‖ Inserisci un titolo (al massimo 200 caratteri)
+2510 ‖ Please enter a title or note ‖ Veuillez saisir un titre ou une remarque ‖ Inserisci un titolo o una nota
+2511 ‖ Please read and confirm ‖ Veuillez lire et confirmer ‖ Leggi e conferma
+2512 ‖ Please choose at least one response group or user role ‖ Veuillez choisir au moins un groupe d'intervention ou un rôle d'utilisateur ‖ Scegli almeno un gruppo d'intervento o un ruolo utente
+2513 ‖ =
+2514 ‖ =
+2515 ‖ =
+2516 ‖ =
+2517 ‖ =
+2518 ‖ =
+2519 ‖ You lack the right for this ‖ Il vous manque le droit pour cela ‖ Ti manca il diritto per questo
+2520 ‖ You are not an editor of this folder ‖ Vous ne faites pas partie de la rédaction de ce dossier ‖ Non fai parte della redazione di questa cartella
+2521 ‖ You are not an editor of any folder ‖ Vous ne faites partie de la rédaction d'aucun dossier ‖ Non fai parte della redazione di alcuna cartella
+2522 ‖ File rejected: content does not match the extension ‖ Fichier refusé : le contenu ne correspond pas à l'extension ‖ File rifiutato: il contenuto non corrisponde all'estensione
+2523 ‖ File could not be saved ‖ Le fichier n'a pas pu être enregistré ‖ Non è stato possibile salvare il file
+2524 ‖ File could not be saved (storage space?) ‖ Le fichier n'a pas pu être enregistré (espace de stockage ?) ‖ Non è stato possibile salvare il file (spazio di archiviazione?)
+2525 ‖ File of a disallowed type rejected ‖ Fichier d'un type non autorisé refusé ‖ File di un tipo non ammesso rifiutato
+2526 ‖ File not found ‖ Fichier introuvable ‖ File non trovato
+2527 ‖ Your suggestion ‖ Votre proposition ‖ La tua proposta
+2528 ‖ The entry has no files ‖ L'entrée n'a pas de fichiers ‖ La voce non ha file
+2529 ‖ The entry has no file yet ‖ L'entrée n'a pas encore de fichier ‖ La voce non ha ancora un file
+2530 ‖ The content of the file does not match the extension “.{0}” (or it contains macros) ‖ Le contenu du fichier ne correspond pas à l'extension « .{0} » (ou il contient des macros) ‖ Il contenuto del file non corrisponde all'estensione «.{0}» (o contiene macro)
+2531 ‖ The document repository's storage is full ‖ L'espace de la gestion documentaire est plein ‖ Lo spazio dell'archivio documenti è pieno
+2532 ‖ The text is too long ‖ Le texte est trop long ‖ Il testo è troppo lungo
+2533 ‖ The file is larger than {0} ‖ Le fichier dépasse {0} ‖ Il file supera {0}
+2534 ‖ The file is too large ‖ Le fichier est trop volumineux ‖ Il file è troppo grande
+2535 ‖ The order cannot be changed personally ‖ L'ordre ne peut pas être modifié personnellement ‖ L'ordine non si può modificare personalmente
+2536 ‖ The current version cannot be ‖ La version actuelle ne peut pas être ‖ La versione attuale non può essere
+2537 ‖ This link is invalid or has been removed. ‖ Ce lien n'est pas valable ou a été retiré. ‖ Questo link non è valido o è stato rimosso.
+2538 ‖ This folder cannot be shared with external parties ‖ Ce dossier ne peut pas être partagé avec des externes ‖ Questa cartella non si può condividere con esterni
+2539 ‖ This suggestion has already been dealt with ‖ Cette proposition est déjà traitée ‖ Questa proposta è già stata evasa
+2540 ‖ This document is no longer available. ‖ Ce document n'est plus disponible. ‖ Questo documento non è più disponibile.
+2541 ‖ Document not found ‖ Document introuvable ‖ Documento non trovato
+2542 ‖ Document “{0} ‖ Document « {0} ‖ Documento «{0}
+2543 ‖ Documents on the guest page are switched off ‖ Les documents sur la page invités sont désactivés ‖ I documenti sulla pagina ospiti sono disattivati
+2544 ‖ Documents for external parties are switched off ‖ Les documents pour les externes sont désactivés ‖ I documenti per esterni sono disattivati
+2545 ‖ Documents for external parties are switched off. ‖ Les documents pour les externes sont désactivés. ‖ I documenti per esterni sono disattivati.
+2546 ‖ Documents are switched off for this operation. ‖ Les documents sont désactivés pour cette intervention. ‖ I documenti sono disattivati per questo intervento.
+2547 ‖ You already have {0} open suggestions; please wait until the editors have dealt with them ‖ Vous avez déjà {0} propositions en attente ; veuillez attendre que la rédaction les ait traitées ‖ Hai già {0} proposte aperte; attendi che la redazione le abbia evase
+2548 ‖ =
+2549 ‖ A folder cannot be inside itself ‖ Un dossier ne peut pas se trouver dans lui-même ‖ Una cartella non può trovarsi in sé stessa
+2550 ‖ Setting missing ‖ Paramètre manquant ‖ Impostazione mancante
+2551 ‖ Entry missing ‖ Entrée manquante ‖ Voce mancante
+2552 ‖ Reminder: please read and confirm ‖ Rappel : veuillez lire et confirmer ‖ Promemoria: leggi e conferma
+2553 ‖ =
+2554 ‖ Favourites ‖ Favoris ‖ Preferiti
+2555 ‖ Share not found ‖ Partage introuvable ‖ Condivisione non trovata
+2556 ‖ Radio link not found ‖ Lien radio introuvable ‖ Link radio non trovato
+2557 ‖ Skill not found ‖ Compétence introuvable ‖ Competenza non trovata
+2558 ‖ For this operation ‖ Pour cette intervention ‖ Per questo intervento
+2559 ‖ No read confirmation is set up for this entry ‖ Aucune confirmation de lecture n'est configurée pour cette entrée ‖ Per questa voce non è configurata alcuna conferma di lettura
+2560 ‖ Please choose a file for a new version ‖ Veuillez choisir un fichier pour une nouvelle version ‖ Scegli un file per una nuova versione
+2561 ‖ Upload incomplete (first part missing), please try again ‖ Téléversement incomplet (première partie manquante), veuillez réessayer ‖ Caricamento incompleto (manca la prima parte), riprova
+2562 ‖ Upload incomplete (no parts arrived), please try again ‖ Téléversement incomplet (aucune partie reçue), veuillez réessayer ‖ Caricamento incompleto (nessuna parte arrivata), riprova
+2563 ‖ Upload incomplete ({0} of {1} bytes arrived), please try again ‖ Téléversement incomplet ({0} sur {1} octets reçus), veuillez réessayer ‖ Caricamento incompleto (arrivati {0} di {1} byte), riprova
+2564 ‖ Upload incomplete: size does not match ‖ Téléversement incomplet : la taille ne correspond pas ‖ Caricamento incompleto: la dimensione non corrisponde
+2565 ‖ Upload incomplete: first part missing ‖ Téléversement incomplet : première partie manquante ‖ Caricamento incompleto: manca la prima parte
+2566 ‖ Upload incomplete: no parts arrived ‖ Téléversement incomplet : aucune partie reçue ‖ Caricamento incompleto: nessuna parte arrivata
+2567 ‖ You may not suggest anything in this folder ‖ Vous ne pouvez rien proposer dans ce dossier ‖ In questa cartella non puoi proporre nulla
+2568 ‖ Maps and routes ‖ Cartes et itinéraires ‖ Mappe e percorsi
+2569 ‖ No attachment ‖ Pas de pièce jointe ‖ Nessun allegato
+2570 ‖ No running operation ‖ Aucune intervention en cours ‖ Nessun intervento in corso
+2571 ‖ No file ‖ Pas de fichier ‖ Nessun file
+2572 ‖ Empty file ‖ Fichier vide ‖ File vuoto
+2573 ‖ Read confirmation pending ‖ Confirmation de lecture en attente ‖ Conferma di lettura in sospeso
+2574 ‖ Read confirmation “{0} ‖ Confirmation de lecture « {0} ‖ Conferma di lettura «{0}
+2575 ‖ Read confirmation overdue ‖ Confirmation de lecture en retard ‖ Conferma di lettura scaduta
+2576 ‖ Links for external parties are switched off ‖ Les liens pour les externes sont désactivés ‖ I link per esterni sono disattivati
+2577 ‖ Links for external parties are switched off. ‖ Les liens pour les externes sont désactivés. ‖ I link per esterni sono disattivati.
+2578 ‖ New and changed ‖ Nouveaux et modifiés ‖ Nuovi e modificati
+2579 ‖ Never allowed: .{0} ‖ Jamais autorisé : .{0} ‖ Mai ammesso: .{0}
+2580 ‖ Nobody ‖ Personne ‖ Nessuno
+2581 ‖ Only entries of the type file have files ‖ Seules les entrées de type fichier ont des fichiers ‖ Solo le voci di tipo file hanno file
+2582 ‖ Only the operation lead may do that ‖ Seule la direction d'intervention peut le faire ‖ Solo la direzione dell'intervento può farlo
+2583 ‖ Folder not found ‖ Dossier introuvable ‖ Cartella non trovata
+2584 ‖ =
+2585 ‖ Checksum does not match, please upload again ‖ La somme de contrôle ne correspond pas, veuillez téléverser à nouveau ‖ Il checksum non corrisponde, carica di nuovo
+2586 ‖ =
+2587 ‖ Document repository storage full ‖ Espace de la gestion documentaire plein ‖ Spazio dell'archivio documenti pieno
+2588 ‖ Part of the file could not be written ‖ Une partie du fichier n'a pas pu être écrite ‖ Non è stato possibile scrivere una parte del file
+2589 ‖ Invalid type ‖ Type invalide ‖ Tipo non valido
+2590 ‖ Invalid image (JPEG or PNG, at most 3 MB) ‖ Image invalide (JPEG ou PNG, au plus 3 Mo) ‖ Immagine non valida (JPEG o PNG, al massimo 3 MB)
+2591 ‖ Invalid upload ‖ Téléversement invalide ‖ Caricamento non valido
+2592 ‖ Invalid chunk ‖ Partie invalide ‖ Parte non valida
+2593 ‖ Version not found ‖ Version introuvable ‖ Versione non trovata
+2594 ‖ =
+2595 ‖ Suggestion not found ‖ Proposition introuvable ‖ Proposta non trovata
+2596 ‖ =
+2597 ‖ Destination missing ‖ Destination manquante ‖ Destinazione mancante
+2598 ‖ Too many accesses, please try again later. ‖ Trop d'accès, veuillez réessayer plus tard. ‖ Troppi accessi, riprova più tardi.
+2599 ‖ Last opened ‖ Dernière ouverture ‖ Ultima apertura
+2600 ‖ =
+2601 ‖ =
+2602 ‖ =
+2603 ‖ =
+2604 ‖ shares the document “{0} ‖ partage le document « {0} ‖ condivide il documento «{0}
+2605 ‖ read and confirm ‖ lire et confirmer ‖ leggere e confermare
+2606 ‖ withdraws the sharing of the document “{0} ‖ retire le partage du document « {0} ‖ ritira la condivisione del documento «{0}
+2607 ‖ =
+2608 ‖ =
+2609 ‖ {0} accesses) ‖ {0} accès) ‖ {0} accessi)
+2610 ‖ {0}” version {1} ‖ {0} » version {1} ‖ {0}» versione {1}
+2611 ‖ {0}” accessed by external parties for the first time ‖ {0} » consulté pour la première fois par des externes ‖ {0}» consultato per la prima volta da esterni
+2612 ‖ {0}” with external parties ( ‖ {0} » avec les externes ( ‖ {0}» con esterni (
+2613 ‖ {0}” for external parties ( ‖ {0} » pour les externes ( ‖ {0}» per esterni (
+2614 ‖ =
+2615 ‖ =
+2616 ‖ Parent folder not found ‖ Dossier parent introuvable ‖ Cartella superiore non trovata
+2617 ‖ 📚 New suggestion ‖ 📚 Nouvelle proposition ‖ 📚 Nuova proposta
+2618 ‖ 📚 Suggestion ‖ 📚 Proposition ‖ 📚 Proposta
+2619 ‖ 📚 Suggestion taken over ‖ 📚 Proposition reprise ‖ 📚 Proposta ripresa
+2620 ‖ (at the partner this installation is not registered with the same key, or the time differs) ‖ (chez le partenaire, cette installation n'est pas enregistrée avec la même clé, ou l'heure diffère) ‖ (presso il partner questa installazione non è registrata con la stessa chiave, o l'ora differisce)
+2621 ‖ (together with “{0} ‖ (avec « {0} ‖ (insieme a «{0}
+2622 ‖ , of which {0} ‖ , dont {0} ‖ , di cui {0}
+2623 ‖ , plus {0} ‖ , plus {0} ‖ , più {0}
+2624 ‖ , own operation there) ‖ , propre intervention là-bas) ‖ , intervento proprio lì)
+2625 ‖ =
+2626 ‖ 1 person ‖ 1 personne ‖ 1 persona
+2627 ‖ 1 more person ‖ 1 autre personne ‖ 1 altra persona
+2628 ‖ Request from a partner rejected ‖ Demande d'un partenaire refusée ‖ Richiesta di un partner rifiutata
+2629 ‖ Please enter a name ‖ Veuillez saisir un nom ‖ Inserisci un nome
+2630 ‖ Please generate a key or enter the one received ‖ Veuillez générer une clé ou saisir celle reçue ‖ Genera una chiave o inserisci quella ricevuta
+2631 ‖ =
+2632 ‖ This is the address of this installation ‖ C'est l'adresse de cette installation ‖ Questo è l'indirizzo di questa installazione
+2633 ‖ The key does not have the expected format (swf1_…) ‖ La clé n'a pas le format attendu (swf1_…) ‖ La chiave non ha il formato atteso (swf1_…)
+2634 ‖ The joint operation has ended ‖ L'intervention commune est terminée ‖ L'intervento comune è terminato
+2635 ‖ The linked operation has already ended here ‖ L'intervention liée est déjà terminée ici ‖ L'intervento collegato qui è già terminato
+2636 ‖ The response groups are not active here ‖ Les groupes d'intervention ne sont pas actifs ici ‖ I gruppi d'intervento qui non sono attivi
+2637 ‖ The initiating organisation cannot be reached: {0} ‖ L'organisation déclenchante n'est pas joignable : {0} ‖ L'organizzazione promotrice non è raggiungibile: {0}
+2638 ‖ This response group of “{0} ‖ Ce groupe d'intervention de « {0} ‖ Questo gruppo d'intervento di «{0}
+2639 ‖ You may not call out these response groups ‖ Vous ne pouvez pas mobiliser ces groupes d'intervention ‖ Non potete convocare questi gruppi d'intervento

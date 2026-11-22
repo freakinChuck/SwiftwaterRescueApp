@@ -10,7 +10,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -20,6 +20,7 @@ import '../api.dart';
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 // ---------- Grundlagen ----------
 J docMe(IncStore s) => s.me?['docs'] is Map ? jm(s.me!['docs']) : <String, dynamic>{};
@@ -399,7 +400,7 @@ Widget dkRow(BuildContext c, J d, VoidCallback onTap, {VoidCallback? onFav, Stri
                 IconButton(
                   onPressed: onFav,
                   visualDensity: VisualDensity.compact,
-                  tooltip: jb(d['fav']) ? 'Favorit entfernen' : 'Als Favorit (wird offline gespeichert, wenn die Redaktion es erlaubt)',
+                  tooltip: trn(jb(d['fav']) ? 'Favorit entfernen' : 'Als Favorit (wird offline gespeichert, wenn die Redaktion es erlaubt)'),
                   icon: Text(jb(d['fav']) ? '★' : '☆', style: TextStyle(fontSize: 20, color: jb(d['fav']) ? _favGold : mut)),
                 ),
             ],
@@ -730,7 +731,7 @@ class _DocsPanelState extends State<DocsPanel> {
           child: TextField(
             controller: _qc,
             onChanged: _search,
-            decoration: const InputDecoration(isDense: true, prefixIcon: Icon(Icons.search), hintText: 'Dokumente durchsuchen …'),
+            decoration: InputDecoration(isDense: true, prefixIcon: const Icon(Icons.search), hintText: trn('Dokumente durchsuchen …')),
           ),
         ),
         Expanded(
@@ -1001,7 +1002,7 @@ class _DocPageState extends State<DocPage> {
         actions: [
           if (!off)
             IconButton(
-              tooltip: jb(d['fav']) ? 'Aus den Favoriten entfernen' : 'Zu den Favoriten',
+              tooltip: trn(jb(d['fav']) ? 'Aus den Favoriten entfernen' : 'Zu den Favoriten'),
               icon: Text(jb(d['fav']) ? '★' : '☆', style: const TextStyle(fontSize: 22, color: accOrange)),
               onPressed: () async {
                 try {
@@ -1013,10 +1014,10 @@ class _DocPageState extends State<DocPage> {
                 }
               },
             ),
-          if (js(d['kind']) == 'file' && file != null) IconButton(tooltip: 'Teilen / Speichern', icon: const Icon(Icons.share), onPressed: _busy ? null : _share),
+          if (js(d['kind']) == 'file' && file != null) IconButton(tooltip: trn('Teilen / Speichern'), icon: const Icon(Icons.share), onPressed: _busy ? null : _share),
           if (jb(d['sug']) && !off)
             IconButton(
-              tooltip: 'Vorschlagen',
+              tooltip: trn('Vorschlagen'),
               icon: const Icon(Icons.rate_review_outlined),
               onPressed: () => docSugDlg(context, s, folderId: ji(d['folder_id']), doc: d),
             ),
@@ -1059,13 +1060,13 @@ Future<void> docSugDlg(BuildContext c, IncStore s, {int? folderId, J? doc}) asyn
               TextField(
                 controller: tc,
                 maxLength: 200,
-                decoration: const InputDecoration(labelText: 'Titel', hintText: 'z. B. Einsatzplan Reuss Luzern'),
+                decoration: InputDecoration(labelText: trn('Titel'), hintText: trn('z. B. Einsatzplan Reuss Luzern')),
               ),
             TextField(
               controller: nc,
               maxLines: 4,
               maxLength: 4000,
-              decoration: InputDecoration(labelText: 'Mitteilung an die Redaktion', hintText: doc != null ? 'Was ist falsch oder veraltet?' : 'Worum geht es? Bei einer Seite: der Text.'),
+              decoration: InputDecoration(labelText: trn('Mitteilung an die Redaktion'), hintText: trn(doc != null ? 'Was ist falsch oder veraltet?' : 'Worum geht es? Bei einer Seite: der Text.')),
             ),
           ],
         ),
@@ -1239,7 +1240,7 @@ Widget? docExtCard(BuildContext c, IncStore s) {
               ),
               if (js(x['token']).isNotEmpty) smallBtn('Teilen', () => docShare(s, js(x['token']), js(x['title']))),
               IconButton(
-                tooltip: 'Freigabe zurücknehmen',
+                tooltip: trn('Freigabe zurücknehmen'),
                 icon: const Icon(Icons.close),
                 onPressed: () async {
                   if (await confirmDlg(c, 'Externe sehen das Dokument danach nicht mehr.', title: 'Freigabe von «${js(x['title'])}» zurücknehmen?', ok: 'Zurücknehmen', danger: true)) {
@@ -1282,7 +1283,7 @@ Future<void> _docExtAdd(BuildContext c, IncStore s, J cf) async {
               DropdownButtonFormField<int>(
                 initialValue: doc,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Dokument'),
+                decoration: InputDecoration(labelText: trn('Dokument')),
                 items: [
                   for (final x in ds)
                     DropdownMenuItem(
@@ -1306,7 +1307,7 @@ Future<void> _docExtAdd(BuildContext c, IncStore s, J cf) async {
                 DropdownButtonFormField<int?>(
                   initialValue: g,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Für'),
+                  decoration: InputDecoration(labelText: trn('Für')),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Alle Funk-Links')),
                     for (final x in gl) DropdownMenuItem(value: ji(x['id']), child: Text(js(x['label']))),

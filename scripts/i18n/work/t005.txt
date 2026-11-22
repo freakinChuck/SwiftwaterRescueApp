@@ -1,0 +1,240 @@
+1200 ‖ Validity: {0}{1} ‖ Validité : {0}{1} ‖ Validità: {0}{1}
+1201 ‖ Altitude ‖ Altitude ‖ Altitudine
+1202 ‖ Legal notice · Licences · Privacy ‖ Mentions légales · Licences · Protection des données ‖ Note legali · Licenze · Protezione dei dati
+1203 ‖ Maps ‖ Cartes ‖ Mappe
+1204 ‖ Map library missing ‖ Bibliothèque cartographique manquante ‖ Libreria della mappa mancante
+1205 ‖ No connection to the server. Please try again later. ‖ Pas de connexion au serveur. Veuillez réessayer plus tard. ‖ Nessuna connessione al server. Riprova più tardi.
+1206 ‖ Registration ‖ Immatriculation ‖ Immatricolazione
+1207 ‖ Copying not possible, please select the text ‖ Copie impossible, veuillez sélectionner le texte ‖ Copia non possibile, seleziona il testo
+1208 ‖ Copying not possible. Please select the text and copy it by hand. ‖ Copie impossible. Veuillez sélectionner le texte et le copier manuellement. ‖ Copia non possibile. Seleziona il testo e copialo a mano.
+1209 ‖ Copied. ‖ Copié. ‖ Copiato.
+1210 ‖ Heading ‖ Cap ‖ Rotta
+1211 ‖ Copy last answer ‖ Copier la dernière réponse ‖ Copia l'ultima risposta
+1212 ‖ Last position ‖ Dernière position ‖ Ultima posizione
+1213 ‖ Aerial images ‖ Images aériennes ‖ Immagini aeree
+1214 ‖ Air situation: ‖ Situation aérienne : ‖ Situazione aerea:
+1215 ‖ Markers / areas ‖ Marqueurs / zones ‖ Marcatori / aree
+1216 ‖ Gauging stations (water level & discharge) ‖ Stations de mesure (niveau & débit) ‖ Stazioni di misura (livello & portata)
+1217 ‖ Replace names of responders, casualties and external parties with labels ‖ Remplacer les noms des intervenants, victimes et externes par des désignations ‖ Sostituisci i nomi di soccorritori, vittime ed esterni con denominazioni
+1218 ‖ Reload ‖ Recharger ‖ Ricarica
+1219 ‖ New version available. ‖ Nouvelle version disponible. ‖ Nuova versione disponibile.
+1220 ‖ Create new suggestion (with the additional request) ‖ Créer une nouvelle proposition (avec le souhait supplémentaire) ‖ Crea una nuova proposta (con la richiesta aggiuntiva)
+1221 ‖ Newest first ‖ Plus récents d'abord ‖ Più recenti prima
+1222 ‖ Nearest fixed location ‖ Site fixe le plus proche ‖ Luogo fisso più vicino
+1223 ‖ Mandatory training missing ‖ Formation obligatoire manquante ‖ Formazione obbligatoria mancante
+1224 ‖ Mandatory training missing ‖ Formations obligatoires manquantes ‖ Formazioni obbligatorie mancanti
+1225 ‖ Remove rule ‖ Retirer la règle ‖ Rimuovi regola
+1226 ‖ Regular availability times: {0} ‖ Horaires de disponibilité réguliers : {0} ‖ Orari di disponibilità regolari: {0}
+1227 ‖ Roles ‖ Rôles ‖ Ruoli
+1228 ‖ Call sign ‖ Indicatif ‖ Nominativo
+1229 ‖ Server error ‖ Erreur du serveur ‖ Errore del server
+1230 ‖ Search area from {0} PLS: {1} along the water ‖ Zone de recherche dès {0} PLS : {1} le long du cours d'eau ‖ Area di ricerca da {0} PLS: {1} lungo il corso d'acqua
+1231 ‖ Search area: no PLS for {0} ‖ Zone de recherche : pas de PLS pour {0} ‖ Area di ricerca: nessun PLS per {0}
+1232 ‖ =
+1233 ‖ =
+1234 ‖ Type ‖ Type ‖ Tipo
+1235 ‖ Unhandled: ‖ Non traité : ‖ Non gestito:
+1236 ‖ Vertical ‖ Vertical ‖ Verticale
+1237 ‖ Full screen ‖ Plein écran ‖ Schermo intero
+1238 ‖ Last {0} ‖ Dernière fois {0} ‖ Ultima volta {0}
+1239 ‖ to “{0}” ‖ à « {0} » ‖ a «{0}»
+1240 ‖ approx. {0} m a.s.l. ({1} ft, barometric) ‖ env. {0} m d'altitude ({1} ft, barométrique) ‖ ca. {0} m s.l.m. ({1} ft, barometrica)
+1241 ‖ =
+1242 ‖ recorded by {0} ‖ saisi par {0} ‖ registrato da {0}
+1243 ‖ separated at the same place ‖ séparés au même endroit ‖ separati nello stesso luogo
+1244 ‖ take it over ‖ le reprenez ‖ lo riprendi
+1245 ‖ use it ‖ l'utilisez ‖ lo usi
+1246 ‖ =
+1247 ‖ e.g. Where were there delays? ‖ p. ex. Où y a-t-il eu des retards ? ‖ p. es. Dove ci sono stati ritardi?
+1248 ‖ {0} ({1} s ago) ‖ {0} (il y a {1} s) ‖ {0} ({1} s fa)
+1249 ‖ =
+1250 ‖ {0} of the AI assistant: please check before you {1}. Only the data of this view go to the provider{2}. ‖ {0} de l'assistant IA : veuillez vérifier avant que vous {1}. Seules les données de cette vue sont transmises au fournisseur{2}. ‖ {0} dell'assistente IA: verifica prima che {1}. Al fornitore vanno solo i dati di questa vista{2}.
+1251 ‖ {0} km straight line ‖ {0} km à vol d'oiseau ‖ {0} km in linea d'aria
+1252 ‖ =
+1253 ‖ {0} · {1} of {2} entries{3} ‖ {0} · {1} sur {2} entrées{3} ‖ {0} · {1} di {2} voci{3}
+1254 ‖ {0}{1} km of river from PLS (drift distance {2} m), bank area {3} m each side ‖ {0}{1} km de cours d'eau dès le PLS (distance de dérive {2} m), zone riveraine {3} m de chaque côté ‖ {0}{1} km di corso d'acqua dal PLS (distanza di deriva {2} m), fascia di riva {3} m per lato
+1255 ‖ · operation ended ‖ · intervention terminée ‖ · intervento terminato
+1256 ‖ · recorded by {0} ‖ · saisi par {0} ‖ · registrato da {0}
+1257 ‖ Oldest first ‖ Plus anciens d'abord ‖ Più vecchi prima
+1258 ‖ 🎓 Try the demo (no login) ‖ 🎓 Essayer la démo (sans connexion) ‖ 🎓 Prova la demo (senza accesso)
+1259 ‖ 📖 User guide ‖ 📖 Mode d'emploi ‖ 📖 Istruzioni per l'uso
+1260 ‖ Recording discarded. ‖ Enregistrement abandonné. ‖ Registrazione scartata.
+1261 ‖ Announcement not sent later: {0} ‖ Annonce non envoyée ultérieurement : {0} ‖ Annuncio non inviato successivamente: {0}
+1262 ‖ Announcements ‖ Annonces ‖ Annunci
+1263 ‖ Announcements are switched off: join the conference to speak. ‖ Les annonces sont désactivées : rejoignez la conférence pour parler. ‖ Gli annunci sono disattivati: partecipa alla conferenza per parlare.
+1264 ‖ No channel chosen for speaking. ‖ Aucun canal choisi pour parler. ‖ Nessun canale scelto per parlare.
+1265 ‖ No connection: the announcement will be sent as soon as the connection is back. ‖ Pas de connexion : l'annonce sera envoyée dès le retour de la connexion. ‖ Nessuna connessione: l'annuncio verrà inviato non appena torna la connessione.
+1266 ‖ Too short: hold the push-to-talk button while you speak. ‖ Trop court : maintenez la touche de parole pendant que vous parlez. ‖ Troppo breve: tieni premuto il tasto di conversazione mentre parli.
+1267 ‖ listening ‖ écoute ‖ ascolta
+1268 ‖ The browser blocked playback: tap the page once and try again. ‖ Le navigateur a bloqué la lecture : touchez la page une fois et réessayez. ‖ Il browser ha bloccato la riproduzione: tocca una volta la pagina e riprova.
+1269 ‖ This browser cannot record audio. ‖ Ce navigateur ne peut pas enregistrer de son. ‖ Questo browser non può registrare audio.
+1270 ‖ Announcement could not be played ‖ L'annonce n'a pas pu être lue ‖ Non è stato possibile riprodurre l'annuncio
+1271 ‖ One announcement ‖ Une annonce ‖ Un annuncio
+1272 ‖ No access to the microphone: please allow it in the browser or app settings. ‖ Pas d'accès au micro : veuillez l'autoriser dans les paramètres du navigateur ou de l'app. ‖ Nessun accesso al microfono: consentilo nelle impostazioni del browser o dell'app.
+1273 ‖ Conference: ‖ Conférence : ‖ Conferenza:
+1274 ‖ LiveKit could not be loaded ‖ LiveKit n'a pas pu être chargé ‖ Non è stato possibile caricare LiveKit
+1275 ‖ Microphone not available: ‖ Micro indisponible : ‖ Microfono non disponibile:
+1276 ‖ Microphone: ‖ Micro : ‖ Microfono:
+1277 ‖ =
+1278 ‖ =
+1279 ‖ {0} sent later. ‖ {0} envoyée(s) ultérieurement. ‖ {0} inviato/i successivamente.
+1280 ‖ =
+1281 ‖ + Suggest an entry ‖ + Proposer une entrée ‖ + Proponi una voce
+1282 ‖ 1 document ‖ 1 document ‖ 1 documento
+1283 ‖ 1 subfolder ‖ 1 sous-dossier ‖ 1 sottocartella
+1284 ‖ Arrange sections ‖ Disposer les sections ‖ Disponi le sezioni
+1285 ‖ As favourite (saved offline if the editors allow it) ‖ Comme favori (enregistré hors ligne si la rédaction le permet) ‖ Come preferito (salvato offline se la redazione lo consente)
+1286 ‖ Remove from favourites ‖ Retirer des favoris ‖ Rimuovi dai preferiti
+1287 ‖ Description: ‖ Description : ‖ Descrizione:
+1288 ‖ Thank you, confirmed. ‖ Merci, confirmé. ‖ Grazie, confermato.
+1289 ‖ File ‖ Fichier ‖ File
+1290 ‖ File (still empty) ‖ Fichier (encore vide) ‖ File (ancora vuoto)
+1291 ‖ File not saved offline ‖ Fichier non enregistré hors ligne ‖ File non salvato offline
+1292 ‖ File not available ‖ Fichier indisponible ‖ File non disponibile
+1293 ‖ The confirmation applies to version {0}. ‖ La confirmation vaut pour la version {0}. ‖ La conferma vale per la versione {0}.
+1294 ‖ This page is still empty. ‖ Cette page est encore vide. ‖ Questa pagina è ancora vuota.
+1295 ‖ Search documents … ‖ Rechercher des documents … ‖ Cerca documenti …
+1296 ‖ External link ‖ Lien externe ‖ Link esterno
+1297 ‖ Remove favourite ‖ Retirer le favori ‖ Rimuovi preferito
+1298 ‖ For anyone who likes: read confirmation is voluntary. ‖ Pour qui le souhaite : confirmation de lecture facultative. ‖ Per chi vuole: conferma di lettura facoltativa.
+1299 ‖ Read and understood ‖ Lu et compris ‖ Letto e compreso
+1300 ‖ The search covers title, description, keywords, pages and the text of PDFs. Only documents you may see. ‖ La recherche porte sur le titre, la description, les mots-clés, les pages et le texte des PDF. Seulement les documents que vous pouvez voir. ‖ La ricerca riguarda titolo, descrizione, parole chiave, pagine e testo dei PDF. Solo documenti che puoi vedere.
+1301 ‖ No results. ‖ Aucun résultat. ‖ Nessun risultato.
+1302 ‖ Empty. ‖ Vide. ‖ Vuoto.
+1303 ‖ Message to the editors ‖ Message à la rédaction ‖ Messaggio alla redazione
+1304 ‖ Suggest a new entry ‖ Proposer une nouvelle entrée ‖ Proponi una nuova voce
+1305 ‖ No file uploaded yet. ‖ Aucun fichier téléversé pour l'instant. ‖ Ancora nessun file caricato.
+1306 ‖ No documents yet. ‖ Aucun document pour l'instant. ‖ Ancora nessun documento.
+1307 ‖ Not available without connection (not saved offline) ‖ Indisponible sans connexion (non enregistré hors ligne) ‖ Non disponibile senza connessione (non salvato offline)
+1308 ‖ Keyword: ‖ Mot-clé : ‖ Parola chiave:
+1309 ‖ Page ‖ Page ‖ Pagina
+1310 ‖ Title ‖ Titre ‖ Titolo
+1311 ‖ Results ({0}) ‖ Résultats ({0}) ‖ Risultati ({0})
+1312 ‖ Suggestion sent to the editors. ‖ Proposition envoyée à la rédaction. ‖ Proposta inviata alla redazione.
+1313 ‖ Suggestion on “{0}” ‖ Proposition sur « {0} » ‖ Proposta su «{0}»
+1314 ‖ Suggest ‖ Proposer ‖ Proponi
+1315 ‖ What is wrong or outdated? ‖ Qu'est-ce qui est faux ou obsolète ? ‖ Cosa è sbagliato o superato?
+1316 ‖ Searching … ‖ Recherche … ‖ Ricerca in corso …
+1317 ‖ What is it about? For a page: the text. ‖ De quoi s'agit-il ? Pour une page : le texte. ‖ Di cosa si tratta? Per una pagina: il testo.
+1318 ‖ Add to favourites ‖ Ajouter aux favoris ‖ Aggiungi ai preferiti
+1319 ‖ external page ‖ page externe ‖ pagina esterna
+1320 ‖ check ‖ vérifier ‖ verificare
+1321 ‖ e.g. Reuss Lucerne operation plan ‖ p. ex. plan d'intervention Reuss Lucerne ‖ p. es. piano d'intervento Reuss Lucerna
+1322 ‖ {0} documents ‖ {0} documents ‖ {0} documenti
+1323 ‖ {0} subfolders ‖ {0} sous-dossiers ‖ {0} sottocartelle
+1324 ‖ {0}Please read and confirm{1}. ‖ {0}Veuillez lire et confirmer{1}. ‖ {0}Leggi e conferma{1}.
+1325 ‖ “{0}” read and understood? ‖ « {0} » lu et compris ? ‖ «{0}» letto e compreso?
+1326 ‖ · version {0} ‖ · version {0} ‖ · versione {0}
+1327 ‖ · saved offline ‖ · enregistré hors ligne ‖ · salvato offline
+1328 ‖ Open: {0} ‖ Ouvrir : {0} ‖ Apri: {0}
+1329 ‖ ⚠ Overdue: ‖ ⚠ En retard : ‖ ⚠ Scaduto:
+1330 ‖ ✓ Confirmed on {0}{1} ‖ ✓ Confirmé le {0}{1} ‖ ✓ Confermato il {0}{1}
+1331 ‖ Edit ‖ Modifier ‖ Modifica
+1332 ‖ Download ‖ Télécharger ‖ Scarica
+1333 ‖ Pages ‖ Pages ‖ Pagine
+1334 ‖ Uploading … {0} % ‖ Téléversement … {0} % ‖ Caricamento … {0} %
+1335 ‖ Review due ‖ Révision due ‖ Revisione dovuta
+1336 ‖ =
+1337 ‖ As favourite ‖ Comme favori ‖ Come preferito
+1338 ‖ Fit to width ‖ Ajuster à la largeur ‖ Adatta alla larghezza
+1339 ‖ The PDF cannot be shown here ({0}). ‖ Le PDF ne peut pas être affiché ici ({0}). ‖ Il PDF non può essere mostrato qui ({0}).
+1340 ‖ File (optional) ‖ Fichier (facultatif) ‖ File (facoltativo)
+1341 ‖ .{0} files are not allowed. Allowed: {1} ‖ Les fichiers .{0} ne sont pas autorisés. Autorisés : {1} ‖ I file .{0} non sono ammessi. Ammessi: {1}
+1342 ‖ The file is larger than {0} MB ‖ Le fichier dépasse {0} Mo ‖ Il file supera {0} MB
+1343 ‖ The file could not be read completely ({0} of {1} bytes). Is it only in the cloud (OneDrive …)? Please save it locally first. ‖ Le fichier n'a pas pu être lu entièrement ({0} sur {1} octets). Se trouve-t-il seulement dans le cloud (OneDrive …) ? Veuillez d'abord l'enregistrer localement. ‖ Non è stato possibile leggere interamente il file ({0} di {1} byte). Si trova solo nel cloud (OneDrive …)? Salvalo prima in locale.
+1344 ‖ The file “{0}” is empty (0 bytes). Is it only in the cloud (OneDrive …)? Please save it locally first. ‖ Le fichier « {0} » est vide (0 octet). Se trouve-t-il seulement dans le cloud (OneDrive …) ? Veuillez d'abord l'enregistrer localement. ‖ Il file «{0}» è vuoto (0 byte). Si trova solo nel cloud (OneDrive …)? Salvalo prima in locale.
+1345 ‖ The PDF viewer could not be loaded (connection?) ‖ L'affichage PDF n'a pas pu être chargé (connexion ?) ‖ Non è stato possibile caricare il visualizzatore PDF (connessione?)
+1346 ‖ The folder's editors receive your suggestion in their inbox and decide whether to take it over. You will be notified. ‖ La rédaction du dossier reçoit votre proposition dans sa boîte de réception et décide de la reprendre ou non. Vous serez notifié. ‖ La redazione della cartella riceve la tua proposta in entrata e decide se riprenderla. Verrai avvisato.
+1347 ‖ Search documents (also in the text of PDFs) ‖ Rechercher des documents (aussi dans le texte des PDF) ‖ Cerca documenti (anche nel testo dei PDF)
+1348 ‖ Downloading is switched off for external parties. ‖ Le téléchargement est désactivé pour les externes. ‖ Il download è disattivato per gli esterni.
+1349 ‖ Note (error, outdated …) ‖ Remarque (erreur, obsolète …) ‖ Nota (errore, superato …)
+1350 ‖ Open in browser ‖ Ouvrir dans le navigateur ‖ Apri nel browser
+1351 ‖ New version (file) ‖ Nouvelle version (fichier) ‖ Nuova versione (file)
+1352 ‖ Only for certain people ‖ Seulement pour certaines personnes ‖ Solo per determinate persone
+1353 ‖ Order and selection apply only to you ‖ L'ordre et la sélection ne valent que pour vous ‖ Ordine e selezione valgono solo per te
+1354 ‖ Page {0} of {1} ‖ Page {0} sur {1} ‖ Pagina {0} di {1}
+1355 ‖ Zoom in ‖ Agrandir ‖ Ingrandisci
+1356 ‖ Zoom out ‖ Réduire ‖ Riduci
+1357 ‖ Administration default ‖ Valeur par défaut de l'administration ‖ Predefinito dell'amministrazione
+1358 ‖ =
+1359 ‖ up ‖ vers le haut ‖ su
+1360 ‖ down ‖ vers le bas ‖ giù
+1361 ‖ without operation ‖ sans intervention ‖ senza intervento
+1362 ‖ and this operation type ‖ et ce type d'intervention ‖ e questo tipo d'intervento
+1363 ‖ {0} ({1}) cannot be shown here. ‖ {0} ({1}) ne peut pas être affiché ici. ‖ {0} ({1}) non può essere mostrato qui.
+1364 ‖ {0} s ago ‖ il y a {0} s ‖ {0} s fa
+1365 ‖ Flow speed not set ‖ Vitesse du courant non définie ‖ Velocità della corrente non impostata
+1366 ‖ No entries yet ‖ Aucune entrée pour l'instant ‖ Ancora nessuna voce
+1367 ‖ Nobody in the operation yet ‖ Personne dans l'intervention pour l'instant ‖ Ancora nessuno nell'intervento
+1368 ‖ Casualties ({0}) ‖ Victimes ({0}) ‖ Vittime ({0})
+1369 ‖ Public view ‖ Vue publique ‖ Vista pubblica
+1370 ‖ Operation record ‖ Procès-verbal d'intervention ‖ Verbale dell'intervento
+1371 ‖ Alarm received {0} ‖ Réception de l'alarme {0} ‖ Ricezione dell'allarme {0}
+1372 ‖ The link is incomplete. ‖ Le lien est incomplet. ‖ Il link è incompleto.
+1373 ‖ The public view only shows running operations. ‖ La vue publique ne montre que les interventions en cours. ‖ La vista pubblica mostra solo interventi in corso.
+1374 ‖ This page updates automatically and shows the view as soon as it starts. ‖ Cette page s'actualise automatiquement et affiche la vue dès que cela commence. ‖ Questa pagina si aggiorna automaticamente e mostra la vista non appena inizia.
+1375 ‖ Flow speed {0} m/s ‖ Vitesse du courant {0} m/s ‖ Velocità della corrente {0} m/s
+1376 ‖ Following ✕ ‖ Suivi ✕ ‖ Seguito ✕
+1377 ‖ Following: ‖ Suivi : ‖ Segue:
+1378 ‖ None recorded ‖ Aucun saisi ‖ Nessuno registrato
+1379 ‖ Names are hidden. ‖ Les noms sont masqués. ‖ I nomi sono nascosti.
+1380 ‖ Not yet started ‖ Pas encore commencé ‖ Non ancora iniziato
+1381 ‖ Swiftwater Rescue – Public view ‖ Swiftwater Rescue – Vue publique ‖ Swiftwater Rescue – Vista pubblica
+1382 ‖ fixed location ‖ site fixe ‖ luogo fisso
+1383 ‖ for {0} min · public view, read only ‖ depuis {0} min · vue publique, lecture seule ‖ da {0} min · vista pubblica, sola lettura
+1384 ‖ {0} {1} · from {2} ‖ {0} {1} · dès {2} ‖ {0} {1} · da {2}
+1385 ‖ Public view not available ‖ Vue publique indisponible ‖ Vista pubblica non disponibile
+1386 ‖ public view, read only ‖ vue publique, lecture seule ‖ vista pubblica, sola lettura
+1387 ‖ This link is invalid. ‖ Ce lien n'est pas valable. ‖ Questo link non è valido.
+1388 ‖ Recording not available ‖ Enregistrement indisponible ‖ Registrazione non disponibile
+1389 ‖ The operation has ended. Thank you for your support, {0}. ‖ L'intervention est terminée. Merci pour votre soutien, {0}. ‖ L'intervento è terminato. Grazie per il sostegno, {0}.
+1390 ‖ Real time while this page is open. Otherwise you receive the announcements below. ‖ En temps réel tant que cette page est ouverte. Sinon, vous recevez les annonces ci-dessous. ‖ In tempo reale finché questa pagina è aperta. Altrimenti ricevi gli annunci qui sotto.
+1391 ‖ Radio “{0}” – {1} ‖ Radio « {0} » – {1} ‖ Radio «{0}» – {1}
+1392 ‖ Guest access ‖ Accès invité ‖ Accesso ospite
+1393 ‖ Guest access · {0} ‖ Accès invité · {0} ‖ Accesso ospite · {0}
+1394 ‖ Channel “{0}” · at most {1} s · you appear as “{2}” ‖ Canal « {0} » · au plus {1} s · vous apparaissez comme « {2} » ‖ Canale «{0}» · al massimo {1} s · appari come «{2}»
+1395 ‖ Channel “{0}” · {1} · valid until the end of the operation ‖ Canal « {0} » · {1} · valable jusqu'à la fin de l'intervention ‖ Canale «{0}» · {1} · valido fino alla fine dell'intervento
+1396 ‖ No connection – still trying … ‖ Pas de connexion – nouvel essai … ‖ Nessuna connessione – nuovo tentativo …
+1397 ‖ Join conference ‖ Rejoindre la conférence ‖ Partecipa alla conferenza
+1398 ‖ Listen in (play new announcements immediately) ‖ Écoute (lire immédiatement les nouvelles annonces) ‖ Ascolto (riproduci subito i nuovi annunci)
+1399 ‖ Names of responders are not shown to external parties (only special role or response option). No map, no locations. ‖ Les noms des intervenants ne sont pas montrés aux externes (seulement le rôle spécial ou l'option d'engagement). Pas de carte, pas de positions. ‖ I nomi dei soccorritori non vengono mostrati agli esterni (solo ruolo speciale o opzione d'intervento). Nessuna mappa, nessuna posizione.
+1400 ‖ No announcements yet. ‖ Aucune annonce pour l'instant. ‖ Ancora nessun annuncio.
+1401 ‖ Push-to-talk ‖ Touche de parole ‖ Tasto di conversazione
+1402 ‖ Swiftwater Rescue – Radio ‖ Swiftwater Rescue – Radio ‖ Swiftwater Rescue – Radio
+1403 ‖ Connected · send with the push-to-talk button or “Microphone open” ‖ Connecté · envoyer avec la touche de parole ou « Micro ouvert » ‖ Connesso · invia con il tasto di conversazione o «Microfono aperto»
+1404 ‖ Connected · listen only ‖ Connecté · écouter seulement ‖ Connesso · solo ascolto
+1405 ‖ Connected · muted by the operation lead ‖ Connecté · coupé par la direction d'intervention ‖ Connesso · silenziato dalla direzione dell'intervento
+1406 ‖ Sending … ‖ Envoi … ‖ Invio in corso …
+1407 ‖ shared by the operation lead ‖ partagé par la direction d'intervention ‖ condiviso dalla direzione dell'intervento
+1408 ‖ {0}Live conference “{1}” ‖ {0}Conférence en direct « {1} » ‖ {0}Conferenza in diretta «{1}»
+1409 ‖ · {0} connected ‖ · {0} connecté(s) ‖ · {0} connesso/i
+1410 ‖ since {0} ‖ depuis {0} ‖ da {0}
+1411 ‖ The operation has ended. The document is no longer shared. ‖ L'intervention est terminée. Le document n'est plus partagé. ‖ L'intervento è terminato. Il documento non è più condiviso.
+1412 ‖ Shared with external parties ‖ Partagé avec les externes ‖ Condiviso con esterni
+1413 ‖ Swiftwater Rescue – Document ‖ Swiftwater Rescue – Document ‖ Swiftwater Rescue – Documento
+1414 ‖ Shared with external parties by the operation lead, valid until the end of the operation. ‖ Partagé avec les externes par la direction d'intervention, valable jusqu'à la fin de l'intervention. ‖ Condiviso con esterni dalla direzione dell'intervento, valido fino alla fine dell'intervento.
+1415 ‖ =
+1416 ‖ Administration ‖ Administration ‖ Amministrazione
+1417 ‖ Evaluation ‖ Évaluation ‖ Valutazione
+1418 ‖ Contents ‖ Contenu ‖ Contenuto
+1419 ‖ To the operations app ‖ Vers l'app d'intervention ‖ All'app d'intervento
+1420 ‖ Alarm and participation ‖ Alarme et participation ‖ Allarme e partecipazione
+1421 ‖ Search the guide ‖ Rechercher dans le mode d'emploi ‖ Cerca nelle istruzioni
+1422 ‖ Search the guide … ‖ Rechercher dans le mode d'emploi … ‖ Cerca nelle istruzioni …
+1423 ‖ The map ‖ La carte ‖ La mappa
+1424 ‖ This chapter could not be loaded (no connection?). ‖ Ce chapitre n'a pas pu être chargé (pas de connexion ?). ‖ Non è stato possibile caricare questo capitolo (nessuna connessione?).
+1425 ‖ First steps ‖ Premiers pas ‖ Primi passi
+1426 ‖ Native app (Android and iOS) ‖ App native (Android et iOS) ‖ App nativa (Android e iOS)
+1427 ‖ Profile and settings ‖ Profil et paramètres ‖ Profilo e impostazioni
+1428 ‖ Search ‖ Recherche ‖ Ricerca
+1429 ‖ Swiftwater Rescue – User guide ‖ Swiftwater Rescue – Mode d'emploi ‖ Swiftwater Rescue – Istruzioni per l'uso
+1430 ‖ =
+1431 ‖ =
+1432 ‖ =
+1433 ‖ Exercises and plans ‖ Exercices et planifications ‖ Esercitazioni e pianificazioni
+1434 ‖ ☰ Contents ‖ ☰ Contenu ‖ ☰ Contenuto
+1435 ‖ Sections ‖ Sections ‖ Sezioni
+1436 ‖ Address ‖ Adresse ‖ Indirizzo
+1437 ‖ =
+1438 ‖ Database ‖ Base de données ‖ Banca dati
+1439 ‖ Service ‖ Service ‖ Servizio

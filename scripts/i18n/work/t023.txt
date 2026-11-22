@@ -1,0 +1,120 @@
+4920 ‖ Passwords and keys, value “(removed)” ‖ Mots de passe et clés, valeur « (retiré) » ‖ Password e chiavi, valore «(rimosso)»
+4921 ‖ Permanent locations ‖ Sites permanents ‖ Luoghi permanenti
+4922 ‖ Add person as exercise lead ‖ Ajouter une personne à la direction d'exercice ‖ Aggiungi persona alla direzione dell'esercitazione
+4923 ‖ Call out person ‖ Mobiliser une personne ‖ Convoca persona
+4924 ‖ Call out person: search name or username ‖ Mobiliser une personne : rechercher nom ou nom d'utilisateur ‖ Convoca persona: cerca nome o nome utente
+4925 ‖ Person may record their training themselves ‖ La personne peut saisir sa formation elle-même ‖ La persona può registrare da sé la propria formazione
+4926 ‖ Person records themselves ‖ La personne saisit elle-même ‖ La persona registra da sé
+4927 ‖ Search person ‖ Rechercher une personne ‖ Cerca persona
+4928 ‖ Search person … ‖ Rechercher une personne … ‖ Cerca persona …
+4929 ‖ person loses ‖ personne perd ‖ persona perde
+4930 ‖ Person {0} ‖ Personne {0} ‖ Persona {0}
+4931 ‖ Person: ‖ Personne : ‖ Persona:
+4932 ‖ Person: {0} ‖ Personne : {0} ‖ Persona: {0}
+4933 ‖ People ({0}) ‖ Personnes ({0}) ‖ Persone ({0})
+4934 ‖ Assign people to the vehicle (“in vehicle”, only types with people and not loaded themselves) ‖ Attribuer des personnes au véhicule (« dans le véhicule », seulement les types avec personnes et non chargés eux-mêmes) ‖ Assegna persone al veicolo («nel veicolo», solo tipi con persone e non caricati a loro volta)
+4935 ‖ Alert people with exercise mode switched on critically ‖ Alarmer de manière critique les personnes avec mode exercice activé ‖ Allarmare in modo critico le persone con modalità esercitazione attiva
+4936 ‖ People without a special role may send messages ‖ Les personnes sans rôle spécial peuvent envoyer des messages ‖ Le persone senza ruolo speciale possono inviare messaggi
+4937 ‖ People without a special role may speak ‖ Les personnes sans rôle spécial peuvent parler ‖ Le persone senza ruolo speciale possono parlare
+4938 ‖ people lose ‖ personnes perdent ‖ persone perdono
+4939 ‖ People who have not accepted the operation may read messages (without notification, without sending) ‖ Les personnes n'ayant pas accepté l'intervention peuvent lire les messages (sans notification, sans envoi) ‖ Le persone che non hanno accettato l'intervento possono leggere i messaggi (senza notifica, senza invio)
+4940 ‖ People: ‖ Personnes : ‖ Persone:
+4941 ‖ Personal data of finished operations can be anonymised in stages: by hand per operation (operation statistics → “Anonymise”), below for many operations at once, or automatically a certain time after the end of the operation. Only “Anonymise display” can be lifted; all other stages are final. From the first stage (except “Delete recording”) there is no After Action Review any more: a released one remains as a saved PDF, an unreleased one is no longer possible, also automatically. The statistics per person are kept, except after “Detach participations from the account”. The details recorded in the After Action Review remain unchanged. A released review is saved completely as a PDF before the first stage (except “Delete recording”) and is from then on only available as such: with the right “Retrieve saved After Action Reviews”, no longer in “My operations”. Without own settings the defaults apply. ‖ Les données personnelles des interventions terminées peuvent être anonymisées par étapes : manuellement par intervention (statistique → « Anonymiser »), ci-dessous pour de nombreuses interventions à la fois, ou automatiquement un certain temps après la fin de l'intervention. Seule « Anonymiser l'affichage » peut être levée, toutes les autres étapes sont définitives. Dès la première étape (sauf « Supprimer l'enregistrement »), il n'y a plus d'After Action Review : une review libérée reste sous forme de PDF sauvegardé, une non libérée n'est plus possible, aussi automatiquement. La statistique par personne est conservée, sauf après « Détacher les participations du compte ». Les informations saisies dans l'After Action Review restent inchangées. Une review libérée est sauvegardée intégralement en PDF avant la première étape (sauf « Supprimer l'enregistrement ») et n'est ensuite disponible que sous cette forme : avec le droit « Récupérer les After Action Reviews sauvegardées », plus dans « Mes interventions ». Sans paramètres propres, les valeurs par défaut s'appliquent. ‖ I dati personali degli interventi terminati si possono anonimizzare a tappe: a mano per intervento (statistica → «Anonimizza»), sotto per molti interventi insieme o automaticamente un certo tempo dopo la fine dell'intervento. Solo «Anonimizzare la visualizzazione» si può revocare, tutte le altre tappe sono definitive. Dalla prima tappa (tranne «Elimina registrazione») non c'è più After Action Review: uno rilasciato resta come PDF salvato, uno non rilasciato non è più possibile, anche automaticamente. La statistica per persona resta, salvo dopo «Scollega partecipazioni dall'account». I dati registrati nell'After Action Review restano invariati. Un review rilasciato viene salvato interamente come PDF prima della prima tappa (tranne «Elimina registrazione») ed è poi disponibile solo così: con il diritto «Recuperare gli After Action Review salvati», non più in «I miei interventi». Senza impostazioni proprie valgono i predefiniti.
+4942 ‖ Anonymise personal data in stages (Administration → Anonymisation) ‖ Anonymiser les données personnelles par étapes (Administration → Anonymisation) ‖ Anonimizzare i dati personali a tappe (Amministrazione → Anonimizzazione)
+4943 ‖ Mandatory: if missing, the person is warned ‖ Obligatoire : si elle manque, la personne est avertie ‖ Obbligatoria: se manca, la persona viene avvisata
+4944 ‖ Mandatory: who has the skill as mandatory. The confirmation is recorded as an entry of this skill. ‖ Obligatoire : qui a la compétence comme obligation. La confirmation est saisie comme entrée de cette compétence. ‖ Obbligatoria: chi ha la competenza come obbligo. La conferma viene registrata come voce di questa competenza.
+4945 ‖ Mandatory{0} ‖ Obligatoire{0} ‖ Obbligatoria{0}
+4946 ‖ Edit plan ‖ Modifier la planification ‖ Modifica pianificazione
+4947 ‖ Planning allowed (Administration → Plans: prepared exercises or planned operations with operation plan) ‖ Planification permise (Administration → Planifications : exercices préparés ou interventions planifiées avec plan d'intervention) ‖ Pianificazione consentita (Amministrazione → Pianificazioni: esercitazioni preparate o interventi pianificati con piano d'intervento)
+4948 ‖ Plan with operation plan ‖ Planification avec plan d'intervention ‖ Pianificazione con piano d'intervento
+4949 ‖ Search plan ‖ Rechercher une planification ‖ Cerca pianificazione
+4950 ‖ Plans ‖ Planifications ‖ Pianificazioni
+4951 ‖ Platform ‖ Plateforme ‖ Piattaforma
+4952 ‖ =
+4953 ‖ Use PostGIS API{0} ‖ Utiliser l'API PostGIS{0} ‖ Usa l'API PostGIS{0}
+4954 ‖ Use PostGIS database{0} ‖ Utiliser la base de données PostGIS{0} ‖ Usa la banca dati PostGIS{0}
+4955 ‖ Mailbox ‖ Boîte aux lettres ‖ Casella di posta
+4956 ‖ Mailbox (IMAP) ‖ Boîte aux lettres (IMAP) ‖ Casella di posta (IMAP)
+4957 ‖ Retrieve mailbox{0} ‖ Récupérer la boîte aux lettres{0} ‖ Recupera la casella di posta{0}
+4958 ‖ Primary operation (with alerting) ‖ Intervention primaire (avec alarme) ‖ Intervento primario (con allarme)
+4959 ‖ Primary operations alert according to the alarm level, e.g. operation, exercise, standby test. ‖ Les interventions primaires alarment selon le niveau d'alarme, p. ex. intervention, exercice, test de piquet. ‖ Gli interventi primari allarmano secondo il livello d'allarme, p. es. intervento, esercitazione, prova di picchetto.
+4960 ‖ Prioritised (always at the top in the “Markers” window, also outside the operation area) ‖ Prioritaire (toujours en haut dans la fenêtre « Marqueurs », aussi hors de la zone d'intervention) ‖ Prioritario (sempre in cima nella finestra «Marcatori», anche fuori dall'area d'intervento)
+4961 ‖ Per person ‖ Par personne ‖ Per persona
+4962 ‖ Configurable per special role under “Edit”. The operation lead, people with the right “Lead any operation” and whoever started the operation may always send. Everyone who has accepted the operation may read, with the setting above also everyone else. ‖ Réglable par rôle spécial sous « Modifier ». La direction d'intervention, les personnes ayant le droit « Diriger toute intervention » et qui a démarré l'intervention peuvent toujours envoyer. Peuvent lire tous ceux qui ont accepté l'intervention, avec le paramètre ci-dessus aussi tous les autres. ‖ Impostabile per ruolo speciale in «Modifica». La direzione dell'intervento, le persone con il diritto «Dirigere qualsiasi intervento» e chi ha avviato l'intervento possono sempre inviare. Possono leggere tutti coloro che hanno accettato l'intervento, con l'impostazione sopra anche tutti gli altri.
+4963 ‖ Record anonymised ‖ Procès-verbal anonymisé ‖ Verbale anonimizzato
+4964 ‖ Check ‖ Vérifier ‖ Verifica
+4965 ‖ Checks a sample e-mail with the details above (also unsaved) without starting an operation. ‖ Vérifie un e-mail d'exemple avec les informations ci-dessus (aussi non enregistrées), sans démarrer d'intervention. ‖ Verifica un'e-mail di esempio con i dati sopra (anche non salvati), senza avviare un intervento.
+4966 ‖ Point (centre of the object) ‖ Point (centre de l'objet) ‖ Punto (centro dell'oggetto)
+4967 ‖ Tap a point on the map … (cancel) ‖ Touchez un point sur la carte … (annuler) ‖ Tocca un punto sulla mappa … (annulla)
+4968 ‖ Source of the tactical symbols: “Behelf Einsatzführung Feuerwehr, Sanität und Polizei”, Canton of Schwyz (pp. 6–7). Lines (rescue axis, zones) are not markers and are missing here. ‖ Source des symboles tactiques : « Behelf Einsatzführung Feuerwehr, Sanität und Polizei », canton de Schwyz (p. 6–7). Les lignes (axe de sauvetage, zones) ne sont pas des marqueurs et manquent ici. ‖ Fonte dei simboli tattici: «Behelf Einsatzführung Feuerwehr, Sanität und Polizei», Cantone di Svitto (pp. 6–7). Le linee (asse di soccorso, zone) non sono marcatori e qui mancano.
+4969 ‖ Source: OpenStreetMap, {0}{1}. Data © OpenStreetMap contributors (ODbL). ‖ Source : OpenStreetMap, {0}{1}. Données © contributeurs d'OpenStreetMap (ODbL). ‖ Fonte: OpenStreetMap, {0}{1}. Dati © contributori di OpenStreetMap (ODbL).
+4970 ‖ Quota ‖ Quota ‖ Quota
+4971 ‖ Reactivate ‖ Réactiver ‖ Riattiva
+4972 ‖ Right “Take over geodata” required ‖ Droit « Reprendre des géodonnées » nécessaire ‖ Necessario il diritto «Riprendi geodati»
+4973 ‖ Rights ‖ Droits ‖ Diritti
+4974 ‖ Operation lead rights (without special role) ‖ Droits de la direction d'intervention (sans rôle spécial) ‖ Diritti della direzione dell'intervento (senza ruolo speciale)
+4975 ‖ Editors ‖ Rédaction ‖ Redazione
+4976 ‖ Regular availability times ({0}) ‖ Horaires de disponibilité réguliers ({0}) ‖ Orari di disponibilità regolari ({0})
+4977 ‖ Rules ‖ Règles ‖ Regole
+4978 ‖ Rules per operation type ‖ Règles par type d'intervention ‖ Regole per tipo d'intervento
+4979 ‖ Check rules ‖ Vérifier les règles ‖ Verifica le regole
+4980 ‖ Order of the sources {0} ‖ Ordre des sources {0} ‖ Ordine delle fonti {0}
+4981 ‖ Order saved. Applies from the next query. ‖ Ordre enregistré. S'applique dès la prochaine requête. ‖ Ordine salvato. Vale dalla prossima richiesta.
+4982 ‖ =
+4983 ‖ An aircraft is relevant if it is within the radius around an active position of the operation. Around the PLS the drift distance also counts (flow speed × time since the PLS, at most 30 km) so that the whole search area is covered. 15 km correspond to about 4 minutes' flight for a rescue helicopter. ‖ Un aéronef est pertinent s'il se trouve dans le rayon autour d'une position active de l'intervention. Autour du PLS compte en plus la distance de dérive (vitesse du courant × temps depuis le PLS, au plus 30 km), afin de couvrir toute la zone de recherche. 15 km correspondent à environ 4 minutes de vol pour un hélicoptère de sauvetage. ‖ Un aeromobile è rilevante se si trova nel raggio attorno a una posizione attiva dell'intervento. Attorno al PLS conta in più la distanza di deriva (velocità della corrente × tempo dal PLS, al massimo 30 km), affinché sia coperta tutta l'area di ricerca. 15 km corrispondono a circa 4 minuti di volo per un elicottero di soccorso.
+4984 ‖ Relevance zone ‖ Zone de pertinence ‖ Zona di rilevanza
+4985 ‖ Relevance zone and query ‖ Zone de pertinence et requête ‖ Zona di rilevanza e richiesta
+4986 ‖ Replay anonymised ‖ Replay anonymisé ‖ Replay anonimizzato
+4987 ‖ Replay and operation log of past operations continue to show it. ‖ Le replay et le journal des interventions passées l'affichent toujours. ‖ Replay e registro degli interventi passati continuano a mostrarlo.
+4988 ‖ Casualty of this exercise ‖ Victime de cet exercice ‖ Vittima di questa esercitazione
+4989 ‖ Casualty “{0}” ‖ Victime « {0} » ‖ Vittima «{0}»
+4990 ‖ Casualties: {0} ‖ Victimes : {0} ‖ Vittime: {0}
+4991 ‖ =
+4992 ‖ Role ‖ Rôle ‖ Ruolo
+4993 ‖ Deactivate role ‖ Désactiver le rôle ‖ Disattiva ruolo
+4994 ‖ Search role or right ‖ Rechercher un rôle ou un droit ‖ Cerca ruolo o diritto
+4995 ‖ Filter roles ‖ Filtrer les rôles ‖ Filtra i ruoli
+4996 ‖ Roles that responders take on during the operation (e.g. operation lead, post). The colour appears on the map and in the lists. ‖ Rôles que les intervenants assument en intervention (p. ex. direction d'intervention, poste). La couleur apparaît sur la carte et dans les listes. ‖ Ruoli che i soccorritori assumono durante l'intervento (p. es. direzione dell'intervento, posto). Il colore compare sulla mappa e negli elenchi.
+4997 ‖ =
+4998 ‖ Keywords ‖ Mots-clés ‖ Parole chiave
+4999 ‖ Key ‖ Clé ‖ Chiave
+5000 ‖ Key (applies in both directions, both sides enter the same one) ‖ Clé (vaut dans les deux sens, les deux côtés saisissent la même) ‖ Chiave (vale in entrambe le direzioni, entrambe le parti inseriscono la stessa)
+5001 ‖ Remove the key of the transcription service? ‖ Retirer la clé du service de transcription ? ‖ Rimuovere la chiave del servizio di trascrizione?
+5002 ‖ Remove key ‖ Retirer la clé ‖ Rimuovi chiave
+5003 ‖ Key for “{0}” (shown only now) ‖ Clé pour « {0} » (affichée seulement maintenant) ‖ Chiave per «{0}» (mostrata solo ora)
+5004 ‖ Keyword “{0}” ‖ Mot-clé « {0} » ‖ Parola chiave «{0}»
+5005 ‖ Keywords (one per line, empty = every e-mail from these senders) ‖ Mots-clés (un par ligne, vide = tout e-mail de ces expéditeurs) ‖ Parole chiave (una per riga, vuoto = ogni e-mail di questi mittenti)
+5006 ‖ Search keywords ‖ Rechercher des mots-clés ‖ Cerca parole chiave
+5007 ‖ Interface ‖ Interface ‖ Interfaccia
+5008 ‖ Already taken over as “{0}” ‖ Déjà repris comme « {0} » ‖ Già ripreso come «{0}»
+5009 ‖ Protection against misuse ‖ Protection contre les abus ‖ Protezione contro gli abusi
+5010 ‖ Remove the media server's secret? The live conference will then no longer work. ‖ Retirer le secret du serveur média ? La conférence en direct ne fonctionnera plus. ‖ Rimuovere il secret del server multimediale? La conferenza in diretta non funzionerà più.
+5011 ‖ Remove secret ‖ Retirer le secret ‖ Rimuovi secret
+5012 ‖ See: {0} · Editors: {1} · Suggestions: {2}{3} · visible to {4} of {5} people ‖ Voir : {0} · Rédaction : {1} · Propositions : {2}{3} · visible pour {4} sur {5} personnes ‖ Vedere: {0} · Redazione: {1} · Proposte: {2}{3} · visibile a {4} di {5} persone
+5013 ‖ View page ‖ Voir la page ‖ Visualizza pagina
+5014 ‖ Secondary operations start without alarm (no push, no alarm in the app); those called out see it and join themselves. Own response options and special roles. ‖ Les interventions secondaires démarrent sans alarme (pas de push, pas d'alarme dans l'app) ; les mobilisés la voient et la rejoignent eux-mêmes. Options d'engagement et rôles spéciaux propres. ‖ Gli interventi secondari si avviano senza allarme (nessun push, nessun allarme nell'app); i convocati lo vedono e vi partecipano da sé. Opzioni d'intervento e ruoli speciali propri.
+5015 ‖ Self-hosted with ‖ Auto-hébergé avec ‖ Ospitato in proprio con
+5016 ‖ Query server ‖ Interroger le serveur ‖ Interroga il server
+5017 ‖ Sets or moves the operation PLS. ‖ Définit ou déplace le PLS de l'intervention. ‖ Imposta o sposta il PLS dell'intervento.
+5018 ‖ Safety/observation post (search area ends here) ‖ Poste de sécurité/d'observation (la zone de recherche s'arrête ici) ‖ Posto di sicurezza/osservazione (l'area di ricerca termina qui)
+5019 ‖ Visible to ‖ Visible pour ‖ Visibile a
+5020 ‖ Visible to {0} of {1} active people.{2} ‖ Visible pour {0} sur {1} personnes actives.{2} ‖ Visibile a {0} di {1} persone attive.{2}
+5021 ‖ It is saved as a new version. ‖ Elle est enregistrée comme nouvelle version. ‖ Viene salvata come nuova versione.
+5022 ‖ It is also removed from {0} location{1}. Deactivating keeps the assignment. ‖ Elle est aussi retirée de {0} site{1}. Désactiver conserve l'attribution. ‖ Viene rimossa anche da {0} luogo{1}. Disattivare mantiene l'assegnazione.
+5023 ‖ This is how long the server waits for the provider. Own servers without a graphics card often need longer. ‖ Durée pendant laquelle le serveur attend le fournisseur. Les serveurs propres sans carte graphique ont souvent besoin de plus de temps. ‖ Tanto attende il server il fornitore. I server propri senza scheda grafica spesso necessitano di più tempo.
+5024 ‖ Sort by ‖ Trier par ‖ Ordina per
+5025 ‖ Total storage ‖ Stockage total ‖ Archiviazione totale
+5026 ‖ Saving and testing … ‖ Enregistrement et test … ‖ Salvataggio e test …
+5027 ‖ Saving makes it a review in progress again. ‖ L'enregistrement en refait une review en cours. ‖ Il salvataggio lo rende di nuovo un review in lavorazione.
+5028 ‖ Save and release ‖ Enregistrer et libérer ‖ Salva e rilascia
+5029 ‖ Save and release? ‖ Enregistrer et libérer ? ‖ Salvare e rilasciare?
+5030 ‖ Save? ‖ Enregistrer ? ‖ Salvare?
+5031 ‖ Barrier ‖ Barrière ‖ Sbarramento
+5032 ‖ Edit special role ‖ Modifier le rôle spécial ‖ Modifica ruolo speciale
+5033 ‖ Special role “{0}” ‖ Rôle spécial « {0} » ‖ Ruolo speciale «{0}»
+5034 ‖ Special roles in the operation ‖ Rôles spéciaux dans l'intervention ‖ Ruoli speciali nell'intervento
+5035 ‖ Special roles in the operation (only with participation) ‖ Rôles spéciaux dans l'intervention (seulement avec participation) ‖ Ruoli speciali nell'intervento (solo con partecipazione)
+5036 ‖ Include voice recordings ‖ Inclure les enregistrements vocaux ‖ Includi le registrazioni vocali
+5037 ‖ Voice recordings deleted ‖ Enregistrements vocaux supprimés ‖ Registrazioni vocali eliminate
+5038 ‖ Voice recordings: {0} saved{1}. Saved After Action Reviews: {2}{3}. Created on {4} by {5}. ‖ Enregistrements vocaux : {0} enregistrés{1}. After Action Reviews sauvegardées : {2}{3}. Créé le {4} par {5}. ‖ Registrazioni vocali: {0} salvate{1}. After Action Review salvati: {2}{3}. Creato il {4} da {5}.
+5039 ‖ Speak ‖ Parler ‖ Parlare

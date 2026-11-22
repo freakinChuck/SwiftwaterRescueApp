@@ -1,0 +1,120 @@
+4440 ‖ Feedback on your operations ‖ Retour sur vos interventions ‖ Feedback sui tuoi interventi
+4441 ‖ Errors 30 days ‖ Erreurs 30 jours ‖ Errori 30 giorni
+4442 ‖ Failed ‖ Échoué ‖ Non riuscito
+4443 ‖ Field ‖ Champ ‖ Campo
+4444 ‖ Edit field ‖ Modifier le champ ‖ Modifica campo
+4445 ‖ Remove field “{0}”? ‖ Retirer le champ « {0} » ? ‖ Rimuovere il campo «{0}»?
+4446 ‖ Fields ‖ Champs ‖ Campi
+4447 ‖ Fields ({0}) ‖ Champs ({0}) ‖ Campi ({0})
+4448 ‖ Fields, title and logo: ‖ Champs, titre et logo : ‖ Campi, titolo e logo:
+4449 ‖ Fixed locations in this exercise ‖ Sites fixes dans cet exercice ‖ Luoghi fissi in questa esercitazione
+4450 ‖ Fixed locations: {0} ‖ Sites fixes : {0} ‖ Luoghi fissi: {0}
+4451 ‖ Following years (0 = end of current year, 1 = end of next year) ‖ Années suivantes (0 = fin de l'année en cours, 1 = fin de l'année suivante) ‖ Anni successivi (0 = fine dell'anno in corso, 1 = fine dell'anno successivo)
+4452 ‖ Shape changed ‖ Forme modifiée ‖ Forma modificata
+4453 ‖ Format ‖ Format ‖ Formato
+4454 ‖ Question to the AI assistant ‖ Question à l'assistant IA ‖ Domanda all'assistente IA
+4455 ‖ Remove question “{0}”? ‖ Retirer la question « {0} » ? ‖ Rimuovere la domanda «{0}»?
+4456 ‖ Questions ({0}) ‖ Questions ({0}) ‖ Domande ({0})
+4457 ‖ Questions to the responders after the operation (Issue #103). Whoever creates reviews requests the feedback in the AAR workspace (button “Record”/“Edit” in the operation statistics). Everyone who took part is asked; they receive a notification and answer under “My operations” or via the notice in the operations app. The answers appear in the workspace and, if “Responders' feedback” is ticked above, in the document. After the review is released no more answers are possible. ‖ Questions aux intervenants après l'intervention (Issue #103). Qui crée des reviews demande le retour dans l'espace de travail AAR (bouton « Saisir »/« Modifier » dans la statistique d'intervention). Sont interrogés tous ceux qui ont participé ; ils reçoivent une notification et répondent sous « Mes interventions » ou via l'avis dans l'app d'intervention. Les réponses figurent dans l'espace de travail et, si « Retours des intervenants » est coché ci-dessus, dans le document. Après la libération de la review, plus aucune réponse n'est possible. ‖ Domande ai soccorritori dopo l'intervento (Issue #103). Chi crea i review richiede il feedback nell'area di lavoro AAR (pulsante «Registra»/«Modifica» nella statistica degli interventi). Vengono interpellati tutti coloro che hanno partecipato; ricevono una notifica e rispondono sotto «I miei interventi» o tramite l'avviso nell'app d'intervento. Le risposte compaiono nell'area di lavoro e, se sopra è spuntato «Feedback dei soccorritori», nel documento. Dopo il rilascio del review non sono più possibili risposte.
+4458 ‖ Asks {0} {1} with an account (everyone who took part). ‖ Interroge {0} {1} avec compte (tous ceux qui ont participé). ‖ Interpella {0} {1} con account (tutti coloro che hanno partecipato).
+4459 ‖ Free events, e.g. event or standby: alarm level freely selectable (“None” = without alarm), reference to an earlier operation possible. Own response options and special roles. ‖ Événements libres, p. ex. manifestation ou piquet : niveau d'alarme librement choisi (« Aucun » = sans alarme), référence à une intervention antérieure possible. Options d'engagement et rôles spéciaux propres. ‖ Eventi liberi, p. es. manifestazione o picchetto: livello d'allarme liberamente selezionabile («Nessuno» = senza allarme), riferimento a un intervento precedente possibile. Opzioni d'intervento e ruoli speciali propri.
+4460 ‖ Allow sharing with external parties ‖ Permettre le partage avec les externes ‖ Consenti la condivisione con esterni
+4461 ‖ Release after start (min) ‖ Libération après le début (min) ‖ Rilascio dopo l'avvio (min)
+4462 ‖ Enabling and privacy per operation type ‖ Ouverture et protection des données par type d'intervention ‖ Abilitazione e protezione dei dati per tipo d'intervento
+4463 ‖ Enabling and privacy of “ ‖ Ouverture et protection des données de « ‖ Abilitazione e protezione dei dati di «
+4464 ‖ Release by hand ‖ Libération manuelle ‖ Rilascio manuale
+4465 ‖ Released by hand by the exercise lead. ‖ Libération manuelle par la direction d'exercice. ‖ Rilascio manuale da parte della direzione dell'esercitazione.
+4466 ‖ Release withdrawn. ‖ Libération retirée. ‖ Rilascio ritirato.
+4467 ‖ Withdraw release? ‖ Retirer la libération ? ‖ Ritirare il rilascio?
+4468 ‖ Release? ‖ Libérer ? ‖ Rilasciare?
+4469 ‖ Released on {0} ‖ Libéré le {0} ‖ Rilasciato il {0}
+4470 ‖ Released{0}{1} ‖ Libéré{0}{1} ‖ Rilasciato{0}{1}
+4471 ‖ Free texts removed ‖ Textes libres supprimés ‖ Testi liberi rimossi
+4472 ‖ Voluntarily confirmed ({0}) ‖ Confirmé volontairement ({0}) ‖ Confermato volontariamente ({0})
+4473 ‖ Deadline ‖ Délai ‖ Termine
+4474 ‖ Deadline (days after release or after joining, empty = none) ‖ Délai (jours après la libération ou l'arrivée, vide = aucun) ‖ Termine (giorni dopo il rilascio o l'aggiunta, vuoto = nessuno)
+4475 ‖ Deadline (days) ‖ Délai (jours) ‖ Termine (giorni)
+4476 ‖ Deadline expired on {0} ‖ Délai échu le {0} ‖ Termine scaduto il {0}
+4477 ‖ Deadline for answering (days, 1–90) ‖ Délai de réponse (jours, 1–90) ‖ Termine per rispondere (giorni, 1–90)
+4478 ‖ Deadline {0} days ‖ Délai {0} jours ‖ Termine {0} giorni
+4479 ‖ Query earlier ‖ Interroger plus tôt ‖ Interroga prima
+4480 ‖ Keep earlier versions ‖ Conserver les versions antérieures ‖ Mantieni le versioni precedenti
+4481 ‖ Earlier versions are kept according to the setting; older ones are removed when uploading. ‖ Les versions antérieures sont conservées selon le paramètre, les plus anciennes sont retirées lors du téléversement. ‖ Le versioni precedenti restano secondo l'impostazione, quelle più vecchie vengono rimosse al caricamento.
+4482 ‖ Place found known {0} ‖ Lieu de découverte connu {0} ‖ Luogo di ritrovamento noto {0}
+4483 ‖ Match ‖ Occurrence ‖ Occorrenza
+4484 ‖ Function ‖ Fonction ‖ Funzione
+4485 ‖ Functions ‖ Fonctions ‖ Funzioni
+4486 ‖ Skill (training) ‖ Compétence (formation) ‖ Competenza (formazione)
+4487 ‖ Edit skill ‖ Modifier la compétence ‖ Modifica competenza
+4488 ‖ Remove skill “{0}”? ‖ Retirer la compétence « {0} » ? ‖ Rimuovere la competenza «{0}»?
+4489 ‖ Skills ‖ Compétences ‖ Competenze
+4490 ‖ Fills in interface, base URL and a sample model. Please check the model against the provider's offer or your own server. ‖ Remplit l'interface, l'URL de base et un modèle d'exemple. Veuillez vérifier le modèle selon l'offre du fournisseur ou votre serveur. ‖ Compila interfaccia, URL di base e un modello di esempio. Verifica il modello secondo l'offerta del fornitore o il proprio server.
+4491 ‖ Required for Anthropic. ‖ Nécessaire pour Anthropic. ‖ Necessaria per Anthropic.
+4492 ‖ For data subject access requests under the data protection act: all stored data of a person or of the whole organisation, readable as PDF and digitally as ZIP. The extract contains names, locations and contents; it is created in the browser and stored nowhere. Each extract appears in the history below. ‖ Pour les demandes d'accès selon la loi sur la protection des données : toutes les données enregistrées d'une personne ou de toute l'organisation, lisibles en PDF et numériquement en ZIP. L'extrait contient noms, positions et contenus ; il est créé dans le navigateur et enregistré nulle part. Chaque extrait figure dans l'historique ci-dessous. ‖ Per richieste d'accesso secondo la legge sulla protezione dei dati: tutti i dati salvati di una persona o dell'intera organizzazione, leggibili come PDF e digitali come ZIP. L'estratto contiene nomi, posizioni e contenuti; viene creato nel browser e non salvato da nessuna parte. Ogni estratto compare nella cronologia sotto.
+4493 ‖ For vehicles that no phone currently sees (e.g. in the depot), or for testing without a beacon. Loaded vehicles move along. A click on a fixed location takes over its position. ‖ Pour les véhicules qu'aucun téléphone ne voit actuellement (p. ex. au dépôt), ou pour tester sans balise. Les véhicules chargés suivent. Un clic sur un site fixe reprend sa position. ‖ Per veicoli che al momento nessun telefono vede (p. es. nel magazzino), o per test senza beacon. I veicoli caricati seguono. Un clic su un luogo fisso ne riprende la posizione.
+4494 ‖ Visible to all logged-in users ‖ Visible pour tous les connectés ‖ Visibile a tutti gli utenti connessi
+4495 ‖ Apply to all operation types ‖ Appliquer à tous les types d'intervention ‖ Applica a tutti i tipi d'intervento
+4496 ‖ Visible to all participants in the menu of the operations app (“Operation” tab). ‖ Visible pour tous les participants dans le menu de l'app d'intervention (onglet « Intervention »). ‖ Visibile a tutti i partecipanti nel menu dell'app d'intervento (scheda «Intervento»).
+4497 ‖ No skill applies to this response group. ‖ Aucune compétence ne vaut pour ce groupe d'intervention. ‖ Per questo gruppo d'intervento non vale alcuna competenza.
+4498 ‖ There are no functions for this area. ‖ Il n'y a pas de fonctions pour ce domaine. ‖ Per quest'area non ci sono funzioni.
+4499 ‖ For “Take over geodata” and the geodata layer (Issue #182) ‖ Pour « Reprendre des géodonnées » et la couche de géodonnées (Issue #182) ‖ Per «Riprendi geodati» e il livello di geodati (Issue #182)
+4500 ‖ For “{0}” at least one map provider must remain switched on. ‖ Pour « {0} », au moins un fournisseur de cartes doit rester activé. ‖ Per «{0}» almeno un fornitore di mappe deve restare attivo.
+4501 ‖ Other side ‖ Partie adverse ‖ Controparte
+4502 ‖ Go to the editors' “Inbox”. ‖ Vont dans la « Boîte de réception » de la rédaction. ‖ Vanno in «In entrata» della redazione.
+4503 ‖ Deleted. ‖ Supprimé. ‖ Eliminato.
+4504 ‖ Joint exercises of partner organisations ‖ Exercices communs d'organisations partenaires ‖ Esercitazioni comuni di organizzazioni partner
+4505 ‖ Joint channel with partner organisations (sent) ‖ Canal commun avec les organisations partenaires (envoyés) ‖ Canale comune con organizzazioni partner (inviati)
+4506 ‖ Planned ({0}) ‖ Prévus ({0}) ‖ Pianificati ({0})
+4507 ‖ Planned secondary operation ‖ Intervention secondaire planifiée ‖ Intervento secondario pianificato
+4508 ‖ Planned free event ‖ Événement libre planifié ‖ Evento libero pianificato
+4509 ‖ Device ‖ Appareil ‖ Dispositivo
+4510 ‖ Devices ‖ Appareils ‖ Dispositivi
+4511 ‖ Total time ‖ Temps total ‖ Tempo totale
+4512 ‖ Speeds in km/h, separated by commas (1 to 6 values, each 1–200, default 10, 20, 30) ‖ Vitesses en km/h, séparées par des virgules (1 à 6 valeurs, chacune 1–200, par défaut 10, 20, 30) ‖ Velocità in km/h, separate da virgole (da 1 a 6 valori, ciascuno 1–200, predefinito 10, 20, 30)
+4513 ‖ Sent messages ‖ Messages envoyés ‖ Messaggi inviati
+4514 ‖ Include saved After Action Reviews (PDF, with all names) ‖ Inclure les After Action Reviews sauvegardées (PDF, avec tous les noms) ‖ Includi gli After Action Review salvati (PDF, con tutti i nomi)
+4515 ‖ Saved reviews {0} of {1} … ‖ Reviews sauvegardées {0} sur {1} … ‖ Review salvati {0} di {1} …
+4516 ‖ Saved ‖ Enregistré ‖ Salvato
+4517 ‖ Saved. The AI assistant is set up. ‖ Enregistré. L'assistant IA est configuré. ‖ Salvato. L'assistente IA è configurato.
+4518 ‖ Saved. The apps take it over on the next retrieval. ‖ Enregistré. Les apps le reprennent à la prochaine récupération. ‖ Salvato. Le app lo riprendono al prossimo recupero.
+4519 ‖ Saved. The operations app takes over the values on the next load. ‖ Enregistré. L'app d'intervention reprend les valeurs au prochain chargement. ‖ Salvato. L'app d'intervento riprende i valori al prossimo caricamento.
+4520 ‖ Saved. The operations app takes it over on the next load. ‖ Enregistré. L'app d'intervention le reprend au prochain chargement. ‖ Salvato. L'app d'intervento lo riprende al prossimo caricamento.
+4521 ‖ Saved. Applies from the next query. ‖ Enregistré. S'applique dès la prochaine requête. ‖ Salvato. Vale dalla prossima richiesta.
+4522 ‖ Saved. Applies to the next recordings. ‖ Enregistré. S'applique aux prochaines saisies. ‖ Salvato. Vale per le prossime registrazioni.
+4523 ‖ Saved. Applies in the operations app from the next update. ‖ Enregistré. S'applique dans l'app d'intervention dès la prochaine actualisation. ‖ Salvato. Vale nell'app d'intervento dal prossimo aggiornamento.
+4524 ‖ Saved. Applies immediately; the devices take it over with the next update. ‖ Enregistré. S'applique immédiatement, les appareils le reprennent à la prochaine actualisation. ‖ Salvato. Vale subito, i dispositivi lo riprendono al prossimo aggiornamento.
+4525 ‖ Saved. Without a data source there are no measurements. ‖ Enregistré. Sans source de données, il n'y a pas de mesures. ‖ Salvato. Senza fonte di dati non ci sono valori misurati.
+4526 ‖ Saved: {0} {1} ({2}). They are deleted after the retention of the operation type or under “Anonymisation” (stage “Delete voice recordings”). ‖ Enregistrés : {0} {1} ({2}). Ils sont supprimés après la durée de conservation du type d'intervention ou sous « Anonymisation » (étape « Supprimer les enregistrements vocaux »). ‖ Salvati: {0} {1} ({2}). Vengono eliminati dopo la conservazione del tipo d'intervento o in «Anonimizzazione» (tappa «Elimina registrazioni vocali»).
+4527 ‖ Remove the saved API key of the PostGIS API? ‖ Retirer la clé API enregistrée de l'API PostGIS ? ‖ Rimuovere la chiave API salvata dell'API PostGIS?
+4528 ‖ Remove the saved mailbox password? ‖ Retirer le mot de passe enregistré de la boîte aux lettres ? ‖ Rimuovere la password salvata della casella di posta?
+4529 ‖ Remove the saved password for PostGIS? ‖ Retirer le mot de passe enregistré pour PostGIS ? ‖ Rimuovere la password salvata per PostGIS?
+4530 ‖ Separate from the call-out of your own organisation: whoever chooses only partners here chooses “Only called-out” without a selection for your own organisation. Called-out partner organisations get their own linked operation with their own settings at the start. Their exercise lead sees the exercise (Administration → Plans) and has the rights of the exercise lead in their operation. ‖ Séparé de la mobilisation de sa propre organisation : qui ne choisit ici que des partenaires choisit « Seulement les mobilisés » sans sélection pour sa propre organisation. Les organisations partenaires mobilisées reçoivent au démarrage leur propre intervention liée avec leurs propres paramètres. Leur direction d'exercice voit l'exercice (Administration → Planifications) et a les droits de la direction d'exercice dans leur intervention. ‖ Separato dalla convocazione della propria organizzazione: chi qui sceglie solo partner sceglie per la propria organizzazione «Solo convocati» senza selezione. Le organizzazioni partner convocate ricevono all'avvio un proprio intervento collegato con impostazioni proprie. La loro direzione dell'esercitazione vede l'esercitazione (Amministrazione → Pianificazioni) e ha nel proprio intervento i diritti della direzione dell'esercitazione.
+4531 ‖ Water body: {0} ‖ Cours d'eau : {0} ‖ Corso d'acqua: {0}
+4532 ‖ Pass it on before resetting; it is no longer shown afterwards. ‖ Transmettez-le avant la réinitialisation, il n'est plus affiché ensuite. ‖ Comunicala prima di reimpostare, dopo non viene più mostrata.
+4533 ‖ Applies to ‖ S'applique à ‖ Vale per
+4534 ‖ Applies to all functions of the AI assistant for this operation type. ‖ S'applique à toutes les fonctions de l'assistant IA pour ce type d'intervention. ‖ Vale per tutte le funzioni dell'assistente IA per questo tipo d'intervento.
+4535 ‖ Applies to all reviews. The document starts with the operation data, then the fields follow in this order and then the lists. ‖ S'applique à toutes les reviews. Le document commence par les données d'intervention, puis suivent les champs dans cet ordre et ensuite les listes. ‖ Vale per tutti i review. Il documento inizia con i dati d'intervento, poi seguono i campi in quest'ordine e poi gli elenchi.
+4536 ‖ Applies to everyone who has not chosen otherwise under “Account” in the operations app. Example Brugg AG: {0} ‖ S'applique à tous ceux qui n'ont rien choisi d'autre sous « Compte » dans l'app d'intervention. Exemple Brugg AG : {0} ‖ Vale per tutti coloro che non hanno scelto altro in «Account» nell'app d'intervento. Esempio Brugg AG: {0}
+4537 ‖ Applies to the view, Word and PDF; it is no longer asked when downloading. The lists only appear if there are such in the operation. ‖ S'applique à la vue, Word et PDF ; on ne le demande plus lors du téléchargement. Les listes n'apparaissent que s'il y en a dans l'intervention. ‖ Vale per vista, Word e PDF; al download non viene più chiesto. Gli elenchi compaiono solo se nell'intervento ce ne sono.
+4538 ‖ Applies to{0} ‖ S'applique à{0} ‖ Vale per{0}
+4539 ‖ Does not apply to this person ‖ Ne s'applique pas à cette personne ‖ Non vale per questa persona
+4540 ‖ Structures form and document (section titles), has no value. ‖ Structure le formulaire et le document (titres de section), n'a pas de valeur. ‖ Struttura modulo e documento (titoli di sezione), non ha valore.
+4541 ‖ Limits ‖ Limites ‖ Limiti
+4542 ‖ Limits and versions ‖ Limites et versions ‖ Limiti e versioni
+4543 ‖ Limits: ‖ Limites : ‖ Limiti:
+4544 ‖ Reason ‖ Motif ‖ Motivo
+4545 ‖ Base maps of the operations app, the public view, the replay and the maps here in the administration. The devices load the tiles directly from the provider, who sees the IP address and the map section (stated in the privacy statement). All providers are free and without a key; the operators' terms apply, some only allow non-commercial use. ‖ Cartes de base de l'app d'intervention, de la vue publique, du replay et des cartes ici dans l'administration. Les appareils chargent les tuiles directement chez le fournisseur, qui voit l'adresse IP et le secteur de carte (mentionné dans la déclaration de protection des données). Tous les fournisseurs sont gratuits et sans clé ; les conditions des exploitants s'appliquent, certains n'autorisent qu'un usage non commercial. ‖ Mappe di base dell'app d'intervento, della vista pubblica, del replay e delle mappe qui nell'amministrazione. I dispositivi caricano le tile direttamente dal fornitore, che vede l'indirizzo IP e la porzione di mappa (indicato nell'informativa sulla protezione dei dati). Tutti i fornitori sono gratuiti e senza chiave; valgono le condizioni dei gestori, alcuni consentono solo l'uso non commerciale.
+4546 ‖ Group {0} ‖ Groupe {0} ‖ Gruppo {0}
+4547 ‖ Groups: {0} ‖ Groupes : {0} ‖ Gruppi: {0}
+4548 ‖ Size of the positions ‖ Taille des positions ‖ Dimensione delle posizioni
+4549 ‖ Size of the positions in percent ‖ Taille des positions en pour cent ‖ Dimensione delle posizioni in percentuale
+4550 ‖ Size per file ‖ Taille par fichier ‖ Dimensione per file
+4551 ‖ Validity ‖ Validité ‖ Validità
+4552 ‖ Validity {0} ‖ Validité {0} ‖ Validità {0}
+4553 ‖ Retention in the cache ‖ Durée de conservation dans le cache ‖ Durata di conservazione nella cache
+4554 ‖ Has rights that you do not have yourself ‖ A des droits que vous n'avez pas vous-même ‖ Ha diritti che tu non hai
+4555 ‖ If a person has several roles, they may call out all groups of these roles. Only someone who may call out all groups themselves can change this. ‖ Si une personne a plusieurs rôles, elle peut mobiliser tous les groupes de ces rôles. Seul qui peut lui-même mobiliser tous les groupes peut le modifier. ‖ Se una persona ha più ruoli, può convocare tutti i gruppi di questi ruoli. Può modificarlo solo chi può convocare tutti i gruppi.
+4556 ‖ Has never logged in and does not appear in any operation data ‖ Ne s'est jamais connecté et ne figure dans aucune donnée d'intervention ‖ Non ha mai effettuato l'accesso e non compare in alcun dato d'intervento
+4557 ‖ Helicopters: {0} ‖ Hélicoptères : {0} ‖ Elicotteri: {0}
+4558 ‖ Use helicopter data ‖ Utiliser les données d'hélicoptères ‖ Usa i dati degli elicotteri
+4559 ‖ Allow downloading (otherwise view only) ‖ Autoriser le téléchargement (sinon seulement consulter) ‖ Consenti il download (altrimenti solo visualizzare)

@@ -1,7 +1,8 @@
 // Logo der Organisation (Issue #123): dasselbe Bild wie im After Action Review (Verwaltung → «After Action Review einrichten»), vom Server des Kontos
 // (Route org/logo ohne Anmeldung; info = me.org_info bzw. Route org: {name, logo}, logo = Stand, ändert die Adresse). Auf hellem Grund, damit auch
 // dunkle Logos gut sichtbar sind. Ohne Logo, im Demo oder bei einem Fehler nichts.
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'i18n.dart';
 
 String? orgLogoUrl(String base, Object? info) {
   if (info is! Map || base.startsWith('demo:')) return null;
@@ -24,7 +25,7 @@ class OrgLogo extends StatelessWidget {
       constraints: BoxConstraints(maxWidth: maxW, maxHeight: h),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5)),
-      child: Image.network(u, height: h - 4, fit: BoxFit.contain, semanticLabel: 'Logo der Organisation', errorBuilder: (_, _, _) => const SizedBox.shrink()),
+      child: Image.network(u, height: h - 4, fit: BoxFit.contain, semanticLabel: trn('Logo der Organisation'), errorBuilder: (_, _, _) => const SizedBox.shrink()),
     );
   }
 }

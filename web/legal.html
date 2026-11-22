@@ -2,6 +2,7 @@
 <html lang="de"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
+<script src="i18n.js?v=0"></script><!-- Mehrsprachigkeit (Issue #66), vor allen anderen Skripten -->
 <title>Swiftwater Rescue – Impressum, Lizenzen & Datenschutz</title>
 <link rel="icon" href="img/icon-192.png">
 <link rel="stylesheet" href="common.css?v=0">
@@ -53,7 +54,7 @@ function impressum(){const c=(D&&D.cfg)||{},F=[['org','Organisation'],['addr','A
   const rows=F.filter(([k])=>c[k]).map(([k,l])=>`<dt>${l}</dt><dd>${esc(c[k])}</dd>`).join('');
   return`<h2>Impressum</h2>${D&&D.org_info&&D.org_info.logo?`<div style="margin:.4rem 0 .8rem">${orgMark({logo:D.org_info.logo},'orgbig')}</div>`:''}
   <div class="lgc">${rows?`<dl>${rows}</dl>`:`<div class="mut">Die betreibende Organisation hat noch keine Angaben hinterlegt (Verwaltung → Rechtliches → «Impressum & Datenschutz»).</div>`}
-  ${c.note?`<p class="pre">${esc(c.note)}</p>`:''}${D&&D.updated?`<div class="mut">Angaben zuletzt geändert am ${new Date(D.updated*1000).toLocaleDateString('de-CH')}</div>`:''}${D&&D.version?`<div class="mut">Version ${esc(verTxt(D.version))}</div>`:''}</div>
+  ${c.note?`<p class="pre">${esc(c.note)}</p>`:''}${D&&D.updated?`<div class="mut">Angaben zuletzt geändert am ${new Date(D.updated*1000).toLocaleDateString(LOC)}</div>`:''}${D&&D.version?`<div class="mut">Version ${esc(verTxt(D.version))}</div>`:''}</div>
   <h3>Zweck</h3>
   <p>Swiftwater Rescue ist eine Web-App für Einsatzgruppen der Wasserrettung: Alarmierung, Koordination und Lageübersicht bei der Suche nach vermissten Personen in Fliessgewässern sowie bei Übungen. Sie richtet sich an die Mitglieder der betreibenden Organisation; ein Konto vergibt die Verwaltung.</p>
   <h3>Verwendungseinschränkungen und Haftung</h3>

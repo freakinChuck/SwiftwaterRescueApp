@@ -1,0 +1,120 @@
+4560 ‖ Download {0} ‖ Télécharger {0} ‖ Scarica {0}
+4561 ‖ Today ‖ Aujourd'hui ‖ Oggi
+4562 ‖ Here you define which kinds of operations exist, e.g. “Operation”, “Exercise” or “Standby test”. For each active type there is a separate start button in the operations app. Who may start it is set in the ‖ Ici, vous définissez quels genres d'interventions existent, p. ex. « Intervention », « Exercice » ou « Test de piquet ». Pour chaque type actif, il y a un bouton de démarrage propre dans l'app d'intervention. Qui peut le démarrer se règle dans les ‖ Qui stabilisci quali generi di interventi esistono, p. es. «Intervento», «Esercitazione» o «Prova di picchetto». Per ogni tipo attivo c'è un pulsante di avvio proprio nell'app d'intervento. Chi può avviarlo si imposta nei
+4563 ‖ Stored. ‖ Enregistré. ‖ Registrato.
+4564 ‖ Delete stored key ‖ Supprimer la clé enregistrée ‖ Elimina la chiave registrata
+4565 ‖ Note ‖ Remarque ‖ Nota
+4566 ‖ Note (in the form below the field, not in the document) ‖ Remarque (dans le formulaire sous le champ, pas dans le document) ‖ Nota (nel modulo sotto il campo, non nel documento)
+4567 ‖ Notes ‖ Remarques ‖ Note
+4568 ‖ Add ‖ Ajouter ‖ Aggiungi
+4569 ‖ Upload ‖ Téléverser ‖ Carica
+4570 ‖ Upload … ‖ Téléverser … ‖ Carica …
+4571 ‖ =
+4572 ‖ Maximum altitude ‖ Altitude maximale ‖ Altitudine massima
+4573 ‖ Maximum length of an announcement in seconds (5–120) ‖ Durée maximale d'une annonce en secondes (5–120) ‖ Durata massima di un annuncio in secondi (5–120)
+4574 ‖ At most this many tokens per answer (approx. 0.75 words per token). ‖ Au plus autant de jetons par réponse (env. 0.75 mot par jeton). ‖ Al massimo tanti token per risposta (ca. 0.75 parole per token).
+4575 ‖ Maximum age of the e-mail in minutes (1–1440) ‖ Âge maximal de l'e-mail en minutes (1–1440) ‖ Età massima dell'e-mail in minuti (1–1440)
+4576 ‖ Maximum age of a position ‖ Âge maximal d'une position ‖ Età massima di una posizione
+4577 ‖ Maximum per type, empty = any ‖ Maximum par type, vide = illimité ‖ Massimo per tipo, vuoto = qualsiasi
+4578 ‖ Listen ‖ Écouter ‖ Ascoltare
+4579 ‖ Its {0} location{1} remain and are then considered “No category”. ‖ Ses {0} site{1} restent et sont ensuite considérés « Sans catégorie ». ‖ I suoi {0} luogo{1} restano e poi valgono come «Senza categoria».
+4580 ‖ In the document as a question with the answer below. In the form, images can be inserted anywhere in the text. ‖ Dans le document comme question avec la réponse en dessous. Dans le formulaire, des images peuvent être insérées n'importe où dans le texte. ‖ Nel documento come domanda con la risposta sotto. Nel modulo si possono inserire immagini in qualsiasi punto del testo.
+4581 ‖ In the document in a table with the other short details. ‖ Dans le document dans un tableau avec les autres informations courtes. ‖ Nel documento in una tabella con gli altri dati brevi.
+4582 ‖ In the document the image appears where its marker is in the text (move by cutting and pasting). Without a marker it goes to the end of the text. Images are saved immediately. ‖ Dans le document, l'image figure là où son repère se trouve dans le texte (déplacer par couper-coller). Sans repère, elle va à la fin du texte. Les images sont enregistrées immédiatement. ‖ Nel documento l'immagine compare dove si trova il suo segno nel testo (spostare tagliando e incollando). Senza segno va alla fine del testo. Le immagini vengono salvate subito.
+4583 ‖ Offer during operations ‖ Proposer en intervention ‖ Offri durante l'intervento
+4584 ‖ During an operation the maps switched on here for its type apply, immediately, also in a running operation. When an operation is opened the map shows the type's default map; afterwards each person can switch, and the choice applies until the end of the operation. Without an operation the list above applies. ‖ En intervention, les cartes activées ici pour son type s'appliquent, immédiatement, aussi en cours d'intervention. À l'ouverture d'une intervention, la carte affiche la carte par défaut du type ; ensuite chacun peut changer, le choix vaut jusqu'à la fin de l'intervention. Sans intervention, la liste ci-dessus s'applique. ‖ Durante un intervento valgono le mappe attivate qui per il suo tipo, subito, anche in un intervento in corso. All'apertura di un intervento la mappa mostra la mappa predefinita del tipo; poi ognuno può cambiare, la scelta vale fino alla fine dell'intervento. Senza intervento vale l'elenco sopra.
+4585 ‖ Search the operation log ‖ Rechercher dans le journal d'intervention ‖ Cerca nel registro dell'intervento
+4586 ‖ Always at the top in the operations app's “Markers” window, also outside the operation area ‖ Toujours en haut dans la fenêtre « Marqueurs » de l'app d'intervention, aussi hors de la zone d'intervention ‖ Sempre in cima nella finestra «Marcatori» dell'app d'intervento, anche fuori dall'area d'intervento
+4587 ‖ In the menu ‖ Dans le menu ‖ Nel menu
+4588 ‖ During a running operation the responders' phone numbers appear with them (“Responders” window and person info); “Call” opens the device's phone app. Whether the function is offered per operation type is set under “Functions” (“Direct call”). If both ticks are off, direct call is completely off. ‖ Pendant une intervention, les numéros de téléphone des intervenants figurent chez eux (fenêtre « Intervenants » et info personne) ; « Appeler » ouvre l'app téléphone de l'appareil. Si la fonction est proposée par type d'intervention se règle sous « Fonctions » (« Appel direct »). Si les deux coches sont désactivées, l'appel direct est entièrement désactivé. ‖ Durante un intervento presso i soccorritori compaiono i loro numeri di telefono (finestra «Soccorritori» e info persona); «Chiama» apre l'app telefono del dispositivo. Se la funzione viene offerta per tipo d'intervento si imposta in «Funzioni» («Chiamata diretta»). Se entrambe le spunte sono disattivate, la chiamata diretta è del tutto disattivata.
+4589 ‖ Show in the exercise schedule (visible to everyone in the operations app, without call-out message) ‖ Afficher dans le programme des exercices (visible pour tous dans l'app d'intervention, sans message de mobilisation) ‖ Mostra nel programma delle esercitazioni (visibile a tutti nell'app d'intervento, senza messaggio di convocazione)
+4590 ‖ Legal notice & privacy ‖ Mentions légales & protection des données ‖ Note legali & protezione dei dati
+4591 ‖ Legal notice · privacy ‖ Mentions légales · protection des données ‖ Note legali · protezione dei dati
+4592 ‖ In 24 hours per person. 0 = unlimited. ‖ En 24 heures par personne. 0 = illimité. ‖ In 24 ore per persona. 0 = illimitato.
+4593 ‖ In 24 hours across all people. 0 = unlimited. ‖ En 24 heures pour toutes les personnes. 0 = illimité. ‖ In 24 ore per tutte le persone. 0 = illimitato.
+4594 ‖ View in OpenStreetMap ‖ Voir dans OpenStreetMap ‖ Visualizza in OpenStreetMap
+4595 ‖ Search in all folders … ‖ Rechercher dans tous les dossiers … ‖ Cerca in tutte le cartelle …
+4596 ‖ Offer in the geodata layer of the operations app ‖ Proposer dans la couche de géodonnées de l'app d'intervention ‖ Offri nel livello di geodati dell'app d'intervento
+4597 ‖ No longer present in the source (removed or recorded differently) ‖ N'existe plus dans la source (retiré ou saisi autrement) ‖ Non più presente nella fonte (rimosso o registrato diversamente)
+4598 ‖ Show in the public view ‖ Afficher dans la vue publique ‖ Mostra nella vista pubblica
+4599 ‖ Search in this section ‖ Rechercher dans ce secteur ‖ Cerca in questa porzione
+4600 ‖ There are no entries in this month. ‖ Il n'y a pas d'entrées ce mois. ‖ In questo mese non ci sono voci.
+4601 ‖ Apply to empty fields ‖ Reprendre dans les champs vides ‖ Applica ai campi vuoti
+4602 ‖ At most in total ‖ Au plus au total ‖ Al massimo in totale
+4603 ‖ Installation there ‖ Installation là-bas ‖ Installazione lì
+4604 ‖ Yes ‖ Oui ‖ Sì
+4605 ‖ Per operation type ‖ Par type d'intervention ‖ Per tipo d'intervento
+4606 ‖ Each person maintains their own number in the profile (otherwise only via “Users”) ‖ Chaque personne gère son propre numéro dans le profil (sinon seulement via « Utilisateurs ») ‖ Ogni persona gestisce il proprio numero nel profilo (altrimenti solo tramite «Utenti»)
+4607 ‖ Every attempt counts: “Server” = query from the hosting, “Device” = direct query from a device when the server received no answer. The next server is only asked if the previous one does not answer. Queries from the cache do not count.{0} ‖ Chaque essai compte : « Serveur » = requête depuis l'hébergement, « Appareil » = requête directe d'un appareil si le serveur n'a pas reçu de réponse. Le serveur suivant n'est interrogé que si le précédent ne répond pas. Les requêtes du cache ne comptent pas.{0} ‖ Ogni tentativo conta: «Server» = richiesta dall'hosting, «Dispositivo» = richiesta diretta di un dispositivo quando il server non ha ricevuto risposta. Il server successivo viene interrogato solo se il precedente non risponde. Le richieste dalla cache non contano.{0}
+4608 ‖ Compare now ‖ Comparer maintenant ‖ Confronta ora
+4609 ‖ Retrieve now ‖ Récupérer maintenant ‖ Recupera ora
+4610 ‖ Not available now according to the rules: {0} ‖ Actuellement non disponible selon les règles : {0} ‖ Ora non disponibile secondo le regole: {0}
+4611 ‖ Require again from everyone now ‖ Exiger à nouveau de tous maintenant ‖ Richiedi ora di nuovo a tutti
+4612 ‖ Loading tile {0} … ‖ Chargement de la tuile {0} … ‖ Caricamento della tile {0} …
+4613 ‖ Edit channel ‖ Modifier le canal ‖ Modifica canale
+4614 ‖ Channels: ‖ Canaux : ‖ Canali:
+4615 ‖ Map & data ‖ Carte & données ‖ Mappa & dati
+4616 ‖ Align the map to the area (at most approx. 40 × 30 km) and search. ‖ Orienter la carte sur la zone (au plus env. 40 × 30 km) et rechercher. ‖ Inquadra la mappa sull'area (al massimo ca. 40 × 30 km) e cerca.
+4617 ‖ Hide map ‖ Masquer la carte ‖ Nascondi mappa
+4618 ‖ “Documents” card in the menu of the operations app ‖ Carte « Documentation » dans le menu de l'app d'intervention ‖ Scheda «Documentazione» nel menu dell'app d'intervento
+4619 ‖ Map providers ‖ Fournisseurs de cartes ‖ Fornitori di mappe
+4620 ‖ Category ‖ Catégorie ‖ Categoria
+4621 ‖ Category (optional) ‖ Catégorie (facultative) ‖ Categoria (facoltativa)
+4622 ‖ Edit category ‖ Modifier la catégorie ‖ Modifica categoria
+4623 ‖ Remove category “{0}”?{1} ‖ Retirer la catégorie « {0} » ?{1} ‖ Rimuovere la categoria «{0}»?{1}
+4624 ‖ Categories ‖ Catégories ‖ Categorie
+4625 ‖ No section found. ‖ Aucune section trouvée. ‖ Nessuna sezione trovata.
+4626 ‖ No reference ‖ Aucune référence ‖ Nessun riferimento
+4627 ‖ No service set up: there are no transcripts. ‖ Aucun service configuré : il n'y a pas de transcriptions. ‖ Nessun servizio configurato: non ci sono trascrizioni.
+4628 ‖ No element selected ‖ Aucun élément choisi ‖ Nessun elemento scelto
+4629 ‖ No vehicle can take this type (see vehicle types). ‖ Aucun véhicule ne peut recevoir ce type (voir types de véhicules). ‖ Nessun veicolo può accogliere questo tipo (vedi tipi di veicolo).
+4630 ‖ No logo ‖ Pas de logo ‖ Nessun logo
+4631 ‖ No suggestion. ‖ Aucune proposition. ‖ Nessuna proposta.
+4632 ‖ No access ‖ Pas d'accès ‖ Nessun accesso
+4633 ‖ No app logged in. ‖ Aucune app connectée. ‖ Nessuna app connessa.
+4634 ‖ No data source switched on: no helicopters will be shown. Save anyway? ‖ Aucune source de données activée : aucun hélicoptère ne sera affiché. Enregistrer quand même ? ‖ Nessuna fonte di dati attiva: non verranno mostrati elicotteri. Salvare comunque?
+4635 ‖ No response groups shared. ‖ Aucun groupe d'intervention partagé. ‖ Nessun gruppo d'intervento condiviso.
+4636 ‖ No response groups available. ‖ Aucun groupe d'intervention disponible. ‖ Nessun gruppo d'intervento disponibile.
+4637 ‖ No operation types ‖ Aucun type d'intervention ‖ Nessun tipo d'intervento
+4638 ‖ No operations ‖ Aucune intervention ‖ Nessun intervento
+4639 ‖ No entries directly in this folder. The subfolders ({0}) are in the tree on the left. ‖ Aucune entrée directement dans ce dossier. Les sous-dossiers ({0}) figurent à gauche dans l'arborescence. ‖ Nessuna voce direttamente in questa cartella. Le sottocartelle ({0}) sono a sinistra nell'albero.
+4640 ‖ No tile received (blocked, not reachable or outside coverage) ‖ Aucune tuile reçue (bloquée, injoignable ou hors couverture) ‖ Nessuna tile ricevuta (bloccata, non raggiungibile o fuori copertura)
+4641 ‖ No folders in which you are an editor. ‖ Aucun dossier dont vous faites partie de la rédaction. ‖ Nessuna cartella di cui fai parte della redazione.
+4642 ‖ No PMTiles file ‖ Pas de fichier PMTiles ‖ Nessun file PMTiles
+4643 ‖ No person found. ‖ Aucune personne trouvée. ‖ Nessuna persona trovata.
+4644 ‖ No track ‖ Pas de trace ‖ Nessuna traccia
+4645 ‖ No location reports recorded. ‖ Aucun message de position enregistré. ‖ Nessuna posizione registrata.
+4646 ‖ No stage offered (Administration → Evaluation → Anonymisation). ‖ Aucune étape proposée (Administration → Évaluation → Anonymisation). ‖ Nessuna tappa offerta (Amministrazione → Valutazione → Anonimizzazione).
+4647 ‖ No stage offered. ‖ Aucune étape proposée. ‖ Nessuna tappa offerta.
+4648 ‖ No participations in the selected range. ‖ Aucune participation dans la sélection. ‖ Nessuna partecipazione nella selezione.
+4649 ‖ No participations in the selected period. ‖ Aucune participation dans la période choisie. ‖ Nessuna partecipazione nel periodo scelto.
+4650 ‖ No matches of the selected types in this section. ‖ Aucun résultat des types choisis dans ce secteur. ‖ Nessun risultato dei tipi scelti in questa porzione.
+4651 ‖ No results. Example: “hydraulic”, “needle weir”, “life jacket”. ‖ Aucun résultat. Exemple : « rouleau », « barrage à aiguilles », « gilet de sauvetage ». ‖ Nessun risultato. Esempio: «rullo», «sbarramento ad aghi», «giubbotto di salvataggio».
+4652 ‖ No agreement for the operation type “{0}”. ‖ Pas d'accord pour le type d'intervention « {0} ». ‖ Nessun accordo per il tipo d'intervento «{0}».
+4653 ‖ No active response group: all active people are alerted for every operation. ‖ Aucun groupe d'intervention actif : toutes les personnes actives sont alarmées à chaque intervention. ‖ Nessun gruppo d'intervento attivo: a ogni intervento vengono allarmate tutte le persone attive.
+4654 ‖ No active response groups. ‖ Aucun groupe d'intervention actif. ‖ Nessun gruppo d'intervento attivo.
+4655 ‖ No finished operations in the selected period. ‖ Aucune intervention terminée dans la période choisie. ‖ Nessun intervento terminato nel periodo scelto.
+4656 ‖ No fixed locations. ‖ Aucun site fixe. ‖ Nessun luogo fisso.
+4657 ‖ None selected = all groups that can be called out at “{0}”. ‖ Aucun choisi = tous les groupes mobilisables chez « {0} ». ‖ Nessuno scelto = tutti i gruppi convocabili presso «{0}».
+4658 ‖ No open suggestions. ‖ Aucune proposition ouverte. ‖ Nessuna proposta aperta.
+4659 ‖ No review due. ‖ Aucune révision due. ‖ Nessuna revisione dovuta.
+4660 ‖ None: 🧭 leads to the location. ‖ Aucun : 🧭 mène au site. ‖ Nessuno: 🧭 porta al luogo.
+4661 ‖ Identifier ‖ Identifiant ‖ Identificativo
+4662 ‖ “Call” button ‖ Bouton « Appeler » ‖ Pulsante «Chiama»
+4663 ‖ Buttons in “My operations” ‖ Boutons dans « Mes interventions » ‖ Pulsanti in «I miei interventi»
+4664 ‖ Comment on navigation point {0} ‖ Commentaire sur le point de navigation {0} ‖ Commento al punto di navigazione {0}
+4665 ‖ Comment, e.g. fire brigade access, barrier ‖ Commentaire, p. ex. accès pompiers, barrière ‖ Commento, p. es. accesso pompieri, sbarra
+4666 ‖ Connectivity ‖ Connectivité ‖ Connettività
+4667 ‖ Account and settings, roles and groups, devices, absences, availability times, training, plans, participations with locations, operation log, messages, announcements, feedback, recorded items, AI usage and application log. The ZIP additionally contains the PDF, all data as JSON and CSV, the location history (GeoJSON), the profile picture and the person's own voice recordings. ‖ Compte et paramètres, rôles et groupes, appareils, absences, horaires de disponibilité, formation, planifications, participations avec positions, journal d'intervention, messages, annonces, retours, saisies, utilisation de l'IA et journal de l'application. Le ZIP contient en plus le PDF, toutes les données en JSON et CSV, l'historique de position (GeoJSON), la photo de profil et les enregistrements vocaux propres. ‖ Account e impostazioni, ruoli e gruppi, dispositivi, assenze, orari di disponibilità, formazione, pianificazioni, partecipazioni con posizioni, registro dell'intervento, messaggi, annunci, feedback, registrazioni effettuate, uso dell'IA e registro dell'applicazione. Lo ZIP contiene inoltre il PDF, tutti i dati come JSON e CSV, la cronologia delle posizioni (GeoJSON), l'immagine del profilo e le registrazioni vocali proprie.
+4668 ‖ Account and personal settings ‖ Compte et paramètres personnels ‖ Account e impostazioni personali
+4669 ‖ Coordinates ‖ Coordonnées ‖ Coordinate
+4670 ‖ Enter coordinates or click on the map ‖ Saisir des coordonnées ou cliquer sur la carte ‖ Inserisci le coordinate o clicca sulla mappa
+4671 ‖ Round coordinates to approx. 100 m ‖ Arrondir les coordonnées à env. 100 m ‖ Arrotonda le coordinate a ca. 100 m
+4672 ‖ Take over coordinates from the e-mail as PLS ‖ Reprendre les coordonnées de l'e-mail comme PLS ‖ Riprendi le coordinate dall'e-mail come PLS
+4673 ‖ Copying not possible, please copy by hand. ‖ Copie impossible, veuillez copier manuellement. ‖ Copia non possibile, copia a mano.
+4674 ‖ Copied ‖ Copié ‖ Copiato
+4675 ‖ Abbreviation ‖ Abréviation ‖ Sigla
+4676 ‖ LV95 2'635'600 / 1'245'500 or WGS84 47.36, 7.91 ‖ LV95 2'635'600 / 1'245'500 ou WGS84 47.36, 7.91 ‖ LV95 2'635'600 / 1'245'500 o WGS84 47.36, 7.91
+4677 ‖ LV95 2'660'000 / 1'250'000 or WGS84 47.38, 8.05 ‖ LV95 2'660'000 / 1'250'000 ou WGS84 47.38, 8.05 ‖ LV95 2'660'000 / 1'250'000 o WGS84 47.38, 8.05
+4678 ‖ LV95, LV03 or WGS84 decimal, or tap on the map. ‖ LV95, LV03 ou WGS84 décimal, ou toucher la carte. ‖ LV95, LV03 o WGS84 decimale, o tocca la mappa.
+4679 ‖ LV95, LV03 or WGS84 decimal. ‖ LV95, LV03 ou WGS84 décimal. ‖ LV95, LV03 o WGS84 decimale.

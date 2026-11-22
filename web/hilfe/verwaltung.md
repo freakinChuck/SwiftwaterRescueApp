@@ -105,6 +105,12 @@ Die Vergleichsgeschwindigkeiten, mit denen das Werkzeug Flussdistanz Fahrzeiten 
 
 Welche Navigations-Apps zur Wahl stehen und welche der Standard ist.
 
+### Sprache {#sprache}
+
+Die App gibt es auf Deutsch, Englisch, Französisch und Italienisch. Hier stellst du die **Vorgabe der Organisation** ein. Sie gilt für Personen, die selbst keine Sprache gewählt haben und deren Gerät keine dieser Sprachen nutzt, sowie für Push-Meldungen an Personen, die die App noch nie geöffnet haben.
+
+> Übersetzt werden die Texte der App. Was die Organisation selbst erfasst (Einsatztypen, Rollen, Einrückoptionen, Meldungen, Dokumente) und das Einsatzlog bleiben in der Sprache, in der sie geschrieben wurden.
+
 ### AI-Assistent {#ai}
 
 Anbieter (OpenAI-kompatibel oder Anthropic), Modell, Schlüssel, Limits und Datenschutz je Einsatztyp (Namen ersetzen, Koordinaten runden). In der Matrix gibst du je Funktion, Rolle und Einsatztyp frei, ob der Assistent aus, auf Abruf oder begleitend arbeitet.

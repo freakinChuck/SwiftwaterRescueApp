@@ -1,0 +1,240 @@
+3600 ‖ Encrypted if the server offers it ‖ Chiffré si le serveur le propose ‖ Cifrato se il server lo offre
+3601 ‖ file version will be ‖ version du fichier sera ‖ versione del file sarà
+3602 ‖ =
+3603 ‖ file versions will be ‖ versions du fichier seront ‖ versioni del file saranno
+3604 ‖ View and configure versions ‖ Consulter et configurer les versions ‖ Visualizzare e configurare le versioni
+3605 ‖ Administration → Exercises; during the operation see and release the prepared elements ‖ Administration → Exercices ; en intervention, voir et libérer les éléments préparés ‖ Amministrazione → Esercitazioni; durante l'intervento vedere e rilasciare gli elementi preparati
+3606 ‖ Full-screen alarm with continuous tone and vibration, push stays until tapped ‖ Alarme plein écran avec son continu et vibration, le push reste jusqu'à ce qu'on le touche ‖ Allarme a schermo intero con suono continuo e vibrazione, il push resta finché non lo si tocca
+3607 ‖ Full-screen alarm with a single tone, push stays until tapped ‖ Alarme plein écran avec un son unique, le push reste jusqu'à ce qu'on le touche ‖ Allarme a schermo intero con suono singolo, il push resta finché non lo si tocca
+3608 ‖ On site ‖ Sur place ‖ Sul posto
+3609 ‖ Prepared exercise started ‖ Exercice préparé démarré ‖ Esercitazione preparata avviata
+3610 ‖ template or element of prepared exercises loses ‖ modèle ou élément d'exercices préparés perd ‖ modello o elemento di esercitazioni preparate perde
+3611 ‖ External responder template ‖ Modèle d'intervenant externe ‖ Modello di soccorritore esterno
+3612 ‖ External responder templates ‖ Modèles d'intervenants externes ‖ Modelli di soccorritori esterni
+3613 ‖ templates and elements of prepared exercises lose ‖ modèles et éléments d'exercices préparés perdent ‖ modelli ed elementi di esercitazioni preparate perdono
+3614 ‖ Suggestion rejected ‖ Proposition refusée ‖ Proposta rifiutata
+3615 ‖ Suggestion for the document repository submitted ‖ Proposition pour la gestion documentaire soumise ‖ Proposta per l'archivio documenti inviata
+3616 ‖ Suggestion taken over ‖ Proposition reprise ‖ Proposta ripresa
+3617 ‖ Suggestions for further elements, messages and the course of a prepared exercise ‖ Propositions d'autres éléments, messages et déroulement d'un exercice préparé ‖ Proposte per ulteriori elementi, messaggi e svolgimento di un'esercitazione preparata
+3618 ‖ Suggestions for the document repository ‖ Propositions pour la gestion documentaire ‖ Proposte per l'archivio documenti
+3619 ‖ Advance warning: 0 to 730 days ‖ Préavis : 0 à 730 jours ‖ Preavviso: da 0 a 730 giorni
+3620 ‖ =
+3621 ‖ Warning (river distance, highlighted in the search area) ‖ Avertissement (distance fluviale, mis en évidence dans la zone de recherche) ‖ Avviso (distanza fluviale, evidenziato nell'area di ricerca)
+3622 ‖ Why were there deviations? ‖ Pourquoi y a-t-il eu des écarts ? ‖ Perché ci sono stati scostamenti?
+3623 ‖ What participants see of their own operations (My operations) ‖ Ce que les participants voient de leurs propres interventions (Mes interventions) ‖ Cosa vedono i partecipanti dei propri interventi (I miei interventi)
+3624 ‖ What actually happened? ‖ Que s'est-il réellement passé ? ‖ Cosa è successo realmente?
+3625 ‖ What can we improve? ‖ Que pouvons-nous améliorer ? ‖ Cosa possiamo migliorare?
+3626 ‖ What went well from your point of view? ‖ Qu'est-ce qui s'est bien passé selon vous ? ‖ Cosa è andato bene dal tuo punto di vista?
+3627 ‖ What went well? ‖ Qu'est-ce qui s'est bien passé ? ‖ Cosa è andato bene?
+3628 ‖ What went less well? ‖ Qu'est-ce qui s'est moins bien passé ? ‖ Cosa è andato meno bene?
+3629 ‖ What should we do differently next time? ‖ Que devrions-nous faire différemment la prochaine fois ? ‖ Cosa dovremmo fare diversamente la prossima volta?
+3630 ‖ What was planned? ‖ Qu'est-ce qui était prévu ? ‖ Cosa era previsto?
+3631 ‖ What, who, by when ‖ Quoi, qui, d'ici quand ‖ Cosa, chi, entro quando
+3632 ‖ Waterfall / rapids ‖ Cascade / rapides ‖ Cascata / rapide
+3633 ‖ Hydroelectric power plant ‖ Centrale hydroélectrique ‖ Centrale idroelettrica
+3634 ‖ Water level ‖ Niveau d'eau ‖ Livello dell'acqua
+3635 ‖ Water temperature {0} ‖ Température de l'eau {0} ‖ Temperatura dell'acqua {0}
+3636 ‖ =
+3637 ‖ Web push rejected ‖ Web push refusé ‖ Web push rifiutato
+3638 ‖ Web push handed over to push services ‖ Web push transmis aux services push ‖ Web push consegnato ai servizi push
+3639 ‖ Web push subscriptions ‖ Abonnements web push ‖ Abbonamenti web push
+3640 ‖ =
+3641 ‖ Weir / sill ‖ Barrage / seuil ‖ Sbarramento / soglia
+3642 ‖ “River distance” tool ‖ Outil « Distance fluviale » ‖ Strumento «Distanza fluviale»
+3643 ‖ Value out of range ({0}–{1}) ‖ Valeur hors de la plage ({0}–{1}) ‖ Valore fuori intervallo ({0}–{1})
+3644 ‖ Value out of range ({0}–{1}): {2} ‖ Valeur hors de la plage ({0}–{1}) : {2} ‖ Valore fuori intervallo ({0}–{1}): {2}
+3645 ‖ =
+3646 ‖ Weather and water level ‖ Météo et niveau d'eau ‖ Meteo e livello dell'acqua
+3647 ‖ How do you rate the operation overall? ‖ Comment jugez-vous l'intervention dans l'ensemble ? ‖ Come valuti l'intervento nel complesso?
+3648 ‖ =
+3649 ‖ =
+3650 ‖ =
+3651 ‖ =
+3652 ‖ =
+3653 ‖ =
+3654 ‖ =
+3655 ‖ =
+3656 ‖ Number ‖ Nombre ‖ Numero
+3657 ‖ Time: 0 to 1440 minutes before release ‖ Heure : 0 à 1440 minutes avant la libération ‖ Ora: da 0 a 1440 minuti prima del rilascio
+3658 ‖ Mailbox timeout ‖ Délai dépassé pour la boîte aux lettres ‖ Tempo scaduto per la casella di posta
+3659 ‖ Too old ‖ Trop ancien ‖ Troppo vecchio
+3660 ‖ Too many announcements, please wait a moment. ‖ Trop d'annonces, veuillez patienter un instant. ‖ Troppi annunci, attendi un momento.
+3661 ‖ Too many water bodies in the section ‖ Trop de cours d'eau dans le secteur ‖ Troppi corsi d'acqua nella porzione
+3662 ‖ Too many objects in the section ‖ Trop d'objets dans le secteur ‖ Troppi oggetti nella porzione
+3663 ‖ First release the casualty who is sighted here ‖ Libérez d'abord la victime aperçue ici ‖ Rilascia prima la vittima avvistata qui
+3664 ‖ First release the external responder who is removed here ‖ Libérez d'abord l'intervenant externe retiré ici ‖ Rilascia prima il soccorritore esterno rimosso qui
+3665 ‖ Vehicle access ‖ Accès en véhicule ‖ Accesso con veicolo
+3666 ‖ Access on foot only ‖ Accès à pied seulement ‖ Accesso solo a piedi
+3667 ‖ Switching on requires host, database and user ‖ L'activation exige l'hôte, la base de données et l'utilisateur ‖ Per l'attivazione servono host, banca dati e utente
+3668 ‖ Switching on requires the address ‖ L'activation exige l'adresse ‖ Per l'attivazione serve l'indirizzo
+3669 ‖ Combine: 2–{0} objects ‖ Regrouper : 2–{0} objets ‖ Raggruppa: 2–{0} oggetti
+3670 ‖ Summary of the operation log ‖ Résumé du journal d'intervention ‖ Riepilogo del registro dell'intervento
+3671 ‖ Summary in words of the log (administration and My operations); accompanying: when opening the log ‖ Résumé en mots du journal (administration et Mes interventions) ; d'accompagnement : à l'ouverture du journal ‖ Riepilogo a parole del registro (amministrazione e I miei interventi); d'accompagnamento: all'apertura del registro
+3672 ‖ Combined location: please adjust the position by hand and choose “Keep” ‖ Site regroupé : veuillez adapter la position manuellement et choisir « Conserver » ‖ Luogo raggruppato: adatta la posizione a mano e scegli «Mantieni»
+3673 ‖ =
+3674 ‖ Assignment of user roles ‖ Attribution des rôles d'utilisateur ‖ Assegnazione dei ruoli utente
+3675 ‖ Cache of AI answers ‖ Cache des réponses IA ‖ Cache delle risposte IA
+3676 ‖ Interim state of the automatic vehicle combination ‖ État intermédiaire du convoi automatique ‖ Stato intermedio del convoglio automatico
+3677 ‖ Subheading ‖ Intertitre ‖ Sottotitolo
+3678 ‖ at the end of the operation ‖ à la fin de l'intervention ‖ alla fine dell'intervento
+3679 ‖ anonymous, without names ‖ anonyme, sans noms ‖ anonimo, senza nomi
+3680 ‖ =
+3681 ‖ on ({0} ‖ sur ({0} ‖ su ({0}
+3682 ‖ person called out ‖ personne mobilisée ‖ persona convocata
+3683 ‖ people called out ‖ personnes mobilisées ‖ persone convocate
+3684 ‖ removed from the operation ‖ retiré de l'intervention ‖ rimosso dall'intervento
+3685 ‖ edits the casualty “{0}” ‖ modifie la victime « {0} » ‖ modifica la vittima «{0}»
+3686 ‖ ends the recording (function switched off in the administration) ‖ termine l'enregistrement (fonction désactivée dans l'administration) ‖ termina la registrazione (funzione disattivata nell'amministrazione)
+3687 ‖ at {0} ‖ chez {0} ‖ presso {0}
+3688 ‖ takes the river barrier “ into account ‖ tient compte de la barrière fluviale « ‖ considera lo sbarramento fluviale «
+3689 ‖ calls out: {0} ‖ mobilise : {0} ‖ convoca: {0}
+3690 ‖ calls out more: {0} ( ‖ mobilise en plus : {0} ( ‖ convoca altri: {0} (
+3691 ‖ previous participation shows ‖ participation passée montre ‖ partecipazione passata mostra
+3692 ‖ previous participations show ‖ participations passées montrent ‖ partecipazioni passate mostrano
+3693 ‖ =
+3694 ‖ afterwards in the statistics per person and in “My operations”. ‖ ensuite dans la statistique par personne et dans « Mes interventions ». ‖ poi nella statistica per persona e in «I miei interventi».
+3695 ‖ afterwards without special role. ‖ ensuite sans rôle spécial. ‖ poi senza ruolo speciale.
+3696 ‖ afterwards only the abbreviation “{1}” instead of “{0}”. ‖ ensuite seulement l'abréviation « {1} » au lieu de « {0} ». ‖ poi solo la sigla «{1}» invece di «{0}».
+3697 ‖ the free event ‖ l'événement libre ‖ l'evento libero
+3698 ‖ the operation ‖ l'intervention ‖ l'intervento
+3699 ‖ the operation PLS ({0}) ‖ le PLS de l'intervention ({0}) ‖ il PLS dell'intervento ({0})
+3700 ‖ the secondary operation without alarm ‖ l'intervention secondaire sans alarme ‖ l'intervento secondario senza allarme
+3701 ‖ the special role. ‖ le rôle spécial. ‖ il ruolo speciale.
+3702 ‖ this type ‖ ce type ‖ questo tipo
+3703 ‖ single line, short ‖ une ligne, court ‖ una riga, breve
+3704 ‖ removes the link for external parties “{0} ‖ retire le lien pour externes « {0} ‖ rimuove il link per esterni «{0}
+3705 ‖ removes the map marker of the message “{0} ‖ retire le marqueur de carte du message « {0} ‖ rimuove il marcatore del messaggio «{0}
+3706 ‖ removes the casualty's own marker ‖ retire son propre marqueur de la victime ‖ rimuove il proprio marcatore della vittima
+3707 ‖ removes a casualty marker ‖ retire un marqueur de la victime ‖ rimuove un marcatore della vittima
+3708 ‖ records the casualty ‖ saisit la victime ‖ registra la vittima
+3709 ‖ records the casualty “{0}” ‖ saisit la victime « {0} » ‖ registra la vittima «{0}»
+3710 ‖ =
+3711 ‖ recorded training will be ‖ formation saisie sera ‖ formazione registrata sarà
+3712 ‖ recorded trainings will be ‖ formations saisies seront ‖ formazioni registrate saranno
+3713 ‖ allows everyone to join ‖ permet à tous de rejoindre ‖ consente a tutti di partecipare
+3714 ‖ allows only those called out to join ‖ ne permet plus de rejoindre qu'aux personnes mobilisées ‖ consente di partecipare solo ai convocati
+3715 ‖ the person then appears as “Deleted person” (also in log and messages); location histories and messages remain without names. ‖ la personne apparaît ensuite comme « Personne supprimée » (aussi dans le journal et les messages) ; les historiques de position et messages restent sans noms. ‖ la persona appare poi come «Persona eliminata» (anche nel registro e nei messaggi); cronologie delle posizioni e messaggi restano senza nomi.
+3716 ‖ creates a link for external parties “{0}” (channel “{1}”, ‖ crée un lien pour externes « {0} » (canal « {1} », ‖ crea un link per esterni «{0}» (canale «{1}»,
+3717 ‖ travels within {0} ‖ se déplace à l'intérieur de {0} ‖ viaggia all'interno di {0}
+3718 ‖ travels from {0} ‖ se déplace de {0} ‖ viaggia da {0}
+3719 ‖ according to file ‖ selon le fichier ‖ secondo il file
+3720 ‖ sufficient ‖ suffisant ‖ sufficiente
+3721 ‖ saved PDFs, as separate files ‖ PDF sauvegardés, en fichiers séparés ‖ PDF salvati, come file separati
+3722 ‖ started ({0} ‖ démarré ({0} ‖ avviato ({0}
+3723 ‖ releases “{0}” ({1} ‖ libère « {0} » ({1} ‖ rilascia «{0}» ({1}
+3724 ‖ =
+3725 ‖ has left the operation (switches to “{0} ‖ a quitté l'intervention (passe à « {0} ‖ ha lasciato l'intervento (passa a «{0}
+3726 ‖ has {0} ‖ a {0} ‖ ha {0}
+3727 ‖ lifts the mute of ‖ lève la coupure de son de ‖ revoca il silenziamento di
+3728 ‖ hitches {0} to {1} ‖ attelle {0} à {1} ‖ aggancia {0} a {1}
+3729 ‖ unhitches {0} from {1} ‖ dételle {0} de {1} ‖ sgancia {0} da {1}
+3730 ‖ in progress ‖ en cours ‖ in lavorazione
+3731 ‖ in the conference “ ‖ dans la conférence « ‖ nella conferenza «
+3732 ‖ no source set up ‖ aucune source configurée ‖ nessuna fonte configurata
+3733 ‖ no current measurements ‖ pas de mesures actuelles ‖ nessun valore attuale
+3734 ‖ no valid response ‖ pas de réponse valide ‖ nessuna risposta valida
+3735 ‖ km straight line, Ø {0} km/h ‖ km à vol d'oiseau, Ø {0} km/h ‖ km in linea d'aria, Ø {0} km/h
+3736 ‖ km from the PLS) ‖ km du PLS) ‖ km dal PLS)
+3737 ‖ =
+3738 ‖ unloads {0} from {1} ‖ décharge {0} de {1} ‖ scarica {0} da {1}
+3739 ‖ deletes the recording ‖ supprime l'enregistrement ‖ elimina la registrazione
+3740 ‖ =
+3741 ‖ =
+3742 ‖ marks the casualty's position at own location ‖ marque la position de la victime à sa propre position ‖ segna la posizione della vittima alla propria posizione
+3743 ‖ multi-line, a few sentences or bullet points ‖ plusieurs lignes, quelques phrases ou points ‖ più righe, alcune frasi o punti elenco
+3744 ‖ reports a sighted casualty and records it as ‖ signale une victime aperçue et la saisit comme ‖ segnala una vittima avvistata e la registra come
+3745 ‖ reports “{0}” sighted and sets the PLS anew ({1}) ‖ signale « {0} » aperçu et redéfinit le PLS ({1}) ‖ segnala «{0}» avvistato e reimposta il PLS ({1})
+3746 ‖ deleted with all files, read confirmations and suggestions. ‖ supprimés avec tous les fichiers, confirmations de lecture et propositions. ‖ eliminati con tutti i file, conferme di lettura e proposte.
+3747 ‖ deleted as well, with their sightings and combination; they will then also be missing from the replay of past operations. ‖ supprimés aussi, avec leurs repérages et le convoi ; ils manqueront ensuite aussi dans le replay des interventions passées. ‖ eliminati anch'essi, con i loro avvistamenti e il convoglio; mancheranno poi anche nel replay degli interventi passati.
+3748 ‖ deleted as well. ‖ supprimé(s) aussi. ‖ eliminato/i anch'esso/i.
+3749 ‖ must remain active ‖ doit rester actif ‖ deve restare attivo
+3750 ‖ after the alarm ‖ après l'alarme ‖ dopo l'allarme
+3751 ‖ not relevant ‖ non pertinent ‖ non rilevante
+3752 ‖ no answer ‖ sans réponse ‖ senza risposta
+3753 ‖ =
+3754 ‖ switches the public view off ‖ désactive la vue publique ‖ disattiva la vista pubblica
+3755 ‖ switches the public view off (function switched off in the administration) ‖ désactive la vue publique (fonction désactivée dans l'administration) ‖ disattiva la vista pubblica (funzione disattivata nell'amministrazione)
+3756 ‖ switches the public view on ({0}) ‖ active la vue publique ({0}) ‖ attiva la vista pubblica ({0})
+3757 ‖ very good ‖ très bien ‖ molto bene
+3758 ‖ =
+3759 ‖ sets the PLS of “{0}” ({1}) ‖ définit le PLS de « {0} » ({1}) ‖ imposta il PLS di «{0}» ({1})
+3760 ‖ sets the location of “{0} ‖ définit la position de « {0} ‖ imposta la posizione di «{0}
+3761 ‖ resets the radio channels to the default of the operation type ‖ rétablit les canaux radio par défaut du type d'intervention ‖ reimposta i canali radio al predefinito del tipo d'intervento
+3762 ‖ sets the radio channels: {0} ‖ définit les canaux radio : {0} ‖ imposta i canali radio: {0}
+3763 ‖ =
+3764 ‖ sets the casualty's position manually ‖ définit manuellement la position de la victime ‖ imposta manualmente la posizione della vittima
+3765 ‖ resets the prepared exercise “{0}” for a new run ‖ réinitialise l'exercice préparé « {0} » pour une nouvelle réalisation ‖ reimposta l'esercitazione preparata «{0}» per un nuovo svolgimento
+3766 ‖ starts the planned free event ‖ démarre l'événement libre planifié ‖ avvia l'evento libero pianificato
+3767 ‖ starts the planned secondary operation “{0}” without alarm ‖ démarre l'intervention secondaire planifiée « {0} » sans alarme ‖ avvia l'intervento secondario pianificato «{0}» senza allarme
+3768 ‖ starts the prepared exercise ‖ démarre l'exercice préparé ‖ avvia l'esercitazione preparata
+3769 ‖ changes the public view ({0}) ‖ modifie la vue publique ({0}) ‖ modifica la vista pubblica ({0})
+3770 ‖ joins the conference “ ‖ rejoint la conférence « ‖ partecipa alla conferenza «
+3771 ‖ insufficient ‖ insuffisant ‖ insufficiente
+3772 ‖ lost (entries in the training remain). ‖ perdu (les entrées de formation restent). ‖ perso (le voci della formazione restano).
+3773 ‖ loads {0} onto {1} ‖ charge {0} sur {1} ‖ carica {0} su {1}
+3774 ‖ leaves the conference “ ‖ quitte la conférence « ‖ lascia la conferenza «
+3775 ‖ =
+3776 ‖ =
+3777 ‖ =
+3778 ‖ at the start ‖ au début ‖ all'inizio
+3779 ‖ {0} (rescued ‖ {0} (sauvée ‖ {0} (salvata
+3780 ‖ =
+3781 ‖ {0} queries in 24 hours) ‖ {0} requêtes en 24 heures) ‖ {0} richieste in 24 ore)
+3782 ‖ {0} responders ‖ {0} intervenants ‖ {0} soccorritori
+3783 ‖ {0} individuals ‖ {0} personnes individuelles ‖ {0} singole persone
+3784 ‖ {0} people absent, not alerted ‖ {0} personnes absentes, non alarmées ‖ {0} persone assenti, non allarmate
+3785 ‖ {0} hitched to {1} (automatic) ‖ {0} attelé à {1} (automatique) ‖ {0} agganciato a {1} (automatico)
+3786 ‖ {0} loaded onto {1} (automatic) ‖ {0} chargé sur {1} (automatique) ‖ {0} caricato su {1} (automatico)
+3787 ‖ {0} removed from the operation (account deactivated) ‖ {0} retiré de l'intervention (compte désactivé) ‖ {0} rimosso dall'intervento (account disattivato)
+3788 ‖ {0} delivered ‖ {0} livré ‖ {0} consegnato
+3789 ‖ {0} ended ‖ {0} terminée ‖ {0} terminato
+3790 ‖ {0} ended, the alarm is no longer current. ‖ {0} terminée, l'alarme n'est plus actuelle. ‖ {0} terminato, l'allarme non è più attuale.
+3791 ‖ =
+3792 ‖ {0} permanently deleted ‖ {0} supprimé définitivement ‖ {0} eliminato definitivamente
+3793 ‖ {0} min after the start ‖ {0} min après le début ‖ {0} min dopo l'avvio
+3794 ‖ {0} not found ‖ {0} introuvable ‖ {0} non trovato
+3795 ‖ {0} missing casualties ‖ {0} victimes disparues ‖ {0} vittime disperse
+3796 ‖ {0} unhitched from {1} ‖ {0} dételé de {1} ‖ {0} sganciato da {1}
+3797 ‖ {0} unloaded from {1} ‖ {0} déchargé de {1} ‖ {0} scaricato da {1}
+3798 ‖ {0}), no new operation because one of this type is already running: {1} ‖ {0}), pas de nouvelle intervention car une de ce type est déjà en cours : {1} ‖ {0}), nessun nuovo intervento perché ne è già in corso uno di questo tipo: {1}
+3799 ‖ {0}, navigation point ‖ {0}, point de navigation ‖ {0}, punto di navigazione
+3800 ‖ {0}, 4326 (WGS84) is required ‖ {0}, 4326 (WGS84) est nécessaire ‖ {0}, è necessario 4326 (WGS84)
+3801 ‖ {0}, by {1} ‖ {0}, par {1} ‖ {0}, da {1}
+3802 ‖ {0}” can be called out ‖ {0} » est mobilisable ‖ {0}» è convocabile
+3803 ‖ {0}” response group that can be called out ‖ {0} » groupe d'intervention mobilisable ‖ {0}» gruppo d'intervento convocabile
+3804 ‖ {0}” switched off ‖ {0} » désactivé ‖ {0}» disattivato
+3805 ‖ {0}” trigger (alarm level ‖ {0} » déclencher (niveau d'alarme ‖ {0}» attivare (livello d'allarme
+3806 ‖ {0}” opened for the first time ‖ {0} » ouvert pour la première fois ‖ {0}» aperto per la prima volta
+3807 ‖ {0}” seen at {1} ‖ {0} » vu à {1} ‖ {0}» visto presso {1}
+3808 ‖ {0}” carried ‖ {0} » porté ‖ {0}» trasportato
+3809 ‖ {0}” has rights that you do not have yourself ‖ {0} » a des droits que vous n'avez pas vous-même ‖ {0}» ha diritti che tu non hai
+3810 ‖ {0}” is switched off ‖ {0} » est désactivé ‖ {0}» è disattivato
+3811 ‖ {0}” is full ‖ {0} » est plein ‖ {0}» è pieno
+3812 ‖ {0}” cannot “ ‖ {0} » ne peut pas « ‖ {0}» non può «
+3813 ‖ {0}” must be switched on ‖ {0} » doit être activé ‖ {0}» deve essere attivo
+3814 ‖ {0}” at least one map provider must remain switched on ‖ {0} » au moins un fournisseur de cartes doit rester activé ‖ {0}» almeno un fornitore di mappe deve restare attivo
+3815 ‖ {0}” cannot be called out ‖ {0} » non mobilisable ‖ {0}» non convocabile
+3816 ‖ {0}” start ‖ {0} » démarrer ‖ {0}» avvia
+3817 ‖ {0}” start (without alarm; which response groups is determined by the user role) ‖ {0} » démarrer (sans alarme ; quels groupes d'intervention, le rôle d'utilisateur le détermine) ‖ {0}» avvia (senza allarme; quali gruppi d'intervento, lo stabilisce il ruolo utente)
+3818 ‖ {0}” of {1} ‖ {0} » du {1} ‖ {0}» del {1}
+3819 ‖ {0}” by hand ‖ {0} » manuellement ‖ {0}» a mano
+3820 ‖ {0}” is itself carried by “{1} ‖ {0} » est lui-même porté par « {1} ‖ {0}» è a sua volta trasportato da «{1}
+3821 ‖ =
+3822 ‖ =
+3823 ‖ © OpenStreetMap contributors, ‖ © contributeurs d'OpenStreetMap, ‖ © contributori di OpenStreetMap,
+3824 ‖ © OpenStreetMap contributors, rendering: Humanitarian OpenStreetMap Team, OSM France ‖ © contributeurs d'OpenStreetMap, représentation : Humanitarian OpenStreetMap Team, OSM France ‖ © contributori di OpenStreetMap, rappresentazione: Humanitarian OpenStreetMap Team, OSM France
+3825 ‖ “From” is too far in the future ‖ « De » est trop loin dans le futur ‖ «Da» è troppo lontano nel futuro
+3826 ‖ “{0}” released automatically ({1} ‖ « {0} » libéré automatiquement ({1} ‖ «{0}» rilasciato automaticamente ({1}
+3827 ‖ “{0}”: at most 5000 characters ‖ « {0} » : au plus 5000 caractères ‖ «{0}»: al massimo 5000 caratteri
+3828 ‖ “{0}”: invalid value ‖ « {0} » : valeur invalide ‖ «{0}»: valore non valido
+3829 ‖ · map marker {0} ‖ · marqueur de carte {0} ‖ · marcatore sulla mappa {0}
+3830 ‖ · location {0} ‖ · position {0} ‖ · posizione {0}
+3831 ‖ ” on ‖ » sur ‖ » su
+3832 ‖ ” needs at least one allowed sender ‖ » a besoin d'au moins un expéditeur autorisé ‖ » serve almeno un mittente ammesso
+3833 ‖ ” is for “{0} ‖ » est pour « {0} ‖ » è per «{0}
+3834 ‖ ” cannot take ‖ » ne peut pas recevoir ‖ » non può accogliere
+3835 ‖ ” muted ‖ » coupé ‖ » silenziato
+3836 ‖ Only listening is allowed via this link. ‖ Ce lien permet seulement d'écouter. ‖ Tramite questo link si può solo ascoltare.
+3837 ‖ =
+3838 ‖ Exercises ‖ Exercices ‖ Esercitazioni
+3839 ‖ Prepare exercises ‖ Préparer des exercices ‖ Preparare esercitazioni

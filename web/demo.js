@@ -94,7 +94,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   // ---------- Hilfen ----------
   const hav=(a,b,c,d)=>{const R=6371000,r=x=>x*Math.PI/180,x=r(c-a),y=r(d-b),h=Math.sin(x/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
   const off=(p,e,n)=>[p[0]+n/111320,p[1]+e/(111320*Math.cos(p[0]*Math.PI/180))]; // Versatz in Metern Ost/Nord
-  const f5=x=>Number(x).toFixed(5),hm=t=>new Date(t*1000).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+  const f5=x=>Number(x).toFixed(5),hm=t=>new Date(t*1000).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'});
   const fail=(msg,st=400)=>{const e=new Error(msg);e.st=st;throw e};
   const uname=id=>id===ME_ID?S.me.name:(SIM[id]||{}).name||'?';
   const role=id=>ROLES.find(r=>r.id===id);

@@ -1,11 +1,12 @@
 // Ausbildungskontrolle in der nativen Einsatz-App (Issue #117, Gegenstück zu skNote, skMine, skRows und skEntryDlg in web/common.js
 // bzw. web/index.html): Karte «Ausbildung» im Profil mit dem Stand je Fähigkeit (Route me/skills), Erfassen einer Ausbildung bzw.
 // Auffrischung (skill/entry/save) und Entfernen eigener Einträge (skill/entry/remove); Hinweis im Menü über skSumText aus me.skills.
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
+import '../i18n.dart';
 
 const _st = {
   'ok': ('gültig', okGreen),

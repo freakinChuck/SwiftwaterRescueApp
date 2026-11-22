@@ -1,0 +1,120 @@
+4680 ‖ LV95, LV03 or WGS84 decimal. Empty = choose the location on the map when recording. ‖ LV95, LV03 ou WGS84 décimal. Vide = choisir la position sur la carte lors de la saisie. ‖ LV95, LV03 o WGS84 decimale. Vuoto = scegli la posizione sulla mappa alla registrazione.
+4681 ‖ Position moved by {0} m ‖ Position déplacée de {0} m ‖ Posizione spostata di {0} m
+4682 ‖ Take over position and name ‖ Reprendre position et nom ‖ Riprendi posizione e nome
+4683 ‖ Take over position ‖ Reprendre la position ‖ Riprendi la posizione
+4684 ‖ Current ({0}) ‖ En cours ({0}) ‖ In corso ({0})
+4685 ‖ Layer ‖ Couche ‖ Livello
+4686 ‖ Layer objects on the water ‖ Couche objets au bord de l'eau ‖ Livello oggetti lungo i corsi d'acqua
+4687 ‖ Empty = never automatically, 0 = at the end of the operation. Only what is offered is applied automatically; the check runs at most every 10 minutes when the app is used. Multi-stage e.g.: anonymise display after 30 days, delete recording after 90 days, pseudonymise record after one year. Entries in the operation log record each stage. ‖ Vide = jamais automatiquement, 0 = à la fin de l'intervention. Seul ce qui est proposé est appliqué automatiquement ; la vérification a lieu au plus toutes les 10 minutes lors d'un appel de l'app. Par étapes p. ex. : anonymiser l'affichage après 30 jours, supprimer l'enregistrement après 90 jours, pseudonymiser le procès-verbal après un an. Des entrées dans le journal d'intervention consignent chaque étape. ‖ Vuoto = mai automaticamente, 0 = alla fine dell'intervento. Viene applicato automaticamente solo ciò che è offerto; la verifica avviene al massimo ogni 10 minuti a un accesso all'app. A più tappe p. es.: anonimizzare la visualizzazione dopo 30 giorni, eliminare la registrazione dopo 90 giorni, pseudonimizzare il verbale dopo un anno. Voci nel registro dell'intervento annotano ogni tappa.
+4688 ‖ Leave empty for api.anthropic.com. ‖ Laisser vide pour api.anthropic.com. ‖ Lascia vuoto per api.anthropic.com.
+4689 ‖ Leave empty to keep. ‖ Laisser vide pour conserver. ‖ Lascia vuoto per mantenere.
+4690 ‖ Empty fields are missing on the page. Additional texts as plain text, paragraphs with blank lines.{0} ‖ Les champs vides manquent sur la page. Textes complémentaires en texte simple, paragraphes séparés par des lignes vides.{0} ‖ I campi vuoti mancano nella pagina. Testi aggiuntivi come testo semplice, paragrafi con righe vuote.{0}
+4691 ‖ Determines in which state of the review which document can be downloaded. “In progress” also includes operations without a recorded review. This applies to the administration; what responders see under “My operations” is set under “View for responders”. Viewing in the browser is independent of this. ‖ Détermine dans quel état de la review quel document peut être téléchargé. « En cours » inclut aussi les interventions sans review saisie. Cela vaut pour l'administration ; ce que les intervenants voient sous « Mes interventions » se règle sous « Consultation pour les intervenants ». La consultation dans le navigateur en est indépendante. ‖ Stabilisce in quale stato del review quale documento si può scaricare. «In lavorazione» comprende anche interventi senza review registrato. Vale per l'amministrazione; ciò che i soccorritori vedono sotto «I miei interventi» si imposta in «Consultazione per i soccorritori». La visualizzazione nel browser ne è indipendente.
+4692 ‖ Lead (starts the operation, operation lead rights) ‖ Direction (démarre l'intervention, droits de la direction d'intervention) ‖ Direzione (avvia l'intervento, diritti della direzione dell'intervento)
+4693 ‖ Lead: {0} ‖ Direction : {0} ‖ Direzione: {0}
+4694 ‖ Read confirmation ‖ Confirmation de lecture ‖ Conferma di lettura
+4695 ‖ Require read confirmation ‖ Exiger une confirmation de lecture ‖ Richiedi conferma di lettura
+4696 ‖ Read confirmation – {0} ‖ Confirmation de lecture – {0} ‖ Conferma di lettura – {0}
+4697 ‖ Readers can confirm voluntarily. ‖ Les lecteurs peuvent confirmer volontairement. ‖ I lettori possono confermare volontariamente.
+4698 ‖ Last ‖ Dernier ‖ Ultimo
+4699 ‖ Last query {0}: {1}{2} ‖ Dernière requête {0} : {1}{2} ‖ Ultima richiesta {0}: {1}{2}
+4700 ‖ Recent requests: ‖ Dernières requêtes : ‖ Ultime richieste:
+4701 ‖ Last login ‖ Dernière connexion ‖ Ultimo accesso
+4702 ‖ Remove last corner ‖ Retirer le dernier sommet ‖ Rimuovi l'ultimo vertice
+4703 ‖ Remove last point ‖ Retirer le dernier point ‖ Rimuovi l'ultimo punto
+4704 ‖ Last retrieval {0}{1}: {2} ‖ Dernière récupération {0}{1} : {2} ‖ Ultimo recupero {0}{1}: {2}
+4705 ‖ Last error ‖ Dernière erreur ‖ Ultimo errore
+4706 ‖ Last location ‖ Dernière position ‖ Ultima posizione
+4707 ‖ Line (e.g. navigation channel) ‖ Ligne (p. ex. chenal) ‖ Linea (p. es. canale navigabile)
+4708 ‖ Edit line ‖ Modifier la ligne ‖ Modifica linea
+4709 ‖ Links for external parties ‖ Liens pour externes ‖ Link per esterni
+4710 ‖ List ‖ Liste ‖ Elenco
+4711 ‖ Filter list: name or username ‖ Filtrer la liste : nom ou nom d'utilisateur ‖ Filtra l'elenco: nome o nome utente
+4712 ‖ Offer live conference{0} ‖ Proposer la conférence en direct{0} ‖ Offri conferenza in diretta{0}
+4713 ‖ Licence: {0} ‖ Licence : {0} ‖ Licenza: {0}
+4714 ‖ Licence: {0}{1}{2} ‖ Licence : {0}{1}{2} ‖ Licenza: {0}{1}{2}
+4715 ‖ Log ({0}) ‖ Journal ({0}) ‖ Registro ({0})
+4716 ‖ Log ({0}) – {1} ‖ Journal ({0}) – {1} ‖ Registro ({0}) – {1}
+4717 ‖ Log and replay of your own operations, as for responders without administration rights ‖ Journal et replay de vos propres interventions, comme pour les intervenants sans droits d'administration ‖ Registro e replay dei tuoi interventi, come per i soccorritori senza diritti di amministrazione
+4718 ‖ Log – {0} ‖ Journal – {0} ‖ Registro – {0}
+4719 ‖ Log, replay and After Action Review then show names again, unless permanently anonymised. ‖ Journal, replay et After Action Review montrent ensuite à nouveau les noms, sauf anonymisation définitive. ‖ Registro, replay e After Action Review mostrano poi di nuovo i nomi, se non anonimizzati definitivamente.
+4720 ‖ =
+4721 ‖ Remove logo? ‖ Retirer le logo ? ‖ Rimuovere il logo?
+4722 ‖ Logo saved. ‖ Logo enregistré. ‖ Logo salvato.
+4723 ‖ Aerial image ‖ Image aérienne ‖ Immagine aerea
+4724 ‖ Uploading … {0}/{1} ‖ Téléversement … {0}/{1} ‖ Caricamento … {0}/{1}
+4725 ‖ Length of the answer ‖ Longueur de la réponse ‖ Lunghezza della risposta
+4726 ‖ Can be configured after the first save. ‖ Configurable après le premier enregistrement. ‖ Configurabile dopo il primo salvataggio.
+4727 ‖ Delete ‖ Supprimer ‖ Elimina
+4728 ‖ MAC address (for the battery level under iOS) ‖ Adresse MAC (pour le niveau de batterie sous iOS) ‖ Indirizzo MAC (per il livello della batteria su iOS)
+4729 ‖ =
+4730 ‖ Insert marker at the cursor position ‖ Insérer un repère à la position du curseur ‖ Inserisci segno alla posizione del cursore
+4731 ‖ Allow markers without symbol (flag ⚑ in one colour) ‖ Autoriser les marqueurs sans symbole (drapeau ⚑ d'une couleur) ‖ Consenti marcatori senza simbolo (bandiera ⚑ di un colore)
+4732 ‖ Media server for the live conference (LiveKit) ‖ Serveur média pour la conférence en direct (LiveKit) ‖ Server multimediale per la conferenza in diretta (LiveKit)
+4733 ‖ Upload several files into this folder ‖ Téléverser plusieurs fichiers dans ce dossier ‖ Carica più file in questa cartella
+4734 ‖ Anonymise several operations ‖ Anonymiser plusieurs interventions ‖ Anonimizza più interventi
+4735 ‖ My statistics ‖ Ma statistique ‖ La mia statistica
+4736 ‖ Message (optional, sent to everyone as a message on release) ‖ Message (facultatif, envoyé à tous à la libération) ‖ Messaggio (facoltativo, inviato a tutti al rilascio)
+4737 ‖ Notification for an announcement ‖ Notification lors d'une annonce ‖ Notifica per un annuncio
+4738 ‖ Message at the start (without alarm) ‖ Message au démarrage (sans alarme) ‖ Messaggio all'avvio (senza allarme)
+4739 ‖ Notifications ‖ Notifications ‖ Notifiche
+4740 ‖ Features changed ({0} ‖ Caractéristiques modifiées ({0} ‖ Caratteristiche modificate ({0}
+4741 ‖ Features assigned to locations (e.g. “River closure”, “Portage point”). They appear in the operations app in the popup and in the lists. Effect “limits search area”: the search area ends there as at a safety post (the operation lead can switch this off during the operation for all or individual locations). Effect “Warning”: notice in the river distance when the route passes the location, and highlighting in the search area. ‖ Caractéristiques attribuées aux sites (p. ex. « Fermeture de la rivière », « Point de portage »). Elles figurent dans l'app d'intervention dans la fenêtre contextuelle et les listes. Effet « limite la zone de recherche » : la zone de recherche s'y arrête comme à un poste de sécurité (la direction d'intervention peut le désactiver en intervention pour tous ou certains sites). Effet « Avertissement » : remarque dans la distance fluviale quand le trajet passe le site, et mise en évidence dans la zone de recherche. ‖ Caratteristiche assegnate ai luoghi (p. es. «Chiusura del fiume», «Punto di trasbordo»). Compaiono nell'app d'intervento nel popup e negli elenchi. Effetto «limita l'area di ricerca»: l'area di ricerca termina lì come a un posto di sicurezza (la direzione dell'intervento può disattivarlo durante l'intervento per tutti o singoli luoghi). Effetto «Avviso»: nota nella distanza fluviale quando il percorso passa il luogo ed evidenziazione nell'area di ricerca.
+4742 ‖ At least one map provider must remain switched on. ‖ Au moins un fournisseur de cartes doit rester activé. ‖ Almeno un fornitore di mappe deve restare attivo.
+4743 ‖ At least one server is required. “Restore default” sets the default list. ‖ Au moins un serveur est nécessaire. « Rétablir par défaut » remet la liste prédéfinie. ‖ Serve almeno un server. «Ripristina predefinito» imposta l'elenco predefinito.
+4744 ‖ At least one app must remain switched on. ‖ Au moins une app doit rester activée. ‖ Almeno un'app deve restare attiva.
+4745 ‖ Minimum app version ‖ Version minimale de l'app ‖ Versione minima dell'app
+4746 ‖ =
+4747 ‖ =
+4748 ‖ With alerting, e.g. operation, exercise, standby test. ‖ Avec alarme, p. ex. intervention, exercice, test de piquet. ‖ Con allarme, p. es. intervento, esercitazione, prova di picchetto.
+4749 ‖ With a reference, the PLS, flow speed and missing casualties of an earlier operation can be taken over at the start or in the plan. ‖ Avec une référence, le PLS, la vitesse du courant et les victimes disparues d'une intervention antérieure peuvent être repris au démarrage ou dans la planification. ‖ Con un riferimento, all'avvio o nella pianificazione si possono riprendere PLS, velocità della corrente e vittime disperse di un intervento precedente.
+4750 ‖ Delete with all consequences, irreversible ‖ Supprimer avec toutes les conséquences, irréversible ‖ Elimina con tutte le conseguenze, irreversibile
+4751 ‖ Always with the right “Manage document repository”. ‖ Toujours avec le droit « Gérer la gestion documentaire ». ‖ Sempre con il diritto «Gestire l'archivio documenti».
+4752 ‖ With the right “Delete permanently” these can also be deleted; they appear in past operations as “Deleted person”. ‖ Avec le droit « Supprimer définitivement », celles-ci peuvent aussi être supprimées ; elles apparaissent dans les interventions passées comme « Personne supprimée ». ‖ Con il diritto «Elimina definitivamente» si possono eliminare anche queste; compaiono negli interventi passati come «Persona eliminata».
+4753 ‖ With these periods the following are anonymised automatically at the next check (within a few minutes): ‖ Avec ces délais, seront anonymisées automatiquement au prochain contrôle (dans quelques minutes) : ‖ Con questi termini al prossimo controllo (entro pochi minuti) vengono anonimizzati automaticamente:
+4754 ‖ Included sections {0} ‖ Sections fournies {0} ‖ Sezioni incluse {0}
+4755 ‖ Add member ‖ Ajouter un membre ‖ Aggiungi membro
+4756 ‖ Members ‖ Membres ‖ Membri
+4757 ‖ Message to the responders (optional) ‖ Message aux intervenants (facultatif) ‖ Messaggio ai soccorritori (facoltativo)
+4758 ‖ Message: ‖ Message : ‖ Messaggio:
+4759 ‖ Message: {0} ‖ Message : {0} ‖ Messaggio: {0}
+4760 ‖ Model ‖ Modèle ‖ Modello
+4761 ‖ Month ‖ Mois ‖ Mese
+4762 ‖ Months ‖ Mois ‖ Mesi
+4763 ‖ After saving and a successful “Test connection”, the partner organisation's operation types appear here. ‖ Après l'enregistrement et un « Tester la connexion » réussi, les types d'intervention de l'organisation partenaire apparaissent ici. ‖ Dopo il salvataggio e un «Testa la connessione» riuscito, qui compaiono i tipi d'intervento dell'organizzazione partner.
+4764 ‖ Move down ‖ Vers le bas ‖ Sposta giù
+4765 ‖ Send messages {0} ‖ Envoyer des messages {0} ‖ Invia messaggi {0}
+4766 ‖ Messages {0} ‖ Messages {0} ‖ Messaggi {0}
+4767 ‖ Name of the casualty ‖ Nom de la victime ‖ Nome della vittima
+4768 ‖ Name “{0}” → “{1}” ‖ Nom « {0} » → « {1} » ‖ Nome «{0}» → «{1}»
+4769 ‖ Anonymise names ‖ Anonymiser les noms ‖ Anonimizza i nomi
+4770 ‖ Replace names with labels before sending (Responder N, Casualty N …), also in free questions; the answer shows the names again ‖ Remplacer les noms par des désignations avant l'envoi (Intervenant N, Victime N …), aussi dans les questions libres ; la réponse montre à nouveau les noms ‖ Sostituisci i nomi con denominazioni prima dell'invio (Soccorritore N, Vittima N …), anche nelle domande libere; la risposta mostra di nuovo i nomi
+4771 ‖ Navigation ‖ Navigation ‖ Navigazione
+4772 ‖ Navigation app ‖ App de navigation ‖ App di navigazione
+4773 ‖ Remove navigation point ‖ Retirer le point de navigation ‖ Rimuovi punto di navigazione
+4774 ‖ No ‖ Non ‖ No
+4775 ‖ Generate new (shown once, then transmit securely to the partner organisation) ‖ Générer à nouveau (affichée une fois, puis la transmettre de manière sûre à l'organisation partenaire) ‖ Genera nuova (mostrata una volta, poi trasmetterla in modo sicuro all'organizzazione partner)
+4776 ‖ New users ‖ Nouveaux utilisateurs ‖ Nuovi utenti
+4777 ‖ New user role ‖ Nouveau rôle d'utilisateur ‖ Nuovo ruolo utente
+4778 ‖ New property ‖ Nouvelle propriété ‖ Nuova proprietà
+4779 ‖ New response option ‖ Nouvelle option d'engagement ‖ Nuova opzione d'intervento
+4780 ‖ New response group ‖ Nouveau groupe d'intervention ‖ Nuovo gruppo d'intervento
+4781 ‖ New vehicle type ‖ Nouveau type de véhicule ‖ Nuovo tipo di veicolo
+4782 ‖ New question ‖ Nouvelle question ‖ Nuova domanda
+4783 ‖ New skill ‖ Nouvelle compétence ‖ Nuova competenza
+4784 ‖ New category ‖ Nouvelle catégorie ‖ Nuova categoria
+4785 ‖ New partner organisation ‖ Nouvelle organisation partenaire ‖ Nuova organizzazione partner
+4786 ‖ New plan ‖ Nouvelle planification ‖ Nuova pianificazione
+4787 ‖ New special role ‖ Nouveau rôle spécial ‖ Nuovo ruolo speciale
+4788 ‖ Generate new UUID ‖ Générer un nouvel UUID ‖ Genera nuovo UUID
+4789 ‖ New UUID generated. Only valid after “Save settings”; then switch all beacons over. ‖ Nouvel UUID généré. Valable seulement après « Enregistrer les paramètres » ; ensuite modifier toutes les balises. ‖ Nuovo UUID generato. Valido solo dopo «Salva impostazioni»; poi aggiorna tutti i beacon.
+4790 ‖ New version ‖ Nouvelle version ‖ Nuova versione
+4791 ‖ Upload new version … ‖ Téléverser une nouvelle version … ‖ Carica nuova versione …
+4792 ‖ New version – {0} ‖ Nouvelle version – {0} ‖ Nuova versione – {0}
+4793 ‖ New template ‖ Nouveau modèle ‖ Nuovo modello
+4794 ‖ Generate a new key? Cron job and webhook must then use the new address. ‖ Générer une nouvelle clé ? La tâche cron et le webhook devront ensuite utiliser la nouvelle adresse. ‖ Generare una nuova chiave? Cron job e webhook dovranno poi usare il nuovo indirizzo.
+4795 ‖ Mark the new state as seen; objects no longer present are detached. Adjust position and name yourself in the location if needed. ‖ Marquer le nouvel état comme vu ; les objets qui n'existent plus sont dissociés. Adaptez au besoin position et nom dans le site lui-même. ‖ Segna il nuovo stato come visto; gli oggetti non più presenti vengono scollegati. Adatta all'occorrenza posizione e nome nel luogo stesso.
+4796 ‖ New user ‖ Nouvel utilisateur ‖ Nuovo utente
+4797 ‖ New operation type ‖ Nouveau type d'intervention ‖ Nuovo tipo d'intervento
+4798 ‖ New channel ‖ Nouveau canal ‖ Nuovo canale
+4799 ‖ New folder ‖ Nouveau dossier ‖ Nuova cartella

@@ -1,0 +1,211 @@
+5520 ‖ {0} results in all folders (title, keywords, description, text of pages and PDFs). ‖ {0} résultats dans tous les dossiers (titre, mots-clés, description, texte des pages et PDF). ‖ {0} risultati in tutte le cartelle (titolo, parole chiave, descrizione, testo di pagine e PDF).
+5521 ‖ {0} warnings ‖ {0} avertissements ‖ {0} avvisi
+5522 ‖ {0} values ‖ {0} valeurs ‖ {0} valori
+5523 ‖ {0} rejected ‖ {0} refusés ‖ {0} rifiutati
+5524 ‖ Anonymise {0}: ‖ Anonymiser {0} : ‖ Anonimizza {0}:
+5525 ‖ {0} can be called out ‖ {0} mobilisables ‖ {0} convocabili
+5526 ‖ {0} selected ‖ {0} choisis ‖ {0} scelti
+5527 ‖ Take over {0} selected with the defaults ‖ Reprendre {0} choisis avec les valeurs par défaut ‖ Riprendi {0} scelti con i predefiniti
+5528 ‖ {0} expiring soon ‖ {0} arrivant bientôt à échéance ‖ {0} in scadenza
+5529 ‖ {0} at {1} ‖ {0} chez {1} ‖ {0} presso {1}
+5530 ‖ {0} confirmed ‖ {0} confirmé(s) ‖ {0} confermato/i
+5531 ‖ Deactivate {0}? ‖ Désactiver {0} ? ‖ Disattivare {0}?
+5532 ‖ =
+5533 ‖ {0} checked, {1} left … ‖ {0} vérifiés, encore {1} … ‖ {0} verificati, ancora {1} …
+5534 ‖ {0} selected ‖ {0} choisi(s) ‖ {0} scelti
+5535 ‖ {0} listens ‖ {0} écoute ‖ {0} ascolta
+5536 ‖ =
+5537 ‖ {0} with deviation ‖ {0} avec écart ‖ {0} con scostamento
+5538 ‖ {0} new e-mails ‖ {0} nouveaux e-mails ‖ {0} nuove e-mail
+5539 ‖ {0} per person ‖ {0} par personne ‖ {0} per persona
+5540 ‖ {0} see the entry ‖ {0} voient l'entrée ‖ {0} vedono la voce
+5541 ‖ {0} is speaking ‖ {0} parle ‖ {0} sta parlando
+5542 ‖ {0} of {1} – {2} ‖ {0} du {1} – {2} ‖ {0} del {1} – {2}
+5543 ‖ {0} of {1}, duration {2}, {3} responders{4} ‖ {0} du {1}, durée {2}, {3} intervenants{4} ‖ {0} del {1}, durata {2}, {3} soccorritori{4}
+5544 ‖ {0} of {1} ‖ {0} sur {1} ‖ {0} di {1}
+5545 ‖ {0} of {1} entries ‖ {0} sur {1} entrées ‖ {0} di {1} voci
+5546 ‖ {0} of {1} device sessions among them ‖ dont {0} sur {1} sessions d'appareils ‖ di cui {0} di {1} sessioni dei dispositivi
+5547 ‖ {0} of {1} switched on ‖ {0} sur {1} activés ‖ {0} di {1} attivi
+5548 ‖ {0} of {1} have replied{2} ‖ {0} sur {1} ont répondu{2} ‖ {0} di {1} hanno risposto{2}
+5549 ‖ {0} preselected ‖ {0} présélectionnés ‖ {0} preselezionati
+5550 ‖ {0} is logged out and must set their own password at the next login. ‖ {0} est déconnecté et doit définir son propre mot de passe à la prochaine connexion. ‖ {0} viene disconnesso e al prossimo accesso deve impostare una password propria.
+5551 ‖ {0} {1} notified. ‖ {0} {1} notifiés. ‖ {0} {1} avvisati.
+5552 ‖ {0} {1} the rights of this role (unless another role grants them). ‖ {0} {1} les droits de ce rôle (sauf si un autre rôle les accorde). ‖ {0} {1} i diritti di questo ruolo (salvo che un altro ruolo li conceda).
+5553 ‖ {0} {1} created, then ‖ {0} {1} créés, puis ‖ {0} {1} creati, poi
+5554 ‖ {0} {1} created. Please check the locations on the map. ‖ {0} {1} créés. Veuillez vérifier les positions sur la carte. ‖ {0} {1} creati. Verifica le posizioni sulla mappa.
+5555 ‖ {0} {1} taken over{2}. Please check and save. ‖ {0} {1} repris{2}. Veuillez vérifier et enregistrer. ‖ {0} {1} ripresi{2}. Verifica e salva.
+5556 ‖ {0} {1}× · {2} tokens ‖ {0} {1}× · {2} jetons ‖ {0} {1}× · {2} token
+5557 ‖ {0} “{1}” permanently deleted. ‖ {0} « {1} » supprimé définitivement. ‖ {0} «{1}» eliminato definitivamente.
+5558 ‖ Permanently delete {0} “{1}”? ‖ Supprimer définitivement {0} « {1} » ? ‖ Eliminare definitivamente {0} «{1}»?
+5559 ‖ {0} · page ‖ {0} · page ‖ {0} · pagina
+5560 ‖ {0} · page {1} of {2} ‖ {0} · page {1} sur {2} ‖ {0} · pagina {1} di {2}
+5561 ‖ {0} · ended {1} days ago · {2} participants ‖ {0} · terminée il y a {1} jours · {2} participants ‖ {0} · terminato {1} giorni fa · {2} partecipanti
+5562 ‖ {0} · you are an editor{1} ‖ {0} · vous faites partie de la rédaction{1} ‖ {0} · fai parte della redazione{1}
+5563 ‖ {0} · measured {1} ‖ {0} · mesuré {1} ‖ {0} · misurato {1}
+5564 ‖ {0} · people joining later {1}{2}{3} ‖ {0} · arrivées ultérieures {1}{2}{3} ‖ {0} · chi si aggiunge più tardi {1}{2}{3}
+5565 ‖ {0} · {1} to {2} ‖ {0} · {1} à {2} ‖ {0} · da {1} a {2}
+5566 ‖ {0} overdue ‖ {0} en retard ‖ {0} scaduti
+5567 ‖ {0} locations taken over ‖ {0} sites repris ‖ {0} luoghi ripresi
+5568 ‖ {0} – validity {1} ‖ {0} – validité {1} ‖ {0} – validità {1}
+5569 ‖ {0} – version {1} ‖ {0} – version {1} ‖ {0} – versione {1}
+5570 ‖ =
+5571 ‖ {0}, centre {1} ‖ {0}, centre {1} ‖ {0}, centro {1}
+5572 ‖ {0}, of which {1} rescued ‖ {0}, dont {1} sauvées ‖ {0}, di cui {1} salvate
+5573 ‖ {0}: {1} entries ‖ {0} : {1} entrées ‖ {0}: {1} voci
+5574 ‖ {0}Privacy for “{1}” ‖ {0}Protection des données pour « {1} » ‖ {0}Protezione dei dati per «{1}»
+5575 ‖ {0}With https; http only for own servers in your own network (unencrypted). The app's server must be able to reach the address. ‖ {0}Avec https ; http seulement pour des serveurs propres dans le réseau propre (non chiffré). Le serveur de l'app doit pouvoir atteindre l'adresse. ‖ {0}Con https; http solo per server propri nella propria rete (non cifrato). Il server dell'app deve raggiungere l'indirizzo.
+5576 ‖ {0}Is only stored on the server and never delivered to devices. ‖ {0}N'est enregistré que sur le serveur et jamais transmis aux appareils. ‖ {0}Viene salvato solo sul server e mai consegnato ai dispositivi.
+5577 ‖ {0}not created: {1} ‖ {0}non créé : {1} ‖ {0}non creato: {1}
+5578 ‖ {0}combine … ‖ {0}regrouper … ‖ {0}raggruppa …
+5579 ‖ {0}{1}. The automatic comparison checks each location once a day (last {2}). ‖ {0}{1}. La comparaison automatique vérifie chaque site une fois par jour (dernière fois {2}). ‖ {0}{1}. Il confronto automatico verifica ogni luogo una volta al giorno (ultima volta {2}).
+5580 ‖ {0}× faster ‖ {0}× plus vite ‖ {0}× più veloce
+5581 ‖ “Anonymised”: all other responders, casualties and external parties appear with labels such as “Responder 3”, the person themselves with name. “With all data”: as in the administration, with the “Anonymous” switch. Anonymised operations (Evaluation → Anonymisation) can only be seen anonymously in any case; with “Anonymise display” the person themselves still with name. ‖ « Anonymisé » : tous les autres intervenants, victimes et externes apparaissent avec des désignations comme « Intervenant 3 », la personne elle-même avec son nom. « Avec toutes les données » : comme dans l'administration, avec le commutateur « Anonyme ». Les interventions anonymisées (Évaluation → Anonymisation) ne sont dans tous les cas visibles qu'anonymement ; avec « Anonymiser l'affichage », la personne elle-même toujours avec son nom. ‖ «Anonimizzato»: tutti gli altri soccorritori, vittime ed esterni compaiono con denominazioni come «Soccorritore 3», la persona stessa con il nome. «Con tutti i dati»: come nell'amministrazione, con il commutatore «Anonimo». Gli interventi anonimizzati (Valutazione → Anonimizzazione) sono in ogni caso visibili solo in forma anonima; con «Anonimizzare la visualizzazione» la persona stessa sempre con il nome.
+5582 ‖ “Record” preselected at the start (replay in the administration; whoever starts can change it, the operation lead can also start, pause or end the recording later) ‖ « Enregistrer » présélectionné au démarrage (replay dans l'administration ; qui démarre peut le modifier, la direction d'intervention peut aussi démarrer, mettre en pause ou terminer l'enregistrement plus tard) ‖ «Registra» preselezionato all'avvio (replay nell'amministrazione; chi avvia può modificarlo, la direzione dell'intervento può anche avviare, mettere in pausa o terminare la registrazione in seguito)
+5583 ‖ “Operation lead”: special role or response option with lead rights, the right “Lead any operation” and whoever started the operation (each with participation). ‖ « Direction d'intervention » : rôle spécial ou option d'engagement avec droits de direction, droit « Diriger toute intervention » et qui a démarré l'intervention (chacun avec participation). ‖ «Direzione dell'intervento»: ruolo speciale o opzione d'intervento con diritti di direzione, diritto «Dirigere qualsiasi intervento» e chi ha avviato l'intervento (ognuno con partecipazione).
+5584 ‖ “In the operations app”: which types the optional geodata layer shows (function “Geodata layer” per operation type under “Functions”). The layer is initially hidden on every device. ‖ « Dans l'app d'intervention » : quels types la couche de géodonnées activable affiche (fonction « Couche de géodonnées » par type d'intervention sous « Fonctions »). La couche est d'abord masquée sur chaque appareil. ‖ «Nell'app d'intervento»: quali tipi mostra il livello di geodati attivabile (funzione «Livello di geodati» per tipo d'intervento in «Funzioni»). Il livello è inizialmente nascosto su ogni dispositivo.
+5585 ‖ “Listen in” preselected (new announcements play immediately while the app is open; each person can change it on the device) ‖ « Écoute » présélectionnée (les nouvelles annonces sont lues immédiatement avec l'app ouverte ; chacun peut le modifier sur l'appareil) ‖ «Ascolto» preselezionato (i nuovi annunci vengono riprodotti subito ad app aperta; ognuno può modificarlo sul dispositivo)
+5586 ‖ “OpenAI-compatible” fits OpenAI, Mistral and self-hosted servers (Ollama, LM Studio). ‖ « Compatible OpenAI » convient à OpenAI, Mistral et aux serveurs auto-hébergés (Ollama, LM Studio). ‖ «Compatibile con OpenAI» va bene per OpenAI, Mistral e server ospitati in proprio (Ollama, LM Studio).
+5587 ‖ “Last opened” and “New and changed” ‖ « Dernière ouverture » et « Nouveaux et modifiés » ‖ «Ultima apertura» e «Nuovi e modificati»
+5588 ‖ “{0}” ({1}) has never logged in and will be permanently deleted. ‖ « {0} » ({1}) ne s'est jamais connecté et sera supprimé définitivement. ‖ «{0}» ({1}) non ha mai effettuato l'accesso e verrà eliminato definitivamente.
+5589 ‖ “{0}” deleted ‖ « {0} » supprimé ‖ «{0}» eliminato
+5590 ‖ Delete “{0}”? This cannot be undone.{1} ‖ Supprimer « {0} » ? C'est irréversible.{1} ‖ Eliminare «{0}»? Non si può annullare.{1}
+5591 ‖ · sign-up ‖ · inscription ‖ · iscrizione
+5592 ‖ · display in the app ‖ · affichage dans l'app ‖ · visualizzazione nell'app
+5593 ‖ · Tap the corners in order on the map (at least 3). ‖ · Touchez les sommets dans l'ordre sur la carte (au moins 3). ‖ · Tocca in ordine i vertici sulla mappa (almeno 3).
+5594 ‖ · operation {0} ‖ · intervention {0} ‖ · intervento {0}
+5595 ‖ · deadline {0} ‖ · délai {0} ‖ · termine {0}
+5596 ‖ · message ‖ · message ‖ · messaggio
+5597 ‖ · names anonymised ‖ · noms anonymisés ‖ · nomi anonimizzati
+5598 ‖ · no. {0} ‖ · n° {0} ‖ · n. {0}
+5599 ‖ · Tap the points of the line in order on the map (at least 2). ‖ · Touchez les points de la ligne dans l'ordre sur la carte (au moins 2). ‖ · Tocca in ordine i punti della linea sulla mappa (almeno 2).
+5600 ‖ · source: ‖ · source : ‖ · fonte:
+5601 ‖ · default ‖ · par défaut ‖ · predefinito
+5602 ‖ · parts were already anonymised at this time ‖ · des parties étaient déjà anonymisées à ce moment ‖ · alcune parti erano già anonimizzate in quel momento
+5603 ‖ · text recognised for search{0} ‖ · texte reconnu pour la recherche{0} ‖ · testo riconosciuto per la ricerca{0}
+5604 ‖ · destination for 🧭 instead of the location, e.g. access or car park; with several, one chooses in the operations app ‖ · destination pour 🧭 au lieu du site, p. ex. accès ou parking ; s'il y en a plusieurs, on choisit dans l'app d'intervention ‖ · destinazione per 🧭 invece del luogo, p. es. accesso o parcheggio; se più d'uno si sceglie nell'app d'intervento
+5605 ‖ · outstanding: {0} ‖ · en attente : {0} ‖ · in sospeso: {0}
+5606 ‖ · deactivated ‖ · désactivé ‖ · disattivato
+5607 ‖ · final ‖ · définitif ‖ · definitivo
+5608 ‖ · removed: {0} ‖ · retiré : {0} ‖ · rimosso: {0}
+5609 ‖ · reminded on {0} ‖ · rappelé le {0} ‖ · ricordato il {0}
+5610 ‖ · again only for significant changes ‖ · à nouveau seulement en cas de modifications importantes ‖ · di nuovo solo per modifiche rilevanti
+5611 ‖ · in vehicle “{0}” ‖ · dans le véhicule « {0} » ‖ · nel veicolo «{0}»
+5612 ‖ · last success {0} ‖ · dernier succès {0} ‖ · ultimo successo {0}
+5613 ‖ · last error {0}: {1} ‖ · dernière erreur {0} : {1} ‖ · ultimo errore {0}: {1}
+5614 ‖ · lets ‖ · laisse ‖ · lascia
+5615 ‖ · shareable with external parties ‖ · partageable avec les externes ‖ · condivisibile con esterni
+5616 ‖ · download only ‖ · téléchargement seulement ‖ · solo download
+5617 ‖ · without colour next to the name ‖ · sans couleur à côté du nom ‖ · senza colore accanto al nome
+5618 ‖ · without text (search only in the title) ‖ · sans texte (recherche seulement dans le titre) ‖ · senza testo (ricerca solo nel titolo)
+5619 ‖ · enters “{0}” in the training ‖ · inscrit « {0} » dans la formation ‖ · registra «{0}» nella formazione
+5620 ‖ · last edited {0} by {1} ‖ · modifié en dernier {0} par {1} ‖ · modificato l'ultima volta {0} da {1}
+5621 ‖ · {0} tile{1} with older data (source not reachable) ‖ · {0} tuile{1} avec des données plus anciennes (source injoignable) ‖ · {0} tile{1} con dati più vecchi (fonte non raggiungibile)
+5622 ‖ · {0} of {1} confirmed{2} ‖ · {0} sur {1} confirmé(s){2} ‖ · {0} di {1} confermato/i{2}
+5623 ‖ · review by {0} ‖ · réviser d'ici au {0} ‖ · rivedere entro il {0}
+5624 ‖ · ⚠ source changed: {0} ‖ · ⚠ source modifiée : {0} ‖ · ⚠ fonte modificata: {0}
+5625 ‖ · ⚠ no longer present in the source ‖ · ⚠ n'existe plus dans la source ‖ · ⚠ non più presente nella fonte
+5626 ‖ · ⚠ last failure {0} ‖ · ⚠ dernier échec {0} ‖ · ⚠ ultimo fallimento {0}
+5627 ‖ · ⚠ {0} not loaded: {1} ‖ · ⚠ {0} non chargé : {1} ‖ · ⚠ {0} non caricato: {1}
+5628 ‖ ” for all operation types? It is only saved with “Save”. ‖ » pour tous les types d'intervention ? N'est enregistré qu'avec « Enregistrer ». ‖ » per tutti i tipi d'intervento? Viene salvato solo con «Salva».
+5629 ‖ Older apps show the notice “Please update the app”. Alerting and operations keep working; nothing is ever blocked. Empty = no notice. ‖ Les apps plus anciennes affichent l'avis « Veuillez mettre à jour l'app ». L'alarme et l'intervention continuent de fonctionner, rien n'est jamais bloqué. Vide = pas d'avis. ‖ Le app più vecchie mostrano l'avviso «Aggiorna l'app». Allarme e intervento continuano a funzionare, non si blocca mai nulla. Vuoto = nessun avviso.
+5630 ‖ Load older ‖ Charger plus anciens ‖ Carica più vecchi
+5631 ‖ Older ones are removed when uploading ‖ Les plus anciennes sont retirées lors du téléversement ‖ Quelle più vecchie vengono rimosse al caricamento
+5632 ‖ Changes only apply after “Save server”. ‖ Les modifications ne s'appliquent qu'après « Enregistrer le serveur ». ‖ Le modifiche valgono solo dopo «Salva server».
+5633 ‖ Changes apply to new acceptances. Whoever is already in the operation with this option keeps it. ‖ Les modifications valent pour les nouvelles acceptations. Qui est déjà en intervention avec cette option la conserve. ‖ Le modifiche valgono per le nuove accettazioni. Chi è già nell'intervento con questa opzione la mantiene.
+5634 ‖ Prepare public view (link already before the start) ‖ Préparer la vue publique (lien déjà avant le démarrage) ‖ Prepara la vista pubblica (link già prima dell'avvio)
+5635 ‖ Public link ‖ Lien public ‖ Link pubblico
+5636 ‖ Ø response time ‖ Ø temps de réponse ‖ Ø tempo di risposta
+5637 ‖ Ø duration ‖ Ø durée ‖ Ø durata
+5638 ‖ Ø reaction ‖ Ø réaction ‖ Ø reazione
+5639 ‖ Ø response time ‖ Ø temps de réaction ‖ Ø tempo di reazione
+5640 ‖ Ø response time (min) ‖ Ø temps de réaction (min) ‖ Ø tempo di reazione (min)
+5641 ‖ Ø participants ‖ Ø participants ‖ Ø partecipanti
+5642 ‖ Ø to 1st acceptance ‖ Ø jusqu'à la 1re acceptation ‖ Ø fino alla 1ª accettazione
+5643 ‖ Ø to search area ‖ Ø jusqu'à la zone de recherche ‖ Ø fino all'area di ricerca
+5644 ‖ Parent folder ‖ Dossier parent ‖ Cartella superiore
+5645 ‖ Take over into the prepared exercise ‖ Reprise dans l'exercice préparé ‖ Ripresa nell'esercitazione preparata
+5646 ‖ Take over as ‖ Reprendre comme ‖ Riprendi come
+5647 ‖ Take over … ‖ Reprendre … ‖ Riprendi …
+5648 ‖ Take over, significant ‖ Reprendre, important ‖ Riprendi, rilevante
+5649 ‖ Takes over functions, helicopter preselection, anonymisation periods and the start right of the user roles. Everything can be changed afterwards. ‖ Reprend les fonctions, la présélection des hélicoptères, les délais d'anonymisation et le droit de démarrage des rôles d'utilisateur. Tout peut être modifié ensuite. ‖ Riprende funzioni, preselezione degli elicotteri, termini di anonimizzazione e diritto di avvio dei ruoli utente. Tutto si può modificare dopo.
+5650 ‖ Takes over name, description, role, abbreviation, colour and location ‖ Reprend nom, description, rôle, abréviation, couleur et position ‖ Riprende nome, descrizione, ruolo, sigla, colore e posizione
+5651 ‖ Taken over at the start, with the state of the earlier operation at that time. ‖ Repris au démarrage, avec l'état de l'intervention antérieure à ce moment. ‖ Ripreso all'avvio, con lo stato dell'intervento precedente in quel momento.
+5652 ‖ Taken over, please save. ‖ Repris, veuillez enregistrer. ‖ Ripreso, salva.
+5653 ‖ Taken over. ‖ Repris. ‖ Ripreso.
+5654 ‖ Review by (optional) ‖ Réviser d'ici (facultatif) ‖ Rivedere entro (facoltativo)
+5655 ‖ Overview ‖ Vue d'ensemble ‖ Panoramica
+5656 ‖ Overview as PDF ‖ Vue d'ensemble en PDF ‖ Panoramica come PDF
+5657 ‖ Loading overview … ‖ Chargement de la vue d'ensemble … ‖ Caricamento della panoramica …
+5658 ‖ Overview of all data of the organisation in the app. The data themselves are in the ZIP: one JSON and one CSV file per table. Passwords, keys and access tokens are removed. ‖ Vue d'ensemble de toutes les données de l'organisation dans l'app. Les données elles-mêmes sont dans le ZIP : un fichier JSON et un fichier CSV par table. Les mots de passe, clés et jetons d'accès sont retirés. ‖ Panoramica di tutti i dati dell'organizzazione nell'app. I dati stessi sono nello ZIP: un file JSON e uno CSV per tabella. Password, chiavi e token d'accesso sono rimossi.
+5659 ‖ Remove exercise “{0}”? ‖ Retirer l'exercice « {0} » ? ‖ Rimuovere l'esercitazione «{0}»?
+5660 ‖ Reset exercise “{0}”? It is then prepared again and all elements are not released. Log and replay of the previous run are kept. ‖ Réinitialiser l'exercice « {0} » ? Il est ensuite de nouveau préparé et tous les éléments sont non libérés. Le journal et le replay de la réalisation précédente sont conservés. ‖ Reimpostare l'esercitazione «{0}»? Sarà di nuovo preparata e tutti gli elementi non rilasciati. Registro e replay dello svolgimento precedente restano.
+5661 ‖ Exercise lead (operation lead rights, does not take part) ‖ Direction d'exercice (droits de la direction d'intervention, ne participe pas) ‖ Direzione dell'esercitazione (diritti della direzione dell'intervento, non partecipa)
+5662 ‖ Exercise lead of “{0}” ({1}) ‖ Direction d'exercice de « {0} » ({1}) ‖ Direzione dell'esercitazione di «{0}» ({1})
+5663 ‖ Exercise lead: {0} · Alerted: {1} · Recording: {2} · Public view: {3} ‖ Direction d'exercice : {0} · Alarmés : {1} · Enregistrement : {2} · Vue publique : {3} ‖ Direzione dell'esercitazione: {0} · Allarmati: {1} · Registrazione: {2} · Vista pubblica: {3}
+5664 ‖ Exercise log – {0} ‖ Journal d'exercice – {0} ‖ Registro dell'esercitazione – {0}
+5665 ‖ Exercise schedule and sign-up ‖ Programme des exercices et inscription ‖ Programma delle esercitazioni e iscrizione
+5666 ‖ Exercise schedule: {0}{1}{2}{3} ‖ Programme des exercices : {0}{1}{2}{3} ‖ Programma delle esercitazioni: {0}{1}{2}{3}
+5667 ‖ older positions are no longer shown ‖ les positions plus anciennes ne sont plus affichées ‖ le posizioni più vecchie non vengono più mostrate
+5668 ‖ taken over as “{0}” ‖ repris comme « {0} » ‖ ripreso come «{0}»
+5669 ‖ – radio switched off for this type under “Functions” ‖ – radio désactivée pour ce type sous « Fonctions » ‖ – radio disattivata per questo tipo in «Funzioni»
+5670 ‖ – mandatory{0} ‖ – obligatoire{0} ‖ – obbligatoria{0}
+5671 ‖ – please choose – ‖ – veuillez choisir – ‖ – scegli –
+5672 ‖ – your own system administrator role remains ‖ – votre propre rôle d'administrateur système reste ‖ – il proprio ruolo di amministratore di sistema resta
+5673 ‖ – contains rights you do not have yourself ‖ – contient des droits que vous n'avez pas vous-même ‖ – contiene diritti che tu non hai
+5674 ‖ – not permitted here – ‖ – pas admis ici – ‖ – non ammesso qui –
+5675 ‖ – no responder locations ‖ – pas de positions des intervenants ‖ – nessuna posizione dei soccorritori
+5676 ‖ – not loaded – ‖ – non chargé – ‖ – non caricato –
+5677 ‖ – top level – ‖ – niveau supérieur – ‖ – livello superiore –
+5678 ‖ •••••••• (stored) ‖ •••••••• (enregistré) ‖ •••••••• (registrato)
+5679 ‖ ▶ Play ‖ ▶ Lire ‖ ▶ Riproduci
+5680 ‖ ● recorded ‖ ● enregistré ‖ ● registrato
+5681 ‖ ● running ‖ ● en cours ‖ ● in corso
+5682 ‖ ★ prioritised ‖ ★ prioritaire ‖ ★ prioritario
+5683 ‖ ⚙ Administration ‖ ⚙ Administration ‖ ⚙ Amministrazione
+5684 ‖ ⚠ Deviations from the source ‖ ⚠ Écarts par rapport à la source ‖ ⚠ Scostamenti dalla fonte
+5685 ‖ ⚠ curl is missing on the server; requests are not possible. ‖ ⚠ curl manque sur le serveur, les requêtes ne sont pas possibles. ‖ ⚠ Sul server manca curl, le richieste non sono possibili.
+5686 ‖ ⚠ This web server is missing the PHP extension ‖ ⚠ Sur ce serveur web, il manque l'extension PHP ‖ ⚠ Su questo server web manca l'estensione PHP
+5687 ‖ ⚠ File ‖ ⚠ Fichier ‖ ⚠ File
+5688 ‖ ⚠ The function “Water level & discharge (FOEN)” is not switched on for any operation type (Functions → Functions). ‖ ⚠ La fonction « Niveau & débit (OFEV) » n'est activée pour aucun type d'intervention (Fonctions → Fonctions). ‖ ⚠ La funzione «Livello & portata (UFAM)» non è attiva per alcun tipo d'intervento (Funzioni → Funzioni).
+5689 ‖ ⚠ No source active: search area and river distance only get data from the cache. ‖ ⚠ Aucune source active : zone de recherche et distance fluviale ne reçoivent plus que des données du cache. ‖ ⚠ Nessuna fonte attiva: area di ricerca e distanza fluviale ricevono solo dati dalla cache.
+5690 ‖ ⚠ Without the right “Configure map & data” the existing locations are not visible here. ‖ ⚠ Sans le droit « Configurer carte & données », les sites existants ne sont pas visibles ici. ‖ ⚠ Senza il diritto «Configurare mappa & dati» qui i luoghi esistenti non sono visibili.
+5691 ‖ ⚠ Source changed ‖ ⚠ Source modifiée ‖ ⚠ Fonte modificata
+5692 ‖ ⚠ the server does not deliver partial requests (HTTP {0}); the map then loads the whole file ‖ ⚠ le serveur ne fournit pas de requêtes partielles (HTTP {0}), la carte charge alors tout le fichier ‖ ⚠ il server non fornisce richieste parziali (HTTP {0}), la mappa carica allora l'intero file
+5693 ‖ ⚠ no vector tiles (MVT), not selectable ‖ ⚠ pas de tuiles vectorielles (MVT), non sélectionnable ‖ ⚠ nessuna tile vettoriale (MVT), non selezionabile
+5694 ‖ ⚠ no longer in the source ‖ ⚠ plus dans la source ‖ ⚠ non più nella fonte
+5695 ‖ ⚠ Review due ‖ ⚠ Révision due ‖ ⚠ Revisione dovuta
+5696 ‖ ✓ Logged in in {0} ms, folder “{1}” with {2} e-mails. Not yet saved, if changed. ‖ ✓ Connecté en {0} ms, dossier « {1} » avec {2} e-mails. Pas encore enregistré, si modifié. ‖ ✓ Accesso in {0} ms, cartella «{1}» con {2} e-mail. Non ancora salvato, se modificato.
+5697 ‖ ✓ Answer in {0} ms from ‖ ✓ Réponse en {0} ms de ‖ ✓ Risposta in {0} ms da
+5698 ‖ ✓ Answer in {0} ms, version {1}, zoom {2}–{3}{4}. ‖ ✓ Réponse en {0} ms, version {1}, zoom {2}–{3}{4}. ‖ ✓ Risposta in {0} ms, versione {1}, zoom {2}–{3}{4}.
+5699 ‖ ✓ Answer in {0} ms: {1} aircraft within 220 km of the centre of Switzerland, of which {2} helicopters{3}. ‖ ✓ Réponse en {0} ms : {1} aéronefs dans un rayon de 220 km autour du centre de la Suisse, dont {2} hélicoptères{3}. ‖ ✓ Risposta in {0} ms: {1} aeromobili entro 220 km dal centro della Svizzera, di cui {2} elicotteri{3}.
+5700 ‖ ✓ Answer in {0} ms: {1} stations, values for {2}.{3} ‖ ✓ Réponse en {0} ms : {1} stations, valeurs pour {2}.{3} ‖ ✓ Risposta in {0} ms: {1} stazioni, valori per {2}.{3}
+5701 ‖ ✓ Set up and switched on. ‖ ✓ Configuré et activé. ‖ ✓ Configurato e attivato.
+5702 ‖ ✓ Reachable in {0} ms{1}, layer {2} with SRID {3}{4}. Example 5 km around Bern: {5} ways in {6} ms{7}.{8} Not yet saved, if changed. ‖ ✓ Joignable en {0} ms{1}, couche {2} avec SRID {3}{4}. Exemple 5 km autour de Berne : {5} tronçons en {6} ms{7}.{8} Pas encore enregistré, si modifié. ‖ ✓ Raggiungibile in {0} ms{1}, livello {2} con SRID {3}{4}. Esempio 5 km attorno a Berna: {5} tratti in {6} ms{7}.{8} Non ancora salvato, se modificato.
+5703 ‖ ✓ Tile loaded in {0} ms: ‖ ✓ Tuile chargée en {0} ms : ‖ ✓ Tile caricata in {0} ms:
+5704 ‖ ✓ Media server reachable ({0} ms, {1} open rooms) ‖ ✓ Serveur média joignable ({0} ms, {1} salles ouvertes) ‖ ✓ Server multimediale raggiungibile ({0} ms, {1} stanze aperte)
+5705 ‖ ✓ Mailbox state remembered; e-mails arriving from now on are processed. ‖ ✓ État de la boîte aux lettres mémorisé ; les e-mails arrivant dès maintenant sont traités. ‖ ✓ Stato della casella di posta memorizzato; le e-mail in arrivo da ora vengono elaborate.
+5706 ‖ ✓ Transcription works ({0}, {1} ms) ‖ ✓ La transcription fonctionne ({0}, {1} ms) ‖ ✓ La trascrizione funziona ({0}, {1} ms)
+5707 ‖ ✓ Connected in {0} ms (PostGIS {1}), table with about {2} water bodies. Example 5 km around Bern: {3} ways in {4} ms{5}. Not yet saved, if changed. ‖ ✓ Connecté en {0} ms (PostGIS {1}), table avec env. {2} cours d'eau. Exemple 5 km autour de Berne : {3} tronçons en {4} ms{5}. Pas encore enregistré, si modifié. ‖ ✓ Collegato in {0} ms (PostGIS {1}), tabella con circa {2} corsi d'acqua. Esempio 5 km attorno a Berna: {3} tratti in {4} ms{5}. Non ancora salvato, se modificato.
+5708 ‖ ✓ Would start “{0}” ({1}){2}.{3} ‖ ✓ Démarrerait « {0} » ({1}){2}.{3} ‖ ✓ Avvierebbe «{0}» ({1}){2}.{3}
+5709 ‖ ✓ active ‖ ✓ actif ‖ ✓ attivo
+5710 ‖ ✓ set up ‖ ✓ configuré ‖ ✓ configurato
+5711 ‖ ✓ created ‖ ✓ créé ‖ ✓ creato
+5712 ‖ ✓ {0} checked: {1} changed, {2} no longer in the source{3}.{4} ‖ ✓ {0} vérifiés : {1} modifiés, {2} plus dans la source{3}.{4} ‖ ✓ {0} verificati: {1} modificati, {2} non più nella fonte{3}.{4}
+5713 ‖ =
+5714 ‖ ✓ {0} ms, {1} stations, values for {2} ‖ ✓ {0} ms, {1} stations, valeurs pour {2} ‖ ✓ {0} ms, {1} stazioni, valori per {2}
+5715 ‖ ✗ No valid answer ({0} ms){1} ‖ ✗ Pas de réponse valide ({0} ms){1} ‖ ✗ Nessuna risposta valida ({0} ms){1}
+5716 ‖ ✗ No valid answer after {0} ms{1}. ‖ ✗ Pas de réponse valide après {0} ms{1}. ‖ ✗ Nessuna risposta valida dopo {0} ms{1}.
+5717 ‖ ✨ Draft for empty fields ‖ ✨ Brouillon pour les champs vides ‖ ✨ Bozza per i campi vuoti
+5718 ‖ ✨ Draft for {0} empty fields ready ‖ ✨ Brouillon pour {0} champs vides prêt ‖ ✨ Bozza per {0} campi vuoti pronta
+5719 ‖ ✨ In words ‖ ✨ En mots ‖ ✨ A parole
+5720 ‖ ✨ Suggestions ‖ ✨ Propositions ‖ ✨ Proposte
+5721 ‖ ✨ Summary ‖ ✨ Résumé ‖ ✨ Riepilogo
+5722 ‖ ✨ Summary ready ‖ ✨ Résumé prêt ‖ ✨ Riepilogo pronto
+5723 ‖ ❚❚ Pause ‖ ❚❚ Pause ‖ ❚❚ Pausa
+5724 ‖ ❚❚ paused ‖ ❚❚ en pause ‖ ❚❚ in pausa
+5725 ‖ ⬇ offline allowed ‖ ⬇ hors ligne autorisé ‖ ⬇ offline consentito
+5726 ‖ ⬇ offline for all ‖ ⬇ hors ligne pour tous ‖ ⬇ offline per tutti
+5727 ‖ 📋 My operations ‖ 📋 Mes interventions ‖ 📋 I miei interventi
+5728 ‖ 📚 All documents ‖ 📚 Tous les documents ‖ 📚 Tutti i documenti
+5729 ‖ 🔒 = not visible to everyone.{0} ‖ 🔒 = pas visible pour tous.{0} ‖ 🔒 = non visibile a tutti.{0}
+5730 ‖ 🧭 {0} navigation point{1} ‖ 🧭 {0} point{1} de navigation ‖ 🧭 {0} punto{1} di navigazione
