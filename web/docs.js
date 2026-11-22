@@ -134,34 +134,47 @@ function dkSugDlg(o){const d=o.doc,cfg=(typeof me!=='undefined'&&me.docs_cfg)||{
 // L: Antwort von docs; ctx: {kid, inc: incident/state docs (Einsatztyp, Standorte), places: [{id, name}], mineOnly}
 // eigene Reihenfolge (doc/view) vor der Vorgabe des Einsatztyps; Abschnitte, die dort fehlen (z. B. neu), kommen aus der Vorgabe dazu
 const dkSecsFor=(L,kid)=>{const c=L.cfg,my=L.my_view||{},own=c.own&&(my[kid]||my['0']),def=c.view[kid]||c.view['0']||[];return(own?own.concat(def.filter(d=>!own.some(o=>o.k===d.k))):def).filter(s=>s.on)};
-function dkRow(d,o={}){const m=d.mine,ack=m&&m.st!=='ok';return`<button class="dkr${d.active?'':' off'}" data-dkid="${d.id}"${o.page?` data-dkpage="${o.page}"`:''}><span class="dki">${dkIco(d)}</span><span class="dkn"><b>${esc(d.title)}</b>${d.fav?' <span class="dkfav">★</span>':''}${ack?` <span class="dkchip ${m.st}">${m.st==='over'?'überfällig':'bestätigen'}${m.due?' bis '+dkDate(m.due):''}</span>`:''}${d.review?' <span class="dkchip rev">prüfen</span>':''}${o.off?' <span class="dkchip">offline</span>':''}
-  <small class="mut">${o.snip?o.snip:esc(dkKindTxt(d)+(d.updated?' · '+dkDate(d.updated):''))}</small></span></button>`}
+// offline auf diesem Gerät (wie auf dem Server: immer bzw. als Favorit)
+const dkOffOn=d=>d.offline===2||d.offline===1&&!!d.fav;
+// Zeile wie im Konzept (Bild 1/2): Art, Titel, Angaben, Fundstelle, Chips; rechts «Öffnen» und Favorit
+// o: page (Seite der Fundstelle), meta (statt Art · Grösse · Stand), snip (HTML der Fundstelle), chips (HTML), title (HTML des Titels)
+function dkRow(d,o={}){const m=d.mine,ack=m&&m.st!=='ok',f=d.kind==='file'?d.file:null,pg=o.page?` data-dkpage="${o.page}"`:'';
+  const meta=o.meta!=null?o.meta:[dkArt(d),f&&f.bytes!=null?dkSize(f.bytes):'',d.updated?'Stand '+dkDate(d.updated):''].filter(x=>x).join(' · ');
+  const ch=[dkOffOn(d)?'<span class="dkchip on">⬇ offline</span>':'',ack?`<span class="dkchip ${m.st}">${m.st==='over'?'überfällig':'bestätigen'}${m.due?' bis '+dkDate(m.due):''}</span>`:'',d.review?'<span class="dkchip rev">prüfen</span>':'',o.chips||''].join('');
+  return`<div class="dkr${d.active?'':' off'}" data-dkid="${d.id}"${pg}>${dkBadge(d)}<span class="dkn"><b>${o.title||esc(d.title)}</b><small class="mut">${esc(meta)}</small>${o.snip?`<small class="dksn">${o.snip}</small>`:''}${ch?`<span class="dkchs">${ch}</span>`:''}</span>
+  <span class="dkra"><button type="button" data-dkid="${d.id}"${pg}>Öffnen</button><button type="button" class="dkst${d.fav?' on':''}" data-dkfv="${d.id}" aria-pressed="${d.fav?'true':'false'}" aria-label="${d.fav?'Favorit entfernen':'Als Favorit'}" title="${d.fav?'Favorit entfernen':'Als Favorit (wird offline gespeichert, wenn die Redaktion es erlaubt)'}">${d.fav?'★':'☆'}</button></span></div>`}
 function dkPanel(el,L,ctx={}){const st={f:null,q:'',hits:null};let qT=0;
   const docs=L.docs,byId=new Map(docs.map(d=>[d.id,d])),fold=L.folders,kid=ctx.kid||0,inc=ctx.inc||{list:[]};
   const pl=new Map((ctx.places||[]).map(p=>[p.id,p.name]));
-  const sec=(t,ds,key)=>ds.length?`<details class="dksec" open data-dks="${key}"><summary>${t} <span class="mut">(${ds.length})</span></summary>${ds.map(d=>dkRow(d)).join('')}</details>`:'';
+  const sec=(t,ds,key,o)=>ds.length?`<details class="dksec" open data-dks="${key}"><summary>${t} (${ds.length})</summary>${ds.map(d=>dkRow(d,o?o(d):{})).join('')}</details>`:'';
   const secs=()=>dkSecsFor(L,kid).map(s=>{const t=L.cfg.secs[s.k];
     if(s.k==='ack')return sec(t,docs.filter(d=>d.mine&&d.mine.st!=='ok').sort((a,b)=>(a.mine.due||9e12)-(b.mine.due||9e12)),'ack');
-    if(s.k==='fav')return sec(t,docs.filter(d=>d.fav),'fav');
+    if(s.k==='fav')return sec('★ '+t,docs.filter(d=>d.fav),'fav');
     if(s.k==='place'){const ds=(inc.list||[]).filter(d=>d.places&&d.places.length).map(d=>byId.get(d.id)||d);if(!ds.length)return'';
-      return`<details class="dksec" open><summary>${t} <span class="mut">(${ds.length})</span></summary>${ds.map(d=>dkRow(d)+`<div class="mut dkpl">📍 ${esc((inc.list.find(x=>x.id===d.id).places||[]).map(i=>pl.get(i)||'Standort').join(', '))}</div>`).join('')}</details>`}
+      return sec(t,ds,'place',d=>({chips:(inc.list.find(x=>x.id===d.id).places||[]).map(i=>`<span class="dkchip pl">📍 ${esc(pl.get(i)||'Standort')}</span>`).join('')}))}
     if(s.k==='kind')return sec(t,(inc.list||[]).filter(d=>d.kind_hit).map(d=>byId.get(d.id)||d),'kind');
     if(s.k==='recent')return sec(t,docs.filter(d=>d.seen).sort((a,b)=>b.seen-a.seen).slice(0,L.cfg.n),'recent');
     if(s.k==='new'){const lim=Date.now()/1000-30*86400;return sec(t,docs.filter(d=>d.updated>lim).sort((a,b)=>b.updated-a.updated).slice(0,L.cfg.n),'new')}
-    if(s.k==='folders')return`<details class="dksec" open><summary>${t}</summary>${folderList(null)}</details>`;return''}).join('');
+    if(s.k==='folders')return`<details class="dksec" open data-dks="folders"><summary>${t}</summary>${folderList(null)}</details>`;return''}).join('');
   const folderList=pid=>{const fs=fold.filter(f=>f.parent_id===pid&&f.active),ds=pid==null?[]:docs.filter(d=>d.folder_id===pid&&d.active);
-    return fs.map(f=>`<button class="dkr dkfo" data-dkf="${f.id}"><span class="dki">📁</span><span class="dkn"><b>${esc(f.name)}</b>${f.lock?' <span class="mut" title="Nur für bestimmte Personen">🔒</span>':''}<small class="mut">${docs.filter(d=>d.folder_id===f.id&&d.active).length} Einträge${f.descr?' · '+esc(f.descr):''}</small></span></button>`).join('')+ds.map(d=>dkRow(d)).join('')||'<div class="mut">Leer.</div>'};
+    return fs.map(f=>`<button class="dkr dkfo" data-dkf="${f.id}"><span class="dkbg dkfb">📁</span><span class="dkn"><b>${esc(f.name)}</b>${f.lock?' <span class="mut" title="Nur für bestimmte Personen">🔒</span>':''}<small class="mut">${docs.filter(d=>d.folder_id===f.id&&d.active).length} Einträge${f.descr?' · '+esc(f.descr):''}</small></span><span class="dkra mut">›</span></button>`).join('')+ds.map(d=>dkRow(d)).join('')||'<div class="mut">Leer.</div>'};
   const path=id=>{const r=[];let f=fold.find(x=>x.id===id);while(f){r.unshift(f);f=fold.find(x=>x.id===f.parent_id)}return r};
   const draw=()=>{const f=st.f!=null?fold.find(x=>x.id===st.f):null;let body;
-    if(st.q.trim().length>=2){const h=st.hits;body=h==null?'<div class="mut">Wird gesucht …</div>':h.length?h.map(x=>{const d=byId.get(x.id);return d?dkRow(d,{page:x.page,snip:(x.page?'S. '+x.page+': ':'')+esc(x.snip||'').replace(new RegExp('('+st.q.trim().split(/\s+/).filter(w=>w.length>1).map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')','gi'),'<mark>$1</mark>')}):''}).join(''):'<div class="mut">Keine Treffer.</div>'}
+    if(st.q.trim().length>=2){const h=st.hits,ws=st.q.trim().split(/\s+/).filter(w=>w.length>1).map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')),re=ws.length?new RegExp('('+ws.join('|')+')','gi'):null,mk=t=>re?esc(t).replace(re,'<mark>$1</mark>'):esc(t);
+      // Fundstelle wie im Konzept (Bild 2): Ordnerpfad · Art, darunter «S. n: «…»», «Schlagwort: …» oder «Beschreibung: «…»»
+      const hit=x=>{const d=byId.get(x.id);if(!d)return'';const w=x.where==='tags'?'Schlagwort: ':x.where==='descr'?'Beschreibung: ':x.page?'S. '+x.page+': ':'';
+        return dkRow(d,{page:x.page,title:mk(d.title),meta:[path(d.folder_id).map(p=>p.name).join(' › '),d.kind==='link'?'externe Seite':dkArt(d)].filter(y=>y).join(' · '),snip:x.where==='title'||!x.snip?'':w+(x.where==='tags'?mk(x.snip):'«'+mk(x.snip)+'»')})};
+      body=h==null?'<div class="mut">Wird gesucht …</div>':h.length?`<details class="dksec" open><summary>Treffer (${h.length})</summary>${h.map(hit).join('')}</details><div class="mut dkhint">Gesucht wird in Titel, Beschreibung, Schlagwörtern, Seiten und im Text der PDFs. Nur Dokumente, die du sehen darfst.</div>`:'<div class="mut">Keine Treffer.</div>'}
     else if(f)body=`<div class="dkcrumb"><a href="#" data-dkf="">Dokumente</a>${path(f.id).map(p=>` › <a href="#" data-dkf="${p.id}">${esc(p.name)}</a>`).join('')}</div>${f.descr?`<div class="mut">${esc(f.descr)}</div>`:''}${folderList(f.id)}${f.sug?`<div class="row"><button data-dksugf="${f.id}">+ Eintrag vorschlagen</button></div>`:''}`;
     else body=(secs()||'<div class="mut">Noch keine Dokumente.</div>')+(L.cfg.own?'<div class="row"><button data-dkord>Abschnitte anordnen</button></div>':'');
     el.querySelector('.dkres').innerHTML=body};
-  el.innerHTML=`<div class="row dkq"><input type="search" placeholder="In Dokumenten suchen (auch im Text der PDF)" aria-label="In Dokumenten suchen" autocomplete="off"></div><div class="dkres"></div>`;
+  el.innerHTML=`<div class="dkq"><input type="search" placeholder="Dokumente durchsuchen …" aria-label="Dokumente durchsuchen (auch im Text der PDF)" autocomplete="off"></div><div class="dkres"></div>`;
   const q=el.querySelector('input');q.oninput=()=>{st.q=q.value;clearTimeout(qT);if(st.q.trim().length<2){st.hits=null;draw();return}st.hits=null;draw();
     qT=setTimeout(async()=>{const v=st.q;try{const r=await api('docs&q='+encodeURIComponent(v));if(v===st.q){st.hits=r.hits;draw()}}catch(e){ // ohne Verbindung: nur Titel, Beschreibung, Schlagwörter
       const w=v.toLowerCase().split(/\s+/).filter(x=>x.length>1);st.hits=docs.filter(d=>w.every(x=>(d.title+' '+d.descr+' '+d.tags).toLowerCase().includes(x))).map(d=>({id:d.id,snip:d.descr}));draw()}},300)};
-  el.onclick=e=>{const a=e.target.closest('[data-dkf],[data-dkid],[data-dksugf],[data-dkord]');if(!a)return;e.preventDefault();
+  el.onclick=async e=>{const fv=e.target.closest('[data-dkfv]');if(fv){e.preventDefault();const d=byId.get(+fv.dataset.dkfv);if(!d)return;
+      try{await api('doc/fav',{id:d.id,on:d.fav?0:1});d.fav=d.fav?0:1;draw();ctx.onChange&&ctx.onChange()}catch(err){fail(err)}return}
+    const a=e.target.closest('[data-dkf],[data-dkid],[data-dksugf],[data-dkord]');if(!a)return;e.preventDefault();
     if(a.dataset.dkord!=null)return dkOrdDlg(L,kid,ctx.onChange);
     if(a.dataset.dksugf)return dkSugDlg({folder_id:+a.dataset.dksugf});
     if(a.dataset.dkf!=null){st.f=a.dataset.dkf?+a.dataset.dkf:null;st.q='';q.value='';draw();return}

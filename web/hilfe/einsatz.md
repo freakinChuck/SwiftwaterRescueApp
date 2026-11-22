@@ -117,8 +117,10 @@ Fahrzeuge mit einem Bluetooth-Beacon erscheinen auf der Karte, sobald die native
 
 Der Kartenknopf **📚 Dokumente** öffnet die Unterlagen deiner Organisation, auch ohne Einsatz. Zuoberst steht die Suche: Sie findet Titel, Beschreibung, Schlagwörter, den Text von Seiten und den Text von PDFs, mit Seitenzahl. Darunter stehen die Abschnitte, die die Verwaltung eingerichtet hat, zum Beispiel offene Lesebestätigungen, ★ Favoriten, Dokumente an Standorten im Einsatzgebiet, Dokumente für diesen Einsatztyp und die Ordner. Ist es erlaubt, ordnest du die Abschnitte mit **Abschnitte anordnen** für dich.
 
+Jede Zeile zeigt links die Art (PDF, TEXT, LINK …), daneben Titel, Art, Grösse und Stand sowie Chips wie «⬇ offline» oder den Standort (📍). Rechts stehen **Öffnen** und der Stern für Favoriten. Bei Suchtreffern steht statt dessen der Ordner und darunter die Fundstelle, zum Beispiel «S. 3: «… Walze …»» oder «Schlagwort: Walze»; die gesuchten Wörter sind hervorgehoben.
+
 - **Ansehen**: Seiten, Bilder und PDFs zeigt die App direkt an, andere Dateien lädst du herunter bzw. öffnest sie in einer passenden App. Links öffnen im Browser.
-- **★** heftet einen Eintrag an. Favoriten und von der Redaktion bestimmte Einträge speichert das Gerät auch **offline**.
+- **★** (bzw. ☆) heftet einen Eintrag an. Favoriten und von der Redaktion bestimmte Einträge speichert das Gerät auch **offline**.
 - **Lesebestätigung**: Verlangt die Organisation, dass du ein Dokument liest, steht es mit Frist im Menü (Karte «📚 Unterlagen») und mit einem Zähler am Kartenknopf. Unten bzw. oben im Dokument bestätigst du mit **Gelesen und verstanden**.
 - **Vorschlagen**: Fehlt etwas oder ist etwas falsch, schickst du der Redaktion einen Vorschlag, bei einem Eintrag oder in einem Ordner. Im Browser kannst du auch eine Datei mitschicken.
 - **Feste Standorte**: Hängt ein Dokument an einem Standort (z. B. dem Einsatzplan eines Wehrs), steht es im Popup des Standorts (in der App im Info-Blatt) unter «Dokumente zu diesem Standort»: je Dokument die Art (PDF, TEXT …), der Titel, «offline», wenn es auf dem Gerät gespeichert ist, und der Stand. Antippen öffnet es.

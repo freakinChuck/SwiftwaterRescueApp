@@ -314,39 +314,130 @@ Widget _inl(BuildContext c, String s, void Function(int id)? openDoc) {
   return Text.rich(TextSpan(children: sp));
 }
 
-// ---------- Zeile eines Eintrags ----------
-Widget dkRow(BuildContext c, J d, VoidCallback onTap, {String? snip}) {
-  final m = d['mine'] is Map ? jm(d['mine']) : null, ack = m != null && js(m['st']) != 'ok';
+// ---------- Zeile eines Eintrags (wie dkRow in docs.js, Konzept #229 Bild 1/2) ----------
+const _plBlue = Color(0xFF5AA9FF), _favGold = Color(0xFFF2C94C);
+
+/// offline auf diesem Gerät: immer bzw. als Favorit (wie auf dem Server)
+bool dkOffOn(J d) => ji(d['offline']) == 2 || (ji(d['offline']) == 1 && jb(d['fav']));
+
+/// Chip mit Rand wie .dkchip
+Widget dkChip(String t, Color c) => Container(
+  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+  decoration: BoxDecoration(border: Border.all(color: c), borderRadius: BorderRadius.circular(10)),
+  child: Text(t, style: TextStyle(color: c, fontSize: 11.5, fontWeight: FontWeight.w600)),
+);
+
+/// Text mit hervorgehobenen Suchwörtern
+Widget dkHl(String t, RegExp? re, TextStyle st) {
+  if (re == null) return Text(t, style: st);
+  final sp = <TextSpan>[];
+  var p = 0;
+  for (final m in re.allMatches(t)) {
+    if (m.start > p) sp.add(TextSpan(text: t.substring(p, m.start)));
+    sp.add(TextSpan(text: m.group(0), style: const TextStyle(backgroundColor: Color(0x66E8B545))));
+    p = m.end;
+  }
+  if (p < t.length) sp.add(TextSpan(text: t.substring(p)));
+  return Text.rich(TextSpan(style: st, children: sp));
+}
+
+/// meta: statt Art · Grösse · Stand (Suche: Ordnerpfad · Art); snip: Fundstelle (Präfix, Text); places: Namen der Standorte
+Widget dkRow(BuildContext c, J d, VoidCallback onTap, {VoidCallback? onFav, String? meta, (String, String, bool)? snip, List<String> places = const [], RegExp? hl}) {
+  final m = d['mine'] is Map ? jm(d['mine']) : null, ack = m != null && js(m['st']) != 'ok', f = js(d['kind']) == 'file' && d['file'] is Map ? jm(d['file']) : null;
+  final mt = meta ?? [dkArt(d), if (f != null && f['bytes'] != null) dkSize(jn(f['bytes'])!), if (d['updated'] != null) 'Stand ${dkDate(jn(d['updated']))}'].join(' · ');
+  final mut = Theme.of(c).hintColor;
+  final chips = <Widget>[
+    if (dkOffOn(d)) dkChip('⬇ offline', okGreen),
+    if (ack) dkChip('${js(m['st']) == 'over' ? 'überfällig' : 'bestätigen'}${m['due'] != null ? ' bis ${dkDate(jn(m['due']))}' : ''}', js(m['st']) == 'over' ? accRed : accOrange),
+    if (jb(d['review'])) dkChip('prüfen', const Color(0xFFC08BFF)),
+    for (final p in places) dkChip('📍 $p', _plBlue),
+  ];
   return InkWell(
     onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(c).dividerColor))),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 28, child: Text(dkIco(d), style: const TextStyle(fontSize: 18))),
+          dkBadge(d),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 2,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(js(d['title']), style: const TextStyle(fontWeight: FontWeight.bold)),
-                    if (jb(d['fav'])) const Text('★', style: TextStyle(color: accOrange)),
-                    if (ack)
-                      Chip2('${js(m['st']) == 'over' ? 'überfällig' : 'bestätigen'}${m['due'] != null ? ' bis ${dkDate(jn(m['due']))}' : ''}', color: js(m['st']) == 'over' ? accRed : accOrange),
-                    if (jb(d['review'])) const Chip2('prüfen'),
-                  ],
-                ),
-                Mut(snip ?? '${dkKindTxt(d)}${d['updated'] != null ? ' · ${dkDate(jn(d['updated']))}' : ''}', size: 12),
+                dkHl(js(d['title']), hl, const TextStyle(fontWeight: FontWeight.bold)),
+                Mut(mt, size: 12),
+                if (snip != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Text.rich(
+                      TextSpan(
+                        style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: mut),
+                        children: [
+                          TextSpan(text: snip.$1),
+                          if (snip.$3) const TextSpan(text: '«'),
+                          WidgetSpan(alignment: PlaceholderAlignment.baseline, baseline: TextBaseline.alphabetic, child: dkHl(snip.$2, hl, TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: mut))),
+                          if (snip.$3) const TextSpan(text: '»'),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (chips.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Wrap(spacing: 4, runSpacing: 3, children: chips)),
               ],
             ),
           ),
+          const SizedBox(width: 6),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OutlinedButton(
+                onPressed: onTap,
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 34), padding: const EdgeInsets.symmetric(horizontal: 12), visualDensity: VisualDensity.compact),
+                child: const Text('Öffnen'),
+              ),
+              if (onFav != null)
+                IconButton(
+                  onPressed: onFav,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: jb(d['fav']) ? 'Favorit entfernen' : 'Als Favorit (wird offline gespeichert, wenn die Redaktion es erlaubt)',
+                  icon: Text(jb(d['fav']) ? '★' : '☆', style: TextStyle(fontSize: 20, color: jb(d['fav']) ? _favGold : mut)),
+                ),
+            ],
+          ),
         ],
       ),
+    ),
+  );
+}
+
+/// Abschnitt mit umrandetem Kopf wie .dksec (aufklappbar)
+class DkSec extends StatefulWidget {
+  const DkSec(this.title, this.children, {super.key});
+  final String title;
+  final List<Widget> children;
+  @override
+  State<DkSec> createState() => _DkSecState();
+}
+
+class _DkSecState extends State<DkSec> {
+  bool _open = true;
+  @override
+  Widget build(BuildContext c) => Padding(
+    padding: const EdgeInsets.only(top: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _open = !_open),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(border: Border.all(color: Theme.of(c).dividerColor), borderRadius: BorderRadius.circular(8)),
+            child: Text('${_open ? '▾' : '▸'}  ${widget.title}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ),
+        if (_open) ...widget.children,
+      ],
     ),
   );
 }
@@ -440,17 +531,22 @@ class _DocsPanelState extends State<DocsPanel> {
   /// Abschnitte gemäss eigener Anordnung bzw. Vorgabe des Einsatztyps (dkSecsFor)
   List<J> _secs() => docSecsFor(_l!, docKid(s));
 
-  Widget _sec(String t, List<J> ds, {List<Widget> Function(J d)? extra}) => ds.isEmpty
+  Future<void> _fav(J d) async {
+    try {
+      await s.api.call('doc/fav', body: {'id': ji(d['id']), 'on': jb(d['fav']) ? 0 : 1});
+      setState(() => d['fav'] = jb(d['fav']) ? 0 : 1);
+      unawaited(docOffSync(s));
+    } catch (e) {
+      s.fail(e);
+    }
+  }
+
+  Widget _row(J d, {String? meta, (String, String, bool)? snip, List<String> places = const [], RegExp? hl}) =>
+      dkRow(context, d, () => _open(ji(d['id'])!), onFav: () => _fav(d), meta: meta, snip: snip, places: places, hl: hl);
+
+  Widget _sec(String t, List<J> ds, {List<String> Function(J d)? places}) => ds.isEmpty
       ? const SizedBox.shrink()
-      : ExpansionTile(
-          initiallyExpanded: true,
-          tilePadding: EdgeInsets.zero,
-          childrenPadding: EdgeInsets.zero,
-          title: Text('$t (${ds.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
-          children: [
-            for (final d in ds) ...[dkRow(context, d, () => _open(ji(d['id'])!)), ...?extra?.call(d)],
-          ],
-        );
+      : DkSec('$t (${ds.length})', [for (final d in ds) _row(d, places: places?.call(d) ?? const [])]);
 
   List<Widget> _folderList(int? pid) {
     final fs = _folders.where((f) => ji(f['parent_id']) == pid && jb(f['active'])).toList();
@@ -461,10 +557,17 @@ class _DocsPanelState extends State<DocsPanel> {
         InkWell(
           onTap: () => setState(() => _f = ji(f['id'])),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
             child: Row(
               children: [
-                const SizedBox(width: 28, child: Text('📁', style: TextStyle(fontSize: 18))),
+                Container(
+                  width: 44,
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: const Color(0xFF3B4B5B), borderRadius: BorderRadius.circular(6)),
+                  child: const Text('📁', style: TextStyle(fontSize: 18)),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,11 +577,12 @@ class _DocsPanelState extends State<DocsPanel> {
                     ],
                   ),
                 ),
+                const Mut('›'),
               ],
             ),
           ),
         ),
-      for (final d in ds) dkRow(context, d, () => _open(ji(d['id'])!)),
+      for (final d in ds) _row(d),
     ];
   }
 
@@ -494,19 +598,14 @@ class _DocsPanelState extends State<DocsPanel> {
             _sec(tt, _docs.where((d) => d['mine'] is Map && js(jm(d['mine'])['st']) != 'ok').toList()..sort((a, b) => (jn(jm(a['mine'])['due']) ?? 9e12).compareTo(jn(jm(b['mine'])['due']) ?? 9e12))),
           );
         case 'fav':
-          out.add(_sec(tt, _docs.where((d) => jb(d['fav'])).toList()));
+          out.add(_sec('★ $tt', _docs.where((d) => jb(d['fav'])).toList()));
         case 'place':
           final ds = il.where((d) => _ids(d['places']).isNotEmpty).map((d) => _byId(ji(d['id'])) ?? d).toList();
           out.add(
             _sec(
               tt,
               ds,
-              extra: (d) => [
-                Padding(
-                  padding: const EdgeInsets.only(left: 28, bottom: 4),
-                  child: Mut('📍 ${(il.firstWhere((x) => ji(x['id']) == ji(d['id']))['places'] as List).map((i) => pl[i] ?? 'Standort').join(', ')}', size: 12),
-                ),
-              ],
+              places: (d) => _ids(il.firstWhere((x) => ji(x['id']) == ji(d['id']))['places']).map((i) => pl[i] ?? 'Standort').toList(),
             ),
           );
         case 'kind':
@@ -517,15 +616,7 @@ class _DocsPanelState extends State<DocsPanel> {
           final lim = DateTime.now().millisecondsSinceEpoch / 1000 - 30 * 86400;
           out.add(_sec(tt, (_docs.where((d) => (jn(d['updated']) ?? 0) > lim).toList()..sort((a, b) => jn(b['updated'])!.compareTo(jn(a['updated'])!))).take(n).toList()));
         case 'folders':
-          out.add(
-            ExpansionTile(
-              initiallyExpanded: true,
-              tilePadding: EdgeInsets.zero,
-              childrenPadding: EdgeInsets.zero,
-              title: Text(tt, style: const TextStyle(fontWeight: FontWeight.bold)),
-              children: _folderList(null),
-            ),
-          );
+          out.add(DkSec(tt, _folderList(null)));
       }
     }
     if (out.isEmpty) out.add(const Mut('Noch keine Dokumente.'));
@@ -574,9 +665,41 @@ class _DocsPanelState extends State<DocsPanel> {
     final h = _hits;
     if (h == null) return [const Mut('Wird gesucht …')];
     if (h.isEmpty) return [const Mut('Keine Treffer.')];
+    // Fundstelle wie im Konzept (Bild 2): Ordnerpfad · Art, darunter «S. n: «…»», «Schlagwort: …» oder «Beschreibung: «…»»
+    final ws = _q.trim().split(RegExp(r'\s+')).where((w) => w.length > 1).map(RegExp.escape).toList();
+    final re = ws.isEmpty ? null : RegExp(ws.join('|'), caseSensitive: false);
+    String path(int? id) {
+      final r = <String>[];
+      var f = _folders.where((x) => ji(x['id']) == id).firstOrNull;
+      while (f != null) {
+        r.insert(0, js(f['name']));
+        final p = ji(f['parent_id']);
+        f = _folders.where((x) => ji(x['id']) == p).firstOrNull;
+      }
+      return r.join(' › ');
+    }
+
     return [
-      for (final x in h)
-        if (_byId(ji(x['id'])) case final d?) dkRow(context, d, () => _open(ji(d['id'])!), snip: '${x['page'] != null ? 'S. ${x['page']}: ' : ''}${js(x['snip'])}'),
+      DkSec('Treffer (${h.length})', [
+        for (final x in h)
+          if (_byId(ji(x['id'])) case final d?)
+            _row(
+              d,
+              hl: re,
+              meta: [path(ji(d['folder_id'])), js(d['kind']) == 'link' ? 'externe Seite' : dkArt(d)].where((y) => y.isNotEmpty).join(' · '),
+              snip: js(x['where']) == 'title' || js(x['snip']).isEmpty
+                  ? null
+                  : switch (js(x['where'])) {
+                      'tags' => ('Schlagwort: ', js(x['snip']), false),
+                      'descr' => ('Beschreibung: ', js(x['snip']), true),
+                      _ => (x['page'] != null ? 'S. ${x['page']}: ' : '', js(x['snip']), true),
+                    },
+            ),
+      ]),
+      const Padding(
+        padding: EdgeInsets.only(top: 10),
+        child: Mut('Gesucht wird in Titel, Beschreibung, Schlagwörtern, Seiten und im Text der PDFs. Nur Dokumente, die du sehen darfst.', size: 12),
+      ),
     ];
   }
 
@@ -586,13 +709,13 @@ class _DocsPanelState extends State<DocsPanel> {
     builder: (c, _) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PanelHead('Dokumente', onClose: () => widget.map != null ? widget.map!.openPanel(null) : Navigator.pop(context)),
+        PanelHead('📚 Dokumente', onClose: () => widget.map != null ? widget.map!.openPanel(null) : Navigator.pop(context)),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
           child: TextField(
             controller: _qc,
             onChanged: _search,
-            decoration: const InputDecoration(isDense: true, prefixIcon: Icon(Icons.search), hintText: 'In Dokumenten suchen (auch im Text der PDF)'),
+            decoration: const InputDecoration(isDense: true, prefixIcon: Icon(Icons.search), hintText: 'Dokumente durchsuchen …'),
           ),
         ),
         Expanded(
@@ -602,6 +725,11 @@ class _DocsPanelState extends State<DocsPanel> {
                   onRefresh: _load,
                   child: ListView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), children: _q.trim().length >= 2 ? _results() : (_f != null ? _folder(_f!) : _start())),
                 ),
+        ),
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: Theme.of(c).dividerColor))),
+          child: const Mut('★ = Favorit · ⬇ = auf diesem Gerät offline gespeichert', size: 11.5),
         ),
       ],
     ),
