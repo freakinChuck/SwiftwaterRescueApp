@@ -379,7 +379,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **VS-07** – Die native App meldet ihre Version dem Server; die Verwaltung (System → «Versionen», eigenes Recht) zeigt den ausgelieferten Stand des Servers und die angemeldeten Apps je Plattform und Version (#175).
 - **VS-08** – In der Verwaltung lässt sich eine Mindestversion der App festlegen. Ältere Apps zeigen nur den Hinweis «Bitte App aktualisieren» (im Menü mit «Später» für 7 Tage ausblendbar, in der Kontenliste und im Profil); Alarmierung und Einsatz funktionieren weiter, gesperrt wird nie. Denselben Hinweis gibt es, wenn der Server eine höhere API-Stufe hat als die App (AG, #175).
 - **VS-09** – Jedes Deployment einer neuen Version steht im Applikationslog («Version a → b») (#175).
-- **VS-10** – Android- und iOS-App desselben Pipeline-Laufs haben dieselbe Build-Nummer; sie steigt mit jedem Lauf, auch über den von Hand ausgelösten iOS-Build hinweg (AG, #230).
+- **VS-10** – Android- und iOS-App desselben Pipeline-Laufs haben dieselbe Build-Nummer; sie steigt mit jedem Lauf um 1 (fortlaufend, keine grossen Sprünge, die Google Play ablehnt), auch über den von Hand ausgelösten iOS-Build hinweg (AG, #230).
 
 ## 27. Demo-Modus (DM)
 
