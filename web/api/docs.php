@@ -134,8 +134,8 @@ function docNorm($d) { $d = ints($d, ['id', 'folder_id', 'offline', 'sort', 'act
 // aktuelle Datei eines Eintrags
 function docFile($d, $ver = null) { global $db; $s = $db->prepare("SELECT * FROM doc_files WHERE doc_id=? AND ver=?"); $s->execute([$d['id'], $ver ?? $d['ver']]); $f = $s->fetch(); $s->closeCursor();
   return $f ? ints($f, ['id', 'doc_id', 'ver', 'bytes', 'pages', 'at']) : null; }
-function docFilesOf($ids) { global $db; if (!$ids) return []; $r = []; $s = $db->prepare("SELECT f.id,f.doc_id,f.ver,f.name,f.ext,f.mime,f.bytes,f.pages,f.sha256,f.at FROM doc_files f JOIN docs d ON d.id=f.doc_id AND d.ver=f.ver WHERE f.doc_id IN (" . qm($ids) . ")");
-  $s->execute(array_values($ids)); foreach ($s->fetchAll() as $f) $r[(int)$f['doc_id']] = ints($f, ['id', 'doc_id', 'ver', 'bytes', 'pages', 'at']); return $r; }
+function docFilesOf($ids) { global $db; if (!$ids) return []; $r = []; $s = $db->prepare("SELECT f.id,f.doc_id,f.ver,f.name,f.ext,f.mime,f.bytes,f.pages,f.sha256,f.at,f.text IS NOT NULL has_text FROM doc_files f JOIN docs d ON d.id=f.doc_id AND d.ver=f.ver WHERE f.doc_id IN (" . qm($ids) . ")");
+  $s->execute(array_values($ids)); foreach ($s->fetchAll() as $f) $r[(int)$f['doc_id']] = ints($f, ['id', 'doc_id', 'ver', 'bytes', 'pages', 'at', 'has_text']); return $r; }
 function docPlacesOf($ids) { global $db; if (!$ids) return []; $r = []; $s = $db->prepare("SELECT place_id,doc_id FROM place_docs WHERE doc_id IN (" . qm($ids) . ")"); $s->execute(array_values($ids));
   foreach ($s->fetchAll() as $x) $r[(int)$x['doc_id']][] = (int)$x['place_id']; return $r; }
 function docUserOf($u, $ids = null) { global $db; $r = []; $s = $db->prepare("SELECT * FROM doc_user WHERE user_id=?"); $s->execute([$u]); foreach ($s->fetchAll() as $x) $r[(int)$x['doc_id']] = $x; return $r; }
@@ -208,8 +208,11 @@ function docAuto() { global $db, $now; if ((int)setting('doc_auto_at', 0) > $now
 function docShort($d, $f, $pl, $du, $ack) { global $now;
   return ['id' => $d['id'], 'folder_id' => $d['folder_id'], 'kind' => $d['kind'], 'title' => $d['title'], 'descr' => (string)$d['descr'], 'tags' => (string)$d['tags'], 'url' => $d['kind'] === 'link' ? $d['url'] : null,
     'ver' => $d['ver'], 'kinds' => $d['kinds'], 'places' => $pl ?? [], 'offline' => $d['offline'], 'active' => $d['active'], 'updated' => $d['updated'], 'review_at' => $d['review_at'], 'review' => $d['review_at'] !== null && $d['review_at'] < $now ? 1 : 0,
-    'file' => $f ? ['name' => $f['name'], 'ext' => $f['ext'], 'bytes' => $f['bytes'], 'pages' => $f['pages'], 'sha' => $f['sha256'], 'show' => docShow($f['ext'])] : null,
-    'fav' => $du ? (int)$du['fav'] : 0, 'seen' => $du && $du['seen_at'] !== null ? (int)$du['seen_at'] : null, 'ack' => $d['ack'], 'mine' => $ack]; }
+    'file' => $f ? ['name' => $f['name'], 'ext' => $f['ext'], 'bytes' => $f['bytes'], 'pages' => $f['pages'], 'sha' => $f['sha256'], 'show' => docShow($f['ext']), 'text' => $f['has_text'] ?? 0] : null,
+    'fav' => $du ? (int)$du['fav'] : 0, 'seen' => $du && $du['seen_at'] !== null ? (int)$du['seen_at'] : null, 'ack' => $d['ack'], 'mine' => $ack, 'by' => docUserName($d['updated_by']), 'imgs' => docImgN()[$d['id']] ?? 0]; }
+// Namen der Bearbeitenden und Anzahl Bilder je Seite (einmal je Anfrage)
+function docUserName($id) { global $db; static $m = null; if ($id === null) return null; if ($m === null) { $m = []; foreach ($db->query("SELECT id,name FROM users")->fetchAll(PDO::FETCH_NUM) as [$i, $n]) $m[(int)$i] = $n; } return $m[(int)$id] ?? null; }
+function docImgN() { global $db; static $m = null; if ($m === null) { $m = []; foreach ($db->query("SELECT doc_id,COUNT(*) FROM doc_imgs GROUP BY doc_id")->fetchAll(PDO::FETCH_NUM) as [$i, $n]) $m[(int)$i] = (int)$n; } return $m; }
 function docShorts($docs) { global $uid; $ids = array_keys($docs); $fs = docFilesOf($ids); $pl = docPlacesOf($ids); $du = docUserOf($uid); $ack = docAckMine($docs);
   return array_values(array_map(fn($d) => docShort($d, $fs[$d['id']] ?? null, $pl[$d['id']] ?? [], $du[$d['id']] ?? null, $ack[$d['id']] ?? null), $docs)); }
 // Ordnerbaum (sichtbare), lock = eingeschränkt, edit = Redaktion, sug = darf vorschlagen
@@ -217,7 +220,8 @@ function docTree($edit = false) { $r = [];
   foreach (docFolders() as $id => $f) { if (!docSee($id)) { continue; } if (!$f['active'] && !($edit && docEdit($id))) continue;
     $lock = 0; foreach (docChain($id) as $x) if ($x['read_grp'] !== null || $x['read_role'] !== null) $lock = 1;
     $o = ['id' => $id, 'parent_id' => $f['parent_id'], 'name' => $f['name'], 'descr' => (string)$f['descr'], 'active' => $f['active'], 'lock' => $lock, 'edit' => docEdit($id) ? 1 : 0, 'sug' => docSugOk($id) ? 1 : 0, 'ext' => docExtFolder($id) ? 1 : 0];
-    if ($edit && can('docs')) $o += array_intersect_key($f, array_flip(['read_grp', 'read_role', 'edit_grp', 'edit_role', 'sug_grp', 'sug_role'])) + ['sugm' => $f['sug'], 'ext_own' => $f['ext']];
+    if ($edit && can('docs')) { $n = 0; foreach (docMem() as $m) if (docSeeM($id, $m)) $n++;
+      $o += array_intersect_key($f, array_flip(['read_grp', 'read_role', 'edit_grp', 'edit_role', 'sug_grp', 'sug_role'])) + ['sugm' => $f['sug'], 'ext_own' => $f['ext'], 'n_see' => $n, 'n_all' => count(docMem())]; }
     $r[] = $o; }
   return $r; }
 function docCfgPub() { $c = docsCfg(); $t = [];

@@ -130,6 +130,18 @@ details.fbmy{display:block;margin:.4rem 0}details.fbmy>*+*{margin-top:.4rem}labe
 .navrow{display:flex;gap:.4rem;align-items:center;margin:.25rem 0}.navrow input{flex:1;min-width:0}
 /* Dialog «Element»: breit, links die Felder, rechts Standort und Karte; am Handy untereinander */
 .dlg .card.wide{max-width:960px}.dlg .card.kdlg{max-width:min(1180px,100%)}.vcap{display:grid;grid-template-columns:repeat(auto-fill,minmax(17rem,1fr));gap:.45rem 1.6rem}.vcaph{margin:.1rem 0 .2rem}.dlg .vcr{display:flex;align-items:center;gap:.4rem;min-height:2rem}.dlg .vcr label.chk{flex:1;min-width:0;gap:.4rem}.dlg .vcr label.chk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dlg .vcr input[type=number]{width:4.4rem;height:2.1rem;box-sizing:border-box;margin:0;padding:.25rem .45rem;flex:none}.dlg .vtot{margin-top:.35rem;padding-top:.35rem;border-top:1px dashed var(--line)}.dlg .vtot label{display:block;flex:1}.jgrid,.jcol{display:grid;gap:.7rem;align-content:start}.jtwo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.7rem;align-items:end}.jtwo>*,.jtwo select,.jtwo input{min-width:0;width:100%}
+.dktb{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.5rem 0 .8rem}.dktb button{margin:0}.dktb input{flex:0 1 22rem;min-width:10rem;margin:0}
+.dkg{display:grid;grid-template-columns:minmax(14rem,19rem) minmax(0,1fr);gap:1rem;align-items:start}
+.dktree{border:1px solid var(--line);border-radius:8px;padding:.4rem;position:sticky;top:.5rem;max-height:calc(100vh - 6rem);overflow:auto}
+.dktr{display:flex;align-items:center;gap:.3rem;padding:.35rem .4rem;border:1px solid transparent;border-radius:6px;cursor:pointer;user-select:none}.dktr:hover{background:#ffffff0d}.dktr.sel{background:#2b7de92e;border-color:#2b7de9}.dktr.off{opacity:.55}.dktr.drop{outline:2px dashed #2b7de9}
+.dktg{flex:0 0 1rem;text-align:center;color:var(--mut);font-size:.8rem}.dktn{flex:1;min-width:0;overflow-wrap:anywhere}.dktc{color:var(--mut);font-size:.85rem}.dkfoot{font-size:.8rem;padding:.5rem .4rem .2rem}
+.inc.ent.dke .ia{max-width:19rem;flex-wrap:wrap}.inc.ent.dke .ia button{margin:0}.inc.ent.dke .ei{align-self:flex-start}.dkfcard{display:block;padding:.6rem .8rem;margin:0 0 .6rem}.dkfh{font-size:1.1rem;font-weight:700;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}.dkacc{margin:.25rem 0 .5rem;line-height:1.4}
+.dkbg{display:inline-flex;align-items:center;justify-content:center;min-width:2.6rem;height:2.2rem;padding:0 .3rem;border-radius:6px;color:#fff;font-size:.72rem;font-weight:800}.dkbr{flex-basis:100%;height:0}
+.pchip.dkok{color:var(--ok);border-color:var(--ok)}.pchip.dkwarn{color:#e8b545;border-color:#e8b545}.pchip.dkpl{color:#5aa9ff;border-color:#5aa9ff}
+.dktabs{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}.dktabs button{margin:0}.dktabs button:disabled{opacity:.4}.dktabs button.on{background:#2b7de9;border-color:#2b7de9;color:#fff}.dkdlg input[type=radio]{width:1.2rem;height:1.2rem;padding:0;margin:0;flex:0 0 auto;accent-color:var(--ex)}.dkdlg label.chk{display:flex;align-items:center;gap:.4rem}.dkpick.ind{margin-left:1.6rem}.dkdlg.eq{grid-template-columns:1fr 1fr}
+.dkvers{border:1px solid var(--line);border-radius:8px;padding:.2rem .6rem;margin:.3rem 0 .6rem}.dkvers .dkverr{flex-wrap:nowrap;align-items:center;gap:.5rem}.dkvt{flex:1;min-width:0;display:flex;flex-direction:column}.dkwide{width:100%}
+.dkackbox{border:1px solid var(--line);border-radius:8px;padding:.5rem .7rem}.dkackbox .row{margin-top:.4rem}.dkpls{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}.dkpls .pchip button{padding:0 .2rem;margin:0 0 0 .2rem;border:0;background:none;color:inherit;min-height:0}.dklb{margin-top:.4rem}
+@media(max-width:900px){.dkg{grid-template-columns:1fr}.dktree{position:static;max-height:none}.dkdlg.eq{grid-template-columns:1fr}}
 @media(min-width:760px){.jgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}.jgrid.kgrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:1.6rem}.jcol.jm{display:flex;flex-direction:column}.jm .pickmap{flex:1;height:auto;min-height:24rem}}
 .lres{display:grid;gap:.25rem;max-height:14rem;overflow:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px;padding:.25rem}.lres:empty{display:none}.lres button{text-align:left}
 .rpg{font-size:.8rem;font-weight:700;color:var(--mut);margin-top:.5rem}
@@ -2513,110 +2525,195 @@ start();
 /* ---------- Dokumente (Issue #229): Ablage, Eingang, Anzeige, Einstellungen ----------
    Ablage: Ordnerbaum mit Freigaben (Einsatzgruppen/Benutzerrollen), Redaktion und Vorschlägen je Ordner; Einträge Datei (mit Versionen), Seite (Markdown), Link.
    Die Redaktion eines Ordners sieht diesen Bereich auch ohne das Recht docs (Pseudorecht docs_ed in nav()). Ansicht und Hochladen gemeinsam in docs.js. */
-let DKA=null,DKF=null; // Antwort docs&all=1, geöffneter Ordner
+let DKA=null,DKF='all',DKQ='',DKX=null; // Antwort docs&all=1, gewählt im Baum (Ordner-ID, 'all', 'rev'), Suche, aufgeklappte Ordner
 const dkFold=id=>DKA.folders.find(f=>f.id===id);
 const dkPath=id=>{const r=[];let f=dkFold(id);while(f){r.unshift(f);f=dkFold(f.parent_id)}return r};
-// Auswahl Einsatzgruppen und Benutzerrollen; all = Häkchen «alle» (null) bzw. ohne (nur Listen, leer = niemand)
-function dkPick(pre,grp,role,allLbl){const M=DKA,all=allLbl&&grp==null&&role==null;
-  return`${allLbl?`<label class="chk"><input type="checkbox" id="${pre}A" ${all?'checked':''}> ${esc(allLbl)}</label>`:''}<div id="${pre}L" class="dkpick"${all?' hidden':''}>
+// Auswahl Einsatzgruppen und Benutzerrollen; mit allLbl Wahl «alle» (null) oder Liste als Optionsfelder, sonst nur die Listen (leer = niemand)
+function dkPick(pre,grp,role,allLbl,listLbl){const M=DKA,all=allLbl&&grp==null&&role==null;
+  return`${allLbl?`<label class="chk"><input type="radio" name="${pre}R" id="${pre}A" ${all?'checked':''}> ${esc(allLbl)}</label><label class="chk"><input type="radio" name="${pre}R" id="${pre}B" ${all?'':'checked'}> ${esc(listLbl||'nur diese Einsatzgruppen oder Benutzerrollen:')}</label>`:''}<div id="${pre}L" class="dkpick${allLbl?' ind':''}"${all?' hidden':''}>
     ${M.groups.length?`<div class="mut">Einsatzgruppen</div><div class="fl">${M.groups.map(g=>`<label class="chk"><input type="checkbox" data-${pre}g="${g.id}" ${(grp||[]).includes(g.id)?'checked':''}> <i class="gdot" style="background:${esc(g.color)}"></i> ${esc(g.name)}</label>`).join('')}</div>`:''}
     <div class="mut">Benutzerrollen</div><div class="fl">${M.roles.map(r=>`<label class="chk"${r.ok?'':' title="Hat Rechte, die du selbst nicht hast"'}><input type="checkbox" data-${pre}r="${r.id}" ${(role||[]).includes(r.id)?'checked':''} ${r.ok||(role||[]).includes(r.id)?'':'disabled'}> ${esc(r.name)}</label>`).join('')}</div></div>`}
 function dkPickVal(d,pre,allLbl){if(allLbl&&$('#'+pre+'A',d).checked)return[null,null];return[[...d.querySelectorAll(`[data-${pre}g]:checked`)].map(i=>+i.dataset[pre+'g']),[...d.querySelectorAll(`[data-${pre}r]:checked`)].map(i=>+i.dataset[pre+'r'])]}
-function dkPickWire(d,pre,cb){const a=$('#'+pre+'A',d);if(a)a.onchange=()=>{$('#'+pre+'L',d).hidden=a.checked;cb&&cb()};cb&&d.querySelectorAll(`#${pre}L input`).forEach(i=>i.onchange=cb)}
+function dkPickWire(d,pre,cb){const a=$('#'+pre+'A',d),b=$('#'+pre+'B',d);if(a){const f=()=>{$('#'+pre+'L',d).hidden=a.checked;cb&&cb()};a.onchange=f;b.onchange=f}cb&&d.querySelectorAll(`#${pre}L input`).forEach(i=>i.onchange=cb)}
 const dkRuleTxt=(g,r,all)=>g==null&&r==null?all:[...(g||[]).map(id=>(DKA.groups.find(x=>x.id===id)||{}).name),...(r||[]).map(id=>(DKA.roles.find(x=>x.id===id)||{}).name)].filter(Boolean).join(', ')||'niemand';
+// Kennzeichen der Art (PDF rot, Seite blau …) wie im Konzept
+const DK_BCOL={pdf:'#d93b3b',img:'#2f9e62',text:'#5b6b7d',audio:'#8a5cd6',video:'#8a5cd6',dl:'#5b6b7d',page:'#2b7de9',link:'#178a96'};
+const dkBadge=d=>{const f=d.kind==='file'?d.file:null,t=d.kind==='page'?'TEXT':d.kind==='link'?'LINK':f?f.ext.toUpperCase().slice(0,4):'–';return`<span class="dkbg" style="background:${DK_BCOL[d.kind==='file'?(f&&f.show)||'dl':d.kind]}">${esc(t)}</span>`};
+const dkArt=d=>d.kind==='page'?'Seite':d.kind==='link'?'Link':d.file?d.file.ext.toUpperCase():'Datei';
+// Baum: aufgeklappte Ordner pro Gerät (sw_dktree), Anzahl aktiver Einträge samt Unterordnern
+const dkOpenSet=()=>{if(!DKX){try{DKX=new Set(JSON.parse(localStorage.getItem('sw_dktree')||'[]'))}catch(e){DKX=new Set()}}return DKX};
+const dkOpenSave=()=>{try{localStorage.setItem('sw_dktree',JSON.stringify([...DKX]))}catch(e){}};
+const dkKids=id=>DKA.folders.filter(x=>id==null?x.parent_id==null||!dkFold(x.parent_id):x.parent_id===id);
+const dkSub=id=>{const r=[id];for(let i=0;i<r.length;i++)DKA.folders.forEach(x=>{if(x.parent_id===r[i])r.push(x.id)});return r};
+const dkCnt=id=>{const s=new Set(dkSub(id));return DKA.docs.filter(d=>d.active&&s.has(d.folder_id)).length};
+function dkTreeHtml(){const op=dkOpenSet(),ad=can('docs'),act=DKA.docs.filter(d=>d.active),nRev=act.filter(d=>d.review).length;
+  const row=(x,lv)=>{const k=dkKids(x.id),o=op.has(x.id);return`<div class="dktr${DKF===x.id?' sel':''}${x.active?'':' off'}" data-dkgo="${x.id}" data-dkdrop="${x.id}"${ad?` draggable="true" data-dkdf="${x.id}"`:''} style="padding-left:${(.3+lv*1.15).toFixed(2)}rem" title="${esc(x.descr||x.name)}">
+    <span class="dktg"${k.length?` data-dktg="${x.id}"`:''}>${k.length?(o?'▾':'▸'):''}</span><span class="dktn">📁 ${esc(x.name)}${x.lock?' <span title="Nicht für alle sichtbar">🔒</span>':''}${x.active?'':' <small class="mut">(deaktiviert)</small>'}</span><span class="dktc">${dkCnt(x.id)}</span></div>${o?k.map(y=>row(y,lv+1)).join(''):''}`};
+  return`<div class="dktr${DKF==='all'?' sel':''}" data-dkgo="all"${ad?' data-dkdrop="0"':''}><span class="dktg"></span><span class="dktn">📚 Alle Dokumente</span><span class="dktc">${act.length}</span></div>
+    <div class="dktr${DKF==='rev'?' sel':''}" data-dkgo="rev"><span class="dktg"></span><span class="dktn">⚠ Überprüfung fällig</span><span class="dktc">${nRev}</span></div>
+    ${dkKids(null).map(x=>row(x,0)).join('')||'<div class="mut dkfoot">Noch keine Ordner.</div>'}
+    <div class="mut dkfoot">🔒 = nicht für alle sichtbar.${ad?' Ordner und Einträge ziehen zum Verschieben.':' Einträge ziehen zum Verschieben.'}</div>`}
+// Zugriffe eines Ordners in Worten: Sehen (eigene und übergeordnete Freigaben), Redaktion (auch von übergeordneten), Vorschläge
+const dkLim=x=>x.read_grp!=null||x.read_role!=null;
+function dkSeeTxt(f){const up=dkPath(f.id).slice(0,-1).reverse().find(dkLim),t=x=>dkRuleTxt(x.read_grp,x.read_role,'');
+  if(!dkLim(f))return up?`wie «${esc(up.name)}» (${esc(t(up))})`:'alle Angemeldeten';return esc(t(f))+(up?` und wie «${esc(up.name)}» (${esc(t(up))})`:'')}
+function dkEdTxt(f){const r=dkPath(f.id).filter(p=>(p.edit_grp||[]).length||(p.edit_role||[]).length).map(p=>esc(dkRuleTxt(p.edit_grp,p.edit_role,''))+(p.id===f.id?'':` (von «${esc(p.name)}»)`));
+  return r.length?r.join(', '):'nur mit dem Recht «Dokumentenablage verwalten»'}
+function dkFolderCard(f){const ad=can('docs'),sib=dkKids(f.parent_id).filter(x=>x.active),i=sib.findIndex(x=>x.id===f.id);
+  const acc=f.read_grp!==undefined?`Sehen: ${dkSeeTxt(f)} · Redaktion: ${dkEdTxt(f)} · Vorschläge: ${f.sugm==='list'?esc(dkRuleTxt(f.sug_grp||[],f.sug_role||[],'')):f.sugm==='none'?'niemand':'alle, die ihn sehen'}${f.ext?' · mit Externen teilbar':''} · sichtbar für ${f.n_see} von ${f.n_all} Personen`
+    :`${f.lock?'Nicht für alle sichtbar':'Für alle Angemeldeten sichtbar'} · du bist Redaktion${f.ext?' · mit Externen teilbar':''}`;
+  return`<div class="inc dkfcard"><div class="dkfh">${dkPath(f.id).map(p=>esc(p.name)).join(' › ')}${f.active?'':' <span class="pchip">deaktiviert</span>'}</div>${f.descr?`<div class="mut">${esc(f.descr)}</div>`:''}
+    <div class="mut dkacc">${acc}</div>${ad?`<div class="ia dkfb"><button id="dkFe">Ordner bearbeiten</button>${f.active&&sib.length>1?`<span class="bg">${mvBtns('dkfm',f.id,i,sib.length)}</span>`:''}${purgeB('doc_folder',f.id)}</div>`:''}</div>`}
+// Karte eines Eintrags: Art, Chips, Beschreibung, Datei, Im Einsatz, Stand; path = Ordner anzeigen (Alle, Suche); hit = Fundstelle
+function dkCard(d,i,n,path,hit){const ed=(dkFold(d.folder_id)||{}).edit,f=d.file;
+  const ch='<span class="dkbr"></span>'+[d.ver&&(d.kind==='file'||d.ver>1)?chip('Version '+d.ver):'',d.offline===2?'<span class="pchip dkok">⬇ offline für alle</span>':d.offline===1?'<span class="pchip dkok">⬇ offline erlaubt</span>':chip('nie offline'),
+    d.imgs?chip(d.imgs+(d.imgs>1?' Bilder':' Bild')):'',d.ack?chip('Lesebestätigung'):'',d.review?'<span class="pchip dkwarn">Überprüfung fällig</span>':''].join('');
+  const ein=[...d.places.map(p=>`<span class="pchip dkpl">📍 ${esc((DKA.places.find(x=>x.id===p)||{}).name||'Standort')}</span>`),...d.kinds.map(k=>DKA.kinds.find(x=>x.id===k)).filter(Boolean).map(k=>chip(k.name))].join('');
+  const rows=[path?['Ordner',esc(dkPath(d.folder_id).map(p=>p.name).join(' › '))]:null,hit&&hit.snip?['Fundstelle',`<span class="mut">${hit.page?'S. '+hit.page+': ':''}${esc(hit.snip)}</span>`]:null,
+    d.kind==='file'?['Datei',f?esc(f.name)+' · '+dkSize(f.bytes)+(f.pages?' · '+f.pages+(f.pages>1?' Seiten':' Seite'):'')+(f.ext==='pdf'?(f.text?', Text erkannt':', ohne Text'):''):'<span class="mut">noch keine Datei</span>']:null,
+    d.kind==='link'?['Adresse',`<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.url)}</a>`]:null,['Im Einsatz',ein],['Stand',esc(dkDate(d.updated)+(d.by?', '+d.by:'')+(d.review_at?' · überprüfen bis '+dkDate(d.review_at):''))]].filter(Boolean);
+  const h=ent({ic:dkBadge(d),th:`<a href="#" data-dkv="${d.id}">${esc(d.title)}</a> ${chip(dkArt(d))}`,ch,off:!d.active,d:d.descr,rows,cls:'dke',
+    btns:`<button data-dkv="${d.id}">Öffnen</button>${ed?`<button data-dkde="${d.id}">Bearbeiten</button>`:''}`,mv:ed&&d.active&&n>1?['dkdm',d.id,i,n]:null,
+    del:ed?[d.active?'dkoff':'dkon',d.id,d.active?'Deaktivieren':'Aktivieren']:null,q:d.title+' '+d.tags+' '+d.descr,pg:can('docs')?['doc',d.id]:null});
+  return ed?h.replace('<div class="inc ent',`<div draggable="true" data-dkdd="${d.id}" class="inc ent`):h}
 async function loadDocs(){const el=$('#sDk');try{DKA=await api('docs&all=1')}catch(e){return secErr(el,'Dokumente',e)}
-  if(DKF!=null&&!dkFold(DKF))DKF=null;const ad=can('docs'),f=DKF!=null?dkFold(DKF):null,docs=DKA.docs.filter(d=>d.folder_id===DKF),subs=DKA.folders.filter(x=>x.parent_id===DKF);
-  const fcard=(x,i,n)=>ent({ic:'📁',th:`<a href="#" data-dkgo="${x.id}">${esc(x.name)}</a>`,off:!x.active,d:x.descr,
-    ch:(x.lock?chip('eingeschränkt','','Sichtbar: '+dkRuleTxt(x.read_grp,x.read_role,'alle')):'')+(x.ext?chip('für Externe'):'')+(x.sug?'':chip('ohne Vorschläge')),
-    rows:ad&&x.read_grp!==undefined?([['Sichtbar für',esc(dkRuleTxt(x.read_grp,x.read_role,'alle Angemeldeten (gemäss übergeordnetem Ordner)'))],['Redaktion',esc(dkRuleTxt(x.edit_grp||[],x.edit_role||[],'')||'nur mit dem Recht «Dokumente»')],['Vorschläge',esc(x.sugm==='list'?dkRuleTxt(x.sug_grp||[],x.sug_role||[],''):x.sugm==='none'?'niemand':'alle, die ihn sehen')]]):null,
-    kv:[['Einträge',DKA.docs.filter(d=>d.folder_id===x.id).length],['Unterordner',DKA.folders.filter(y=>y.parent_id===x.id).length]],
-    ed:ad?['dkfe',x.id]:null,mv:ad&&x.active?['dkfm',x.id,i,n]:null,cls:'dkfc',q:x.name,pg:['doc_folder',x.id]});
-  const dcard=(d,i,n)=>{const m=d.mine;return ent({ic:dkIco(d),th:`<a href="#" data-dkv="${d.id}">${esc(d.title)}</a>`,off:!d.active,d:d.descr,
-    ch:(d.ack?chip('Lesebestätigung'):'')+(d.review?chip('Überprüfung fällig','#e8b545'):'')+(d.kinds.length?chip(d.kinds.map(k=>(DKA.kinds.find(x=>x.id===k)||{}).name).filter(Boolean).join(', ')):'')+(d.places.length?chip(d.places.length+' Standort'+(d.places.length>1?'e':'')):'')+(d.offline===2?chip('offline für alle'):d.offline===0?chip('nie offline'):''),
-    rows:[['Art',esc(dkKindTxt(d))],['Stand',esc((d.ver?'Version '+d.ver+', ':'')+dkDate(d.updated))],d.review_at?['Überprüfen bis',esc(dkDate(d.review_at))]:null].filter(Boolean),
-    btns:`${d.kind==='file'?`<button data-dkup="${d.id}">Neue Version</button>`:''}<button data-dkack="${d.id}">Lesebestätigung</button>`,ed:['dkde',d.id],mv:d.active?['dkdm',d.id,i,n]:null,q:d.title+' '+d.tags+' '+d.descr,pg:['doc',d.id]})};
-  const act=a=>a.filter(x=>x.active),off=a=>a.filter(x=>!x.active),sa=act(subs),da=act(docs);
-  const u=DKA.cfg;
-  el.innerHTML=`<h2>Dokumente</h2><div class="mut">Ablage für Merkblätter, Einsatzpläne, Checklisten und Links. Jede Person sieht nur Ordner, die für eine ihrer Einsatzgruppen oder Benutzerrollen freigegeben sind; die Einsatz-App zeigt sie im Fenster «Dokumente». Die Redaktion eines Ordners pflegt dessen Einträge.</div>
-    <div class="dkcrumb"><a href="#" data-dkgo="">Alle Ordner</a>${f?dkPath(f.id).map(p=>` › <a href="#" data-dkgo="${p.id}">${esc(p.name)}</a>`).join(''):''}</div>
-    ${f&&f.descr?`<div class="mut">${esc(f.descr)}</div>`:''}
-    ${newBar(ad?'dkFn':'',f?'Unterordner':'Ordner',`${f&&f.edit?'<button class="pri" id="dkNe">+ Neuer Eintrag</button>':''}${qIn('dkQ','Einträge und Ordner suchen')}`)}
-    ${sa.map((x,i)=>fcard(x,i,sa.length)).join('')}${da.map((d,i)=>dcard(d,i,da.length)).join('')}
-    ${!subs.length&&!docs.length?empty(f?'Dieser Ordner ist leer. Beispiel: Merkblatt «Bootseinsatz» als Seite, Einsatzplan als PDF, Link zum Pegel.':ad?'Noch keine Ordner. Beispiel: «Einsatzpläne» mit Unterordnern je Gewässer, «Merkblätter», «Ausbildung».':'Keine Ordner, in denen du Redaktion bist.'):''}
-    ${offGrp([...off(subs).map(x=>fcard(x,0,0)),...off(docs).map(d=>dcard(d,0,0))])}`;
-  qWire(el,'dkQ');
-  el.querySelectorAll('[data-dkgo]').forEach(a=>a.onclick=e=>{e.preventDefault();DKF=a.dataset.dkgo?+a.dataset.dkgo:null;loadDocs()});
+  if(typeof DKF==='number'&&!dkFold(DKF))DKF='all';const ad=can('docs'),f=typeof DKF==='number'?dkFold(DKF):null;
+  if(f)dkPath(f.id).slice(0,-1).forEach(p=>dkOpenSet().add(p.id));
+  const canNew=DKA.folders.some(x=>x.edit&&x.active),canUp=f&&f.edit&&f.active;
+  el.innerHTML=`<h2>Dokumente</h2><div class="dktb">${canNew?'<button class="pri" id="dkNe">+ Eintrag</button>':''}${ad?'<button id="dkFn">+ Ordner</button>':''}${canNew?`<button id="dkUp" ${canUp?'':'disabled title="Zuerst links einen Ordner wählen"'}>Hochladen …</button>`:''}
+    <input type="search" id="dkQ" placeholder="In allen Ordnern suchen …" value="${esc(DKQ)}" data-nodirty><span class="mut" id="dkUpSt"></span></div>
+    <div class="dkg"><aside class="dktree" id="dkTree">${dkTreeHtml()}</aside><div class="dkmain" id="dkMain"></div></div>`;
+  dkMainDraw();
+  const tr=$('#dkTree');
+  tr.onclick=e=>{const t=e.target.closest('[data-dktg]');if(t){const id=+t.dataset.dktg,o=dkOpenSet();o.has(id)?o.delete(id):o.add(id);dkOpenSave();tr.innerHTML=dkTreeHtml();return}
+    const g=e.target.closest('[data-dkgo]');if(!g)return;const v=g.dataset.dkgo;DKF=/^\d+$/.test(v)?+v:v;if(typeof DKF==='number'&&dkKids(DKF).length&&!dkOpenSet().has(DKF)){dkOpenSet().add(DKF);dkOpenSave()}
+    DKQ='';$('#dkQ').value='';tr.innerHTML=dkTreeHtml();dkMainDraw();const u=$('#dkUp');if(u){const x=typeof DKF==='number'?dkFold(DKF):null,ok=x&&x.edit&&x.active;u.disabled=!ok;u.title=ok?'Mehrere Dateien in diesen Ordner hochladen':'Zuerst links einen Ordner wählen'}};
+  // Ziehen: Ordner in einen anderen Ordner (bzw. auf «Alle Dokumente» = oberste Ebene), Einträge in einen Ordner mit Redaktion
+  let drag=null;el.addEventListener('dragstart',e=>{const a=e.target.closest('[data-dkdf],[data-dkdd]');if(!a)return;drag=a.dataset.dkdf?{f:+a.dataset.dkdf}:{d:+a.dataset.dkdd};e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','dk')});
+  el.addEventListener('dragend',()=>{drag=null;tr.querySelectorAll('.drop').forEach(x=>x.classList.remove('drop'))});
+  const okDrop=t=>{if(!drag||!t)return false;const id=+t.dataset.dkdrop;if(drag.f)return id!==drag.f&&!(id&&dkPath(id).some(p=>p.id===drag.f));if(!id)return false;const x=dkFold(id);return x&&x.edit&&x.active&&DKA.docs.find(d=>d.id===drag.d).folder_id!==id};
+  tr.addEventListener('dragover',e=>{const t=e.target.closest('[data-dkdrop]');tr.querySelectorAll('.drop').forEach(x=>x!==t&&x.classList.remove('drop'));if(okDrop(t)){e.preventDefault();t.classList.add('drop')}});
+  tr.addEventListener('drop',async e=>{const t=e.target.closest('[data-dkdrop]');if(!okDrop(t))return;e.preventDefault();const id=+t.dataset.dkdrop||null,dr=drag;drag=null;
+    try{if(dr.f){const x=dkFold(dr.f);if(!await ask(`Ordner «${x.name}» ${id?'nach «'+dkFold(id).name+'»':'auf die oberste Ebene'} verschieben?\n\nEr übernimmt die Freigaben des neuen übergeordneten Ordners zusätzlich zu den eigenen.`,{ok:'Verschieben'}))return;await api('doc/folder/save',{id:dr.f,parent_id:id})}
+      else await api('doc/save',{id:dr.d,folder_id:id});toast('Verschoben.','ok');loadDocs()}catch(err){fail(err)}});
+  let qt=0;$('#dkQ').oninput=()=>{clearTimeout(qt);qt=setTimeout(()=>{DKQ=$('#dkQ').value.trim();dkMainDraw()},250)};
+  if($('#dkFn'))$('#dkFn').onclick=()=>dkFolderDlg({parent_id:f?f.id:null});
+  if($('#dkNe'))$('#dkNe').onclick=()=>{const x=typeof DKF==='number'?dkFold(DKF):null;dkDocDlg({kind:'file',folder_id:x&&x.edit&&x.active?x.id:DKA.folders.find(y=>y.edit&&y.active).id,kinds:[],places:[],offline:1,active:1})};
+  if($('#dkUp'))$('#dkUp').onclick=()=>dkBulk(dkFold(DKF))}
+// rechte Seite: Ordnerkarte und Einträge, «Alle», «Überprüfung fällig» oder Suche über alle Ordner (Volltext über den Server)
+async function dkMainDraw(){const el=$('#dkMain');if(!el)return;const f=typeof DKF==='number'?dkFold(DKF):null,act=a=>a.filter(x=>x.active),off=a=>a.filter(x=>!x.active);let h='';
+  if(DKQ){el.innerHTML='<div class="mut">Wird gesucht …</div>';let hits=[];try{hits=(await api('docs&q='+encodeURIComponent(DKQ))).hits||[]}catch(e){}if(DKQ!==$('#dkQ').value.trim())return;
+    const t=DKQ.toLowerCase(),by=new Map(hits.map(x=>[x.id,x])),ds=DKA.docs.filter(d=>by.has(d.id)||!d.active&&(d.title+' '+d.tags+' '+d.descr).toLowerCase().includes(t)).sort((a,b)=>((by.get(b.id)||{}).score||0)-((by.get(a.id)||{}).score||0));
+    h=`<div class="dkfcard inc"><div class="dkfh">Suche «${esc(DKQ)}»</div><div class="mut dkacc">${ds.length} Treffer in allen Ordnern (Titel, Schlagwörter, Beschreibung, Text der Seiten und PDFs).</div></div>${act(ds).map(d=>dkCard(d,0,0,1,by.get(d.id))).join('')||empty('Keine Treffer. Beispiel: «Walze», «Nadelwehr», «Schwimmweste».')}${offGrp(off(ds).map(d=>dkCard(d,0,0,1)))}`}
+  else if(f){const ds=DKA.docs.filter(d=>d.folder_id===f.id),a=act(ds),k=dkKids(f.id);
+    h=dkFolderCard(f)+a.map((d,i)=>dkCard(d,i,a.length)).join('')+(a.length?'':empty(k.length?`Keine Einträge direkt in diesem Ordner. Die Unterordner (${esc(k.map(x=>x.name).join(', '))}) stehen links im Baum.`:'Dieser Ordner ist leer. Beispiel: Merkblatt «Bootseinsatz» als Seite, Einsatzplan als PDF, Link zum Pegel.'))+offGrp(off(ds).map(d=>dkCard(d,0,0)))}
+  else{const rev=DKF==='rev',ds=DKA.docs.filter(d=>!rev||d.review);
+    h=`<div class="dkfcard inc"><div class="dkfh">${rev?'Überprüfung fällig':'Alle Dokumente'}</div><div class="mut dkacc">${rev?'Einträge, deren Datum «Überprüfen bis» vorbei ist. Nach der Prüfung im Eintrag ein neues Datum setzen.':`${act(ds).length} Einträge in ${DKA.folders.filter(x=>x.active).length} Ordnern. Links einen Ordner wählen, um seine Zugriffe zu sehen und Einträge anzulegen.`}</div></div>`
+      +act(ds).map(d=>dkCard(d,0,0,1)).join('')+(act(ds).length?'':empty(rev?'Keine Überprüfung fällig.':DKA.folders.length?'Noch keine Einträge. Beispiel: Einsatzplan als PDF, Merkblatt «Bootseinsatz» als Seite.':can('docs')?'Noch keine Ordner. Beispiel: «Einsatzpläne» mit Unterordnern je Gewässer, «Merkblätter», «Ausbildung».':'Keine Ordner, in denen du Redaktion bist.'))+(rev?'':offGrp(off(ds).map(d=>dkCard(d,0,0,1))))}
+  el.innerHTML=h;
   el.querySelectorAll('[data-dkv]').forEach(a=>a.onclick=e=>{e.preventDefault();dkOpen(+a.dataset.dkv,{edit:d=>dkDocDlg(d),onChange:loadDocs})});
-  el.querySelectorAll('[data-dkup]').forEach(b=>b.onclick=()=>dkVerDlg(DKA.docs.find(d=>d.id===+b.dataset.dkup)));
-  el.querySelectorAll('[data-dkack]').forEach(b=>b.onclick=()=>dkAckDlg(+b.dataset.dkack));
-  el.querySelectorAll('[data-dkfe]').forEach(b=>b.onclick=()=>dkFolderDlg(dkFold(+b.dataset.dkfe)));
   el.querySelectorAll('[data-dkde]').forEach(b=>b.onclick=async()=>{try{dkDocDlg(await api('doc&id='+b.dataset.dkde))}catch(e){fail(e)}});
-  [['dkfm','doc/folder/move'],['dkdm','doc/move']].forEach(([k,r])=>el.querySelectorAll(`[data-${k}]`).forEach(b=>b.onclick=async()=>{try{await api(r,{id:+b.dataset[k],dir:+b.dataset.d});loadDocs()}catch(e){fail(e)}}));
-  if($('#dkFn'))$('#dkFn').onclick=()=>dkFolderDlg({parent_id:DKF});if($('#dkNe'))$('#dkNe').onclick=()=>dkNewDlg()}
-// Ordner: Name, Beschreibung, wer sieht ihn (gilt zusätzlich zu übergeordneten), Redaktion, Vorschläge, Externe
-function dkFolderDlg(f){const par=f.parent_id;const d=dlg(f.id?'Ordner bearbeiten':'Neuer Ordner',`<div class="jtwo"><label class="mut">Name<input id="fN" maxlength="100" value="${esc(f.name||'')}" placeholder="z. B. Einsatzpläne"></label>
-    <label class="mut">Liegt in<select id="fP"><option value="">(oberste Ebene)</option>${DKA.folders.filter(x=>x.id!==f.id&&!dkPath(x.id).some(p=>p.id===f.id)).map(x=>`<option value="${x.id}" ${par===x.id?'selected':''}>${esc(dkPath(x.id).map(p=>p.name).join(' › '))}</option>`).join('')}</select></label></div>
-    <label class="mut">Beschreibung (optional)<textarea id="fD" rows="2" maxlength="2000">${esc(f.descr||'')}</textarea></label>
-    <h3>Wer sieht den Ordner?</h3><div class="mut">Gilt zusätzlich zu den übergeordneten Ordnern: wer diese nicht sieht, sieht auch diesen nicht.</div>${dkPick('fr',f.read_grp??null,f.read_role??null,'Alle Angemeldeten')}<div class="mut" id="fCnt"></div>
-    <h3>Redaktion</h3><div class="mut">Pflegt die Einträge dieses Ordners und seiner Unterordner, bearbeitet Vorschläge und verlangt Lesebestätigungen. Wer das Recht «Dokumente» hat, ist immer Redaktion.</div>${dkPick('fe',f.edit_grp||[],f.edit_role||[],'')}
-    <h3>Vorschläge</h3><label class="mut">Wer darf neue Einträge und Änderungen vorschlagen?<select id="fS"><option value="all">Alle, die den Ordner sehen</option><option value="list" ${f.sugm==='list'?'selected':''}>Bestimmte Einsatzgruppen oder Benutzerrollen</option><option value="none" ${f.sugm==='none'?'selected':''}>Niemand</option></select></label><div id="fSw">${dkPick('fs',f.sug_grp||[],f.sug_role||[],'')}</div>
-    <label class="chk"><input type="checkbox" id="fX" ${f.ext_own?'checked':''}> Einträge dürfen im Einsatz für Externe freigegeben werden (auch in Unterordnern)</label>
-    ${f.id?`<label class="chk"><input type="checkbox" id="fA" ${f.active!==0?'checked':''}> Aktiv</label>`:''}`,async d=>{const[rg,rr]=dkPickVal(d,'fr','x'),[eg,er]=dkPickVal(d,'fe'),[sg,sr]=dkPickVal(d,'fs');
-      await api('doc/folder/save',{id:f.id||0,parent_id:+$('#fP',d).value||null,name:$('#fN',d).value,descr:$('#fD',d).value,read_grp:rg,read_role:rr,edit_grp:eg,edit_role:er,sug:$('#fS',d).value,sug_grp:sg,sug_role:sr,ext:$('#fX',d).checked?1:0,active:$('#fA',d)?($('#fA',d).checked?1:0):1});
-      toast('Gespeichert.','ok');loadDocs()});d.firstElementChild.classList.add('mid');
-  let t=0;const cnt=()=>{clearTimeout(t);t=setTimeout(async()=>{const[g,r]=dkPickVal(d,'fr','x');try{const c=await api('doc/folder/count',{parent_id:+$('#fP',d).value||null,read_grp:g,read_role:r});$('#fCnt',d).textContent=`Sichtbar für ${c.n} von ${c.all} aktiven Personen.`}catch(e){}},200)};
+  el.querySelectorAll('[data-dkoff],[data-dkon]').forEach(b=>b.onclick=async()=>{const on=b.dataset.dkon?1:0,id=+(b.dataset.dkon||b.dataset.dkoff);
+    if(!on&&!await ask('Eintrag deaktivieren?\n\nEr verschwindet aus der Einsatz-App; die Redaktion sieht ihn weiter unter «Deaktiviert».',{ok:'Deaktivieren'}))return;try{await api('doc/active',{id,on});loadDocs()}catch(e){fail(e)}});
+  if($('#dkFe'))$('#dkFe').onclick=()=>dkFolderDlg(f);
+  [['dkfm','doc/folder/move'],['dkdm','doc/move']].forEach(([k,r])=>el.querySelectorAll(`[data-${k}]`).forEach(b=>b.onclick=async()=>{try{await api(r,{id:+b.dataset[k],dir:+b.dataset.d});loadDocs()}catch(e){fail(e)}}))}
+// Hochladen: mehrere Dateien auf einmal, je ein Eintrag mit dem Dateinamen als Titel
+function dkBulk(f){if(!f)return;const cfg=me.docs_cfg,okx=cfg.types.flatMap(t=>t.ext).concat(cfg.free),i=document.createElement('input');i.type='file';i.multiple=true;
+  i.onchange=async()=>{const fs=[...i.files],st=$('#dkUpSt');let ok=0;
+    for(const [n,fl] of fs.entries()){try{const ex=(fl.name.match(/\.([^.]+)$/)||[])[1];if(!ex||!okx.includes(ex.toLowerCase()))throw new Error('Dieser Dateityp ist nicht erlaubt');if(!fl.size)throw new Error(dkEmpty(fl));
+      const r=await api('doc/save',{folder_id:f.id,kind:'file',title:fl.name.replace(/\.[^.]+$/,'')});
+      try{await dkUpload(fl,{doc_id:r.id},cfg,p=>{if(st)st.textContent=`Wird hochgeladen (${n+1} von ${fs.length}) … ${Math.round(p*100)} %`})}catch(e){await api('doc/active',{id:r.id,on:0}).catch(()=>{});throw e}ok++}
+      catch(e){toast(fl.name+': '+e.message,'err')}}
+    if(st)st.textContent='';if(ok)toast(ok+(ok>1?' Dateien':' Datei')+' hochgeladen.','ok');loadDocs()};i.click()}
+// Ordner: zweispaltig wie im Konzept; links Name, Lage, Beschreibung, wer sieht ihn; rechts Redaktion, Vorschläge, Externe
+function dkFolderDlg(f){const par=f.parent_id,subs=f.id?dkKids(f.id).map(x=>x.name):[];const d=dlg(f.id?'Ordner bearbeiten':'Neuer Ordner',`<div class="dkdlg eq"><div class="dkdl">
+    <div class="jtwo"><label class="mut">Name<input id="fN" maxlength="100" value="${esc(f.name||'')}" placeholder="z. B. Einsatzpläne"></label>
+    <label class="mut">Übergeordneter Ordner<select id="fP"><option value="">– oberste Ebene –</option>${DKA.folders.filter(x=>x.id!==f.id&&!dkPath(x.id).some(p=>p.id===f.id)).map(x=>`<option value="${x.id}" ${par===x.id?'selected':''}>${esc(dkPath(x.id).map(p=>p.name).join(' › '))}</option>`).join('')}</select></label></div>
+    <label class="mut">Beschreibung (optional)<input id="fD" maxlength="2000" value="${esc(f.descr||'')}" placeholder="z. B. Pläne für Wehre, Kraftwerke und Einwasserungen je Gewässer"></label>
+    <h3>Wer sieht diesen Ordner?</h3>${dkPick('fr',f.read_grp??null,f.read_role??null,'alle Angemeldeten','nur Mitglieder dieser Einsatzgruppen oder Benutzerrollen:')}<div class="mut" id="fCnt"></div></div>
+    <div class="dkdr"><h3>Redaktion</h3><div class="mut">Darf in diesem Ordner und darunter Einträge anlegen, ändern und deaktivieren, Vorschläge bearbeiten und Lesebestätigungen verlangen, aber keine Freigaben ändern.</div>${dkPick('fe',f.edit_grp||[],f.edit_role||[],'')}<div class="mut">Mit dem Recht «Dokumentenablage verwalten» immer.</div>
+    <h3>Vorschläge</h3><label class="mut">Vorschlagen dürfen<select id="fS"><option value="all">alle, die den Ordner sehen</option><option value="list" ${f.sugm==='list'?'selected':''}>bestimmte Einsatzgruppen oder Benutzerrollen</option><option value="none" ${f.sugm==='none'?'selected':''}>niemand</option></select></label><div id="fSw">${dkPick('fs',f.sug_grp||[],f.sug_role||[],'')}</div><div class="mut">Gehen in den «Eingang» der Redaktion.</div>
+    <h3>Externe</h3><label class="chk"><input type="checkbox" id="fX" ${f.ext_own?'checked':''}> mit Externen teilbar (Einsatzleitung gibt einzeln frei, gilt auch für Unterordner)</label>
+    ${f.id?`<label class="chk"><input type="checkbox" id="fA" ${f.active!==0?'checked':''}> Aktiv</label>`:''}</div></div>`,async d=>{const[rg,rr]=dkPickVal(d,'fr','x'),[eg,er]=dkPickVal(d,'fe'),[sg,sr]=dkPickVal(d,'fs');
+      const r=await api('doc/folder/save',{id:f.id||0,parent_id:+$('#fP',d).value||null,name:$('#fN',d).value,descr:$('#fD',d).value,read_grp:rg,read_role:rr,edit_grp:eg,edit_role:er,sug:$('#fS',d).value,sug_grp:sg,sug_role:sr,ext:$('#fX',d).checked?1:0,active:$('#fA',d)?($('#fA',d).checked?1:0):1});
+      if(!f.id){DKF=r.id;const p=+$('#fP',d).value;if(p){dkOpenSet().add(p);dkOpenSave()}}toast('Gespeichert.','ok');loadDocs()});d.firstElementChild.classList.add('wide');
+  const sub=subs.length?` Unterordner (${subs.join(', ')}) übernehmen das und können nur weiter einschränken.`:' Unterordner übernehmen das und können nur weiter einschränken.';
+  let t=0;const cnt=()=>{clearTimeout(t);t=setTimeout(async()=>{const[g,r]=dkPickVal(d,'fr','x');try{const c=await api('doc/folder/count',{parent_id:+$('#fP',d).value||null,read_grp:g,read_role:r});$('#fCnt',d).textContent=`Sichtbar für ${c.n} von ${c.all} aktiven Personen.`+sub}catch(e){}},200)};
   dkPickWire(d,'fr',cnt);$('#fP',d).onchange=cnt;cnt();const sw=()=>$('#fSw',d).hidden=$('#fS',d).value!=='list';$('#fS',d).onchange=sw;sw()}
-function dkNewDlg(){const d=dlg('Neuer Eintrag',`<div class="mut">Was soll in den Ordner «${esc(dkFold(DKF).name)}»?</div><div class="dkkinds">
-  <label class="chk"><input type="radio" name="nk" value="file" checked> 📎 <b>Datei</b> – PDF, Bild, Word … (mit Versionen)</label>
-  <label class="chk"><input type="radio" name="nk" value="page"> 📝 <b>Seite</b> – Text direkt in der App, mit Bildern</label>
-  <label class="chk"><input type="radio" name="nk" value="link"> 🔗 <b>Link</b> – Verweis auf eine Webseite</label></div>`,async d=>{const k=d.querySelector('[name=nk]:checked').value;setTimeout(()=>dkDocDlg({kind:k,folder_id:DKF,kinds:[],places:[],offline:1,active:1}),0)},'Weiter')}
-// Eintrag: Titel, Inhalt je Art, Einsatztypen, feste Standorte, offline, Überprüfung; Datei mit Hochladen und Versionen
-function dkDocDlg(o){const M=DKA,isNew=!o.id,k=o.kind,cfg=me.docs_cfg;const revD=o.review_at?new Date(o.review_at*1000).toISOString().slice(0,10):'';
-  const plOpts=M.places.map(p=>`<label class="chk"><input type="checkbox" data-dpl="${p.id}" ${(o.places||[]).includes(p.id)?'checked':''}> ${esc(p.name)}${p.plan_id?` <span class="mut">(Übung «${esc(p.plan||'')}»)</span>`:''}</label>`).join('');
-  const d=dlg(isNew?'Neuer Eintrag':'Eintrag bearbeiten',`<div class="dkdlg"><div class="dkdl"><div class="jtwo"><label class="mut">Titel<input id="dT" maxlength="200" value="${esc(o.title||'')}" placeholder="${k==='link'?'z. B. Pegel Reuss Luzern':'z. B. Merkblatt Bootseinsatz'}"></label>
-      <label class="mut">Ordner<select id="dF">${M.folders.filter(x=>x.edit).map(x=>`<option value="${x.id}" ${o.folder_id===x.id?'selected':''}>${esc(dkPath(x.id).map(p=>p.name).join(' › '))}</option>`).join('')}</select></label></div>
-    ${k==='link'?`<label class="mut">Adresse<input id="dU" type="url" maxlength="2000" value="${esc(o.url||'')}" placeholder="https://…"></label>`:''}
-    <label class="mut">Beschreibung (optional, erscheint in Listen und bei der Suche)<textarea id="dD" rows="2" maxlength="4000">${esc(o.descr||'')}</textarea></label>
-    <label class="mut">Schlagwörter (optional, für die Suche)<input id="dG" maxlength="500" value="${esc(o.tags||'')}" placeholder="z. B. Boot, Schwimmweste"></label>
-    ${k==='page'?`<div class="dkedh"><span class="mut">Text (Markdown: # Titel, **fett**, - Liste, | Tabelle |, > Hinweis, > ! Warnung)</span><span><button type="button" id="dImg">+ Bild</button><button type="button" id="dPv">Vorschau</button></span></div>
-      <textarea id="dB" rows="14" maxlength="2000000" class="mono">${esc(o.body||'')}</textarea><div id="dPvB" class="dkmd dkpv" hidden></div>${isNew?'<div class="mut">Bilder lassen sich nach dem ersten Speichern einfügen.</div>':''}`:''}
-    ${k==='file'?(isNew?`<label class="mut">Datei<input type="file" id="dFl"></label><div class="mut" id="dFp">Erlaubt: ${esc(cfg.types.flatMap(t=>t.ext).concat(cfg.free).map(x=>'.'+x).join(', '))}, höchstens ${cfg.max_mb} MB.</div>`:`<div id="dVer"></div>`):''}
+// Eintrag: zweispaltig wie im Konzept; links Art (Register), Titel, Ordner, Schlagwörter, Beschreibung, Inhalt bzw. Versionen; rechts Im Einsatz anbieten, Aktualität, Lesebestätigung, Offline
+function dkDocDlg(o){const M=DKA,isNew=!o.id,cfg=me.docs_cfg;let k=o.kind||'file',pls=[...(o.places||[])];const revD=o.review_at?new Date(o.review_at*1000).toISOString().slice(0,10):'';
+  const allow=`Erlaubt: ${esc(cfg.types.flatMap(t=>t.ext).concat(cfg.free).map(x=>'.'+x).join(', '))}, höchstens ${cfg.max_mb} MB.`;
+  const d=dlg(isNew?'Neuer Eintrag':'Eintrag bearbeiten',`<div class="dkdlg eq"><div class="dkdl">
+    <div class="dktabs">${[['file','Datei'],['page','Seite'],['link','Link']].map(([v,l])=>`<button type="button" data-dkk="${v}"${isNew||v===k?'':' disabled title="Die Art lässt sich nach dem Anlegen nicht mehr ändern"'}>${l}</button>`).join('')}</div>
+    <label class="mut">Titel<input id="dT" maxlength="200" value="${esc(o.title||'')}"></label>
+    <div class="jtwo"><label class="mut">Ordner<select id="dF">${M.folders.filter(x=>x.edit&&(x.active||x.id===o.folder_id)).map(x=>`<option value="${x.id}" ${o.folder_id===x.id?'selected':''}>${esc(dkPath(x.id).map(p=>p.name).join(' › '))}</option>`).join('')}</select></label>
+      <label class="mut">Schlagwörter<input id="dG" maxlength="500" value="${esc(o.tags||'')}" placeholder="z. B. Wehr, Walze, Kraftwerk"></label></div>
+    <label class="mut">Beschreibung<textarea id="dD" rows="2" maxlength="4000" placeholder="Erscheint in Listen und bei der Suche">${esc(o.descr||'')}</textarea></label>
+    <div data-dks="link"><label class="mut">Adresse<input id="dU" type="url" maxlength="2000" value="${esc(o.url||'')}" placeholder="https://…"></label></div>
+    <div data-dks="page"><div class="dkedh"><span class="mut">Text (Markdown: # Titel, **fett**, - Liste, | Tabelle |, > Hinweis, > ! Warnung)</span><span><button type="button" id="dImg">+ Bild</button><button type="button" id="dPv">Vorschau</button></span></div>
+      <textarea id="dB" rows="12" maxlength="2000000" class="mono">${esc(o.body||'')}</textarea><div id="dPvB" class="dkmd dkpv" hidden></div>${isNew?'<div class="mut">Bilder lassen sich nach dem ersten Speichern einfügen.</div>':''}</div>
+    <div data-dks="file"><div class="mut dklb">Datei</div>${isNew?`<input type="file" id="dFl"><div class="mut" id="dFp">${allow}</div>`:'<div id="dVer"></div>'}</div>
     ${!isNew&&k!=='file'?`<label class="chk"><input type="checkbox" id="dMj"> Wesentliche Änderung (verlangt eine erneute Lesebestätigung, sofern so eingestellt)</label>`:''}</div>
-    <div class="dkdr"><h3>Wo erscheint der Eintrag?</h3><div class="mut">Im Einsatz zuoberst bei diesen Einsatztypen (im Fenster «Dokumente», Abschnitt «Für diesen Einsatz»):</div><div class="fl">${M.kinds.map(x=>`<label class="chk"><input type="checkbox" data-dk="${x.id}" ${(o.kinds||[]).includes(x.id)?'checked':''}> <i class="gdot" style="background:${esc(x.color)}"></i> ${esc(x.name)}</label>`).join('')}</div>
-      <div class="mut">Bei festen Standorten (im Popup des Standorts und im Abschnitt «An Standorten im Einsatzgebiet»):</div>${M.places.length?`<input type="search" id="dPq" placeholder="Standort suchen" data-nodirty><div class="fl dkplist">${plOpts}</div>`:'<div class="mut">Keine festen Standorte.</div>'}
-      <h3>Offline</h3><select id="dO"><option value="1" ${o.offline===1?'selected':''}>Offline bei Favoriten (Standard)</option><option value="2" ${o.offline===2?'selected':''}>Offline auf allen Geräten, die ihn sehen</option><option value="0" ${o.offline===0?'selected':''}>Nie offline</option></select>
-      <label class="mut">Überprüfen bis (optional; danach als «Überprüfung fällig» markiert)<input type="date" id="dR" value="${revD}"></label>
-      ${isNew?'':`<label class="chk"><input type="checkbox" id="dA" ${o.active?'checked':''}> Aktiv (deaktivierte sieht nur die Redaktion)</label>`}</div></div>`,async d=>{
-      const r=$('#dR',d).value,body={id:o.id||0,folder_id:+$('#dF',d).value,kind:k,title:$('#dT',d).value,descr:$('#dD',d).value,tags:$('#dG',d).value,kinds:[...d.querySelectorAll('[data-dk]:checked')].map(i=>+i.dataset.dk),places:[...d.querySelectorAll('[data-dpl]:checked')].map(i=>+i.dataset.dpl),
-        offline:+$('#dO',d).value,review_at:r?Math.floor(new Date(r+'T12:00').getTime()/1000):null,active:$('#dA',d)?($('#dA',d).checked?1:0):1,major:$('#dMj',d)&&$('#dMj',d).checked?1:0};
-      if(k==='page')body.body=$('#dB',d).value;if(k==='link')body.url=$('#dU',d).value;const fl=$('#dFl',d)&&$('#dFl',d).files[0];
+    <div class="dkdr"><h3>Im Einsatz anbieten</h3><div class="mut">Bei diesen Einsatztypen im Fenster «Dokumente» unter «Für diesen Einsatz»</div>
+      <div class="fl">${M.kinds.map(x=>`<label class="chk"><input type="checkbox" data-dk="${x.id}" ${(o.kinds||[]).includes(x.id)?'checked':''}> ${esc(x.name)}</label>`).join('')}</div>
+      <div class="mut">An festen Standorten (Popup und «Dokumente», wenn der Standort im Einsatzgebiet liegt)</div><div class="dkpls" id="dPls"></div>
+      <h3>Aktualität</h3><label class="mut dkrv">Überprüfen bis (optional)<input type="date" id="dR" value="${revD}"></label>
+      <h3>Lesebestätigung</h3><div class="dkackbox" id="dAck">${isNew?'<span class="mut">Lässt sich nach dem ersten Speichern einstellen.</span>':'<span class="mut">Wird geladen …</span>'}</div>
+      <h3>Offline</h3><label class="chk"><input type="checkbox" id="dO1" ${o.offline!==0?'checked':''}> darf offline gespeichert werden</label>
+      <label class="chk"><input type="checkbox" id="dO2" ${o.offline===2?'checked':''}> für alle Lesenden automatisch offline speichern</label></div></div>`,async d=>{
+      const r=$('#dR',d).value,body={id:o.id||0,folder_id:+$('#dF',d).value,kind:k,title:$('#dT',d).value,descr:$('#dD',d).value,tags:$('#dG',d).value,kinds:[...d.querySelectorAll('[data-dk]:checked')].map(i=>+i.dataset.dk),places:pls,
+        offline:$('#dO1',d).checked?($('#dO2',d).checked?2:1):0,review_at:r?Math.floor(new Date(r+'T12:00').getTime()/1000):null,major:$('#dMj',d)&&$('#dMj',d).checked?1:0};
+      if(k==='page')body.body=$('#dB',d).value;if(k==='link')body.url=$('#dU',d).value;const fl=k==='file'&&$('#dFl',d)&&$('#dFl',d).files[0];
       if(isNew&&k==='file'&&!fl)throw new Error('Bitte eine Datei wählen');if(fl&&!fl.size)throw new Error(dkEmpty(fl));if(!body.title&&fl)body.title=fl.name.replace(/\.[^.]+$/,'');
       const res=await api('doc/save',body);if(fl){try{await dkUpload(fl,{doc_id:res.id},cfg,p=>$('#dFp',d).textContent='Wird hochgeladen … '+Math.round(p*100)+' %')}catch(e){toast('Eintrag gespeichert, die Datei aber nicht: '+e.message,'err');loadDocs();return}}
       toast('Gespeichert.','ok');loadDocs()});d.firstElementChild.classList.add('wide');
-  const pq=$('#dPq',d);if(pq)pq.oninput=()=>{const t=pq.value.toLowerCase();d.querySelectorAll('[data-dpl]').forEach(i=>i.parentNode.hidden=!!t&&!i.parentNode.textContent.toLowerCase().includes(t))};
+  const ph={file:'z. B. Einsatzplan Nadelwehr Luzern',page:'z. B. Merkblatt Bootseinsatz',link:'z. B. Pegel Reuss Luzern'};
+  const kind=v=>{k=v;d.querySelectorAll('[data-dkk]').forEach(b=>b.classList.toggle('on',b.dataset.dkk===k));d.querySelectorAll('[data-dks]').forEach(s=>s.hidden=s.dataset.dks!==k);$('#dT',d).placeholder=ph[k]};
+  d.querySelectorAll('[data-dkk]').forEach(b=>b.onclick=()=>kind(b.dataset.dkk));kind(k);
+  const o2=()=>{$('#dO2',d).disabled=!$('#dO1',d).checked;if(!$('#dO1',d).checked)$('#dO2',d).checked=false};$('#dO1',d).onchange=o2;o2();
+  // feste Standorte als Chips mit ✕, «+ Standort» wählt aus der Liste
+  const plDraw=()=>{$('#dPls',d).innerHTML=pls.map(id=>{const p=M.places.find(x=>x.id===id);return p?`<span class="pchip dkpl">📍 ${esc(p.name)}<button type="button" data-plx="${id}" title="Entfernen" aria-label="${esc(p.name)} entfernen">✕</button></span>`:''}).join('')+(M.places.length?'<button type="button" id="dPlA">+ Standort</button>':'<span class="mut">Keine festen Standorte.</span>');
+    d.querySelectorAll('[data-plx]').forEach(b=>b.onclick=()=>{pls=pls.filter(x=>x!==+b.dataset.plx);plDraw()});const a=$('#dPlA',d);if(a)a.onclick=plPick};
+  const plPick=()=>{const p=dlg('Feste Standorte',`<input type="search" id="pQ" placeholder="Standort suchen" data-nodirty><div class="fl dkplist">${M.places.map(p=>`<label class="chk"><input type="checkbox" data-ppl="${p.id}" ${pls.includes(p.id)?'checked':''}> ${esc(p.name)}${p.plan_id?` <span class="mut">(Übung «${esc(p.plan||'')}»)</span>`:''}</label>`).join('')}</div>`,
+      async x=>{pls=[...x.querySelectorAll('[data-ppl]:checked')].map(i=>+i.dataset.ppl);plDraw()},'Übernehmen');
+    $('#pQ',p).oninput=()=>{const t=$('#pQ',p).value.toLowerCase();p.querySelectorAll('[data-ppl]').forEach(i=>i.parentNode.hidden=!!t&&!i.parentNode.textContent.toLowerCase().includes(t))}};
+  plDraw();
+  if(!isNew)dkAckBox($('#dAck',d),o);
   if(k==='page'){const ta=$('#dB',d),pv=$('#dPvB',d),imgs=Object.assign({},o.imgs||{});$('#dPv',d).onclick=()=>{pv.hidden=!pv.hidden;ta.hidden=!pv.hidden?true:false;if(!pv.hidden)pv.innerHTML=dkMd(ta.value,imgs)||'<p class="mut">Leer.</p>';$('#dPv',d).textContent=pv.hidden?'Vorschau':'Bearbeiten'};
     const ins=async f=>{if(!o.id)return toast('Bitte den Eintrag zuerst speichern, dann Bilder einfügen.','info');try{const u=await dkImgShrink(f),r=await api('doc/img/add',{doc_id:o.id,data:u.data,w:u.w,h:u.h});imgs[r.id]=u.data;const m=`![${f.name.replace(/\.[^.]+$/,'').replace(/[[\]]/g,'')}](img:${r.id})`,p=ta.selectionStart;ta.value=ta.value.slice(0,p)+(p&&ta.value[p-1]!=='\n'?'\n':'')+m+'\n'+ta.value.slice(p);markDirty(null)}catch(e){fail(e)}};
     $('#dImg',d).onclick=()=>{const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>i.files[0]&&ins(i.files[0]);i.click()};
     ta.addEventListener('paste',e=>{const f=[...(e.clipboardData||{}).files||[]].find(x=>/^image\//.test(x.type));if(f){e.preventDefault();ins(f)}})}
+  else if(isNew){const ta=$('#dB',d);$('#dImg',d).onclick=()=>toast('Bitte den Eintrag zuerst speichern, dann Bilder einfügen.','info');$('#dPv',d).onclick=()=>{const pv=$('#dPvB',d);pv.hidden=!pv.hidden;ta.hidden=!pv.hidden;if(!pv.hidden)pv.innerHTML=dkMd(ta.value,{})||'<p class="mut">Leer.</p>';$('#dPv',d).textContent=pv.hidden?'Vorschau':'Bearbeiten'}}
   if(k==='file'&&!isNew)dkVerList($('#dVer',d),o)}
+// Lesebestätigung im Dialog des Eintrags: Zusammenfassung, «Einstellen …», «Stand ansehen»
+async function dkAckBox(box,o){let c=o.ackcfg,A=null;if(!c){box.innerHTML='<span class="mut">Nur für die Redaktion.</span>';return}
+  if(c.ack){try{A=await api('doc/acks&id='+o.id)}catch(e){}}
+  const who=c.ack_by==='list'?esc(dkRuleTxt(c.ack_grp||[],c.ack_role||[],'')):c.ack_by==='skill'?`wer «${esc((DKA.skills.find(x=>x.id===c.ack_skill)||{}).name||'?')}» als Pflicht hat`:'allen Lesenden';
+  const sk=c.ack_skill&&c.ack_by!=='skill'?` · trägt «${esc((DKA.skills.find(x=>x.id===c.ack_skill)||{}).name||'?')}» in der Ausbildung ein`:'';
+  box.innerHTML=c.ack?`<div><b>verlangt</b> von ${who}${A?` · ${A.list.filter(x=>x.st==='ok').length} von ${A.list.length} bestätigt${A.list.some(x=>x.st==='over')?` · <span class="dkover">${A.list.filter(x=>x.st==='over').length} überfällig</span>`:''}`:''}</div>
+    <div class="mut">${c.ack_days?'Frist '+c.ack_days+' Tage':'ohne Frist'} · später Hinzukommende ${c.ack_new!==0?'auch (Frist ab Eintritt)':'nicht'}${c.ack_major?' · erneut nur bei wesentlichen Änderungen':''}${sk}</div>
+    <div class="row"><button type="button" data-ac>Einstellen …</button><button type="button" data-ac>Stand ansehen</button></div>`
+    :`<div><b>nicht verlangt</b></div><div class="mut">Lesende können freiwillig bestätigen.</div><div class="row"><button type="button" data-ac>Einstellen …</button></div>`;
+  box.querySelectorAll('[data-ac]').forEach(b=>b.onclick=()=>dkAckDlg(o.id,async()=>{try{const n=await api('doc&id='+o.id);o.ackcfg=n.ackcfg;dkAckBox(box,o)}catch(e){}}))}
 // Bild verkleinern (höchstens 1600 px, JPEG) wie im After Action Review
 function dkImgShrink(f){return new Promise((ok,no)=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const s=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
   c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);const png=f.type==='image/png'&&f.size<400000;ok({data:c.toDataURL(png?'image/png':'image/jpeg',.85),w:c.width,h:c.height})};im.onerror=()=>no(new Error('Bild nicht lesbar'));im.src=u})}
-// Versionen einer Datei: aktuelle, frühere (ansehen, wiederherstellen, entfernen), neue hochladen
+// Versionen einer Datei wie im Konzept: aktuelle mit «Öffnen», frühere mit «Wiederherstellen» und ✕, neue hochladen
 async function dkVerList(box,o){let d;try{d=await api('doc&id='+o.id)}catch(e){box.textContent=e.message;return}const fs=d.files;
-  box.innerHTML=`<h3>Versionen</h3>${fs.length?fs.map(f=>`<div class="dkverr${f.ver===d.ver?' cur':''}"><span><b>Version ${f.ver}</b> ${esc(f.name)} <span class="mut">${esc(dkSize(f.bytes)+(f.pages?', '+f.pages+' S.':'')+' · '+dkDate(f.at)+(f.by_name?' · '+f.by_name:''))}${f.ext==='pdf'&&!f.has_text?' · ohne Text (Suche nur im Titel)':''}</span></span>
-    <span><button type="button" data-vv="${f.ver}">Ansehen</button>${f.ver!==d.ver?`<button type="button" data-vr="${f.id}">Wiederherstellen</button><button type="button" class="sec" data-vx="${f.id}">Entfernen</button>`:'<span class="pchip">aktuell</span>'}</span></div>`).join(''):'<div class="mut">Noch keine Datei.</div>'}
-    <div class="row"><button type="button" id="vUp">+ Neue Version hochladen</button></div><div class="mut">Frühere Versionen bleiben gemäss Einstellung erhalten, ältere werden beim Hochladen entfernt.</div>`;
+  box.innerHTML=`<div class="dkvers">${fs.length?fs.map(f=>`<div class="dkverr${f.ver===d.ver?' cur':''}">${dkBadge({kind:'file',file:{ext:f.ext,show:f.show}})}<span class="dkvt"><span><b>Version ${f.ver}${f.ver===d.ver?' (aktuell)':''}</b> · ${esc(f.name)}</span>
+    <small class="mut">${esc(dkSize(f.bytes)+' · '+dkDate(f.at)+(f.by_name?', '+f.by_name:''))}${f.ext==='pdf'?(f.has_text?` · Text für die Suche erkannt${f.pages?' ('+f.pages+(f.pages>1?' Seiten':' Seite')+')':''}`:' · ohne Text (Suche nur im Titel)'):''}</small></span>
+    ${f.ver===d.ver?`<button type="button" data-vv="${f.ver}">Öffnen</button>`:`<button type="button" data-vv="${f.ver}" title="Ansehen">Ansehen</button><button type="button" data-vr="${f.id}">Wiederherstellen</button><button type="button" class="sec" data-vx="${f.id}" title="Version entfernen" aria-label="Version ${f.ver} entfernen">✕</button>`}</div>`).join(''):'<div class="mut">Noch keine Datei.</div>'}</div>
+    <button type="button" id="vUp" class="dkwide">Neue Version hochladen …</button><div class="mut">Frühere Versionen bleiben gemäss Einstellung erhalten, ältere werden beim Hochladen entfernt.</div>`;
   box.querySelectorAll('[data-vv]').forEach(b=>b.onclick=async()=>{const v=+b.dataset.vv,f=fs.find(x=>x.ver===v);const ov=document.createElement('div');ov.className='dkov';ov.innerHTML=`<div class="dkhd"><button data-x aria-label="Schliessen">✕</button><div class="dkt"><b>${esc(d.title)} – Version ${v}</b></div></div><div class="dkbody"></div>`;document.body.appendChild(ov);
     ov.querySelector('[data-x]').onclick=()=>ov.remove();dkView(ov.querySelector('.dkbody'),{...d,file:{...f}},()=>dkBlob(o.id,'&ver='+v))});
   box.querySelectorAll('[data-vr]').forEach(b=>b.onclick=async()=>{if(!await ask('Diese Version wiederherstellen?\n\nSie wird als neue Version gespeichert.',{ok:'Wiederherstellen'}))return;try{await api('doc/ver/restore',{id:+b.dataset.vr});dkVerList(box,o);loadDocs()}catch(e){fail(e)}});
   box.querySelectorAll('[data-vx]').forEach(b=>b.onclick=async()=>{if(!await ask('Diese frühere Version entfernen?'))return;try{await api('doc/ver/remove',{id:+b.dataset.vx});dkVerList(box,o)}catch(e){fail(e)}});
-  box.querySelector('#vUp').onclick=()=>dkVerDlg(d,()=>dkVerList(box,o))}
+  box.querySelector('#vUp').onclick=()=>dkVerDlg(d,()=>{dkVerList(box,o);loadDocs()})}
 function dkVerDlg(o,done){const cfg=me.docs_cfg;const d=dlg('Neue Version – '+o.title,`<label class="mut">Datei<input type="file" id="vF"></label><div class="mut" id="vP">Erlaubt: ${esc(cfg.types.flatMap(t=>t.ext).concat(cfg.free).map(x=>'.'+x).join(', '))}, höchstens ${cfg.max_mb} MB.</div>
   <label class="chk"><input type="checkbox" id="vM" checked> Wesentliche Änderung (verlangt eine erneute Lesebestätigung, sofern so eingestellt)</label>`,async d=>{const f=$('#vF',d).files[0];if(!f)throw new Error('Bitte eine Datei wählen');
     const r=await dkUpload(f,{doc_id:o.id,major:$('#vM',d).checked},cfg,p=>$('#vP',d).textContent='Wird hochgeladen … '+Math.round(p*100)+' %');toast('Version '+r.ver+' gespeichert.','ok');done?done():loadDocs()},'Hochladen')}
 // Lesebestätigung: wer (alle Lesenden, Liste, über Fähigkeit), Frist, Neue, nur bei wesentlichen Änderungen, Fähigkeit eintragen; Stand mit Erinnern
-async function dkAckDlg(id){let o,A;try{[o,A]=await Promise.all([api('doc&id='+id),api('doc/acks&id='+id)])}catch(e){return fail(e)}const c=o.ackcfg,M=DKA;
+async function dkAckDlg(id,done){let o,A;try{[o,A]=await Promise.all([api('doc&id='+id),api('doc/acks&id='+id)])}catch(e){return fail(e)}const c=o.ackcfg,M=DKA;
   const stTxt={ok:'bestätigt',open:'offen',over:'überfällig'};
   const d=dlg('Lesebestätigung – '+o.title,`<label class="chk"><input type="checkbox" id="aOn" ${c.ack?'checked':''}> Lesebestätigung verlangen</label><div id="aW">
     <label class="mut">Wer muss bestätigen?<select id="aBy"><option value="read">Alle, die den Eintrag sehen</option><option value="list" ${c.ack_by==='list'?'selected':''}>Nur bestimmte Einsatzgruppen oder Benutzerrollen</option><option value="skill" ${c.ack_by==='skill'?'selected':''}>Wer eine Fähigkeit der Ausbildung als Pflicht hat</option></select></label>
@@ -2629,13 +2726,13 @@ async function dkAckDlg(id){let o,A;try{[o,A]=await Promise.all([api('doc&id='+i
     ${c.ack?`<h3>Stand (Version ${A.ack_ver}${A.ack_at?', verlangt seit '+dkDate(A.ack_at):''})</h3><div class="fl"><span class="skchip sk-ok">${A.list.filter(x=>x.st==='ok').length} bestätigt</span> <span class="skchip sk-warn">${A.list.filter(x=>x.st==='open').length} offen</span> <span class="skchip sk-exp">${A.list.filter(x=>x.st==='over').length} überfällig</span> <span class="mut">${A.readers} sehen den Eintrag</span></div>
       <div class="dkacks">${A.list.map(x=>`<div class="dkackr st-${x.st}"><span>${nmG(x.name,x.user_id)}</span><span class="mut">${stTxt[x.st]}${x.st==='ok'&&x.at?' '+dkDate(x.at):x.due?' · Frist '+dkDate(x.due):''}</span></div>`).join('')||'<div class="mut">Niemand muss bestätigen.</div>'}</div>
       ${A.free.length?`<details><summary class="mut">Freiwillig bestätigt (${A.free.length})</summary>${A.free.map(x=>`<div class="dkackr"><span>${nmG(x.name,x.user_id)}</span><span class="mut">${dkDate(x.at)}</span></div>`).join('')}</details>`:''}
-      <div class="row"><button type="button" id="aRm">Offene erinnern</button><button type="button" id="aRn">Jetzt von allen erneut verlangen</button><button type="button" id="aCsv">CSV</button></div>`:''}`,async d=>{await api('doc/ack/cfg',val(d));toast('Gespeichert.','ok');loadDocs()});d.firstElementChild.classList.add('mid');
+      <div class="row"><button type="button" id="aRm">Offene erinnern</button><button type="button" id="aRn">Jetzt von allen erneut verlangen</button><button type="button" id="aCsv">CSV</button></div>`:''}`,async d=>{await api('doc/ack/cfg',val(d));toast('Gespeichert.','ok');done?done():loadDocs()});d.firstElementChild.classList.add('mid');
   const val=(d,x={})=>{const[g,r]=dkPickVal(d,'al');return{id,ack:$('#aOn',d).checked?1:0,ack_by:$('#aBy',d).value,ack_grp:g,ack_role:r,ack_days:+$('#aD',d).value||null,ack_new:$('#aN',d).checked?1:0,ack_major:$('#aM',d).checked?1:0,ack_skill:+$('#aS',d).value||null,...x}};
   let t=0;const sync=()=>{const by=$('#aBy',d).value;$('#aW',d).hidden=!$('#aOn',d).checked;$('#aL',d).hidden=by!=='list';$('#aSh',d).textContent=by==='skill'?'Pflicht: wer die Fähigkeit als Pflicht hat. Die Bestätigung wird als Eintrag dieser Fähigkeit erfasst.':'Optional: die Bestätigung wird zusätzlich als Eintrag dieser Fähigkeit erfasst.';
     clearTimeout(t);if($('#aOn',d).checked)t=setTimeout(async()=>{try{const n=await api('doc/ack/cfg',val(d,{dry:1}));$('#aCnt',d).textContent=`Betrifft ${n.n} von ${n.readers} Personen, die den Eintrag sehen.`}catch(e){$('#aCnt',d).textContent=e.message}},200)};
   ['#aOn','#aBy','#aS','#aD'].forEach(s=>$(s,d).addEventListener('change',sync));dkPickWire(d,'al',sync);sync();
   const rm=$('#aRm',d);if(rm)rm.onclick=async()=>{try{const r=await api('doc/remind',{id});toast(r.n?r.n+' Personen erinnert.':'Niemand ist offen.','ok')}catch(e){fail(e)}};
-  const rn=$('#aRn',d);if(rn)rn.onclick=async()=>{if(!await ask('Von allen erneut verlangen?\n\nAuch wer schon bestätigt hat, muss die aktuelle Version erneut bestätigen.',{ok:'Erneut verlangen'}))return;try{await api('doc/ack/cfg',val(d,{renew:1}));d.remove();toast('Erneut verlangt.','ok');loadDocs()}catch(e){fail(e)}};
+  const rn=$('#aRn',d);if(rn)rn.onclick=async()=>{if(!await ask('Von allen erneut verlangen?\n\nAuch wer schon bestätigt hat, muss die aktuelle Version erneut bestätigen.',{ok:'Erneut verlangen'}))return;try{await api('doc/ack/cfg',val(d,{renew:1}));d.remove();toast('Erneut verlangt.','ok');done?done():loadDocs()}catch(e){fail(e)}};
   const cv=$('#aCsv',d);if(cv)cv.onclick=()=>{const rows=[['Person','Stand','Bestätigt','Frist'],...A.list.map(x=>[x.name,stTxt[x.st],x.at?dkDate(x.at):'',x.due?dkDate(x.due):'']),...A.free.map(x=>[x.name,'freiwillig',dkDate(x.at),''])];
     saveBlob(new Blob(['﻿'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),'lesebestaetigung.csv')}}
 // Eingang: Vorschläge an die Redaktion (offen zuerst), übernehmen, erledigt, ablehnen mit Begründung
