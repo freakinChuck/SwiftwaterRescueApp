@@ -1,6 +1,15 @@
 {
   "versions": [
     {
+      "version": "1.5.0",
+      "date": "2026-11-22",
+      "items": [
+        "Randlose Anzeige unter Android auf allen Versionen (#237)",
+        "deploy.ps1: Dateiliste aus dem ausgelieferten Stand, Prüfung der eingebundenen PHP-Dateien (#239)",
+        "Mehrsprachigkeit: Deutsch, Englisch, Französisch, Italienisch (Issue #66) (#238)"
+      ]
+    },
+    {
       "version": "1.4.0",
       "date": "2026-11-22",
       "items": [
