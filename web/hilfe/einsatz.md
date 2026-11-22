@@ -113,6 +113,16 @@ Welche Kanäle du hörst und wo du sprechen darfst, hängt von deiner Spezialrol
 
 Fahrzeuge mit einem Bluetooth-Beacon erscheinen auf der Karte, sobald die native App eines Teilnehmenden sie sieht. Die Liste steht im Fenster «Einsatzkräfte» unter «Fahrzeuge»: wer darin sitzt, was verladen ist (Boot auf dem Anhänger) und wo es zuletzt gesehen wurde. Verladen und abladen geht über das Popup des Fahrzeugs.
 
+## Notruf (SOS) {#sos}
+
+Gerätst du selbst in Not, halte den roten Knopf **SOS** oben links auf der Karte **2 Sekunden** gedrückt. Danach läuft ein kurzer Countdown: **Abbrechen** stoppt einen versehentlichen Notruf, **Sofort senden** schickt ihn ohne Warten. Den Knopf gibt es nur, solange du am Einsatz teilnimmst.
+
+Der Notruf alarmiert – je nach Einstellung der Organisation – die Einsatzleitung und die Einsatzkräfte in deiner Nähe **kritisch**, mit deinem Namen und Standort. Bei ihnen erscheinen ein Vollbild mit Distanz, 🧭 und **Quittieren**, eine rote Leiste oben und ein blinkender Marker an deinem Standort; die Karte springt zu dir. Bist du in einer Live-Konferenz, ertönt dort ein Signalton.
+
+Sobald jemand quittiert, siehst du in deiner Leiste «gesehen von …». Ist die Gefahr vorbei, tippe auf **ENDE** (bzw. **Beenden** in der Leiste); beenden kann auch die Einsatzleitung. Notruf, Quittung und Ende stehen im Einsatzlog und im Replay.
+
+> ! Der Notruf ersetzt keinen Anruf bei 112/144/117, wenn Hilfe von aussen nötig ist.
+
 ## Dokumente {#dokumente}
 
 Der Kartenknopf **📚 Dokumente** öffnet die Unterlagen deiner Organisation, auch ohne Einsatz. Zuoberst steht die Suche: Sie findet Titel, Beschreibung, Schlagwörter, den Text von Seiten und den Text von PDFs, mit Seitenzahl. Darunter stehen die Abschnitte, die die Verwaltung eingerichtet hat, zum Beispiel offene Lesebestätigungen, ★ Favoriten, Dokumente an Standorten im Einsatzgebiet, Dokumente für diesen Einsatztyp und die Ordner. Ist es erlaubt, ordnest du die Abschnitte mit **Abschnitte anordnen** für dich.

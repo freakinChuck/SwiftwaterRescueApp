@@ -113,6 +113,16 @@ Quali canali senti e dove puoi parlare dipende dal tuo ruolo speciale e dalla di
 
 I veicoli con un beacon Bluetooth compaiono sulla mappa non appena l'app nativa di un partecipante li vede. L'elenco si trova nella finestra «Soccorritori» sotto «Veicoli»: chi è a bordo, cosa è caricato (barca sul rimorchio) e dove è stato visto l'ultima volta. Caricare e scaricare si fa dal popup del veicolo.
 
+## Chiamata d'emergenza (SOS) {#sos}
+
+Se ti trovi tu stesso in pericolo, tieni premuto il pulsante rosso **SOS** in alto a sinistra sulla mappa per **2 secondi**. Segue un breve conto alla rovescia: **Annulla** ferma una chiamata involontaria, **Invia subito** la invia senza attendere. Il pulsante appare solo mentre partecipi all'intervento.
+
+A seconda dell'impostazione dell'organizzazione, la chiamata d'emergenza allerta la direzione d'intervento e i soccorritori vicini a te con un allarme **critico**, con il tuo nome e la tua posizione. Vedono uno schermo intero con la distanza, 🧭 e **Conferma**, una barra rossa in alto e un indicatore lampeggiante nella tua posizione; la mappa si sposta su di te. Se sei in una conferenza dal vivo, vi risuona un segnale acustico.
+
+Appena qualcuno conferma, la tua barra mostra «visto da …». Passato il pericolo, tocca **FINE** (o **Termina** nella barra); può terminarla anche la direzione d'intervento. Chiamata, conferma e fine figurano nel log e nel replay.
+
+> ! La chiamata d'emergenza non sostituisce una chiamata al 112/144/117 se serve aiuto esterno.
+
 ## Documenti {#dokumente}
 
 Il pulsante della mappa **📚 Documenti** apre la documentazione della tua organizzazione, anche senza intervento. In cima c'è la ricerca: trova titoli, descrizioni, parole chiave, il testo delle pagine e il testo dei PDF, con il numero di pagina. Sotto ci sono le sezioni che l'amministrazione ha configurato, per esempio conferme di lettura aperte, ★ preferiti, documenti nei luoghi dell'area d'intervento, documenti per questo tipo d'intervento e le cartelle. Se è permesso, disponi le sezioni per te con **Disponi le sezioni**.

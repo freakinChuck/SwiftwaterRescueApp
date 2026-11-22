@@ -105,6 +105,10 @@ Die Vergleichsgeschwindigkeiten, mit denen das Werkzeug Flussdistanz Fahrzeiten 
 
 Welche Navigations-Apps zur Wahl stehen und welche der Standard ist.
 
+### Notruf (SOS) {#sos}
+
+Wer bei einem Notruf alarmiert wird: **Einsatzleitung und Teilnehmende im Umkreis** (Umkreis in km), **nur die Einsatzleitung** oder **alle Teilnehmenden**. Dazu, wie lange der Knopf gedrückt werden muss (1–5 s), die Dauer des Countdowns zum Abbrechen (0–10 s, 0 = ohne) und ob in der Live-Konferenz ein Signalton ertönt. Die Funktion selbst schaltest du je Einsatztyp unter **Funktionen** ein und aus.
+
 ### Sprache {#sprache}
 
 Die App gibt es auf Deutsch, Englisch, Französisch und Italienisch. Hier stellst du die **Vorgabe der Organisation** ein. Sie gilt für Personen, die selbst keine Sprache gewählt haben und deren Gerät keine dieser Sprachen nutzt, sowie für Push-Meldungen an Personen, die die App noch nie geöffnet haben.

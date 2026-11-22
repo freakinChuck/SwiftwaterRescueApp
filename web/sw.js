@@ -5,7 +5,7 @@
    - Eigene OSM-Karte (tiles/*.pmtiles, Teilabfragen): je Abschnitt (Range) wie eine Kachel, die Cache-API nimmt keine 206-Antworten, deshalb als 200 mit dem Status im Kopf.
    - Die API (api/index.php) geht nie über den Zwischenspeicher; den letzten Stand merkt sich die App selbst (localStorage sw_last). */
 const SHELL='sw-shell-1',LIBS='sw-libs-1',TILES='sw-tiles-1',TILE_MAX=1500;
-const PRE=['./','index.html','i18n.js?v=0','common.js?v=0','common.css?v=0','voice.js?v=0','manifest.webmanifest','img/icon-192.png','img/icon-512.png'];
+const PRE=['./','index.html','i18n.js?v=0','common.js?v=0','common.css?v=0','voice.js?v=0','sos.js?v=0','manifest.webmanifest','img/icon-192.png','img/icon-512.png'];
 const CDN=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\//,TILE=/^https:\/\/(wmts\.geo\.admin\.ch|tile\.openstreetmap\.org|tiles\.maps\.eox\.at|[a-c]\.tile\.openstreetmap\.fr)\//;
 
 self.addEventListener('install',e=>{e.waitUntil(caches.open(SHELL).then(c=>Promise.all(PRE.map(u=>c.add(u).catch(()=>{})))).then(()=>self.skipWaiting()))});

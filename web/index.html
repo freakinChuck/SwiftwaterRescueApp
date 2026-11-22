@@ -80,6 +80,28 @@ body.jb #followChip{top:calc(7.6rem + env(safe-area-inset-top))}
 /* Seitenfenster «Einsatzkräfte» und «Nachrichten» (Knöpfe rechts unten, immer nur eines offen) und Anzeige beim Folgen */
 #people,#vx{position:fixed;right:.7rem;top:calc(7.4rem + env(safe-area-inset-top));bottom:calc(.7rem + env(safe-area-inset-bottom));width:min(360px,calc(100vw - 1.4rem));z-index:1050;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px #000a;display:flex;flex-direction:column}#vxBody{display:flex;flex-direction:column;flex:1;min-height:0}
 /* Funk (Issue #113): Sprechtaste links unten über dem Hinweis zum Suchgebiet (vxFabPos), Kanal der Durchsage darunter; in der Konferenz darüber die Live-Taste */
+/* Notruf (SOS, Issue #240): Knopf unter ☰, Countdown, Vollbild, Leiste oben, blinkender Ring auf der Karte */
+#sosB{top:calc(4.2rem + env(safe-area-inset-top));background:#c40000;border-color:#ff6b6b;color:#fff;font-weight:800;font-size:.85rem;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#sosB .sost{position:relative;z-index:1}#sosB .sosr{position:absolute;inset:0;background:#ff2d2d;transform:scaleY(0);transform-origin:bottom}
+#sosB.hold .sosr{transform:scaleY(1);transition:transform var(--sosh,2s) linear}#sosB.on{width:auto;padding:0 .6rem;animation:sosPulse 1s ease-in-out infinite}
+body.so #sosB{display:none}body.off #sosB{margin-top:var(--offH,2.4rem)}
+@media(min-width:760px){body.so #sosB{display:block;left:calc(400px + 1rem)}}
+@keyframes sosPulse{0%,100%{box-shadow:0 0 0 0 #ff2d2dcc}50%{box-shadow:0 0 0 10px #ff2d2d00}}
+#sosBar{position:fixed;top:calc(3.9rem + env(safe-area-inset-top));left:4rem;right:4rem;z-index:1001;display:flex;flex-direction:column;gap:.3rem}
+body.jb #sosBar{top:calc(7.2rem + env(safe-area-inset-top))}body.sosb #followChip{margin-top:3rem}body.sosk #followChip{left:4rem}
+@media(min-width:760px){body.so #sosBar{left:calc(400px + 1rem)}}
+#sosBar .sosi{background:#c40000;color:#fff;border-radius:6px;padding:.45rem .6rem;font-weight:600;box-shadow:0 1px 4px #0008;display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem;animation:sosBlink 1.2s step-end infinite}
+#sosBar .sosbt,#sosAl .sosbt,#sosCd .sosbt{display:flex;flex-wrap:wrap;gap:.4rem;margin-left:auto}#sosBar .btn{padding:.25rem .55rem;font-size:.85rem}
+@keyframes sosBlink{50%{background:#8a0000}}
+#sosCd,#sosAl{position:fixed;inset:0;z-index:6000;background:#7a0000ee;color:#fff;display:grid;place-items:center;padding:1rem;text-align:center}
+#sosAl{animation:sosBg 1s step-end infinite}@keyframes sosBg{50%{background:#c40000ee}}
+#sosCd .sosbox,#sosAl .sosbox{max-width:30rem;display:flex;flex-direction:column;gap:.6rem;font-size:1.1rem}#sosCd .sosbt,#sosAl .sosbt{justify-content:center;margin:1rem 0 0}
+#sosCd .sosn{font-size:5rem;font-weight:800;line-height:1}#sosAl .sosh{font-size:2rem;font-weight:800;letter-spacing:.05em}#sosAl .sosnm{font-size:1.6rem;font-weight:700}
+#sosCd .btn,#sosAl .btn{font-size:1.1rem;padding:.7rem 1.1rem}#sosAl .mut{color:#ffd0d0}
+.sosmk{width:56px;height:56px;border-radius:50%;border:4px solid #ff1a1a;background:#ff1a1a55;display:grid;place-items:center;animation:sosRing 1s ease-in-out infinite}
+.sosmk span{background:#c40000;color:#fff;font:800 .7rem system-ui;padding:1px 4px;border-radius:3px}
+@keyframes sosRing{0%,100%{transform:scale(.8);opacity:1}50%{transform:scale(1.15);opacity:.55}}
+.leaflet-tooltip.sostip{background:#c40000;color:#fff;border:0;font-weight:700}.leaflet-tooltip.sostip:before{display:none}
 #vxFab{position:fixed;left:.7rem;bottom:calc(1.2rem + env(safe-area-inset-bottom));z-index:1040;display:flex;flex-direction:column;align-items:center;gap:.3rem;width:88px}
 #vxFab .vxptt{width:64px;height:64px;font-size:1.6rem;box-shadow:0 2px 12px #000b}#vxFab select{width:100%;font-size:.75rem;padding:.2rem .3rem;border-radius:12px;background:#0f2430e6}
 #vxFc{display:flex;flex-direction:column;align-items:center;gap:.2rem;margin-bottom:.2rem}#vxFc[hidden]{display:none}#vxFc .vxptt{width:48px;height:48px;font-size:1.15rem}#vxFc .vxlive{margin:0}
@@ -167,6 +189,7 @@ body.picking .pinfo{pointer-events:none;opacity:.6}
 <script src="common.js?v=0"></script>
 <script src="docs.js?v=0"></script>
 <script src="voice.js?v=0"></script>
+<script src="sos.js?v=0"></script><!-- Notruf (SOS, Issue #240) -->
 <script>
 /* ---------- Konfiguration ---------- */
 // Kartenanbieter (MAP_PROVIDERS, DEFAULT_BASE) in common.js, gemeinsam mit dem Replay der Verwaltung
@@ -1377,11 +1400,11 @@ let timer;async function poll(){try{const nx=await api(`incident/state&since=${l
       if(st&&st.me&&!st.me.left_at&&st.me.mode!=='declined'&&nx.me&&nx.me.left_at&&!window.selfLeft&&notify('AUS EINSATZ ENTFERNT','Die Einsatzleitung hat dich aus dem Einsatz entfernt.','k:'+i.id+':'+nx.me.left_at,kr))toggleSheet(true);
       // Standort teilen nach der eigenen Teilnahme, auch wenn ein anderer Einsatz angezeigt wird (my_inc; ältere Server und Demo: nach me)
       const mi=nx.my_inc!==undefined?nx.my_inc:(nx.me&&!nx.me.left_at&&nx.me.mode!=='declined'?nx.me:null);
-      st=nx;vxPoll(nx);if(mi&&shares(mi.mode))track();else stop()}
-    else{if(st&&st.incident){const k=kindOf(st.incident).name,lv=st.level||'crit';incNotesClose(st.incident.id);if((st.alarm!==false||st.me)&&notify(k.toUpperCase()+' BEENDET',k+' beendet.','e:'+st.incident.id,st.end_level||(lv==='none'?'low':lv)))toggleSheet(true)}st=nx;lastIncId=null;vxPoll(nx);stop()}
+      st=nx;vxPoll(nx);sosPoll(nx);if(mi&&shares(mi.mode))track();else stop()}
+    else{if(st&&st.incident){const k=kindOf(st.incident).name,lv=st.level||'crit';incNotesClose(st.incident.id);if((st.alarm!==false||st.me)&&notify(k.toUpperCase()+' BEENDET',k+' beendet.','e:'+st.incident.id,st.end_level||(lv==='none'?'low':lv)))toggleSheet(true)}st=nx;lastIncId=null;vxPoll(nx);sosPoll(nx);stop()}
     saveLast();setOffline(false);if(bootOff){bootOff=false;return render()} // offline gestartet: jetzt alles frisch laden
     paint()}catch(e){if(e instanceof TypeError)setOffline(true);console.error('Poll',e)}} // TypeError = keine Verbindung (fetch)
-function paint(){if(st&&st.incident)creating=false;alJoinSync();baseSync();updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderHyd();renderDocs();renderVx();renderBigLog();if(!document.activeElement.matches('input,textarea,select'))draw()}
+function paint(){if(st&&st.incident)creating=false;alJoinSync();baseSync();updateChip();drawMap();airPoll();hyPoll();followNow();autoFit();updateFollowChip();renderPeople();renderMsgs();renderPois();renderRes();renderHyd();renderDocs();renderVx();renderBigLog();sosPaint();if(!document.activeElement.matches('input,textarea,select'))draw()}
 /* ---------- Funk & Konferenz (Issue #113): Kartenknopf «Funk», Seitenfenster, Sprechtaste auf der Karte, Live-Konferenz ---------- */
 // st.voice vom Server: ch (meine Kanäle mit speak), items (Durchsagen inkrementell nach upd, vs), conf (Konferenz verfügbar), conf_list (wer verbunden ist, muted), tr, max_s, listen, keep;
 // Einsatzleitung zusätzlich all_ch, inc_ch, guests, guest_speak, guest_links. Aufnahme, Wiedergabe und Konferenz in voice.js (VX).

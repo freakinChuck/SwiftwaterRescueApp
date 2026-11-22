@@ -29,6 +29,7 @@ import 'pois.dart';
 import 'prefs.dart';
 import 'rd.dart';
 import 'res.dart';
+import 'sos.dart';
 import 'store.dart';
 import 'util.dart';
 import 'veh.dart';
@@ -120,6 +121,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     });
     _eSub = s.events.stream.listen((e) {
       if (e == 'inc') _fitted = null;
+      // neuer Notruf (Issue #240): Kamera auf die Person, Folgen und Auto-Übersicht enden
+      final sid = e.startsWith('sos:') ? int.tryParse(e.substring(4)) : null, sp = sid == null ? null : sosById(s, sid);
+      if (sp != null && sosPos(sp) != null && _mapReady) {
+        _stopFollow();
+        centerOn(sosPos(sp)!, zoom: math.max(16, mc.camera.zoom));
+      }
     });
     s.addListener(_onStore);
     s.vx.addListener(_onVx); // Funk (Issue #113): Sprechtaste, Leiste, Zähler
@@ -1224,6 +1231,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       out.add(CircleLayer(circles: _drawPts.map((p) => CircleMarker(point: p, radius: 6, color: _drawCol, borderColor: Colors.white, borderStrokeWidth: 2)).toList()));
     }
     _selfLayer(out);
+    final so = sosLayer(s); // Notruf (Issue #240) zuoberst
+    if (so != null) out.add(so);
     return out;
   }
 
@@ -1575,6 +1584,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
               Column(children: [
                 FloatingActionButton.small(heroTag: 'menu', tooltip: trn('Menü'), backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: () => _sk.currentState?.openDrawer(), child: const Icon(Icons.menu)),
                 if (s.demo) Padding(padding: const EdgeInsets.only(top: 6), child: DemoBadge(onChanged: _demoChanged)), // Demo-Modus (Issue #74)
+                if (sosMay(s)) Padding(padding: const EdgeInsets.only(top: 8), child: SosButton(s: s)), // Notruf (Issue #240)
               ]),
               const SizedBox(width: 8),
               Expanded(
@@ -1587,6 +1597,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                             color: s.offline ? const Color(0xFF8A6D00) : (k != null ? hexColor(k.color) : appBlue).withValues(alpha: .92), borderRadius: BorderRadius.circular(16)),
                         child: Text(t, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)))),
                 ?_joinBan(),
+                ?sosBar(context, s, this),
                 if (_follow != null || _jfollow != null || s.autoView)
                   Padding(
                       padding: const EdgeInsets.only(top: 6),
@@ -1703,6 +1714,37 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     if (mounted) focusArea();
   }
 
+  /// Notruf im Alarm-Vollbild (Issue #240): Distanz, Zeigen und Navigation zur auslösenden Person
+  List<Widget> _sosAlarm(AlarmItem a) {
+    final id = int.tryParse(RegExp(r'^x:(\d+)$').firstMatch(a.key)?.group(1) ?? ''), x = id == null ? null : sosById(s, id), p = x == null ? null : sosPos(x);
+    if (x == null) return const [];
+    final d = sosDist(s, x), st = OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white, width: 1.5));
+    return [
+      const SizedBox(height: 12),
+      Text([sosAgo(s, x), if (d.isNotEmpty) '$d entfernt', if (p == null) 'ohne Standort'].join(' · '), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 18)),
+      if (p != null) ...[
+        const SizedBox(height: 16),
+        Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
+          OutlinedButton(
+              style: st,
+              onPressed: () async {
+                await s.ackAlarm();
+                centerOn(p, zoom: 16);
+              },
+              child: const Text('Quittieren und zeigen')),
+          if (s.feat('nav'))
+            OutlinedButton(
+                style: st,
+                onPressed: () async {
+                  await s.ackAlarm();
+                  await navGo(s, p.latitude, p.longitude, 'SOS ${js(x['name'])}');
+                },
+                child: const Text('🧭 Navigieren')),
+        ]),
+      ],
+    ];
+  }
+
   Widget _alarm(AlarmItem a) {
     final ms = _alarmModes(a);
     final fill = FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16));
@@ -1723,6 +1765,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                               Text(a.body, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 20)),
                               const SizedBox(height: 8),
                               Text(widget.account.label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+                              ..._sosAlarm(a),
                               const SizedBox(height: 32),
                               // Annehmen direkt im Alarm: eine Taste je Einrückoption
                               for (final x in ms) ...[

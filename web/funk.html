@@ -33,16 +33,19 @@ const io={me:null,upload:b=>gApi('guest/voice',b),audio:async id=>{const r=await
   join:()=>gApi('guest/voice/join'),conf:()=>{},change:()=>draw(),poll:()=>poll()};
 const ini=n=>String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?';
 function stop(msg){clearTimeout(timer);vxConfLeave();$('#gFoot').innerHTML='';$('#vxBar').hidden=true;$('#gMain').innerHTML=`<div id="gMsg" class="gcard"><h2>Funk</h2><div class="mut">${esc(msg)}</div></div>`}
+let sosSeen=null;
 async function poll(){try{const r=await gApi(`guest/state&vs=${VX.vs}${VX.conf?'&vc=1':confWas?'&vc=0':''}`);confWas=!!VX.conf;
     if(r.ended)return stop(`Der Einsatz ist beendet. Danke für die Unterstützung, ${r.label}.`);
     G=r;io.me=null;io.guestName=r.label+' (extern)';vxInit(io,'g'+K.slice(0,8),1);VX.max=r.max_s;VX.ann=r.ann!==0;vxMerge(r.voice,r.now);vxConfSync(r.conf_list);if(vxQueued())vxFlush();
+    // Notruf (SOS, Issue #240): neuer Notruf mit Ton (Konferenz oder Mithören) und Hinweis, ohne Standort
+    const sn=(r.sos||[]).map(x=>x.id);if(sosSeen&&(VX.conf||VX.listen)&&sn.some(i=>!sosSeen.includes(i)))[0,180,360].forEach(t=>setTimeout(()=>vxTone(true),t));sosSeen=sn;
     if(Date.now()-gdAt>30000){gdAt=Date.now();gApi('guest/docs').then(x=>{GD=x.docs||[];draw()}).catch(()=>{})}draw()}
   catch(e){if(e instanceof TypeError){$('#gWho').textContent='Keine Verbindung – versuche es weiter …';return}if(e.status===404||e.status===403)return stop(e.message);toast(e.message,'err')}}
 function loop(){timer=setTimeout(()=>poll().finally(loop),VX.conf||VX.listen?1500:3000)}
 function draw(){if(!G)return;const r=VX.rec,cf=VX.conf,it=VX.playing&&VX.items.get(VX.playing);
   $('#gWho').textContent=`Gastzugang · ${G.label}`;document.title='Funk «'+G.ch.name+'» – '+G.label;
   const items=vxList(null),cl=G.conf_list||[];
-  const h=`<div class="gcard"><span class="badge" style="background:${esc(G.incident.kind_color)}">${esc(G.incident.kind_name)}</span> <b>${esc(G.incident.message)}</b>
+  const h=`${(G.sos||[]).map(x=>`<div class="gcard" role="alert" style="background:#c40000;color:#fff"><b>SOS – Notruf</b> von <span translate="no">${esc(x.name)}</span>. Bitte Funkdisziplin, die Einsatzleitung koordiniert.</div>`).join('')}<div class="gcard"><span class="badge" style="background:${esc(G.incident.kind_color)}">${esc(G.incident.kind_name)}</span> <b>${esc(G.incident.message)}</b>
       <div class="mut" style="margin-top:.3rem">Kanal «${esc(G.ch.name)}» · ${G.speak?'hören und sprechen':'nur hören'} · gültig bis zum Einsatzende</div>
       <label class="vxsw" style="margin-top:.4rem"><input type="checkbox" id="gLis" ${VX.listen?'checked':''}> Mithören (neue Durchsagen sofort abspielen)</label></div>
     ${G.conf?`<div class="gcard"><h2>${cf?'<span class="vxlive">LIVE</span>':''}Live-Konferenz «${esc(G.ch.name)}» <span class="mut">· ${cl.length} verbunden</span></h2>
