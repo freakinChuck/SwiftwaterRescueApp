@@ -1,6 +1,27 @@
 {
   "versions": [
     {
+      "version": "1.3.2",
+      "date": "2026-11-22",
+      "items": [
+        "Fortlaufende Build-Nummer für Android und iOS (Issue #230) (#234)"
+      ]
+    },
+    {
+      "version": "1.3.1",
+      "date": "2026-11-21",
+      "items": [
+        "iOS: kritische und zeitkritische Hinweise einschalten (#217)",
+        "iOS mit Xcode 27 bauen (ITMS-90725) (#219)",
+        "Graue Karte nach Push beheben, Annehmen direkt im Alarm (#220)",
+        "Persönlicher Testalarm im Profil (Issue #218) (#221)",
+        "iOS-Beacons, Fahrzeuge jetzt scannen, Batteriestand (#224)",
+        "Einsatzgebiet: Fokus nicht bei jeder Aktualisierung zurücksetzen (#225)",
+        "Alarm mit Einrückoptionen bei allen Einsatztypen (Issue #226) (#228)",
+        "Android und iOS mit derselben Build-Nummer (Issue #230) (#231)"
+      ]
+    },
+    {
       "version": "1.3.0",
       "date": "2026-11-16",
       "items": [

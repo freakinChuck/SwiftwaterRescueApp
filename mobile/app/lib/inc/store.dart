@@ -105,6 +105,37 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   J? st; // letzter Stand von incident/state
   final msgs = <J>[];
   int _lastMsg = 0;
+
+  // ---------- Verknüpfter Einsatz mit Partnerorganisationen (Issue #60, jointMerge in index.html) ----------
+  /// gemeinsamer Kanal: Nachrichten aller beteiligten Organisationen (inkrementell über jm)
+  final List<J> jMsgs = [];
+  int _jLast = 0;
+  int? _jId;
+
+  J? get joint => st?['joint'] is Map ? jm(st!['joint']) : null;
+  Map<String, String> _jmQ() => _jId != null ? {'jm': '$_jLast'} : {};
+  void _jointMerge(J nx) {
+    final j = nx['joint'] is Map ? jm(nx['joint']) : null;
+    if (j == null) {
+      jMsgs.clear();
+      _jLast = 0;
+      _jId = null;
+      return;
+    }
+    if (ji(j['id']) != _jId) {
+      _jId = ji(j['id']);
+      jMsgs.clear();
+      _jLast = 0;
+    }
+    for (final m in jl(j['msgs'])) {
+      final id = ji(m['id']) ?? 0;
+      if (id > _jLast) {
+        _jLast = id;
+        jMsgs.add(m);
+      }
+    }
+    if (jMsgs.length > 300) jMsgs.removeRange(0, jMsgs.length - 300);
+  }
   int? _lastIncId;
   bool _msgInit = false;
   bool ready = false, offline = false, closed = false;
@@ -160,7 +191,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   int _selGen = 0; // Wahl geändert: laufende Abfrage verwerfen
   bool _again = false;
   List<J>? _incPrev; // laufende Einsätze der letzten Abfrage (Ende der übrigen melden)
-  Set<int> othHide = {}; // ausgeblendete übrige Einsätze (oth_hide_<Konto>, wie sw_othhide)
+  Set<String> othHide = {}; // ausgeblendete übrige Einsätze (oth_hide_<Konto>, wie sw_othhide; Schlüssel othK)
+
+  /// Schlüssel eines Eintrags in others: verknüpfte Einsätze anderer Organisationen `o<Org>-<Einsatz>` (Issue #60), sonst die ID
+  static String othK(J o) => js(o['k']).isNotEmpty ? js(o['k']) : '${ji(o['id'])}';
 
   /// alle laufenden Einsätze, die man sehen darf (leer bei älteren Servern und im Demo)
   List<J> get incidents => jl(st?['incidents']);
@@ -205,9 +239,9 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     unawaited(setSel(r.$2));
   }
 
-  void setOthHide(int id, bool hide) {
+  void setOthHide(String id, bool hide) {
     hide ? othHide.add(id) : othHide.remove(id);
-    _sp?.setStringList('oth_hide_${acc.id}', othHide.map((e) => '$e').toList());
+    _sp?.setStringList('oth_hide_${acc.id}', othHide.toList());
     notifyListeners();
   }
 
@@ -318,7 +352,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     _sp = await SharedPreferences.getInstance();
     _loadView();
     api.inc = demo ? 0 : (_sp!.getInt('incsel_${acc.id}') ?? 0);
-    othHide = (_sp!.getStringList('oth_hide_${acc.id}') ?? []).map(int.tryParse).whereType<int>().toSet();
+    othHide = (_sp!.getStringList('oth_hide_${acc.id}') ?? []).toSet();
     selReq.addListener(_onSelReq);
     _onSelReq();
     try {
@@ -562,13 +596,14 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     _polling = true;
     final g = _selGen;
     try {
-      var nx = await api.call('incident/state', query: {'since': '$_lastMsg', ...vx.query(), 'oth': '1'});
+      var nx = await api.call('incident/state', query: {'since': '$_lastMsg', ...vx.query(), 'oth': '1', ..._jmQ()});
       if (g != _selGen) {
         _again = true; // Wahl inzwischen geändert: diese Antwort gilt nicht mehr
         return;
       }
       // neu alarmiert zu einem anderen Einsatz ohne eigene Teilnahme: diesen anzeigen
       if (_incWatch(nx)) nx = await api.call('incident/state', query: {'since': '0', ...vx.query(), 'oth': '1'});
+      _jointMerge(nx);
       _askBt(nx);
       if (nx['test_alarm'] is Map) { // persönlicher Testalarm (Issue #218), Stufe wie ein Alarm
         final t = jm(nx['test_alarm']);

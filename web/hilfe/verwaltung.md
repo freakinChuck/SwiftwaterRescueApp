@@ -231,6 +231,19 @@ Eine eingehende E-Mail startet einen Einsatz: Postfach (IMAP), Abruf, erlaubte A
 
 Durchsagen und Live-Konferenz (LiveKit-Server), Kanäle mit Hör- und Sprechrechten, Transkription, Aufbewahrung und Links für Externe je Einsatztyp.
 
+### Partnerorganisationen {#partner}
+
+Vereinbarungen mit anderen Organisationen, die eine **eigene Installation** mit eigener Adresse betreiben (Recht «Konnektivität einstellen»). Es gibt keine gemeinsame Datenbank: Jede Organisation behält ihre Personen, Einstellungen und Einsätze auf ihrem Server und entscheidet selbst, was ein Partner darf.
+
+1. Eine Seite trägt den Partner mit **+ Partnerorganisation** ein: Name, Adresse der Installation (z. B. `https://partner.example.ch/swiftwater/`, steht beim Partner oben unter «Diese Installation») und **Neuen Schlüssel erzeugen**. Der Schlüssel erscheint einmal zum Kopieren.
+2. Die andere Seite trägt diese Installation ebenso ein und gibt unter «Schlüssel» den **erhaltenen Schlüssel** ein. Den Schlüssel auf einem sicheren Weg weitergeben (nicht per gewöhnlicher E-Mail), er berechtigt zum Aufbieten.
+3. **Verbindung testen** auf beiden Seiten; danach kennt jede Seite die Einsatztypen des Partners.
+4. Im Dialog des Partners festlegen, **welche Einsatzgruppen** er aufbieten darf (alle oder ausgewählte) und **welcher eigene Einsatztyp** auf einen Einsatztyp des Partners folgt. Einsatztypen ohne Zuordnung lösen bei uns nichts aus.
+
+Die Server sprechen direkt miteinander; jede Anfrage ist mit dem Schlüssel signiert und gilt nur kurz (die Uhren beider Server müssen stimmen). **Deaktivieren** sperrt den Partner sofort, ohne die Vereinbarung zu löschen; **Entfernen** geht nur, solange kein gemeinsamer Einsatz läuft. Ein neuer Schlüssel ersetzt den alten, der Partner muss ihn dann ebenfalls eintragen. Ablauf im Einsatz: siehe [Aufgebot und Nachbieten](#leitung/aufgebot).
+
+> Partner sehen von uns nur, was ein gemeinsamer Einsatz braucht: Name und Spezialrolle der Teilnehmenden mit Standort, die Lage, feste Standorte und Fahrzeuge dieses Einsatzes, gemeinsame Rettlinge und den gemeinsamen Kanal. Telefonnummern nur, wenn der Direktanruf bei uns allen Teilnehmenden offen steht.
+
 ## System {#system}
 
 ### Applikationslog {#applog}

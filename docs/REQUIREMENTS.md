@@ -379,7 +379,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **VS-07** – Die native App meldet ihre Version dem Server; die Verwaltung (System → «Versionen», eigenes Recht) zeigt den ausgelieferten Stand des Servers und die angemeldeten Apps je Plattform und Version (#175).
 - **VS-08** – In der Verwaltung lässt sich eine Mindestversion der App festlegen. Ältere Apps zeigen nur den Hinweis «Bitte App aktualisieren» (im Menü mit «Später» für 7 Tage ausblendbar, in der Kontenliste und im Profil); Alarmierung und Einsatz funktionieren weiter, gesperrt wird nie. Denselben Hinweis gibt es, wenn der Server eine höhere API-Stufe hat als die App (AG, #175).
 - **VS-09** – Jedes Deployment einer neuen Version steht im Applikationslog («Version a → b») (#175).
-- **VS-10** – Android- und iOS-App desselben Pipeline-Laufs haben dieselbe Build-Nummer; sie steigt mit jedem Lauf, auch über den von Hand ausgelösten iOS-Build hinweg (AG, #230).
+- **VS-10** – Android- und iOS-App desselben Pipeline-Laufs haben dieselbe Build-Nummer; sie steigt mit jedem Lauf um 1 (fortlaufend, keine grossen Sprünge, die Google Play ablehnt), auch über den von Hand ausgelösten iOS-Build hinweg (AG, #230).
 
 ## 27. Demo-Modus (DM)
 
@@ -448,7 +448,22 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **BA-03** – Kontextbezogene Links: Knopf «?» in der Kopfzeile des Menüs (je nach Register bzw. ohne Einsatz), in den Seitenfenstern Einsatzkräfte, Rettlinge, Nachrichten, Funk, Markierungen und Messstationen, im Profil und in der Verwaltung je Bereich bzw. in «Meine Einsätze»; dazu Links bei der Anmeldung, im Profil (Karte «Rechtliches», auch nativ) und im Konto-Menü der Verwaltung (#37).
 - **BA-04** – Die Anleitung wird bei jeder Änderung der Bedienung nachgeführt (Text und, wo nötig, Bildschirmfotos) (#37).
 
-## 32. Dokumentenablage (DO)
+## 32. Partnerorganisationen (PO)
+
+- **PO-01** – Organisationen mit je eigener Installation (eigene Adresse, eigener Server, eigene Datenbank) schliessen Vereinbarungen miteinander; es gibt keine Mandantenfähigkeit und keine gemeinsame Datenbank. Eingerichtet in der Verwaltung → Konnektivität → «Partnerorganisationen» (Recht «Konnektivität einstellen») mit Adresse und einem gemeinsamen Schlüssel, den eine Seite erzeugt und die andere eingibt; «Verbindung testen» prüft beide Richtungen (#60).
+- **PO-02** – Die Server sprechen direkt miteinander, jede Anfrage ist mit dem gemeinsamen Schlüssel signiert (HMAC-SHA256 mit Zeitstempel, ±5 min gültig). Der Schlüssel geht nie an Geräte, steht nicht im Datenschutzauszug und nicht im Applikationslog (#60).
+- **PO-03** – Jede Seite legt selbst fest, was der Partner bei ihr darf: welche Einsatzgruppen er aufbieten darf (alle oder ausgewählte) und welcher eigene Einsatztyp auf welchen Einsatztyp des Partners folgt; ohne Zuordnung löst der Typ nichts aus. Deaktivieren sperrt den Partner sofort (#60).
+- **PO-04** – Wer alle Einsatzgruppen aufbieten darf, bietet beim Start und beim Nachbieten auch freigegebene Gruppen der Partner auf. Das Aufgebot trennt «Eigene Organisation» und «Partnerorganisationen»; sind nur Gruppen von Partnern gewählt, wird in der eigenen Organisation niemand alarmiert (#60).
+- **PO-05** – Der Partner erhält auf seinem Server einen eigenen, **verknüpften Einsatz** mit seinen Einstellungen, Funktionen, Rollen und Einrückoptionen; die Aufgebotenen werden dort gemäss seinem Einsatztyp alarmiert. Die auslösende Organisation vermittelt zwischen allen Beteiligten (Stern) (#60).
+- **PO-06** – Im verknüpften Einsatz sieht jede Organisation die Lage der übrigen auf der Karte (PLS, Markierungen, Bereiche, Linien, Externe, Einsatzkräfte mit Spezialrolle, feste Standorte, Fahrzeuge), beschriftet mit der Organisation und je Organisation ausblendbar; ein nicht erreichbarer Partner wird als solcher angezeigt (#60).
+- **PO-07** – Die Fenster «Einsatzkräfte» und «Markierungen» zeigen je Partnerorganisation eine eigene, zusammenklappbare Gruppe (nur lesend) mit «Zentrieren»/«Zeigen» und Navigation; Einsatzkräfte der Partner lassen sich folgen, öffnen die Personeninfo und haben Nummer und «Anrufen», wenn der Direktanruf beim Partner allen Teilnehmenden offen steht (#60).
+- **PO-08** – Rettlinge sind gemeinsam: Erfassen, Bearbeiten, Fundort, «gerettet» und Entfernen gelten sofort in allen verknüpften Einsätzen (Log mit «Name (Organisation)») (#60).
+- **PO-09** – Gemeinsamer Kanal (alle Beteiligten mit Funktion «Nachrichten», ohne Benachrichtigung, im Einsatzlog jeder Organisation) und gemeinsame Live-Konferenz (alle mit Konferenz). Das Einsatzende der auslösenden Organisation beendet die verknüpften Einsätze (#60).
+- **PO-10** – Gemeinsame Übungen: Eine vorbereitete Übung bietet Einsatzgruppen von Partnern auf und trägt Personen der Partner als Übungsleitung ein; diese sehen die Übung in ihrer Verwaltung (nur lesend) und haben im verknüpften Einsatz die Rechte der Übungsleitung ohne Alarm (#60).
+- **PO-11** – Die native App zeigt gemeinsame Einsätze wie die Web-App (Karte «Gemeinsamer Einsatz», Lage, Listen, Folgen, gemeinsamer Kanal und Konferenz) (#60).
+- **PO-12** – Datenschutzerklärung nennt die eingetragenen Partner mit Host als Empfänger; Export der Organisation und Datenschutzauszug enthalten die Tabellen bzw. Nachrichten im gemeinsamen Kanal; endgültiges Löschen eines Einsatzes löscht seine Verknüpfung (#60).
+
+## 33. Dokumentenablage (DO)
 
 - **DO-01** – Eine Ablage je Organisation für Unterlagen (Einsatzpläne, Checklisten, Merkblätter, Reglemente) mit Ordnern beliebiger Tiefe, erreichbar in der Einsatz-App (Web und nativ, mit und ohne Einsatz; Kartenknopf «Dokumente», Menükarte «Unterlagen», Profil) und in der Verwaltung (#229).
 - **DO-02** – Drei Arten von Einträgen: Datei mit Versionen (frühere wiederherstellbar, Anzahl einstellbar), Seite (Text in der App, Markdown mit Bildern) und Link; je Eintrag Titel, Beschreibung, Schlagwörter, «Überprüfen bis» und aktiv/deaktiviert (#229).

@@ -22,6 +22,10 @@ abstract class MapCtl {
   void follow(int? userId);
   int? get followId;
 
+  /// Einsatzkraft einer Partnerorganisation folgen (Schlüssel jk aus jointPpl, Issue #60), null = beenden
+  void followJ(String? key);
+  String? get followJId;
+
   /// Punkt auf der Karte antippen lassen (Hinweis oben), null = abgebrochen
   Future<LatLng?> pickPoint(String hint);
 
@@ -250,21 +254,27 @@ Widget? navBtn(IncStore s, dynamic lat, dynamic lon, String name, {String? label
 
 /// Direktanruf (Issue #44): Nummer nur, wenn der Server sie liefert (Funktion «call», Einstellung phone_cfg: show = anzeigen, call = Knopf); nie bei einem selbst
 String telOf(IncStore s, J p) {
+  if (p['jk'] != null) return _phCfg(s, p) == null ? '' : js(p['phone']); // Partnerorganisation: Einstellung des Partners (pcfg)
   final c = s.st?['phone_cfg'];
   if (c is! Map || ji(p['user_id']) == null || ji(p['user_id']) == s.uid) return '';
   return js(p['phone']);
 }
 
+Map? _phCfg(IncStore s, J p) {
+  final c = p['jk'] != null ? p['pcfg'] : s.st?['phone_cfg'];
+  return c is Map ? c : null;
+}
+
 /// Zeile «📞 Nummer» (nur mit show)
 String? telTxt(IncStore s, J p) {
   final n = telOf(s, p);
-  return n.isNotEmpty && ji((s.st?['phone_cfg'] as Map)['show']) == 1 ? '📞 $n' : null;
+  return n.isNotEmpty && ji(_phCfg(s, p)?['show']) == 1 ? '📞 $n' : null;
 }
 
 /// Knopf «📞 Anrufen» (nur mit call), öffnet die Telefon-App
 Widget? telBtn(IncStore s, J p) {
   final n = telOf(s, p);
-  if (n.isEmpty || ji((s.st?['phone_cfg'] as Map)['call']) != 1) return null;
+  if (n.isEmpty || ji(_phCfg(s, p)?['call']) != 1) return null;
   return smallBtn('📞 Anrufen', () async {
     try {
       if (!await launchUrl(Uri(scheme: 'tel', path: n.replaceAll(RegExp(r'[^0-9+]'), '')))) s.toast('Telefon-App nicht verfügbar', 'err');
@@ -338,4 +348,51 @@ Widget avatar(J p, {double r = 16, Color? border}) {
   return Container(
       decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: border ?? Colors.white, width: 2.5)),
       child: CircleAvatar(radius: r, backgroundColor: appBlue, backgroundImage: img, child: img == null ? Text(n, style: TextStyle(fontSize: r * .7, color: Colors.white)) : null));
+}
+
+// Verknüpfte Einsätze von Partnerorganisationen (Issue #60): Listen in den Fenstern «Einsatzkräfte» und «Markierungen», nur lesend
+List<J> jointParts(IncStore s) => s.inc == null ? <J>[] : s.others.where((o) => jn(o['joint']) == 1).toList();
+String jointName(J o) => '${js(o['org_name'])} · Partnerorganisation${jn(o['host']) == 1 ? ' (auslösend)' : ''}';
+const jointDown = Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Mut('Die Partnerorganisation ist gerade nicht erreichbar.'));
+
+/// Zeile mit «Zentrieren»/«Zeigen» (ein Punkt: Karte schieben, mehrere: Ausschnitt) und 🧭
+Widget jointRow(BuildContext context, IncStore s, MapCtl map, String name, String sub, List<LatLng> pts, {String btn = 'Zentrieren'}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+      if (sub.isNotEmpty) Mut(sub, size: 12),
+      if (pts.isNotEmpty)
+        Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              OutlinedButton(
+                  onPressed: () {
+                    pts.length > 1 ? map.fitPts(pts) : map.centerOn(pts.first);
+                    if (MediaQuery.sizeOf(context).width < 760) map.openPanel(null);
+                  },
+                  child: Text(btn)),
+              ?navBtn(s, pts.first.latitude, pts.first.longitude, name),
+            ])),
+    ]));
+
+/// Punkte eines Eintrags ([[lat, lon], …] oder lat/lon)
+List<LatLng> jointPts(dynamic v) => v is List
+    ? v.whereType<List>().where((p) => p.length >= 2 && jd(p[0]) != null && jd(p[1]) != null).map((p) => LatLng(jd(p[0])!, jd(p[1])!)).toList()
+    : <LatLng>[];
+
+/// Einsatzkräfte (team) und Externe eines Partners als Einträge mit Schlüssel jk wie jPplOf in der Web-App: `j<k>:<id>` bzw. `jx<k>:<id>`
+List<J> jointPpl(J o) => [
+      for (final p in jl(o['team'])) {...p, 'jk': 'j${js(o['k'])}:${ji(p['id'])}', 'ok': js(o['k']), 'org_name': o['org_name'], 'pcfg': o['phone_cfg']},
+      for (final e in jl(o['ext'])) {...e, 'ext': 1, 'jk': 'jx${js(o['k'])}:${ji(e['id'])}', 'ok': js(o['k']), 'org_name': o['org_name']},
+    ];
+
+/// Eintrag zum Schlüssel jk (nur erreichbare, auf der Karte eingeblendete Partner)
+J? jointPerson(IncStore s, String k) {
+  for (final o in jointParts(s)) {
+    if (jn(o['down']) == 1 || s.othHide.contains(IncStore.othK(o))) continue;
+    for (final p in jointPpl(o)) {
+      if (p['jk'] == k) return p;
+    }
+  }
+  return null;
 }

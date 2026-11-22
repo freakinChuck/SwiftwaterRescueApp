@@ -85,19 +85,26 @@ class VoiceStore extends ChangeNotifier {
   int get recS => recT0 == null ? 0 : DateTime.now().difference(recT0!).inSeconds;
   bool get tap => _sp?.getBool('vx_tap') ?? false;
   bool get pttMap => _sp?.getBool('vx_ptt') ?? true;
-  String chName(int? id) => js((chs.where((c) => ji(c['id']) == id).firstOrNull ?? jl(v?['all_ch']).where((c) => ji(c['id']) == id).firstOrNull ?? {'name': 'Kanal'})['name']);
+  String chName(int? id) => id == jointCh ? 'Gemeinsam' : js((chs.where((c) => ji(c['id']) == id).firstOrNull ?? jl(v?['all_ch']).where((c) => ji(c['id']) == id).firstOrNull ?? {'name': 'Kanal'})['name']);
   List<J> list(int? c) => (items.values.where((x) => c == null || ji(x['ch']) == c).toList()..sort((a, b) => (ji(a['id']) ?? 0).compareTo(ji(b['id']) ?? 0)));
   int unheard(int? c) => list(c).where((x) => !heard.contains(ji(x['id']))).length;
 
   /// Abfrage: vs (Stand), vc (Anwesenheit in der Konferenz: Kanal bzw. 0 = verlassen)
-  Map<String, String> query() => {'vs': '$vs', if (confCh != null && confState != 'connecting') 'vc': '$confCh' else if (_wasConf) 'vc': '0'};
+  Map<String, String> query() => {'vs': '$vs', if (confCh != null && confCh != jointCh && confState != 'connecting') 'vc': '$confCh' else if (_wasConf) 'vc': '0'};
+
+  /// gemeinsame Konferenz eines verknüpften Einsatzes mit Partnerorganisationen (Issue #60, incident/voice/jjoin): kein Kanal dieser Organisation
+  static const jointCh = -1;
+
+  /// gemeinsame Konferenz verfügbar (joint.conf, Einsatz nicht beendet)
+  bool get jointConf => s.st?['joint'] is Map && jb(s.st!['joint']['conf']) && !jb(s.st!['joint']['ended']);
 
   Future<void> onState(J nx) async {
     _sp ??= await SharedPreferences.getInstance();
     final i = nx['incident'] is Map ? jm(nx['incident']) : null, vo = nx['voice'] is Map ? jm(nx['voice']) : null;
     if (confCh == null) _wasConf = false;
+    if (room != null && confCh == jointCh && (i == null || !jointConf)) await confLeave();
     if (i == null || vo == null) {
-      if (room != null) await confLeave();
+      if (room != null && confCh != jointCh) await confLeave();
       if (recording) await recStop(drop: true);
       notifyListeners();
       return;
@@ -140,7 +147,7 @@ class VoiceStore extends ChangeNotifier {
         s.notify('Durchsage «${chName(ji(it['ch']))}»', '${js(it['name'])} (${vxDur(jn(it['dur']))})', 'v:${it['id']}', lv == 'none' ? 'low' : lv);
       }
     }
-    if (room != null && (!confAvail || !chs.any((c) => ji(c['id']) == confCh))) await confLeave();
+    if (room != null && confCh != jointCh && (!confAvail || !chs.any((c) => ji(c['id']) == confCh))) await confLeave();
     if (room != null && confMe.isNotEmpty) {
       final x = jl(vo['conf_list']).where((y) => js(y['ident']) == confMe && ji(y['ch']) == confCh).firstOrNull;
       if (x != null) _setMuted(jb(x['muted']));
@@ -425,7 +432,7 @@ class VoiceStore extends ChangeNotifier {
     await prefs.setBool('vx_conf', true);
     unawaited(syncService());
     try {
-      final j = await s.api.call('incident/voice/join', body: {'ch': c});
+      final j = c == jointCh ? await s.api.call('incident/voice/jjoin', body: {}) : await s.api.call('incident/voice/join', body: {'ch': c});
       if (confCh != c) return;
       confMay = jb(j['speak']);
       confMuted = jb(j['muted']);
@@ -485,10 +492,12 @@ class VoiceStore extends ChangeNotifier {
       confState = 'on';
       unawaited(_tone(true));
       confMe = r.localParticipant?.identity ?? '';
-      cc = c;
-      _sp?.setInt('vx_cc', c);
       _peers();
-      unawaited(s.api.call('incident/voice/conf', body: {'ch': c}).catchError((_) => <String, dynamic>{}));
+      if (c != jointCh) {
+        cc = c;
+        _sp?.setInt('vx_cc', c);
+        unawaited(s.api.call('incident/voice/conf', body: {'ch': c}).catchError((_) => <String, dynamic>{}));
+      }
     } catch (e) {
       s.toast('Konferenz: ${e is ApiError ? e.message : e}', 'err');
       await confLeave();
@@ -500,7 +509,7 @@ class VoiceStore extends ChangeNotifier {
   Future<void> confLeave({bool sw = false}) async {
     final r = room;
     room = null;
-    final had = confCh != null;
+    final had = confCh != null && confCh != jointCh;
     if (!sw && confState == 'on') unawaited(_tone(false));
     confCh = null;
     confState = '';
@@ -714,7 +723,7 @@ Widget _micBtn(VoiceStore vx) {
 Widget? voiceFab(BuildContext c, VoiceStore vx) {
   final live = vx.room != null && vx.confState == 'on' && vx.confSpeak;
   final conf = vx.room != null || (vx.confAvail && vx.cc != null);
-  if (!vx.on || (vx.speakChs.isEmpty && !live && !conf) || !vx.pttMap) return null;
+  if ((!vx.on && vx.confCh != VoiceStore.jointCh) || (vx.speakChs.isEmpty && !live && !conf) || !vx.pttMap) return null;
   return SizedBox(
       width: 92,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
