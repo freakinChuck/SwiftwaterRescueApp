@@ -186,6 +186,34 @@ Für Auskunftsbegehren nach dem Datenschutzgesetz. Zwei getrennte Rechte, beide 
 
 Einsätze, deren Teilnahmen anonymisiert und vom Konto gelöst wurden, sind der Person nicht mehr zugeordnet und fehlen deshalb im Auszug.
 
+## Dokumente {#dokumente-kat}
+
+Die Dokumentenablage hält Unterlagen bereit, die man im Einsatz, in der Übung und in der Ausbildung braucht: Einsatzpläne, Checklisten, Merkblätter, Reglemente. Alles Nötige sehen Personen mit dem Recht «Dokumentenablage verwalten». Wer zur **Redaktion** eines Ordners gehört, sieht die Ablage und den Eingang nur für seine Ordner. Die Funktion «Dokumente» lässt sich je Einsatztyp unter [Funktionen](#funktionen) ausschalten.
+
+### Ablage {#dokumente}
+
+Links stehen die Ordner, rechts ihre Einträge. Ein Eintrag ist eine **Datei** (mit Versionen), eine **Seite** (Text direkt in der App, Markdown wie in dieser Anleitung, mit Bildern) oder ein **Link**. Je Eintrag: Titel, Beschreibung, Schlagwörter, Einsatztypen («Für diesen Einsatz»), feste Standorte (das Dokument erscheint im Popup des Standorts), «Überprüfen bis», Offline und Lesebestätigung.
+
+- **Ordner**: Lesen für alle Angemeldeten oder nur für bestimmte Einsatzgruppen bzw. Benutzerrollen; ein Unterordner kann nur weiter einschränken. Dazu die **Redaktion** (darf Einträge anlegen und ändern), wer **vorschlagen** darf und ob der Ordner **mit Externen teilbar** ist.
+- **Versionen**: Eine neue Datei ersetzt die bisherige. Frühere Fassungen bleiben gemäss [Einstellungen](#dokumente-einstellungen) erhalten und lassen sich wiederherstellen. Der Text von PDFs wird beim Hochladen für die Suche ausgelesen.
+- **Lesebestätigung**: von allen, die den Eintrag sehen, nur von bestimmten Einsatzgruppen oder Benutzerrollen oder wie die Pflicht einer Fähigkeit der [Ausbildung](#ausbildung). Später Hinzukommende müssen wahlweise auch bestätigen (mit eigener Frist ab Eintritt) oder nicht. Frist in Tagen mit Erinnerung per Push. Eine neue Version verlangt die Bestätigung erneut, wahlweise nur bei wesentlichen Änderungen. Mit einer Fähigkeit trägt die Bestätigung die Ausbildung bei der Person ein. Die Übersicht zeigt Offene, Bestätigte und Freiwillige, mit «Erinnern» und CSV.
+
+> Wer einen Eintrag sehen darf, regelt der Ordner. Wer ihn bestätigen muss, regelt der Eintrag. Alle übrigen Lesenden können freiwillig bestätigen.
+
+### Eingang {#dokumente-eingang}
+
+Vorschläge von Einsatzkräften: ein neuer Eintrag, eine neue Version oder ein Hinweis («Funkgerät fehlt auf der Checkliste»). Sie sieht nur die Redaktion des Ordners. **Übernehmen** legt den Eintrag bzw. die Version an, **Ablehnen** mit Begründung, Hinweise markiert man als **erledigt**. Die vorschlagende Person wird benachrichtigt (Push) und sieht den Stand im Profil.
+
+### Anzeige {#dokumente-anzeige}
+
+Welche Abschnitte im Fenster «Dokumente» der Einsatz-App erscheinen und in welcher Reihenfolge: Lesebestätigung offen, Favoriten, An Standorten im Einsatzgebiet, Für diesen Einsatz, Zuletzt geöffnet, Neu und geändert, Ordner. Es gibt eine Vorgabe (auch ohne Einsatz) und auf Wunsch eine eigene je Einsatztyp. Dazu die Zahl der Einträge je Abschnitt, die Zahl in der Menükarte «Unterlagen» und ob Personen die Abschnitte für sich anordnen dürfen.
+
+### Einstellungen {#dokumente-einstellungen}
+
+- **Dateitypen**: Katalog fester Typen, je ein- und ausschaltbar, dazu freie Endungen. Freie Endungen zeigt die App nie an, sie werden nur heruntergeladen. Ausführbare und aktive Dateien (z. B. `.exe`, `.js`, `.html`, `.svg`) sind nie erlaubt. Der Server prüft den Inhalt, nicht nur die Endung.
+- **Speicher**: Höchstgrösse je Datei, Speicher insgesamt, Anzahl früherer Versionen, offline je Gerät.
+- **Externe**: ob die Einsatzleitung Dokumente an Externe freigeben darf, auf der Gastseite des Funks und bzw. oder über einen eigenen Link, ob Externe herunterladen dürfen und wie viele Abrufe je Stunde erlaubt sind.
+
 ## Konnektivität {#konnektivitaet}
 
 ### E-Mail-Alarm {#emailalarm}

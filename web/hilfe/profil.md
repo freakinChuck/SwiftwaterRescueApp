@@ -70,6 +70,10 @@ Je Funktion des AI-Assistenten wählst du, wie weit er dich unterstützt: aus, *
 
 Werden die Fahrzeuge auch ausserhalb von Einsätzen verfolgt, gibst du hier deine Zustimmung, dass die native App Beacons in deiner Nähe meldet. **Fahrzeuge jetzt scannen** sucht sofort nach Fahrzeugen in deiner Nähe und meldet sie (siehe [Fahrzeuge und Beacons](#app/beacons)). Mit dem nötigen Recht lernst du hier ein neues Beacon ein.
 
+## Dokumente {#dokumente}
+
+Die Karte **Dokumente** zeigt, wie viele Einträge offline auf dem Gerät gespeichert sind und wie viele Lesebestätigungen offen sind. **Jetzt offline speichern** führt den Offline-Stand sofort nach, **Meine Vorschläge** zeigt deine Vorschläge an die Redaktion mit Stand. Offene Vorschläge kannst du zurückziehen. Mehr unter [Dokumente](#einsatz/dokumente).
+
 ## Ausbildung {#ausbildung}
 
 Die Karte **Ausbildung** zeigt deine Ausbildungen und Fähigkeiten mit Gültigkeit: gültig, läuft bald ab, abgelaufen oder fehlend (Pflicht). Ist es erlaubt, erfasst du einen Abschluss selbst. Ausstehendes meldet auch ein Hinweis im Menü.

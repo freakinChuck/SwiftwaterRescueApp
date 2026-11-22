@@ -215,7 +215,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 14. Funktionen ein-/ausschalten (FU)
 
-- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo, Geodaten-Ebene, Funk, Fahrzeuge, Personen im Fahrzeug, Direktanruf (#35, #79, #96, #125, #105, #182, #113, #177, #44).
+- **FU-01** – In der Verwaltung je Einsatztyp ein- und ausschaltbar: Suchgebiet, Rettlinge, Nachrichten, Markierungen & Bereiche, Externe Einsatzkräfte, Flussdistanz, öffentliche Ansicht, Aufzeichnung, Navigation, Feste Standorte, Pegel & Abfluss, Personeninfo, Geodaten-Ebene, Funk, Fahrzeuge, Personen im Fahrzeug, Direktanruf, Dokumente (#35, #79, #96, #125, #105, #182, #113, #177, #44, #229).
 - **FU-02** – Gilt sofort, auch im laufenden Einsatz; der Server liefert keine Daten ausgeschalteter Funktionen und lehnt deren Aktionen ab; Daten bleiben erhalten (#35).
 - **FU-03** – Neue Funktionen sind standardmässig eingeschaltet (#35).
 
@@ -285,7 +285,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 ## 20. Verwaltung (VW)
 
-- **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen, Rechtliches, Konnektivität, System), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
+- **VW-01** – Verwaltung ohne Karte, nach Kategorien gegliedert (Personen, Einsatz, Funktionen, Karte & Daten, Auswertung, Übungen, Rechtliches, Dokumente, Konnektivität, System), am Handy als Auswahlliste; immer nur ein Abschnitt sichtbar, direkt verlinkbar (#32).
 - **VW-02** – Neue Einstellungen erscheinen als Unterpunkt einer Kategorie mit eigenem Recht (#32, #63).
 - **VW-03** – Hinweise verschwinden von selbst; nur Rückfragen brauchen einen Klick (AG).
 - **VW-04** – Navigation der Verwaltung: Kategorien mit Symbol und Anzahl einklappbar, die Kategorie des geöffneten Bereichs ist aufgeklappt, von Hand aufgeklappte pro Gerät gemerkt; Kategorien mit nur einem Bereich als direkter Link; Suchfeld über der Navigation (Enter öffnet den ersten Treffer); die Navigation scrollt bei Bedarf selbst (#128).
@@ -447,3 +447,19 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **BA-02** – Die Kapitel sind Markdown-Dateien (`hilfe/*.md`) mit Bildschirmfotos aus dem Demo-Modus; die Fotos entstehen reproduzierbar mit einem Skript (#37).
 - **BA-03** – Kontextbezogene Links: Knopf «?» in der Kopfzeile des Menüs (je nach Register bzw. ohne Einsatz), in den Seitenfenstern Einsatzkräfte, Rettlinge, Nachrichten, Funk, Markierungen und Messstationen, im Profil und in der Verwaltung je Bereich bzw. in «Meine Einsätze»; dazu Links bei der Anmeldung, im Profil (Karte «Rechtliches», auch nativ) und im Konto-Menü der Verwaltung (#37).
 - **BA-04** – Die Anleitung wird bei jeder Änderung der Bedienung nachgeführt (Text und, wo nötig, Bildschirmfotos) (#37).
+
+## 32. Dokumentenablage (DO)
+
+- **DO-01** – Eine Ablage je Organisation für Unterlagen (Einsatzpläne, Checklisten, Merkblätter, Reglemente) mit Ordnern beliebiger Tiefe, erreichbar in der Einsatz-App (Web und nativ, mit und ohne Einsatz; Kartenknopf «Dokumente», Menükarte «Unterlagen», Profil) und in der Verwaltung (#229).
+- **DO-02** – Drei Arten von Einträgen: Datei mit Versionen (frühere wiederherstellbar, Anzahl einstellbar), Seite (Text in der App, Markdown mit Bildern) und Link; je Eintrag Titel, Beschreibung, Schlagwörter, «Überprüfen bis» und aktiv/deaktiviert (#229).
+- **DO-03** – Lesen je Ordner für alle Angemeldeten oder nur für bestimmte Einsatzgruppen bzw. Benutzerrollen; Unterordner schränken nur weiter ein. Die Redaktion je Ordner (Einsatzgruppen/Benutzerrollen) pflegt die Einträge darin, das Recht «Dokumentenablage verwalten» erlaubt alles. Der Server prüft jeden Zugriff (#229).
+- **DO-04** – Einträge lassen sich Einsatztypen («Für diesen Einsatz») und festen Standorten zuordnen; im Popup bzw. Info-Blatt eines Standorts erscheinen seine Dokumente (#229).
+- **DO-05** – Suche über Titel, Beschreibung, Schlagwörter, Text der Seiten und Text der PDFs (beim Hochladen ausgelesen) mit Fundstelle und Seitenzahl, nur über Sichtbares (#229).
+- **DO-06** – Lesebestätigung je Eintrag: von allen Lesenden, nur von bestimmten Einsatzgruppen/Benutzerrollen oder gemäss einer Fähigkeit der Ausbildung; übrige können freiwillig bestätigen. Später Hinzukommende wahlweise mit eigener Frist ab Eintritt oder nicht betroffen. Frist mit Erinnerung per Push, erneut bei neuer Version (wahlweise nur bei wesentlichen Änderungen). Übersicht je Eintrag mit «Erinnern» und CSV (#229).
+- **DO-07** – Einsatzkräfte schlagen der Redaktion neue Einträge, neue Versionen oder Hinweise vor (höchstens 10 offene je Person, wer vorschlagen darf, je Ordner); die Redaktion übernimmt, lehnt mit Begründung ab oder markiert als erledigt, im «Eingang» der Verwaltung. Beide Seiten erhalten eine Push-Meldung, keine E-Mail (#229).
+- **DO-08** – Favoriten je Person; Favoriten und von der Redaktion bestimmte Einträge werden auf dem Gerät offline gespeichert (Web im Zwischenspeicher des Service Workers, nativ im App-Ordner), mit Höchstgrösse je Gerät (#229).
+- **DO-09** – Abschnitte des Fensters «Dokumente» (Lesebestätigung offen, Favoriten, An Standorten im Einsatzgebiet, Für diesen Einsatz, Zuletzt geöffnet, Neu und geändert, Ordner) ein-/ausschaltbar und sortierbar, als Vorgabe und je Einsatztyp; wahlweise ordnen Personen sie für sich (#229).
+- **DO-10** – Erlaubte Dateitypen aus einem Katalog ein-/ausschaltbar plus freie Endungen (nur zum Herunterladen); ausführbare und aktive Dateien nie; der Server prüft den Inhalt; Höchstgrösse je Datei und Speicher insgesamt einstellbar (#229).
+- **DO-11** – Die Einsatzleitung gibt einzelne Einträge (wahlweise nur aus «mit Externen teilbaren» Ordnern) an Externe ohne Konto frei: auf der Gastseite des Funks (alle oder ein Funk-Link) oder über einen eigenen Link je Dokument (`dok.html`); gültig bis zum Einsatzende oder bis zur Rücknahme, Herunterladen und Abrufe je Stunde einstellbar, im Einsatzlog mit Zahl der Abrufe; nicht in der öffentlichen Ansicht (#229).
+- **DO-12** – Datenschutzauszug, Export der Organisation, endgültiges Löschen, Applikationslog und Datenschutzerklärung berücksichtigen die Dokumentenablage; die Funktion `docs` ist je Einsatztyp schaltbar; im Demo-Modus gibt es sie nicht (#229).
+- **DO-13** – Native App: dieselbe Ablage mit Suche, Favoriten, Lesebestätigung, Vorschlägen (ohne Datei) und Offline-Stand; Seiten, Bilder und Texte in der App, PDFs und übrige Dateien über eine App des Geräts (#229).

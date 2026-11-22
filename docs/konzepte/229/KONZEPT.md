@@ -194,3 +194,17 @@ Externe (Feuerwehr, Polizei, Nachbarorganisation) haben **kein Konto**. Heute er
 1. **Lesebestätigung mit Fähigkeit**: soll «wie die Pflicht der Fähigkeit» bei verknüpfter Fähigkeit die einzige Wahl sein (Pflicht nur in der Ausbildung gepflegt), oder beides zulassen wie im Bild?
 2. **Externe ohne Funk** (eigener Link je Dokument): nötig, oder genügt die Gastseite des Funks?
 3. **Vorschläge**: genügen Push und Hinweis für die Redaktion, oder zusätzlich E-Mail?
+
+## Umsetzung (PR #232)
+
+Umgesetzt wie oben beschrieben, mit diesen Entscheiden zu den offenen Fragen:
+
+1. Lesebestätigung: beide Arten (alle Lesenden oder bestimmte Gruppen/Rollen bzw. eine Fähigkeit) sind möglich.
+2. Eigener Link je Dokument für Externe (`dok.html?k=`) ist umgesetzt, zusätzlich zur Funk-Gastseite.
+3. Vorschläge melden sich nur per Push, keine E-Mail.
+
+Abweichungen:
+
+- Native App: PDFs und übrige Dateien öffnen über eine App des Geräts (Teilen), nicht in einem eigenen Betrachter; Seiten, Bilder und Texte zeigt die App selbst.
+- Native App: Vorschläge ohne Datei (nur Hinweis oder neuer Eintrag mit Text); Dateien schlägt man im Browser vor.
+- Native App: Der Offline-Stand wird beim Start, beim Öffnen des Fensters und im Profil nachgeführt, nicht bei jedem Polling.

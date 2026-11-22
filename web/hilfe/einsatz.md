@@ -113,6 +113,18 @@ Welche Kanäle du hörst und wo du sprechen darfst, hängt von deiner Spezialrol
 
 Fahrzeuge mit einem Bluetooth-Beacon erscheinen auf der Karte, sobald die native App eines Teilnehmenden sie sieht. Die Liste steht im Fenster «Einsatzkräfte» unter «Fahrzeuge»: wer darin sitzt, was verladen ist (Boot auf dem Anhänger) und wo es zuletzt gesehen wurde. Verladen und abladen geht über das Popup des Fahrzeugs.
 
+## Dokumente {#dokumente}
+
+Der Kartenknopf **📚 Dokumente** öffnet die Unterlagen deiner Organisation, auch ohne Einsatz. Zuoberst steht die Suche: Sie findet Titel, Beschreibung, Schlagwörter, den Text von Seiten und den Text von PDFs, mit Seitenzahl. Darunter stehen die Abschnitte, die die Verwaltung eingerichtet hat, zum Beispiel offene Lesebestätigungen, ★ Favoriten, Dokumente an Standorten im Einsatzgebiet, Dokumente für diesen Einsatztyp und die Ordner. Ist es erlaubt, ordnest du die Abschnitte mit **Abschnitte anordnen** für dich.
+
+- **Ansehen**: Seiten, Bilder und PDFs zeigt die App direkt an, andere Dateien lädst du herunter bzw. öffnest sie in einer passenden App. Links öffnen im Browser.
+- **★** heftet einen Eintrag an. Favoriten und von der Redaktion bestimmte Einträge speichert das Gerät auch **offline**.
+- **Lesebestätigung**: Verlangt die Organisation, dass du ein Dokument liest, steht es mit Frist im Menü (Karte «📚 Unterlagen») und mit einem Zähler am Kartenknopf. Unten bzw. oben im Dokument bestätigst du mit **Gelesen und verstanden**.
+- **Vorschlagen**: Fehlt etwas oder ist etwas falsch, schickst du der Redaktion einen Vorschlag, bei einem Eintrag oder in einem Ordner. Im Browser kannst du auch eine Datei mitschicken.
+- **Feste Standorte**: Hängt ein Dokument an einem Standort (z. B. dem Einsatzplan eines Wehrs), steht es im Popup des Standorts.
+
+Die Einsatzleitung kann im Register «Leitung» unter **Dokumente für Externe** einzelne Dokumente an Externe ohne App weitergeben: auf der Gastseite des Funks oder über einen eigenen Link. Die Freigabe endet mit dem Einsatz.
+
 ## Einsatzlog {#log}
 
 Das Register **Log** zeigt den Ablauf des Einsatzes: Beitritte, Spezialrollen, Fahrten («fährt von A nach B»), Nachrichten im Volltext, Markierungen, Rettlinge, Messwerte und mehr. **Gross-Modus** zeigt das Log bildschirmfüllend, zum Beispiel auf einem Bildschirm im Kommandoposten.
