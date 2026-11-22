@@ -548,6 +548,21 @@ class _DocsPanelState extends State<DocsPanel> {
       ? const SizedBox.shrink()
       : DkSec('$t (${ds.length})', [for (final d in ds) _row(d, places: places?.call(d) ?? const [])]);
 
+  /// Inhalt eines Ordners samt allen Unterordnern: «5 Dokumente · 2 Unterordner» (wie fCnt in docs.js)
+  String _fCnt(int? id) {
+    var n = 0, k = 0;
+    void go(int? i) {
+      n += _docs.where((d) => ji(d['folder_id']) == i && jb(d['active'])).length;
+      for (final x in _folders.where((x) => ji(x['parent_id']) == i && jb(x['active']))) {
+        k++;
+        go(ji(x['id']));
+      }
+    }
+
+    go(id);
+    return '${n == 1 ? '1 Dokument' : '$n Dokumente'}${k > 0 ? ' · ${k == 1 ? '1 Unterordner' : '$k Unterordner'}' : ''}';
+  }
+
   List<Widget> _folderList(int? pid) {
     final fs = _folders.where((f) => ji(f['parent_id']) == pid && jb(f['active'])).toList();
     final ds = pid == null ? <J>[] : _docs.where((d) => ji(d['folder_id']) == pid && jb(d['active'])).toList();
@@ -573,7 +588,7 @@ class _DocsPanelState extends State<DocsPanel> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('${js(f['name'])}${jb(f['lock']) ? ' 🔒' : ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Mut('${_docs.where((d) => ji(d['folder_id']) == ji(f['id']) && jb(d['active'])).length} Einträge${js(f['descr']).isNotEmpty ? ' · ${js(f['descr'])}' : ''}', size: 12),
+                      Mut('${_fCnt(ji(f['id']))}${js(f['descr']).isNotEmpty ? ' · ${js(f['descr'])}' : ''}', size: 12),
                     ],
                   ),
                 ),

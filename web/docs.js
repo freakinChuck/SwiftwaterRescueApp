@@ -169,8 +169,11 @@ function dkPanel(el,L,ctx={}){const st={f:null,q:'',hits:null};let qT=0;
     if(s.k==='recent')return sec(t,docs.filter(d=>d.seen).sort((a,b)=>b.seen-a.seen).slice(0,L.cfg.n),'recent');
     if(s.k==='new'){const lim=Date.now()/1000-30*86400;return sec(t,docs.filter(d=>d.updated>lim).sort((a,b)=>b.updated-a.updated).slice(0,L.cfg.n),'new')}
     if(s.k==='folders')return`<details class="dksec" open data-dks="folders"><summary>${t}</summary>${folderList(null)}</details>`;return''}).join('');
+  // Inhalt eines Ordners samt allen Unterordnern: «5 Dokumente · 2 Unterordner»
+  const fCnt=id=>{let n=0,k=0;const go=i=>{n+=docs.filter(d=>d.folder_id===i&&d.active).length;fold.filter(x=>x.parent_id===i&&x.active).forEach(x=>{k++;go(x.id)})};go(id);
+    return(n===1?'1 Dokument':n+' Dokumente')+(k?' · '+(k===1?'1 Unterordner':k+' Unterordner'):'')};
   const folderList=pid=>{const fs=fold.filter(f=>f.parent_id===pid&&f.active),ds=pid==null?[]:docs.filter(d=>d.folder_id===pid&&d.active);
-    return fs.map(f=>`<button class="dkr dkfo" data-dkf="${f.id}"><span class="dkbg dkfb">📁</span><span class="dkn"><b>${esc(f.name)}</b>${f.lock?' <span class="mut" title="Nur für bestimmte Personen">🔒</span>':''}<small class="mut">${docs.filter(d=>d.folder_id===f.id&&d.active).length} Einträge${f.descr?' · '+esc(f.descr):''}</small></span><span class="dkra mut">›</span></button>`).join('')+ds.map(d=>dkRow(d)).join('')||'<div class="mut">Leer.</div>'};
+    return fs.map(f=>`<button class="dkr dkfo" data-dkf="${f.id}"><span class="dkbg dkfb">📁</span><span class="dkn"><b>${esc(f.name)}</b>${f.lock?' <span class="mut" title="Nur für bestimmte Personen">🔒</span>':''}<small class="mut">${esc(fCnt(f.id))}${f.descr?' · '+esc(f.descr):''}</small></span><span class="dkra mut">›</span></button>`).join('')+ds.map(d=>dkRow(d)).join('')||'<div class="mut">Leer.</div>'};
   const path=id=>{const r=[];let f=fold.find(x=>x.id===id);while(f){r.unshift(f);f=fold.find(x=>x.id===f.parent_id)}return r};
   const draw=()=>{const f=st.f!=null?fold.find(x=>x.id===st.f):null;let body;
     if(st.q.trim().length>=2){const h=st.hits,ws=st.q.trim().split(/\s+/).filter(w=>w.length>1).map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')),re=ws.length?new RegExp('('+ws.join('|')+')','gi'):null,mk=t=>re?esc(t).replace(re,'<mark>$1</mark>'):esc(t);
