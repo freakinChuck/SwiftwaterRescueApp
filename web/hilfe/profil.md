@@ -50,6 +50,7 @@ Oben wechselst du den Monat (‹ Heute ›), zwischen **Monat** und **Liste** un
 
 ## Anzeige {#anzeige}
 
+- **Sprache**: Deutsch, Englisch, Französisch oder Italienisch. «Automatisch» nimmt die Sprache des Geräts, sonst die Vorgabe der Organisation. Die Wahl gilt für dein Konto (auch in der Verwaltung und für Push-Meldungen); die Seite lädt danach neu. In der Verwaltung wählst du sie im Konto-Menü oben rechts, bei der Anmeldung unter dem Knopf «Anmelden».
 - **Koordinatensystem**: LV95 (Standard), LV03, WGS84 dezimal oder in Grad/Minuten/Sekunden, oder Koordinaten ausblenden.
 - **Navigations-App** für den Knopf 🧭: Google Maps, Apple Karten, Waze oder eine andere App.
 

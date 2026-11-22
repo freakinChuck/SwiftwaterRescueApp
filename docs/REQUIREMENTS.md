@@ -479,3 +479,13 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **DO-12** – Datenschutzauszug, Export der Organisation, endgültiges Löschen, Applikationslog und Datenschutzerklärung berücksichtigen die Dokumentenablage; die Funktion `docs` ist je Einsatztyp schaltbar; im Demo-Modus gibt es sie nicht (#229).
 - **DO-13** – Native App: dieselbe Ablage mit Suche, Favoriten, Lesebestätigung, Vorschlägen (ohne Datei) und Offline-Stand; Seiten, Bilder und Texte in der App, PDFs und übrige Dateien über eine App des Geräts (#229).
 - **DO-14** – Verwaltung der Ablage mit Ordnerbaum (Anzahl Einträge, eingeschränkte Ordner gekennzeichnet, «Alle Dokumente», «Überprüfung fällig»), Zugriffen des Ordners in einer Zeile mit der Zahl der Personen, die ihn sehen, Einträgen als Karten, Verschieben von Einträgen und Ordnern per Ziehen, Hochladen mehrerer Dateien auf einmal und Suche über alle Ordner (#229).
+
+## 34. Mehrsprachigkeit (ML)
+
+- **ML-01** – Web-App, Verwaltung, öffentliche Ansicht, Funk-Gastseite, Dokumentseite, Rechtliches, Bedienungsanleitung und native App gibt es auf Deutsch, Englisch, Französisch und Italienisch (#66).
+- **ML-02** – Jede Person wählt ihre Sprache (bei der Anmeldung, im Profil, im Konto-Menü der Verwaltung, in den Einstellungen der App); «Automatisch» nimmt die Sprache des Geräts, sonst die Vorgabe der Organisation. Die Wahl gilt für das Konto auf allen Geräten (#66).
+- **ML-03** – Die Organisation legt eine Vorgabesprache fest (Verwaltung → Funktionen → «Sprache») (#66).
+- **ML-04** – Push-Meldungen (Alarm, Nachrichten, Einsatzende, Durchsagen, Dokumente, Feedback, Testalarm) kommen in der Sprache der empfangenden Person (#66).
+- **ML-05** – Datum und Zahlen erscheinen im Format der gewählten Sprache; der AI-Assistent antwortet in der Sprache der Person (#66).
+- **ML-06** – Übersetzt werden die Texte der App; Eingaben der Organisation (Einsatztypen, Rollen, Meldungen, Dokumente usw.), Namen und das gespeicherte Einsatzlog bleiben in der Sprache, in der sie erfasst wurden. Fehlende Übersetzungen erscheinen deutsch (#66).
+- **ML-07** – Kapitel der Bedienungsanleitung können je Sprache übersetzt vorliegen; fehlt ein Kapitel, erscheint das deutsche (#66).
