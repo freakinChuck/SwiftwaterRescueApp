@@ -1001,17 +1001,64 @@ Widget? docCard(BuildContext c, IncStore s, MapCtl map) {
 // ---------- fester Standort: Knopf im Info-Blatt (placeDocBtn) ----------
 List<J> placeDocs(IncStore s, J p) => !docBtn(s) ? [] : jl(docInc(s)['list']).where((d) => _ids(d['places']).contains(ji(p['id']))).toList();
 
-Future<void> placeDocsOpen(BuildContext c, IncStore s, J p) async {
+// farbiges Kästchen mit der Art wie dkBadge in docs.js
+const _bcol = {'pdf': Color(0xFFD93B3B), 'img': Color(0xFF2F9E62), 'text': Color(0xFF5B6B7D), 'audio': Color(0xFF8A5CD6), 'video': Color(0xFF8A5CD6), 'dl': Color(0xFF5B6B7D), 'page': Color(0xFF2B7DE9), 'link': Color(0xFF178A96)};
+Widget dkBadge(J d) {
+  final k = js(d['kind']), f = d['file'] is Map ? jm(d['file']) : null;
+  final t = k == 'page' ? 'TEXT' : (k == 'link' ? 'LINK' : (f != null ? js(f['ext']).toUpperCase() : '–'));
+  return Container(
+      constraints: const BoxConstraints(minWidth: 44),
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: _bcol[k == 'file' ? (f != null && js(f['show']).isNotEmpty ? js(f['show']) : 'dl') : k] ?? _bcol['dl'], borderRadius: BorderRadius.circular(6)),
+      child: Text(t.length > 4 ? t.substring(0, 4) : t, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)));
+}
+
+String dkArt(J d) => switch (js(d['kind'])) { 'page' => 'Seite', 'link' => 'Link', _ => d['file'] is Map ? js(jm(d['file'])['ext']).toUpperCase() : 'Datei' };
+
+/// Dokumente im Info-Blatt eines festen Standorts (Konzept #229, Bild 3): Art, Titel, offline, Stand; Antippen öffnet das Dokument.
+/// c = Kontext der Karte (bleibt gültig), sc = Kontext des Blatts (wird geschlossen)
+List<Widget> placeDocsBox(BuildContext c, BuildContext sc, IncStore s, J p) {
   final ds = placeDocs(s, p);
-  if (ds.length == 1) return docOpen(c, s, ji(ds[0]['id'])!, onChange: () => docReload(s));
-  final id = await showDialog<int>(
-    context: c,
-    builder: (d) => SimpleDialog(
-      title: Text('Dokumente – ${js(p['name'])}'),
-      children: [for (final x in ds) SimpleDialogOption(onPressed: () => Navigator.pop(d, ji(x['id'])), child: Text('${dkIco(x)} ${js(x['title'])}'))],
-    ),
-  );
-  if (id != null && c.mounted) await docOpen(c, s, id, onChange: () => docReload(s));
+  if (ds.isEmpty) return [];
+  return [
+    const Padding(padding: EdgeInsets.only(top: 12), child: Divider(height: 1)),
+    const Padding(padding: EdgeInsets.only(top: 8, bottom: 2), child: Mut('📚 Dokumente zu diesem Standort')),
+    for (final d in ds)
+      Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Material(
+          color: Theme.of(sc).colorScheme.surfaceContainerHighest,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Theme.of(sc).dividerColor)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () {
+              Navigator.pop(sc);
+              docOpen(c, s, ji(d['id'])!, onChange: () => docReload(s));
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(children: [
+                dkBadge(d),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(js(d['title'])),
+                  Mut(
+                      [
+                        ji(d['offline']) == 2 || (ji(d['offline']) == 1 && ji(d['fav']) == 1) ? '⬇ offline' : dkArt(d),
+                        if (d['updated'] != null) 'Stand ${dkDate(jn(d['updated']))}',
+                        if (d['mine'] is Map && js(jm(d['mine'])['st']) != 'ok') js(jm(d['mine'])['st']) == 'over' ? 'überfällig' : 'bestätigen',
+                      ].join(' · '),
+                      size: 12),
+                ])),
+              ]),
+            ),
+          ),
+        ),
+      ),
+  ];
 }
 
 // ---------- Leitung: Dokumente für Externe (docExtCard) ----------

@@ -559,7 +559,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   bool get _picking => _pick != null || _draw != null;
 
   // ---------- Info-Blatt (statt Popup) ----------
-  Future<void> _sheet(String title, List<String> lines, {double? lat, double? lon, String? navName, List<Widget> Function(BuildContext)? actions}) async {
+  Future<void> _sheet(String title, List<String> lines, {double? lat, double? lon, String? navName, List<Widget> Function(BuildContext)? actions, List<Widget> Function(BuildContext)? extra}) async {
     if (_picking) return;
     await showModalBottomSheet(
         context: context,
@@ -583,6 +583,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                           child: Text('🧭 Mit ${navApps[navApp(s)]} navigieren')),
                     ...?actions?.call(c),
                   ]),
+                  ...?extra?.call(c),
                 ]))));
   }
 
@@ -610,14 +611,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                       stopToggle(s, p);
                     },
                     child: Text(stopOn(s, p) ? '⛔ Sperre aufheben (Einsatz)' : '⛔ Sperre wieder berücksichtigen')),
-              if (placeDocs(s, p).isNotEmpty) // Dokumente zum Standort (Issue #229)
-                OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(c);
-                      placeDocsOpen(context, s, p);
-                    },
-                    child: Text('📚 ${placeDocs(s, p).length == 1 ? js(placeDocs(s, p)[0]['title']) : '${placeDocs(s, p).length} Dokumente'}')),
-            ]);
+            ],
+        extra: (c) => placeDocsBox(context, c, s, p)); // Dokumente zum Standort (Issue #229)
   }
 
   // Objekt der Geodaten-Ebene: Angaben, Quelle, 🧭; Einsatzleitung als Markierung, mit Recht geo als festen Standort übernehmen

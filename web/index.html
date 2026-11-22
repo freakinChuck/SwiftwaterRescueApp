@@ -65,6 +65,9 @@ body.jb #followChip{top:calc(7.6rem + env(safe-area-inset-top))}
 .mmpop b{display:block}.mmpop .t{display:block;color:#666;font-size:.8rem;margin-bottom:.3rem}.mmpop button{margin-top:.5rem;padding:.35rem .6rem;background:var(--alarm);border-color:var(--alarm);color:#fff;font-weight:600}
 .mmpop .vbt{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.45rem}.mmpop .vbt button{margin:0}
 .mmpop button.nav{display:block;background:#eef2f4;border-color:#b9c6cc;color:#032248}
+.pldocs{border-top:1px solid #dde3e7;margin-top:.6rem;padding-top:.5rem;min-width:15rem}.pldh{color:#555;font-size:.85rem;margin-bottom:.1rem}
+.mmpop button.pldoc{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;margin-top:.4rem;padding:.4rem .5rem;background:#eef2f4;border:1px solid #c9d3d8;border-radius:8px;color:#032248;font-weight:400}
+.mmpop button.pldoc:hover{background:#e2e9ed}.pldoc .dkbg{flex:0 0 auto}.pldn{display:flex;flex-direction:column;min-width:0}.pldn b{overflow-wrap:anywhere;font-weight:500}.pldn small{color:#555}
 #bView{left:auto;right:.7rem;display:grid;place-items:center}#bView[aria-expanded=true]{background:var(--ex);border-color:var(--ex)}
 #viewBox{position:fixed;top:calc(4rem + env(safe-area-inset-top));right:.7rem;max-height:calc(100dvh - 5rem - env(safe-area-inset-top))} /* übriges Aussehen in common.css (auch öffentliche Ansicht) */
 #mmShowRow{display:flex;gap:.5rem;align-items:center;padding:.35rem .7rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--mut)}
@@ -1457,12 +1460,12 @@ function docCard(){if(!docBtn())return'';const n=(me.docs_cfg&&me.docs_cfg.menu_
   const row=(d,t)=>`<button class="dkr" data-dkid="${d.id}"><span class="dki">${t}</span><span class="dkn"><b>${esc(d.title)}</b>${d.st?` <span class="dkchip ${d.st}">${d.st==='over'?'überfällig':'bestätigen'}${d.due?' bis '+dkDate(d.due):''}</span>`:''}</span></button>`;
   return mcard('📚 Unterlagen',(ack.length?`<h5 style="margin:.2rem 0">Lesen und bestätigen</h5>${ack.slice(0,n).map(d=>row(d,'✍️')).join('')}${ack.length>n?`<div class="mut">… und ${ack.length-n} weitere</div>`:''}`:'')
     +(kd.length?`<h5 style="margin:.4rem 0 .2rem">Zu diesem Einsatz</h5>${kd.map(d=>row(d,dkIco(d))).join('')}`:'')+`<div class="mbtns"><button data-dkall>Alle Dokumente</button></div>`)}
-// Knopf im Popup eines festen Standorts
-function placeDocBtn(f){if(!docBtn()||!st||!st.docs)return'';const ds=(st.docs.list||[]).filter(d=>(d.places||[]).includes(f.id));return ds.length?`<button data-dkpl="${f.id}">📚 ${ds.length===1?esc(ds[0].title):ds.length+' Dokumente'}</button>`:''}
-document.addEventListener('click',e=>{const a=e.target.closest('[data-dkid],[data-dkpl],[data-dkall]');if(!a||a.closest('#docs'))return;
+// Dokumente im Popup eines festen Standorts (Konzept #229, Bild 3): Art, Titel, offline, Stand
+function placeDocBtn(f){if(!docBtn()||!st||!st.docs)return'';const ds=(st.docs.list||[]).filter(d=>(d.places||[]).includes(f.id));if(!ds.length)return'';
+  return`<div class="pldocs"><div class="pldh">📚 Dokumente zu diesem Standort</div>${ds.map(d=>`<button class="pldoc" data-dkid="${d.id}">${dkBadge(d)}<span class="pldn"><b>${esc(d.title)}</b><small>${[d.offline===2||d.offline===1&&d.fav?'⬇ offline':dkArt(d),d.updated?'Stand '+dkDate(d.updated):''].filter(x=>x).join(' · ')}${d.mine&&d.mine.st!=='ok'?` · <span class="dkchip ${d.mine.st}">${d.mine.st==='over'?'überfällig':'bestätigen'}</span>`:''}</small></span></button>`).join('')}</div>`}
+document.addEventListener('click',e=>{const a=e.target.closest('[data-dkid],[data-dkall]');if(!a||a.closest('#docs'))return;
   if(a.dataset.dkall!=null){toggleSheet(false);togglePanel('docs',true);return}
-  if(a.dataset.dkpl){const id=+a.dataset.dkpl,ds=(st.docs.list||[]).filter(d=>(d.places||[]).includes(id)),f=(st.places||[]).find(x=>x.id===id);map.closePopup();
-    if(ds.length===1)return dkOpen(ds[0].id,{onChange:docReload});const x=dlg('Dokumente – '+(f?f.name:'Standort'),ds.map(d=>dkRow(d)).join(''),async()=>{},'Schliessen');x.querySelector('[data-x]').remove();x.onclick=ev=>{const b=ev.target.closest('[data-dkid]');if(b){ev.stopPropagation();x.remove();dkOpen(+b.dataset.dkid,{onChange:docReload})}};return}
+  if(a.closest('.leaflet-popup'))map.closePopup();
   if(a.closest('.dlg'))return;e.preventDefault();dkOpen(+a.dataset.dkid,{onChange:docReload})});
 // Leitung: Dokumente für Externe (Funk-Gastseite bzw. eigener Link dok.html?k=)
 const docExtUrl=t=>new URL('dok.html?k='+t,location.href).href;

@@ -5,6 +5,10 @@
 const DK_PDF='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 const DK_ICON={pdf:'📕',img:'🖼️',text:'📄',audio:'🎧',video:'🎬',dl:'📎',page:'📝',link:'🔗',folder:'📁'};
 const dkIco=d=>d.kind==='file'?DK_ICON[(d.file||{}).show||'dl']||'📎':DK_ICON[d.kind]||'📄';
+// farbiges Kästchen mit der Art (PDF, TEXT …), Verwaltung und Popup fester Standorte
+const DK_BCOL={pdf:'#d93b3b',img:'#2f9e62',text:'#5b6b7d',audio:'#8a5cd6',video:'#8a5cd6',dl:'#5b6b7d',page:'#2b7de9',link:'#178a96'};
+const dkBadge=d=>{const f=d.kind==='file'?d.file:null,t=d.kind==='page'?'TEXT':d.kind==='link'?'LINK':f?f.ext.toUpperCase().slice(0,4):'–';return`<span class="dkbg" style="background:${DK_BCOL[d.kind==='file'?(f&&f.show)||'dl':d.kind]}">${esc(t)}</span>`};
+const dkArt=d=>d.kind==='page'?'Seite':d.kind==='link'?'Link':d.file?d.file.ext.toUpperCase():'Datei';
 const dkSize=b=>b==null?'':b<1024?b+' B':b<1048576?Math.round(b/1024)+' KB':(b/1048576).toFixed(b<10485760?1:0).replace('.',',')+' MB';
 const dkDate=t=>t?new Date(t*1000).toLocaleDateString('de-CH'):'';
 const dkKindTxt=d=>d.kind==='page'?'Seite':d.kind==='link'?'Link':d.file?d.file.ext.toUpperCase()+(d.file.pages?', '+d.file.pages+' S.':'')+', '+dkSize(d.file.bytes):'Datei (noch leer)';

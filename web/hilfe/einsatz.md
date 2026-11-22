@@ -121,7 +121,7 @@ Der Kartenknopf **📚 Dokumente** öffnet die Unterlagen deiner Organisation, a
 - **★** heftet einen Eintrag an. Favoriten und von der Redaktion bestimmte Einträge speichert das Gerät auch **offline**.
 - **Lesebestätigung**: Verlangt die Organisation, dass du ein Dokument liest, steht es mit Frist im Menü (Karte «📚 Unterlagen») und mit einem Zähler am Kartenknopf. Unten bzw. oben im Dokument bestätigst du mit **Gelesen und verstanden**.
 - **Vorschlagen**: Fehlt etwas oder ist etwas falsch, schickst du der Redaktion einen Vorschlag, bei einem Eintrag oder in einem Ordner. Im Browser kannst du auch eine Datei mitschicken.
-- **Feste Standorte**: Hängt ein Dokument an einem Standort (z. B. dem Einsatzplan eines Wehrs), steht es im Popup des Standorts.
+- **Feste Standorte**: Hängt ein Dokument an einem Standort (z. B. dem Einsatzplan eines Wehrs), steht es im Popup des Standorts (in der App im Info-Blatt) unter «Dokumente zu diesem Standort»: je Dokument die Art (PDF, TEXT …), der Titel, «offline», wenn es auf dem Gerät gespeichert ist, und der Stand. Antippen öffnet es.
 
 Die Einsatzleitung kann im Register «Leitung» unter **Dokumente für Externe** einzelne Dokumente an Externe ohne App weitergeben: auf der Gastseite des Funks oder über einen eigenen Link. Die Freigabe endet mit dem Einsatz.
 

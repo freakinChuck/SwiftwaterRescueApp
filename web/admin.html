@@ -136,7 +136,7 @@ details.fbmy{display:block;margin:.4rem 0}details.fbmy>*+*{margin-top:.4rem}labe
 .dktr{display:flex;align-items:center;gap:.3rem;padding:.35rem .4rem;border:1px solid transparent;border-radius:6px;cursor:pointer;user-select:none}.dktr:hover{background:#ffffff0d}.dktr.sel{background:#2b7de92e;border-color:#2b7de9}.dktr.off{opacity:.55}.dktr.drop{outline:2px dashed #2b7de9}
 .dktg{flex:0 0 1rem;text-align:center;color:var(--mut);font-size:.8rem}.dktn{flex:1;min-width:0;overflow-wrap:anywhere}.dktc{color:var(--mut);font-size:.85rem}.dkfoot{font-size:.8rem;padding:.5rem .4rem .2rem}
 .inc.ent.dke .ia{max-width:19rem;flex-wrap:wrap}.inc.ent.dke .ia button{margin:0}.inc.ent.dke .ei{align-self:flex-start}.dkfcard{display:block;padding:.6rem .8rem;margin:0 0 .6rem}.dkfh{font-size:1.1rem;font-weight:700;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}.dkacc{margin:.25rem 0 .5rem;line-height:1.4}
-.dkbg{display:inline-flex;align-items:center;justify-content:center;min-width:2.6rem;height:2.2rem;padding:0 .3rem;border-radius:6px;color:#fff;font-size:.72rem;font-weight:800}.dkbr{flex-basis:100%;height:0}
+.dkbr{flex-basis:100%;height:0}
 .pchip.dkok{color:var(--ok);border-color:var(--ok)}.pchip.dkwarn{color:#e8b545;border-color:#e8b545}.pchip.dkpl{color:#5aa9ff;border-color:#5aa9ff}
 .dktabs{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}.dktabs button{margin:0}.dktabs button:disabled{opacity:.4}.dktabs button.on{background:#2b7de9;border-color:#2b7de9;color:#fff}.dkdlg input[type=radio]{width:1.2rem;height:1.2rem;padding:0;margin:0;flex:0 0 auto;accent-color:var(--ex)}.dkdlg label.chk{display:flex;align-items:center;gap:.4rem}.dkpick.ind{margin-left:1.6rem}.dkdlg.eq{grid-template-columns:1fr 1fr}
 .dkvers{border:1px solid var(--line);border-radius:8px;padding:.2rem .6rem;margin:.3rem 0 .6rem}.dkvers .dkverr{flex-wrap:nowrap;align-items:center;gap:.5rem}.dkvt{flex:1;min-width:0;display:flex;flex-direction:column}.dkwide{width:100%}
@@ -2537,9 +2537,7 @@ function dkPickVal(d,pre,allLbl){if(allLbl&&$('#'+pre+'A',d).checked)return[null
 function dkPickWire(d,pre,cb){const a=$('#'+pre+'A',d),b=$('#'+pre+'B',d);if(a){const f=()=>{$('#'+pre+'L',d).hidden=a.checked;cb&&cb()};a.onchange=f;b.onchange=f}cb&&d.querySelectorAll(`#${pre}L input`).forEach(i=>i.onchange=cb)}
 const dkRuleTxt=(g,r,all)=>g==null&&r==null?all:[...(g||[]).map(id=>(DKA.groups.find(x=>x.id===id)||{}).name),...(r||[]).map(id=>(DKA.roles.find(x=>x.id===id)||{}).name)].filter(Boolean).join(', ')||'niemand';
 // Kennzeichen der Art (PDF rot, Seite blau …) wie im Konzept
-const DK_BCOL={pdf:'#d93b3b',img:'#2f9e62',text:'#5b6b7d',audio:'#8a5cd6',video:'#8a5cd6',dl:'#5b6b7d',page:'#2b7de9',link:'#178a96'};
-const dkBadge=d=>{const f=d.kind==='file'?d.file:null,t=d.kind==='page'?'TEXT':d.kind==='link'?'LINK':f?f.ext.toUpperCase().slice(0,4):'–';return`<span class="dkbg" style="background:${DK_BCOL[d.kind==='file'?(f&&f.show)||'dl':d.kind]}">${esc(t)}</span>`};
-const dkArt=d=>d.kind==='page'?'Seite':d.kind==='link'?'Link':d.file?d.file.ext.toUpperCase():'Datei';
+// DK_BCOL, dkBadge und dkArt stehen in docs.js (auch für das Popup fester Standorte)
 // Baum: aufgeklappte Ordner pro Gerät (sw_dktree), Anzahl aktiver Einträge samt Unterordnern
 const dkOpenSet=()=>{if(!DKX){try{DKX=new Set(JSON.parse(localStorage.getItem('sw_dktree')||'[]'))}catch(e){DKX=new Set()}}return DKX};
 const dkOpenSave=()=>{try{localStorage.setItem('sw_dktree',JSON.stringify([...DKX]))}catch(e){}};
