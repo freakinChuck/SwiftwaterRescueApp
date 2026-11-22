@@ -261,7 +261,7 @@ function shell(){$('#app').innerHTML=`<div id="map"></div><button id="bMenu" cla
   $('#bMenu').onclick=()=>toggleSheet();$('#bView').onclick=()=>viewBox();
   $('#viewBox').onclick=e=>{const a=e.target.closest('[data-va]');if(a){const cats=(st&&st.incident?viewCats():[['place']]).map(v=>v[0]);if(cats.includes('place'))setPlaceCat(placeCatsUsed().map(c=>c.id),a.dataset.va==='1');setVis(cats,a.dataset.va==='1')}
     if(e.target.closest('[data-vpr]'))setPlaceCat(null);if(e.target.closest('#bViewX'))viewBox(false)};
-  $('#viewBox').onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked);else if(t.dataset.vpc){setPlaceCat([+t.dataset.vpc],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.vpl)setPlaceCat(['lbl'],t.checked);else if(t.dataset.vo)othSet(+t.dataset.vo,t.checked)};
+  $('#viewBox').onchange=e=>{const t=e.target;if(t.name==='vbase')setBase(t.value);else if(t.dataset.vk)setVis([t.dataset.vk],t.checked);else if(t.dataset.vpc){setPlaceCat([+t.dataset.vpc],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.vpl)setPlaceCat(['lbl'],t.checked);else if(t.dataset.vo)othSet(/^\d+$/.test(t.dataset.vo)?+t.dataset.vo:t.dataset.vo,t.checked)};
 $('#joinBan').onclick=joinOpen;const an=$('#areaNote');an.onclick=()=>{if(an.classList.contains('more')){areaOpen=!areaOpen;drawNote()}};an.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&an.classList.contains('more')){e.preventDefault();an.onclick()}};$('#bCam').onclick=()=>camMenu();$('#camMenu').onclick=e=>{const b=e.target.closest('[data-cam]');if(!b)return;camMenu(false);const k=b.dataset.cam;k==='f'?fitForces():k==='auto'?(toggleSheet(false),setAuto(!autoView)):fitArea(k||null)};$('#bClose').onclick=()=>toggleSheet(false);$('#bAdm').onclick=()=>{location.href='admin.html'};$('#bMy').onclick=()=>{location.href='admin.html#meine'};$('#bPrefs').onclick=()=>prefs(true);$('#bHelp').onclick=()=>hilfe(!st||!st.incident?'start/oberflaeche':({lead:'leitung/rechte',ex:'planung/freigabe',log:'einsatz/log'})[menuTab]||'einsatz/menu');$('#bPrefsX').onclick=()=>prefs(false);$('#prefs').onkeydown=e=>{if(e.key==='Escape')prefs(false)};$('#chip').onclick=()=>toggleSheet(true);
   followId=null;panel=null;msgSeen=0;msgFormKey='';$('#bPeople').onclick=()=>togglePanel('people');$('#bPeopleX').onclick=()=>togglePanel('people',false);$('#bUnfollow').onclick=stopFollow;
   $('#bMsg').onclick=()=>togglePanel('msgs');$('#bMsgX').onclick=()=>togglePanel('msgs',false);
@@ -276,7 +276,7 @@ $('#joinBan').onclick=joinOpen;const an=$('#areaNote');an.onclick=()=>{if(an.cla
   rd=null;$('#bRd').onclick=rdOpen; // Flussdistanz (zusätzlich im ☰-Menü, auch ohne Einsatz)
   $('#poiList').onclick=e=>{const b=e.target.closest('[data-pof],[data-pg],[data-pls],[data-pf]');if(!b)return;if(b.dataset.pof)return setPoiFold(b.dataset.pof);if(b.dataset.pg)return showPoi(+b.dataset.pg);if(b.dataset.pf)return showPlace(+b.dataset.pf);stopFollow();map.panTo(b.dataset.pls.split(',').map(Number));if(narrow())togglePanel('pois',false)};
   $('#poiList').onchange=e=>{const t=e.target;if(t.dataset.pfcat){setPlaceCat([+t.dataset.pfcat],t.checked);if(t.checked&&!vis('place'))setVis(['place'],true)}else if(t.dataset.pfids!=null)placeSecSet(t.dataset.pfids.split(',').filter(Boolean).map(Number),t.checked);else if(t.dataset.pfv)setPoiHidden(['f'+t.dataset.pfv],!t.checked);else if(t.dataset.pfgrp)setPoiHidden((st.places||[]).map(f=>'f'+f.id),!t.checked);else if(t.dataset.pv)setPoiHidden([+t.dataset.pv],!t.checked);else if(t.dataset.pgrp)setPoiHidden((st.pois||[]).filter(p=>t.dataset.pgrp==='all'||p.kind===t.dataset.pgrp).map(p=>p.id),!t.checked)};
-  $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.pf)setPplFold(b.dataset.pf);else if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(+b.dataset.f);else if(b.dataset.pi)pinfoShow(b.dataset.pi)};
+  $('#peopleList').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.pf)setPplFold(b.dataset.pf);else if(b.dataset.c)centerOn(+b.dataset.c);else if(b.dataset.f)toggleFollow(fid(b.dataset.f));else if(b.dataset.pi)pinfoShow(b.dataset.pi)};
   map=L.map('map',{zoomControl:false,rotate:true,touchRotate:true,rotateControl:false}).setView([46.8,8.2],8);L.control.zoom({position:'bottomright'}).addTo(map);addCompass();
   // Grundkarte: Auswahl im Fenster «Ansicht» (setBase); Anbieter vom Server (Issue #106), ohne Einsatz gemerkt in sw_base, im Einsatz je Einsatz (baseSync)
   mapsSet(me.maps,me.map_def);baseLayers={};baseKey=null;baseInc=null;baseSync();
@@ -571,7 +571,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   if(st.can_flow)h+=mcard(feat('area')?'Fliessgeschwindigkeit &amp; Suchgebiet':'Fliessgeschwindigkeit',`<div class="mrow"><label class="mut">Fliessgeschwindigkeit (m/s)<input id="fl" type="number" step="0.1" min="0" value="${i.flow_ms??''}"></label><button id="bFl">${feat('area')?'Setzen &amp; berechnen':'Setzen'}</button></div><div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`);
   // ältere Einzelmarkierungen des Rettlings (vor der Rettlingsverwaltung) nur noch anzeigen und entfernen
   if(joined&&(st.marks||[]).length)h+=mcard('Frühere Rettling-Markierungen',(st.marks||[]).map(x=>`<div class="mli"><span>${x.manual?'Einsatzleitung (manuell)':esc(x.name)} · ${fmtT(x.ts)}${esc(fcs(x.lat,x.lon))}</span>${(st.can_manage||x.user_id==me.id)?`<button data-mr="${x.id}">Entfernen</button>`:''}</div>`).join('')+'<div class="mut">Neue Markierungen über den Kartenknopf «Rettlinge».</div>');
-  P.main=h+hydroCard()+startMore()+tools;
+  P.main=jointCard()+h+hydroCard()+startMore()+tools;
   // Register «Leitung» (nur can_manage): Aufgebot, PLS, Aufzeichnung, Helikopter, öffentliche Ansicht, Einsatzkräfte, Einsatz beenden
   // Aufzeichnung fürs Replay: record 0 aus/beendet, 1 läuft, 2 pausiert; nach «Beenden» jederzeit wieder aufnehmbar
   const REC={0:[i.recorded?'Beendet. Bisherige Aufzeichnung bleibt für das Replay erhalten.':'Aus',[['start',i.recorded?'Wieder aufnehmen':'Aufzeichnung starten']]],1:['● Läuft',[['pause','Pausieren'],['stop','Beenden']]],2:['❚❚ Pausiert',[['resume','Fortsetzen'],['stop','Beenden']]]}[i.record]||['?',[]];
@@ -591,7 +591,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   s.innerHTML=head+incSwitch()+`<div class="mtabs" role="tablist" aria-label="Bereiche des Menüs">${tabs.map(([k,l])=>`<button role="tab" data-mt="${k}" aria-selected="${k===menuTab}" aria-controls="mtp-${k}">${l}</button>`).join('')}</div>`
     +tabs.map(([k])=>`<div class="mtab" id="mtp-${k}" role="tabpanel" ${k===menuTab?'':'hidden'}>${P[k]||''}</div>`).join('')+footInfo();
   s.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{menuTab=b.dataset.mt;s.querySelectorAll('[data-mt]').forEach(x=>x.setAttribute('aria-selected',x===b));s.querySelectorAll('.mtab').forEach(p=>p.hidden=p.id!=='mtp-'+menuTab);s.scrollTop=0});
-  bindPush();bindTools();bindMarks();bindHydro(s);vxLeadBind();bindStartMore(s);if($('#bAiSit'))$('#bAiSit').onclick=()=>{const r=aiSitR.id===i.id?aiSitR.r:null;aiSitR.r=null;toggleSheet(false);aiPanel({title:'Lagezusammenfassung',req:{fn:'sit',id:i.id},pre:r,chat:aiCh})};if($('#bAiQ'))$('#bAiQ').onclick=()=>{toggleSheet(false);aiPanel({title:'Frage zum Einsatz',req:{fn:'sit',id:i.id},chatOnly:true})};if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
+  bindPush();bindTools();bindMarks();bindHydro(s);vxLeadBind();bindStartMore(s);bindJoint(s);if($('#bAiSit'))$('#bAiSit').onclick=()=>{const r=aiSitR.id===i.id?aiSitR.r:null;aiSitR.r=null;toggleSheet(false);aiPanel({title:'Lagezusammenfassung',req:{fn:'sit',id:i.id},pre:r,chat:aiCh})};if($('#bAiQ'))$('#bAiQ').onclick=()=>{toggleSheet(false);aiPanel({title:'Frage zum Einsatz',req:{fn:'sit',id:i.id},chatOnly:true})};if($('#bBig'))$('#bBig').onclick=()=>openBigLog('Einsatzlog – '+st.incident.message,()=>st&&st.log,true);
   s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>join(b.dataset.m));
   s.querySelectorAll('[data-xr]').forEach(b=>b.onclick=async()=>{const j=st.ex_injects.find(x=>x.id===+b.dataset.xr);
     if(j.ago==null){exRelAt(j);return} // kein vorbereiteter Zeitpunkt: die Übungsleitung gibt ihn jetzt an
@@ -657,24 +657,31 @@ function photo(e){const f=e.target.files[0];if(!f)return;const img=new Image();i
 /* ---------- Aufgebot (Issue #90): Einsatzgruppen, bei Übungen auch Einzelpersonen, oder alle Personen ---------- */
 // o = start/options, allowed = erlaubte Gruppen (null = alle, dann auch «Alle Personen»); liefert get() für incident/start bzw. incident/invite/add
 function invPick(el,o,K,allowed,sel){const gs=o.groups.filter(g=>!(K.grp_off||[]).includes(g.id)&&(allowed==null||allowed.includes(g.id)));let ps=[];
-  if(!o.groups.length){el.innerHTML='';return null} // ohne Einsatzgruppen werden wie bisher alle alarmiert
+  const xo=allowed==null?(o.ext||[]).filter(x=>(x.kinds||{})[K.id]):[]; // Partnerorganisationen gemäss Vereinbarung (Issue #60, je Einsatztyp), nur wer alle Gruppen aufbieten darf; sie erhalten einen eigenen, verknüpften Einsatz
+  if(!o.groups.length&&!xo.length){el.innerHTML='';return null} // ohne Einsatzgruppen werden wie bisher alle alarmiert
   const kp=(o.kind_people||{})[K.id],na=(o.kind_absent||{})[K.id]||0,pp=K.persons?o.people.filter(u=>kp==null||kp.includes(u.id)):[],pn=id=>(pp.find(u=>u.id===id)||{}).name||'?';
-  el.innerHTML=`<h4 style="margin:.3rem 0">Aufgebot</h4>${allowed==null?'<label class="row" style="align-items:center"><input type="checkbox" id="iAll" style="flex:0 0 auto"> <span>Alle aufbietbaren Personen alarmieren</span></label>'+(na?`<div class="mut">${na} ${na===1?'Person ist':'Personen sind'} abwesend und ${na===1?'wird':'werden'} nicht alarmiert.</div>`:''):''}
-    <div id="iGs">${gs.map(g=>`<label class="row" style="align-items:center"><input type="checkbox" data-ig="${g.id}" style="flex:0 0 auto" ${(sel||[]).includes(g.id)?'checked':''}> <span><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)} <small class="mut">${g.n} ${g.n===1?'Person':'Personen'}${g.na?`, davon ${g.na} abwesend`:''}</small></span></label>`).join('')||`<div class="mut">Du darfst bei «${esc(K.name)}» keine Einsatzgruppe aufbieten.</div>`}
-    ${pp.length?`<label class="mut">Einzelpersonen<input id="iPq" type="search" placeholder="Liste filtern: Name" autocomplete="off"></label><div id="iPr" class="isr"></div><div id="iPs" class="isel"></div>`:''}</div>`;
+  const on=(me&&me.org_info&&me.org_info.name)||'',sec='border-left:3px solid var(--line);padding:.1rem 0 .2rem .6rem;margin:.4rem 0'; // eigene Organisation und Partner getrennt (Issue #60)
+  el.innerHTML=`<h4 style="margin:.3rem 0">Aufgebot</h4>${xo.length?`<div style="${sec}"><h5 style="margin:.2rem 0">Eigene Organisation${on?' «'+esc(on)+'»':''}</h5>`:''}${allowed==null?`<label class="row" style="align-items:center"><input type="checkbox" id="iAll" style="flex:0 0 auto"> <span>${o.groups.length?'Alle aufbietbaren Personen alarmieren':'Alle Personen dieser Organisation alarmieren'}</span></label>`+(na?`<div class="mut">${na} ${na===1?'Person ist':'Personen sind'} abwesend und ${na===1?'wird':'werden'} nicht alarmiert.</div>`:''):''}
+    ${o.groups.length?'':`<div class="mut">${xo.length?'Ohne Auswahl werden alle Personen dieser Organisation alarmiert, ausser es ist eine Partnerorganisation gewählt: dann nur diese.':'Ohne Auswahl werden alle Personen dieser Organisation alarmiert.'}</div>`}<div id="iGs">${gs.map(g=>`<label class="row" style="align-items:center"><input type="checkbox" data-ig="${g.id}" style="flex:0 0 auto" ${(sel||[]).includes(g.id)?'checked':''}> <span><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)} <small class="mut">${g.n} ${g.n===1?'Person':'Personen'}${g.na?`, davon ${g.na} abwesend`:''}</small></span></label>`).join('')||(o.groups.length?`<div class="mut">Du darfst bei «${esc(K.name)}» keine Einsatzgruppe aufbieten.</div>`:'')}
+    ${pp.length?`<label class="mut">Einzelpersonen<input id="iPq" type="search" placeholder="Liste filtern: Name" autocomplete="off"></label><div id="iPr" class="isr"></div><div id="iPs" class="isel"></div>`:''}</div>${xo.length?'</div>':''}
+    ${xo.length?`<div style="${sec}"><h5 style="margin:.2rem 0">Partnerorganisationen</h5><div class="mut">Jede gewählte Partnerorganisation erhält einen eigenen, verknüpften Einsatz und alarmiert nur die gewählten Gruppen.</div>${xo.map(x=>`<h5 style="margin:.4rem 0 .1rem">${esc(x.name)} <small class="mut">Einsatztyp dort: ${esc(x.kinds[K.id])}</small></h5>${x.groups.map(g=>`<label class="row" style="align-items:center"><input type="checkbox" data-ixo="${x.org}" data-ixg="${g.id}" style="flex:0 0 auto"> <span><span class="gdot" style="background:${esc(g.color)}"></span>${esc(g.name)} <small class="mut">${g.n} ${g.n===1?'Person':'Personen'}${g.na?`, davon ${g.na} abwesend`:''}</small></span></label>`).join('')}`).join('')}</div>`:''}<div class="mut" id="iOwn" hidden>Aus der eigenen Organisation wird niemand alarmiert, nur die gewählten Partnerorganisationen.</div>`;
   const drawP=()=>{if(!$('#iPq',el))return;const q=$('#iPq',el).value.trim().toLowerCase(),m=pp.filter(u=>!ps.includes(u.id)&&(!q||u.name.toLowerCase().includes(q))); // leere Suche = alle (scrollbare Liste)
     $('#iPr',el).innerHTML=m.map(u=>`<button data-ipa="${u.id}">+ ${esc(u.name)}${u.absent?' <small>(abwesend)</small>':''}</button>`).join('')||`<div class="mut">${q?'Keine passende Person':'Alle ausgewählt'}</div>`;
     $('#iPs',el).innerHTML=ps.map(id=>`<span class="lchip">${esc(pn(id))}<button data-ipx="${id}" aria-label="${esc(pn(id))} entfernen">✕</button></span>`).join('')};
   if($('#iPq',el)){$('#iPq',el).oninput=drawP;$('#iPq',el).onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const b=$('[data-ipa]',el);b&&b.click()}}}
   el.onclick=e=>{const a=e.target.closest('[data-ipa]'),x=e.target.closest('[data-ipx]');if(a){ps.push(+a.dataset.ipa);drawP()}else if(x){ps=ps.filter(i=>i!==+x.dataset.ipx);drawP()}};
   drawP();const all=$('#iAll',el);if(all)all.onchange=()=>{$('#iGs',el).style.opacity=all.checked?.4:1;$('#iGs',el).querySelectorAll('input').forEach(c=>c.disabled=all.checked)};
-  return{get:()=>all&&all.checked?{all:1}:{groups:[...el.querySelectorAll('[data-ig]')].filter(c=>c.checked).map(c=>+c.dataset.ig),persons:ps},
+  const ext=()=>{const r={};el.querySelectorAll('[data-ixg]:checked').forEach(c=>(r[c.dataset.ixo]=r[c.dataset.ixo]||[]).push(+c.dataset.ixg));return Object.keys(r).length?{ext:r}:{}};
+  function get(){return all&&all.checked?{all:1,...ext()}:{groups:[...el.querySelectorAll('[data-ig]')].filter(c=>c.checked).map(c=>+c.dataset.ig),persons:ps,...ext()}}
+  function own(){const n=$('#iOwn',el),g=get();if(n)n.hidden=!(g.ext&&!g.all&&!g.groups.length&&!g.persons.length)} // Hinweis: nur Partner aufgeboten
+  el.addEventListener('change',own);el.addEventListener('click',()=>setTimeout(own));
+  return{get,
     set:ids=>el.querySelectorAll('[data-ig]').forEach(c=>c.checked=ids.includes(+c.dataset.ig))}}
-const invTxt=a=>(!a||a.all?'Alle Personen':[...a.groups,a.persons?a.persons+(a.persons===1?' Einzelperson':' Einzelpersonen'):''].filter(Boolean).join(', ')+` (${a.n} ${a.n===1?'Person':'Personen'})`)+(a&&a.absent?`, davon ${a.absent} abwesend (nicht alarmiert)`:'');
+const invTxt=a=>(!a?'Alle Personen':[...(a.all?['Alle Personen']:a.groups),a.persons?a.persons+(a.persons===1?' Einzelperson':' Einzelpersonen'):'',...(a.ext||[]).map(x=>x.groups.join(', ')+' ('+x.name+')')].filter(Boolean).join(', ')+(a.all&&!(a.ext||[]).length?'':` (${a.n} ${a.n===1?'Person':'Personen'})`))+(a&&a.absent?`, davon ${a.absent} abwesend (nicht alarmiert)`:'');
 // Nachbieten (Einsatzleitung): weitere Gruppen, wenn der Typ es erlaubt Einzelpersonen, oder alle; alarmiert nur die neu Aufgebotenen
 async function invAdd(){let o;try{o=await api('start/options')}catch(e){fail(e);return}
   const K=st.incident.kind,d=dlg('Nachbieten','<div class="mut">Alarmiert nur die neu aufgebotenen Personen. Bereits Aufgebotene erhalten keinen weiteren Alarm.</div><div id="iNb"></div>',async d=>{const v=P.get();
-    if(!v.all&&!v.groups.length&&!v.persons.length)throw new Error('Bitte mindestens eine Einsatzgruppe wählen');await api('incident/invite/add',v);toast('Nachgeboten.','ok');poll()},'Nachbieten'),
+    if(!v.all&&!v.groups.length&&!v.persons.length&&!v.ext)throw new Error('Bitte mindestens eine Einsatzgruppe wählen');await api('incident/invite/add',v);toast('Nachgeboten.','ok');poll()},'Nachbieten'),
     P=invPick($('#iNb',d),o,K,o.add[K.id],[]);if(!P){d.remove();toast('Es gibt keine Einsatzgruppen.','info')}}
 const kindsNow=()=>(st&&st.kinds)||(me&&me.kinds)||[];
 // Übungsplan (Issue #169): vorbereitete Übungen mit Datum aus st.ex_sched (ohne Einsatz), Anmeldung mit «Ich nehme teil» / «Ich nehme nicht teil», Bemerkung optional
@@ -699,7 +706,7 @@ function newView(kid){const K=kindsNow().find(k=>k.id===kid);if(!K)return;creati
 }).catch(()=>{});
   let pin;map.once('click',function f(e){$('#nlat').value=e.latlng.lat.toFixed(6);$('#nlon').value=e.latlng.lng.toFixed(6);pin&&map.removeLayer(pin);pin=L.marker(e.latlng).addTo(map);map.once('click',f)});
   $('#nX').onclick=()=>{creating=false;map.off('click');pin&&map.removeLayer(pin);draw()};
-  $('#nGo').onclick=()=>api('incident/start',{kind_id:kid,...parGet(),record:$('#nrec').checked?1:0,...(K.air!=null?{air:$('#nair').checked?1:0}:{}),message:$('#nm').value,...($('#nlat').value.trim()||$('#nlon').value.trim()?{lat:+$('#nlat').value,lon:+$('#nlon').value}:{}),alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined,...(INV?(v=>v.all?{invite_all:1}:v)(INV.get()):{})}).then(r=>{creating=false;map.off('click');pin&&map.removeLayer(pin);setSel(r&&r.id)}).catch(fail)}
+  $('#nGo').onclick=()=>api('incident/start',{kind_id:kid,...parGet(),record:$('#nrec').checked?1:0,...(K.air!=null?{air:$('#nair').checked?1:0}:{}),message:$('#nm').value,...($('#nlat').value.trim()||$('#nlon').value.trim()?{lat:+$('#nlat').value,lon:+$('#nlon').value}:{}),alarm_at:Math.floor(new Date($('#nat').value).getTime()/1000)||undefined,...(INV?(v=>v.all?{invite_all:1,...(v.ext?{ext:v.ext}:{})}:v)(INV.get()):{})}).then(r=>{creating=false;map.off('click');pin&&map.removeLayer(pin);setSel(r&&r.id)}).catch(fail)}
 // Sekundäreinsatz als Folgeeinsatz (Issue #164): Auswahl eines beendeten Einsatzes der letzten 30 Tage, Übernahme von PLS, Fliessgeschwindigkeit und vermissten Rettlingen
 // Einsatzplan eines geplanten Sekundäreinsatzes (Feedback zu #164), für alle Teilnehmenden
 function planCard(p){const d=p.doc||{};return mcard('Einsatzplan'+(p.title?' «'+esc(p.title)+'»':''),mkv([d.at&&['Geplanter Beginn',esc(fmtDT(d.at))],d.meet&&['Treffpunkt',esc(d.meet)]].filter(Boolean))
@@ -772,6 +779,23 @@ function togglePanel(name,on){panel=(on===undefined?panel!==name:on)?name:(panel
 // gruppiert nach Spezialrolle in der Reihenfolge der Verwaltung, Personen ohne Rolle zuletzt; innerhalb alphabetisch
 const byRole=list=>[...roles.map(r=>({r,items:list.filter(p=>p.role_id==r.id)})),{r:null,items:list.filter(p=>!roles.some(r=>r.id==p.role_id))}]
   .filter(g=>g.items.length).map(g=>({r:g.r,items:g.items.sort((a,b)=>a.name.localeCompare(b.name,'de'))}));
+// Partnerorganisationen eines gemeinsamen Einsatzes (Issue #60): in den Fenstern «Einsatzkräfte», «Markierungen» und «Rettlinge» je Organisation, nur lesend (Daten aus st.others mit joint)
+const jParts=()=>((st&&st.incident&&st.others)||[]).filter(o=>o.joint);
+const jName=o=>esc(o.org_name)+' · Partnerorganisation'+(o.host?' (auslösend)':'');
+const jRow=(nm,sub,pts,t)=>`<div class="pp"><div class="nm">${esc(nm)}<small>${esc(sub)}</small></div>${pts&&pts.length?`<div class="pa"><button data-jz="${esc(JSON.stringify(pts))}" title="Auf der Karte zeigen">${t||'Zentrieren'}</button>${navBtn(pts[0][0],pts[0][1],nm)}</div>`:''}</div>`;
+const jDown='<div class="mut" style="padding:.4rem 0">Die Partnerorganisation ist gerade nicht erreichbar.</div>';
+document.addEventListener('click',e=>{const b=e.target.closest('[data-jz]');if(!b||!map)return;const p=JSON.parse(b.dataset.jz);stopFollow();if(p.length>1)map.fitBounds(p,{padding:[30,30]});else map.panTo(p[0]);if(narrow()&&panel)togglePanel(panel,false)});
+// Einsatzkräfte und Externe der Partner als Personen mit Schlüssel jk (Folgen, Info, Navigation, Direktanruf wie bei den eigenen)
+const jPplOf=o=>o.down?[]:[...(o.team||[]).map(p=>({...p,jk:'j'+o.k+':'+p.id,ok:o.k,org_name:o.org_name,pcfg:o.phone_cfg||null})),...(o.ext||[]).map(e=>({...e,ext:1,jk:'jx'+o.k+':'+e.id,ok:o.k,org_name:o.org_name}))];
+const jPplAll=()=>jParts().flatMap(jPplOf);
+const fid=v=>/^j/.test(v)?v:+v; // Folgen: eigene über user_id, Partner über jk
+const pAny=id=>typeof id==='string'?jPplAll().find(p=>p.jk===id):activePeople().find(x=>x.user_id===id);
+const jpRow=p=>{const has=p.lat!=null,f=followId===p.jk;
+  return `<div class="pp">${mk(p)}<div class="nm">${esc(p.name)}<small>${esc([p.ext?'Extern':p.mode,p.ext?'':has?(p.loc_at?'Standort '+ago(p.loc_at):'Standort'):'kein Standort'].filter(Boolean).join(' · '))}</small>${telTxt(p)}${has&&fc(p.lat,p.lon)?`<small>${esc(fc(p.lat,p.lon))}</small>`:''}</div>${has||telBtn(p)?`<div class="pa">${has?`<button data-jz="${esc(JSON.stringify([[p.lat,p.lon]]))}" title="Auf der Karte zentrieren">Zentrieren</button>${p.ext?'':`<button data-f="${esc(p.jk)}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>`}${pinfoBtn(p)}${navBtn(p.lat,p.lon,p.name)}`:''}${telBtn(p)}</div>`:''}</div>`};
+function jPeople(){return jParts().map(o=>{const k='j:'+o.k,c=pplFold.has(k),ps=jPplOf(o),t=ps.filter(p=>!p.ext),x=ps.filter(p=>p.ext),rs=[...new Set(t.map(p=>p.role||''))].sort((a,b)=>!a-!b||a.localeCompare(b));
+  const body=o.down?jDown:rs.map(r=>{const it=t.filter(p=>(p.role||'')===r);return`<div class="pg">${r?esc(r):'Ohne Spezialrolle'} (${it.length})</div>`+it.map(jpRow).join('')}).join('')
+    +(x.length?`<div class="pg">Externe Einsatzkräfte (${x.length})</div>`+x.map(jpRow).join(''):'')||'<div class="mut" style="padding:.4rem 0">Noch niemand im Einsatz.</div>';
+  return`<button class="pfold" data-pf="${esc(k)}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${jName(o)} (${o.down?'?':t.length+x.length})</button>`+(c?'':body)}).join('')}
 function renderPeople(){const o=$('#people');if(!o)return;const inc=!!(st&&st.incident),on=panel==='people'&&(inc||vehBtn());o.hidden=!on;$('#bPeople').setAttribute('aria-expanded',on);
   const ap=activePeople(),n=ap.filter(p=>modeOf(p.mode).counts).length,c=$('#peopleCnt');c.hidden=!n;c.textContent=n; // Zähler am Knopf: alle im Einsatz mit zählender Einrückoption (Verwaltung, z. B. ohne Koordinator KP Rück)
   if(!on)return;
@@ -783,7 +807,7 @@ function renderPeople(){const o=$('#people');if(!o)return;const inc=!!(st&&st.in
   // zwei Gruppen (mit App / extern), je zusammenklappbar, darin nach Spezialrolle
   const roleGrp=list=>byRole(list).map(g=>`<div class="pg">${g.r?`<span style="color:${esc(g.r.color)}">●</span> ${esc(g.r.name)}`:'Ohne Spezialrolle'} (${g.items.length})</div>`+g.items.map(p=>p.ext?xrow(p):row(p)).join('')).join('');
   const xl=extList(),fold=(k,t,list,empty)=>{const c=pplFold.has(k);return `<button class="pfold" data-pf="${k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button>`+(c?'':roleGrp(list)||`<div class="mut" style="padding:.4rem 0">${empty}</div>`)};
-  $('#peopleList').innerHTML=fold('int','Einsatzkräfte mit App',ap,'Noch niemand im Einsatz.')+(feat('ext')&&(xl.length||st.can_manage)?fold('ext','Externe Einsatzkräfte',xl,'Keine erfasst.'):'')+vehFold();
+  $('#peopleList').innerHTML=fold('int','Einsatzkräfte mit App',ap,'Noch niemand im Einsatz.')+(feat('ext')&&(xl.length||st.can_manage)?fold('ext','Externe Einsatzkräfte',xl,'Keine erfasst.'):'')+jPeople()+vehFold();
   $('#peopleForm').hidden=!(st.can_manage&&feat('ext'))}
 // zugeklappte Gruppen im Fenster «Einsatzkräfte», pro Gerät gemerkt (localStorage sw_pplfold)
 const pplFold=(()=>{try{return new Set(JSON.parse(localStorage.getItem('sw_pplfold')||'[]'))}catch(e){return new Set()}})();
@@ -853,11 +877,11 @@ function renderMsgs(){const o=$('#msgs');if(!o)return;const on=panel==='msgs'&&!
     api('incident/message',body).then(()=>{if($('#mt'))$('#mt').value='';if($('#mmark'))$('#mmark').checked=false;if($('#mto'))[...$('#mto').options].forEach(x=>x.selected=false);if(picked&&panel!=='msgs')togglePanel('msgs',true);poll()}).catch(fail)};
   $('#bSend').onclick=send;$('#mt').onkeydown=e=>{if(e.key==='Enter')send()}}
 // bei jeder Aktualisierung: Karte auf die gefolgte Person schieben; verlässt sie den Einsatz, endet das Folgen
-function followNow(){if(followId==null)return updateFollowChip();const p=activePeople().find(x=>x.user_id===followId);if(!p)return stopFollow();
+function followNow(){if(followId==null)return updateFollowChip();const p=pAny(followId);if(!p)return stopFollow();
   if(p.lat!=null)map.panTo([p.lat,p.lon]);updateFollowChip()}
 function stopFollow(){followId=null;endAuto();updateFollowChip();renderPeople()}
-function updateFollowChip(){const c=$('#followChip');if(!c)return;const p=followId!=null&&activePeople().find(x=>x.user_id===followId),a=autoView&&!!(st&&st.incident);c.hidden=!p&&!a;
-  if(p)c.firstChild.textContent='Folgt: '+p.name+(p.lat==null?' (kein Standort)':'');else if(a)c.firstChild.textContent='Auto-Übersicht';$('#bUnfollow').setAttribute('aria-label',a&&!p?'Auto-Übersicht beenden':'Folgen beenden')}
+function updateFollowChip(){const c=$('#followChip');if(!c)return;const p=followId!=null&&pAny(followId),a=autoView&&!!(st&&st.incident);c.hidden=!p&&!a;
+  if(p)c.firstChild.textContent='Folgt: '+p.name+(p.org_name?' ('+p.org_name+')':'')+(p.lat==null?' (kein Standort)':'');else if(a)c.firstChild.textContent='Auto-Übersicht';$('#bUnfollow').setAttribute('aria-label',a&&!p?'Auto-Übersicht beenden':'Folgen beenden')}
 /* ---------- Markierungen und Bereiche der Einsatzleitung (Kartenknopf «Markierungen») ---------- */
 // für alle sichtbar; ein-/ausblenden pro Gerät und Einsatz (localStorage sw_poihide_<id>, gespeichert werden nur die ausgeblendeten, Neues ist also immer sichtbar)
 const POI_COLORS=[['#ff9f1c','Orange'],['#ff4d2e','Rot'],['#ffd23f','Gelb'],['#35c27a','Grün'],['#1d7fd1','Blau'],['#c78cff','Violett']];
@@ -923,35 +947,39 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-geop],[dat
    Inhalt: Profilbild, Name, Spezialrolle, Einrückoption, alle Einsatzgruppen (st.groups, unabhängig von «Farbe beim Namen»), Standort; Folgen und 🧭.
    Schliesst über ✕, Escape, Antippen der leeren Karte, wenn die Person den Einsatz verlässt, ausgeblendet wird oder keinen Standort mehr hat. Ohne die Funktion fragt das Antippen wie bisher nach der Navigation. */
 let pinfo=null,pinfoMk=null,pinfoKey=''; // pinfo: Schlüssel 'u<user_id>' bzw. 'x<id der Externen>'
-const pinfoK=p=>p.ext?'x'+p.id:'u'+p.user_id;
+const pinfoK=p=>p.jk||(p.ext?'x'+p.id:'u'+p.user_id);
+const pByK=k=>k[0]==='j'?jPplAll().find(p=>p.jk===k):k[0]==='x'?extList().find(e=>pinfoK(e)===k):activePeople().find(p=>pinfoK(p)===k);
+const pVis=p=>p.jk?!othHide().includes(p.ok):p.ext?vis('ext'):vis('app');
 const pplOn=(m,items)=>m.on('click',()=>{if(document.body.classList.contains('picking'))return;const a=items[0];
   if(feat('pinfo'))pinfoOpen(items);else if(feat('nav'))navTo(a.lat,a.lon,items.map(x=>x.name).join(', '))});
-const pinfoItems=()=>(pinfo||[]).map(k=>k[0]==='x'?vis('ext')&&extList().find(e=>pinfoK(e)===k):vis('app')&&activePeople().find(p=>pinfoK(p)===k)).filter(p=>p&&p.lat!=null);
+const pinfoItems=()=>(pinfo||[]).map(pByK).filter(p=>p&&pVis(p)&&p.lat!=null);
 function pinfoOpen(list){pinfo=list.map(pinfoK);pinfoKey='';pinfoDraw()}
 // Knopf «Info» im Fenster «Einsatzkräfte»: Infofenster öffnen und die Person zentrieren (Zoom bleibt)
 // Direktanruf (Issue #44): Nummer nur, wenn der Server sie liefert (Funktion «call», Einstellung phone: show = anzeigen, call = Knopf); nie bei einem selbst
-const phOf=p=>!p.ext&&p.phone&&st&&st.phone_cfg&&p.user_id!=me.id?p.phone:'';
-const telTxt=p=>phOf(p)&&st.phone_cfg.show?`<small>📞 ${esc(phOf(p))}</small>`:'';
-const telBtn=p=>phOf(p)&&st.phone_cfg.call?`<a class="btn tel" href="tel:${esc(phOf(p).replace(/[^0-9+]/g,''))}" title="${esc(p.name)} anrufen">📞 Anrufen</a>`:'';
-const pinfoBtn=p=>feat('pinfo')&&p.lat!=null&&(p.ext?vis('ext'):vis('app'))&&!(!p.ext&&p.user_id==me.id)?`<button data-pi="${pinfoK(p)}" title="Infofenster auf der Karte zeigen">ℹ Info</button>`:'';
-function pinfoShow(k){const p=k[0]==='x'?extList().find(e=>pinfoK(e)===k):activePeople().find(x=>pinfoK(x)===k);if(!p||p.lat==null)return;
+const phCfg=p=>p.jk?p.pcfg:st&&st.phone_cfg; // Partner: Einstellung der Partnerorganisation
+const phOf=p=>!p.ext&&p.phone&&phCfg(p)&&(p.jk||p.user_id!=me.id)?p.phone:'';
+const telTxt=p=>phOf(p)&&phCfg(p).show?`<small>📞 ${esc(phOf(p))}</small>`:'';
+const telBtn=p=>phOf(p)&&phCfg(p).call?`<a class="btn tel" href="tel:${esc(phOf(p).replace(/[^0-9+]/g,''))}" title="${esc(p.name)} anrufen">📞 Anrufen</a>`:'';
+const pinfoBtn=p=>feat('pinfo')&&p.lat!=null&&pVis(p)&&!(!p.jk&&!p.ext&&p.user_id==me.id)?`<button data-pi="${pinfoK(p)}" title="Infofenster auf der Karte zeigen">ℹ Info</button>`:'';
+function pinfoShow(k){const p=pByK(k);if(!p||p.lat==null)return;
   if(followId!=null||autoView)stopFollow();map.panTo([p.lat,p.lon]);pinfoOpen([p]);if(narrow())togglePanel('people',false)}
 function pinfoClose(){if(!pinfo)return;pinfo=null;pinfoDraw()}
 function pinfoHtml(it){const gs=(st&&st.groups)||[];
-  const one=p=>{const r=roles.find(x=>x.id==p.role_id),g=p.ext?[]:(p.groups||[]).map(id=>gs.find(x=>x.id===id)).filter(Boolean),f=!p.ext&&followId===p.user_id;
-    const sub=[r?`<span style="color:${esc(r.color)}">●</span> ${esc(r.name)}`:'Ohne Spezialrolle',p.ext?'Externe Einsatzkraft':esc(modeOf(p.mode).name)].join(' · ');
+  const one=p=>{const r=!p.jk&&roles.find(x=>x.id==p.role_id),g=p.ext||p.jk?[]:(p.groups||[]).map(id=>gs.find(x=>x.id===id)).filter(Boolean),f=!p.ext&&followId===(p.jk||p.user_id);
+    const sub=p.jk?[esc(p.role||'Ohne Spezialrolle'),p.ext?'Externe Einsatzkraft':esc(p.mode||''),esc(p.org_name)].filter(Boolean).join(' · ') // Partnerorganisation: Rolle und Option als Text
+      :[r?`<span style="color:${esc(r.color)}">●</span> ${esc(r.name)}`:'Ohne Spezialrolle',p.ext?'Externe Einsatzkraft':esc(modeOf(p.mode).name)].join(' · ');
     return `<div class="pih">${/^data:image\//.test(p.photo||'')?`<img src="${esc(p.photo)}" alt="">`:mk(p)}<div><b>${esc(p.name)}</b><small>${sub}</small></div></div>`+
       (g.length?`<div class="pig">${g.map(x=>`<span class="gchip"><i style="background:${esc(x.color)}"></i>${esc(x.name)}</span>`).join('')}</div>`:'')+
-      (p.ext&&p.descr?`<div class="pid">${esc(p.descr)}</div>`:'')+(p.ext?'':vehOf(p))+(telTxt(p)?`<div class="pid">${telTxt(p)}</div>`:'')+
-      `<small class="mut">${p.ext?'Fester Standort':'Standort '+esc(ago(p.loc_at))}${esc(fcs(p.lat,p.lon))}</small>`+
-      `<div class="pib">${p.ext?'':`<button data-pif="${p.user_id}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>`}${navBtn(p.lat,p.lon,p.name)}${telBtn(p)}</div>`};
+      (p.ext&&p.descr?`<div class="pid">${esc(p.descr)}</div>`:'')+(p.ext||p.jk?'':vehOf(p))+(telTxt(p)?`<div class="pid">${telTxt(p)}</div>`:'')+
+      `<small class="mut">${p.ext?'Fester Standort':p.loc_at?'Standort '+esc(ago(p.loc_at)):'Standort'}${esc(fcs(p.lat,p.lon))}</small>`+
+      `<div class="pib">${p.ext?'':`<button data-pif="${esc(p.jk||p.user_id)}" aria-pressed="${f}" title="Karte folgt dieser Person">${f?'Folgt':'Folgen'}</button>`}${navBtn(p.lat,p.lon,p.name)}${telBtn(p)}</div>`};
   return `<div class="pinfo" role="dialog" aria-label="Personeninfo"><button class="pix" data-pix="1" aria-label="Infofenster schliessen" title="Schliessen">✕</button>${it.map(one).join('<hr>')}</div>`}
 function pinfoDraw(){const it=pinfo&&feat('pinfo')&&st&&st.incident?pinfoItems():[];
   if(!it.length){pinfo=null;pinfoKey='';if(pinfoMk){map.removeLayer(pinfoMk);pinfoMk=null}return}
-  const ll=[it[0].lat,it[0].lon],k=JSON.stringify([it.map(p=>[pinfoK(p),p.name,p.role_id,p.mode,p.groups,p.lat,p.lon,p.loc_at,p.descr,(p.photo||'').length,p.phone]),followId,feat('nav'),st.phone_cfg,st.groups,roles.map(r=>[r.id,r.name,r.color]),Math.floor(st.now/60)]);
+  const ll=[it[0].lat,it[0].lon],k=JSON.stringify([it.map(p=>[pinfoK(p),p.name,p.role_id,p.role,p.mode,p.groups,p.lat,p.lon,p.loc_at,p.descr,(p.photo||'').length,p.phone]),followId,feat('nav'),st.phone_cfg,st.groups,roles.map(r=>[r.id,r.name,r.color]),Math.floor(st.now/60)]);
   if(!pinfoMk)pinfoMk=L.marker(ll,{icon:L.divIcon({className:'pinfo-w',html:'',iconSize:[0,0],iconAnchor:[0,0]}),zIndexOffset:5000,keyboard:false}).on('click',()=>{}).addTo(map);else pinfoMk.setLatLng(ll); // eigener Klick-Listener: sonst reicht Leaflet Klicks im Fenster als Kartenklick weiter (schliesst es)
   if(k!==pinfoKey){pinfoKey=k;const el=pinfoMk.getElement();if(el)el.innerHTML=pinfoHtml(it)}}
-document.addEventListener('click',e=>{if(e.target.closest('[data-pix]'))return pinfoClose();const f=e.target.closest('[data-pif]');if(f){toggleFollow(+f.dataset.pif);pinfoKey='';pinfoDraw()}});
+document.addEventListener('click',e=>{if(e.target.closest('[data-pix]'))return pinfoClose();const f=e.target.closest('[data-pif]');if(f){toggleFollow(fid(f.dataset.pif));pinfoKey='';pinfoDraw()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pinfo&&!document.querySelector('.dlg'))pinfoClose()});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;const [la,lo]=b.dataset.nav.split(',').map(Number);map.closePopup();navGo(la,lo,b.dataset.nn)});
 // Karte: nur neu zeichnen, wenn sich Inhalt, Sichtbarkeit oder Berechtigung ändern (ein offenes Popup bleibt offen)
@@ -995,7 +1023,11 @@ function renderPois(){const o=$('#pois');if(!o)return;const inc=!!(st&&st.incide
   const sub=(k,t,list,inv)=>{const c=inv?!poiFold.has(k+'+'):poiFold.has(k);return `<div class="psh">${secChk(list,t+': alle Standorte anzeigen')}<button class="sfold" data-pof="${inv?k+'+':k}" aria-expanded="${!c}"><span class="ar">${c?'▸':'▾'}</span>${t} (${list.length})</button></div>`+(c?'':`<div class="pgb">${list.length?cats(k+':',list,1):'<div class="mut">Keine</div>'}</div>`)};
   const body=!areaIn?cats('fix:',top.concat(rest)):cats('fix:',top)+sub('fix:in','Im Einsatzgebiet',rest.filter(isIn))+sub('fix:out','Ausserhalb des Einsatzgebiets',rest.filter(f=>!isIn(f)),1);
   const fl=!fs.length?'':hd('fix','Feste Standorte',fs.length,chk('data-pfgrp="1"',fs.every(f=>!poiHide.has('f'+f.id)),0,'Alle festen Standorte anzeigen'))+grpBody('fix',body);
-  $('#poiList').innerHTML=pls+lg+fl;
+  const KN={point:'Markierung',area:'Bereich',line:'Linie'},jl=inc?jParts().map(o=>{const k='j:'+o.k,ps=o.pois||[],pl=o.pls||[],pf=(o.places||[]).filter(f=>f.lat!=null);
+    return hd(k,jName(o),o.down?'?':ps.length+pl.length+pf.length,'<span class="nochk"></span>')+grpBody(k,o.down?jDown:pl.map(p=>jRow('PLS'+(p.label?' «'+p.label+'»':''),fcs(p.lat,p.lon,'',''),[[p.lat,p.lon]],'Zeigen')).join('')
+      +ps.map(p=>jRow(p.name||p.sym_name||KN[p.kind],(KN[p.kind]||'')+(p.sym_name&&p.sym_name!==p.name?' · '+p.sym_name:''),p.kind==='point'?p.pts.slice(0,1):p.pts,'Zeigen')).join('')
+      +(pf.length?`<div class="pg">Feste Standorte (${pf.length})</div>`+pf.map(f=>jRow(f.name,[placeShape(f)||'Punkt',f.descr].filter(Boolean).join(' · '),f.pts&&f.pts.length>1?f.pts:[[f.lat,f.lon]],'Zeigen')).join(''):'')||'<div class="mut">Keine</div>')}).join(''):'';
+  $('#poiList').innerHTML=pls+lg+jl+fl;
   const f=$('#poiForm'),ok=inc&&!!st.can_manage&&feat('poi');f.hidden=!ok;if(ok&&!$('#bPoiP')){f.innerHTML='<div class="row" style="margin:0"><button class="pri" id="bPoiP">+ Markierung</button><button class="pri" id="bPoiA">+ Bereich</button><button class="pri" id="bPoiL">+ Linie</button></div>';$('#bPoiP').onclick=()=>newPoi('point');$('#bPoiA').onclick=()=>newPoi('area');$('#bPoiL').onclick=()=>newPoi('line')}}
 const PLACE_COL='#1d7fd1';
 // zugeklappte Gruppen im Fenster «Markierungen» (pls, lage, fix, lage:<Art>, fix:<Kategorie>, fix:in, fix:in:<Kategorie>, fix:out:<Kategorie>; fix:out+ = «Ausserhalb» geöffnet), pro Gerät gemerkt (localStorage sw_poifold)
@@ -1275,6 +1307,21 @@ function incWatch(nx){const IL=nx.incidents;if(!IL)return false;const cur=nx.inc
     incNotesClose(x.id);if(x.alarm||x.mine)notify(x.kind_name.toUpperCase()+' BEENDET',x.kind_name+' beendet.','e:'+x.id,x.end_level||'normal')});
   incPrev=IL;if(sw){try{localStorage.setItem('sw_incsel',String(INC_SEL))}catch(e){}secReset=true}return sw}
 // Menü: Auswahl, sobald mehr als ein Einsatz läuft
+/* ---------- Gemeinsamer Einsatz mit Partnerorganisationen (Issue #60): je Organisation ein eigener, verknüpfter Einsatz ---------- */
+// gemeinsamer Nachrichtenkanal: Stand jMsgs/jLast je gemeinsamem Einsatz (jId), inkrementell über den Parameter jm
+let jMsgs=[],jLast=0,jId=null;
+function jointMerge(nx){const j=nx.joint;if(!j){jMsgs=[];jLast=0;jId=null;return}if(j.id!==jId){jId=j.id;jMsgs=[];jLast=0}
+  (j.msgs||[]).forEach(m=>{if(m.id>jLast){jLast=m.id;jMsgs.push(m)}});if(jMsgs.length>300)jMsgs=jMsgs.slice(-300)}
+const jmQ=()=>jId!=null?'&jm='+jLast:'';
+function jointCard(){const j=st&&st.joint;if(!j)return'';const ps=j.partners||[];
+  const row=p=>`<div class="mli"><span><b>${esc(p.name)}</b><small class="mut"> · ${p.host?'hat ausgelöst':'verknüpft'}${p.kind_name?' · '+esc(p.kind_name):''}${p.down?' · <b>nicht erreichbar</b>':p.ended?' · beendet':''}</small></span></div>`;
+  const vc=VX.conf&&VX.conf.ch==='j';
+  return mcard('Gemeinsamer Einsatz',`<div class="mut">${j.host?'Deine Organisation hat diesen Einsatz ausgelöst.':'Ausgelöst von einer Partnerorganisation.'} Jede Organisation führt ihren eigenen Einsatz mit eigenen Einstellungen; ihre Lage steht auf der Karte (Fenster «Ansicht», «Weitere Einsätze»).</div>${ps.map(row).join('')}
+    ${j.conf?`<div class="mbtns"><button id="bJConf">${vc?'Gemeinsame Konferenz verlassen':'Der gemeinsamen Konferenz beitreten'}</button></div>`:''}
+    ${j.msg?`<h5>Gemeinsamer Kanal</h5><div class="jmsgs">${jMsgs.slice(-30).map(m=>`<div class="msg"><span class="mut">${fmtT(m.at)}</span> <b>${esc(m.name)}</b> <small class="mut">${esc(m.org_name||'')}</small> ${esc(m.text)}</div>`).join('')||'<div class="mut">Noch keine Nachrichten. Gemeinsame Nachrichten gehen ohne Benachrichtigung an alle beteiligten Organisationen und stehen in deren Einsatzlog.</div>'}</div>
+      ${j.can_msg&&!j.ended?'<div class="row"><input id="jmT" maxlength="2000" placeholder="Nachricht an alle Organisationen" autocomplete="off"><button id="bJm">Senden</button></div>':''}`:'<div class="mut">Einen gemeinsamen Kanal gibt es nur, wenn alle Organisationen die Funktion «Nachrichten» eingeschaltet haben.</div>'}`)}
+function bindJoint(s){const t=$('#jmT',s),b=$('#bJm',s);if(b){const go=()=>{const v=t.value.trim();if(!v)return;b.disabled=true;api('incident/jmsg',{text:v}).then(()=>{t.value='';t.blur();return poll()}).catch(fail).finally(()=>b.disabled=false)};b.onclick=go;t.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go()}}}
+  const c=$('#bJConf',s);if(c)c.onclick=()=>{if(VX.conf&&VX.conf.ch==='j')vxConfLeave();else vxConfJoin('j')}}
 function incSwitch(){const IL=(st&&st.incidents)||[];if(IL.length<2)return'';const cur=st.incident&&st.incident.id;
   return mcard(`Laufende Einsätze (${IL.length})`,IL.map(x=>`<div class="mli${x.id===cur?' cur':''}"><span>${kindBadge(x)} ${esc(x.message||'–')}<small class="mut"> · ${esc(fmtDT(x.alarm_at))}${x.mine?' · du nimmst teil':x.ex_lead?' · Übungsleitung':x.alarm&&!x.joined?' · <b>alarmiert</b>':''}</small></span>${x.id===cur?'<span class="mut" style="white-space:nowrap">angezeigt</span>':`<button data-isw="${x.id}">Anzeigen</button>`}</div>`).join(''))}
 // Menü im Einsatz: weiteren Einsatz bzw. eine Planung starten (läuft parallel)
@@ -1287,14 +1334,16 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-isw]');if(
 // Karte: Lage der übrigen Einsätze, je Einsatz ein-/ausblendbar (Fenster «Ansicht», ausgeblendete in sw_othhide)
 let othKey='';
 const othHide=()=>{try{return JSON.parse(localStorage.getItem('sw_othhide')||'[]')}catch(e){return[]}};
+const othK=o=>o.k||o.id; // Partner eines gemeinsamen Einsatzes: Schlüssel o<Org>-<Einsatz>
+const othInfo=(o,IL)=>o.joint?{kind_name:o.kind_name,kind_color:o.kind_color,message:o.message,org:o.org_name}:IL.find(y=>y.id===o.id)||{};
 function othSet(id,on){const h=othHide().filter(x=>x!==id);if(!on)h.push(id);try{localStorage.setItem('sw_othhide',JSON.stringify(h))}catch(e){}othKey='';drawOthers()}
 function othView(){const O=(st&&st.incident&&st.others)||[],IL=st&&st.incidents||[],h=othHide();if(!O.length)return'';
-  return'<h4>Weitere Einsätze</h4>'+O.map(o=>{const x=IL.find(y=>y.id===o.id)||{};return`<label><input type="checkbox" data-vo="${o.id}" ${h.includes(o.id)?'':'checked'}> ${kindBadge(x)} ${esc(x.message||'')}</label>`}).join('')}
+  return'<h4>Weitere Einsätze</h4>'+O.map(o=>{const x=othInfo(o,IL),k=othK(o);return`<label><input type="checkbox" data-vo="${esc(k)}" ${h.includes(k)?'':'checked'}> ${x.org?`<b>${esc(x.org)}</b> `:''}${kindBadge(x)} ${esc(x.message||'')}${o.down?' <small class="mut">(nicht erreichbar)</small>':''}</label>`}).join('')}
 function drawOthers(){if(!map)return;const O=(st&&st.incident&&st.others)||[],h=othHide(),k=JSON.stringify([O,h,st&&st.incidents]);if(k===othKey)return;othKey=k;
   if(layers.oth){map.removeLayer(layers.oth);layers.oth=null}if(!O.length)return;const IL=st.incidents||[],ms=[];
   const ini=n=>String(n||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
-  O.forEach(o=>{if(h.includes(o.id))return;const x=IL.find(y=>y.id===o.id)||{},c=x.kind_color||'#888',nm=(x.kind_name||'Einsatz')+(x.message?': '+x.message:'');
-    const pop=t=>`<b>${esc(t)}</b><div class="mut">${esc(nm)}</div><div class="mbtns"><button data-isw="${o.id}">Diesen Einsatz anzeigen</button></div>`;
+  O.forEach(o=>{if(h.includes(othK(o))||o.down)return;const x=othInfo(o,IL),c=x.kind_color||'#888',nm=(x.org?x.org+' · ':'')+(x.kind_name||'Einsatz')+(x.message?': '+x.message:'');
+    const pop=t=>`<b>${esc(t)}</b><div class="mut">${esc(nm)}</div>${o.joint?'<div class="mut">Partnerorganisation (eigener verknüpfter Einsatz)</div>':`<div class="mbtns"><button data-isw="${o.id}">Diesen Einsatz anzeigen</button></div>`}`;
     const mk=(ll,html,t,sz)=>ms.push(L.marker(ll,{icon:L.divIcon({className:'',html,iconSize:sz||[22,22],iconAnchor:[(sz||[22])[0]/2,(sz||[22,22])[1]/2]}),opacity:1}).bindTooltip(esc(t+' · '+nm)).bindPopup(pop(t)));
     const chip=(t,sq)=>`<div class="othp${sq?' sq':''}" style="border-color:${esc(c)}">${esc(t)}</div>`;
     (o.pls||[]).forEach(p=>mk([p.lat,p.lon],`<div class="pls oth" style="background:${esc(c)}"></div>`,'PLS'));
@@ -1302,12 +1351,18 @@ function drawOthers(){if(!map)return;const O=(st&&st.incident&&st.others)||[],h=
       else if(p.kind==='line')ms.push(L.polyline(p.pts,{color:c,weight:3,dashArray:'4 6',opacity:.7}).bindTooltip(esc(p.name+' · '+nm)).bindPopup(pop(p.name)));
       else if(p.pts[0])mk(p.pts[0],chip('⚑'),p.name||p.sym_name||'Markierung')});
     (o.res||[]).forEach(r=>mk([r.lat,r.lon],chip(r.rescued?'✓':'R'),'Rettling '+r.name));
-    (o.ext||[]).forEach(r=>mk([r.lat,r.lon],chip(r.abbr||ini(r.name),1),r.name+' (extern)'));
-    (o.ppl||[]).forEach(p=>mk([p.lat,p.lon],chip(ini(p.name)),p.name))});
+    // Partner (Issue #60): Antippen wie bei den eigenen Einsatzkräften (Infofenster bzw. Navigation)
+    const pk=(ll,html,t,k)=>{if(!o.joint)return mk(ll,html,t);ms.push(L.marker(ll,{icon:L.divIcon({className:'',html,iconSize:[22,22],iconAnchor:[11,11]})}).bindTooltip(esc(t+' · '+nm)).on('click',()=>{if(document.body.classList.contains('picking'))return;const p=pByK(k);
+      if(p&&feat('pinfo'))pinfoOpen([p]);else if(feat('nav'))navTo(ll[0],ll[1],t)}))};
+    (o.ext||[]).forEach(r=>pk([r.lat,r.lon],chip(r.abbr||ini(r.name),1),r.name+' (extern)','jx'+o.k+':'+r.id));
+    (o.ppl||[]).forEach(p=>pk([p.lat,p.lon],chip(ini(p.name)),p.name+(p.role?' ('+p.role+')':''),'j'+o.k+':'+p.id));
+    (o.places||[]).forEach(p=>{const t=p.name+' (fester Standort)';if(p.pts&&p.pts.length>1)ms.push((p.line?L.polyline(p.pts,{color:p.color||c,weight:3,dashArray:'12 6',opacity:.7}):L.polygon(p.pts,{color:p.color||c,weight:2,dashArray:'12 6',fillOpacity:.05})).bindTooltip(esc(t+' · '+nm)).bindPopup(pop(t)));
+      else if(p.lat!=null)mk([p.lat,p.lon],chip(p.abbr||ini(p.name),1),t)}); // feste Standorte und Fahrzeuge der Partnerorganisationen (Issue #60)
+    ((o.veh&&o.veh.list)||[]).forEach(v=>{if(v.lat!=null&&v.carrier_id==null)mk([v.lat,v.lon],chip(v.abbr||ini(v.name),1),v.name+' (Fahrzeug)')})});
   layers.oth=L.layerGroup(ms).addTo(map)}
 /* ---------- Polling ---------- */
 // Alarmstufe kommt vom Server (level, je Person: Einsatztyp, Übungsmodus); Nachrichten und Einsatzende auch bei «Keine» als stiller Hinweis
-let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}&vs=${VX.vs}${vxQ()}&oth=1`);
+let timer;async function poll(){try{const nx=await api(`incident/state&since=${lastMsg}&vs=${VX.vs}${vxQ()}${jmQ()}&oth=1`);jointMerge(nx);
     if(nx.test_alarm){const t=nx.test_alarm;if(TA&&TA.id===t.id){TA=null;taUi()}notify(t.t,t.b,t.tag,t.lvl)} // Testalarm (Issue #218)
     if(incWatch(nx))return poll(); // neu alarmiert zu einem anderen Einsatz ohne eigene Teilnahme: diesen anzeigen
     if(nx.incident){const i=nx.incident,lv=nx.level||'crit',cr=nx.msg_level||(lv==='none'?'low':lv),kr=cr==='none'?'low':cr;if(lastIncId!==i.id){lastIncId=i.id;lastMsg=0;msgInit=false;msgData=[];if(nx.alarm!==false&&notify(kindOf(i).name.toUpperCase(),i.message,'i:'+i.id,lv))toggleSheet(true)}
@@ -1337,16 +1392,16 @@ function vxFix(){const h=vxChs(),s=vxSpeakChs();if(!h.some(c=>c.id===vxCh)){cons
   if(!h.some(c=>c.id===vxCc)){const l=+vxLs('sw_vxcc');vxCc=VX.conf?VX.conf.ch:(h.find(c=>c.id===l)||h[0]||{}).id??null}}
 const vxSpk=()=>{const s=vxSpeakChs();return(s.find(c=>c.id===vxCh)||s[0]||{}).id??null}; // Kanal der Sprechtaste (Durchsage)
 const vxConfName=i=>((st&&st.voice&&st.voice.conf_list||[]).find(x=>x.ident===i)||{}).name||'Jemand';
-function vxIo(){return{me:me.id,upload:b=>api('incident/voice',{...b,inc:st.incident.id}),audio:id=>voiceBlob(id),join:ch=>api('incident/voice/join',{ch}),
-  conf:ch=>api('incident/voice/conf',{ch}).catch(()=>{}),change:()=>{renderVx();vxFab()},poll:()=>poll()}}
+function vxIo(){return{me:me.id,upload:b=>api('incident/voice',{...b,inc:st.incident.id}),audio:id=>voiceBlob(id),join:ch=>ch==='j'?api('incident/voice/jjoin',{}):api('incident/voice/join',{ch}),
+  conf:ch=>ch==='j'?Promise.resolve():api('incident/voice/conf',{ch}).catch(()=>{}),change:()=>{renderVx();vxFab()},poll:()=>poll()}}
 // nach jedem Abruf: neue Durchsagen übernehmen, nachsenden, Hinweis ohne Mithören; Konferenz verlassen, wenn sie nicht mehr erlaubt ist; Stummschaltung übernehmen
 function vxPoll(nx){if(!nx.incident||!nx.voice){if(VX.conf)vxConfLeave();if(VX.rec)vxRecStop(true);return}
   vxInit(vxIo(),nx.incident.id,nx.voice.listen);VX.io=vxIo();VX.ann=nx.voice.ann!==0;VX.max=nx.voice.max_s||60;
   const fresh=vxMerge(nx.voice.items,nx.now),lv=nx.msg_level||'normal';
   if(!VX.listen||document.hidden)fresh.slice(-3).forEach(it=>notify('Durchsage «'+vxChName(it.ch)+'»',it.name+' ('+vxDur(it.dur)+')','v:'+it.id,lv==='none'?'low':lv));
-  if(VX.conf&&(!nx.voice.conf||!nx.voice.ch.some(c=>c.id===VX.conf.ch)))vxConfLeave();
+  if(VX.conf&&(VX.conf.ch==='j'?!(nx.joint&&nx.joint.conf&&!nx.joint.ended):!nx.voice.conf||!nx.voice.ch.some(c=>c.id===VX.conf.ch)))vxConfLeave(); // gemeinsame Konferenz (Issue #60): Kanal 'j'
   vxConfSync(nx.voice.conf_list);if(vxQueued())vxFlush();vxFix()}
-const vxQ=()=>VX.conf?'&vc='+VX.conf.ch:(VX.wasConf?'&vc=0':''); // Anwesenheit in der Konferenz bei jedem Abruf melden
+const vxQ=()=>VX.conf&&VX.conf.ch!=='j'?'&vc='+VX.conf.ch:VX.conf?'&vc=0':(VX.wasConf?'&vc=0':''); // Anwesenheit in der Konferenz bei jedem Abruf melden
 const vxFast=()=>vxOn()&&(panel==='vx'||VX.listen||!!VX.conf); // schneller abfragen, solange man zuhört
 // Sprechtaste links unten über dem Hinweis zum Suchgebiet (der Hinweis bleibt, wo er ist; die Taste rückt über ihn)
 function vxFabPos(){const f=$('#vxFab'),an=$('#areaNote');if(!f||f.hidden)return;const r=an&&!an.hidden?an.getBoundingClientRect():null;

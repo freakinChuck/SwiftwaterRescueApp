@@ -45,6 +45,7 @@ class _IncMenuState extends State<IncMenu> {
   final _flFocus = FocusNode();
   String? _flSrv;
   final _busy = <String>{};
+  final _jm = TextEditingController(); // gemeinsamer Kanal (Issue #60)
   bool _updLater = true; // Hinweis «Bitte App aktualisieren» bis zur Prüfung von «Später» ausgeblendet (Issue #175)
 
   @override
@@ -58,6 +59,7 @@ class _IncMenuState extends State<IncMenu> {
   @override
   void dispose() {
     _fl.dispose();
+    _jm.dispose();
     _flFocus.dispose();
     super.dispose();
   }
@@ -546,6 +548,8 @@ class _IncMenuState extends State<IncMenu> {
   List<Widget> _main(BuildContext c, J i) {
     final st = s.st!, m = s.myPart, joined = s.joined;
     final out = <Widget>[];
+    final jc = _jointCard(c);
+    if (jc != null) out.add(jc);
     final ai = jm(st['ai']), aiSit = js(ai['sit']).isNotEmpty && ai['sit'] != 'off' && (joined || s.canManage || s.exLead);
     if (aiSit) {
       out.add(Padding(
@@ -704,6 +708,65 @@ class _IncMenuState extends State<IncMenu> {
     ]);
   }
 
+  /// Verknüpfter Einsatz mit Partnerorganisationen (Issue #60, jointCard in index.html): Partner, gemeinsame Konferenz, gemeinsamer Kanal
+  Widget? _jointCard(BuildContext c) {
+    final j = s.joint;
+    if (j == null) return null;
+    final vc = s.vx.confCh == VoiceStore.jointCh && s.vx.room != null, can = jb(j['can_msg']) && !jb(j['ended']);
+    Future<void> send() async {
+      final t = _jm.text.trim();
+      if (t.isEmpty) return;
+      final r = await _run('jm', 'incident/jmsg', {'text': t});
+      if (r != null) _jm.clear();
+    }
+
+    final ms = s.jMsgs.length > 30 ? s.jMsgs.sublist(s.jMsgs.length - 30) : s.jMsgs;
+    return MCard(title: 'Gemeinsamer Einsatz', children: [
+      Mut('${jb(j['host']) ? 'Deine Organisation hat diesen Einsatz ausgelöst.' : 'Ausgelöst von einer Partnerorganisation.'} Jede Organisation führt ihren eigenen Einsatz mit eigenen Einstellungen; ihre Lage steht auf der Karte (Fenster «Ansicht», «Weitere Einsätze»).'),
+      for (final p in jl(j['partners']))
+        Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Text.rich(TextSpan(children: [
+              TextSpan(text: js(p['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+              TextSpan(
+                  text: ' · ${jb(p['host']) ? 'hat ausgelöst' : 'verknüpft'}${js(p['kind_name']).isNotEmpty ? ' · ${js(p['kind_name'])}' : ''}${jb(p['down']) ? ' · nicht erreichbar' : jb(p['ended']) ? ' · beendet' : ''}',
+                  style: TextStyle(fontSize: 12, color: Theme.of(c).colorScheme.onSurfaceVariant)),
+            ]))),
+      if (jb(j['conf']) && !jb(j['ended']))
+        Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: OutlinedButton(
+                onPressed: s.vx.confState == 'connecting' ? null : () => vc ? s.vx.confLeave() : s.vx.confJoin(VoiceStore.jointCh),
+                child: Text(vc ? 'Gemeinsame Konferenz verlassen' : 'Der gemeinsamen Konferenz beitreten'))),
+      if (jb(j['msg'])) ...[
+        Padding(padding: const EdgeInsets.only(top: 8), child: Text('Gemeinsamer Kanal', style: Theme.of(c).textTheme.titleSmall)),
+        if (ms.isEmpty) const Mut('Noch keine Nachrichten. Gemeinsame Nachrichten gehen ohne Benachrichtigung an alle beteiligten Organisationen und stehen in deren Einsatzlog.'),
+        for (final m in ms)
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text.rich(TextSpan(children: [
+                TextSpan(text: '${fmtT(jn(m['at']))} ', style: TextStyle(color: Theme.of(c).colorScheme.onSurfaceVariant)),
+                TextSpan(text: js(m['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+                TextSpan(text: ' ${js(m['org_name'])} ', style: TextStyle(fontSize: 12, color: Theme.of(c).colorScheme.onSurfaceVariant)),
+                TextSpan(text: js(m['text'])),
+              ]))),
+        if (can)
+          Row(children: [
+            Expanded(
+                child: TextField(
+                    controller: _jm,
+                    maxLength: 2000,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => send(),
+                    decoration: const InputDecoration(hintText: 'Nachricht an alle Organisationen', counterText: '', isDense: true))),
+            const SizedBox(width: 8),
+            smallBtn('Senden', _busy.contains('jm') ? null : send),
+          ]),
+      ] else
+        const Mut('Einen gemeinsamen Kanal gibt es nur, wenn alle Organisationen die Funktion «Nachrichten» eingeschaltet haben.'),
+    ]);
+  }
+
   /// im Einsatz: weiteren Einsatz bzw. eine Planung starten, läuft parallel (startMore)
   Widget? _startMore(BuildContext c) {
     if (s.demo || s.st?['start_plans'] == null) return null; // Demo und ältere Server: nur ein Einsatz
@@ -755,9 +818,14 @@ class _IncMenuState extends State<IncMenu> {
 
   // ---------- Register «Leitung» ----------
   String _invTxt(dynamic a0) {
-    if (a0 is! Map || jb(a0['all'])) return 'Alle Personen${a0 is Map && (ji(a0['absent']) ?? 0) > 0 ? ', davon ${a0['absent']} abwesend (nicht alarmiert)' : ''}';
+    if (a0 is! Map || (jb(a0['all']) && jl(a0['ext']).isEmpty)) return 'Alle Personen${a0 is Map && (ji(a0['absent']) ?? 0) > 0 ? ', davon ${a0['absent']} abwesend (nicht alarmiert)' : ''}';
     final a = jm(a0), n = ji(a['n']) ?? 0, p = ji(a['persons']) ?? 0, ab = ji(a['absent']) ?? 0;
-    final parts = [...(a['groups'] is List ? (a['groups'] as List).map((e) => '$e') : const <String>[]), if (p > 0) '$p ${p == 1 ? 'Einzelperson' : 'Einzelpersonen'}'];
+    final parts = [
+      if (jb(a['all'])) 'Alle Personen',
+      ...(a['groups'] is List ? (a['groups'] as List).map((e) => '$e') : const <String>[]),
+      if (p > 0) '$p ${p == 1 ? 'Einzelperson' : 'Einzelpersonen'}',
+      for (final x in jl(a['ext'])) '${x['groups'] is List ? (x['groups'] as List).join(', ') : ''} (${js(x['name'])})', // andere Organisationen (Issue #60)
+    ];
     return '${parts.join(', ')} ($n ${n == 1 ? 'Person' : 'Personen'})${ab > 0 ? ', davon $ab abwesend (nicht alarmiert)' : ''}';
   }
 
@@ -953,7 +1021,7 @@ class _IncMenuState extends State<IncMenu> {
       s.fail(e);
       return;
     }
-    if (jl(o['groups']).isEmpty) {
+    if (jl(o['groups']).isEmpty && jl(o['ext']).isEmpty) {
       s.toast('Es gibt keine Einsatzgruppen.', 'info');
       return;
     }
@@ -971,7 +1039,7 @@ class _IncMenuState extends State<IncMenu> {
             ]),
         ok: 'Nachbieten', valid: () {
       final g = v.get();
-      if (g['all'] == null && v.groups.isEmpty && v.persons.isEmpty) {
+      if (g['all'] == null && v.groups.isEmpty && v.persons.isEmpty && v.ext.isEmpty) {
         s.toast('Bitte mindestens eine Einsatzgruppe wählen', 'err');
         return false;
       }
@@ -1211,10 +1279,14 @@ class _Inv {
   final groups = <int>{};
   final persons = <int>[];
   bool all = false;
+  final ext = <String, Set<int>>{}; // Einsatzgruppen anderer Organisationen gemäss Vereinbarung (Issue #60): {Org-ID: Gruppen}
   final q = TextEditingController();
 
   /// Werte für incident/start bzw. incident/invite/add
-  J get() => all ? {'all': 1} : {'groups': groups.toList(), 'persons': persons};
+  J get() {
+    final x = {for (final e in ext.entries) if (e.value.isNotEmpty) e.key: e.value.toList()};
+    return {...(all ? {'all': 1} : {'groups': groups.toList(), 'persons': persons}), if (x.isNotEmpty) 'ext': x};
+  }
   void dispose() => q.dispose();
 }
 
@@ -1229,7 +1301,9 @@ class _InvPick extends StatelessWidget {
   Widget build(BuildContext context) {
     final off = _ints(k['grp_off']);
     final gs = jl(o['groups']).where((g) => !off.contains(ji(g['id'])) && (allowed == null || allowed!.contains(ji(g['id'])))).toList();
-    if (jl(o['groups']).isEmpty) return const SizedBox.shrink();
+    // Partnerorganisationen mit Vereinbarung für diesen Einsatztyp (Issue #60), nur wer alle Gruppen aufbieten darf
+    final xo = allowed == null ? jl(o['ext']).where((x) => jm(x['kinds'])['${ji(k['id'])}'] != null).toList() : <J>[];
+    if (jl(o['groups']).isEmpty && xo.isEmpty) return const SizedBox.shrink();
     final kid = '${ji(k['id'])}';
     final kpRaw = jm(o['kind_people'])[kid], kp = kpRaw == null ? null : _ints(kpRaw), na = ji(jm(o['kind_absent'])[kid]) ?? 0;
     final pp = jb(k['persons']) ? jl(o['people']).where((u) => kp == null || kp.contains(ji(u['id']))).toList() : <J>[];
@@ -1239,14 +1313,17 @@ class _InvPick extends StatelessWidget {
     Widget row(Widget ctl, Widget t) => Row(children: [ctl, Expanded(child: t)]);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
       const Padding(padding: EdgeInsets.only(top: 4, bottom: 2), child: Text('Aufgebot', style: TextStyle(fontWeight: FontWeight.bold))),
+      // eigene Organisation und Partner getrennt (Issue #60, wie invPick in index.html)
+      if (xo.isNotEmpty) const Padding(padding: EdgeInsets.only(top: 4), child: Text('Eigene Organisation', style: TextStyle(fontWeight: FontWeight.w600))),
       if (allowed == null) ...[
-        row(Checkbox(value: v.all, onChanged: (x) => ss(() => v.all = x == true)), const Text('Alle aufbietbaren Personen alarmieren')),
+        row(Checkbox(value: v.all, onChanged: (x) => ss(() => v.all = x == true)),
+            Text(jl(o['groups']).isNotEmpty ? 'Alle aufbietbaren Personen alarmieren' : 'Alle Personen dieser Organisation alarmieren')),
         if (na > 0) Mut('$na ${na == 1 ? 'Person ist' : 'Personen sind'} abwesend und ${na == 1 ? 'wird' : 'werden'} nicht alarmiert.'),
       ],
       Opacity(
         opacity: v.all ? .4 : 1,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-          if (gs.isEmpty) Mut('Du darfst bei «${js(k['name'])}» keine Einsatzgruppe aufbieten.'),
+          if (gs.isEmpty && jl(o['groups']).isNotEmpty) Mut('Du darfst bei «${js(k['name'])}» keine Einsatzgruppe aufbieten.'),
           for (final g in gs)
             row(
                 Checkbox(
@@ -1295,6 +1372,42 @@ class _InvPick extends StatelessWidget {
           ],
         ]),
       ),
+      if (jl(o['groups']).isEmpty)
+        Mut(xo.isEmpty
+            ? 'Ohne Auswahl werden alle Personen dieser Organisation alarmiert.'
+            : 'Ohne Auswahl werden alle Personen dieser Organisation alarmiert, ausser es ist eine Partnerorganisation gewählt: dann nur diese.'),
+      if (xo.isNotEmpty) ...[
+        const Divider(height: 18),
+        const Text('Partnerorganisationen', style: TextStyle(fontWeight: FontWeight.w600)),
+        const Mut('Jede gewählte Partnerorganisation erhält einen eigenen, verknüpften Einsatz und alarmiert nur die gewählten Gruppen.'),
+      ],
+      for (final x in xo) ...[
+        Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 2),
+            child: Text.rich(TextSpan(children: [
+              TextSpan(text: js(x['name']), style: const TextStyle(fontWeight: FontWeight.bold)),
+              TextSpan(text: '  Einsatztyp dort: ${js(jm(x['kinds'])['${ji(k['id'])}'])}', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ]))),
+        for (final g in jl(x['groups']))
+          row(
+              Checkbox(
+                  value: v.ext['${x['org']}']?.contains(ji(g['id'])) ?? false,
+                  onChanged: (b) => ss(() {
+                        final set = v.ext.putIfAbsent('${x['org']}', () => <int>{});
+                        b == true ? set.add(ji(g['id'])!) : set.remove(ji(g['id']));
+                      })),
+              Text.rich(TextSpan(children: [
+                WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Container(width: 10, height: 10, margin: const EdgeInsets.only(right: 6), decoration: BoxDecoration(color: hexColor(g['color']), shape: BoxShape.circle))),
+                TextSpan(text: js(g['name'])),
+                TextSpan(
+                    text: '  ${g['n']} ${ji(g['n']) == 1 ? 'Person' : 'Personen'}${(ji(g['na']) ?? 0) > 0 ? ', davon ${g['na']} abwesend' : ''}',
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ]))),
+      ],
+      if (!v.all && v.groups.isEmpty && v.persons.isEmpty && v.ext.values.any((e) => e.isNotEmpty))
+        const Mut('Aus der eigenen Organisation wird niemand alarmiert, nur die gewählten Partnerorganisationen.'),
     ]);
   }
 }
@@ -1383,10 +1496,11 @@ class _StartPageState extends State<_StartPage> {
       if (d.at != null) 'alarm_at': d.at!.millisecondsSinceEpoch ~/ 1000,
       if (d.parent != null) ...{'parent_id': d.parent, for (final t in _takes) 'take_$t': 1},
     };
-    if (d.opts != null && jl(d.opts!['groups']).isNotEmpty) {
+    if (d.opts != null && (jl(d.opts!['groups']).isNotEmpty || jl(d.opts!['ext']).isNotEmpty)) {
       final v = d.inv.get();
       if (v['all'] != null) {
         body['invite_all'] = 1;
+        if (v['ext'] != null) body['ext'] = v['ext'];
       } else {
         body.addAll(v);
       }
