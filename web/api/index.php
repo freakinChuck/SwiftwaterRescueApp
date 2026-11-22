@@ -28,11 +28,14 @@ set_exception_handler(function ($e) { global $db;
 // Nie Passwörter, Schlüssel oder Inhalte von Einsätzen ins Log, nur Kennungen und technische Angaben.
 const APPLOG_LVL = ['info' => 'Ereignis', 'warn' => 'Warnung', 'err' => 'Fehler'];
 const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
-  'push' => 'Push', 'overpass' => 'Geodaten-Quellen', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'voice' => 'Funk & Konferenz', 'geo' => 'Geodaten übernehmen', 'veh' => 'Fahrzeuge', 'dsar' => 'Datenschutz', 'client' => 'Browser & App'];
+  'push' => 'Push', 'overpass' => 'Geodaten-Quellen', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'voice' => 'Funk & Konferenz', 'geo' => 'Geodaten übernehmen', 'veh' => 'Fahrzeuge', 'dsar' => 'Datenschutz', 'docs' => 'Dokumente', 'client' => 'Browser & App'];
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
 // Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
-const APPLOG_ROUTES = ['logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/testalarm' => ['push', 'Persönlicher Testalarm angefordert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
+const APPLOG_ROUTES = ['doc/folder/save' => ['docs', 'Ordner der Dokumentenablage gespeichert'], 'doc/save' => ['docs', 'Eintrag der Dokumentenablage gespeichert'], 'doc/upload/done' => ['docs', 'Datei der Dokumentenablage hochgeladen'],
+  'doc/ack/cfg' => ['docs', 'Lesebestätigung eingestellt'], 'doc/sug' => ['docs', 'Vorschlag zur Dokumentenablage eingereicht'], 'doc/sug/take' => ['docs', 'Vorschlag übernommen'], 'doc/sug/reject' => ['docs', 'Vorschlag abgelehnt'],
+  'docs/cfg/save' => ['cfg', 'Einstellungen der Dokumentenablage gespeichert'], 'incident/doc/ext/save' => ['docs', 'Dokument für Externe freigegeben'], 'incident/doc/ext/remove' => ['docs', 'Freigabe für Externe zurückgenommen'],
+  'logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/testalarm' => ['push', 'Persönlicher Testalarm angefordert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
   'user/save' => ['user', 'Benutzer gespeichert'], 'user/password' => ['user', 'Passwort zurückgesetzt'], 'user/active' => ['user', 'Benutzer aktiviert bzw. deaktiviert'], 'user/delete' => ['user', 'Benutzer gelöscht'],
   'skill/save' => ['user', 'Fähigkeit der Ausbildung gespeichert'], 'skill/remove' => ['user', 'Fähigkeit der Ausbildung entfernt'], 'skill/entry/save' => ['user', 'Ausbildung erfasst'], 'skill/entry/remove' => ['user', 'Ausbildung entfernt'],
   'urole/save' => ['user', 'Benutzerrolle gespeichert'], 'urole/remove' => ['user', 'Benutzerrolle entfernt'], 'group/save' => ['user', 'Einsatzgruppe gespeichert'], 'group/delete' => ['user', 'Einsatzgruppe gelöscht'],
@@ -380,6 +383,7 @@ const PERMS = [
   'legal' => ['Verwaltung', 'Impressum & Datenschutz einstellen', 'Angaben zur betreibenden Organisation, Kontakt und Zusatztexte der Seite «Impressum, Lizenzen & Datenschutz»'],
   'aar_arch' => ['Auswertung', 'Gesicherte After Action Reviews abrufen', 'Das vor dem Anonymisieren gesicherte, vollständige PDF eines freigegebenen Reviews abrufen, mit allen Namen'],
   'cfg_conn' => ['Verwaltung', 'Konnektivität einstellen', 'E-Mail-Alarm: Postfach, Schlüsselwörter und erlaubte Absender je Einsatztyp, Abruf über Cron-Job oder Webhook; Verlauf der eingegangenen E-Mails einsehen. Funk & Konferenz: Medienserver (LiveKit), Kanäle, Transkription, Aufbewahrung und Links für Externe je Einsatztyp'],
+  'docs' => ['Verwaltung', 'Dokumentenablage verwalten', 'Ordner mit Freigaben und Redaktion anlegen, alle Einträge bearbeiten, Lesebestätigungen und Vorschläge aller Ordner, Dateitypen, Speicher, Anzeige und Weitergabe an Externe einstellen (Issue #229)'],
   'geo' => ['Verwaltung', 'Geodaten übernehmen und abgleichen', 'Objekte am Gewässer (Wehre, Kraftwerke, Brücken …) aus OpenStreetMap als feste Standorte übernehmen, auch in vorbereitete Übungen, und Abweichungen zur Quelle prüfen und übernehmen'],
   'versions' => ['System', 'Versionen einsehen und einstellen', 'Ausgelieferte Version des Servers, Versionen der angemeldeten Apps und Mindestversion der App (Hinweis «Bitte App aktualisieren»)'],
   'applog' => ['System', 'Applikationslog einsehen', 'Technisches Applikationslog mit Ereignissen, Warnungen und Fehlern des Servers und der Geräte; Aufbewahrung einstellen'],
@@ -607,7 +611,7 @@ function aarIn($in) { $old = aarCfg(); $s = fn($v, $n) => mb_substr(trim(preg_re
   return ['title' => $s($in['title'] ?? '', 120) ?: AAR_DEFAULT['title'], 'org' => $s($in['org'] ?? '', 120), 'seq' => $seq, 'auto' => $a, 'dl' => $d, 'fields' => $f,
     'fb' => isset($in['fb']) && is_array($in['fb']) ? fbIn($in['fb'], $old['fb']) : $old['fb']]; }
 const FEATURES = ['area' => 'Suchgebiet', 'res' => 'Rettlinge', 'msg' => 'Nachrichten (mit Kartenmarkierungen)', 'poi' => 'Markierungen & Bereiche', 'ext' => 'Externe Einsatzkräfte',
-                  'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)', 'place' => 'Feste Standorte', 'hydro' => 'Pegel & Abfluss (BAFU)', 'pinfo' => 'Personeninfo (Infofenster beim Antippen einer Einsatzkraft)', 'geo' => 'Geodaten-Ebene (Objekte am Gewässer aus OpenStreetMap, zuschaltbar)', 'voice' => 'Funk (Durchsagen und Live-Konferenz)', 'veh' => 'Fahrzeuge (BLE-Beacons)', 'vehp' => 'Personen im Fahrzeug (Zuordnung über die Beacons)', 'call' => 'Direktanruf (Telefonnummer der Einsatzkräfte)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
+                  'rd' => 'Werkzeug «Flussdistanz»', 'pub' => 'Öffentliche Ansicht', 'rec' => 'Aufzeichnung (Replay)', 'nav' => 'Navigation (Ziele an eine Navigations-App übergeben)', 'place' => 'Feste Standorte', 'hydro' => 'Pegel & Abfluss (BAFU)', 'pinfo' => 'Personeninfo (Infofenster beim Antippen einer Einsatzkraft)', 'geo' => 'Geodaten-Ebene (Objekte am Gewässer aus OpenStreetMap, zuschaltbar)', 'voice' => 'Funk (Durchsagen und Live-Konferenz)', 'veh' => 'Fahrzeuge (BLE-Beacons)', 'vehp' => 'Personen im Fahrzeug (Zuordnung über die Beacons)', 'call' => 'Direktanruf (Telefonnummer der Einsatzkräfte)', 'docs' => 'Dokumente (Unterlagen im Einsatz, an festen Standorten, für Externe)']; // Helikopter: eigener Hauptschalter und Schalter je Einsatz (airInc), nicht hier
 // Navigations-Apps (Funktion «nav»): in der Verwaltung einzeln ausschaltbar (nav_off), Standard nav_default, pro Person users.nav_app
 const NAV_APPS = ['google' => 'Google Maps', 'apple' => 'Apple Karten', 'waze' => 'Waze', 'geo' => 'Andere App (nur Android: Auswahl der Karten-Apps)'];
 // Direktanruf (Issue #44): Telefonnummer je Person (users.phone), im Einsatz bei den Einsatzkräften (Funktion «call»). Einstellung phone: show = Nummer anzeigen,
@@ -647,7 +651,7 @@ function symPub($k) { [$c, $n, $a] = SYMBOLS[$k]; return ['k' => $k, 'set' => ex
 function symActive($c = null) { $c = $c ?? symCfg(); $r = []; foreach (SYMBOLS as $k => $_) if (in_array(explode('-', $k)[0], $c['sets'], true) && !in_array($k, $c['off'], true)) $r[] = symPub($k); return $r; } // zur Wahl beim Setzen, in dieser Reihenfolge
 function symRow($p) { $k = $p['sym'] ?? null; unset($p['sym']); return $p + ($k !== null && isset(SYMBOLS[$k]) ? ['sym' => $k, 'sym_name' => SYMBOLS[$k][1], 'sym_foot' => SYMBOLS[$k][2] === 'b' ? 1 : 0] : ['sym' => null]); } // mit Name und Anker, auch wenn das Symbol inzwischen ausgeschaltet ist
 function navDefault() { $a = navApps(); $d = setting('nav_default', 'google'); return in_array($d, $a, true) ? $d : $a[0]; }
-const FEATURE_ROUTES = ['incident/mark' => 'res', 'incident/mark/remove' => 'res', 'incident/rescuee/save' => 'res', 'incident/rescuee/locate' => 'res', 'incident/rescuee/rescued' => 'res', 'incident/rescuee/remove' => 'res',
+const FEATURE_ROUTES = ['incident/doc/ext/save' => 'docs', 'incident/doc/ext/remove' => 'docs', 'incident/mark' => 'res', 'incident/mark/remove' => 'res', 'incident/rescuee/save' => 'res', 'incident/rescuee/locate' => 'res', 'incident/rescuee/rescued' => 'res', 'incident/rescuee/remove' => 'res',
                         'incident/message' => 'msg', 'incident/message/unmark' => 'msg', 'incident/poi' => 'poi', 'incident/poi/remove' => 'poi',
                         'incident/external/save' => 'ext', 'incident/external/remove' => 'ext', 'incident/public' => 'pub', 'incident/record' => 'rec', 'incident/event' => 'area', 'incident/stops' => 'area',
                         'incident/voice' => 'voice', 'incident/voice/join' => 'voice', 'incident/voice/conf' => 'voice', 'incident/voice/mute' => 'voice', 'incident/voice/channels' => 'voice', 'incident/voice/guest/save' => 'voice', 'incident/voice/guest/remove' => 'voice', 'incident/vehicle/link' => 'veh'];
@@ -1838,6 +1842,8 @@ if ($route === 'public/state') {
   $stops = array_map(fn($x) => ['lat' => $x['lat'], 'lon' => $x['lon'], 'pts' => $x['pts'], 'line' => $x['line']], incStops($inc)); // Flusssperren (Issue #182): nur die Lage, ohne Namen
   out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'stops' => $stops, 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'features' => features($inc['kind_id']), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0] + mapsFor($inc['kind_id']) + ['veh' => beaconCfg()['public'] && feature($inc, 'veh') ? vehState($inc, true) : null, 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
 }
+
+require __DIR__ . '/docs.php'; // Dokumentenablage (Issue #229): Tabellen, Routen ohne Anmeldung (ext/doc, guest/docs), docRoute()
 
 // Funk für Externe (Issue #113): Gastseite funk.html?k=<token> ohne Anmeldung, nur der Kanal des Links; keine Karte, keine Standorte, Einsatzkräfte nur mit Spezialrolle bzw. Einrückoption
 if (strncmp($route, 'guest/', 6) === 0) {
@@ -3292,7 +3298,7 @@ if ($route === 'incident/location' && ($inc = activeIncident()) && ($p = part($i
 // Jeder Auszug steht im Verlauf (Einstellung dsar_hist, höchstens DSAR_HIST) und im Applikationslog, ohne Inhalte.
 const DSAR_HIST = 200;
 const DSAR_SECRET = ['ai_key', 'mail_in_key', 'mail_in_pass', 'pgapi_key', 'postgis_pass', 'vapid', 'voice_lk_secret', 'voice_tr_key']; // Einstellungen: Wert wird nie ausgegeben
-const DSAR_HIDE = ['users' => ['pass_hash', 'token'], 'sessions' => ['token'], 'push_subs' => ['endpoint', 'p256dh', 'auth'], 'push_native' => ['token'], 'voice_guests' => ['token'], 'incidents' => ['public_token'], 'ex_plans' => ['public_token']];
+const DSAR_HIDE = ['users' => ['pass_hash', 'token'], 'sessions' => ['token'], 'push_subs' => ['endpoint', 'p256dh', 'auth'], 'push_native' => ['token'], 'voice_guests' => ['token'], 'incidents' => ['public_token'], 'ex_plans' => ['public_token'], 'doc_ext' => ['token']];
 // Tabellen des Datenexports: Tabelle => [Bezeichnung, Sortierung]. Neue Tabellen hier aufnehmen (sonst fehlen sie im Export). Nicht dabei: ai_cache (Zwischenspeicher der AI-Antworten),
 // veh_cand (Zwischenstand des automatischen Verbunds), aar_arch_part (gesicherte PDFs, als eigene Dateien über dsar/file).
 const DSAR_TABLES = ['users' => ['Personen', 'id'], 'uroles' => ['Benutzerrollen', 'id'], 'user_uroles' => ['Zuweisung der Benutzerrollen', 'user_id,urole_id'], 'sessions' => ['Gerätesitzungen', 'id'],
@@ -3308,6 +3314,9 @@ const DSAR_TABLES = ['users' => ['Personen', 'id'], 'uroles' => ['Benutzerrollen
   'veh_kinds' => ['Fahrzeugarten', 'id'], 'vehicles' => ['Fahrzeuge', 'id'], 'vehicle_seen' => ['Sichtungen der Fahrzeuge', 'id'], 'veh_links' => ['Verbund der Fahrzeuge', 'id'],
   'aar' => ['After Action Reviews', 'incident_id'], 'aar_img' => ['Bilder der After Action Reviews', 'id'], 'aar_arch' => ['Gesicherte After Action Reviews', 'incident_id'], 'aar_arch_img' => ['Bilder gesicherter Reviews', 'incident_id,img_id'],
   'fb_req' => ['Anfragen Einsatzfeedback', 'incident_id'], 'fb_ans' => ['Antworten Einsatzfeedback', 'id'], 'ai_usage' => ['Nutzung AI-Assistent', 'id'], 'app_log' => ['Applikationslog', 'id'],
+  'doc_folders' => ['Ordner der Dokumentenablage', 'id'], 'docs' => ['Einträge der Dokumentenablage', 'id'], 'doc_files' => ['Dateien der Dokumentenablage (Angaben)', 'id'], 'doc_imgs' => ['Bilder in Seiten der Dokumentenablage', 'id'],
+  'doc_user' => ['Favoriten und Lesebestätigungen', 'user_id,doc_id'], 'doc_ack_due' => ['Verlangte Lesebestätigungen', 'doc_id,user_id'], 'doc_sug' => ['Vorschläge zur Dokumentenablage', 'id'], 'doc_ext' => ['Dokumente für Externe', 'id'],
+  'doc_view' => ['Eigene Anzeige der Dokumente', 'user_id,kid'], 'place_docs' => ['Dokumente an festen Standorten', 'place_id,doc_id'],
   'overpass_stats' => ['Statistik Geodaten-Quellen', 'url,src'], 'settings' => ['Einstellungen', 'k']];
 const DSAR_PAGE = 2000; const DSAR_BYTES = 3000000; // Zeilen bzw. Zeichen je Abfrage des Exports (Bilder als Data-URL sind gross)
 function dsarHist($kind, $uid2 = null, $what = '') { global $uid, $me, $now; $h = json_decode((string)setting('dsar_hist', ''), true); $h = is_array($h) ? $h : [];
@@ -3371,6 +3380,10 @@ function dsarUser($id) { global $db;
     'feedback' => $rows("SELECT * FROM fb_ans WHERE user_id=? ORDER BY created", function ($r) use ($fbF, $t) { $d = json_decode((string)$r['data'], true) ?: []; $o = [];
       foreach ($d as $k => $v) $o[] = [$fbF[$k] ?? $k, is_scalar($v) ? (string)$v : json_encode($v, JSON_UNESCAPED_UNICODE)]; return ['incident_id' => (int)$r['incident_id'], 'created' => $t($r['created']), 'updated' => $t($r['updated']), 'answers' => $o]; }),
     'created' => $created,
+    'docs' => ['user' => $rows("SELECT u.*,d.title FROM doc_user u LEFT JOIN docs d ON d.id=u.doc_id WHERE u.user_id=? ORDER BY u.doc_id", fn($r) => ['doc' => $r['title'] ?? ('Eintrag ' . (int)$r['doc_id']), 'fav' => (int)$r['fav'], 'seen_at' => $t($r['seen_at']), 'ack_at' => $t($r['ack_at']), 'ack_ver' => $t($r['ack_ver']), 'ack_free' => (int)$r['ack_free']]),
+      'due' => $rows("SELECT a.*,d.title FROM doc_ack_due a LEFT JOIN docs d ON d.id=a.doc_id WHERE a.user_id=?", fn($r) => ['doc' => $r['title'] ?? ('Eintrag ' . (int)$r['doc_id']), 'ver' => (int)$r['ver'], 'since' => $t($r['since']), 'due_at' => $t($r['due_at'])]),
+      'sug' => $rows("SELECT * FROM doc_sug WHERE user_id=? ORDER BY at", fn($r) => ['kind' => $r['kind'], 'title' => $r['title'], 'note' => $r['note'], 'file' => $r['name'], 'at' => $t($r['at']), 'state' => $r['state'], 'reason' => $r['reason']]),
+      'edited' => $rows("SELECT id,title,created,updated,created_by,updated_by FROM docs WHERE created_by=? OR updated_by=" . (int)$id, fn($r) => ['doc' => $r['title'], 'created' => (int)$r['created_by'] === $id ? $t($r['created']) : null, 'updated' => (int)$r['updated_by'] === $id ? $t($r['updated']) : null])],
     'ai' => $rows("SELECT fn, COUNT(*) n, SUM(tokens) tokens, MIN(ts) first, MAX(ts) last FROM ai_usage WHERE user_id=? GROUP BY fn", fn($r) => ['fn' => $r['fn'], 'n' => (int)$r['n'], 'tokens' => (int)$r['tokens'], 'first' => $t($r['first']), 'last' => $t($r['last'])]),
     'vehicles' => $rows("SELECT id,name,seen_at FROM vehicles WHERE seen_uid=?", fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'seen_at' => $t($r['seen_at'])]),
     'applog' => $rows("SELECT at,lvl,cat,msg,route FROM app_log WHERE user_id=? ORDER BY at DESC LIMIT 5000", fn($r) => ['at' => (int)$r['at'], 'lvl' => $r['lvl'], 'cat' => APPLOG_CATS[$r['cat']] ?? $r['cat'], 'msg' => $r['msg'], 'route' => $r['route']]),
@@ -3383,10 +3396,10 @@ function dsarMeta() { global $me, $now; $l = (string)setting('aar_logo', ''); $l
 // Mit dem Spezialrecht purge lassen sich auch Elemente löschen, die sonst nur deaktiviert werden oder gar nicht löschbar sind.
 // Je Art: [Bezeichnung, nötiges Bereichsrecht]; purgeInfo beschreibt die Folgen (Rückfrage im Frontend), purgeDo löscht in einer Transaktion.
 const PURGE_KINDS = ['incident' => ['Einsatz', 'stats'], 'user' => ['Benutzer', 'users'], 'mode' => ['Einrückoption', 'cfg_inc'], 'role' => ['Spezialrolle', 'cfg_inc'],
-  'ext_template' => ['Vorlage externe Einsatzkraft', 'cfg_inc'], 'skill' => ['Fähigkeit', 'skills'], 'veh_kind' => ['Fahrzeugart', 'cfg_map'], 'vehicle' => ['Fahrzeug', 'cfg_map']];
+  'ext_template' => ['Vorlage externe Einsatzkraft', 'cfg_inc'], 'skill' => ['Fähigkeit', 'skills'], 'veh_kind' => ['Fahrzeugart', 'cfg_map'], 'vehicle' => ['Fahrzeug', 'cfg_map'], 'doc' => ['Eintrag der Dokumentenablage', 'docs'], 'doc_folder' => ['Ordner der Dokumentenablage', 'docs']];
 // Tabellen mit Daten eines Einsatzes (Spalte incident_id); neue Tabellen mit incident_id hier aufnehmen
 const PURGE_INC_TABLES = ['participants', 'incident_log', 'messages', 'track', 'rec_periods', 'air_track', 'rescuees', 'rescuee_marks', 'externals', 'pois', 'inc_hydro',
-  'voice', 'voice_guests', 'voice_conf', 'voice_mute', 'aar', 'aar_img', 'aar_arch', 'aar_arch_img', 'aar_arch_part', 'fb_req', 'fb_ans', 'vehicle_seen', 'veh_links'];
+  'voice', 'voice_guests', 'voice_conf', 'voice_mute', 'aar', 'aar_img', 'aar_arch', 'aar_arch_img', 'aar_arch_part', 'fb_req', 'fb_ans', 'vehicle_seen', 'veh_links', 'doc_ext'];
 function purgeCnt($sql, $p) { global $db; try { $s = $db->prepare($sql); $s->execute($p); return (int)$s->fetchColumn(); } catch (Throwable $e) { return 0; } }
 // Element laden und prüfen; liefert [Name, Folgen (Liste von Sätzen)]
 function purgeInfo($k, $id) {
@@ -3417,6 +3430,10 @@ function purgeInfo($k, $id) {
     return [$r['name'], $why]; }
   if ($k === 'ext_template') { $r = $row("SELECT * FROM ext_templates WHERE id=?"); $why[] = 'Bereits erfasste externe Einsatzkräfte bleiben unverändert.'; return [$r['name'], $why]; }
   if ($k === 'skill') { $r = $row("SELECT * FROM skills WHERE id=?"); $n = $c("SELECT COUNT(*) FROM user_skills WHERE skill_id=?"); if ($n) $why[] = $pl($n, 'erfasste Ausbildung wird', 'erfasste Ausbildungen werden') . " mitgelöscht."; return [$r['name'], $why]; }
+  if ($k === 'doc') { $r = $row("SELECT * FROM docs WHERE id=?"); $n = $c("SELECT COUNT(*) FROM doc_files WHERE doc_id=?"); if ($n) $why[] = $pl($n, 'Version der Datei wird', 'Versionen der Datei werden') . ' mitgelöscht.';
+    $n = $c("SELECT COUNT(*) FROM doc_user WHERE doc_id=? AND ack_at IS NOT NULL"); if ($n) $why[] = $pl($n, 'Lesebestätigung geht', 'Lesebestätigungen gehen') . ' verloren (Einträge in der Ausbildung bleiben).'; return [$r['title'], $why]; }
+  if ($k === 'doc_folder') { $r = $row("SELECT * FROM doc_folders WHERE id=?"); $ids = docFolderTree($id); $n = purgeCnt("SELECT COUNT(*) FROM docs WHERE folder_id IN (" . implode(',', $ids) . ")", []);
+    if (count($ids) > 1) $why[] = $pl(count($ids) - 1, 'Unterordner wird', 'Unterordner werden') . ' mitgelöscht.'; if ($n) $why[] = $pl($n, 'Eintrag wird', 'Einträge werden') . ' mit allen Dateien, Lesebestätigungen und Vorschlägen mitgelöscht.'; return [$r['name'], $why]; }
   if ($k === 'veh_kind') { $r = $row("SELECT * FROM veh_kinds WHERE id=?"); $n = $c("SELECT COUNT(*) FROM vehicles WHERE kind_id=?");
     if ($n) $why[] = $pl($n, 'Fahrzeug dieser Art wird', 'Fahrzeuge dieser Art werden') . " mitgelöscht, mit ihren Sichtungen und dem Verbund; sie fehlen danach auch im Replay bisheriger Einsätze.";
     return [$r['name'], $why]; }
@@ -3443,7 +3460,7 @@ function purgeDo($k, $id, $name) {
       $db->prepare("DELETE FROM ex_signups WHERE plan_id=?")->execute([$p['id']]); }
     $db->prepare("DELETE FROM incidents WHERE id=?")->execute([$id]);
   } elseif ($k === 'user') {
-    foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'avail_rules', 'sessions', 'push_native', 'user_skills', 'ex_signups', 'fb_ans'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
+    foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'avail_rules', 'sessions', 'push_native', 'user_skills', 'ex_signups', 'fb_ans', 'doc_user', 'doc_ack_due', 'doc_view'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]); docSugUser($id);
     foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
       $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));
       if ($fx($p['leads']) !== $p['leads'] || $fx($p['invite']) !== $p['invite']) $db->prepare("UPDATE ex_plans SET leads=?, invite=? WHERE id=?")->execute([$fx($p['leads']), $fx($p['invite']), $p['id']]); }
@@ -3462,11 +3479,17 @@ function purgeDo($k, $id, $name) {
       if ($fx($ch['hear']) !== $ch['hear'] || $fx($ch['speak']) !== $ch['speak']) $db->prepare("UPDATE voice_channels SET hear=?, speak=? WHERE id=?")->execute([$fx($ch['hear']), $fx($ch['speak']), $ch['id']]); }
     $db->prepare("DELETE FROM roles WHERE id=?")->execute([$id]);
   } elseif ($k === 'ext_template') { $db->prepare("DELETE FROM ext_templates WHERE id=?")->execute([$id]);
-  } elseif ($k === 'skill') { $db->prepare("DELETE FROM user_skills WHERE skill_id=?")->execute([$id]); $db->prepare("DELETE FROM skills WHERE id=?")->execute([$id]);
+  } elseif ($k === 'skill') { $db->prepare("DELETE FROM user_skills WHERE skill_id=?")->execute([$id]); $db->prepare("UPDATE docs SET ack_skill=NULL, ack_by=CASE WHEN ack_by='skill' THEN 'read' ELSE ack_by END WHERE ack_skill=?")->execute([$id]); $db->prepare("DELETE FROM skills WHERE id=?")->execute([$id]);
   } elseif ($k === 'veh_kind') { purgeVehicles($db->query("SELECT id FROM vehicles WHERE kind_id=" . (int)$id)->fetchAll(PDO::FETCH_COLUMN)); $db->prepare("DELETE FROM veh_kinds WHERE id=?")->execute([$id]);
     foreach ($db->query("SELECT id,carries FROM veh_kinds")->fetchAll() as $x) { $ca = (array)json_decode((string)$x['carries'], true); if (array_key_exists((string)$id, $ca)) { unset($ca[(string)$id]); $db->prepare("UPDATE veh_kinds SET carries=? WHERE id=?")->execute([json_encode((object)$ca), $x['id']]); } }
+  } elseif ($k === 'doc') { $dfiles[] = $id; docPurge([$id]);
+  } elseif ($k === 'doc_folder') { $fids = docFolderTree($id); $dids = array_map('intval', $db->query("SELECT id FROM docs WHERE folder_id IN (" . implode(',', $fids) . ")")->fetchAll(PDO::FETCH_COLUMN)); $dfiles = $dids; docPurge($dids);
+    foreach ($db->query("SELECT file FROM doc_sug WHERE file IS NOT NULL AND folder_id IN (" . implode(',', $fids) . ")")->fetchAll(PDO::FETCH_COLUMN) as $f) $sfiles[] = $f;
+    $db->exec("DELETE FROM doc_sug WHERE folder_id IN (" . implode(',', $fids) . ")"); $db->exec("DELETE FROM doc_folders WHERE id IN (" . implode(',', $fids) . ")");
   } else purgeVehicles([$id]);
   $db->commit();
+  foreach ($dfiles ?? [] as $d) { $dd = docDir($d); foreach (glob($dd . '/*') ?: [] as $f) @unlink($f); @rmdir($dd); } // Dateien der Dokumentenablage
+  foreach ($sfiles ?? [] as $f) @unlink(docDir() . '/sug/' . basename($f));
   if ($k === 'incident') { // Dateien: Durchsagen, Zwischenspeicher der Helikopter
     $d = __DIR__ . '/data/voice/' . $id; if (is_dir($d)) { foreach (glob($d . '/*') ?: [] as $f) @unlink($f); @rmdir($d); }
     @unlink(__DIR__ . '/data/air/inc' . $id . '.json'); }
@@ -3487,8 +3510,9 @@ try { anonAuto(); } catch (Throwable $e) { alog('err', 'anon', 'Automatische Ano
 try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog_purge_at', (string)$now); $db->prepare("DELETE FROM app_log WHERE at<?")->execute([$now - applogDays() * 86400]); } } catch (Throwable $e) {}
 try { if (!$me['must_change']) geoAuto(); } catch (Throwable $e) { alog('err', 'geo', 'Abgleich der Geodaten: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // Abgleich übernommener Standorte mit der Quelle (Issue #182), täglich im Nachlauf
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
+docRoute($route); // Dokumentenablage (Issue #229), beendet die Anfrage bei eigenen Routen
 switch ($route) {
- case 'me': out(['me' => $me + mapsFor(null) + ['phone_cfg' => phoneCfg(), 'coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid)]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
+ case 'me': out(['me' => $me + mapsFor(null) + ['phone_cfg' => phoneCfg(), 'coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid), 'docs' => docMe(), 'docs_cfg' => docCfgPub()]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
  case 'roles': out(array_map(fn($r) => ints($r, ['id', 'is_lead', 'is_post', 'can_message', 'can_voice', 'sec']), $db->query("SELECT id,name,color,is_lead,is_post,can_message,can_voice,sec FROM roles WHERE active=1 ORDER BY id")->fetchAll())); // sec: Spezialrolle für Sekundäreinsätze (Issue #164)
  case 'modes': // alle, auch deaktivierte (für die Anzeige bestehender Teilnahmen); sec: Einrückoption für Sekundäreinsätze (Issue #164)
   out(array_map(fn($r) => ints($r, ['id', 'share_location', 'active', 'lead_rights', 'counts', 'sec']), $db->query("SELECT id,code,name,share_location,active,lead_rights,counts,sec FROM modes ORDER BY id")->fetchAll()));
@@ -3709,7 +3733,7 @@ switch ($route) {
     // feste Standorte auch ohne Einsatz (Änderungswunsch #96): die aktiven permanenten, solange die Funktion für einen der Einsatztypen an ist
     $fpl = array_filter(featuresAll(), fn($f) => $f['place']) ? array_values(array_map(fn($r) => array_diff_key($r, ['active' => 1]), array_filter(placesOf(null), fn($r) => $r['active']))) : [];
     if ($blocked) $xp = [];
-    out(['test_alarm' => testAlarmDue($uid), 'incident' => null, 'incidents' => [], 'my_inc' => null, 'fb_open' => count(array_filter(fbMine($uid), fn($x) => !$x['answered'])), 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
+    out(['test_alarm' => testAlarmDue($uid), 'incident' => null, 'incidents' => [], 'my_inc' => null, 'fb_open' => count(array_filter(fbMine($uid), fn($x) => !$x['answered'])), 'air_home' => airHomeOn() ? 1 : 0, 'my_abs' => absNow($uid)[$uid] ?? null, 'blocked' => $blocked ? 1 : 0, 'last_ended' => $last ?: null, 'places' => $fpl, 'docs' => docState(null, $fpl), 'place_cats' => placeCats(), 'veh' => !$blocked && vehVisible(null) ? vehState(null) : null, 'place_props' => placeProps(), 'geo_kinds' => geoLiveOn() ? geoKindsPub() : [], 'kinds' => kindsPub(), 'features' => featuresAll()] + mapsFor(null) + ['ex_sched' => exSched(), 'ex_plans' => array_map(fn($p) => ['id' => (int)$p['id'], 'title' => $p['title'], 'invited' => $p['invite'] !== null ? 1 : 0, 'sec' => ($k = planKind($p)) ? $k['sec'] : 0, 'at' => (json_decode((string)$p['doc'], true) ?: [])['at'] ?? null], $xp)]); // sec: geplanter Sekundäreinsatz (Issue #164), at = geplanter Beginn // features: Flussdistanz ohne Einsatz
   }
   $inc['id'] = (int)$inc['id']; $inc['plan_id'] = $inc['plan_id'] === null ? null : (int)$inc['plan_id']; $inc = floats($inc, ['lat', 'lon']); $inc['pls_at'] = plsAt($inc); $inc['alarm_at'] = (int)$inc['alarm_at']; $inc['created_by'] = (int)$inc['created_by']; $inc = kindAdd($inc); $inc['kind'] = kindPub(kindOf($inc)); $inc['record'] = (int)$inc['record']; $inc['recorded'] = (int)$inc['recorded'];
   if ($inc['flow_ms'] !== null) $inc['flow_ms'] = (float)$inc['flow_ms'];
@@ -3782,7 +3806,7 @@ switch ($route) {
       $vo['guest_links'] = $vk['guests'] ? array_map(fn($g) => ints($g, ['id', 'ch', 'speak', 'created', 'opened_at']), $s->fetchAll()) : []; } }
   unset($inc['voice_ch'], $inc['voice_anon']);
   $il = incList(); $oth = isset($_GET['oth']) && count($il) > 1 ? array_values(array_map('incOther', array_filter(runningIncidents(), fn($r) => (int)$r['id'] !== $id && in_array((int)$r['id'], array_column($il, 'id'), true)))) : [];
-  out(['test_alarm' => testAlarmDue($uid), 'incident' => $inc, 'incidents' => $il, 'others' => $oth, 'my_inc' => myIncPub(), 'start_plans' => exStartable(), 'kinds' => kindsPub(), 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
+  out(['test_alarm' => testAlarmDue($uid), 'incident' => $inc, 'incidents' => $il, 'others' => $oth, 'my_inc' => myIncPub(), 'start_plans' => exStartable(), 'kinds' => kindsPub(), 'voice' => $vo, 'pois' => $pois, 'rescuees' => $rescuees, 'externals' => $ext, 'places' => $ipl, 'docs' => docState($inc, $ipl), 'place_cats' => placeCats(), 'place_props' => placeProps(), 'place_near_km' => placeNearKm(), 'stops' => incStops($inc, $ipl), 'geo_kinds' => $F['geo'] ? geoKindsPub() : [], 'ext_templates' => $tpl, 'ext_inc_templates' => $itpl, 'sources' => plsSources($inc, $rescuees),
        'phone_cfg' => $phSee ? ['show' => phoneCfg()['show'], 'call' => phoneCfg()['call']] : null, // Direktanruf (Issue #44): null = keine Nummern
        'participants' => array_map(function ($p) use ($pg, $F, $phSee) { if (!$phSee || $p['phone'] === null || $p['left_at'] !== null || $p['mode'] === 'declined') unset($p['phone']); /* nur aktive Teilnahmen */ foreach (['lat', 'lon'] as $k) if ($p[$k] !== null) $p[$k] = (float)$p[$k]; if ($pg) $p['groups'] = $pg['m'][(int)$p['user_id']] ?? []; if (!$F['vehp'] || !$F['veh']) unset($p['veh_id']); return ints($p, ['user_id', 'role_id', 'left_at', 'loc_at', 'veh_id']); }, $ps->fetchAll()),
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
@@ -4423,7 +4447,7 @@ switch ($route) {
   // Übungsplan übernehmen (Issue #169), aber nicht im Plan zeigen, bis Datum und Angaben angepasst sind; Anmeldungen gehören zur alten Übung
   $db->prepare("UPDATE ex_plans SET plan_at=?, plan_end=?, plan_loc=?, plan_info=?, sched=0, su_on=?, su_grp=?, su_until=?, su_inv=? WHERE id=?")->execute([$p['plan_at'], $p['plan_end'], $p['plan_loc'], $p['plan_info'], $p['su_on'], $p['su_grp'], $p['su_until'], $p['su_inv'], $nid]);
   foreach (placesOf((int)$p['id'], true) as $f) { $db->prepare("INSERT INTO places(plan_id,name,descr,abbr,color,lat,lon,active,cat_id,pts,line,sort,props,src_ref,src_kind,src_data,src_at) VALUES(?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?)")->execute([$nid, $f['name'], $f['descr'], $f['abbr'], $f['color'], $f['lat'], $f['lon'], $f['cat_id'], $f['pts'] ? json_encode($f['pts']) : null, $f['line'], $f['sort'], json_encode($f['props']), $f['src_ref'], $f['src_kind'], $f['src_data'] === null ? null : json_encode($f['src_data'], JSON_UNESCAPED_UNICODE), $f['src_at']]);
-    placeNavSet((int)$db->lastInsertId(), array_map(fn($n) => [$n['lat'], $n['lon'], $n['note']], $f['nav'])); } // mit Eigenschaften, Navigationspunkten und Quelle (Issue #182)
+    $npl = (int)$db->lastInsertId(); placeNavSet($npl, array_map(fn($n) => [$n['lat'], $n['lon'], $n['note']], $f['nav'])); $db->prepare("INSERT INTO place_docs(place_id,doc_id) SELECT ?,doc_id FROM place_docs WHERE place_id=?")->execute([$npl, $f['id']]); } // mit Eigenschaften, Navigationspunkten und Quelle (Issue #182)
   foreach ($js as $j) {
     $db->prepare("INSERT INTO ex_injects(plan_id,kind,label,name,descr,lat,lon,ago,auto,msg,role_id,abbr,color) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute([$nid, $j['kind'], $j['label'], $j['name'], $j['descr'], $j['lat'], $j['lon'], $j['ago'], $j['auto'], $j['msg'], $j['role_id'], $j['abbr'], $j['color']]);
     $map[$j['id']] = (int)$db->lastInsertId();
@@ -4880,7 +4904,7 @@ switch ($route) {
  case 'skill/remove': need('skills'); // ohne Einträge löschen, sonst deaktivieren (Einträge bleiben)
   $id = (int)($in['id'] ?? 0); $s = $db->prepare("SELECT COUNT(*) FROM user_skills WHERE skill_id=?"); $s->execute([$id]);
   if ((int)$s->fetchColumn()) { $db->prepare("UPDATE skills SET active=0 WHERE id=?")->execute([$id]); out(['ok' => true, 'kept' => 1]); }
-  $db->prepare("DELETE FROM skills WHERE id=?")->execute([$id]); out(['ok' => true, 'kept' => 0]);
+  $db->prepare("DELETE FROM skills WHERE id=?")->execute([$id]); $db->prepare("UPDATE docs SET ack_skill=NULL, ack_by=CASE WHEN ack_by='skill' THEN 'read' ELSE ack_by END WHERE ack_skill=?")->execute([$id]); out(['ok' => true, 'kept' => 0]);
  case 'skills/matrix': need('skills'); // alle aktiven Personen × aktive Fähigkeiten: cells[user][skill] nur für geltende
   $ks = skillRows(); $us = $db->query("SELECT id,name FROM users WHERE active=1 ORDER BY name")->fetchAll(); $l = skillLast(); $mg = [];
   foreach ($db->query("SELECT m.user_id,m.group_id FROM inc_group_members m JOIN inc_groups g ON g.id=m.group_id WHERE g.active=1")->fetchAll() as $x) $mg[(int)$x['user_id']][] = (int)$x['group_id'];
@@ -5000,7 +5024,7 @@ switch ($route) {
   if (!$u) fail('Benutzer nicht gefunden', 404);
   if ($u['last_login'] !== null || isset(usersUsed()[$id])) fail('Diese Person hat sich schon angemeldet oder kommt in Einsatzdaten vor; bitte deaktivieren');
   $db->beginTransaction();
-  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'avail_rules', 'sessions', 'push_native', 'user_skills', 'ex_signups', 'fb_ans'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]);
+  foreach (['user_uroles', 'push_subs', 'inc_group_members', 'absences', 'avail_rules', 'sessions', 'push_native', 'user_skills', 'ex_signups', 'fb_ans', 'doc_user', 'doc_ack_due', 'doc_view'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]); docSugUser($id);
   $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
   foreach ($db->query("SELECT id,leads,invite FROM ex_plans")->fetchAll() as $p) { // aus Übungsleitung und Aufgebot vorbereiteter Übungen entfernen
     $fx = fn($j) => $j === null ? null : json_encode(array_values(array_filter((array)json_decode($j, true), fn($x) => (int)$x !== $id)));

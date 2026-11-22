@@ -522,7 +522,7 @@ function leadWhy(i,m,joined){const why=[],r=joined&&roles.find(x=>x.id==m.role_i
 function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «Einstellungen» hat eigene Prüfungen
   const s=$('#sheet');if(!s||creating)return;const f=document.activeElement;if(f&&f.matches&&f.matches('#sheet input,#sheet textarea,#sheet select'))return; // Eingabe nicht überschreiben
   // Kopfzeile des Menüs: Verwaltung für Administratoren und Übungsleiter (Issue #58), «Meine Einsätze» für alle (Issue #61, Ansicht als Einsatzkraft, auch für Administratoren; fehlt bei my_runs off)
-  const ba=$('#bAdm');if(ba)ba.hidden=!(me&&ADMIN_PERMS.some(can)); // Issue #63: wer ein Recht der Verwaltung hat
+  const ba=$('#bAdm');if(ba)ba.hidden=!(me&&(ADMIN_PERMS.some(can)||!!(me.docs&&me.docs.edit))); // Issue #63: wer ein Recht der Verwaltung hat
   const bm=$('#bMy');if(bm)bm.hidden=!(me&&me.my_runs&&me.my_runs!=='off');
   // Werkzeuge: auch ohne Einsatz verfügbar (im Einsatz zusätzlich über den Kartenknopf)
   const tools=!feat('rd')?'':mcard('Werkzeuge',`<div class="mut">Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei ${rdSpeeds().join(', ')} km/h.</div><div class="mbtns"><button id="bRdM">Flussdistanz messen</button></div>`);
