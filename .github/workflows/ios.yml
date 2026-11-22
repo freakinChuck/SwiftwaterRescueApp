@@ -10,12 +10,14 @@ on:
         type: boolean
         default: false
       build:
-        description: Build-Nummer (von mobile.yml, gleich wie Android); leer = Laufnummer
+        description: Build-Nummer (von mobile.yml, gleich wie Android); leer = BUILD_BASE plus Laufnummer
         type: string
         default: ''
 
 env:
   FLUTTER_VERSION: '3.47.9'
+  # Basis der Build-Nummer (Issue #230), gleich wie in mobile.yml
+  BUILD_BASE: '611212000'
   # Ab April 2027 nimmt App Store Connect nur Builds mit dem iOS-27-SDK an (ITMS-90725). Gewählt wird das neuste Xcode dieser Hauptversion.
   XCODE_MAJOR: '27'
 
@@ -51,9 +53,9 @@ jobs:
           v=$(tr -d ' \r\n' < ../../VERSION)
           if [[ "$GITHUB_REF" == refs/tags/mobile-v* ]]; then v="${GITHUB_REF#refs/tags/mobile-v}"; elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF#refs/tags/v}"; fi
           echo "name=$v" >> "$GITHUB_OUTPUT"
-          # Build-Nummer (Issue #230): von mobile.yml übergeben (gleich wie Android, Laufnummer von mobile.yml), sonst die Laufnummer;
+          # Build-Nummer (Issue #230): von mobile.yml übergeben (gleich wie Android), sonst BUILD_BASE plus Laufnummer (von mobile.yml, auch als workflow_call);
           # App Store Connect verlangt je Version eine höhere Nummer als die zuletzt hochgeladene
-          b="${{ inputs.build }}"; [ -z "$b" ] && b=${{ github.run_number }}
+          b="${{ inputs.build }}"; [ -z "$b" ] && b=$(( BUILD_BASE + ${{ github.run_number }} ))
           echo "build=$b" >> "$GITHUB_OUTPUT"; echo "::notice::Version $v, Build $b"
       - name: Zertifikat und Profil
         id: sign
