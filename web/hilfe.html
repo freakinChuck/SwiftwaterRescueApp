@@ -90,7 +90,7 @@ function show(){const h=decodeURIComponent(location.hash.slice(1)).replace(/^\//
   const n=KAP.findIndex(x=>x[0]===k),pv=KAP[n-1],nx=KAP[n+1];
   m.innerHTML=DOC[k].html+`<div class="hlnav"><span>${pv?`<a href="#${pv[0]}">← ${esc(pv[1])}</a>`:''}</span><span>${nx?`<a href="#${nx[0]}">${esc(nx[1])} →</a>`:''}</span></div>`;
   m.querySelectorAll('figure img').forEach(im=>{const f=()=>im.closest('figure').classList.toggle('p',im.naturalHeight>im.naturalWidth);im.complete?f():im.onload=f});
-  toc(k,a);document.getElementById('hlToc').classList.remove('open');document.title='Swiftwater Rescue – '+KAP[n][1];
+  toc(k,a);document.getElementById('hlToc').classList.remove('open');document.title='Swiftwater Rescue – '+(window.T?T(KAP[n][1]):KAP[n][1]);
   const t=a&&document.getElementById(k+'/'+a);if(!t){window.scrollTo(0,0);return}
   // Bilder davor haben vor dem Laden keine Höhe: zuerst springen, nach dem Laden nochmals (höchstens 3 s, nicht mehr nach eigenem Scrollen)
   t.scrollIntoView();const gen=++JUMP;

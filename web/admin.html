@@ -198,7 +198,7 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
     <div id="wrap" class="my"><main><section id="sMy"><h2>Meine Einsätze</h2><div class="mut">Wird geladen …</div></section></main></div>${adminFoot()}`;
     userMenuWire();footWire();
     if(adm)$('#bVw').onclick=e=>{e.preventDefault();location.hash='einsatzlog'};
-    document.title='Swiftwater Rescue – Meine Einsätze';return loadMy()}
+    document.title='Swiftwater Rescue – '+T('Meine Einsätze');return loadMy()}
   a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Verwaltung</h1><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine" title="Log und Replay deiner eigenen Einsätze, wie für Einsatzkräfte ohne Verwaltungsrechte">📋 Meine Einsätze</a>':''}<a class="btn" href="#kalender" title="Abwesenheiten, Einsatzzeiten, Einsätze und Planungen">📅 Kalender</a><button id="bHlp" title="Bedienungsanleitung zu diesem Bereich" aria-label="Anleitung">?</button>${userMenu()}</header>
     <div id="wrap"><nav id="nav" aria-label="Bereiche der Verwaltung"><select id="navSel" aria-label="Bereich wählen">${nav().map(([g,its])=>`<optgroup label="${esc(g)}">${its.map(([k,,l])=>`<option value="${k}">${esc(l)}</option>`).join('')}</optgroup>`).join('')}</select>
     <div class="navl">${navItems().length>8?'<input type="search" id="navQ" placeholder="Bereich suchen …" aria-label="Bereich der Verwaltung suchen" autocomplete="off">':''}${nav().map(([g,its])=>its.length===1?`<div class="ngw one" data-g="${esc(g)}">${navLink(its[0],g)}</div>`
@@ -260,7 +260,7 @@ function showNav(){if(!$('#nav'))return;if(location.hash==='#gewaesserdaten')his
   its.forEach(([,i])=>{$('#'+i).hidden=i!==id});dirtyWire($('#'+id)); // Hinweis «Ungespeicherte Änderungen» (Issue #95)
   document.querySelectorAll('#nav a').forEach(a=>{if(a.dataset.k===k)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   const g=(nav().find(([,its])=>its.some(x=>x[0]===k))||[])[0];document.querySelectorAll('#nav .ngw').forEach(w=>{const c=w.dataset.g===g;w.classList.toggle('cur',c);navOpen(w,c||navOGet().has(w.dataset.g),false)}); // von Hand geöffnete bleiben offen
-  $('#navSel').value=k;document.title='Swiftwater Rescue – Verwaltung – '+l;gnLoad().then(load)}
+  $('#navSel').value=k;document.title='Swiftwater Rescue – '+T('Verwaltung')+' – '+T(l);gnLoad().then(load)}
 // Farbpunkte der Einsatzgruppen beim Namen (Issue #105): nur aktive Gruppen mit «Farbe beim Namen» (Route groups/names), vor jedem Bereich frisch geladen
 let GN={groups:[],members:{}};
 const gnLoad=()=>api('groups/names').then(r=>{GN=r}).catch(()=>{});
@@ -457,7 +457,7 @@ function calView(a){CALV=true;MY=false;const adm=nav().length>0;
   a.innerHTML=`<header>${orgHd()}<h1>Swiftwater Rescue – Kalender</h1><span class="mut">${esc(me.name)}</span><a class="btn" href="./">Zur Einsatz-App</a>${me.my_runs!=='off'?'<a class="btn" href="#meine">📋 Meine Einsätze</a>':''}${adm?'<a class="btn" href="#" id="bVw">⚙ Verwaltung</a>':''}<button id="bHlp" title="Bedienungsanleitung zu diesem Bereich" aria-label="Anleitung">?</button>${userMenu()}</header>
     <div id="wrap" class="my"><main><section id="sCal"><h2>Kalender</h2><div class="mut">Wird geladen …</div></section></main></div>${adminFoot()}`;
   userMenuWire();footWire();if(adm)$('#bVw').onclick=e=>{e.preventDefault();location.hash=navItems()[0][0]};
-  document.title='Swiftwater Rescue – Kalender';const t=new Date();CAL.m=new Date(t.getFullYear(),t.getMonth(),1);CAL.sel=calDay(t);calLoad()}
+  document.title='Swiftwater Rescue – '+T('Kalender');const t=new Date();CAL.m=new Date(t.getFullYear(),t.getMonth(),1);CAL.sel=calDay(t);calLoad()}
 // Raster: Montag vor dem Monatsersten bis Sonntag nach dem Monatsende
 function calRange(){const m=CAL.m,s=calAdd(m,-((m.getDay()+6)%7)),e0=new Date(m.getFullYear(),m.getMonth()+1,0),e=calAdd(e0,7-((e0.getDay()+6)%7));return[s,e]}
 async function calLoad(){const el=$('#sCal');if(!el)return;const f=calF(),all=f.all&&can('avail')?1:0,[s,e]=calRange();

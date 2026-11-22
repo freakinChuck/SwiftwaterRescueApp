@@ -53,7 +53,7 @@ window.T=T;
 /* ---------- DOM ---------- */
 const SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,NOSCRIPT:1,CODE:1,PRE:1};
 const ATTR=['title','placeholder','aria-label','alt'];
-const done=new WeakMap(),adone=new WeakMap();
+let done=new WeakMap(),adone=new WeakMap();
 function skipEl(e){return SKIP[e.nodeName]||e.isContentEditable||e.getAttribute&&(e.getAttribute('translate')==='no'||e.classList&&e.classList.contains('notranslate'))}
 function inSkip(n){for(let e=n.parentNode;e&&e.nodeType===1;e=e.parentNode)if(skipEl(e))return true;return false}
 function txt(n){const v=n.data;if(done.get(n)===v)return;const r=tr(v);
@@ -81,7 +81,7 @@ if(L!=='de'){
   if(have!==VER||VER==='0')fetch('i18n/'+L+'.json?v='+VER,{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;
       const was=ready&&D.size;setDict(d);put(ck,JSON.stringify({v:VER,d}));
       if(!was||have!==VER){/* neu übersetzen: gemerkte Ergebnisse verwerfen */
-        const all=document.querySelectorAll('*');for(const e of all)adone.delete(e);walk(document.documentElement)}})
+        done=new WeakMap();adone=new WeakMap();walk(document.documentElement)}})
     .catch(()=>{});
 }
 
