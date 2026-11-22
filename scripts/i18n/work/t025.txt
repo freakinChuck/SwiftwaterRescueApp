@@ -1,0 +1,120 @@
+5160 ‖ Test connection ‖ Tester la connexion ‖ Testa la connessione
+5161 ‖ Usage ‖ Consommation ‖ Consumo
+5162 ‖ Combination ‖ Convoi ‖ Convoglio
+5163 ‖ Detect combination automatically (what travels together is loaded or hitched; separated when seen apart or a boat is on the water) ‖ Détecter le convoi automatiquement (ce qui se déplace ensemble est chargé ou attelé ; séparé s'ils sont vus séparément ou si un bateau est sur l'eau) ‖ Riconoscere il convoglio automaticamente (ciò che viaggia insieme è caricato o agganciato; separato se visti separati o se una barca è in acqua)
+5164 ‖ Combination of “{0}” ‖ Convoi de « {0} » ‖ Convoglio di «{0}»
+5165 ‖ Connected to “{0}”{1}. ‖ Connecté à « {0} »{1}. ‖ Collegato a «{0}»{1}.
+5166 ‖ Agreements with other organisations that run this app on their ‖ Accords avec d'autres organisations qui exploitent cette app sur leur ‖ Accordi con altre organizzazioni che gestiscono questa app sul loro
+5167 ‖ Detach link ‖ Dissocier ‖ Scollega
+5168 ‖ Loaded onto or hitched to ‖ Chargé sur ou attelé à ‖ Caricato su o agganciato a
+5169 ‖ History ‖ Historique ‖ Cronologia
+5170 ‖ Clear e-mail history? ‖ Vider l'historique des e-mails ? ‖ Svuotare la cronologia delle e-mail?
+5171 ‖ Clear history ‖ Vider l'historique ‖ Svuota la cronologia
+5172 ‖ Take over missing casualties ‖ Reprendre les victimes disparues ‖ Riprendi le vittime disperse
+5173 ‖ Move ‖ Déplacer ‖ Sposta
+5174 ‖ Encryption ‖ Chiffrement ‖ Cifratura
+5175 ‖ Moved. ‖ Déplacé. ‖ Spostato.
+5176 ‖ Remove version ‖ Retirer la version ‖ Rimuovi versione
+5177 ‖ Remove version {0} ‖ Retirer la version {0} ‖ Rimuovi versione {0}
+5178 ‖ Version {0} saved. ‖ Version {0} enregistrée. ‖ Versione {0} salvata.
+5179 ‖ Versions ‖ Versions ‖ Versioni
+5180 ‖ Attempts ‖ Essais ‖ Tentativi
+5181 ‖ Administration (without operation) ‖ Administration (sans intervention) ‖ Amministrazione (senza intervento)
+5182 ‖ Administration: the statistics go to the provider without names, free questions without operation data. ‖ Administration : la statistique est transmise au fournisseur sans noms, les questions libres sans données d'intervention. ‖ Amministrazione: la statistica va al fornitore senza nomi, le domande libere senza dati d'intervento.
+5183 ‖ Use and availability ‖ Utilisation et disponibilité ‖ Uso e disponibilità
+5184 ‖ Complete version, saved on {0} before anonymising{1} ‖ Version complète, sauvegardée le {0} avant l'anonymisation{1} ‖ Versione completa, salvata il {0} prima dell'anonimizzazione{1}
+5185 ‖ Require again from everyone? ‖ Exiger à nouveau de tous ? ‖ Richiedere di nuovo a tutti?
+5186 ‖ Received from the partner organisation ‖ Reçu de l'organisation partenaire ‖ Ricevuto dall'organizzazione partner
+5187 ‖ From – to … ‖ De – à … ‖ Da – a …
+5188 ‖ Preselected ‖ Présélectionné ‖ Preselezionato
+5189 ‖ Preselection at the start ‖ Présélection au démarrage ‖ Preselezione all'avvio
+5190 ‖ Prepared exercise ‖ Exercice préparé ‖ Esercitazione preparata
+5191 ‖ Prepared exercises, planned secondary operations and free events (operation types with “Planning allowed”). The registered lead starts them in the operations app (☰ → Plans) and releases the elements there. Only someone registered as exercise lead can start. They have the rights of the operation lead and are not alerted, but can also take part as a responder. Only released elements are visible to participants and count for the search area. The public link can be opened beforehand and shows a waiting page until the start. Secondary operations and free events additionally get an operation plan and optionally a reference to an earlier operation; secondary operations start without alarm. ‖ Exercices préparés, interventions secondaires planifiées et événements libres (types d'intervention avec « Planification permise »). La direction inscrite les démarre dans l'app d'intervention (☰ → Planifications) et y libère les éléments. Seule une personne inscrite comme direction d'exercice peut démarrer. Elle a les droits de la direction d'intervention et n'est pas alarmée, mais peut aussi participer comme intervenant. Seuls les éléments libérés sont visibles pour les participants et comptent pour la zone de recherche. Le lien public peut être ouvert avant et affiche une page d'attente jusqu'au démarrage. Les interventions secondaires et événements libres reçoivent en plus un plan d'intervention et facultativement une référence à une intervention antérieure ; les interventions secondaires démarrent sans alarme. ‖ Esercitazioni preparate, interventi secondari pianificati ed eventi liberi (tipi d'intervento con «Pianificazione consentita»). La direzione registrata li avvia nell'app d'intervento (☰ → Pianificazioni) e lì rilascia gli elementi. Può avviare solo chi è registrato come direzione dell'esercitazione. Ha i diritti della direzione dell'intervento e non viene allarmata, ma può anche partecipare come soccorritore. Solo gli elementi rilasciati sono visibili ai partecipanti e contano per l'area di ricerca. Il link pubblico si può aprire prima e mostra una pagina d'attesa fino all'avvio. Interventi secondari ed eventi liberi ricevono in più un piano d'intervento e facoltativamente un riferimento a un intervento precedente; gli interventi secondari si avviano senza allarme.
+5192 ‖ Organisation default ‖ Valeur par défaut de l'organisation ‖ Predefinito dell'organizzazione
+5193 ‖ Organisation default ({0}) ‖ Valeur par défaut de l'organisation ({0}) ‖ Predefinito dell'organizzazione ({0})
+5194 ‖ Organisation default for all operation types without their own sound (native app, alarm level “Critical” or exercise mode). Each type can set a different sound in the dialog, and each person can choose their own in the app profile per backend and operation type. The web app always plays its own sound. ‖ Valeur par défaut de l'organisation pour tous les types d'intervention sans son propre (app native, niveau d'alarme « Critique » ou mode exercice). Chaque type peut définir un autre son dans le dialogue, et chaque personne peut en choisir un propre dans le profil de l'app par backend et type d'intervention. L'app web joue toujours son propre son. ‖ Predefinito dell'organizzazione per tutti i tipi d'intervento senza suono proprio (app nativa, livello d'allarme «Critico» o modalità esercitazione). Ogni tipo può impostare un altro suono nel dialogo e ogni persona può sceglierne uno proprio nel profilo dell'app per backend e tipo d'intervento. La web app riproduce sempre il proprio suono.
+5195 ‖ Default for everyone with this type; without their own choice the organisation default applies (at the top of the list). Each person can choose a different sound in the app profile per backend and operation type. The web app always plays its own sound. ‖ Valeur par défaut pour tous avec ce type ; sans choix propre, la valeur par défaut de l'organisation s'applique (en haut de la liste). Chaque personne peut choisir un autre son dans le profil de l'app par backend et type d'intervention. L'app web joue toujours son propre son. ‖ Predefinito per tutti con questo tipo; senza scelta propria vale il predefinito dell'organizzazione (in cima all'elenco). Ogni persona può scegliere un altro suono nel profilo dell'app per backend e tipo d'intervento. La web app riproduce sempre il proprio suono.
+5196 ‖ Defaults inserted, not yet saved ‖ Valeurs par défaut insérées, pas encore enregistrées ‖ Predefiniti inseriti, non ancora salvati
+5197 ‖ Insert defaults ‖ Insérer les valeurs par défaut ‖ Inserisci i predefiniti
+5198 ‖ Defaults saved ‖ Valeurs par défaut enregistrées ‖ Predefiniti salvati
+5199 ‖ Defaults per object type ‖ Valeurs par défaut par type d'objet ‖ Predefiniti per tipo di oggetto
+5200 ‖ Save defaults ‖ Enregistrer les valeurs par défaut ‖ Salva i predefiniti
+5201 ‖ Restore the default list? ‖ Rétablir la liste par défaut ? ‖ Ripristinare l'elenco predefinito?
+5202 ‖ Default list. ‖ Liste par défaut. ‖ Elenco predefinito.
+5203 ‖ Suggested elements ‖ Éléments proposés ‖ Elementi proposti
+5204 ‖ Previous month ‖ Mois précédent ‖ Mese precedente
+5205 ‖ Template ‖ Modèle ‖ Modello
+5206 ‖ Edit template ‖ Modifier le modèle ‖ Modifica modello
+5207 ‖ Template inserted, please check the model and save. ‖ Modèle inséré, veuillez vérifier le modèle et enregistrer. ‖ Modello inserito, verifica il modello e salva.
+5208 ‖ Search template ‖ Rechercher un modèle ‖ Cerca modello
+5209 ‖ Templates for responders without an app account at a fixed location, e.g. safety and observation posts of other organisations. The operation lead records them during the operation via the “Responders” map button and chooses a template there. With a post role the search area ends at the location. ‖ Modèles pour des intervenants sans compte app à un emplacement fixe, p. ex. postes de sécurité et d'observation d'autres organisations. La direction d'intervention les saisit en intervention via le bouton de carte « Intervenants » et y choisit un modèle. Avec un rôle de poste, la zone de recherche s'arrête à l'emplacement. ‖ Modelli per soccorritori senza account app in un luogo fisso, p. es. posti di sicurezza e d'osservazione di altre organizzazioni. La direzione dell'intervento li registra durante l'intervento tramite il pulsante della mappa «Soccorritori» e lì sceglie un modello. Con un ruolo di posto l'area di ricerca termina al luogo.
+5210 ‖ Preview ‖ Aperçu ‖ Anteprima
+5211 ‖ Reject suggestion ‖ Refuser la proposition ‖ Rifiuta la proposta
+5212 ‖ AI assistant's suggestion for “{0}” ‖ Proposition de l'assistant IA pour « {0} » ‖ Proposta dell'assistente IA per «{0}»
+5213 ‖ Suggestion by {0} ‖ Proposition de {0} ‖ Proposta di {0}
+5214 ‖ May suggest ‖ Peuvent proposer ‖ Possono proporre
+5215 ‖ Suggestions ‖ Propositions ‖ Proposte
+5216 ‖ Responders' suggestions for the folders in which you are an editor: new entries, new versions and notes. Whoever made the suggestion is notified of the result. Rejected ones are deleted after 30 days. ‖ Propositions des intervenants pour les dossiers dont vous faites partie de la rédaction : nouvelles entrées, nouvelles versions et remarques. L'auteur de la proposition est notifié du résultat. Les propositions refusées sont supprimées après 30 jours. ‖ Proposte dei soccorritori per le cartelle di cui fai parte della redazione: nuove voci, nuove versioni e note. Chi ha proposto viene avvisato del risultato. Quelle rifiutate vengono eliminate dopo 30 giorni.
+5217 ‖ AI assistant's suggestions for the exercise ‖ Propositions de l'assistant IA pour l'exercice ‖ Proposte dell'assistente IA per l'esercitazione
+5218 ‖ Search suggestions ‖ Rechercher des propositions ‖ Cerca proposte
+5219 ‖ Suggestions – {0} ‖ Propositions – {0} ‖ Proposte – {0}
+5220 ‖ Advance warning (days before expiry) ‖ Préavis (jours avant l'échéance) ‖ Preavviso (giorni prima della scadenza)
+5221 ‖ Advance warning {0} days ‖ Préavis {0} jours ‖ Preavviso {0} giorni
+5222 ‖ Warnings and errors ‖ Avertissements et erreurs ‖ Avvisi ed errori
+5223 ‖ Waiting time per request ‖ Temps d'attente par requête ‖ Tempo d'attesa per richiesta
+5224 ‖ What a type can do is stated as a property of the type: whether it takes people, which types it takes or tows (with maximum) and whether it is a watercraft. A loaded vehicle does not take any people itself. ‖ Ce qu'un type peut faire figure comme propriété du type : s'il prend des personnes, quels types il prend ou tracte (avec maximum) et s'il est une embarcation. Un véhicule chargé ne prend lui-même pas de personnes. ‖ Ciò che un tipo può fare è indicato come proprietà del tipo: se accoglie persone, quali tipi accoglie o traina (con massimo) e se è un natante. Un veicolo caricato non accoglie a sua volta persone.
+5225 ‖ Watercraft ‖ Embarcation ‖ Natante
+5226 ‖ Watercraft (on the water it counts as unloaded) ‖ Embarcation (sur l'eau, elle est considérée comme déchargée) ‖ Natante (in acqua vale come scaricato)
+5227 ‖ Water rescue Aare Olten ‖ Sauvetage aquatique Aar Olten ‖ Soccorso acquatico Aar Olten
+5228 ‖ Web app, server and app have a common version (MAJOR.MINOR.PATCH, 0.x before going live). A release is created on GitHub with the “Release” workflow (tag vX.Y.Z); in between, test and DEV show the distance to the last release and the commit, e.g. 0.1.0+12.abc1234. ‖ L'app web, le serveur et l'app ont une version commune (MAJOR.MINOR.PATCH, 0.x avant la mise en production). Une release se crée sur GitHub avec le workflow « Release » (tag vX.Y.Z) ; entre-temps, test et DEV indiquent l'écart avec la dernière release et le commit, p. ex. 0.1.0+12.abc1234. ‖ Web app, server e app hanno una versione comune (MAJOR.MINOR.PATCH, 0.x prima della messa in produzione). Una release nasce su GitHub con il workflow «Release» (tag vX.Y.Z); nel frattempo test e DEV mostrano la distanza dall'ultima release e il commit, p. es. 0.1.0+12.abc1234.
+5229 ‖ =
+5230 ‖ Webhook instead of mailbox: the raw e-mail (RFC 822, e.g. a forwarding from the mail server to a script or an e-mail service) via POST to this address. The rules apply equally; the mailbox can then remain switched off. ‖ Webhook au lieu de la boîte aux lettres : l'e-mail brut (RFC 822, p. ex. une redirection du serveur de messagerie vers un script ou un service e-mail) par POST à cette adresse. Les règles s'appliquent de même ; la boîte aux lettres peut alors rester désactivée. ‖ Webhook invece della casella di posta: l'e-mail grezza (RFC 822, p. es. un inoltro del server di posta a uno script o a un servizio e-mail) tramite POST a questo indirizzo. Le regole valgono allo stesso modo; la casella può allora restare disattivata.
+5231 ‖ Change pending ‖ Changement en attente ‖ Cambio in sospeso
+5232 ‖ Route ‖ Parcours ‖ Percorso
+5233 ‖ Route (recording) ‖ Parcours (enregistrement) ‖ Percorso (registrazione)
+5234 ‖ Route recording (km) ‖ Parcours enregistré (km) ‖ Percorso registrato (km)
+5235 ‖ More ‖ Autres ‖ Altri
+5236 ‖ Further details (equipment, safety, connections …) ‖ Autres informations (matériel, sécurité, liaisons …) ‖ Ulteriori informazioni (materiale, sicurezza, collegamenti …)
+5237 ‖ Further extensions (separated by commas, download only; extensions of the file types above count there) ‖ Autres extensions (séparées par des virgules, téléchargement seulement ; les extensions des types de fichiers ci-dessus y comptent) ‖ Ulteriori estensioni (separate da virgole, solo download; le estensioni dei tipi di file sopra contano lì)
+5238 ‖ Further UUIDs (one per line) ‖ Autres UUID (un par ligne) ‖ Altri UUID (uno per riga)
+5239 ‖ Which sections the “Documents” window of the operations app shows and in which order, per operation type and without operation. “Folders” shows the whole repository. ‖ Quelles sections la fenêtre « Documents » de l'app d'intervention affiche et dans quel ordre, par type d'intervention et sans intervention. « Dossiers » affiche tout le classement. ‖ Quali sezioni mostra la finestra «Documenti» dell'app d'intervento e in quale ordine, per tipo d'intervento e senza intervento. «Cartelle» mostra l'intero archivio.
+5240 ‖ Which files may be uploaded. The server checks extension and content (signature); Office files with macros, programs and web pages are never allowed. ‖ Quels fichiers peuvent être téléversés. Le serveur vérifie l'extension et le contenu (signature) ; les fichiers Office avec macros, programmes et pages web ne sont jamais autorisés. ‖ Quali file si possono caricare. Il server verifica estensione e contenuto (firma); file Office con macro, programmi e pagine web non sono mai ammessi.
+5241 ‖ Which aircraft{0} ‖ Quels aéronefs{0} ‖ Quali aeromobili{0}
+5242 ‖ Who ‖ Qui ‖ Chi
+5243 ‖ Whoever took part in an operation (accepted, even if they left later) sees the buttons chosen below under “My operations” after the end of the operation. {0} ‖ Qui a participé à une intervention (accepté, même s'il est parti plus tard) voit après la fin de l'intervention, sous « Mes interventions », les boutons choisis ci-dessous. {0} ‖ Chi ha partecipato a un intervento (accettato, anche se uscito più tardi) vede dopo la fine dell'intervento, sotto «I miei interventi», i pulsanti scelti sotto. {0}
+5244 ‖ Whoever knows the key can deliver e-mails via the webhook (the rules still apply). A new key invalidates both addresses. ‖ Qui connaît la clé peut livrer des e-mails via le webhook (les règles s'appliquent quand même). Une nouvelle clé rend les deux adresses invalides. ‖ Chi conosce la chiave può consegnare e-mail tramite il webhook (le regole valgono comunque). Una nuova chiave rende non validi entrambi gli indirizzi.
+5245 ‖ Who has a training skill as mandatory ‖ Qui a une compétence de formation comme obligation ‖ Chi ha una competenza di formazione come obbligo
+5246 ‖ Who hears a channel and who speaks in it (whoever may speak also hears it). A channel “exercises only” exists only for operation types with prepared exercises. Which channels an operation has is determined by the operation type; the operation lead can adjust them during the operation. ‖ Qui entend un canal et qui y parle (qui peut parler l'entend aussi). Un canal « exercices seulement » n'existe que pour les types d'intervention avec exercices préparés. Les canaux d'une intervention sont définis par le type d'intervention ; la direction d'intervention peut les adapter en intervention. ‖ Chi ascolta un canale e chi vi parla (chi può parlare lo ascolta anche). Un canale «solo esercitazioni» esiste solo per tipi d'intervento con esercitazioni preparate. Quali canali ha un intervento lo stabilisce il tipo d'intervento; la direzione dell'intervento può adattarli durante l'intervento.
+5247 ‖ Who hears the channel? ‖ Qui entend le canal ? ‖ Chi ascolta il canale?
+5248 ‖ Who must confirm? ‖ Qui doit confirmer ? ‖ Chi deve confermare?
+5249 ‖ Whoever has never logged in can be deleted; all others are deactivated: they can no longer log in, their operation data are kept.{0} ‖ Qui ne s'est jamais connecté peut être supprimé ; tous les autres sont désactivés : ils ne peuvent plus se connecter, leurs données d'intervention sont conservées.{0} ‖ Chi non ha mai effettuato l'accesso può essere eliminato; tutti gli altri vengono disattivati: non possono più accedere, i loro dati d'intervento restano.{0}
+5250 ‖ Who sees the vehicles without an operation{0} ‖ Qui voit les véhicules sans intervention{0} ‖ Chi vede i veicoli senza intervento{0}
+5251 ‖ Who sees the vehicles{0} ‖ Qui voit les véhicules{0} ‖ Chi vede i veicoli{0}
+5252 ‖ Who sees this folder? ‖ Qui voit ce dossier ? ‖ Chi vede questa cartella?
+5253 ‖ Who, e.g. boat 1 ‖ Qui, p. ex. bateau 1 ‖ Chi, p. es. barca 1
+5254 ‖ Significant change (requires a new read confirmation, if so configured) ‖ Modification importante (exige une nouvelle confirmation de lecture, si configuré ainsi) ‖ Modifica rilevante (richiede una nuova conferma di lettura, se così impostato)
+5255 ‖ Significant change: require read confirmation again (if so configured)? ‖ Modification importante : exiger à nouveau la confirmation de lecture (si configuré ainsi) ? ‖ Modifica rilevante: richiedere di nuovo la conferma di lettura (se così impostato)?
+5256 ‖ As the type: {0} ‖ Comme le type : {0} ‖ Come il tipo: {0}
+5257 ‖ Prepared again, all elements not released ‖ Préparé à nouveau, tous les éléments non libérés ‖ Preparato di nuovo, tutti gli elementi non rilasciati
+5258 ‖ Restore ‖ Restaurer ‖ Ripristina
+5259 ‖ Querying … ‖ Interrogation … ‖ Interrogazione …
+5260 ‖ Retrieving … ‖ Récupération … ‖ Recupero …
+5261 ‖ Testing … ‖ Test … ‖ Test in corso …
+5262 ‖ Uploading ({0} of {1}) … {2} % ‖ Téléversement ({0} sur {1}) … {2} % ‖ Caricamento ({0} di {1}) … {2} %
+5263 ‖ Effect ‖ Effet ‖ Effetto
+5264 ‖ Effect: ‖ Effet : ‖ Effetto:
+5265 ‖ During an operation with a search area, the fixed locations in the operations app are shown separately as “In the operation area” and “Outside the operation area”. A location counts as in the operation area up to this distance from the search area along the water (0 = only in the search area itself). Prioritised categories are always at the top. ‖ Pendant une intervention avec zone de recherche, les sites fixes de l'app d'intervention sont séparés en « Dans la zone d'intervention » et « Hors de la zone d'intervention ». Un site compte comme dans la zone d'intervention jusqu'à cette distance de la zone de recherche le long du cours d'eau (0 = seulement dans la zone de recherche). Les catégories prioritaires sont toujours en haut. ‖ Durante un intervento con area di ricerca i luoghi fissi nell'app d'intervento sono separati in «Nell'area d'intervento» e «Fuori dall'area d'intervento». Un luogo conta come nell'area d'intervento fino a questa distanza dall'area di ricerca lungo il corso d'acqua (0 = solo nell'area di ricerca stessa). Le categorie prioritarie sono sempre in cima.
+5266 ‖ Create ZIP ‖ Créer le ZIP ‖ Crea ZIP
+5267 ‖ Creating ZIP … ‖ Création du ZIP … ‖ Creazione dello ZIP …
+5268 ‖ Shows helicopters (e.g. Rega) live on the operation map, from open ADS-B data (transponder signals collected by volunteers). The server queries the data and shares them with all devices. Only what flies in the operation's relevance zone appears. ‖ Affiche les hélicoptères (p. ex. de la Rega) en direct sur la carte de l'intervention, d'après des données ADS-B ouvertes (signaux de transpondeur collectés par des bénévoles). Le serveur interroge les données et les partage avec tous les appareils. Seul ce qui vole dans la zone de pertinence de l'intervention apparaît. ‖ Mostra gli elicotteri (p. es. della Rega) in diretta sulla mappa dell'intervento, da dati ADS-B aperti (segnali dei transponder raccolti da volontari). Il server interroga i dati e li condivide con tutti i dispositivi. Compare solo ciò che vola nella zona di rilevanza dell'intervento.
+5269 ‖ Rows ‖ Lignes ‖ Righe
+5270 ‖ Time ‖ Heure ‖ Ora
+5271 ‖ Time in the operation ‖ Moment dans l'intervention ‖ Momento nell'intervento
+5272 ‖ Period ‖ Période ‖ Periodo
+5273 ‖ To ‖ Vers ‖ A
+5274 ‖ To the fixed locations ‖ Vers les sites fixes ‖ Ai luoghi fissi
+5275 ‖ The server first asks the interface; its values take precedence. The website adds what the interface lacks (danger level, classification, further stations) and steps in completely if it does not respond. If both are off, there are no measurements. ‖ Le serveur interroge d'abord l'interface, ses valeurs sont prioritaires. Le site web complète ce qui manque à l'interface (degré de danger, classification, autres stations) et prend entièrement le relais si elle ne répond pas. Si les deux sont désactivés, il n'y a pas de mesures. ‖ Il server interroga prima l'interfaccia, i suoi valori hanno la precedenza. Il sito web integra ciò che manca all'interfaccia (grado di pericolo, classificazione, altre stazioni) e subentra del tutto se non risponde. Se entrambi sono disattivati, non ci sono valori misurati.
+5276 ‖ First choose a folder on the left ‖ Choisissez d'abord un dossier à gauche ‖ Scegli prima una cartella a sinistra
+5277 ‖ Credentials or token, value “(removed)” ‖ Identifiants ou jeton, valeur « (retiré) » ‖ Credenziali o token, valore «(rimosso)»
+5278 ‖ Access to Overpass ‖ Accès à Overpass ‖ Accesso a Overpass
+5279 ‖ Last ‖ Dernière fois ‖ Ultima volta

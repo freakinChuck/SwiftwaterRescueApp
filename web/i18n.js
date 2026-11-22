@@ -38,8 +38,12 @@ function tr(s){if(!s||L==='de'||!ready)return null;
   if(/\n\s*\n/.test(s)){let any=false;const o=s.split(/\n\s*\n/).map(p=>{const r=tr(p);if(r!=null){any=true;return r}return norm(p)});return any?o.join('\n\n'):null}
   const k=norm(s);if(k.length<2||!/[A-Za-zÄÖÜäöü]/.test(k))return null;
   if(C.has(k))return C.get(k);let r=D.has(k)?D.get(k):null;
-  if(r===null){for(const t of TP){if(k.length<t.n||!k.includes(t.long))continue;const m=t.re.exec(k);if(!m)continue;
-      const cap={};t.idx.forEach((n,i)=>{cap[n]=m[i+1]});r=t.out.replace(/\{(\d+)\}/g,(x,n)=>n in cap?sub(cap[n]):x);break}}
+  /* Vorlagen: unter gleich langen Treffern die, deren Teile bekannt sind (Wörterbuch) oder keine Buchstaben enthalten («{0} starten» vor «Einsatz {0}») */
+  if(r===null){let best=null,bs=-1,bn=-1;for(const t of TP){if(best&&t.n<bn)break;if(k.length<t.n||!k.includes(t.long))continue;const m=t.re.exec(k);if(!m)continue;
+      const cap={};let sc=0;t.idx.forEach((n,i)=>{cap[n]=m[i+1];const v=norm(m[i+1]);if(D.has(v)||!/[A-Za-zÄÖÜäöü]{2}/.test(v))sc++});
+      if(sc>bs){best=[t,cap];bs=sc;bn=t.n}}
+    if(best){const [t,cap]=best;r=t.out.replace(/\{(\d+)\}/g,(x,n)=>n in cap?sub(cap[n]):x)}}
+  if(r===null&&/[:：]$/.test(k)&&k.length>2){const b=tr(k.slice(0,-1));if(b!=null)r=b+(L==='fr'?' :':':')} // Beschriftung mit Doppelpunkt
   if(C.size>20000)C.clear();C.set(k,r);return r}
 /* T: für Texte ausserhalb des DOM (Benachrichtigungen, Downloads): Absätze einzeln */
 function T(s,...a){let x=String(s??'');if(L!=='de'&&ready){x=x.split(/(\n\s*\n)/).map((p,i)=>i%2?p:(()=>{const lead=p.match(/^\s*/)[0],tail=p.match(/\s*$/)[0];const r=tr(p);return r==null?p:lead+r+tail})()).join('')}

@@ -1,0 +1,120 @@
+5280 ‖ Last edited {0} ‖ Modifié en dernier {0} ‖ Modificato l'ultima volta {0}
+5281 ‖ Last successful ‖ Dernier succès ‖ Ultimo successo
+5282 ‖ Last failed ‖ Dernier échec ‖ Ultimo fallimento
+5283 ‖ Last seen ‖ Vu pour la dernière fois ‖ Visto l'ultima volta
+5284 ‖ Last changed {0}. ‖ Modifié en dernier {0}. ‖ Modificato l'ultima volta {0}.
+5285 ‖ Choose “Save” to take over. ‖ Choisissez « Enregistrer » pour reprendre. ‖ Scegli «Salva» per riprendere.
+5286 ‖ Back to the plans ‖ Retour aux planifications ‖ Torna alle pianificazioni
+5287 ‖ Reset ‖ Réinitialiser ‖ Reimposta
+5288 ‖ Combine: {0} objects as one fixed location ‖ Regrouper : {0} objets en un site fixe ‖ Raggruppa: {0} oggetti come un luogo fisso
+5289 ‖ Summary of the operation log by the AI assistant ‖ Résumé du journal d'intervention par l'assistant IA ‖ Riepilogo del registro dell'intervento da parte dell'assistente IA
+5290 ‖ Summary – {0} ‖ Résumé – {0} ‖ Riepilogo – {0}
+5291 ‖ Combined from {0} ‖ Regroupé à partir de {0} ‖ Raggruppato da {0}
+5292 ‖ Taken over combined ‖ Repris regroupé ‖ Ripreso raggruppato
+5293 ‖ Counts in the counter on the “Responders” map button ‖ Compte dans le compteur du bouton de carte « Intervenants » ‖ Conta nel contatore del pulsante della mappa «Soccorritori»
+5294 ‖ aar_gesichert/ After Action Reviews saved before anonymising ‖ aar_gesichert/ After Action Reviews sauvegardées avant l'anonymisation ‖ aar_gesichert/ After Action Review salvati prima dell'anonimizzazione
+5295 ‖ from {0} ‖ dès {0} ‖ da {0}
+5296 ‖ =
+5297 ‖ all logged-in users ‖ tous les connectés ‖ tutti gli utenti connessi
+5298 ‖ all response groups ‖ tous les groupes d'intervention ‖ tutti i gruppi d'intervento
+5299 ‖ all operations ‖ toutes les interventions ‖ tutti gli interventi
+5300 ‖ all people ‖ toutes les personnes ‖ tutte le persone
+5301 ‖ all active ‖ tous les actifs ‖ tutti gli attivi
+5302 ‖ all active response groups ‖ tous les groupes d'intervention actifs ‖ tutti i gruppi d'intervento attivi
+5303 ‖ everyone who sees the folder ‖ tous ceux qui voient le dossier ‖ tutti coloro che vedono la cartella
+5304 ‖ everyone who sees it ‖ tous ceux qui le voient ‖ tutti coloro che lo vedono
+5305 ‖ all readers ‖ tous les lecteurs ‖ tutti i lettori
+5306 ‖ of all people ‖ de toutes les personnes ‖ di tutte le persone
+5307 ‖ also (deadline from joining) ‖ aussi (délai dès l'arrivée) ‖ anche (termine dall'ingresso)
+5308 ‖ to the top level ‖ au niveau supérieur ‖ al livello superiore
+5309 ‖ automatically {0} min after the start ‖ automatiquement {0} min après le début ‖ automaticamente {0} min dopo l'avvio
+5310 ‖ answered on {0}, can be changed ‖ répondu le {0}, modifiable ‖ risposto il {0}, modificabile
+5311 ‖ limits search area ‖ limite la zone de recherche ‖ limita l'area di ricerca
+5312 ‖ on release ‖ à la libération ‖ al rilascio
+5313 ‖ at “{0}” ‖ chez « {0} » ‖ presso «{0}»
+5314 ‖ choose when recording ‖ choisir lors de la saisie ‖ scegli alla registrazione
+5315 ‖ any number ‖ autant que souhaité ‖ quanti si vuole
+5316 ‖ certain response groups or user roles ‖ certains groupes d'intervention ou rôles d'utilisateur ‖ determinati gruppi d'intervento o ruoli utente
+5317 ‖ confirmed ‖ confirmé ‖ confermato
+5318 ‖ run. Each side registers the other with address and the same key and decides itself what the other may do: which of its own response groups it may call out and which of its own operation types applies to the other's operation types. If an organisation calls out groups of the other, a separate linked operation is created there with the settings and users of that installation. Shared are the situation on the map, the casualties, a joint message channel and a joint live conference; if the initiating organisation ends the operation, the linked ones end too. The servers talk directly to each other (signed, without user accounts of the other side). ‖ exploitent. Chaque côté inscrit l'autre avec l'adresse et la même clé et décide lui-même ce que l'autre peut faire : quels groupes d'intervention propres il peut mobiliser et quel type d'intervention propre s'applique à ses types d'intervention. Si une organisation mobilise des groupes de l'autre, une intervention propre et liée est créée là-bas avec les paramètres et utilisateurs de l'installation locale. Sont communs la situation sur la carte, les victimes, un canal de messages commun et une conférence en direct commune ; si l'organisation déclenchante termine l'intervention, les interventions liées prennent fin aussi. Les serveurs communiquent directement (signé, sans comptes d'utilisateur de l'autre côté). ‖ gestiscono. Ogni parte registra l'altra con indirizzo e la stessa chiave e decide da sé cosa può fare l'altra: quali propri gruppi d'intervento può convocare e quale proprio tipo d'intervento vale per i suoi tipi d'intervento. Se un'organizzazione convoca gruppi dell'altra, lì nasce un intervento proprio e collegato con le impostazioni e gli utenti di quell'installazione. Sono comuni la situazione sulla mappa, le vittime, un canale di messaggi comune e una conferenza in diretta comune; se l'organizzazione promotrice termina l'intervento, terminano anche quelli collegati. I server comunicano direttamente (firmato, senza account utente dell'altra parte).
+5319 ‖ faded = released · dashed = sighting of the casualty ‖ pâle = libéré · en tirets = repérage de la victime ‖ sbiadito = rilasciato · tratteggiato = avvistamento della vittima
+5320 ‖ needs its own media server (LiveKit) because the hosting does not allow real-time connections; this server only issues the access. Switch on and off per operation type under “Functions” (function “Radio”). ‖ nécessite un propre serveur média (LiveKit), car l'hébergement n'autorise pas de connexions en temps réel ; ce serveur ne délivre que les accès. Activer et désactiver par type d'intervention sous « Fonctions » (fonction « Radio »). ‖ necessita di un proprio server multimediale (LiveKit), perché l'hosting non consente connessioni in tempo reale; questo server rilascia solo gli accessi. Attiva e disattiva per tipo d'intervento in «Funzioni» (funzione «Radio»).
+5321 ‖ or under ‖ ou sous ‖ o in
+5322 ‖ approx. {0} {1} of ‖ env. {0} {1} de ‖ ca. {0} {1} di
+5323 ‖ =
+5324 ‖ may be saved offline ‖ peut être enregistré hors ligne ‖ può essere salvato offline
+5325 ‖ =
+5326 ‖ =
+5327 ‖ your operations ‖ vos interventions ‖ i tuoi interventi
+5328 ‖ the sighted casualty has not been created ‖ la victime aperçue n'est pas créée ‖ la vittima avvistata non è creata
+5329 ‖ of the exercise “{0}” ‖ de l'exercice « {0} » ‖ dell'esercitazione «{0}»
+5330 ‖ the corresponding external responder has not been created ‖ l'intervenant externe correspondant n'est pas créé ‖ il soccorritore esterno corrispondente non è creato
+5331 ‖ =
+5332 ‖ =
+5333 ‖ =
+5334 ‖ =
+5335 ‖ =
+5336 ‖ =
+5337 ‖ durchsagen/ voice recordings per operation ‖ durchsagen/ enregistrements vocaux par intervention ‖ durchsagen/ registrazioni vocali per intervento
+5338 ‖ own installation ‖ propre installation ‖ propria installazione
+5339 ‖ one query for all devices together ‖ une requête pour tous les appareils ensemble ‖ una richiesta per tutti i dispositivi insieme
+5340 ‖ registered (identifier {0}) ‖ enregistré (identifiant {0}) ‖ registrato (identificativo {0})
+5341 ‖ final ‖ définitif ‖ definitivo
+5342 ‖ removed {0} ‖ retiré {0} ‖ rimosso {0}
+5343 ‖ appears at the end of the privacy statement ‖ figure à la fin de la déclaration de protection des données ‖ compare alla fine dell'informativa sulla protezione dei dati
+5344 ‖ appears below the details in the legal notice ‖ figure sous les informations dans les mentions légales ‖ compare sotto i dati nelle note legali
+5345 ‖ is missing in the webroot. Create and upload with the scripts in ‖ manque dans le webroot. Créer et téléverser avec les scripts dans ‖ manca nella webroot. Creare e caricare con gli script in
+5346 ‖ fixed role ‖ rôle fixe ‖ ruolo fisso
+5347 ‖ share (table as for PostGIS) and have the OSM way as ID. The API key needs the role ‖ partager (table comme pour PostGIS) et avoir le tronçon OSM comme ID. La clé API a besoin du rôle ‖ condividere (tabella come per PostGIS) e avere il tratto OSM come ID. La chiave API necessita del ruolo
+5348 ‖ save offline automatically for all readers ‖ enregistrer automatiquement hors ligne pour tous les lecteurs ‖ salvare automaticamente offline per tutti i lettori
+5349 ‖ visible to all permitted groups ‖ visible pour tous les groupes admis ‖ visibile a tutti i gruppi ammessi
+5350 ‖ for everyone it applies to ‖ pour tous ceux pour qui elle s'applique ‖ per tutti coloro per cui vale
+5351 ‖ for the exercise lead ‖ pour la direction d'exercice ‖ per la direzione dell'esercitazione
+5352 ‖ intended; the operators' terms apply. ‖ prévus ; les conditions des exploitants s'appliquent. ‖ pensati; valgono le condizioni dei gestori.
+5353 ‖ deleted ‖ supprimé ‖ eliminato
+5354 ‖ rescued {0} ‖ sauvée {0} ‖ salvata {0}
+5355 ‖ saved reviews ‖ reviews sauvegardées ‖ review salvati
+5356 ‖ saved, leave empty to keep ‖ enregistré, laisser vide pour conserver ‖ salvato, lascia vuoto per mantenere
+5357 ‖ changed ‖ modifié ‖ modificato
+5358 ‖ entered by the exercise lead ‖ indiqué par la direction d'exercice ‖ indicato dalla direzione dell'esercitazione
+5359 ‖ has not yet mapped any operation type from here ‖ n'a pas encore attribué de type d'intervention d'ici ‖ non ha ancora assegnato alcun tipo d'intervento da qui
+5360 ‖ at most (empty = any) ‖ au plus (vide = illimité) ‖ al massimo (vuoto = qualsiasi)
+5361 ‖ at most {0} ‖ au plus {0} ‖ al massimo {0}
+5362 ‖ higher-flying ones count as transit (barometric altitude) ‖ ceux volant plus haut comptent comme transit (altitude barométrique) ‖ quelli più alti valgono come transito (altitudine barometrica)
+5363 ‖ in the ZIP ‖ dans le ZIP ‖ nello ZIP
+5364 ‖ in the last 24 hours ‖ dans les dernières 24 heures ‖ nelle ultime 24 ore
+5365 ‖ in the operations app ‖ dans l'app d'intervention ‖ nell'app d'intervento
+5366 ‖ in no response group ‖ dans aucun groupe d'intervention ‖ in nessun gruppo d'intervento
+5367 ‖ yes, anonymous ‖ oui, anonyme ‖ sì, anonimo
+5368 ‖ yes, with names ‖ oui, avec noms ‖ sì, con nomi
+5369 ‖ per link ‖ par lien ‖ per link
+5370 ‖ no key saved ‖ aucune clé enregistrée ‖ nessuna chiave salvata
+5371 ‖ no password saved ‖ aucun mot de passe enregistré ‖ nessuna password salvata
+5372 ‖ no key saved ‖ aucune clé enregistrée ‖ nessuna chiave salvata
+5373 ‖ no secret saved ‖ aucun secret enregistré ‖ nessun secret salvato
+5374 ‖ no details ‖ aucune indication ‖ nessuna indicazione
+5375 ‖ no recording ‖ pas d'enregistrement ‖ nessuna registrazione
+5376 ‖ no response group ‖ aucun groupe d'intervention ‖ nessun gruppo d'intervento
+5377 ‖ no group ‖ aucun groupe ‖ nessun gruppo
+5378 ‖ no messages ‖ aucun message ‖ nessun messaggio
+5379 ‖ no rights ‖ aucun droit ‖ nessun diritto
+5380 ‖ no mapping: the partner cannot trigger anything here ‖ aucune correspondance : le partenaire ne peut rien déclencher ici ‖ nessuna corrispondenza: il partner non può avviare nulla qui
+5381 ‖ no response group that can be called out ‖ aucun groupe d'intervention mobilisable ‖ nessun gruppo d'intervento convocabile
+5382 ‖ none set up ‖ aucun configuré ‖ nessuno configurato
+5383 ‖ none recorded ‖ aucun saisi ‖ nessuno registrato
+5384 ‖ critical with exercise mode ‖ critique avec mode exercice ‖ critico con modalità esercitazione
+5385 ‖ empty = like contact ‖ vide = comme le contact ‖ vuoto = come il contatto
+5386 ‖ empty: the lead enters it ‖ vide : la direction l'indique ‖ vuoto: lo indica la direzione
+5387 ‖ empty: by hand ‖ vide : manuellement ‖ vuoto: a mano
+5388 ‖ last report {0} ago ‖ dernier signalement il y a {0} ‖ ultima segnalazione {0} fa
+5389 ‖ =
+5390 ‖ shareable with external parties (the operation lead releases individually, also applies to subfolders) ‖ partageable avec les externes (la direction d'intervention libère individuellement, vaut aussi pour les sous-dossiers) ‖ condivisibile con esterni (la direzione dell'intervento rilascia singolarmente, vale anche per le sottocartelle)
+5391 ‖ with you ‖ avec vous ‖ con te
+5392 ‖ to “{0}” ‖ vers « {0} » ‖ in «{0}»
+5393 ‖ new: {0} ‖ nouveau : {0} ‖ nuovo: {0}
+5394 ‖ new casualty “{0}” ‖ nouvelle victime « {0} » ‖ nuova vittima «{0}»
+5395 ‖ not recorded ‖ non enregistré ‖ non registrato
+5396 ‖ not in the exercise schedule ‖ pas dans le programme des exercices ‖ non nel programma delle esercitazioni
+5397 ‖ no longer present ‖ n'existe plus ‖ non più presente
+5398 ‖ not visible ‖ pas visible ‖ non visibile
+5399 ‖ not required ‖ pas exigé ‖ non richiesto

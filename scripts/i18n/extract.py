@@ -306,8 +306,17 @@ def php_strings(src):
     return res
 
 
+def sprintf_ph(t):
+    # sprintf-Muster (%s, %d, %.5F …) als Platzhalter, damit die fertigen Log-Texte als Vorlage erkannt werden
+    k = [0]
+    def r(m):
+        k[0] += 1
+        return ph(80 + k[0])
+    return re.sub(r'%(?:\d+\$)?[-+ 0]*\d*(?:\.\d+)?[sdfFu]', r, t) if '%' in t else t
+
+
 def from_php(src):
-    lits = php_strings(src)
+    lits = [(a, b, sprintf_ph(t)) for a, b, t in php_strings(src)]
     texts = merge_concat(src, lits, '.', PSIMPLE)
     res = []
     for t in texts:

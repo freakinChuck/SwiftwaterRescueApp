@@ -111,22 +111,42 @@ class I18n {
     if (_c.containsKey(k)) return _c[k];
     String? r = _ex[k];
     if (r == null) {
+      // wie i18n.js: unter gleich langen Treffern die, deren Teile bekannt sind oder keine Buchstaben enthalten
+      _Tp? best;
+      Map<int, String>? bcap;
+      var bs = -1, bn = -1;
       for (final t in _tp) {
+        if (best != null && t.n < bn) break;
         if (k.length < t.n || !k.contains(t.long)) continue;
         final mm = t.re.firstMatch(k);
         if (mm == null) continue;
         final cap = <int, String>{};
+        var sc = 0;
         for (var i = 0; i < t.idx.length; i++) {
-          cap[t.idx[i]] = mm.group(i + 1)!;
+          final v = mm.group(i + 1)!;
+          cap[t.idx[i]] = v;
+          if (_ex.containsKey(_norm(v)) || !RegExp(r'[A-Za-zÄÖÜäöü]{2}').hasMatch(v)) sc++;
         }
+        if (sc > bs) {
+          best = t;
+          bcap = cap;
+          bs = sc;
+          bn = t.n;
+        }
+      }
+      if (best != null) {
+        final t = best, cap = bcap!;
         r = t.out.replaceAllMapped(RegExp(r'\{(\d+)\}'), (x) {
           final v = cap[int.parse(x.group(1)!)];
           if (v == null) return x.group(0)!;
           final t = _ex[_norm(v)];
-          return t == null ? v : '${RegExp(r'^\s*').firstMatch(v)!.group(0)}$t${RegExp(r'\s*\$').firstMatch(v)!.group(0)}';
+          return t == null ? v : '${RegExp(r'^\s*').firstMatch(v)!.group(0)}$t${RegExp(r'\s*$').firstMatch(v)!.group(0)}';
         });
-        break;
       }
+    }
+    if (r == null && k.endsWith(':') && k.length > 2) {
+      final b = _tr(k.substring(0, k.length - 1));
+      if (b != null) r = b + (lang == 'fr' ? ' :' : ':');
     }
     if (_c.length > 20000) _c.clear();
     _c[k] = r;

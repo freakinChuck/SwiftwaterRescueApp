@@ -1,0 +1,120 @@
+4800 ‖ New key ‖ Nouvelle clé ‖ Nuova chiave
+4801 ‖ New key generated ‖ Nouvelle clé générée ‖ Nuova chiave generata
+4802 ‖ New location ‖ Nouveau site ‖ Nuovo luogo
+4803 ‖ New fixed location ‖ Nouveau site fixe ‖ Nuovo luogo fisso
+4804 ‖ New element ‖ Nouvel élément ‖ Nuovo elemento
+4805 ‖ New vehicle ‖ Nouveau véhicule ‖ Nuovo veicolo
+4806 ‖ New field ‖ Nouveau champ ‖ Nuovo campo
+4807 ‖ Generate new password ‖ Générer un nouveau mot de passe ‖ Genera nuova password
+4808 ‖ New start password ‖ Nouveau mot de passe initial ‖ Nuova password iniziale
+4809 ‖ People not called out from the response groups that can be called out see the operation and can take part (everyone else only if the operation lead allows it) ‖ Les non-mobilisés des groupes mobilisables voient l'intervention et peuvent participer (tous les autres seulement si la direction d'intervention le permet) ‖ I non convocati dei gruppi convocabili vedono l'intervento e possono partecipare (tutti gli altri solo se la direzione dell'intervento lo consente)
+4810 ‖ Not included ‖ Non inclus ‖ Non incluso
+4811 ‖ Not included: operations whose participations were anonymised and detached from the account (stage “Detach participations from the account”) are no longer assigned to this person. Entries in the application log are deleted after {0} days. Created on {1} by {2}. ‖ Non inclus : les interventions dont les participations ont été anonymisées et détachées du compte (étape « Détacher les participations du compte ») ne sont plus attribuées à cette personne. Les entrées du journal de l'application sont supprimées après {0} jours. Créé le {1} par {2}. ‖ Non incluso: gli interventi le cui partecipazioni sono state anonimizzate e scollegate dall'account (tappa «Scollega partecipazioni dall'account») non sono più assegnati a questa persona. Le voci del registro dell'applicazione vengono eliminate dopo {0} giorni. Creato il {1} da {2}.
+4812 ‖ After Action Reviews not released are then no longer possible. ‖ Les After Action Reviews non libérées ne sont ensuite plus possibles. ‖ Gli After Action Review non rilasciati non sono poi più possibili.
+4813 ‖ Not visible to everyone ‖ Pas visible pour tous ‖ Non visibile a tutti
+4814 ‖ Not available: {0} ‖ Indisponible : {0} ‖ Non disponibile: {0}
+4815 ‖ Nothing taken over: the fields have been filled in meanwhile. ‖ Rien repris : les champs ont été remplis entre-temps. ‖ Niente ripreso: i campi sono stati compilati nel frattempo.
+4816 ‖ Never allowed: {0} ‖ Jamais autorisé : {0} ‖ Mai ammesso: {0}
+4817 ‖ Nobody is outstanding. ‖ Personne n'est en attente. ‖ Nessuno è in sospeso.
+4818 ‖ Nobody needs to confirm. ‖ Personne ne doit confirmer. ‖ Nessuno deve confermare.
+4819 ‖ Nobody. ‖ Personne. ‖ Nessuno.
+4820 ‖ Takes people (as long as it is not loaded itself) ‖ Prend des personnes (tant qu'il n'est pas lui-même chargé) ‖ Accoglie persone (finché non è caricato a sua volta)
+4821 ‖ Takes ‖ Prend ‖ Accoglie
+4822 ‖ Takes or tows ‖ Prend ou tracte ‖ Accoglie o traina
+4823 ‖ No requests yet. ‖ Aucune requête pour l'instant. ‖ Ancora nessuna richiesta.
+4824 ‖ No sign-ups yet. ‖ Aucune inscription pour l'instant. ‖ Ancora nessuna iscrizione.
+4825 ‖ No answers yet. ‖ Aucune réponse pour l'instant. ‖ Ancora nessuna risposta.
+4826 ‖ No extracts created yet. ‖ Aucun extrait créé pour l'instant. ‖ Ancora nessun estratto creato.
+4827 ‖ No file yet. ‖ Pas encore de fichier. ‖ Ancora nessun file.
+4828 ‖ No e-mails yet. ‖ Aucun e-mail pour l'instant. ‖ Ancora nessuna e-mail.
+4829 ‖ No corners yet ‖ Pas encore de sommets ‖ Ancora nessun vertice
+4830 ‖ No properties yet. Example: “⛔ River closure” with effect “limits search area”. ‖ Aucune propriété pour l'instant. Exemple : « ⛔ Fermeture de la rivière » avec l'effet « limite la zone de recherche ». ‖ Ancora nessuna proprietà. Esempio: «⛔ Chiusura del fiume» con effetto «limita l'area di ricerca».
+4831 ‖ No response groups yet. ‖ Aucun groupe d'intervention pour l'instant. ‖ Ancora nessun gruppo d'intervento.
+4832 ‖ No response groups yet. Without groups all active people are alerted for every operation. ‖ Aucun groupe d'intervention pour l'instant. Sans groupes, toutes les personnes actives sont alarmées à chaque intervention. ‖ Ancora nessun gruppo d'intervento. Senza gruppi a ogni intervento vengono allarmate tutte le persone attive.
+4833 ‖ No entries yet. Example: operation plan as PDF, fact sheet “Boat operation” as a page. ‖ Aucune entrée pour l'instant. Exemple : plan d'intervention en PDF, fiche « Engagement bateau » comme page. ‖ Ancora nessuna voce. Esempio: piano d'intervento come PDF, scheda «Impiego barca» come pagina.
+4834 ‖ No elements yet. Example: “Casualty drifts off” with PLS at the bridge. ‖ Aucun élément pour l'instant. Exemple : « La victime dérive » avec PLS au pont. ‖ Ancora nessun elemento. Esempio: «La vittima va alla deriva» con PLS al ponte.
+4835 ‖ No vehicles yet. Example: “Bus 1” with trailer and boat. ‖ Aucun véhicule pour l'instant. Exemple : « Bus 1 » avec remorque et bateau. ‖ Ancora nessun veicolo. Esempio: «Bus 1» con rimorchio e barca.
+4836 ‖ No fields yet. Example: “What went well?” as multi-line text. ‖ Aucun champ pour l'instant. Exemple : « Qu'est-ce qui s'est bien passé ? » en texte sur plusieurs lignes. ‖ Ancora nessun campo. Esempio: «Cosa è andato bene?» come testo su più righe.
+4837 ‖ No questions yet. Example: “What would you do differently next time?” ‖ Aucune question pour l'instant. Exemple : « Que feriez-vous différemment la prochaine fois ? » ‖ Ancora nessuna domanda. Esempio: «Cosa faresti diversamente la prossima volta?»
+4838 ‖ No skill set up yet. ‖ Aucune compétence configurée pour l'instant. ‖ Ancora nessuna competenza configurata.
+4839 ‖ No skill yet. Examples: lifeguard (24 months), first aid (until the end of next year), boat driver (unlimited). ‖ Aucune compétence pour l'instant. Exemples : sauveteur (24 mois), premiers secours (jusqu'à la fin de l'année suivante), pilote de bateau (illimité). ‖ Ancora nessuna competenza. Esempi: bagnino di salvataggio (24 mesi), primo soccorso (fino alla fine dell'anno successivo), conduttore di barca (illimitato).
+4840 ‖ No channels yet. Example: “Operation” for everyone, “Lead” only for the operation lead. ‖ Aucun canal pour l'instant. Exemple : « Intervention » pour tous, « Direction » seulement pour la direction d'intervention. ‖ Ancora nessun canale. Esempio: «Intervento» per tutti, «Direzione» solo per la direzione dell'intervento.
+4841 ‖ No categories yet. Example: “Boat launch sites”. ‖ Aucune catégorie pour l'instant. Exemple : « Mises à l'eau ». ‖ Ancora nessuna categoria. Esempio: «Scivoli per barche».
+4842 ‖ No folders yet. ‖ Aucun dossier pour l'instant. ‖ Ancora nessuna cartella.
+4843 ‖ No folders yet. Example: “Operation plans” with subfolders per water body, “Fact sheets”, “Training”. ‖ Aucun dossier pour l'instant. Exemple : « Plans d'intervention » avec sous-dossiers par cours d'eau, « Fiches », « Formation ». ‖ Ancora nessuna cartella. Esempio: «Piani d'intervento» con sottocartelle per corso d'acqua, «Schede», «Formazione».
+4844 ‖ No plans yet. Example: “Reuss exercise May” with three casualties and one post. ‖ Aucune planification pour l'instant. Exemple : « Exercice Reuss mai » avec trois victimes et un poste. ‖ Ancora nessuna pianificazione. Esempio: «Esercitazione Reuss maggio» con tre vittime e un posto.
+4845 ‖ No points yet ‖ Pas encore de points ‖ Ancora nessun punto
+4846 ‖ No templates yet. Example: “Bremgarten fire brigade, bridge post” with special role post. ‖ Aucun modèle pour l'instant. Exemple : « Pompiers de Bremgarten, poste du pont » avec le rôle spécial poste. ‖ Ancora nessun modello. Esempio: «Pompieri di Bremgarten, posto ponte» con ruolo speciale posto.
+4847 ‖ No finished operations with your participation yet. ‖ Aucune intervention terminée avec votre participation pour l'instant. ‖ Ancora nessun intervento terminato con la tua partecipazione.
+4848 ‖ No external responder in this exercise yet ‖ Pas encore d'intervenant externe dans cet exercice ‖ Ancora nessun soccorritore esterno in questa esercitazione
+4849 ‖ No fixed locations yet. Example: “Reussbühl launch site” as a point with abbreviation “LS”. ‖ Aucun site fixe pour l'instant. Exemple : « Mise à l'eau Reussbühl » comme point avec l'abréviation « ME ». ‖ Ancora nessun luogo fisso. Esempio: «Scivolo Reussbühl» come punto con sigla «SC».
+4850 ‖ None yet. Example: “Approach with equipment”. ‖ Aucune pour l'instant. Exemple : « Trajet avec matériel ». ‖ Ancora nessuna. Esempio: «Arrivo con materiale».
+4851 ‖ None yet. Example: “Operation lead”, “Post”. ‖ Aucun pour l'instant. Exemple : « Direction d'intervention », « Poste ». ‖ Ancora nessuno. Esempio: «Direzione dell'intervento», «Posto».
+4852 ‖ Not yet queried ‖ Pas encore interrogé ‖ Non ancora interrogato
+4853 ‖ Not yet requested. ‖ Pas encore demandé. ‖ Non ancora richiesto.
+4854 ‖ Nothing recorded yet ‖ Rien saisi pour l'instant ‖ Ancora nulla registrato
+4855 ‖ Never retrieved ‖ Jamais récupéré ‖ Mai recuperato
+4856 ‖ Nobody called out yet ‖ Personne de mobilisé pour l'instant ‖ Ancora nessuno convocato
+4857 ‖ Nobody selected yet ‖ Personne de choisi pour l'instant ‖ Ancora nessuno scelto
+4858 ‖ Number: {0} ‖ Numéro : {0} ‖ Numero: {0}
+4859 ‖ Only called-out ‖ Seulement les mobilisés ‖ Solo convocati
+4860 ‖ Only entries from folders that allow it ‖ Seulement les entrées de dossiers qui le permettent ‖ Solo voci di cartelle che lo consentono
+4861 ‖ Events only ‖ Seulement les événements ‖ Solo eventi
+4862 ‖ Errors only ‖ Seulement les erreurs ‖ Solo errori
+4863 ‖ Only members of these groups ‖ Seulement les membres de ces groupes ‖ Solo membri di questi gruppi
+4864 ‖ Only finished operations can be anonymised. ‖ Seules les interventions terminées peuvent être anonymisées. ‖ Si possono anonimizzare solo interventi terminati.
+4865 ‖ Only for operation types with prepared exercises ‖ Seulement pour les types d'intervention avec exercices préparés ‖ Solo per tipi d'intervento con esercitazioni preparate
+4866 ‖ Only certain response groups or user roles ‖ Seulement certains groupes d'intervention ou rôles d'utilisateur ‖ Solo determinati gruppi d'intervento o ruoli utente
+4867 ‖ Only confirmed senders (your own mail server reports SPF, DKIM or DMARC “pass” in the header ‖ Seulement les expéditeurs confirmés (le serveur de messagerie propre indique SPF, DKIM ou DMARC « pass » dans l'en-tête ‖ Solo mittenti confermati (il proprio server di posta indica SPF, DKIM o DMARC «pass» nell'intestazione
+4868 ‖ Only the first 800 matches. Please reduce the section or deselect types. ‖ Seulement les 800 premiers résultats. Veuillez réduire le secteur ou désélectionner des types. ‖ Solo i primi 800 risultati. Riduci la porzione o deseleziona dei tipi.
+4869 ‖ Only these response groups ‖ Seulement ces groupes d'intervention ‖ Solo questi gruppi d'intervento
+4870 ‖ Only for the editors. ‖ Seulement pour la rédaction. ‖ Solo per la redazione.
+4871 ‖ Only selected ‖ Seulement les choisis ‖ Solo scelti
+4872 ‖ Only me ‖ Seulement moi ‖ Solo io
+4873 ‖ Only during operations, does not apply here. ‖ Seulement en intervention, ne s'applique pas ici. ‖ Solo durante l'intervento, qui non vale.
+4874 ‖ Use of the AI assistant ‖ Utilisation de l'assistant IA ‖ Uso dell'assistente IA
+4875 ‖ Terms of use ‖ Conditions d'utilisation ‖ Condizioni d'uso
+4876 ‖ Next month ‖ Mois suivant ‖ Mese successivo
+4877 ‖ OSM: {0} objects ‖ OSM : {0} objets ‖ OSM: {0} oggetti
+4878 ‖ Search for objects on the water from OpenStreetMap (weirs, power plants, bridges over water, slipways, rescue points …) in the map section and take them over as fixed locations. Locations taken over remain linked to the source: a comparison checks them daily, deviations appear under “Fixed locations” and are never taken over automatically. Sources in the order under “Geodata sources”: {0}. Data © OpenStreetMap contributors (ODbL). ‖ Rechercher dans le secteur de carte des objets au bord de l'eau d'OpenStreetMap (barrages, centrales, ponts sur cours d'eau, rampes, points de sauvetage …) et les reprendre comme sites fixes. Les sites repris restent liés à la source : une comparaison les vérifie chaque jour, les écarts apparaissent sous « Sites fixes » et ne sont jamais repris automatiquement. Sources dans l'ordre sous « Sources de géodonnées » : {0}. Données © contributeurs d'OpenStreetMap (ODbL). ‖ Cerca nella porzione di mappa oggetti lungo i corsi d'acqua da OpenStreetMap (sbarramenti, centrali, ponti su corsi d'acqua, scivoli, punti di soccorso …) e riprendili come luoghi fissi. I luoghi ripresi restano collegati alla fonte: un confronto li verifica ogni giorno, gli scostamenti compaiono in «Luoghi fissi» e non vengono mai ripresi automaticamente. Fonti nell'ordine in «Fonti di geodati»: {0}. Dati © contributori di OpenStreetMap (ODbL).
+4879 ‖ Take over objects from OpenStreetMap as locations of this exercise ‖ Reprendre des objets d'OpenStreetMap comme sites de cet exercice ‖ Riprendi oggetti da OpenStreetMap come luoghi di questa esercitazione
+4880 ‖ Open ‖ Ouvert ‖ Aperto
+4881 ‖ Open until {0} ‖ Ouvert jusqu'au {0} ‖ Aperto fino al {0}
+4882 ‖ Remind those outstanding ‖ Rappeler aux personnes en attente ‖ Ricorda a chi è in sospeso
+4883 ‖ Offline per device ‖ Hors ligne par appareil ‖ Offline per dispositivo
+4884 ‖ Without alarm, e.g. follow-up search the next day; with its own response options and special roles. ‖ Sans alarme, p. ex. recherche complémentaire le lendemain ; avec ses propres options d'engagement et rôles spéciaux. ‖ Senza allarme, p. es. ricerca successiva il giorno dopo; con opzioni d'intervento e ruoli speciali propri.
+4885 ‖ Without operation ‖ Sans intervention ‖ Senza intervento
+4886 ‖ Delete if without entries, otherwise deactivate ‖ Supprimer si sans entrées, sinon désactiver ‖ Elimina se senza voci, altrimenti disattiva
+4887 ‖ Without names (setting). ‖ Sans noms (paramètre). ‖ Senza nomi (impostazione).
+4888 ‖ Without a PLS time the drift starts at release. ‖ Sans heure du PLS, la dérive commence à la libération. ‖ Senza ora del PLS la deriva inizia al rilascio.
+4889 ‖ Without template ‖ Sans modèle ‖ Senza modello
+4890 ‖ Without recorded training it is deleted, otherwise only deactivated (the entries are kept). ‖ Sans formations saisies, elle est supprimée, sinon seulement désactivée (les entrées sont conservées). ‖ Senza formazioni registrate viene eliminata, altrimenti solo disattivata (le voci restano).
+4891 ‖ Optional ‖ Facultatif ‖ Facoltativo
+4892 ‖ Optional; own servers usually do not need one. ‖ Facultatif, les serveurs propres n'en ont généralement pas besoin. ‖ Facoltativo, i server propri di solito non ne hanno bisogno.
+4893 ‖ Optional, appears at the top right of the document. PNG, JPEG, WebP or SVG; it is reduced to at most 800 pixels. ‖ Facultatif, figure en haut à droite du document. PNG, JPEG, WebP ou SVG ; il est réduit à 800 pixels au plus. ‖ Facoltativo, compare in alto a destra nel documento. PNG, JPEG, WebP o SVG; viene ridotto al massimo a 800 pixel.
+4894 ‖ Optional: the confirmation is additionally recorded as an entry of this skill. ‖ Facultatif : la confirmation est en plus saisie comme entrée de cette compétence. ‖ Facoltativo: la conferma viene registrata in aggiunta come voce di questa competenza.
+4895 ‖ Edit folder ‖ Modifier le dossier ‖ Modifica cartella
+4896 ‖ Drag folders and entries to move them. ‖ Faites glisser dossiers et entrées pour les déplacer. ‖ Trascina cartelle e voci per spostarle.
+4897 ‖ Move folder “{0}” {1}? ‖ Déplacer le dossier « {0} » {1} ? ‖ Spostare la cartella «{0}» {1}?
+4898 ‖ Organisation (operator of the app) ‖ Organisation (exploitante de l'app) ‖ Organizzazione (gestore dell'app)
+4899 ‖ Organisation (below the title) ‖ Organisation (sous le titre) ‖ Organizzazione (sotto il titolo)
+4900 ‖ Organisation {0} ‖ Organisation {0} ‖ Organizzazione {0}
+4901 ‖ Place / meeting point (optional) ‖ Lieu / point de rencontre (facultatif) ‖ Luogo / punto d'incontro (facoltativo)
+4902 ‖ Place: the location of the selected external responder. ‖ Lieu : la position de l'intervenant externe choisi. ‖ Luogo: la posizione del soccorritore esterno scelto.
+4903 ‖ Places, areas and lines that are on the map in every operation and exercise, e.g. boat launch sites, depots, meeting points, bridges or navigation channels. They appear in the operations app as a separate category (“View” and “Markers” window) and can be shown and hidden there. For prepared exercises you choose which apply and can add your own. The “Fixed locations” function can be switched off per type under “Functions”. ‖ Lieux, zones et lignes figurant sur la carte à chaque intervention et exercice, p. ex. mises à l'eau, dépôts, points de rencontre, ponts ou chenaux. Ils apparaissent dans l'app d'intervention comme catégorie propre (« Affichage » et fenêtre « Marqueurs ») et peuvent y être affichés ou masqués. Pour les exercices préparés, on choisit lesquels s'appliquent et on peut en ajouter. La fonction « Sites fixes » se désactive par type sous « Fonctions ». ‖ Luoghi, aree e linee presenti sulla mappa a ogni intervento ed esercitazione, p. es. scivoli per barche, magazzini, punti d'incontro, ponti o canali navigabili. Compaiono nell'app d'intervento come categoria propria («Vista» e finestra «Marcatori») e lì si possono mostrare e nascondere. Per le esercitazioni preparate si sceglie quali valgono e se ne possono aggiungere. La funzione «Luoghi fissi» si disattiva per tipo in «Funzioni».
+4904 ‖ Create PDF ‖ Créer le PDF ‖ Crea PDF
+4905 ‖ Creating PDF … ‖ Création du PDF … ‖ Creazione del PDF …
+4906 ‖ PLS before release (min) ‖ PLS avant la libération (min) ‖ PLS prima del rilascio (min)
+4907 ‖ PLS {0} min before release ‖ PLS {0} min avant la libération ‖ PLS {0} min prima del rilascio
+4908 ‖ Take over PLS ‖ Reprendre le PLS ‖ Riprendi il PLS
+4909 ‖ The exercise lead enters the PLS time on release. ‖ La direction d'exercice saisit l'heure du PLS lors de la libération. ‖ La direzione dell'esercitazione inserisce l'ora del PLS al rilascio.
+4910 ‖ Search partners ‖ Rechercher des partenaires ‖ Cerca partner
+4911 ‖ Edit partner organisation ‖ Modifier l'organisation partenaire ‖ Modifica organizzazione partner
+4912 ‖ Partner organisation removed. ‖ Organisation partenaire retirée. ‖ Organizzazione partner rimossa.
+4913 ‖ Remove partner organisation “{0}”? ‖ Retirer l'organisation partenaire « {0} » ? ‖ Rimuovere l'organizzazione partner «{0}»?
+4914 ‖ Partner organisations (own linked operation): {0} ‖ Organisations partenaires (propre intervention liée) : {0} ‖ Organizzazioni partner (intervento collegato proprio): {0}
+4915 ‖ Remove password ‖ Retirer le mot de passe ‖ Rimuovi password
+4916 ‖ Password of {0} reset. ‖ Mot de passe de {0} réinitialisé. ‖ Password di {0} reimpostata.
+4917 ‖ Reset password ‖ Réinitialiser le mot de passe ‖ Reimposta password
+4918 ‖ Reset password – {0} ‖ Réinitialiser le mot de passe – {0} ‖ Reimposta password – {0}
+4919 ‖ Change password at next login ‖ Changer le mot de passe à la prochaine connexion ‖ Cambia password al prossimo accesso

@@ -4,6 +4,7 @@
 Eingabe: Dateien mit Zeilen «Nummer ‖ Englisch ‖ Französisch ‖ Italienisch» (bzw. «Nummer ‖ =» = nicht übersetzen),
 die Nummer bezieht sich auf die Liste order.json (deutsche Texte in Bearbeitungsreihenfolge).
   python3 scripts/i18n/merge.py <order.json> <Datei> [<Datei> …]
+(Ergänzungen von Hand in scripts/i18n/manual.json, {Sprache: {deutsch: übersetzt}})
 Prüft die Platzhalter {n}, ergänzt web/i18n/<Sprache>.json (bestehende Einträge werden überschrieben) und kopiert
 die Wörterbücher nach mobile/app/assets/i18n/. Ohne Dateien: nur sortieren und kopieren.
 """
@@ -44,6 +45,11 @@ def main():
                     print(f'{f}:{ln} [{l}]: Platzhalter {ph} ≠ {t[:80]}'); bad += 1; continue
                 if t and t != src:
                     dic[l][src] = t
+    # Ergänzungen von Hand (Texte, die der Extraktor nicht findet oder die je nach Ort anders lauten)
+    mp = os.path.join(ROOT, 'scripts', 'i18n', 'manual.json')
+    if os.path.exists(mp):
+        for l, m in json.load(open(mp, encoding='utf-8')).items():
+            dic[l].update(m)
     os.makedirs(os.path.join(ROOT, 'web', 'i18n'), exist_ok=True)
     dst = os.path.join(ROOT, 'mobile', 'app', 'assets', 'i18n')
     os.makedirs(dst, exist_ok=True)

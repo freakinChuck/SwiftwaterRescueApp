@@ -1,0 +1,120 @@
+4320 ‖ Switched-on providers are available in the “View” window, in this order (grouped into aerial images and maps). The default applies without an operation and for operation types without their own default map. “Test” loads a sample tile in the browser. ‖ Les fournisseurs activés sont proposés dans la fenêtre « Affichage », dans cet ordre (groupés en images aériennes et cartes). La valeur par défaut vaut sans intervention et pour les types d'intervention sans carte par défaut propre. « Tester » charge une tuile d'exemple dans le navigateur. ‖ I fornitori attivi sono selezionabili nella finestra «Vista», in quest'ordine (raggruppati in immagini aeree e mappe). Il predefinito vale senza intervento e per i tipi d'intervento senza mappa predefinita propria. «Testa» carica una tile di esempio nel browser.
+4321 ‖ Introduction (appears above the questions) ‖ Introduction (figure au-dessus des questions) ‖ Introduzione (compare sopra le domande)
+4322 ‖ Response option / role ‖ Option d'engagement / rôle ‖ Opzione d'intervento / ruolo
+4323 ‖ Edit response option ‖ Modifier l'option d'engagement ‖ Modifica opzione d'intervento
+4324 ‖ Response option “{0}” ‖ Option d'engagement « {0} » ‖ Opzione d'intervento «{0}»
+4325 ‖ Operations app: who sees the helicopters{0} ‖ App d'intervention : qui voit les hélicoptères{0} ‖ App d'intervento: chi vede gli elicotteri{0}
+4326 ‖ Operation data ‖ Données d'intervention ‖ Dati d'intervento
+4327 ‖ End of operation ‖ Fin de l'intervention ‖ Fine dell'intervento
+4328 ‖ End of operation {0} ‖ Fin de l'intervention {0} ‖ Fine dell'intervento {0}
+4329 ‖ Operation feedback ({0}) ‖ Retour sur l'intervention ({0}) ‖ Feedback sull'intervento ({0})
+4330 ‖ Can request operation feedback ‖ Peut demander un retour sur l'intervention ‖ Può richiedere un feedback sull'intervento
+4331 ‖ Operation area in the “Markers” window ‖ Zone d'intervention dans la fenêtre « Marqueurs » ‖ Area d'intervento nella finestra «Marcatori»
+4332 ‖ Response group ‖ Groupe d'intervention ‖ Gruppo d'intervento
+4333 ‖ Edit response group ‖ Modifier le groupe d'intervention ‖ Modifica gruppo d'intervento
+4334 ‖ Response group deleted. ‖ Groupe d'intervention supprimé. ‖ Gruppo d'intervento eliminato.
+4335 ‖ Permanently delete response group “{0}”? ‖ Supprimer définitivement le groupe d'intervention « {0} » ? ‖ Eliminare definitivamente il gruppo d'intervento «{0}»?
+4336 ‖ Response groups (or only parts of them: then choose individual people instead of the group) ‖ Groupes d'intervention (ou seulement une partie : choisir alors des personnes individuelles au lieu du groupe) ‖ Gruppi d'intervento (o solo parti di essi: allora scegli singole persone invece del gruppo)
+4337 ‖ Call out response groups ‖ Mobiliser des groupes d'intervention ‖ Convoca gruppi d'intervento
+4338 ‖ Response groups: {0} ‖ Groupes d'intervention : {0} ‖ Gruppi d'intervento: {0}
+4339 ‖ Responders may change the order for themselves ‖ Les intervenants peuvent modifier l'ordre pour eux-mêmes ‖ I soccorritori possono modificare l'ordine per sé
+4340 ‖ Operation lead (may manage the operation) ‖ Direction d'intervention (peut gérer l'intervention) ‖ Direzione dell'intervento (può gestire l'intervento)
+4341 ‖ Operation log (large) ‖ Journal d'intervention (grand) ‖ Registro dell'intervento (grande)
+4342 ‖ Operation log up to this time ‖ Journal d'intervention jusqu'à ce moment ‖ Registro dell'intervento fino a questo momento
+4343 ‖ Operation plan: {0} ‖ Plan d'intervention : {0} ‖ Piano d'intervento: {0}
+4344 ‖ Operation statistics ‖ Statistique d'intervention ‖ Statistica degli interventi
+4345 ‖ Operation statistics in words ‖ Statistique d'intervention en mots ‖ Statistica degli interventi a parole
+4346 ‖ Operation statistics and operation log ‖ Statistique et journal d'intervention ‖ Statistica e registro degli interventi
+4347 ‖ Operation symbols ‖ Symboles d'intervention ‖ Simboli d'intervento
+4348 ‖ Operation type ‖ Type d'intervention ‖ Tipo d'intervento
+4349 ‖ Edit operation type ‖ Modifier le type d'intervention ‖ Modifica tipo d'intervento
+4350 ‖ Operation type deleted. ‖ Type d'intervention supprimé. ‖ Tipo d'intervento eliminato.
+4351 ‖ Delete operation type “{0}”? ‖ Supprimer le type d'intervention « {0} » ? ‖ Eliminare il tipo d'intervento «{0}»?
+4352 ‖ Operation types: if the partner organisation triggers an operation of its type, this type applies here (with its functions, alarm level and periods). Without a mapping it cannot trigger this type here. ‖ Types d'intervention : si l'organisation partenaire déclenche une intervention de son type, ce type s'applique ici (avec ses fonctions, niveau d'alarme et délais). Sans correspondance, elle ne peut pas déclencher ce type ici. ‖ Tipi d'intervento: se l'organizzazione partner avvia un intervento del suo tipo, qui vale questo tipo (con funzioni, livello d'allarme e termini). Senza corrispondenza non può avviare questo tipo qui.
+4353 ‖ Operation time (min) ‖ Temps d'intervention (min) ‖ Tempo d'intervento (min)
+4354 ‖ Total operation time ‖ Temps d'intervention total ‖ Tempo d'intervento totale
+4355 ‖ Operation time: from acceptance until leaving or end of operation (per section when rejoining). Response time: alarm until first acceptance. Trip kilometres: detected trips by vehicle according to the operation log (straight line). Route: sum of the recorded locations, only for operations with recording. ‖ Temps d'intervention : de l'acceptation au départ ou à la fin de l'intervention (par section en cas de retour). Temps de réaction : alarme jusqu'à la première acceptation. Kilomètres de trajet : trajets détectés en véhicule selon le journal (à vol d'oiseau). Parcours : somme des positions enregistrées, seulement pour les interventions avec enregistrement. ‖ Tempo d'intervento: dall'accettazione all'uscita o alla fine dell'intervento (per sezione in caso di rientro). Tempo di reazione: allarme fino alla prima accettazione. Chilometri di tragitto: tragitti riconosciuti in veicolo secondo il registro (in linea d'aria). Percorso: somma delle posizioni registrate, solo per interventi con registrazione.
+4356 ‖ Operation time: from acceptance until leaving or end of operation. Response time: alarm until acceptance. Trips: detected trips by vehicle (straight line). Route: only for operations with recording. Also counts running and permanently anonymised operations. ‖ Temps d'intervention : de l'acceptation au départ ou à la fin de l'intervention. Temps de réaction : alarme jusqu'à l'acceptation. Trajets : trajets détectés en véhicule (à vol d'oiseau). Parcours : seulement pour les interventions avec enregistrement. Compte aussi les interventions en cours et anonymisées définitivement. ‖ Tempo d'intervento: dall'accettazione all'uscita o alla fine dell'intervento. Tempo di reazione: allarme fino all'accettazione. Tragitti: tragitti riconosciuti in veicolo (in linea d'aria). Percorso: solo per interventi con registrazione. Conta anche interventi in corso e anonimizzati definitivamente.
+4357 ‖ Availability times ‖ Horaires de disponibilité ‖ Orari di disponibilità
+4358 ‖ Access ‖ Consultation ‖ Consultazione
+4359 ‖ View for responders ‖ Consultation pour les intervenants ‖ Consultazione per i soccorritori
+4360 ‖ Configure … ‖ Configurer … ‖ Configura …
+4361 ‖ Document settings ‖ Paramètres des documents ‖ Impostazioni dei documenti
+4362 ‖ Take over settings from ‖ Reprendre les paramètres de ‖ Riprendi le impostazioni da
+4363 ‖ Settings: {0} ‖ Paramètres : {0} ‖ Impostazioni: {0}
+4364 ‖ Operations per month ‖ Interventions par mois ‖ Interventi al mese
+4365 ‖ View entry ‖ Voir l'entrée ‖ Visualizza voce
+4366 ‖ Edit entry ‖ Modifier l'entrée ‖ Modifica voce
+4367 ‖ Deactivate entry? ‖ Désactiver l'entrée ? ‖ Disattivare la voce?
+4368 ‖ Entry saved, but the file not: {0} ‖ Entrée enregistrée, mais pas le fichier : {0} ‖ Voce salvata, ma il file no: {0}
+4369 ‖ Entries ‖ Entrées ‖ Voci
+4370 ‖ Entries in the operation log ‖ Entrées dans le journal d'intervention ‖ Voci nel registro dell'intervento
+4371 ‖ Entries per section ‖ Entrées par section ‖ Voci per sezione
+4372 ‖ Delete entries after ‖ Supprimer les entrées après ‖ Elimina le voci dopo
+4373 ‖ Drag entries to move them. ‖ Faites glisser les entrées pour les déplacer. ‖ Trascina le voci per spostarle.
+4374 ‖ Entries whose “Review by” date has passed. After the review, set a new date in the entry. ‖ Entrées dont la date « Réviser d'ici » est dépassée. Après la révision, définir une nouvelle date dans l'entrée. ‖ Voci la cui data «Rivedere entro» è passata. Dopo la revisione imposta una nuova data nella voce.
+4375 ‖ Individuals can be called out ‖ Personnes individuelles mobilisables ‖ Singole persone convocabili
+4376 ‖ Calling out individuals allowed, not only whole groups ‖ Mobilisation de personnes individuelles permise, pas seulement de groupes entiers ‖ Convocazione di singole persone consentita, non solo di gruppi interi
+4377 ‖ Element ‖ Élément ‖ Elemento
+4378 ‖ Edit element ‖ Modifier l'élément ‖ Modifica elemento
+4379 ‖ Remove element? ‖ Retirer l'élément ? ‖ Rimuovere l'elemento?
+4380 ‖ Elements ‖ Éléments ‖ Elementi
+4381 ‖ Received messages (addressed to this person) ‖ Messages reçus (adressés à cette personne) ‖ Messaggi ricevuti (indirizzati a questa persona)
+4382 ‖ End (optional) ‖ Fin (facultatif) ‖ Fine (facoltativa)
+4383 ‖ Removes an external responder recorded by another element of this exercise. It must be released first. ‖ Retire un intervenant externe saisi par un autre élément de cet exercice. Il doit d'abord être libéré. ‖ Rimuove un soccorritore esterno registrato da un altro elemento di questa esercitazione. Deve essere rilasciato prima.
+4384 ‖ Removed fields disappear from form and document; details already recorded remain saved. Short details (single-line text, date, time, number, selection, yes/no) appear in a table in the document, multi-line ones as question and answer. ‖ Les champs retirés disparaissent du formulaire et du document ; les informations déjà saisies restent enregistrées. Les informations courtes (texte sur une ligne, date, heure, nombre, sélection, oui/non) figurent dans un tableau, celles sur plusieurs lignes comme question et réponse. ‖ I campi rimossi scompaiono da modulo e documento; i dati già registrati restano salvati. I dati brevi (testo su una riga, data, ora, numero, selezione, sì/no) stanno in una tabella, quelli su più righe come domanda e risposta.
+4385 ‖ Removed questions disappear from form, workspace and document; answers already given remain saved. ‖ Les questions retirées disparaissent du formulaire, de l'espace de travail et du document ; les réponses déjà données restent enregistrées. ‖ Le domande rimosse scompaiono da modulo, area di lavoro e documento; le risposte già date restano salvate.
+4386 ‖ Draft for empty fields ‖ Brouillon pour les champs vides ‖ Bozza per i campi vuoti
+4387 ‖ It disappears from the operations app; the editors still see it under “Deactivated”. ‖ Elle disparaît de l'app d'intervention ; la rédaction la voit encore sous « Désactivé ». ‖ Scompare dall'app d'intervento; la redazione la vede ancora sotto «Disattivato».
+4388 ‖ It takes over the sharing of the new parent folder in addition to its own. ‖ Il reprend les partages du nouveau dossier parent en plus des siens. ‖ Riprende le condivisioni della nuova cartella superiore oltre alle proprie.
+4389 ‖ Recorded ‖ Saisi ‖ Registrato
+4390 ‖ Records a responder without an app account at a fixed location. A post role limits the search area. ‖ Saisit un intervenant sans compte app à un emplacement fixe. Un rôle de poste limite la zone de recherche. ‖ Registra un soccorritore senza account app in un luogo fisso. Un ruolo di posto limita l'area di ricerca.
+4391 ‖ Records a casualty with its own PLS (own search area). ‖ Saisit une victime avec son propre PLS (zone de recherche propre). ‖ Registra una vittima con un proprio PLS (area di ricerca propria).
+4392 ‖ Recorded or edited ‖ Saisi ou modifié ‖ Registrato o modificato
+4393 ‖ Recorded since {0}. ‖ Saisi depuis {0}. ‖ Registrato da {0}.
+4394 ‖ Successful ‖ Réussi ‖ Riuscito
+4395 ‖ Result ‖ Résultat ‖ Risultato
+4396 ‖ View result ‖ Voir le résultat ‖ Visualizza risultato
+4397 ‖ Key received ‖ Clé reçue ‖ Chiave ricevuta
+4398 ‖ Remind ‖ Rappeler ‖ Ricorda
+4399 ‖ Detected: {0} ‖ Détecté : {0} ‖ Riconosciuto: {0}
+4400 ‖ Allow detection (each person switches it on in their own profile; reported without names) ‖ Autoriser la détection (chaque personne l'active dans son profil ; signalé sans noms) ‖ Consenti il riconoscimento (ogni persona lo attiva nel proprio profilo; segnalato senza nomi)
+4401 ‖ Detection ‖ Détection ‖ Riconoscimento
+4402 ‖ Allowed: {0}, at most {1} MB. ‖ Autorisés : {0}, au plus {1} Mo. ‖ Ammessi: {0}, al massimo {1} MB.
+4403 ‖ Allowed senders (address or domain, one per line) ‖ Expéditeurs autorisés (adresse ou domaine, un par ligne) ‖ Mittenti ammessi (indirizzo o dominio, uno per riga)
+4404 ‖ Done ‖ Fait ‖ Fatto
+4405 ‖ Request again ‖ Demander à nouveau ‖ Richiedi di nuovo
+4406 ‖ Again only for significant changes ‖ À nouveau seulement en cas de modifications importantes ‖ Di nuovo solo per modifiche rilevanti
+4407 ‖ Require again ‖ Exiger à nouveau ‖ Richiedi di nuovo
+4408 ‖ Required again. ‖ Exigé à nouveau. ‖ Richiesto di nuovo.
+4409 ‖ Appears in lists and in search ‖ Figure dans les listes et la recherche ‖ Compare negli elenchi e nella ricerca
+4410 ‖ First ‖ Premier ‖ Primo
+4411 ‖ First acceptance after ‖ Première acceptation après ‖ Prima accettazione dopo
+4412 ‖ Created on ‖ Créé le ‖ Creato il
+4413 ‖ Created on {0} by {1}{2} ‖ Créé le {0} par {1}{2} ‖ Creato il {0} da {1}{2}
+4414 ‖ Created by ‖ Créé par ‖ Creato da
+4415 ‖ There are no other types yet. ‖ Il n'y a pas encore d'autres types. ‖ Non ci sono ancora altri tipi.
+4416 ‖ No further answers are possible afterwards. Requesting again reopens it. ‖ Ensuite, plus aucune réponse n'est possible. Le redemander le rouvre. ‖ Dopo non sono più possibili risposte. Richiederlo di nuovo lo riapre.
+4417 ‖ No fields are set up yet (Evaluation → Set up After Action Review). ‖ Aucun champ n'est encore configuré (Évaluation → Configurer l'After Action Review). ‖ Non sono ancora configurati campi (Valutazione → Configura After Action Review).
+4418 ‖ It disappears from form and document. Details already recorded remain saved but no longer appear. ‖ Il disparaît du formulaire et du document. Les informations déjà saisies restent enregistrées, mais n'apparaissent plus. ‖ Scompare da modulo e documento. I dati già registrati restano salvati, ma non compaiono più.
+4419 ‖ It waits until the external responder is released. ‖ Il attend que l'intervenant externe soit libéré. ‖ Attende che il soccorritore esterno sia rilasciato.
+4420 ‖ All data are shown unless they have been permanently anonymised. ‖ Toutes les données sont affichées, sauf si elles ont été anonymisées définitivement. ‖ Vengono mostrati tutti i dati, salvo se anonimizzati definitivamente.
+4421 ‖ It no longer counts as open. The details in the form are saved; the review can be recorded again at any time. ‖ Elle ne compte plus comme ouverte. Les informations du formulaire sont enregistrées, la review peut être saisie à nouveau à tout moment. ‖ Non conta più come aperto. I dati del modulo vengono salvati, il review si può registrare di nuovo in qualsiasi momento.
+4422 ‖ External responders: {0} ‖ Intervenants externes : {0} ‖ Soccorritori esterni: {0}
+4423 ‖ External parties may speak ‖ Les externes peuvent parler ‖ Gli esterni possono parlare
+4424 ‖ Trips ‖ Trajets ‖ Tragitti
+4425 ‖ Trip kilometres ‖ Kilomètres de trajet ‖ Chilometri di tragitto
+4426 ‖ Edit vehicle ‖ Modifier le véhicule ‖ Modifica veicolo
+4427 ‖ Search vehicle ‖ Rechercher un véhicule ‖ Cerca veicolo
+4428 ‖ Edit vehicle type ‖ Modifier le type de véhicule ‖ Modifica tipo di veicolo
+4429 ‖ Remove vehicle type? ‖ Retirer le type de véhicule ? ‖ Rimuovere il tipo di veicolo?
+4430 ‖ Vehicles (last seen by this person) ‖ Véhicules (vus en dernier par cette personne) ‖ Veicoli (visti l'ultima volta da questa persona)
+4431 ‖ Report vehicles outside operations ‖ Signaler les véhicules hors interventions ‖ Segnalare i veicoli fuori dagli interventi
+4432 ‖ Vehicles with a BLE beacon (iBeacon) appear on the map. The beacon only sends its identifier (UUID, major, minor); the location is supplied by the responders' native app that sees it nearby. A vehicle is therefore shown where it was last seen. The functions “Vehicles” and “People in the vehicle” can be switched off per operation type under “Functions”.{0} ‖ Les véhicules avec une balise BLE (iBeacon) apparaissent sur la carte. La balise n'envoie que son identifiant (UUID, major, minor) ; la position est fournie par l'app native des intervenants qui la voit à proximité. Un véhicule figure donc là où il a été vu en dernier. Les fonctions « Véhicules » et « Personnes dans le véhicule » se désactivent par type d'intervention sous « Fonctions ».{0} ‖ I veicoli con un beacon BLE (iBeacon) compaiono sulla mappa. Il beacon invia solo il suo identificativo (UUID, major, minor); la posizione la fornisce l'app nativa dei soccorritori che lo vede nelle vicinanze. Un veicolo si trova quindi dove è stato visto l'ultima volta. Le funzioni «Veicoli» e «Persone nel veicolo» si disattivano per tipo d'intervento in «Funzioni».{0}
+4433 ‖ Show colour next to the name ‖ Afficher la couleur à côté du nom ‖ Mostra il colore accanto al nome
+4434 ‖ =
+4435 ‖ Feedback ({0}) ‖ Retours ({0}) ‖ Feedback ({0})
+4436 ‖ Close feedback? ‖ Clôturer le retour ? ‖ Chiudere il feedback?
+4437 ‖ Request feedback ‖ Demander un retour ‖ Richiedi feedback
+4438 ‖ Responders' feedback ({0}) ‖ Retours des intervenants ({0}) ‖ Feedback dei soccorritori ({0})
+4439 ‖ Send feedback ‖ Envoyer le retour ‖ Invia feedback

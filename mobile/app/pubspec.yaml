@@ -84,6 +84,7 @@ flutter:
     - assets/sounds/
     # Einsatzsymbole für den Demo-Modus (Issue #74, Kopie von web/img/sym; im Konto eines Servers lädt die App sie von dort)
     - assets/sym/
+    - assets/i18n/ # Mehrsprachigkeit (Issue #66), Kopie von web/i18n
 
   # To add assets to your application, add an assets section, like this:
   # assets:

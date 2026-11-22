@@ -1795,9 +1795,13 @@ function i18nTr($l, $s) { $s = (string)$s; if ($l === 'de' || !langOk($l) || tri
   if (preg_match('/\n\s*\n/', $s)) return implode("\n\n", array_map(fn($p) => i18nTr($l, $p), preg_split('/\n\s*\n/', $s)));
   $d = i18nDict($l); $k = trim(preg_replace('/[\s\x{00a0}]+/u', ' ', $s));
   if (isset($d['ex'][$k])) return $d['ex'][$k];
-  foreach ($d['tp'] as $t) { if (mb_strlen($k) < $t['n'] || ($t['long'] !== '' && strpos($k, $t['long']) === false) || !preg_match($t['re'], $k, $m)) continue;
-    $cap = []; foreach ($t['idx'] as $i => $n) $cap[$n] = $m[$i + 1];
+  $best = null; $bs = -1; $bn = -1; // wie i18n.js: unter gleich langen Treffern die mit bekannten Teilen
+  foreach ($d['tp'] as $t) { if ($best && $t['n'] < $bn) break; if (mb_strlen($k) < $t['n'] || ($t['long'] !== '' && strpos($k, $t['long']) === false) || !preg_match($t['re'], $k, $m)) continue;
+    $cap = []; $sc = 0; foreach ($t['idx'] as $i => $n) { $cap[$n] = $m[$i + 1]; $v = trim($m[$i + 1]); if (isset($d['ex'][$v]) || !preg_match('/\pL{2}/u', $v)) $sc++; }
+    if ($sc > $bs) { $best = [$t, $cap]; $bs = $sc; $bn = $t['n']; } }
+  if ($best) { [$t, $cap] = $best;
     return preg_replace_callback('/\{(\d+)\}/', function ($x) use ($cap, $d) { $v = $cap[(int)$x[1]] ?? $x[0]; $vk = trim($v); if (!isset($d['ex'][$vk])) return $v; preg_match('/^\s*/u', $v, $p); preg_match('/\s*$/u', $v, $q); return $p[0] . $d['ex'][$vk] . $q[0]; }, $t['out']); }
+  if (preg_match('/:$/u', $k) && mb_strlen($k) > 2) { $b = i18nTr($l, mb_substr($k, 0, -1)); if ($b !== mb_substr($k, 0, -1)) return $b . ($l === 'fr' ? ' :' : ':'); }
   return $s; }
 // Grossbuchstaben (Titel von Push «EINSATZ»): in gemischter Schreibweise übersetzen, dann wieder gross
 function i18nUp($l, $s) { return mb_strtoupper(i18nTr($l, $s)); }
