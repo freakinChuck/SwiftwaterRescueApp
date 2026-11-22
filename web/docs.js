@@ -62,7 +62,7 @@ async function dkBlob(id,q=''){const r=await fetch('api/index.php?r=doc/get&id='
 async function dkLoad(id){try{const d=await api('doc&id='+id);return d}catch(e){if(!(e instanceof TypeError))throw e;const m=await dkCacheGet(id,null,'m');if(!m)throw new Error('Ohne Verbindung nicht verfügbar (nicht offline gespeichert)');m.off=1;return m}}
 /* ---------- Ansicht ---------- */
 // el: Behälter; d: Eintrag (title, kind, body, url, imgs, file {name, ext, show}); blob(dl) liefert die Datei; page = Seite im PDF, hl = Suchbegriff
-async function dkView(el,d,blob,o={}){el.innerHTML='';el.className='dkv';
+async function dkView(el,d,blob,o={}){el.innerHTML='';el.classList.add('dkv');
   if(d.kind==='page'){el.innerHTML=`<div class="dkmd">${dkMd(d.body,d.imgs)||'<p class="mut">Diese Seite ist noch leer.</p>'}</div>`;return}
   if(d.kind==='link'){el.innerHTML=`<div class="dkmd"><p>${d.descr?esc(d.descr):'Externer Link'}</p><p><a class="btn pri" href="${esc(d.url)}" target="_blank" rel="noopener">Öffnen: ${esc(String(d.url).replace(/^https?:\/\//,'').slice(0,60))}</a></p></div>`;return}
   if(!d.file){el.innerHTML='<div class="mut">Noch keine Datei hochgeladen.</div>';return}
@@ -71,14 +71,27 @@ async function dkView(el,d,blob,o={}){el.innerHTML='';el.className='dkv';
   if(sh==='img'){el.innerHTML=`<img class="dkimg" src="${u}" alt="${esc(d.title)}">`;return}
   if(sh==='audio'||sh==='video'){el.innerHTML=`<${sh} controls src="${u}" class="dkmed"></${sh}>`;return}
   if(sh==='text'){const t=await b.text();el.innerHTML=d.file.ext==='md'?`<div class="dkmd">${dkMd(t)}</div>`:`<pre class="dktxt">${esc(t.slice(0,500000))}</pre>`;return}
-  if(sh==='pdf'){try{const L=await dkPdfLib(),p=await L.getDocument({data:await b.arrayBuffer()}).promise;el.innerHTML=`<div class="dkpbar"><span id="dkPn">${p.numPages} Seiten</span><button data-dkz="-1" aria-label="Verkleinern">−</button><button data-dkz="1" aria-label="Vergrössern">+</button></div><div class="dkpages"></div>`;
-      const box=el.querySelector('.dkpages');let z=1;const pages=[];
+  if(sh==='pdf'){try{const L=await dkPdfLib(),p=await L.getDocument({data:await b.arrayBuffer()}).promise;
+      el.innerHTML=`<div class="dkpbar"><span>${p.numPages} ${p.numPages>1?'Seiten':'Seite'}</span><button data-dkz="-1" aria-label="Verkleinern">−</button><button data-dkz="0" class="dkzv" title="Auf Breite einpassen">100 %</button><button data-dkz="1" aria-label="Vergrössern">+</button></div><div class="dkpages"></div>`;
+      // Bildlauf und Zoom im Behälter (.dkbody); die Seite selbst zoomt in der Einsatz-App nie
+      const box=el.querySelector('.dkpages'),sc=el.closest('.dkbody')||el,zv=el.querySelector('.dkzv'),dpr=devicePixelRatio||1;let z=1;const pages=[];
       for(let i=1;i<=p.numPages;i++){const c=document.createElement('div');c.className='dkpg';c.dataset.n=i;c.style.minHeight='40vh';box.appendChild(c);pages.push(c)}
-      const draw=async c=>{if(c._z===z)return;c._z=z;const pg=await p.getPage(+c.dataset.n),w=Math.min(box.clientWidth||800,1400)-8,v0=pg.getViewport({scale:1}),sc=w/v0.width*z,v=pg.getViewport({scale:sc*(devicePixelRatio||1)}),cv=document.createElement('canvas');
-        cv.width=v.width;cv.height=v.height;cv.style.width=(v.width/(devicePixelRatio||1))+'px';await pg.render({canvasContext:cv.getContext('2d'),viewport:v}).promise;c.innerHTML='';c.style.minHeight='';c.appendChild(cv);
-        const n=document.createElement('div');n.className='dkpn';n.textContent='Seite '+c.dataset.n;c.appendChild(n)};
-      const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)draw(e.target).catch(()=>{})}),{root:null,rootMargin:'600px'});pages.forEach(c=>io.observe(c));
-      el.querySelectorAll('[data-dkz]').forEach(x=>x.onclick=()=>{z=Math.max(.5,Math.min(3,z+(+x.dataset.dkz)*.25));pages.forEach(c=>{if(c._z)draw(c)})});
+      const fitW=()=>Math.min(sc.clientWidth||800,1400)-24;
+      const draw=async c=>{if(c._z===z)return;const zz=z;c._z=zz;const pg=await p.getPage(+c.dataset.n),v0=pg.getViewport({scale:1}),w=fitW()*zz,v=pg.getViewport({scale:w/v0.width*Math.min(dpr*zz,4)/zz}),cv=document.createElement('canvas');
+        cv.width=v.width;cv.height=v.height;cv.style.width=w+'px';cv.style.height=(w*v0.height/v0.width)+'px';await pg.render({canvasContext:cv.getContext('2d'),viewport:v}).promise;if(c._z!==zz)return;
+        c.innerHTML='';c.style.minHeight='';c.appendChild(cv);const n=document.createElement('div');n.className='dkpn';n.textContent='Seite '+c.dataset.n+' von '+p.numPages;c.appendChild(n)};
+      const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)draw(e.target).catch(()=>{})}),{root:sc===el?null:sc,rootMargin:'600px'});pages.forEach(c=>io.observe(c));
+      // neuer Zoom: Stelle in der Mitte des Bildes bleibt stehen; gezeichnete Seiten sofort auf die neue Grösse skalieren, danach scharf neu zeichnen
+      const zoom=nz=>{nz=Math.max(.5,Math.min(4,Math.round(nz*100)/100));if(nz===z)return;const f=nz/z,cx=sc.scrollLeft+sc.clientWidth/2,cy=sc.scrollTop+sc.clientHeight/2;z=nz;zv.textContent=Math.round(z*100)+' %';
+        pages.forEach(c=>{const cv=c.querySelector('canvas');if(cv){cv.style.width=parseFloat(cv.style.width)*f+'px';cv.style.height=parseFloat(cv.style.height)*f+'px'}else c.style.minHeight=40*z+'vh'});
+        sc.scrollLeft=cx*f-sc.clientWidth/2;sc.scrollTop=cy*f-sc.clientHeight/2;clearTimeout(zoom.t);zoom.t=setTimeout(()=>pages.forEach(c=>{if(c._z&&c.getBoundingClientRect().bottom>-800&&c.getBoundingClientRect().top<innerHeight+800)draw(c);else c._z=c.querySelector('canvas')?-1:0}),250)};
+      el.querySelectorAll('[data-dkz]').forEach(x=>x.onclick=()=>zoom(+x.dataset.dkz?z+(+x.dataset.dkz)*.25:1));
+      // Zwei Finger (Handy) bzw. Ctrl + Mausrad / Trackpad
+      let t0=null;const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+      sc.addEventListener('touchstart',e=>{if(e.touches.length===2)t0={d:dist(e.touches),z}},{passive:true});
+      sc.addEventListener('touchmove',e=>{if(t0&&e.touches.length===2){e.preventDefault();box.style.transformOrigin='center top';box.style.transform=`scale(${Math.max(.5,Math.min(4,t0.z*dist(e.touches)/t0.d))/z})`;t0.last=dist(e.touches)}},{passive:false});
+      sc.addEventListener('touchend',e=>{if(t0&&e.touches.length<2){box.style.transform='';const r=t0.last?t0.z*t0.last/t0.d:z;t0=null;zoom(r)}});
+      sc.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();zoom(z*(e.deltaY<0?1.1:1/1.1))},{passive:false});
       if(o.page>1&&pages[o.page-1])setTimeout(()=>pages[o.page-1].scrollIntoView(),50);return}
     catch(e){el.innerHTML=`<div class="mut">Das PDF lässt sich hier nicht anzeigen (${esc(e.message)}).</div><p><a class="btn" href="${u}" target="_blank" rel="noopener">Im Browser öffnen</a></p>`;return}}
   el.innerHTML=`<div class="dkmd"><p>${esc(d.file.name)} (${dkSize(d.file.bytes)}) lässt sich hier nicht anzeigen.</p>${o.nodl?'<p class="mut">Herunterladen ist für Externe ausgeschaltet.</p>':'<p><button class="pri" data-dkdl>Herunterladen</button></p>'}</div>`;
