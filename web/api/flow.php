@@ -335,7 +335,8 @@ function flowReachRows($grp = null) { global $db; $q = "SELECT * FROM hydro_reac
   return array_map(fn($r) => floats(ints($r, ['id', 'g_from', 'g_to', 'len_m', 'sort', 'active']), ['fac', 'mg']) + ['pts_n' => count($r['pts'])], array_map(function ($r) { $r['pts'] = json_decode((string)$r['pts'], true) ?: []; return $r; }, $s->fetchAll())); }
 function flowAdmin($id) { $c = flowCurve($id); $locs = hydroLocs(); $st = flowStations(); [$L] = hydroLatest(); $q = $L[$id]['flow'] ?? null;
   return ['station' => $id, 'name' => $locs[$id]['name'] ?? $st[$id]['name'] ?? ($c['name'] ?? $id), 'water' => $locs[$id]['water'] ?? $st[$id]['river'] ?? ($c['river'] ?? ''), 'curve' => $c,
-    'lat' => $locs[$id]['lat'] ?? $st[$id]['lat'] ?? null, 'lon' => $locs[$id]['lon'] ?? $st[$id]['lon'] ?? null, 'q' => $q, 'v' => $c ? flowV($c, $q) : null, 'drift' => $c && $q ? flowDrift($c, $q) : null, 'fc' => isset(flowFcList()[$id]) ? 1 : 0]; }
+    'lat' => $locs[$id]['lat'] ?? $st[$id]['lat'] ?? null, 'lon' => $locs[$id]['lon'] ?? $st[$id]['lon'] ?? null, 'q' => $q, 'v' => $c ? flowV($c, $q) : null, 'drift' => $c && $q ? flowDrift($c, $q) : null, 'fc' => isset(flowFcList()[$id]) ? 1 : 0,
+    'wl' => $L[$id]['wl'] ?? null, 'danger' => $L[$id]['danger'] ?? null]; } // wl = Abfluss ab Gefahrenstufe 2–5 (BAFU), für das Querprofil
 
 /* ---------- Routen (vor dem switch) ---------- */
 function flowRoute($route) { global $db, $in, $now;

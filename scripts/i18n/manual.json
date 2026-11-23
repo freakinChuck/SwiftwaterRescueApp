@@ -133,7 +133,21 @@
 "Zusatzmarge Hauptströmung %": "Extra margin main current %",
 "Zusatzmarge Hauptströmung": "Extra margin main current",
 "km ab der Mündung gemäss BAFU-Flussvermessung. Faktor = Geschwindigkeit im Abschnitt im Verhältnis zur Station (Stau 0.33, Schwellen 0.75, frei 0.8, Engstelle 1). Zusatzmarge = Zuschlag auf die obere Grenze der Driftspanne, weil die Hauptströmung in der Flussmitte schneller ist als der Durchschnitt; leer = Standard ({0} %).": "km from the mouth according to the FOEN river survey. Factor = velocity in the section relative to the station (impounded 0.33, sills 0.75, free 0.8, narrows 1). Extra margin = surcharge on the upper limit of the drift range, because the main current in the middle of the river is faster than the average; empty = default ({0} %).",
-"Driftspanne = Faktor × Geschwindigkeit an der Oberfläche (≈ mittlere ÷ 0.85), die obere Grenze zusätzlich mit der Zusatzmarge für die Hauptströmung: in der Flussmitte fliesst das Wasser schneller als der Durchschnitt. Je Abschnitt übersteuerbar. Relevante Veränderungen gehen an die Einsatzleitung: Hinweis in der Einsatz-App, Eintrag im Einsatzlog, Push mit der Stufe des Einsatztyps für Nachrichten. Fliessgeschwindigkeit und Suchgebiet bleiben unverändert.": "Drift range = factor × surface velocity (≈ mean ÷ 0.85), the upper limit additionally with the extra margin for the main current: in the middle of the river the water flows faster than the average. Can be overridden per section. Relevant changes go to the incident command: notice in the operations app, entry in the incident log, push with the message level of the incident type. Flow velocity and search area remain unchanged."
+"Driftspanne = Faktor × Geschwindigkeit an der Oberfläche (≈ mittlere ÷ 0.85), die obere Grenze zusätzlich mit der Zusatzmarge für die Hauptströmung: in der Flussmitte fliesst das Wasser schneller als der Durchschnitt. Je Abschnitt übersteuerbar. Relevante Veränderungen gehen an die Einsatzleitung: Hinweis in der Einsatz-App, Eintrag im Einsatzlog, Push mit der Stufe des Einsatztyps für Nachrichten. Fliessgeschwindigkeit und Suchgebiet bleiben unverändert.": "Drift range = factor × surface velocity (≈ mean ÷ 0.85), the upper limit additionally with the extra margin for the main current: in the middle of the river the water flows faster than the average. Can be overridden per section. Relevant changes go to the incident command: notice in the operations app, entry in the incident log, push with the message level of the incident type. Flow velocity and search area remain unchanged.",
+"mässige Gefahr": "moderate danger",
+"erhebliche Gefahr": "considerable danger",
+"grosse Gefahr": "high danger",
+"sehr grosse Gefahr": "very high danger",
+"Stufe 1": "Level 1",
+"keine oder geringe Gefahr, unter {0} m³/s.": "no or low danger, below {0} m³/s.",
+"aktueller Abfluss und Wasserspiegel.": "current discharge and water level.",
+"Tief / Hoch": "Low / High",
+"Gefahrenstufen": "Danger levels",
+"{0}, ab {1} m³/s.": "{0}, from {1} m³/s.",
+"{0}, {1} bis {2} m³/s.": "{0}, {1} to {2} m³/s.",
+"über {0}": "above {0}",
+"Die Farben zeigen, welche Gefahrenstufe gilt, solange der Wasserspiegel in diesem Band liegt; die Linien sind die Grenzwerte des BAFU für diese Station. Den Wasserspiegel dazu rechnet die App aus der Kennlinie; über dem höchsten Wert der Tabelle ist er geschätzt.": "The colours show which danger level applies while the water level lies in that band; the lines are the FOEN thresholds for this station. The app derives the matching water level from the rating curve; above the highest value in the table it is estimated.",
+"Oben der Querschnitt des Flussbetts beim Pegel der Station mit dem Wasserspiegel bei tiefem, aktuellem und hohem Abfluss bzw. bei den Grenzwerten der Gefahrenstufen. Unten die daraus berechnete mittlere Geschwindigkeit: jeder Punkt ist ein Stundenwert des letzten Jahres (Abfluss ÷ benetzte Fläche), die Linie die Kennlinie v̄ = a · Q": "Top: the cross-section of the riverbed at the station’s gauge with the water level at low, current and high discharge or at the danger level thresholds. Bottom: the resulting mean velocity: each dot is an hourly value of the last year (discharge ÷ wetted area), the line is the rating curve v̄ = a · Q"
 },
 "fr": {
 "Angemeldet:": "Connecté :",
@@ -269,7 +283,21 @@
 "Zusatzmarge Hauptströmung %": "Marge courant principal %",
 "Zusatzmarge Hauptströmung": "Marge courant principal",
 "km ab der Mündung gemäss BAFU-Flussvermessung. Faktor = Geschwindigkeit im Abschnitt im Verhältnis zur Station (Stau 0.33, Schwellen 0.75, frei 0.8, Engstelle 1). Zusatzmarge = Zuschlag auf die obere Grenze der Driftspanne, weil die Hauptströmung in der Flussmitte schneller ist als der Durchschnitt; leer = Standard ({0} %).": "km depuis l'embouchure selon le levé fluvial de l'OFEV. Facteur = vitesse dans le tronçon par rapport à la station (retenue 0.33, seuils 0.75, libre 0.8, rétrécissement 1). Marge supplémentaire = majoration de la limite supérieure de la plage de dérive, car le courant principal au milieu de la rivière est plus rapide que la moyenne ; vide = valeur par défaut ({0} %).",
-"Driftspanne = Faktor × Geschwindigkeit an der Oberfläche (≈ mittlere ÷ 0.85), die obere Grenze zusätzlich mit der Zusatzmarge für die Hauptströmung: in der Flussmitte fliesst das Wasser schneller als der Durchschnitt. Je Abschnitt übersteuerbar. Relevante Veränderungen gehen an die Einsatzleitung: Hinweis in der Einsatz-App, Eintrag im Einsatzlog, Push mit der Stufe des Einsatztyps für Nachrichten. Fliessgeschwindigkeit und Suchgebiet bleiben unverändert.": "Plage de dérive = facteur × vitesse en surface (≈ moyenne ÷ 0.85), la limite supérieure en plus avec la marge pour le courant principal : au milieu de la rivière, l'eau s'écoule plus vite que la moyenne. Modifiable par tronçon. Les changements pertinents vont à la direction d'intervention : avis dans l'app d'intervention, entrée dans le journal, push avec le niveau du type d'intervention pour les messages. La vitesse d'écoulement et la zone de recherche restent inchangées."
+"Driftspanne = Faktor × Geschwindigkeit an der Oberfläche (≈ mittlere ÷ 0.85), die obere Grenze zusätzlich mit der Zusatzmarge für die Hauptströmung: in der Flussmitte fliesst das Wasser schneller als der Durchschnitt. Je Abschnitt übersteuerbar. Relevante Veränderungen gehen an die Einsatzleitung: Hinweis in der Einsatz-App, Eintrag im Einsatzlog, Push mit der Stufe des Einsatztyps für Nachrichten. Fliessgeschwindigkeit und Suchgebiet bleiben unverändert.": "Plage de dérive = facteur × vitesse en surface (≈ moyenne ÷ 0.85), la limite supérieure en plus avec la marge pour le courant principal : au milieu de la rivière, l'eau s'écoule plus vite que la moyenne. Modifiable par tronçon. Les changements pertinents vont à la direction d'intervention : avis dans l'app d'intervention, entrée dans le journal, push avec le niveau du type d'intervention pour les messages. La vitesse d'écoulement et la zone de recherche restent inchangées.",
+"mässige Gefahr": "danger marqué",
+"erhebliche Gefahr": "danger important",
+"grosse Gefahr": "danger fort",
+"sehr grosse Gefahr": "danger très fort",
+"Stufe 1": "Degré 1",
+"keine oder geringe Gefahr, unter {0} m³/s.": "danger nul ou faible, sous {0} m³/s.",
+"aktueller Abfluss und Wasserspiegel.": "débit et niveau d’eau actuels.",
+"Tief / Hoch": "Bas / Haut",
+"Gefahrenstufen": "Degrés de danger",
+"{0}, ab {1} m³/s.": "{0}, dès {1} m³/s.",
+"{0}, {1} bis {2} m³/s.": "{0}, de {1} à {2} m³/s.",
+"über {0}": "au-dessus de {0}",
+"Die Farben zeigen, welche Gefahrenstufe gilt, solange der Wasserspiegel in diesem Band liegt; die Linien sind die Grenzwerte des BAFU für diese Station. Den Wasserspiegel dazu rechnet die App aus der Kennlinie; über dem höchsten Wert der Tabelle ist er geschätzt.": "Les couleurs indiquent le degré de danger applicable tant que le niveau d’eau se situe dans cette bande ; les lignes sont les seuils de l’OFEV pour cette station. L’app calcule le niveau d’eau correspondant à partir de la courbe de tarage ; au-dessus de la valeur la plus élevée du tableau, il est estimé.",
+"Oben der Querschnitt des Flussbetts beim Pegel der Station mit dem Wasserspiegel bei tiefem, aktuellem und hohem Abfluss bzw. bei den Grenzwerten der Gefahrenstufen. Unten die daraus berechnete mittlere Geschwindigkeit: jeder Punkt ist ein Stundenwert des letzten Jahres (Abfluss ÷ benetzte Fläche), die Linie die Kennlinie v̄ = a · Q": "En haut : la section du lit au limnimètre de la station avec le niveau d’eau à débit bas, actuel et haut ou aux seuils des degrés de danger. En bas : la vitesse moyenne qui en résulte : chaque point est une valeur horaire de l’année écoulée (débit ÷ section mouillée), la ligne est la courbe v̄ = a · Q"
 },
 "it": {
 "Angemeldet:": "Connesso:",
@@ -405,6 +433,20 @@
 "Zusatzmarge Hauptströmung %": "Margine corrente principale %",
 "Zusatzmarge Hauptströmung": "Margine corrente principale",
 "km ab der Mündung gemäss BAFU-Flussvermessung. Faktor = Geschwindigkeit im Abschnitt im Verhältnis zur Station (Stau 0.33, Schwellen 0.75, frei 0.8, Engstelle 1). Zusatzmarge = Zuschlag auf die obere Grenze der Driftspanne, weil die Hauptströmung in der Flussmitte schneller ist als der Durchschnitt; leer = Standard ({0} %).": "km dalla foce secondo il rilievo fluviale dell'UFAM. Fattore = velocità nel tratto rispetto alla stazione (sbarramento 0.33, soglie 0.75, libero 0.8, strettoia 1). Margine aggiuntivo = maggiorazione del limite superiore dell'intervallo di deriva, perché la corrente principale al centro del fiume è più veloce della media; vuoto = predefinito ({0} %).",
-"Driftspanne = Faktor × Geschwindigkeit an der Oberfläche (≈ mittlere ÷ 0.85), die obere Grenze zusätzlich mit der Zusatzmarge für die Hauptströmung: in der Flussmitte fliesst das Wasser schneller als der Durchschnitt. Je Abschnitt übersteuerbar. Relevante Veränderungen gehen an die Einsatzleitung: Hinweis in der Einsatz-App, Eintrag im Einsatzlog, Push mit der Stufe des Einsatztyps für Nachrichten. Fliessgeschwindigkeit und Suchgebiet bleiben unverändert.": "Intervallo di deriva = fattore × velocità in superficie (≈ media ÷ 0.85), il limite superiore in più con il margine per la corrente principale: al centro del fiume l'acqua scorre più veloce della media. Modificabile per tratto. Le variazioni rilevanti vanno alla direzione d'intervento: avviso nell'app d'intervento, voce nel giornale, push con il livello del tipo d'intervento per i messaggi. Velocità della corrente e zona di ricerca restano invariate."
+"Driftspanne = Faktor × Geschwindigkeit an der Oberfläche (≈ mittlere ÷ 0.85), die obere Grenze zusätzlich mit der Zusatzmarge für die Hauptströmung: in der Flussmitte fliesst das Wasser schneller als der Durchschnitt. Je Abschnitt übersteuerbar. Relevante Veränderungen gehen an die Einsatzleitung: Hinweis in der Einsatz-App, Eintrag im Einsatzlog, Push mit der Stufe des Einsatztyps für Nachrichten. Fliessgeschwindigkeit und Suchgebiet bleiben unverändert.": "Intervallo di deriva = fattore × velocità in superficie (≈ media ÷ 0.85), il limite superiore in più con il margine per la corrente principale: al centro del fiume l'acqua scorre più veloce della media. Modificabile per tratto. Le variazioni rilevanti vanno alla direzione d'intervento: avviso nell'app d'intervento, voce nel giornale, push con il livello del tipo d'intervento per i messaggi. Velocità della corrente e zona di ricerca restano invariate.",
+"mässige Gefahr": "pericolo marcato",
+"erhebliche Gefahr": "pericolo notevole",
+"grosse Gefahr": "pericolo forte",
+"sehr grosse Gefahr": "pericolo molto forte",
+"Stufe 1": "Grado 1",
+"keine oder geringe Gefahr, unter {0} m³/s.": "pericolo nullo o debole, sotto {0} m³/s.",
+"aktueller Abfluss und Wasserspiegel.": "portata e livello dell’acqua attuali.",
+"Tief / Hoch": "Basso / Alto",
+"Gefahrenstufen": "Gradi di pericolo",
+"{0}, ab {1} m³/s.": "{0}, da {1} m³/s.",
+"{0}, {1} bis {2} m³/s.": "{0}, da {1} a {2} m³/s.",
+"über {0}": "oltre {0}",
+"Die Farben zeigen, welche Gefahrenstufe gilt, solange der Wasserspiegel in diesem Band liegt; die Linien sind die Grenzwerte des BAFU für diese Station. Den Wasserspiegel dazu rechnet die App aus der Kennlinie; über dem höchsten Wert der Tabelle ist er geschätzt.": "I colori mostrano quale grado di pericolo vale finché il livello dell’acqua si trova in quella fascia; le linee sono le soglie dell’UFAM per questa stazione. L’app calcola il livello corrispondente dalla scala di deflusso; oltre il valore più alto della tabella è stimato.",
+"Oben der Querschnitt des Flussbetts beim Pegel der Station mit dem Wasserspiegel bei tiefem, aktuellem und hohem Abfluss bzw. bei den Grenzwerten der Gefahrenstufen. Unten die daraus berechnete mittlere Geschwindigkeit: jeder Punkt ist ein Stundenwert des letzten Jahres (Abfluss ÷ benetzte Fläche), die Linie die Kennlinie v̄ = a · Q": "In alto: la sezione dell’alveo all’idrometro della stazione con il livello dell’acqua a portata bassa, attuale e alta o alle soglie dei gradi di pericolo. In basso: la velocità media risultante: ogni punto è un valore orario dell’ultimo anno (portata ÷ sezione bagnata), la linea è la curva v̄ = a · Q"
 }
 }

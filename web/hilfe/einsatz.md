@@ -107,7 +107,7 @@ Der Kartenknopf **Messstationen** zeigt Pegel, Abfluss und Wassertemperatur der 
 - **Beim PLS**: die nächsten Stationen, mit den Werten bei Einsatzbeginn und den aktuellen.
 - **Meine Messstationen**: deine eigene Auswahl, auch ohne Einsatz (im [Profil](#profil/messstationen)).
 
-Bei Stationen mit Kennlinie steht zusätzlich die aktuelle **Fliessgeschwindigkeit** (Bereich in m/s). **Kennlinie** (in der Liste und im Popup des Markers) zeigt den Querschnitt des Flussbetts mit dem Wasserspiegel und die Geschwindigkeit je Abfluss.
+Bei Stationen mit Kennlinie steht zusätzlich die aktuelle **Fliessgeschwindigkeit** (Bereich in m/s). **Kennlinie** (in der Liste und im Popup des Markers) zeigt den Querschnitt des Flussbetts mit dem Wasserspiegel und die Geschwindigkeit je Abfluss. Über dem Querschnitt schaltest du zwischen **Tief / Hoch** (Niedrig- und Hochwasser des letzten Jahres) und **Gefahrenstufen** um: Dann zeigen farbige Bänder, ab welchem Wasserspiegel welche Gefahrenstufe des BAFU gilt, und die gestrichelte Linie den Wasserspiegel jetzt (nur bei Stationen mit Grenzwerten für den Abfluss).
 
 ![Messstationen](img/messstationen.jpg)
 
