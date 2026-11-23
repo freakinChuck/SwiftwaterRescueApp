@@ -380,8 +380,8 @@ function hyShow(i){const s=hyStation(i);if(!s)return;stopFollow();if(!vis('hydro
 function bindHydro(el,deleg){if(deleg){el.onclick=e=>{const b=e.target.closest('[data-hyz],[data-hyp]');if(!b)return;b.dataset.hyz?hyShow(b.dataset.hyz):(togglePanel('hyd',false),prefs(true))};return}
   el.querySelectorAll('[data-hyz]').forEach(b=>b.onclick=()=>hyShow(b.dataset.hyz));el.querySelectorAll('[data-hyp]').forEach(b=>b.onclick=()=>prefs(true))}
 // Kartenknopf «Messstationen» (Issue #147): im Einsatz bei eingeschalteter Funktion, ohne Einsatz, sobald man eigene Messstationen hat
-// Station ohne Geschwindigkeit: oberhalb der Bezugsstation mit Laufzeit, sonst Hinweis (nur wenn die Werte geladen sind)
-const hyFlUp=i=>{const p=st&&st.incident&&st.flow_pred,u=p&&(p.ups||[]).find(x=>x.id===i);if(u)return`<div class="mut" style="font-size:.85rem">erreicht ${esc(p.name)} in ca. ${u.lag_h} h</div>`;return hyFlowOk&&!hyFlow[i]?'<div class="mut" style="font-size:.85rem">kein Querprofil, keine Geschwindigkeit</div>':''};
+// Station ohne Geschwindigkeit: Hinweis (nur wenn die Werte geladen sind)
+const hyFlUp=i=>{return hyFlowOk&&!hyFlow[i]?'<div class="mut" style="font-size:.85rem">kein Querprofil, keine Geschwindigkeit</div>':''};
 const hyBtn=()=>feat('hydro')&&!!(st&&st.incident||hyMine().length);
 /* ---------- Fliessgeschwindigkeit an den Stationen (Issue #254) ---------- */
 // st.flow_pred (flowIncPred im Server): Bezugsstation beim PLS mit Kennlinie v̄ = a·Q^m, Abfluss stündlich −12 h … +96 h (ser [[t, q, lo, hi]]),
@@ -413,11 +413,10 @@ function fpReach(r){const k=FLK[r.kind]||FLK.frei;return`<div class="fsec"><div>
 // Inhalt der Karte «Fliessgeschwindigkeit» unter dem Eingabefeld
 function flowPredHtml(i){const p=st.flow_pred;if(!p)return'';const set=i.flow_ms,d0=fpD(p,0)||fpDrift(p,p.q),w=p.warn,nm=fpName(p);
   const tab=[[3,'in 3 h'],[12,'in 12 h'],[24,'in 1 Tag'],[48,'in 2 Tagen']].map(([h,l])=>{const d=fpD(p,h);if(!d)return'';const up=set&&Math.abs(d[2]-set)>=set*.2;return`<div${up?' class="up"':''}>${l}<b>${fpR(d)}</b></div>`}).join('');
-  const ups=p.ups&&p.ups.length?`bis ${p.lag+1} h aus ${p.ups.map(u=>esc(u.water&&u.water!==p.water?u.water:u.name)).join(', ')} (Laufzeit ca. ${p.lag} h), danach `:'';
   return(w?`<div class="fpv w">⚠ <b>In ${w.h} h deutlich ${w.up?'schneller':'langsamer'}:</b> ${fpR([w.d0,w.d1])} m/s statt eingestellt ${f1(set)} m/s (Abfluss ${esc(p.name)} ${w.q>w.q0?'steigt':'sinkt'}${w.fc?' gemäss BAFU-Vorhersage':''} von ${w.q0} auf ${w.q} m³/s).</div>`:'')
     +`<div class="fpv"><div class="rw"><div><span class="mut">Vorschlag jetzt</span><div class="big">${fpR(d0)} m/s</div><span class="mut">${f1(d0[0]*3.6)}–${f1(d0[1]*3.6)} km/h · Abfluss ${Math.round(p.q)} m³/s</span></div><button class="pri" id="bFlTake" data-v="${f1(d0[2]).replace(',','.')}">Übernehmen ${f1(d0[2])}</button></div>`
     +fpSvg(p,set)+`<div class="ftab">${tab}</div>`
-    +`<div class="mut" style="font-size:.75rem">${esc(nm)} (${esc(p.station)}), ${fpRel(p)} · ${ups}${p.fc_at?'BAFU-Vorhersage (Median, Spanne Min.–Max.) · Stand '+fmtDT(p.fc_at):'Abfluss bleibt wie jetzt (keine BAFU-Vorhersage)'}${p.src==='strickler'?' · ohne Querprofil, Schätzung ±30–50 %':''}</div></div>`
+    +`<div class="mut" style="font-size:.75rem">${esc(nm)} (${esc(p.station)}), ${fpRel(p)} · ${p.fc_at?'BAFU-Vorhersage (Median, Spanne Min.–Max.) · Stand '+fmtDT(p.fc_at):'Abfluss bleibt wie jetzt (keine BAFU-Vorhersage)'}${p.src==='strickler'?' · ohne Querprofil, Schätzung ±30–50 %':''}</div></div>`
     +(p.reaches&&p.reaches.length?`<details ${flSecOpen?'open ':''}class="fpv fsecs" id="flSecs"><summary><b>Abschnitte bis Ende Suchgebiet</b> <span class="mut">(m/s, Schätzung)</span></summary>${p.reaches.map(fpReach).join('')}</details>`:'')}
 let flSecOpen=(()=>{try{return localStorage.getItem('sw_flsec')!=='0'}catch(e){return true}})();
 function flowPredBind(s){const b=s.querySelector('#bFlTake'),p=st&&st.flow_pred;if(b&&p)b.onclick=()=>api('incident/flow',{flow_ms:+b.dataset.v,src:'Vorschlag '+fpName(p)}).then(()=>{toast('Fliessgeschwindigkeit übernommen','ok');return poll()}).catch(fail);

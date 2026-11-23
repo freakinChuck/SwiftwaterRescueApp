@@ -901,14 +901,12 @@ const HYDRO_SOURCES = [
             'note' => 'Dokumentierte Schnittstelle des BAFU: Stundenwerte für die Kennlinien, Querprofile, Längenprofile und Bauwerke der Flussvermessung. Höchstens 500 Abfragen in 5 Minuten; die Kennlinien werden nachts neu berechnet.'],
   'fc' => ['name' => 'BAFU-Hochwasservorhersage (hydrodaten.admin.ch)', 'site' => 'https://www.hydrodaten.admin.ch', 'lic' => 'Offene Daten des BAFU, Quellenangabe «BAFU»', 'flow' => 1,
             'note' => 'Abflussvorhersage für rund 50 Stationen an grösseren Flüssen, bis 5 Tage, mit Spannweite (Median, Min./Max.). Ausgegeben mehrmals täglich, ohne Gewähr.'],
-  'kt_ag' => ['name' => 'Kanton Aargau, Hydrometrie (ag.ch)', 'site' => 'https://www.ag.ch/de/verwaltung/bvu/umwelt-natur-landschaft/umwelt/hydrometrie', 'lic' => 'Daten des Kantons Aargau', 'flow' => 1,
-            'note' => 'Kantonale Stationen an den Zuflüssen für die Laufzeit der Abflusswelle. Noch nicht angebunden: die Schnittstelle wird mit dem Kanton geklärt.'],
 ];
 const HYDRO_OLD = 86400; // ältere Messwerte gelten als nicht aktuell
 const HYDRO_TTL = 300; // Messwerte zwischenspeichern (BAFU misst alle 10 Minuten)
 const HYDRO_MAX = 20;  // persönliche Messstationen je Person
 const HYDRO_NUM = ['radius_km' => [15, 1, 100], 'n' => [3, 1, 10]]; // [Standard, Minimum, Maximum]: Umkreis um jeden PLS, Stationen je PLS
-const HYDRO_DEFAULT = ['radius_km' => 15, 'n' => 3, 'lakes' => 0, 'src' => ['api' => 1, 'web' => 1, 'bafu' => 1, 'fc' => 1, 'kt_ag' => 0]];
+const HYDRO_DEFAULT = ['radius_km' => 15, 'n' => 3, 'lakes' => 0, 'src' => ['api' => 1, 'web' => 1, 'bafu' => 1, 'fc' => 1]];
 const HYDRO_ID = '/^[A-Za-z0-9_-]{1,12}$/';
 function hydroCfg() { $v = json_decode(setting('hydro', ''), true); $v = is_array($v) ? $v : []; $c = HYDRO_DEFAULT;
   foreach (HYDRO_NUM as $k => [$d, $lo, $hi]) if (is_numeric($v[$k] ?? null)) $c[$k] = (int)min(max((float)$v[$k], $lo), $hi);
@@ -943,7 +941,7 @@ function hydroBafu() { return hydroFile('bafu', HYDRO_TTL, function () { $on = h
     return $ok && $locs ? ['locs' => $locs, 'vals' => $vals] : null; }); }
 // eine Quelle abfragen und den Stand festhalten: ['locs' => …, 'vals' => …] oder null
 function hydroSrc($k) { $t = microtime(true); $err = null;
-  try { $r = ['api' => 'hydroApi', 'web' => 'hydroWeb', 'bafu' => 'flowSrcBafu', 'fc' => 'flowSrcFc', 'kt_ag' => 'flowSrcAg'][$k](); } catch (Throwable $e) { $r = null; $err = $e->getMessage(); }
+  try { $r = ['api' => 'hydroApi', 'web' => 'hydroWeb', 'bafu' => 'flowSrcBafu', 'fc' => 'flowSrcFc'][$k](); } catch (Throwable $e) { $r = null; $err = $e->getMessage(); }
   if (!$r && !$err) $err = 'keine gültige Antwort';
   if (!$r) alog('warn', 'hydro', 'Quelle ohne Antwort: ' . (HYDRO_SOURCES[$k]['name'] ?? $k), ['err' => mb_substr((string)$err, 0, 200)]); // Applikationslog (Issue #139)
   hydroStat($k, ['ok' => $r ? 1 : 0, 'ms' => (int)((microtime(true) - $t) * 1000), 'err' => $err, 'stations' => $r ? count($r['locs']) : 0, 'values' => $r ? count($r['vals']) : 0]);
@@ -3378,7 +3376,7 @@ const DSAR_TABLES = ['users' => ['Personen', 'id'], 'uroles' => ['Benutzerrollen
   'inc_kinds' => ['Einsatztypen', 'id'], 'modes' => ['Einrückoptionen', 'id'], 'roles' => ['Spezialrollen', 'id'], 'incidents' => ['Einsätze', 'id'], 'participants' => ['Teilnahmen', 'id'],
   'incident_log' => ['Einsatzlog', 'id'], 'messages' => ['Nachrichten', 'id'], 'track' => ['Aufzeichnung (Standortverlauf)', 'id'], 'rec_periods' => ['Aufgezeichnete Zeiträume', 'id'],
   'air_track' => ['Aufzeichnung Luftfahrzeuge', 'id'], 'rescuees' => ['Rettlinge', 'id'], 'rescuee_marks' => ['Frühere Rettling-Markierungen', 'id'], 'externals' => ['Externe Einsatzkräfte', 'id'],
-  'pois' => ['Markierungen, Bereiche und Linien', 'id'], 'inc_hydro' => ['Pegel und Abfluss im Einsatz', 'id'], 'hydro_note' => ['Meldungen zur Fliessgeschwindigkeit', 'id'], 'hydro_curve' => ['Kennlinien der Messstationen', 'station'], 'hydro_lag' => ['Stationen oberhalb', 'id'], 'hydro_reach' => ['Abschnitte der Gewässer', 'id'], 'voice' => ['Durchsagen (Funk)', 'id'], 'voice_channels' => ['Funkkanäle', 'id'],
+  'pois' => ['Markierungen, Bereiche und Linien', 'id'], 'inc_hydro' => ['Pegel und Abfluss im Einsatz', 'id'], 'hydro_note' => ['Meldungen zur Fliessgeschwindigkeit', 'id'], 'hydro_curve' => ['Kennlinien der Messstationen', 'station'], 'hydro_reach' => ['Abschnitte der Gewässer', 'id'], 'voice' => ['Durchsagen (Funk)', 'id'], 'voice_channels' => ['Funkkanäle', 'id'],
   'voice_guests' => ['Funk-Links für Externe', 'id'], 'voice_conf' => ['Anwesenheit in der Konferenz', 'incident_id,ident'], 'voice_mute' => ['Stummschaltungen', 'incident_id,channel_id,ident'],
   'ex_plans' => ['Planungen (vorbereitete Übungen)', 'id'], 'ex_injects' => ['Elemente der Planungen', 'id'], 'ex_signups' => ['Anmeldungen zu Übungen', 'id'], 'ext_templates' => ['Vorlagen externe Einsatzkräfte', 'id'],
   'places' => ['Feste Standorte', 'id'], 'place_cats' => ['Kategorien fester Standorte', 'id'], 'place_props' => ['Eigenschaften fester Standorte', 'id'], 'place_nav' => ['Navigationspunkte', 'id'],

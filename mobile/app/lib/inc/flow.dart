@@ -201,10 +201,6 @@ List<Widget> flowPredWidgets(BuildContext c, IncStore s, void Function(double v,
             ])));
   }
 
-  final ups = jl(p['ups']), lag = ji(p['lag']) ?? 0;
-  final upsT = ups.isEmpty
-      ? ''
-      : 'bis ${lag + 1} h aus ${ups.map((u) => js(u['water']).isNotEmpty && js(u['water']) != js(p['water']) ? js(u['water']) : js(u['name'])).join(', ')} (Laufzeit ca. $lag h), danach ';
   final fc = p['fc_at'] != null ? 'BAFU-Vorhersage (Median, Spanne Min.–Max.) · Stand ${fmtDT(jn(p['fc_at']))}' : 'Abfluss bleibt wie jetzt (keine BAFU-Vorhersage)';
   final rs = jl(p['reaches']);
   return [
@@ -236,7 +232,7 @@ List<Widget> flowPredWidgets(BuildContext c, IncStore s, void Function(double v,
       FlowChart(p, set),
       Row(children: [tabCell(3, 'in 3 h'), tabCell(12, 'in 12 h'), tabCell(24, 'in 1 Tag'), tabCell(48, 'in 2 Tagen')]),
       const SizedBox(height: 4),
-      Text('$nm (${js(p['station'])}), ${fpRel(p)} · $upsT$fc${js(p['src']) == 'strickler' ? ' · ohne Querprofil, Schätzung ±30–50 %' : ''}',
+      Text('$nm (${js(p['station'])}), ${fpRel(p)} · $fc${js(p['src']) == 'strickler' ? ' · ohne Querprofil, Schätzung ±30–50 %' : ''}',
           style: const TextStyle(fontSize: 11, color: mutC)),
     ])),
     if (rs.isNotEmpty)
@@ -312,8 +308,6 @@ List<Widget> flowLayers(IncStore s) {
 Widget? hyFq(IncStore s, String id) {
   final f = s.hyFlow[id];
   if (f == null) {
-    final p = s.flowPred, u = p == null ? null : jl(p['ups']).where((x) => js(x['id']) == id).firstOrNull;
-    if (u != null) return Mut('erreicht ${js(p!['name'])} in ca. ${u['lag_h']} h', size: 12);
     return s.hyFlowOk ? const Mut('kein Querprofil, keine Geschwindigkeit', size: 12) : null;
   }
   final d0 = jd(f['d0']) ?? 0, d1 = jd(f['d1']) ?? 0;

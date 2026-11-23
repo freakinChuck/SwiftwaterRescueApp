@@ -59,7 +59,7 @@ details.agrp{margin:.6rem 0}details.agrp>summary{cursor:pointer;font-weight:600;
 .ent0{color:var(--mut);margin:.4rem 0}.nq{color:var(--mut);margin:.4rem 0}
 .inst{font-size:.75rem;color:var(--mut);margin-left:.4rem}
 .scard{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.6rem 0}
-.dlg .card.flk{max-width:min(860px,100%)}.flup{display:flex;align-items:center;gap:.4rem;margin:.3rem 0}.flup>span{flex:1 1 auto;min-width:0}.flup input{width:4.5rem;flex:none;margin:0}.flup button{flex:none}.flsvg{background:#0f2430;border:1px solid #2c4f60;border-radius:6px;padding:.3rem;margin:.5rem 0}.fltt{border-collapse:collapse;width:100%;margin:.4rem 0}.fltt th,.fltt td{border-bottom:1px solid var(--line);padding:.25rem .45rem;text-align:right}.fltt th:first-child,.fltt td:first-child{text-align:left}
+.dlg .card.flk{max-width:min(860px,100%)}.flsvg{background:#0f2430;border:1px solid #2c4f60;border-radius:6px;padding:.3rem;margin:.5rem 0}.fltt{border-collapse:collapse;width:100%;margin:.4rem 0}.fltt th,.fltt td{border-bottom:1px solid var(--line);padding:.25rem .45rem;text-align:right}.fltt th:first-child,.fltt td:first-child{text-align:left}
 .kch{display:inline-block;margin-left:.4rem;padding:0 .45rem;border-radius:9px;font-size:.78rem;font-weight:600;color:#fff}.kch.pool{background:#1d7fd1}.kch.thr{background:#ff8a3d}.kch.gorge{background:#c34fff}.kch.free{background:#35c27a}.scard>h3:first-child{margin-top:0}
 .sbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-top:.8rem}.sbar .sbn{color:var(--mut);font-size:.85rem}.sbar.dirty{position:sticky;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--ex);padding:.5rem 0}.sbar.dirty .sbn{color:var(--ex)}
 /* Statistik pro Person (Issue #87): Filterzeile, Diagramme als SVG, Hinweis beim Darüberfahren */
@@ -1622,7 +1622,7 @@ async function loadHydro(){const el=$('#sHy');let s,h;try{[s,h]=await Promise.al
     try{const r=await api('hydro/test',{src:k});o.innerHTML=r.ok?`✓ Antwort in ${r.ms} ms: ${r.stations} Stationen, Werte für ${r.values}.${r.example?' Beispiel '+esc(r.example):''}`:`✗ Keine gültige Antwort (${r.ms} ms)${r.err?': '+esc(r.err):''}`}catch(e){o.textContent='✗ '+e.message}finally{b.disabled=false}});
   $('#hyRf').onclick=e=>{const b=e.target;b.disabled=true;api('hydro/status',{fresh:1}).then(x=>{$('#hySt').innerHTML=st(x)+` Abruf in ${x.ms} ms.`}).catch(fail).finally(()=>{b.disabled=false})};flowLoad()}
 /* ---------- Fliessgeschwindigkeit an den Stationen (Issue #254) ---------- */
-// Kennlinie v̄ = a·Q^m je Station (Querprofil der BAFU-Flussvermessung, sonst Strickler, oder von Hand), Stationen oberhalb mit Laufzeit, Abschnitte mit Faktor, Meldungen
+// Kennlinie v̄ = a·Q^m je Station (Querprofil der BAFU-Flussvermessung, sonst Strickler, oder von Hand), Abschnitte mit Faktor, Meldungen
 // Server: hydro/curves, hydro/curve(/calc|/save|/remove), hydro/reaches, hydro/reach/(propose|save|remove), Einstellung flow (settings/save)
 const FLW={prof:'Kennlinie aus Querprofil',strickler:'ohne Querprofil',manual:'Kennlinie von Hand',none:'ohne Kennlinie'};
 const flN=(v,d=2)=>v==null?'–':(+v).toLocaleString(LOC,{maximumFractionDigits:d}),flMon=s=>{const d=new Date(s);return isNaN(d)?esc(s||''):d.toLocaleDateString(LOC,{month:'short',year:'numeric'})};
@@ -1631,12 +1631,10 @@ let flowA=null,flowMap=null,flowGrp=null,flowStP=null; // Stand der Verwaltung: 
 function flowStH(s){const c=s.curve||{},q=s.q!=null?Math.round(s.q):null,d=s.drift;
   const desc=c.src==='prof'?`Kennlinie v̄ = ${flN(c.a,3)} · Q^${flN(c.m,2)} aus ${(c.prof||[]).length>1?'den Querprofilen':'dem Querprofil'} GEWISS ${(c.prof||[]).map(p=>p.g).join(' und ')} (${(c.prof||[]).map(p=>flMon(p.at)).filter((x,i,a)=>a.indexOf(x)===i).join(', ')}, ${(c.prof||[]).map(p=>flN(p.d,0)).join(' bzw. ')} m von der Station) und ${flN(c.n,0)} Stundenwerten${c.r2!=null?` · R² ${flN(c.r2,3)}`:''}${c.upd?' · Stand '+new Date(c.upd*1000).toLocaleDateString(LOC):''}`
     :c.src==='manual'?`Kennlinie von Hand: v̄ = ${flN(c.a,3)} · Q^${flN(c.m,2)}`:esc(c.msg||'Kennlinie noch nicht berechnet');
-  const up=s.ups.length?s.ups.map(u=>`${esc(u.name)} ${flN(u.lag_h,1)} h`).join(' · ')+(c.rest!=null?` · Zwischengebiet ohne Station ${c.rest>=0?'+':''}${flN(c.rest,1)} m³/s`:''):'keine (Ende der Kette)'+(s.fc?' · nur BAFU-Vorhersage':'');
-  const gu=c.err!=null?`<br><b>Güte (letzte 30 Tage):</b> ±${flN(c.err,1)} % in 3 h · ohne Stationen oberhalb ±${flN(c.err0,1)} %`:'';
   return ent({t:`${s.water?s.water+' – ':''}${s.name} (${s.station})`,q:`${s.water} ${s.name} ${s.station}`,cls:flNeed(s)?'flneed':'',
     ch:chip(FLW[c.src]||FLW.none,c.src==='prof'||c.src==='manual'?'var(--ok)':'#ff9f1c')+(s.fc?chip('BAFU-Vorhersage'):''),dh:(c.src==='prof'||c.src==='manual'?'':'⚠ ')+desc,
     kv:[[q!=null?`jetzt ${flN(q,0)} m³/s`:'jetzt',s.v!=null?flN(s.v,2)+' m/s':'–'],['Drift',d?`${flN(d[0],1)}–${flN(d[1],1)} m/s`:'–']],
-    sub:`<div class="mut ed" style="margin-top:.3rem"><b>Stationen oberhalb:</b> ${up}${gu}</div>`,btns:c.a!=null?`<button data-flk="${esc(s.station)}">Kennlinie</button>`:'',ed:['fle',esc(s.station)],del:['fld',esc(s.station)]})}
+    btns:(c.a!=null?`<button data-flk="${esc(s.station)}">Kennlinie</button>`:'')+`<button data-flr="${esc(s.station)}">Neu berechnen</button>`,del:['fld',esc(s.station)]})}
 // Querprofil mit Wasserspiegeln (Tabelle kl: [Q, Pegel, Fläche, v̄])
 function flProfSvg(c,qNow){const p=(c.prof||[])[0];if(!p||!p.pts||p.pts.length<3)return'';const kl=c.kl||[],W=520,H=210,L0=40,R0=10,T0=10,B0=26;
   const wlAt=q=>{if(!kl.length)return null;let a=kl[0],b=kl[kl.length-1];for(let i=1;i<kl.length;i++)if(kl[i][0]>=q){a=kl[i-1];b=kl[i];break}return b[0]===a[0]?a[1]:a[1]+(q-a[0])/(b[0]-a[0])*(b[1]-a[1])};
@@ -1666,16 +1664,14 @@ async function flowCurveDlg(id){let s;try{s=await api('hydro/curve',{id})}catch(
     async d=>{const man=d.querySelector('#flMan').checked;if(man===!!c.manual&&(!man||+d.querySelector('#flA').value===c.a&&+d.querySelector('#flM').value===c.m))return;
       await api('hydro/curve/save',man?{id,manual:1,a:d.querySelector('#flA').value,m:d.querySelector('#flM').value}:{id,manual:0});toast(man?'Kennlinie von Hand gespeichert.':'Kennlinie neu berechnet.','ok');flowLoad()},'Schliessen','Abbrechen');
   d.querySelector('.card').classList.add('flk');const ok=d.querySelector('[data-ok]'),upd=()=>{const m=d.querySelector('#flMan').checked;d.querySelector('#flManF').hidden=!m;ok.textContent=m!==!!c.manual||m?'Speichern':'Schliessen'};d.querySelector('#flMan').onchange=upd;upd()}
-// Bearbeiten: Stationen oberhalb mit Laufzeit, neu berechnen
-function flowStDlg(s){const all=flowA.cur.all,nm=id=>{const x=all.find(y=>y.id===id);return x?`${x.water} – ${x.name} (${id})`:id},ups=s.ups.map(u=>({up:u.up,lag_h:u.lag_h}));
-  const d=dlg(`${s.water?s.water+' – ':''}${s.name} (${s.station})`,`<h4>Stationen oberhalb</h4><div class="mut">Ihr Abfluss erreicht diese Station nach der Laufzeit. Die Vorhersage der ersten Stunden setzt sich daraus zusammen, danach gilt die BAFU-Vorhersage.</div><div id="flUps"></div>
-    <div class="row"><input id="flUpQ" list="flAll" placeholder="Station oberhalb suchen" style="flex:1 1 14rem"><datalist id="flAll">${all.filter(x=>x.id!==s.station).map(x=>`<option value="${esc(nm(x.id))}">`).join('')}</datalist><button id="flUpAdd">+ Station</button></div>
-    <h4>Kennlinie</h4><div class="mut">Neu berechnen holt Querprofil und Stundenwerte erneut bei der BAFU-Datenplattform (dauert bis eine Minute) und hebt eine Kennlinie von Hand auf.</div><div class="row"><button id="flCalc">Neu berechnen</button></div>`,
-    async()=>{await api('hydro/curve/save',{id:s.station,ups});toast('Gespeichert.','ok');flowLoad()});d.querySelector('.card').classList.add('mid');
-  const draw=()=>{d.querySelector('#flUps').innerHTML=ups.length?ups.map((u,i)=>`<div class="flup"><span>${esc(nm(u.up))}</span><input type="number" data-flu="${i}" step="0.5" min="0.5" max="48" value="${u.lag_h}" aria-label="Laufzeit in Stunden"><small>h</small><button class="sec" data-flx="${i}">Entfernen</button></div>`).join(''):empty('Keine. Beispiel: Aare – Murgenthal, Laufzeit 3 h.');
-    d.querySelectorAll('[data-flu]').forEach(x=>x.oninput=()=>{ups[+x.dataset.flu].lag_h=+x.value});d.querySelectorAll('[data-flx]').forEach(x=>x.onclick=()=>{ups.splice(+x.dataset.flx,1);draw()})};draw();
-  d.querySelector('#flUpAdd').onclick=()=>{const v=d.querySelector('#flUpQ').value,m=v.match(/\(([^()]+)\)\s*$/),id=m?m[1]:v.trim();if(!all.some(x=>x.id===id))return toast('Station nicht gefunden.','err');if(!ups.some(u=>u.up===id))ups.push({up:id,lag_h:3});d.querySelector('#flUpQ').value='';draw()};
-  d.querySelector('#flCalc').onclick=async e=>{const b=e.target;b.disabled=true;b.textContent='Wird berechnet …';try{await api('hydro/curve/calc',{id:s.station,reset:1});toast('Kennlinie neu berechnet.','ok');d.remove();flowLoad()}catch(x){fail(x)}finally{b.disabled=false;b.textContent='Neu berechnen'}}}
+// Kennlinie berechnen: holt Querprofil und Stundenwerte bei der BAFU-Datenplattform (bis eine Minute), der Knopf zählt die Sekunden, das Ergebnis kommt als Hinweis
+async function flowCalcRun(id,b,reset){const t0=Date.now(),lb=b.textContent,tick=()=>{b.textContent=`Wird berechnet … ${Math.round((Date.now()-t0)/1000)} s`};
+  b.disabled=true;tick();const iv=setInterval(tick,1000);
+  try{const r=await api('hydro/curve/calc',reset?{id,reset:1}:{id}),c=r.curve||{},nm=`${r.water?r.water+' – ':''}${r.name}`;
+    if(c.src==='prof')toast(`Kennlinie berechnet (${nm}): v̄ = ${flN(c.a,3)} · Q^${flN(c.m,2)}.`,'ok');
+    else if(c.src==='manual')toast(`Kennlinie von Hand bleibt (${nm}).`,'info');
+    else toast(`${nm}: ${c.msg||'Keine Kennlinie berechnet.'}`,c.a!=null?'info':'err');
+    flowLoad();return r}finally{clearInterval(iv);b.disabled=false;b.textContent=lb}}
 // Abschnitte: Karte und Liste je Gruppe (Flussstrecke um eine Station)
 function flowReachDlg(r,st){const K=flowA.rch.kinds,isN=!r;r=r||{name:'',kind:'frei',fac:K.frei[2],g_from:'',g_to:'',active:1,station:st};
   dlg(isN?'Neuer Abschnitt':'Abschnitt bearbeiten',`<label>Bezeichnung<input id="frN" value="${esc(r.name)}" placeholder="Beispiel: Blockrampe km 24.3 bis Schwelle km 19.6"></label>
@@ -1700,7 +1696,7 @@ function flowMapDraw(){const box=$('#flMap');if(flowMap){flowMap.remove();flowMa
   if(b.length)m.fitBounds(L.latLngBounds(b),{padding:[14,14]});else m.setView([46.8,8.2],8);setTimeout(()=>m.invalidateSize(),0)}
 async function flowLoad(){const el=$('#hyFlow');if(!el)return;let cur,rch,ks;try{[cur,rch,ks]=await Promise.all([api('hydro/curves'),api('hydro/reaches'),api('kinds')])}catch(e){return secErr(el,'Fliessgeschwindigkeit',e)}
   flowA={cur,rch};const flowRH=flowReachHtml();const c=cur.cfg,N=cur.num,K=(ks.kinds||[]).filter(k=>!k.deleted&&k.active),kc=id=>c.kinds[id]||{show:1,note:1};
-  el.innerHTML=`<h3>Fliessgeschwindigkeit an den Stationen</h3><div class="mut">Die Geschwindigkeit an jeder Station folgt aus Abfluss und benetztem Querschnitt (BAFU-Flussvermessung), die Vorhersage aus den Stationen oberhalb (Laufzeit der Abflusswelle) und der BAFU-Vorhersage. Nachts neu berechnet. Die App zeigt einen Vorschlag mit «Übernehmen» und ändert nie selbst.</div>
+  el.innerHTML=`<h3>Fliessgeschwindigkeit an den Stationen</h3><div class="mut">Die Geschwindigkeit an jeder Station folgt aus Abfluss und benetztem Querschnitt (BAFU-Flussvermessung), die Vorhersage aus der BAFU-Abflussvorhersage. Nachts neu berechnet. Die App zeigt einen Vorschlag mit «Übernehmen» und ändert nie selbst.</div>
     ${newBar('flAdd','Station',`${qIn('flQ','Station suchen')}<label class="chk"><input type="checkbox" id="flNeed"> nur mit Handlungsbedarf</label>`)}
     <div id="flSt">${cur.stations.length?cur.stations.map(flowStH).join(''):empty('Noch keine Station. Die App berechnet die Kennlinie der Station beim PLS beim ersten Einsatz selbst. Beispiel: «+ Station» Aare – Brugg (2016).')}</div>
     <h3>Abschnitte</h3><div class="mut">Vorschlag aus Längenprofil, Wehren und Schwellen der Flussvermessung. Bestätigen oder korrigieren; Kraftwerke mit Ausbau- und Dotierwassermenge von Hand.</div>
@@ -1712,10 +1708,10 @@ async function flowLoad(){const el=$('#hyFlow');if(!el)return;let cur,rch,ks;try
     <h4>Je Einsatztyp</h4><table class="fltt"><tr><th></th>${K.map(k=>`<th>${esc(k.name)}</th>`).join('')}</tr><tr><td>Vorhersage anzeigen</td>${K.map(k=>`<td><input type="checkbox" data-fks="${k.id}" aria-label="Vorhersage anzeigen: ${esc(k.name)}" ${kc(k.id).show?'checked':''}></td>`).join('')}</tr><tr><td>Relevante Veränderungen melden</td>${K.map(k=>`<td><input type="checkbox" data-fkn="${k.id}" aria-label="Melden: ${esc(k.name)}" ${kc(k.id).note?'checked':''}></td>`).join('')}</tr></table>${sbar('flSv')}</div>`;
   qWire(el,'flQ');const nd=$('#flNeed'),nf=()=>el.querySelectorAll('#flSt .ent').forEach(x=>{if(nd.checked&&!x.classList.contains('flneed'))x.style.display='none';else if(!nd.checked&&x.style.display==='none')x.style.display=''});nd.onchange=nf;
   el.querySelectorAll('[data-flk]').forEach(b=>b.onclick=()=>flowCurveDlg(b.dataset.flk));
-  el.querySelectorAll('[data-fle]').forEach(b=>b.onclick=()=>flowStDlg(cur.stations.find(s=>s.station===b.dataset.fle)));
-  el.querySelectorAll('[data-fld]').forEach(b=>b.onclick=async()=>{if(!await ask('Station entfernen?\n\nKennlinie und Stationen oberhalb werden gelöscht. Im nächsten Einsatz beim PLS berechnet die App sie neu.'))return;api('hydro/curve/remove',{id:b.dataset.fld}).then(flowLoad).catch(fail)});
+  el.querySelectorAll('[data-flr]').forEach(b=>b.onclick=()=>flowCalcRun(b.dataset.flr,b,1).catch(fail));
+  el.querySelectorAll('[data-fld]').forEach(b=>b.onclick=async()=>{if(!await ask('Station entfernen?\n\nDie Kennlinie wird gelöscht. Im nächsten Einsatz beim PLS berechnet die App sie neu.'))return;api('hydro/curve/remove',{id:b.dataset.fld}).then(flowLoad).catch(fail)});
   $('#flAdd').onclick=()=>{const all=cur.all,nm=x=>`${x.water} – ${x.name} (${x.id})`;dlg('Station erfassen',`<label>Station<input id="flNew" list="flAllN" placeholder="Beispiel: Aare – Brugg"></label><datalist id="flAllN">${all.map(x=>`<option value="${esc(nm(x))}">`).join('')}</datalist><div class="mut">Die App holt Querprofil und Stundenwerte bei der BAFU-Datenplattform und berechnet die Kennlinie (dauert bis eine Minute).</div>`,
-    async d=>{const v=d.querySelector('#flNew').value,m=v.match(/\(([^()]+)\)\s*$/),id=m?m[1]:v.trim();if(!all.some(x=>x.id===id))throw new Error('Station nicht gefunden');await api('hydro/curve/calc',{id});toast('Kennlinie berechnet.','ok');flowLoad()},'Berechnen')};
+    async d=>{const v=d.querySelector('#flNew').value,m=v.match(/\(([^()]+)\)\s*$/),id=m?m[1]:v.trim();if(!all.some(x=>x.id===id))throw new Error('Station nicht gefunden. Bitte aus der Liste wählen.');await flowCalcRun(id,d.querySelector('[data-ok]'))},'Berechnen')};
   if($('#flGrp'))$('#flGrp').onchange=e=>{flowGrp=e.target.value;$('#flR').innerHTML=flowReachHtml();flowRBind()};
   $('#flProp').onclick=flowPropDlg;if($('#flRAdd'))$('#flRAdd').onclick=()=>flowReachDlg(null,(rch.groups.find(g=>g.grp===flowGrp)||{}).station);
   const flowRBind=()=>{el.querySelectorAll('[data-fre]').forEach(b=>b.onclick=()=>flowReachDlg(rch.reaches.find(r=>r.id===+b.dataset.fre)));

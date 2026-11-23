@@ -79,7 +79,7 @@ Hat die massgebende Messstation beim PLS eine Kennlinie (Verwaltung), zeigt die 
 
 - **Vorschlag jetzt**: Driftgeschwindigkeit mit Unter- und Obergrenze aus dem aktuellen Abfluss. **Übernehmen** setzt den Wert; die App ändert ihn nie selbst.
 - **Diagramm**: die letzten 12 Stunden (weiss), die Vorhersage (blau) mit Band und der eingestellte Wert (gelb gestrichelt).
-- **In 3 / 12 / 24 / 48 h**: die erwartete Geschwindigkeit. Quelle ist die Abflussvorhersage des BAFU, sonst die Stationen oberhalb mit ihrer Laufzeit.
+- **In 3 / 12 / 24 / 48 h**: die erwartete Geschwindigkeit. Quelle ist die Abflussvorhersage des BAFU; ohne sie bleibt der Abfluss wie jetzt.
 - **Abschnitte bis Ende Suchgebiet**: Stau, Schwellen, Engstellen und freie Strecken mit eigener Geschwindigkeit. Auf der Karte erscheinen sie als farbige Linien (Fenster «Ansicht», Kategorie «Fliessgeschwindigkeit je Abschnitt»).
 
 Weicht die Vorhersage deutlich vom eingestellten Wert ab, steigt der Abfluss stark, gilt eine neue Gefahrenstufe oder kommt eine neue Vorhersage, erhält die Einsatzleitung eine Meldung (auf Wunsch der Verwaltung alle Teilnehmenden); sie steht auch im Einsatzlog. Das Suchgebiet bleibt dabei unverändert.

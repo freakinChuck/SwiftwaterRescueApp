@@ -2,18 +2,16 @@
 /* ---------- Fliessgeschwindigkeit an den Messstationen (Issue #254, Konzept docs/konzepte/254/KONZEPT.md) ----------
  Eingebunden von index.php nach docs.php. Gehört zur Funktion «hydro» (Pegel & Abfluss), keine eigene Funktion.
  Quellen: BAFU-Datenplattform (data.bafu.admin.ch, GraphQL: Stationen, 10-Minuten- und Stundenwerte, Flussvermessung), BAFU-Hochwasservorhersage
- (hydrodaten.admin.ch, Ensemble Median/Min./Max.), Kanton Aargau (noch nicht angebunden). Alle über den Server mit Datei-Cache in api/data/hydro/.
+ (hydrodaten.admin.ch, Ensemble Median/Min./Max.). Alle über den Server mit Datei-Cache in api/data/hydro/.
  Kennlinie je Station (hydro_curve): benetzte Fläche A(W) aus den Querprofilen beim Pegel, mittlere Geschwindigkeit v̄ = Q / A, angepasst als v̄ = a · Q^m;
  ohne Querprofil Schätzung nach Strickler aus Sohlenbreite und Gefälle des Längenprofils. Driftspanne = Faktor (f_lo … f_hi) × v̄ / 0.85 (Oberfläche).
- Vorhersage (flowPred): bis zur Laufzeit der Stationen oberhalb (hydro_lag) aus deren Änderung, danach die BAFU-Vorhersage. Abschnitte (hydro_reach)
+ Vorhersage (flowPred): BAFU-Vorhersage, angeglichen an den letzten Messwert, sonst bleibt der Abfluss. Abschnitte (hydro_reach)
  mit Faktor auf die Geschwindigkeit der Station. Relevante Veränderungen (flowCheck) als Hinweis, Log-Eintrag und Push an die Einsatzleitung,
  die App ändert Fliessgeschwindigkeit und Suchgebiet nie selbst. */
 
 foreach ([
-  // Kennlinie je Station: src prof|strickler|manual|none, prof = Querprofile [{g, at, pts [[x, z]]}], fit = Stichprobe [[Q, v]], kl = Tabelle [[Q, W, A, v]], err/err0 = Fehler der 3-h-Vorhersage mit/ohne Stationen oberhalb (%), rest = Zwischengebiet m³/s
+  // Kennlinie je Station: src prof|strickler|manual|none, prof = Querprofile [{g, at, pts [[x, z]]}], fit = Stichprobe [[Q, v]], kl = Tabelle [[Q, W, A, v]] (Spalten err, err0, rest aus einer früheren Fassung, ungenutzt)
   "CREATE TABLE IF NOT EXISTS hydro_curve(station $tx PRIMARY KEY, name $tx NULL, river $tx NULL, gwl $tx NULL, gewiss INT NULL, a DOUBLE NULL, m DOUBLE NULL, src $tx NULL, manual INT DEFAULT 0, prof MEDIUMTEXT NULL, fit TEXT NULL, kl TEXT NULL, q_lo DOUBLE NULL, q_hi DOUBLE NULL, n INT NULL, r2 DOUBLE NULL, err DOUBLE NULL, err0 DOUBLE NULL, rest DOUBLE NULL, msg TEXT NULL, upd BIGINT NULL)",
-  // Stationen oberhalb: Laufzeit der Abflusswelle bis zur Station down in Stunden
-  "CREATE TABLE IF NOT EXISTS hydro_lag(id $ai, down $tx, up $tx, lag_h DOUBLE, note TEXT NULL, sort INT NULL)",
   // Abschnitte entlang eines Gewässers (GEWISS-Adressen: Meter ab Mündung, flussabwärts abnehmend): kind stau|schwellen|eng|frei, fac = Faktor auf die Geschwindigkeit der Station, pts [[lat, lon, g]]
   "CREATE TABLE IF NOT EXISTS hydro_reach(id $ai, grp $tx NULL, name $tx, kind $tx, gwl $tx, g_from INT, g_to INT, pts MEDIUMTEXT NULL, len_m INT NULL, width $tx NULL, slope $tx NULL, fac DOUBLE, station $tx NULL, src $tx NULL, sort INT NULL, active INT DEFAULT 1)",
   // Meldungen im Einsatz (je Art höchstens eine pro Stunde)
@@ -21,9 +19,6 @@ foreach ([
 ] as $s) $db->exec($s);
 try { $db->exec("ALTER TABLE incidents ADD COLUMN flow_chk BIGINT NULL"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE hydro_note ADD COLUMN title $tx"); } catch (Throwable $e) {}
-if ((int)$db->query("SELECT COUNT(*) FROM hydro_lag")->fetchColumn() === 0 && setting('flow_lag_seed', '') === '') { // Beispiel Aare – Brugg: Murgenthal, Wigger, Dünnern
-  setSetting('flow_lag_seed', '1'); $i = $db->prepare("INSERT INTO hydro_lag(down,up,lag_h,sort) VALUES(?,?,?,?)");
-  foreach ([['2016', '2063', 3, 1], ['2016', '2450', 3, 2], ['2016', '2434', 2, 3]] as $r) $i->execute($r); }
 
 const BAFU_GQ = 'https://data.bafu.admin.ch/api';
 const BAFU_FC = 'https://www.hydrodaten.admin.ch/';
@@ -88,7 +83,6 @@ function flowFcList() { $d = hydroFile('fc_list', 1800, function () {
 function flowSrcFc() { @unlink(__DIR__ . '/data/hydro/fc_list.json'); $l = flowFcList(); if (!$l) return null;
   $locs = []; foreach ($l as $id => $s) $locs[$id] = ['id' => $id, 'name' => $s['name'], 'water' => '', 'type' => 'river', 'lat' => $s['lat'], 'lon' => $s['lon']];
   $f = flowFc('2016'); return ['locs' => $locs, 'vals' => $f ? ['2016' => ['flow' => $f['q0'], 'at' => $f['at']]] : []]; }
-function flowSrcAg() { throw new Exception('noch nicht angebunden (Schnittstelle des Kantons wird geklärt)'); }
 // BAFU-Vorhersage einer Station: {at = Ausgabe, q0 = zuletzt gemessen, s = [[t, Median, Min., Max.]]} oder null; 30 min zwischengespeichert
 function flowFc($id) { if (!preg_match(FLOW_ID, (string)$id) || empty(hydroCfg()['src']['fc'])) return null;
   if (!isset(flowFcList()[$id])) return null;
@@ -180,7 +174,7 @@ function flowCalc($id) { global $db, $now; $st = flowStations()[$id] ?? null;
   [$gwl, $g] = $b; $from = $now - 365 * 86400;
   $Q = flowHourly($id, 'Q', $from); $W = flowHourly($id, 'W', $from);
   if (!$Q) return $save(['src' => 'none', 'a' => null, 'gwl' => $gwl, 'gewiss' => $g, 'msg' => 'Keine Stundenwerte des Abflusses: ' . ($GLOBALS['BAFU_ERR'] ?? 'leer')]);
-  $c = ['gwl' => $gwl, 'gewiss' => $g, 'q_lo' => round(min($Q), 1), 'q_hi' => round(max($Q), 1)] + flowBack($id, $Q);
+  $c = ['gwl' => $gwl, 'gewiss' => $g, 'q_lo' => round(min($Q), 1), 'q_hi' => round(max($Q), 1)];
   $xs = flowXs($gwl, $g - 300, $g + 300) ?: [];
   uksort($xs, fn($x, $y) => abs($x - $g) <=> abs($y - $g)); $xs = array_slice($xs, 0, 2, true);
   $pairs = []; $kl = [];
@@ -201,42 +195,27 @@ function flowCalc($id) { global $db, $now; $st = flowStations()[$id] ?? null;
     foreach ([0.05, 0.5, 0.95] as $p) { $qs = array_values($Q); sort($qs); $q = $qs[min(count($qs) - 1, (int)floor($p * count($qs)))]; $kl[] = [round($q), null, round($q / ($a * $q ** $m)), round($a * $q ** $m, 2)]; }
     return $save($c + ['src' => 'strickler', 'a' => round($a, 5), 'm' => $m, 'n' => count($Q), 'kl' => $kl, 'msg' => 'Kein Querprofil beim Pegel: Schätzung nach Strickler aus Sohlenbreite ' . round($B) . ' m und Gefälle ' . number_format($S * 1000, 1, '.', '') . ' ‰ (±30–50 %)']); }
   return $save($c + ['src' => 'none', 'a' => null, 'msg' => 'Weder Querprofil noch Längenprofil beim Pegel']); }
-// Güte der kurzfristigen Vorhersage (letzte 30 Tage): Fehler in 3 h mit den Stationen oberhalb (err) und ohne (err0, Abfluss bleibt), Zwischengebiet (rest)
-function flowBack($id, $Q) { $ups = flowUps($id); if (!$ups) return ['err' => null, 'err0' => null, 'rest' => null]; $from = time() - 30 * 86400; $U = [];
-  foreach ($ups as $u) { $h = flowHourly($u['up'], 'Q', $from - 86400, 2000); if ($h) $U[] = [$h, (int)round($u['lag_h'] * 3600)]; }
-  if (!$U) return ['err' => null, 'err0' => null, 'rest' => null]; $e = $e0 = $rs = []; $H = 3 * 3600;
-  foreach ($Q as $t => $q) { if ($t < $from || !isset($Q[$t + $H]) || $q <= 0) continue; $p = $q; $sum = 0; $ok = true;
-    foreach ($U as [$h, $lag]) { $a = $h[$t + $H - $lag] ?? $h[$t] ?? null; $b = $h[$t - $lag] ?? null; if ($a === null || $b === null) { $ok = false; break; } $p += min($H, $lag) === $lag ? ($h[$t] ?? $a) - $b : $a - $b; $sum += $h[$t - $lag + $H] ?? $a; }
-    if (!$ok) continue; $y = $Q[$t + $H]; $e[] = abs($p - $y) / $y; $e0[] = abs($q - $y) / $y; $rs[] = $y - $sum; }
-  if (count($e) < 24) return ['err' => null, 'err0' => null, 'rest' => null];
-  sort($rs); return ['err' => round(array_sum($e) / count($e) * 100, 1), 'err0' => round(array_sum($e0) / count($e0) * 100, 1), 'rest' => round($rs[intdiv(count($rs), 2)], 1)]; }
 function flowCurve($id) { global $db; $s = $db->prepare("SELECT * FROM hydro_curve WHERE station=?"); $s->execute([(string)$id]); $r = $s->fetch(); $s->closeCursor(); if (!$r) return null;
   $r = floats(ints($r, ['gewiss', 'manual', 'n', 'upd']), ['a', 'm', 'q_lo', 'q_hi', 'r2', 'err', 'err0', 'rest']);
   foreach (['prof', 'fit', 'kl'] as $k) $r[$k] = json_decode((string)$r[$k], true); return $r; }
-function flowUps($id) { global $db; $s = $db->prepare("SELECT * FROM hydro_lag WHERE down=? ORDER BY sort, id"); $s->execute([(string)$id]);
-  return array_map(fn($r) => ['id' => (int)$r['id'], 'up' => (string)$r['up'], 'lag_h' => (float)$r['lag_h'], 'note' => $r['note']], $s->fetchAll()); }
 // mittlere Geschwindigkeit und Driftspanne (m/s) zu einem Abfluss
 function flowV($c, $q) { return $c && $c['a'] !== null && $q > 0 ? $c['a'] * $q ** $c['m'] : null; }
 function flowDrift($c, $q, $lo = null, $hi = null, $fac = 1.0) { $f = flowCfg(); $v = flowV($c, $q); if ($v === null) return null;
   return [round($f['f_lo'] * flowV($c, $lo ?? $q) * $fac / FLOW_SURF, 2), round($f['f_hi'] * flowV($c, $hi ?? $q) * $fac / FLOW_SURF, 2), round(($f['f_lo'] + $f['f_hi']) / 2 * $v * $fac / FLOW_SURF, 2)]; }
 
 /* ---------- Vorhersage ---------- */
-// Abfluss einer Station von −12 h bis +96 h stündlich: {q, at, ser [[t, q, lo, hi]] (lo/hi null = gemessen), lag = Stunden aus den Stationen oberhalb, fc_at, ups}; null = keine Werte
-function flowPred($id) { $d = hydroFile("pred_$id", FLOW_PRED_S, function () use ($id) { $now = time(); $c = flowCurve($id);
+// Abfluss einer Station von −12 h bis +96 h stündlich: {q, at, ser [[t, q, lo, hi]] (lo/hi null = gemessen), fc_at}; null = keine Werte
+function flowPred($id) { $d = hydroFile("pred_$id", FLOW_PRED_S, function () use ($id) { $now = time();
     $nq = flowNow($id); if (!$nq) return null; [$q0, $t0] = $nq; $h0 = intdiv($t0, 3600) * 3600;
-    $hist = flowHourly($id, 'Q', $now - 13 * 3600, 30) ?: []; $ups = flowUps($id); $lag = 0; $U = []; $names = [];
-    foreach ($ups as $u) { $h = flowHourly($u['up'], 'Q', $now - (int)ceil($u['lag_h'] + 2) * 3600, 60); $nu = flowNow($u['up']); if (!$h || !$nu) continue;
-      $h[intdiv($nu[1], 3600) * 3600 + 3600] = $nu[0]; ksort($h); $U[] = [$h, $u['lag_h'] * 3600, $nu[0]]; $lag = max($lag, $u['lag_h']); $names[] = ['id' => $u['up'], 'lag_h' => $u['lag_h'], 'name' => hydroLocs()[$u['up']]['name'] ?? (flowStations()[$u['up']]['name'] ?? $u['up']), 'water' => hydroLocs()[$u['up']]['water'] ?? (flowStations()[$u['up']]['river'] ?? '')]; }
-    $at = function ($h, $t) { $b = null; foreach ($h as $x => $y) { if ($x > $t) break; $b = $y; } return $b ?? reset($h); };
-    $fc = flowFc($id); $err = max(3, (float)($c['err'] ?? 5)) / 100; $ser = [];
+    $hist = flowHourly($id, 'Q', $now - 13 * 3600, 30) ?: [];
+    $fc = flowFc($id); $ser = [];
     foreach ($hist as $t => $q) if ($t < $t0) $ser[] = [$t, round($q, 1), null, null];
     $ser[] = [$t0, round($q0, 1), null, null]; $last = $q0; $off = null;
     for ($h = 1; $h <= 96; $h++) { $t = $h0 + $h * 3600; $q = null; $lo = $hi = null;
-      if ($U && $h <= $lag) { $q = $q0; foreach ($U as [$hh, $lg, $un]) $q += ($h * 3600 >= $lg ? $un : $at($hh, $t - $lg)) - $at($hh, $t0 - $lg); $q = max(0.1, $q); $lo = $q * (1 - $err * $h / max(1, $lag)); $hi = $q * (1 + $err * $h / max(1, $lag)); }
-      elseif ($fc) { $p = null; foreach ($fc['s'] as $x) if (abs($x[0] - $t) <= 1800) { $p = $x; break; } if (!$p) { foreach ($fc['s'] as $x) if ($x[0] <= $t) $p = $x; }
-        if ($p && $p[0] >= $t - 7200) { $off ??= $last - $p[1]; $w = max(0, 1 - ($h - $lag) / 12); $q = $p[1] + $off * $w; $lo = min($q, $p[2] + $off * $w); $hi = max($q, $p[3] + $off * $w); } }
+      if ($fc) { $p = null; foreach ($fc['s'] as $x) if (abs($x[0] - $t) <= 1800) { $p = $x; break; } if (!$p) { foreach ($fc['s'] as $x) if ($x[0] <= $t) $p = $x; }
+        if ($p && $p[0] >= $t - 7200) { $off ??= $last - $p[1]; $w = max(0, 1 - $h / 12); $q = $p[1] + $off * $w; $lo = min($q, $p[2] + $off * $w); $hi = max($q, $p[3] + $off * $w); } }
       if ($q === null) break; $last = $q; $ser[] = [$t, round($q, 1), round($lo, 1), round($hi, 1)]; }
-    return ['q' => round($q0, 1), 'at' => $t0, 'ser' => $ser, 'lag' => $lag, 'fc_at' => $fc['at'] ?? null, 'fc_med' => $fc ? round(max(array_map(fn($x) => $x[1], $fc['s'])), 1) : null, 'ups' => $names]; });
+    return ['q' => round($q0, 1), 'at' => $t0, 'ser' => $ser, 'fc_at' => $fc['at'] ?? null, 'fc_med' => $fc ? round(max(array_map(fn($x) => $x[1], $fc['s'])), 1) : null]; });
   return is_array($d['data'] ?? null) ? $d['data'] : null; }
 // Wert der Vorhersage nach h Stunden: [q, lo, hi]
 function flowAt($p, $h) { $t = $p['at'] + $h * 3600; $b = null; foreach ($p['ser'] as $x) if ($x[0] <= $t + 1800) $b = $x; return $b ? [$b[1], $b[2] ?? $b[1], $b[3] ?? $b[1]] : null; }
@@ -281,7 +260,7 @@ function flowIncPred($inc, $F) { global $db, $now; if (!$F['hydro'] || !flowKind
   $note = $db->prepare("SELECT id,kind,at,title,text FROM hydro_note WHERE incident_id=? ORDER BY id DESC LIMIT 1"); $note->execute([(int)$inc['id']]); $nt = $note->fetch(); $note->closeCursor();
   return ['station' => $id, 'name' => $loc['name'] ?? ($st['name'] ?? $id), 'water' => $loc['water'] ?? ($st['river'] ?? ''), 'lat' => $loc['lat'] ?? $st['lat'] ?? null, 'lon' => $loc['lon'] ?? $st['lon'] ?? null,
     'dist' => $dist, 'rel' => $rel, 'a' => $c['a'], 'm' => $c['m'], 'src' => $c['src'], 'f_lo' => $f['f_lo'], 'f_hi' => $f['f_hi'], 'surf' => FLOW_SURF, 'hor' => $f['hor'],
-    'q' => $p['q'], 'at' => $p['at'], 'ser' => $p['ser'], 'lag' => $p['lag'], 'ups' => $p['ups'], 'fc_at' => $p['fc_at'], 'reaches' => $reach, 'kinds' => array_map(fn($k) => ['s' => $k[0], 'n' => $k[1], 'c' => $k[3], 'cl' => $k[4]], FLOW_KINDS), 'warn' => $wr, 'note' => $nt ? ['id' => (int)$nt['id'], 'kind' => $nt['kind'], 'at' => (int)$nt['at'], 'title' => $nt['title'], 'text' => $nt['text'], 'me' => in_array($GLOBALS['uid'] ?? 0, flowTo($inc), true) ? 1 : 0, 'lvl' => noteLvl($inc, 'msg')] : null]; }
+    'q' => $p['q'], 'at' => $p['at'], 'ser' => $p['ser'], 'fc_at' => $p['fc_at'], 'reaches' => $reach, 'kinds' => array_map(fn($k) => ['s' => $k[0], 'n' => $k[1], 'c' => $k[3], 'cl' => $k[4]], FLOW_KINDS), 'warn' => $wr, 'note' => $nt ? ['id' => (int)$nt['id'], 'kind' => $nt['kind'], 'at' => (int)$nt['at'], 'title' => $nt['title'], 'text' => $nt['text'], 'me' => in_array($GLOBALS['uid'] ?? 0, flowTo($inc), true) ? 1 : 0, 'lvl' => noteLvl($inc, 'msg')] : null]; }
 // Fliessgeschwindigkeit an allen Stationen mit Kennlinie (Popup, Messstationen): {id: {v, d0, d1, h12 [lo, hi], src}}
 function flowStationsV($ids) { $o = []; foreach (array_slice(array_values(array_unique(array_map('strval', $ids))), 0, 30) as $id) { $c = flowCurve($id); if (!$c || $c['a'] === null) continue; [$L] = hydroLatest(); $q = $L[$id]['flow'] ?? null; if ($q === null) continue;
     $d = flowDrift($c, $q); $p = flowPred($id); $h = $p ? flowAt($p, 12) : null; $dh = $h ? flowDrift($c, $h[0], $h[1], $h[2]) : null;
@@ -354,7 +333,7 @@ function flowPropose($gwl, $gA, $gB, $station, $grp) { global $db;
 function flowReachRows($grp = null) { global $db; $q = "SELECT * FROM hydro_reach" . ($grp !== null ? " WHERE grp=?" : '') . " ORDER BY grp, g_from DESC"; $s = $db->prepare($q); $s->execute($grp !== null ? [$grp] : []);
   return array_map(fn($r) => floats(ints($r, ['id', 'g_from', 'g_to', 'len_m', 'sort', 'active']), ['fac']) + ['pts_n' => count($r['pts'])], array_map(function ($r) { $r['pts'] = json_decode((string)$r['pts'], true) ?: []; return $r; }, $s->fetchAll())); }
 function flowAdmin($id) { $c = flowCurve($id); $locs = hydroLocs(); $st = flowStations(); [$L] = hydroLatest(); $q = $L[$id]['flow'] ?? null;
-  return ['station' => $id, 'name' => $locs[$id]['name'] ?? $st[$id]['name'] ?? ($c['name'] ?? $id), 'water' => $locs[$id]['water'] ?? $st[$id]['river'] ?? ($c['river'] ?? ''), 'curve' => $c, 'ups' => array_map(fn($u) => $u + ['name' => ($locs[$u['up']]['water'] ?? $st[$u['up']]['river'] ?? '') . ' – ' . ($locs[$u['up']]['name'] ?? $st[$u['up']]['name'] ?? $u['up'])], flowUps($id)),
+  return ['station' => $id, 'name' => $locs[$id]['name'] ?? $st[$id]['name'] ?? ($c['name'] ?? $id), 'water' => $locs[$id]['water'] ?? $st[$id]['river'] ?? ($c['river'] ?? ''), 'curve' => $c,
     'lat' => $locs[$id]['lat'] ?? $st[$id]['lat'] ?? null, 'lon' => $locs[$id]['lon'] ?? $st[$id]['lon'] ?? null, 'q' => $q, 'v' => $c ? flowV($c, $q) : null, 'drift' => $c && $q ? flowDrift($c, $q) : null, 'fc' => isset(flowFcList()[$id]) ? 1 : 0]; }
 
 /* ---------- Routen (vor dem switch) ---------- */
@@ -373,23 +352,21 @@ function flowRoute($route) { global $db, $in, $now;
     if (!$c || !$a || !$b || $a[0] !== $b[0]) out(['reaches' => []]); $p = flowPred($sel[0]);
     $rs = flowReachV(flowReachesBetween($a[0], max($a[1], $b[1]), min($a[1], $b[1])), $c, $p);
     out(['reaches' => array_map(fn($r) => array_diff_key($r, ['pts' => 1]), $rs), 'station' => $sel[0]]);
-  case 'hydro/curves': need('cfg_map'); // Verwaltung: Stationen mit Kennlinie und solche mit Stationen oberhalb
-    $ids = array_unique(array_merge($db->query("SELECT station FROM hydro_curve")->fetchAll(PDO::FETCH_COLUMN), $db->query("SELECT down FROM hydro_lag")->fetchAll(PDO::FETCH_COLUMN)));
+  case 'hydro/curves': need('cfg_map'); // Verwaltung: Stationen mit Kennlinie
+    $ids = $db->query("SELECT station FROM hydro_curve")->fetchAll(PDO::FETCH_COLUMN);
     out(['stations' => array_values(array_map('flowAdmin', $ids)), 'kinds' => FLOW_KINDS, 'cfg' => flowCfg(), 'num' => FLOW_NUM, 'all' => array_values(array_map(fn($s) => ['id' => $s['no'], 'name' => $s['name'], 'water' => $s['river']], flowStations()))]);
   case 'hydro/curve': need('cfg_map'); $id = (string)($in['id'] ?? ''); if (!preg_match(FLOW_ID, $id)) fail('Ungültige Station'); out(flowAdmin($id));
   case 'hydro/curve/calc': need('cfg_map'); $id = (string)($in['id'] ?? ''); if (!preg_match(FLOW_ID, $id) || !isset(flowStations()[$id])) fail('Station auf der BAFU-Datenplattform nicht gefunden');
     set_time_limit(120); if (!empty($in['reset'])) $db->prepare("UPDATE hydro_curve SET manual=0 WHERE station=?")->execute([$id]);
     flowCalc($id); @unlink(__DIR__ . "/data/hydro/pred_$id.json"); out(flowAdmin($id));
-  case 'hydro/curve/save': need('cfg_map'); // von Hand: a, m (manual 1) bzw. manual 0; Stationen oberhalb ups [{up, lag_h}]
+  case 'hydro/curve/save': need('cfg_map'); // von Hand: a, m (manual 1) bzw. manual 0
     $id = (string)($in['id'] ?? ''); if (!preg_match(FLOW_ID, $id)) fail('Ungültige Station');
-    if (isset($in['ups'])) { $db->prepare("DELETE FROM hydro_lag WHERE down=?")->execute([$id]); $i = $db->prepare("INSERT INTO hydro_lag(down,up,lag_h,sort) VALUES(?,?,?,?)"); $n = 0;
-      foreach (array_slice((array)$in['ups'], 0, 8) as $u) { $up = (string)($u['up'] ?? ''); $lg = (float)($u['lag_h'] ?? 0); if (!preg_match(FLOW_ID, $up) || $up === $id || $lg <= 0 || $lg > 48) fail('Station oberhalb: Nummer und Laufzeit (0–48 h) angeben'); $i->execute([$id, $up, $lg, ++$n]); } }
     if (isset($in['manual'])) { if (!flowCurve($id)) $db->prepare("INSERT INTO hydro_curve(station,src,upd) VALUES(?,'none',?)")->execute([$id, $now]);
       if ($in['manual']) { $a = (float)($in['a'] ?? 0); $m = (float)($in['m'] ?? 0); if ($a <= 0 || $a > 5 || $m <= 0 || $m > 1.2) fail('Kennlinie: a zwischen 0 und 5, m zwischen 0 und 1.2');
         $db->prepare("UPDATE hydro_curve SET manual=1, a=?, m=?, src='manual', upd=? WHERE station=?")->execute([$a, $m, $now, $id]); }
       else { $db->prepare("UPDATE hydro_curve SET manual=0 WHERE station=?")->execute([$id]); set_time_limit(120); flowCalc($id); } }
     @unlink(__DIR__ . "/data/hydro/pred_$id.json"); out(flowAdmin($id));
-  case 'hydro/curve/remove': need('cfg_map'); $id = (string)($in['id'] ?? ''); $db->prepare("DELETE FROM hydro_curve WHERE station=?")->execute([$id]); $db->prepare("DELETE FROM hydro_lag WHERE down=?")->execute([$id]); out(['ok' => true]);
+  case 'hydro/curve/remove': need('cfg_map'); $id = (string)($in['id'] ?? ''); $db->prepare("DELETE FROM hydro_curve WHERE station=?")->execute([$id]); out(['ok' => true]);
   case 'hydro/reaches': need('cfg_map'); $rs = flowReachRows();
     $grps = []; foreach ($rs as $r) $grps[(string)$r['grp']] ??= ['grp' => (string)$r['grp'], 'gwl' => $r['gwl'], 'station' => $r['station']];
     out(['reaches' => $rs, 'groups' => array_values($grps), 'kinds' => FLOW_KINDS]);
