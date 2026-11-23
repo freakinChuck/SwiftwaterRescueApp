@@ -314,23 +314,58 @@ function flowAuto() { global $db, $now; $h = (int)date('G', $now); if ($h < 1 ||
   if ($ids) after(function () use ($ids) { foreach ($ids as $i) flowCalc($i); }); }
 
 /* ---------- Abschnitte vorschlagen ---------- */
-// aus Längenprofil (Gefälle, Sohlenbreite) und Bauwerken: Abschnitte zwischen g_from (oben) und g_to (unten) auf dem Gewässer gwl
-function flowPropose($gwl, $gA, $gB, $station, $grp) { global $db;
-  $lp = flowLp($gwl, $gB, $gA) ?: []; $obj = flowObj($gwl, $gB, $gA); $river = flowStations()[$station]['river'] ?? ''; $bm = $river !== '' ? array_values(array_filter(flowBm($river), fn($b) => $b[0] === $gwl && $b[1] <= $gA && $b[1] >= $gB)) : [];
-  usort($bm, fn($x, $y) => $y[1] <=> $x[1]); $cv = flowCurve($station); $gs = $cv['gewiss'] ?? null;
+// aus Längenprofil (Gefälle, Sohlenbreite) und Bauwerken: lückenlose Abschnitte zwischen g_from (oben) und g_to (unten) auf dem Gewässer gwl; $sts = {Station: GEWISS-Adresse}, je Station ein eigener Abschnitt ±450 m, die übrigen gehören zur nächsten Station
+function flowPropose($gwl, $gA, $gB, $sts, $grp) {
+  $lp = flowLp($gwl, $gB, $gA) ?: []; $obj = flowObj($gwl, $gB, $gA); $bm = flowBmG($gwl, array_keys($sts), $gA, $gB);
+  $in = array_filter($sts, fn($g) => $g < $gA && $g > $gB);
   $cuts = [[$gA, null]]; foreach ($obj as [$g, $k]) if ($g < $gA - 300 && $g > $gB + 300 && abs($g - end($cuts)[0]) > 400) $cuts[] = [$g, $k]; $cuts[] = [$gB, null];
-  if ($gs !== null && $gs < $gA && $gs > $gB) { $cuts = array_values(array_filter($cuts, fn($x) => abs($x[0] - $gs) > 600 || $x[0] === $gA || $x[0] === $gB)); $cuts[] = [$gs + 450, null]; $cuts[] = [max($gB, $gs - 450), null]; usort($cuts, fn($x, $y) => $y[0] <=> $x[0]); }
+  if ($in) { $cuts = array_values(array_filter($cuts, function ($x) use ($in, $gA, $gB) { if ($x[0] === $gA || $x[0] === $gB) return true; foreach ($in as $gs) if (abs($x[0] - $gs) <= 600) return false; return true; }));
+    foreach ($in as $gs) { $cuts[] = [min($gA, $gs + 450), null]; $cuts[] = [max($gB, $gs - 450), null]; } usort($cuts, fn($x, $y) => $y[0] <=> $x[0]); }
   $ws = array_values(array_filter(array_map(fn($x) => $x[1], $lp))); sort($ws); $wMed = $ws ? $ws[intdiv(count($ws), 2)] : null; $o = [];
-  for ($i = 1; $i < count($cuts); $i++) { [$a, $ka] = $cuts[$i - 1]; [$b, $kb] = $cuts[$i]; if ($a - $b < 100) continue; $mid = ($a + $b) / 2; $S = flowSlope($lp, $mid);
+  for ($i = 1; $i < count($cuts); $i++) { [$a, $ka] = $cuts[$i - 1]; [$b, $kb] = $cuts[$i]; if ($a - $b < 100) { if ($o && $a - $b > 0) { $o[count($o) - 1]['g_to'] = $b; $o[count($o) - 1]['len_m'] = $o[count($o) - 1]['g_from'] - $b; } continue; }
+    $mid = ($a + $b) / 2; $S = flowSlope($lp, $mid);
     $w = array_values(array_filter(array_map(fn($x) => $x[0] <= $a && $x[0] >= $b ? $x[1] : null, $lp))); $wmin = $w ? min($w) : null; $wmax = $w ? max($w) : null;
-    $isSt = $gs !== null && $gs <= $a && $gs >= $b; $stauDown = $kb === 'Wehr';
+    $sIn = null; foreach ($in as $st => $gs) if ($gs <= $a && $gs >= $b) $sIn = (string)$st;
+    $near = null; $nd = INF; foreach ($sts as $st => $gs) { $d = abs($gs - $mid); if ($d < $nd) { $nd = $d; $near = (string)$st; } } $station = $sIn ?? $near;
+    $isSt = $sIn !== null; $stauDown = $kb === 'Wehr';
     $kind = $isSt && $wMed && $wmin && $wmin < 0.75 * $wMed ? 'eng' : ($stauDown || ($S !== null && $S < 0.0006) ? 'stau' : (($kb === 'Schwelle' || $kb === 'Blockrampe' || ($S !== null && $S > 0.0015)) ? 'schwellen' : ($wMed && $wmin && $wmin < 0.65 * $wMed ? 'eng' : 'frei')));
     $lbl = fn($g, $k) => ($k ? "$k " : '') . flowKm($g);
-    $name = $lbl($a, $ka) . ' – ' . $lbl($b, $kb); if ($isSt) $name = (flowStations()[$station]['name'] ?? 'Station') . " (Station $station)";
-    $pts = array_values(array_map(fn($x) => [$x[2], $x[3], $x[1]], array_filter($bm, fn($x) => $x[1] <= $a + 150 && $x[1] >= $b - 150)));
-    $o[] = ['grp' => $grp, 'name' => $name, 'kind' => $kind, 'gwl' => $gwl, 'g_from' => $a, 'g_to' => $b, 'pts' => $pts, 'len_m' => $a - $b, 'width' => $wmin ? ($wmin === $wmax ? round($wmin) : round($wmin) . '–' . round($wmax)) : null,
+    $name = $lbl($a, $ka) . ' – ' . $lbl($b, $kb); if ($isSt) $name = (flowStations()[$sIn]['name'] ?? 'Station') . " (Station $sIn)";
+    $o[] = ['grp' => $grp, 'name' => $name, 'kind' => $kind, 'gwl' => $gwl, 'g_from' => $a, 'g_to' => $b, 'pts' => flowPtsG($bm, $a, $b), 'len_m' => $a - $b, 'width' => $wmin ? ($wmin === $wmax ? round($wmin) : round($wmin) . '–' . round($wmax)) : null,
       'slope' => $S !== null ? flowNum($S * 1000) : null, 'fac' => $isSt ? 1.0 : FLOW_KINDS[$kind][2], 'station' => $station, 'src' => 'prop']; }
   return $o; }
+// Vermessungspunkte des Gewässers gwl (über die Gewässernamen der Stationen) zwischen gA und gB, absteigend nach g
+function flowBmG($gwl, $sts, $gA = PHP_INT_MAX, $gB = PHP_INT_MIN) { $rv = []; foreach ($sts as $st) if (($r = flowStations()[(string)$st]['river'] ?? '') !== '') $rv[$r] = 1;
+  $bm = []; foreach (array_keys($rv) as $r) foreach (flowBm($r) as $x) if ($x[0] === $gwl && $x[1] <= $gA && $x[1] >= $gB) $bm[$x[1]] = $x;
+  krsort($bm); return array_values($bm); }
+// Linie eines Abschnitts aus den Vermessungspunkten: [[lat, lon, g]]
+function flowPtsG($bm, $a, $b) { return array_values(array_map(fn($x) => [$x[2], $x[3], $x[1]], array_filter($bm, fn($x) => $x[1] <= $a + 150 && $x[1] >= $b - 150))); }
+// Punkt auf dem Gewässer gwl fangen: GEWISS-Adresse oder null
+function flowSnapG($gwl, $sts, $la, $lo) { $b = flowBmNear(flowBmG($gwl, $sts), (float)$la, (float)$lo, 1500); return $b ? (int)$b[1] : null; }
+// von Hand gesetzte Abschnitte aus den vorgeschlagenen aussparen (Vorschlag lückenlos zwischen ihnen)
+function flowClip($o, $man, $bm) { foreach ($man as [$ma, $mb]) { $n = [];
+    foreach ($o as $r) { if ($mb >= $r['g_from'] || $ma <= $r['g_to']) { $n[] = $r; continue; }
+      foreach ([[$r['g_from'], $ma], [$mb, $r['g_to']]] as [$a, $b]) if ($a - $b >= 100 && $a <= $r['g_from'] && $b >= $r['g_to']) $n[] = array_replace($r, ['g_from' => $a, 'g_to' => $b, 'len_m' => $a - $b, 'pts' => flowPtsG($bm, $a, $b)]); }
+    $o = $n; } return $o; }
+// Nachbarn eines geänderten Abschnitts anpassen, damit die Strecke lückenlos und ohne Überlappung bleibt: überdeckte entfallen, angeschnittene werden gekürzt bzw. geteilt, angrenzende schliessen eine Lücke
+function flowNbFit($gwl, $id, $g0, $g1, $old0, $old1, $bm) { global $db; $s = $db->prepare("SELECT * FROM hydro_reach WHERE gwl=? AND id<>?"); $s->execute([$gwl, $id]);
+  $up = $db->prepare("UPDATE hydro_reach SET g_from=?, g_to=?, len_m=?, pts=? WHERE id=?");
+  foreach ($s->fetchAll() as $r) { $a = (int)$r['g_from']; $b = (int)$r['g_to']; $rid = (int)$r['id'];
+    if ($old0 !== null && $b === $old0 && $g0 < $old0 && $a > $g0) { $up->execute([$a, $g0, $a - $g0, json_encode(flowPtsG($bm, $a, $g0)), $rid]); continue; } // oberer Nachbar schliesst die Lücke
+    if ($old1 !== null && $a === $old1 && $g1 > $old1 && $b < $g1) { $up->execute([$g1, $b, $g1 - $b, json_encode(flowPtsG($bm, $g1, $b)), $rid]); continue; } // unterer Nachbar
+    if ($b >= $g0 || $a <= $g1) continue; // keine Überlappung
+    if ($a <= $g0 && $b >= $g1) { $db->prepare("DELETE FROM hydro_reach WHERE id=?")->execute([$rid]); continue; }
+    if ($a > $g0 && $b < $g1) { $up->execute([$a, $g0, $a - $g0, json_encode(flowPtsG($bm, $a, $g0)), $rid]); // teilen: unterer Teil als Kopie
+      $c = $r; unset($c['id']); $c = array_replace($c, ['g_from' => $g1, 'g_to' => $b, 'len_m' => $g1 - $b, 'pts' => json_encode(flowPtsG($bm, $g1, $b)), 'name' => flowSplitName((string)$r['name'], $g1, false)]);
+      $db->prepare("INSERT INTO hydro_reach(" . implode(',', array_keys($c)) . ") VALUES(" . implode(',', array_fill(0, count($c), '?')) . ")")->execute(array_values($c)); continue; }
+    if ($a > $g0) $up->execute([$a, $g0, $a - $g0, json_encode(flowPtsG($bm, $a, $g0)), $rid]); else $up->execute([$g1, $b, $g1 - $b, json_encode(flowPtsG($bm, $g1, $b)), $rid]); } }
+// Bezeichnung eines geteilten Abschnitts: «A – B» wird zu «A – km X» (oben) bzw. «km X – B» (unten)
+function flowSplitName($nm, $g, $top) { $pp = explode(' – ', $nm, 2); if (count($pp) === 2) return $top ? $pp[0] . ' – ' . flowKm($g) : flowKm($g) . ' – ' . $pp[1];
+  return mb_substr($nm . ($top ? ' (oberhalb ' : ' (unterhalb ') . flowKm($g) . ')', 0, 100); }
+// Gewässer mit Stationen der Flussvermessung: {gwl: {Station: GEWISS-Adresse}}
+function flowGwls() { global $db; $o = []; foreach ($db->query("SELECT station,gwl,gewiss FROM hydro_curve WHERE gwl IS NOT NULL AND gewiss IS NOT NULL")->fetchAll() as $r) $o[(string)$r['gwl']][(string)$r['station']] = (int)$r['gewiss']; return $o; }
+// Bezeichnung der Strecke eines Gewässers: Name des Gewässers (Stationen)
+function flowGrpName($gwl, $sts) { $rv = []; foreach (array_keys($sts) as $st) if (($x = flowStations()[(string)$st]['river'] ?? '') !== '') $rv[$x] = 1; return mb_substr($rv ? implode(' / ', array_keys($rv)) : $gwl, 0, 80); }
 function flowReachRows($grp = null) { global $db; $q = "SELECT * FROM hydro_reach" . ($grp !== null ? " WHERE grp=?" : '') . " ORDER BY grp, g_from DESC"; $s = $db->prepare($q); $s->execute($grp !== null ? [$grp] : []);
   return array_map(fn($r) => floats(ints($r, ['id', 'g_from', 'g_to', 'len_m', 'sort', 'active']), ['fac', 'mg']) + ['pts_n' => count($r['pts'])], array_map(function ($r) { $r['pts'] = json_decode((string)$r['pts'], true) ?: []; return $r; }, $s->fetchAll())); }
 function flowAdmin($id) { $c = flowCurve($id); $locs = hydroLocs(); $st = flowStations(); [$L] = hydroLatest(); $q = $L[$id]['flow'] ?? null;
@@ -376,26 +411,50 @@ function flowRoute($route) { global $db, $in, $now;
   case 'hydro/curve/remove': need('cfg_map'); $id = (string)($in['id'] ?? ''); $db->prepare("DELETE FROM hydro_curve WHERE station=?")->execute([$id]); out(['ok' => true]);
   case 'hydro/reaches': need('cfg_map'); $rs = flowReachRows();
     $grps = []; foreach ($rs as $r) $grps[(string)$r['grp']] ??= ['grp' => (string)$r['grp'], 'gwl' => $r['gwl'], 'station' => $r['station']];
-    out(['reaches' => $rs, 'groups' => array_values($grps), 'kinds' => FLOW_KINDS]);
-  case 'hydro/reach/propose': need('cfg_map'); // Vorschlag für eine Station: km oberhalb (up_km) bis unterhalb (down_km); ersetzt die vorgeschlagenen der Gruppe, von Hand geänderte bleiben
-    $id = (string)($in['station'] ?? ''); $c = flowCurve($id); if (!$c || !$c['gwl'] || $c['gewiss'] === null) fail('Für diese Station gibt es keine Flussvermessung (Kennlinie zuerst berechnen)');
-    set_time_limit(120); $up = min(60, max(1, (float)($in['up_km'] ?? 10))) * 1000; $dn = min(30, max(0.5, (float)($in['down_km'] ?? 3))) * 1000;
-    $grp = (string)($in['grp'] ?? '') ?: ($c['river'] . ': ' . ($c['name'] ?? $id)); $o = flowPropose($c['gwl'], $c['gewiss'] + (int)$up, max(0, $c['gewiss'] - (int)$dn), $id, mb_substr($grp, 0, 80));
-    if (!$o) fail('Kein Längenprofil gefunden: ' . ($GLOBALS['BAFU_ERR'] ?? 'leer'));
-    $db->beginTransaction(); $db->prepare("DELETE FROM hydro_reach WHERE grp=? AND src='prop'")->execute([$grp]);
-    $i = $db->prepare("INSERT INTO hydro_reach(grp,name,kind,gwl,g_from,g_to,pts,len_m,width,slope,fac,station,src,active) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1)");
-    foreach ($o as $r) $i->execute([$r['grp'], $r['name'], $r['kind'], $r['gwl'], $r['g_from'], $r['g_to'], json_encode($r['pts']), $r['len_m'], $r['width'], $r['slope'], $r['fac'], $r['station'], 'prop']);
-    $db->commit(); out(['ok' => true, 'n' => count($o)]);
-  case 'hydro/reach/save': need('cfg_map'); $id = (int)($in['id'] ?? 0); $k = (string)($in['kind'] ?? ''); if (!isset(FLOW_KINDS[$k])) fail('Unbekannte Art');
-    $nm = trim((string)($in['name'] ?? '')); if ($nm === '') fail('Bezeichnung fehlt'); $fac = (float)($in['fac'] ?? 0); if ($fac <= 0 || $fac > 2) fail('Faktor zwischen 0 und 2');
+    $rv = []; foreach (flowGwls() as $g => $sts) $rv[] = ['gwl' => (string)$g, 'name' => flowGrpName((string)$g, $sts), 'stations' => array_keys($sts)];
+    out(['reaches' => $rs, 'groups' => array_values($grps), 'kinds' => FLOW_KINDS, 'rivers' => $rv]);
+  case 'hydro/reach/propose': need('cfg_map'); // Vorschlag lückenlos je Gewässer mit allen Stationen der Flussvermessung: von up_km oberhalb der obersten bis down_km unterhalb der untersten; gwl bzw. station = nur dieses Gewässer, sonst alle; von Hand gesetzte bleiben und werden ausgespart
+    set_time_limit(300); $up = (int)(min(60, max(1, (float)($in['up_km'] ?? 10))) * 1000); $dn = (int)(min(30, max(0.5, (float)($in['down_km'] ?? 3))) * 1000);
+    $only = (string)($in['gwl'] ?? ''); if ($only === '' && ($id = (string)($in['station'] ?? '')) !== '') { $c = flowCurve($id); if (!$c || !$c['gwl'] || $c['gewiss'] === null) fail('Für diese Station gibt es keine Flussvermessung (Kennlinie zuerst berechnen)'); $only = $c['gwl']; }
+    $G = flowGwls(); if ($only !== '') $G = array_intersect_key($G, [$only => 1]); if (!$G) fail('Keine Station mit Flussvermessung. Zuerst eine Station erfassen und ihre Kennlinie berechnen.');
+    $n = 0; $done = []; $err = [];
+    foreach ($G as $gwl => $sts) { $gwl = (string)$gwl; $gA = max($sts) + $up; $gB = max(0, min($sts) - $dn); $grp = flowGrpName($gwl, $sts);
+      $o = flowPropose($gwl, $gA, $gB, $sts, $grp); if (!$o) { $err[] = $grp; continue; }
+      $m = $db->prepare("SELECT g_from,g_to FROM hydro_reach WHERE gwl=? AND src<>'prop'"); $m->execute([$gwl]); $o = flowClip($o, array_map(fn($r) => [(int)$r['g_from'], (int)$r['g_to']], $m->fetchAll()), flowBmG($gwl, array_keys($sts)));
+      $db->beginTransaction(); $db->prepare("DELETE FROM hydro_reach WHERE gwl=? AND src='prop'")->execute([$gwl]); $db->prepare("UPDATE hydro_reach SET grp=? WHERE gwl=?")->execute([$grp, $gwl]);
+      $i = $db->prepare("INSERT INTO hydro_reach(grp,name,kind,gwl,g_from,g_to,pts,len_m,width,slope,fac,station,src,active) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1)");
+      foreach ($o as $r) $i->execute([$r['grp'], $r['name'], $r['kind'], $r['gwl'], $r['g_from'], $r['g_to'], json_encode($r['pts']), $r['len_m'], $r['width'], $r['slope'], $r['fac'], $r['station'], 'prop']);
+      $db->commit(); $n += count($o); $done[] = $grp; }
+    if (!$done) fail('Kein Längenprofil gefunden: ' . ($GLOBALS['BAFU_ERR'] ?? 'leer'));
+    out(['ok' => true, 'n' => $n, 'grps' => $done, 'err' => $err]);
+  case 'hydro/reach/save': need('cfg_map'); // Abschnitt speichern: km_from/km_to oder auf der Karte pa/pb [lat, lon] (gefangen auf das Gewässer); fit = Nachbarn anpassen (lückenlos)
+    $id = (int)($in['id'] ?? 0); $k = (string)($in['kind'] ?? ''); if (!isset(FLOW_KINDS[$k])) fail('Unbekannte Art');
+    $nm = trim((string)($in['name'] ?? '')); $fac = (float)($in['fac'] ?? 0); if ($fac <= 0 || $fac > 2) fail('Faktor zwischen 0 und 2');
     $mg = ($in['mg'] ?? '') === '' || $in['mg'] === null ? null : (float)$in['mg']; if ($mg !== null && ($mg < 0 || $mg > 100)) fail('Zusatzmarge zwischen 0 und 100 %');
-    $g0 = (int)round((float)($in['km_from'] ?? 0) * 1000); $g1 = (int)round((float)($in['km_to'] ?? 0) * 1000); if ($g0 <= $g1) fail('«von km» muss oberhalb (grösser) als «bis km» sein');
-    if ($id) { $s = $db->prepare("SELECT * FROM hydro_reach WHERE id=?"); $s->execute([$id]); $r = $s->fetch(); if (!$r) fail('Abschnitt nicht gefunden', 404);
-      $pts = json_decode((string)$r['pts'], true) ?: []; if ($g0 !== (int)$r['g_from'] || $g1 !== (int)$r['g_to']) { $river = flowStations()[(string)$r['station']]['river'] ?? ''; $pts = array_values(array_map(fn($x) => [$x[2], $x[3], $x[1]], array_filter($river !== '' ? flowBm($river) : [], fn($b) => $b[0] === $r['gwl'] && $b[1] <= $g0 + 150 && $b[1] >= $g1 - 150))); }
-      $db->prepare("UPDATE hydro_reach SET name=?, kind=?, fac=?, mg=?, g_from=?, g_to=?, len_m=?, pts=?, src='manual', active=? WHERE id=?")->execute([mb_substr($nm, 0, 100), $k, $fac, $mg, $g0, $g1, $g0 - $g1, json_encode($pts), empty($in['off']) ? 1 : 0, $id]); }
-    else { $st = (string)($in['station'] ?? ''); $c = flowCurve($st); if (!$c || !$c['gwl']) fail('Station ohne Flussvermessung'); $river = flowStations()[$st]['river'] ?? '';
-      $pts = array_values(array_map(fn($x) => [$x[2], $x[3], $x[1]], array_filter($river !== '' ? flowBm($river) : [], fn($b) => $b[0] === $c['gwl'] && $b[1] <= $g0 + 150 && $b[1] >= $g1 - 150)));
-      $db->prepare("INSERT INTO hydro_reach(grp,name,kind,gwl,g_from,g_to,pts,len_m,fac,mg,station,src,active) VALUES(?,?,?,?,?,?,?,?,?,?,?,'manual',1)")->execute([mb_substr((string)($in['grp'] ?? ($c['river'] . ': ' . $c['name'])), 0, 80), mb_substr($nm, 0, 100), $k, $c['gwl'], $g0, $g1, json_encode($pts), $g0 - $g1, $fac, $mg, $st]); }
-    out(['ok' => true]);
+    $r = null; if ($id) { $s = $db->prepare("SELECT * FROM hydro_reach WHERE id=?"); $s->execute([$id]); $r = $s->fetch(); $s->closeCursor(); if (!$r) fail('Abschnitt nicht gefunden', 404); $gwl = (string)$r['gwl']; }
+    else { $gwl = (string)($in['gwl'] ?? ''); if ($gwl === '' && ($st = (string)($in['station'] ?? '')) !== '') { $c = flowCurve($st); $gwl = (string)($c['gwl'] ?? ''); } }
+    $G = flowGwls(); $sts = $G[$gwl] ?? null; if (!$sts) fail('Gewässer ohne Station mit Flussvermessung');
+    if (is_array($in['pa'] ?? null) && is_array($in['pb'] ?? null)) { $ga = flowSnapG($gwl, array_keys($sts), $in['pa'][0] ?? 0, $in['pa'][1] ?? 0); $gb = flowSnapG($gwl, array_keys($sts), $in['pb'][0] ?? 0, $in['pb'][1] ?? 0);
+      if ($ga === null || $gb === null) fail('Punkt nicht am Gewässer (höchstens 1.5 km von der Flussvermessung)'); $g0 = max($ga, $gb); $g1 = min($ga, $gb); }
+    else { $g0 = (int)round((float)($in['km_from'] ?? 0) * 1000); $g1 = (int)round((float)($in['km_to'] ?? 0) * 1000); }
+    if ($g0 - $g1 < 100) fail('Ein Abschnitt ist mindestens 100 m lang («von km» oberhalb, also grösser als «bis km»)');
+    if ($nm === '') $nm = flowKm($g0) . ' – ' . flowKm($g1);
+    $bm = flowBmG($gwl, array_keys($sts)); $pts = $r && $g0 === (int)$r['g_from'] && $g1 === (int)$r['g_to'] ? (json_decode((string)$r['pts'], true) ?: []) : flowPtsG($bm, $g0, $g1);
+    $station = $r ? (string)$r['station'] : (string)($in['station'] ?? ''); if (!isset($sts[$station])) { $mid = ($g0 + $g1) / 2; $nd = INF; foreach ($sts as $st => $gs) if (abs($gs - $mid) < $nd) { $nd = abs($gs - $mid); $station = (string)$st; } }
+    $db->beginTransaction();
+    if ($r) $db->prepare("UPDATE hydro_reach SET name=?, kind=?, fac=?, mg=?, g_from=?, g_to=?, len_m=?, pts=?, src='manual', active=? WHERE id=?")->execute([mb_substr($nm, 0, 100), $k, $fac, $mg, $g0, $g1, $g0 - $g1, json_encode($pts), empty($in['off']) ? 1 : 0, $id]);
+    else { $db->prepare("INSERT INTO hydro_reach(grp,name,kind,gwl,g_from,g_to,pts,len_m,fac,mg,station,src,active) VALUES(?,?,?,?,?,?,?,?,?,?,?,'manual',1)")->execute([flowGrpName($gwl, $sts), mb_substr($nm, 0, 100), $k, $gwl, $g0, $g1, json_encode($pts), $g0 - $g1, $fac, $mg, $station]); $id = (int)$db->lastInsertId(); }
+    if (!empty($in['fit'])) flowNbFit($gwl, $id, $g0, $g1, $r ? (int)$r['g_from'] : null, $r ? (int)$r['g_to'] : null, $bm);
+    $db->commit(); out(['ok' => true, 'id' => $id]);
+  case 'hydro/reach/split': need('cfg_map'); // Abschnitt teilen: at [lat, lon] (gefangen auf das Gewässer) oder km; beide Teile gelten danach als von Hand gesetzt
+    $id = (int)($in['id'] ?? 0); $s = $db->prepare("SELECT * FROM hydro_reach WHERE id=?"); $s->execute([$id]); $r = $s->fetch(); $s->closeCursor(); if (!$r) fail('Abschnitt nicht gefunden', 404);
+    $gwl = (string)$r['gwl']; $sts = flowGwls()[$gwl] ?? [(string)$r['station'] => 0];
+    $g = is_array($in['at'] ?? null) ? flowSnapG($gwl, array_keys($sts), $in['at'][0] ?? 0, $in['at'][1] ?? 0) : (isset($in['km']) ? (int)round((float)$in['km'] * 1000) : null);
+    if ($g === null) fail('Punkt nicht am Gewässer'); $a = (int)$r['g_from']; $b = (int)$r['g_to']; if ($g >= $a - 50 || $g <= $b + 50) fail('Der Punkt liegt nicht innerhalb des Abschnitts (' . flowKm($a) . ' bis ' . flowKm($b) . ')');
+    $bm = flowBmG($gwl, array_keys($sts)); $db->beginTransaction();
+    $db->prepare("UPDATE hydro_reach SET g_to=?, len_m=?, pts=?, name=?, src='manual' WHERE id=?")->execute([$g, $a - $g, json_encode(flowPtsG($bm, $a, $g)), flowSplitName((string)$r['name'], $g, true), $id]);
+    $c = $r; unset($c['id']); $c = array_replace($c, ['g_from' => $g, 'g_to' => $b, 'len_m' => $g - $b, 'pts' => json_encode(flowPtsG($bm, $g, $b)), 'name' => flowSplitName((string)$r['name'], $g, false), 'src' => 'manual']);
+    $db->prepare("INSERT INTO hydro_reach(" . implode(',', array_keys($c)) . ") VALUES(" . implode(',', array_fill(0, count($c), '?')) . ")")->execute(array_values($c)); $nid = (int)$db->lastInsertId();
+    $db->commit(); out(['ok' => true, 'id' => $id, 'new' => $nid, 'km' => round($g / 1000, 1)]);
   case 'hydro/reach/remove': need('cfg_map'); $db->prepare("DELETE FROM hydro_reach WHERE id=?")->execute([(int)($in['id'] ?? 0)]); out(['ok' => true]);
   } }

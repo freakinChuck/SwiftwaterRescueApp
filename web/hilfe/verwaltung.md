@@ -143,7 +143,15 @@ Umkreis und Anzahl der Messstationen beim PLS, Seen ja oder nein, Datenquellen m
 
 **Kennlinien**: je Station aus den Querprofilen der BAFU-Flussvermessung bzw. aus den Messreihen berechnen («+ Station», «Berechnen» bzw. «Neu berechnen»; das dauert bis eine Minute, der Knopf zählt die Sekunden, danach meldet ein Hinweis das Ergebnis oder den Grund, weshalb es keine Kennlinie gibt), prüfen (Querschnitt des Flussbetts mit dem Wasserspiegel bei tiefem Abfluss (grün, nur in 5 % der Stunden des letzten Jahres tiefer), jetzt (blau) und hoch (rot, höchster Stundenwert des letzten Jahres); umschaltbar auf **Gefahrenstufen**: farbige Bänder je Stufe zwischen den Grenzwerten des BAFU, die Wasserspiegel dazu aus der Kennlinie; darunter das Diagramm v(Q) mit den Stundenwerten als Punkten und der Kennlinie als Linie) oder von Hand übersteuern.
 
-**Abschnitte**: für eine Station vorschlagen (km oberhalb und unterhalb), danach Art (Stau, Schwellen, Engstelle, frei), Faktor und Zusatzmarge (leer = Standard) je Abschnitt anpassen. Von Hand geänderte Abschnitte bleiben bei einem neuen Vorschlag erhalten.
+**Abschnitte**: «Vorschlag erzeugen» legt je Gewässer eine lückenlose Strecke über alle Stationen mit Flussvermessung an (wählbar ein Gewässer oder alle; km oberhalb der obersten und unterhalb der untersten Station). Geschnitten wird an Wehren, Schwellen und Blockrampen, jede Station erhält einen eigenen Abschnitt, die übrigen gehören zur nächsten Station. Von Hand gesetzte oder geteilte Abschnitte bleiben bei einem neuen Vorschlag erhalten, der Vorschlag füllt die Strecke zwischen ihnen.
+
+«Auf der Karte bearbeiten» (oder «Gross bearbeiten» auf der kleinen Karte) öffnet die Abschnitte im Vollbild:
+
+- Abschnitt auf der Karte oder in der Liste antippen = auswählen; rechts Bezeichnung, Art (Stau, Schwellen, Engstelle, frei), Faktor und Zusatzmarge (leer = Standard) ändern und «Speichern».
+- «Teilen»: den Punkt im Abschnitt antippen, an dem er geteilt wird.
+- «Neu zeichnen»: oberes und unteres Ende am Gewässer antippen. Die Punkte werden auf die Flussvermessung gesetzt (höchstens 1.5 km daneben); angrenzende Abschnitte werden gekürzt bzw. verlängert, die Strecke bleibt lückenlos.
+- «+ Abschnitt»: Anfang und Ende antippen; überdeckte Abschnitte werden gekürzt oder geteilt.
+- Escape bricht das Antippen ab bzw. schliesst die Karte. Alles gilt sofort.
 
 ### Feste Standorte {#standorte}
 
