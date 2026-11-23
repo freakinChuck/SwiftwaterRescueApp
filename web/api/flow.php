@@ -430,7 +430,7 @@ function flowRoute($route) { global $db, $in, $now;
       $db->commit(); $n += count($o); $done[] = $grp; }
     if (!$done) fail('Kein Längenprofil gefunden: ' . ($GLOBALS['BAFU_ERR'] ?? 'leer'));
     out(['ok' => true, 'n' => $n, 'grps' => $done, 'err' => $err]);
-  case 'hydro/reach/save': need('cfg_map'); // Abschnitt speichern: km_from/km_to oder auf der Karte pa/pb [lat, lon] (gefangen auf das Gewässer); fit = Nachbarn anpassen (lückenlos)
+  case 'hydro/reach/save': need('cfg_map'); // Abschnitt speichern: km_from/km_to oder auf der Karte pa/pb [lat, lon] (gefangen auf das Gewässer); fit = Nachbarn anpassen (lückenlos); station = Bezugsstation (eine Station mit Flussvermessung am selben Gewässer, sonst bisherige bzw. nächste)
     $id = (int)($in['id'] ?? 0); $k = (string)($in['kind'] ?? ''); if (!isset(FLOW_KINDS[$k])) fail('Unbekannte Art');
     $nm = trim((string)($in['name'] ?? '')); $fac = (float)($in['fac'] ?? 0); if ($fac <= 0 || $fac > 2) fail('Faktor zwischen 0 und 2');
     $mg = ($in['mg'] ?? '') === '' || $in['mg'] === null ? null : (float)$in['mg']; if ($mg !== null && ($mg < 0 || $mg > 100)) fail('Zusatzmarge zwischen 0 und 100 %');
@@ -443,9 +443,9 @@ function flowRoute($route) { global $db, $in, $now;
     if ($g0 - $g1 < 100) fail('Ein Abschnitt ist mindestens 100 m lang («von km» oberhalb, also grösser als «bis km»)');
     if ($nm === '') $nm = flowKm($g0) . ' – ' . flowKm($g1);
     $bm = flowBmG($gwl, array_keys($sts)); $pts = $r && $g0 === (int)$r['g_from'] && $g1 === (int)$r['g_to'] ? flowJumps(json_decode((string)$r['pts'], true) ?: [], 0, 1, 2) : flowPtsG($bm, $g0, $g1);
-    $station = $r ? (string)$r['station'] : (string)($in['station'] ?? ''); if (!isset($sts[$station])) { $mid = ($g0 + $g1) / 2; $nd = INF; foreach ($sts as $st => $gs) if (abs($gs - $mid) < $nd) { $nd = abs($gs - $mid); $station = (string)$st; } }
+    $station = (string)($in['station'] ?? ''); if (!isset($sts[$station])) $station = $r ? (string)$r['station'] : ''; if (!isset($sts[$station])) { $mid = ($g0 + $g1) / 2; $nd = INF; foreach ($sts as $st => $gs) if (abs($gs - $mid) < $nd) { $nd = abs($gs - $mid); $station = (string)$st; } }
     $db->beginTransaction();
-    if ($r) $db->prepare("UPDATE hydro_reach SET name=?, kind=?, fac=?, mg=?, g_from=?, g_to=?, len_m=?, pts=?, src='manual', active=? WHERE id=?")->execute([mb_substr($nm, 0, 100), $k, $fac, $mg, $g0, $g1, $g0 - $g1, json_encode($pts), empty($in['off']) ? 1 : 0, $id]);
+    if ($r) $db->prepare("UPDATE hydro_reach SET name=?, kind=?, fac=?, mg=?, g_from=?, g_to=?, len_m=?, pts=?, station=?, src='manual', active=? WHERE id=?")->execute([mb_substr($nm, 0, 100), $k, $fac, $mg, $g0, $g1, $g0 - $g1, json_encode($pts), $station, empty($in['off']) ? 1 : 0, $id]);
     else { $db->prepare("INSERT INTO hydro_reach(grp,name,kind,gwl,g_from,g_to,pts,len_m,fac,mg,station,src,active) VALUES(?,?,?,?,?,?,?,?,?,?,?,'manual',1)")->execute([flowGrpName($gwl, $sts), mb_substr($nm, 0, 100), $k, $gwl, $g0, $g1, json_encode($pts), $g0 - $g1, $fac, $mg, $station]); $id = (int)$db->lastInsertId(); }
     if (!empty($in['fit'])) flowNbFit($gwl, $id, $g0, $g1, $r ? (int)$r['g_from'] : null, $r ? (int)$r['g_to'] : null, $bm);
     $db->commit(); out(['ok' => true, 'id' => $id]);
