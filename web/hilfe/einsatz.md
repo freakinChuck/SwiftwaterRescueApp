@@ -77,7 +77,7 @@ Im Register «Einsatz» setzen alle Teilnehmenden die **Fliessgeschwindigkeit** 
 
 Hat die massgebende Messstation beim PLS eine Kennlinie (Verwaltung), zeigt die Karte eine **Vorhersage der Fliessgeschwindigkeit**:
 
-- **Vorschlag jetzt**: Driftgeschwindigkeit mit Unter- und Obergrenze aus dem aktuellen Abfluss. **Übernehmen** setzt den Wert; die App ändert ihn nie selbst.
+- **Vorschlag jetzt**: Driftgeschwindigkeit mit Unter- und Obergrenze aus dem aktuellen Abfluss. Die Obergrenze enthält eine Zusatzmarge für die schnellere Hauptströmung in der Flussmitte (Angabe unter dem Diagramm). **Übernehmen** setzt den Wert; die App ändert ihn nie selbst.
 - **Diagramm**: die letzten 12 Stunden (weiss), die Vorhersage (blau) mit Band und der eingestellte Wert (gelb gestrichelt).
 - **In 3 / 12 / 24 / 48 h**: die erwartete Geschwindigkeit. Quelle ist die Abflussvorhersage des BAFU; ohne sie bleibt der Abfluss wie jetzt.
 - **Abschnitte bis Ende Suchgebiet**: Stau, Schwellen, Engstellen und freie Strecken mit eigener Geschwindigkeit. Auf der Karte erscheinen sie als farbige Linien (Fenster «Ansicht», Kategorie «Fliessgeschwindigkeit je Abschnitt»).
@@ -107,7 +107,7 @@ Der Kartenknopf **Messstationen** zeigt Pegel, Abfluss und Wassertemperatur der 
 - **Beim PLS**: die nächsten Stationen, mit den Werten bei Einsatzbeginn und den aktuellen.
 - **Meine Messstationen**: deine eigene Auswahl, auch ohne Einsatz (im [Profil](#profil/messstationen)).
 
-Bei Stationen mit Kennlinie steht zusätzlich die aktuelle **Fliessgeschwindigkeit** (Bereich in m/s).
+Bei Stationen mit Kennlinie steht zusätzlich die aktuelle **Fliessgeschwindigkeit** (Bereich in m/s). **Kennlinie** (in der Liste und im Popup des Markers) zeigt den Querschnitt des Flussbetts mit dem Wasserspiegel und die Geschwindigkeit je Abfluss.
 
 ![Messstationen](img/messstationen.jpg)
 

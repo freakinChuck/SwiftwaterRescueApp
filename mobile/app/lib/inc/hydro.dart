@@ -101,6 +101,7 @@ List<Widget> hyList(BuildContext c, IncStore s, MapCtl map) {
           ])),
           if (st != null) ...[
             smallBtn('Zeigen', () => hyShow(c, s, map, id)),
+            if (s.hyFlow[id] != null && !s.demo) smallBtn('Kennlinie', () => openWeb(c, s, 'kennlinie.html?st=$id')), // Querprofil und Kennlinie (Issue #254)
             ?navBtn(s, st['lat'], st['lon'], hyName(st)),
           ],
         ]));

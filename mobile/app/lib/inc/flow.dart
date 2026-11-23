@@ -1,6 +1,6 @@
 // Fliessgeschwindigkeit an den Messstationen (Issue #254, Gegenstück zu FLK, fpSvg, flowPredHtml, flowNote, drawFlow, hyFq, hyFpPop
 // und rdAlong in web/index.html): Bezugsstation beim PLS mit Kennlinie v̄ = a·Q^m (st.flow_pred), Abfluss stündlich −12 h … +96 h,
-// Driftspanne = f_lo … f_hi × Geschwindigkeit an der Oberfläche (v̄ ÷ surf), Abschnitte bis Ende Suchgebiet, relevante Abweichung (warn).
+// Driftspanne = f_lo … f_hi × Geschwindigkeit an der Oberfläche (v̄ ÷ surf), obere Grenze plus Zusatzmarge der Hauptströmung (mg %), Abschnitte bis Ende Suchgebiet, relevante Abweichung (warn).
 // Nur Anzeige: «Übernehmen» setzt die Fliessgeschwindigkeit über incident/flow (mit src fürs Log), sonst ändert die App nichts.
 import 'dart:math' as math;
 
@@ -33,7 +33,8 @@ double _v(J p, double q) => (jd(p['a']) ?? 0) * math.pow(math.max(q, 0), jd(p['m
 /// Driftspanne [tief, hoch, Mitte] in m/s
 List<double> fpDrift(J p, double q, [double? lo, double? hi]) {
   final fl = jd(p['f_lo']) ?? .8, fh = jd(p['f_hi']) ?? 1.0;
-  return [fl * _v(p, lo ?? q), fh * _v(p, hi ?? q), (fl + fh) / 2 * _v(p, q)];
+  final mg = jd(p['mg']) ?? 0;
+  return [fl * _v(p, lo ?? q), fh * _v(p, hi ?? q) * (1 + mg / 100), (fl + fh) / 2 * _v(p, q)];
 }
 
 List<List<double?>> _ser(J p) => (p['ser'] is List ? p['ser'] as List : const [])
@@ -232,7 +233,7 @@ List<Widget> flowPredWidgets(BuildContext c, IncStore s, void Function(double v,
       FlowChart(p, set),
       Row(children: [tabCell(3, 'in 3 h'), tabCell(12, 'in 12 h'), tabCell(24, 'in 1 Tag'), tabCell(48, 'in 2 Tagen')]),
       const SizedBox(height: 4),
-      Text('$nm (${js(p['station'])}), ${fpRel(p)} · $fc${js(p['src']) == 'strickler' ? ' · ohne Querprofil, Schätzung ±30–50 %' : ''}',
+      Text('$nm (${js(p['station'])}), ${fpRel(p)} · $fc${(jd(p['mg']) ?? 0) > 0 ? ' · obere Grenze mit +${(jd(p['mg'])!).round()} % für die Hauptströmung' : ''}${js(p['src']) == 'strickler' ? ' · ohne Querprofil, Schätzung ±30–50 %' : ''}',
           style: const TextStyle(fontSize: 11, color: mutC)),
     ])),
     if (rs.isNotEmpty)

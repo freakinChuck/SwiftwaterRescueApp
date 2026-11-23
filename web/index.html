@@ -155,6 +155,7 @@ body.picking .pinfo{pointer-events:none;opacity:.6}
 .mktt{background:#0f2430;color:#eaf3f6;border:1px solid #2c4f60;font-weight:600}.mktt:before{display:none}
 .hypop .fq{margin:.3rem 0;font-size:.82rem}.hypop .fq b{font-size:.95rem}.hypop .fsv{background:#0f2430;border-radius:6px;padding:4px}
 .hyph{font-size:.8rem;color:var(--mut)}.hypop{min-width:12rem}.hypop .t{display:block;color:#666;font-size:.8rem;margin-bottom:.2rem}
+.hypop .hyb{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.3rem}
 #hyRes button{display:block;width:100%;text-align:left;margin:.2rem 0;padding:.35rem .5rem;font-size:.85rem}
 #followChip button{background:transparent;border:0;color:#fff;padding:.2rem .4rem}
 @media(min-width:760px){body.so #followChip{left:calc(400px + 1rem)}}
@@ -356,7 +357,7 @@ function hyPoll(force){if(!feat('hydro'))return;const ids=hyIds(),k=ids.join();i
 // erfasste Werte des Einsatzes zu einer Station: «Beginn …», «Ende …»
 const hyPh=i=>hyInc().filter(r=>r.station===i).map(r=>`<div class="hyph">${r.phase==='start'?'Beginn':'Ende'} (${fmtT(r.ts)}): ${esc(hyVals(r.v))}</div>`).join('');
 const hyNow=i=>{const c=hyData[i];return c?esc(hyVals(c))+(c.at?' · Messung '+fmtT(c.at):''):hyErr?esc(hyErr):'Messwerte werden geladen …'};
-function hyPop(i){const s=hyStation(i);return`<div class="mmpop hypop"><b>${esc(hyName(s))}</b><span class="t"><a href="https://www.hydrodaten.admin.ch/de/seen-und-fluesse/stationen-und-daten/${encodeURIComponent(i)}" target="_blank" rel="noopener">Messstation BAFU ${esc(i)}</a>${hyDist(i)}</span>Aktuell: ${hyNow(i)}${hyFq(i,1)}${hyFpPop(i)}${hyPh(i)}${navBtn(s.lat,s.lon,hyName(s),'Navigieren')}</div>`}
+function hyPop(i){const s=hyStation(i);return`<div class="mmpop hypop"><b>${esc(hyName(s))}</b><span class="t"><a href="https://www.hydrodaten.admin.ch/de/seen-und-fluesse/stationen-und-daten/${encodeURIComponent(i)}" target="_blank" rel="noopener">Messstation BAFU ${esc(i)}</a>${hyDist(i)}</span>Aktuell: ${hyNow(i)}${hyFq(i,1)}${hyFpPop(i)}${hyPh(i)}<div class="hyb">${hyKlBtn(i)}${navBtn(s.lat,s.lon,hyName(s),'Navigieren')}</div></div>`}
 // Popup der Bezugsstation des Einsatzes: Diagramm und «Als Fliessgeschwindigkeit übernehmen»
 function hyFpPop(i){const p=st&&st.incident&&st.flow_pred,f=hyFlow[i];if(!f&&!(p&&p.station===i))return'';const ip=p&&p.station===i;
   return(ip?`<div class="fsv">${fpSvg(p,st.incident.flow_ms)}</div><div style="color:#666;font-size:.75rem">${p.fc_at?'BAFU-Vorhersage '+fmtDT(p.fc_at)+' · ':''}Schätzung für treibende Personen</div>`:'')
@@ -368,7 +369,7 @@ function drawHydro(){if(!hyLayer)return;const ids=feat('hydro')&&vis('hydro')?hy
 // Karte im Menü: im Einsatz die Stationen beim PLS (Beginn/Ende/aktuell), dazu die persönlichen; ohne Einsatz nur die persönlichen
 // Liste der Stationen, gemeinsam für die Karte im Menü und das Seitenfenster «Messstationen» (Issue #147)
 function hyList(){const inc=st&&st.incident,ir=hyInc(),is=[...new Set(ir.map(r=>r.station))],mine=hyMine().filter(i=>!is.includes(i));
-  const row=i=>{const s=hyStation(i);if(!s)return`<div class="hyli"><div><b>Station ${esc(i)}</b><div class="mut">${hyNow(i)}</div></div></div>`;return`<div class="hyli"><div><b>${esc(hyName(s))}</b>${hyDist(i)?` <span class="mut">${hyDist(i).slice(3)}</span>`:''}<div class="mut">${hyNow(i)}</div>${hyFq(i)||hyFlUp(i)}${hyPh(i)}</div><div class="hyb"><button data-hyz="${esc(i)}">Zeigen</button>${navBtn(s.lat,s.lon,hyName(s))}</div></div>`};
+  const row=i=>{const s=hyStation(i);if(!s)return`<div class="hyli"><div><b>Station ${esc(i)}</b><div class="mut">${hyNow(i)}</div></div></div>`;return`<div class="hyli"><div><b>${esc(hyName(s))}</b>${hyDist(i)?` <span class="mut">${hyDist(i).slice(3)}</span>`:''}<div class="mut">${hyNow(i)}</div>${hyFq(i)||hyFlUp(i)}${hyPh(i)}</div><div class="hyb"><button data-hyz="${esc(i)}">Zeigen</button>${hyKlBtn(i)}${navBtn(s.lat,s.lon,hyName(s))}</div></div>`};
   const hasPls=inc&&(inc.lat!=null||(st.rescuees||[]).some(r=>r.pls_lat!=null));
   return (inc?`<h5>Beim PLS</h5>${is.length?is.map(row).join(''):`<div class="mut">${hasPls?'Noch keine Werte erfasst (keine Messstation im Umkreis oder BAFU nicht erreichbar, siehe Log).':'Werden erfasst, sobald ein PLS bekannt ist. Am Einsatzende folgen die Werte derselben Stationen.'}</div>`}<h5>Meine Messstationen</h5>`:'')
     +(mine.length?mine.map(row).join(''):`<div class="mut">${hyMine().length?'Stehen schon oben.':'Keine gewählt. Im Profil kannst du Messstationen wählen, die du hier und auf der Karte siehst.'}</div>`)}
@@ -381,16 +382,19 @@ function bindHydro(el,deleg){if(deleg){el.onclick=e=>{const b=e.target.closest('
   el.querySelectorAll('[data-hyz]').forEach(b=>b.onclick=()=>hyShow(b.dataset.hyz));el.querySelectorAll('[data-hyp]').forEach(b=>b.onclick=()=>prefs(true))}
 // Kartenknopf «Messstationen» (Issue #147): im Einsatz bei eingeschalteter Funktion, ohne Einsatz, sobald man eigene Messstationen hat
 // Station ohne Geschwindigkeit: Hinweis (nur wenn die Werte geladen sind)
+// Kennlinie mit Querprofil ansehen (flCurveOpen in common.js), nur wenn der Server eine hat; im Demo nicht
+const hyKlBtn=i=>hyFlow[i]&&!DEMO?`<button data-hyk="${esc(i)}">Kennlinie</button>`:'';
+document.addEventListener('click',e=>{const b=e.target.closest('[data-hyk]');if(b)flCurveOpen(b.dataset.hyk)});
 const hyFlUp=i=>{return hyFlowOk&&!hyFlow[i]?'<div class="mut" style="font-size:.85rem">kein Querprofil, keine Geschwindigkeit</div>':''};
 const hyBtn=()=>feat('hydro')&&!!(st&&st.incident||hyMine().length);
 /* ---------- Fliessgeschwindigkeit an den Stationen (Issue #254) ---------- */
 // st.flow_pred (flowIncPred im Server): Bezugsstation beim PLS mit Kennlinie v̄ = a·Q^m, Abfluss stündlich −12 h … +96 h (ser [[t, q, lo, hi]]),
-// Driftspanne = Faktor f_lo … f_hi × Geschwindigkeit an der Oberfläche (v̄ ÷ surf), Abschnitte bis Ende Suchgebiet (reaches), relevante Abweichung (warn), letzte Meldung (note).
+// Driftspanne = Faktor f_lo … f_hi × Geschwindigkeit an der Oberfläche (v̄ ÷ surf), obere Grenze plus Zusatzmarge der Hauptströmung (mg %), Abschnitte bis Ende Suchgebiet (reaches), relevante Abweichung (warn), letzte Meldung (note).
 // Nur Anzeige: «Übernehmen» setzt die Fliessgeschwindigkeit über incident/flow (mit src fürs Log), sonst ändert die App nichts.
 const FLK={stau:['Stau','#1d7fd1','pool'],schwellen:['Schwellen','#ff8a3d','thr'],eng:['Engstelle','#c34fff','gorge'],frei:['frei','#35c27a','free']};
 const f1=v=>hyN(v,1),fpR=d=>f1(d[0])+'–'+f1(d[1]);
 const fpV=(p,q)=>p.a*Math.pow(Math.max(q,0),p.m)/p.surf;
-function fpDrift(p,q,lo,hi){return[p.f_lo*fpV(p,lo??q),p.f_hi*fpV(p,hi??q),(p.f_lo+p.f_hi)/2*fpV(p,q)]}
+function fpDrift(p,q,lo,hi){return[p.f_lo*fpV(p,lo??q),p.f_hi*fpV(p,hi??q)*(1+(p.mg||0)/100),(p.f_lo+p.f_hi)/2*fpV(p,q)]}
 function fpAt(p,h){const t=p.at+h*3600;let b=null;for(const x of p.ser)if(x[0]<=t+1800)b=x;return b&&[b[1],b[2]??b[1],b[3]??b[1]]}
 const fpD=(p,h)=>{const x=fpAt(p,h);return x&&fpDrift(p,...x)};
 const fpName=p=>(p.water?p.water+' – ':'')+p.name;
@@ -416,7 +420,7 @@ function flowPredHtml(i){const p=st.flow_pred;if(!p)return'';const set=i.flow_ms
   return(w?`<div class="fpv w">⚠ <b>In ${w.h} h deutlich ${w.up?'schneller':'langsamer'}:</b> ${fpR([w.d0,w.d1])} m/s statt eingestellt ${f1(set)} m/s (Abfluss ${esc(p.name)} ${w.q>w.q0?'steigt':'sinkt'}${w.fc?' gemäss BAFU-Vorhersage':''} von ${w.q0} auf ${w.q} m³/s).</div>`:'')
     +`<div class="fpv"><div class="rw"><div><span class="mut">Vorschlag jetzt</span><div class="big">${fpR(d0)} m/s</div><span class="mut">${f1(d0[0]*3.6)}–${f1(d0[1]*3.6)} km/h · Abfluss ${Math.round(p.q)} m³/s</span></div><button class="pri" id="bFlTake" data-v="${f1(d0[2]).replace(',','.')}">Übernehmen ${f1(d0[2])}</button></div>`
     +fpSvg(p,set)+`<div class="ftab">${tab}</div>`
-    +`<div class="mut" style="font-size:.75rem">${esc(nm)} (${esc(p.station)}), ${fpRel(p)} · ${p.fc_at?'BAFU-Vorhersage (Median, Spanne Min.–Max.) · Stand '+fmtDT(p.fc_at):'Abfluss bleibt wie jetzt (keine BAFU-Vorhersage)'}${p.src==='strickler'?' · ohne Querprofil, Schätzung ±30–50 %':''}</div></div>`
+    +`<div class="mut" style="font-size:.75rem">${esc(nm)} (${esc(p.station)}), ${fpRel(p)} · ${p.fc_at?'BAFU-Vorhersage (Median, Spanne Min.–Max.) · Stand '+fmtDT(p.fc_at):'Abfluss bleibt wie jetzt (keine BAFU-Vorhersage)'}${p.mg?` · obere Grenze mit +${p.mg} % für die Hauptströmung`:''}${p.src==='strickler'?' · ohne Querprofil, Schätzung ±30–50 %':''}</div></div>`
     +(p.reaches&&p.reaches.length?`<details ${flSecOpen?'open ':''}class="fpv fsecs" id="flSecs"><summary><b>Abschnitte bis Ende Suchgebiet</b> <span class="mut">(m/s, Schätzung)</span></summary>${p.reaches.map(fpReach).join('')}</details>`:'')}
 let flSecOpen=(()=>{try{return localStorage.getItem('sw_flsec')!=='0'}catch(e){return true}})();
 function flowPredBind(s){const b=s.querySelector('#bFlTake'),p=st&&st.flow_pred;if(b&&p)b.onclick=()=>api('incident/flow',{flow_ms:+b.dataset.v,src:'Vorschlag '+fpName(p)}).then(()=>{toast('Fliessgeschwindigkeit übernommen','ok');return poll()}).catch(fail);

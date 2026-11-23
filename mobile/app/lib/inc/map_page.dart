@@ -1023,7 +1023,10 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         _sheet(hyName(st), hyPopLines(s, id),
             lat: jd(st['lat']),
             lon: jd(st['lon']),
-            actions: (c) => [OutlinedButton(onPressed: () => hyOpenBafu(id), child: const Text('Stationsseite BAFU'))],
+            actions: (c) => [
+              OutlinedButton(onPressed: () => hyOpenBafu(id), child: const Text('Stationsseite BAFU')),
+              if (s.hyFlow[id] != null && !s.demo) OutlinedButton(onPressed: () => openWeb(c, s, 'kennlinie.html?st=$id'), child: const Text('Kennlinie')),
+            ],
             extra: (c) => hyFpExtra(c, s, id, hyName(st), (v, src) => s.act('incident/flow', {'flow_ms': v, 'src': src}, 'Fliessgeschwindigkeit übernommen')));
       }
     });

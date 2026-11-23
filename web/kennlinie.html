@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<script src="i18n.js?v=0"></script><!-- Mehrsprachigkeit (Issue #66), vor allen anderen Skripten -->
+<title>Swiftwater Rescue – Kennlinie</title>
+<link rel="icon" href="img/icon-192.png">
+<link rel="stylesheet" href="common.css?v=0">
+<style>
+/* Kennlinie einer Messstation (Issue #254): Querprofil und v̄(Q) wie im Dialog der Einsatz-App; für die native App (openWeb), Adresse kennlinie.html?st=<Station> */
+#klHead{display:flex;gap:.6rem;align-items:center;padding:.6rem 1rem;padding-top:calc(.6rem + env(safe-area-inset-top));border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10}
+#klHead h1{font-size:1.05rem;margin:0;flex:1;min-width:0}
+#kl{padding:.6rem 1rem calc(1rem + env(safe-area-inset-bottom));max-width:1500px;margin:0 auto}
+</style>
+</head><body>
+<div id="klHead"><a class="btn" href="./">‹ Zur Einsatz-App</a><h1 id="klT">Kennlinie</h1></div>
+<div id="kl"><p class="mut">Wird geladen …</p></div>
+<script src="common.js?v=0"></script>
+<script>
+// Angemeldet über sw_token (die App setzt ihn in der WebView); ohne Anmeldung zurück zur Einsatz-App
+(async()=>{const id=new URLSearchParams(location.search).get('st')||'',el=document.getElementById('kl');
+  if(!token){location.href='./';return}
+  try{const s=await api('hydro/curve/view',{id});const t=`Kennlinie ${s.water?s.water+' – ':''}${s.name} (${s.station})`;
+    document.getElementById('klT').textContent=t;document.title='Swiftwater Rescue – '+t;el.innerHTML=flCurveHtml(s,s.f_lo,s.f_hi,s.mg)}
+  catch(e){el.innerHTML=`<p class="mut">${esc(e.message||'Fehler')}</p>`}})();
+</script>
+</body></html>
