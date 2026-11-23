@@ -23,9 +23,9 @@ try { $db->exec("ALTER TABLE hydro_reach ADD COLUMN mg DOUBLE NULL"); } catch (T
 
 const BAFU_GQ = 'https://data.bafu.admin.ch/api';
 const BAFU_FC = 'https://www.hydrodaten.admin.ch/';
-const FLOW_DEFAULT = ['f_lo' => 0.8, 'f_hi' => 1.0, 'mg' => 20, 'dev' => 20, 'min_kmh' => 1.0, 'hor' => 12, 'dq' => 25, 'danger' => 1, 'fc_new' => 1, 'all' => 0, 'kinds' => []];
+const FLOW_DEFAULT = ['f_lo' => 0.8, 'f_hi' => 1.0, 'mg' => 20, 'dev' => 20, 'min_kmh' => 1.0, 'hor' => 2, 'dq' => 25, 'danger' => 1, 'fc_new' => 1, 'all' => 0, 'kinds' => []];
 // [Standard, Minimum, Maximum, Schritt]
-const FLOW_NUM = ['f_lo' => [0.8, 0.5, 1.0], 'f_hi' => [1.0, 0.6, 1.2], 'mg' => [20, 0, 100], 'dev' => [20, 5, 100], 'min_kmh' => [1.0, 0.2, 5], 'hor' => [12, 1, 48], 'dq' => [25, 5, 100]];
+const FLOW_NUM = ['f_lo' => [0.8, 0.5, 1.0], 'f_hi' => [1.0, 0.6, 1.2], 'mg' => [20, 0, 100], 'dev' => [20, 5, 100], 'min_kmh' => [1.0, 0.2, 5], 'hor' => [2, 1, 48], 'dq' => [25, 5, 100]];
 const FLOW_KINDS = ['stau' => ['Stau', 'Staustrecke', 0.33, '#1d7fd1', 'pool'], 'schwellen' => ['Schwellen', 'Schwellenstrecke', 0.75, '#ff8a3d', 'thr'], 'eng' => ['Engstelle', 'Engstelle', 1.0, '#c34fff', 'gorge'], 'frei' => ['frei', 'frei', 0.8, '#35c27a', 'free']]; // Kurzname, Name, Faktor, Farbe, Klasse
 const FLOW_SURF = 0.85; // mittlere Geschwindigkeit ≈ 0.85 × Oberfläche
 const FLOW_PRED_S = 300; // Vorhersage je Station zwischenspeichern
