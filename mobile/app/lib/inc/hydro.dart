@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'ctx.dart';
+import 'flow.dart';
 import 'store.dart';
 import 'util.dart';
 import '../i18n.dart';
@@ -95,6 +96,7 @@ List<Widget> hyList(BuildContext c, IncStore s, MapCtl map) {
               if (d.isNotEmpty) TextSpan(text: '  $d', style: TextStyle(fontSize: 12, color: Theme.of(c).colorScheme.onSurfaceVariant)),
             ])),
             Mut(hyNow(s, id), size: 12),
+            ?hyFq(s, id), // Fliessgeschwindigkeit an der Station (Issue #254)
             ...hyPh(s, id).map((t) => Mut(t, size: 12)),
           ])),
           if (st != null) ...[
@@ -203,7 +205,7 @@ MarkerLayer? hydroLayer(IncStore s, void Function(String id) onTap) {
 /// Zeilen des Info-Blatts zu einer Station (hyPop)
 List<String> hyPopLines(IncStore s, String id) {
   final d = hyDist(s, id);
-  return ['Messstation BAFU $id${d.isNotEmpty ? ' · $d' : ''}', 'Aktuell: ${hyNow(s, id)}', ...hyPh(s, id)];
+  return ['Messstation BAFU $id${d.isNotEmpty ? ' · $d' : ''}', 'Aktuell: ${hyNow(s, id)}', ?hyFqLine(s, id), ...hyPh(s, id)];
 }
 
 /// Profil: persönliche Messstationen (hyPrefs, höchstens 20), Suche in allen Stationen des BAFU

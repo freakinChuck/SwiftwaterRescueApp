@@ -12,6 +12,7 @@ import '../org.dart';
 import '../version.dart';
 import 'ctx.dart';
 import 'docs.dart';
+import 'flow.dart';
 import 'hydro.dart';
 import 'pois.dart';
 import 'skills.dart';
@@ -647,6 +648,7 @@ class _IncMenuState extends State<IncMenu> {
         ]),
         const SizedBox(height: 6),
         Mut('${(s.area?.info ?? const <String>[]).join(' ')} Zeit seit Alarm: ${(secs / 60).round()} min.'.trim()),
+        ...flowPredWidgets(c, s, (v, src) => s.act('incident/flow', {'flow_ms': v, 'src': src}, 'Fliessgeschwindigkeit übernommen')), // Issue #254
       ]));
     }
     final marks = jl(st['marks']);

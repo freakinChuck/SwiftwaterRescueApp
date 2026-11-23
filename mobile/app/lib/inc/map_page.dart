@@ -21,6 +21,7 @@ import '../sys.dart';
 import 'ctx.dart';
 import 'geo.dart';
 import 'docs.dart';
+import 'flow.dart';
 import 'hydro.dart';
 import 'menu.dart';
 import 'msgs.dart';
@@ -1018,8 +1019,15 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     // Messstationen Pegel & Abfluss (Issue #165), auch ohne Einsatz (persönliche)
     final hy = hydroLayer(s, (id) {
       final st = s.hyStation(id);
-      if (st != null) _sheet(hyName(st), hyPopLines(s, id), lat: jd(st['lat']), lon: jd(st['lon']), actions: (c) => [OutlinedButton(onPressed: () => hyOpenBafu(id), child: const Text('Stationsseite BAFU'))]);
+      if (st != null) {
+        _sheet(hyName(st), hyPopLines(s, id),
+            lat: jd(st['lat']),
+            lon: jd(st['lon']),
+            actions: (c) => [OutlinedButton(onPressed: () => hyOpenBafu(id), child: const Text('Stationsseite BAFU'))],
+            extra: (c) => hyFpExtra(c, s, id, hyName(st), (v, src) => s.act('incident/flow', {'flow_ms': v, 'src': src}, 'Fliessgeschwindigkeit übernommen')));
+      }
     });
+    out.addAll(flowLayers(s)); // Fliessgeschwindigkeit je Abschnitt (Issue #254), unter den Stationen
     if (hy != null) out.add(hy);
     // Fahrzeuge (Issue #177): je Kette ein Marker beim obersten Fahrzeug, auch ohne Einsatz (Sichtbarkeit bestimmt der Server)
     if (s.vis('veh') && vehOf(s) != null) {

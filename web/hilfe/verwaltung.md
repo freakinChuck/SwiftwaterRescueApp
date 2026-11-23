@@ -139,6 +139,12 @@ Quellen der ADS-B-Daten, Filter (Rettungshelikopter, Helikopter, alle), wer die 
 
 Umkreis und Anzahl der Messstationen beim PLS, Seen ja oder nein, Datenquellen mit Test.
 
+**Fliessgeschwindigkeit**: Faktoren der Driftgeschwindigkeit (Unter- und Obergrenze), Schwellen der Meldungen (Abweichung in %, Horizont, Anstieg des Abflusses, Gefahrenstufe, neue Vorhersage) und je Einsatztyp Anzeige und Meldungen ein oder aus.
+
+**Kennlinien**: je Station aus den Querprofilen der BAFU-Flussvermessung bzw. aus den Messreihen berechnen («Berechnen»), prüfen (Diagramm v(Q) mit Messpunkten) oder von Hand übersteuern. Dazu die Stationen oberhalb mit ihrer Laufzeit (für Stunden ohne BAFU-Vorhersage).
+
+**Abschnitte**: für eine Station vorschlagen (km oberhalb und unterhalb), danach Art (Stau, Schwellen, Engstelle, frei) und Faktor je Abschnitt anpassen. Von Hand geänderte Abschnitte bleiben bei einem neuen Vorschlag erhalten.
+
 ### Feste Standorte {#standorte}
 
 Orte, Bereiche und Linien, die in jedem Einsatz auf der Karte stehen, zum Beispiel Bootseinwasserungen, Magazine oder Fahrrinnen. Mit Kategorien (Standard ein- oder ausgeblendet, priorisiert), Eigenschaften (zum Beispiel «Flusssperre», die das Suchgebiet begrenzt, oder eine Warnung) und Navigationspunkten (Zufahrten).

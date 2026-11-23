@@ -364,6 +364,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     // Regelmässige Einsatzzeiten (Issue #180): im Demo keine
     'avail/rules':()=>({rules:[],now:null}),'avail/rule/save':()=>fail('Regelmässige Einsatzzeiten gibt es im Demo-Modus nicht.'),
     'absence/remove':b=>{const a=S.abs.find(x=>x.id===+b.id&&!x.removed)||fail('Eintrag nicht gefunden',404);a.removed=1;return{ok:true}},
+    'hydro/flow':()=>({flow:{}}),'hydro/along':()=>({reaches:[]}), // Fliessgeschwindigkeit an Stationen (Issue #254) braucht den Server
     'hydro':b=>{const ids=b.ids?b.ids.map(String):HYDRO.map(h=>h.id),t=now();return{stations:HYDRO.filter(h=>ids.includes(h.id)).map(h=>({...h,at:h.at||t-240})),at:t-240,err:null}},
     'overpass':b=>{const k=opKey(b);if(OPC.has(k))return OPC.get(k);const e=new Error('Gewässernetz vom Gerät laden');e.st=502;e.data={error:e.message,query:overpassQ(b),servers:OVERPASS};throw e},
     'overpass/put':b=>{if(Array.isArray(b.elements))OPC.set(opKey(b),{elements:b.elements});return{ok:true}},'overpass/stat':()=>({ok:true}),

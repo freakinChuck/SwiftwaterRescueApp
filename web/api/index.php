@@ -32,7 +32,7 @@ const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', '
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
 // Erfolgreiche Anfragen dieser Routen sind Ereignisse (Eintrag in out(), also erst, wenn die Route durchgelaufen ist): Route => [Bereich, Text]
-const APPLOG_ROUTES = ['doc/folder/save' => ['docs', 'Ordner der Dokumentenablage gespeichert'], 'doc/save' => ['docs', 'Eintrag der Dokumentenablage gespeichert'], 'doc/upload/done' => ['docs', 'Datei der Dokumentenablage hochgeladen'],
+const APPLOG_ROUTES = ['hydro/curve/calc' => ['hydro', 'Kennlinie einer Messstation berechnet'], 'hydro/curve/save' => ['hydro', 'Kennlinie einer Messstation gespeichert'], 'hydro/reach/propose' => ['hydro', 'Abschnitte vorgeschlagen'], 'hydro/reach/save' => ['hydro', 'Abschnitt gespeichert'], 'hydro/reach/remove' => ['hydro', 'Abschnitt entfernt'], 'doc/folder/save' => ['docs', 'Ordner der Dokumentenablage gespeichert'], 'doc/save' => ['docs', 'Eintrag der Dokumentenablage gespeichert'], 'doc/upload/done' => ['docs', 'Datei der Dokumentenablage hochgeladen'],
   'doc/ack/cfg' => ['docs', 'Lesebestätigung eingestellt'], 'doc/sug' => ['docs', 'Vorschlag zur Dokumentenablage eingereicht'], 'doc/sug/take' => ['docs', 'Vorschlag übernommen'], 'doc/sug/reject' => ['docs', 'Vorschlag abgelehnt'],
   'docs/cfg/save' => ['cfg', 'Einstellungen der Dokumentenablage gespeichert'], 'incident/doc/ext/save' => ['docs', 'Dokument für Externe freigegeben'], 'incident/doc/ext/remove' => ['docs', 'Freigabe für Externe zurückgenommen'],
   'logout' => ['auth', 'Abgemeldet'], 'me/password' => ['auth', 'Eigenes Passwort geändert'], 'me/testalarm' => ['push', 'Persönlicher Testalarm angefordert'], 'me/session/remove' => ['auth', 'App-Sitzung abgemeldet'],
@@ -415,7 +415,7 @@ function sndApns($k) { return $k && $k !== 'system' && preg_match('/^[a-z0-9_]{1
 const ALARM_LEVELS = ['crit' => ['Kritisch', 'Vollbild-Alarm mit Dauerton und Vibration, Push bleibt stehen, bis man ihn antippt'], 'high' => ['Hoch', 'Vollbild-Alarm mit einmaligem Ton, Push bleibt stehen, bis man ihn antippt'], 'normal' => ['Normal', 'Hinweis mit kurzem Ton, normaler Push'], 'low' => ['Leise', 'Hinweis ohne Ton und Vibration, stiller Push'], 'none' => ['Keine', 'Kein Alarm und kein Push, der Einsatz erscheint nur in der App']];
 // Einstellungen (settings/save) und das Recht, das sie ändern darf
 const SETTING_PERMS = ['lang' => 'cfg_func', 'msg_no_role' => 'cfg_inc', 'msg_read_all' => 'cfg_inc', 'features' => 'cfg_func', 'air_kinds' => 'cfg_map', 'rd_speeds' => 'cfg_func', 'nav_off' => 'cfg_func', 'nav_default' => 'cfg_func', 'sym' => 'cfg_inc',
-  'coord_sys' => 'cfg_map', 'place_near_km' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'maps' => 'cfg_map', 'map_kinds' => 'cfg_map', 'applog_days' => 'applog', 'app_min' => 'versions', 'beacon' => 'cfg_map', 'phone' => 'cfg_func', 'snd_default' => 'cfg_inc']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
+  'coord_sys' => 'cfg_map', 'place_near_km' => 'cfg_map', 'overpass_ttl' => 'cfg_map', 'overpass_urls' => 'cfg_map', 'overpass_off' => 'cfg_map', 'overpass_on' => 'cfg_map', 'air' => 'cfg_map', 'my_runs' => 'cfg_my', 'my_btns' => 'cfg_my', 'legal' => 'legal', 'ai' => 'cfg_ai', 'hydro' => 'cfg_map', 'flow' => 'cfg_map', 'postgis' => 'cfg_map', 'pgapi' => 'cfg_map', 'water_order' => 'cfg_map', 'maps' => 'cfg_map', 'map_kinds' => 'cfg_map', 'applog_days' => 'applog', 'app_min' => 'versions', 'beacon' => 'cfg_map', 'phone' => 'cfg_func', 'snd_default' => 'cfg_inc']; // ai: eigene Route ai/cfg/save (Prüfung aiIn), settings/save lehnt es ab
 /* ---------- After Action Review (Issue #55) ---------- */
 // Felder frei definierbar (Einstellung aar_cfg: Titel, Organisation, mitgelieferte Abschnitte, Felder), Werte je Einsatz in der Tabelle aar (JSON je Feld-ID).
 // Das Dokument (Word/PDF) entsteht im Browser (admin.html, aarModel); der Server liefert nur die Daten. Logo als PNG-/JPEG-Data-URL in der Einstellung aar_logo.
@@ -896,12 +896,19 @@ const HYDRO_SOURCES = [
             'note' => 'Gratis, ohne Schlüssel, privat betrieben (Existenz.ch), stellt die Daten des BAFU als Schnittstelle bereit: Abfluss, Pegel, Wassertemperatur, ohne Gefahrenstufe. Kein Anspruch auf Verfügbarkeit. Hat Vorrang.'],
   'web' => ['name' => 'hydrodaten.admin.ch (Webseite des BAFU)', 'site' => 'https://www.hydrodaten.admin.ch', 'lic' => 'Offene Daten des BAFU, Quellenangabe «BAFU»',
             'note' => 'Daten der Karte auf der Webseite des BAFU (keine dokumentierte Schnittstelle, der Aufbau kann sich ohne Ankündigung ändern), mit Gefahrenstufe und Einordnung. Ergänzt die Schnittstelle und springt ein, wenn sie nicht antwortet.'],
+  // Quellen für die Fliessgeschwindigkeit (Issue #254, flow.php), nicht Teil des Abrufs der Messwerte
+  'bafu' => ['name' => 'BAFU-Datenplattform (data.bafu.admin.ch)', 'site' => 'https://data.bafu.admin.ch', 'lic' => 'Offene Daten des BAFU, Quellenangabe «BAFU»', 'flow' => 1,
+            'note' => 'Dokumentierte Schnittstelle des BAFU: Stundenwerte für die Kennlinien, Querprofile, Längenprofile und Bauwerke der Flussvermessung. Höchstens 500 Abfragen in 5 Minuten; die Kennlinien werden nachts neu berechnet.'],
+  'fc' => ['name' => 'BAFU-Hochwasservorhersage (hydrodaten.admin.ch)', 'site' => 'https://www.hydrodaten.admin.ch', 'lic' => 'Offene Daten des BAFU, Quellenangabe «BAFU»', 'flow' => 1,
+            'note' => 'Abflussvorhersage für rund 50 Stationen an grösseren Flüssen, bis 5 Tage, mit Spannweite (Median, Min./Max.). Ausgegeben mehrmals täglich, ohne Gewähr.'],
+  'kt_ag' => ['name' => 'Kanton Aargau, Hydrometrie (ag.ch)', 'site' => 'https://www.ag.ch/de/verwaltung/bvu/umwelt-natur-landschaft/umwelt/hydrometrie', 'lic' => 'Daten des Kantons Aargau', 'flow' => 1,
+            'note' => 'Kantonale Stationen an den Zuflüssen für die Laufzeit der Abflusswelle. Noch nicht angebunden: die Schnittstelle wird mit dem Kanton geklärt.'],
 ];
 const HYDRO_OLD = 86400; // ältere Messwerte gelten als nicht aktuell
 const HYDRO_TTL = 300; // Messwerte zwischenspeichern (BAFU misst alle 10 Minuten)
 const HYDRO_MAX = 20;  // persönliche Messstationen je Person
 const HYDRO_NUM = ['radius_km' => [15, 1, 100], 'n' => [3, 1, 10]]; // [Standard, Minimum, Maximum]: Umkreis um jeden PLS, Stationen je PLS
-const HYDRO_DEFAULT = ['radius_km' => 15, 'n' => 3, 'lakes' => 0, 'src' => ['api' => 1, 'web' => 1]];
+const HYDRO_DEFAULT = ['radius_km' => 15, 'n' => 3, 'lakes' => 0, 'src' => ['api' => 1, 'web' => 1, 'bafu' => 1, 'fc' => 1, 'kt_ag' => 0]];
 const HYDRO_ID = '/^[A-Za-z0-9_-]{1,12}$/';
 function hydroCfg() { $v = json_decode(setting('hydro', ''), true); $v = is_array($v) ? $v : []; $c = HYDRO_DEFAULT;
   foreach (HYDRO_NUM as $k => [$d, $lo, $hi]) if (is_numeric($v[$k] ?? null)) $c[$k] = (int)min(max((float)$v[$k], $lo), $hi);
@@ -930,13 +937,13 @@ function hydroFile($name, $ttl, $fetch) { $dir = __DIR__ . '/data/hydro'; if (!i
 // Ein Abruf alle HYDRO_TTL: zuerst die API; die Webseite ergänzt, was der API fehlt (Gefahrenstufe, Einordnung, Stationen), und springt ganz ein, wenn die API nicht antwortet.
 // Werte der API gehen immer vor. Bei Fehlschlag aller Quellen gelten die bisherigen Daten. Stand je Quelle in api/data/hydro/status.json (hydroStat).
 function hydroBafu() { return hydroFile('bafu', HYDRO_TTL, function () { $on = hydroCfg()['src']; $locs = []; $vals = []; $ok = false;
-    foreach (array_keys(HYDRO_SOURCES) as $k) { if (empty($on[$k])) continue; $r = hydroSrc($k); if (!$r) continue; $ok = true;
+    foreach (array_keys(HYDRO_SOURCES) as $k) { if (empty($on[$k]) || !empty(HYDRO_SOURCES[$k]['flow'])) continue; $r = hydroSrc($k); if (!$r) continue; $ok = true;
       foreach ($r['locs'] as $i => $s) $locs[$i] ??= $s;
       foreach ($r['vals'] as $i => $v) $vals[$i] = ($vals[$i] ?? []) + $v; } // vorhandene Werte (aus der API) bleiben
     return $ok && $locs ? ['locs' => $locs, 'vals' => $vals] : null; }); }
 // eine Quelle abfragen und den Stand festhalten: ['locs' => …, 'vals' => …] oder null
 function hydroSrc($k) { $t = microtime(true); $err = null;
-  try { $r = $k === 'api' ? hydroApi() : hydroWeb(); } catch (Throwable $e) { $r = null; $err = $e->getMessage(); }
+  try { $r = ['api' => 'hydroApi', 'web' => 'hydroWeb', 'bafu' => 'flowSrcBafu', 'fc' => 'flowSrcFc', 'kt_ag' => 'flowSrcAg'][$k](); } catch (Throwable $e) { $r = null; $err = $e->getMessage(); }
   if (!$r && !$err) $err = 'keine gültige Antwort';
   if (!$r) alog('warn', 'hydro', 'Quelle ohne Antwort: ' . (HYDRO_SOURCES[$k]['name'] ?? $k), ['err' => mb_substr((string)$err, 0, 200)]); // Applikationslog (Issue #139)
   hydroStat($k, ['ok' => $r ? 1 : 0, 'ms' => (int)((microtime(true) - $t) * 1000), 'err' => $err, 'stations' => $r ? count($r['locs']) : 0, 'values' => $r ? count($r['vals']) : 0]);
@@ -979,7 +986,7 @@ function hydroWeb() { $locs = []; $vals = [];
         $put(str_contains($hu, 'ü.M') ? 'height' : 'level', $h, $ts($p['sensor_waterlevel_measured_at'] ?? null));
         // Gefahrenstufe 1–5 aus den Schwellen wl_1 … wl_4 (gleiche Grösse wie der Hauptwert), Einordnung des BAFU (sehr tief … sehr hoch)
         $mv = ($p['metric'] ?? '') === 'masl' ? ($v['height'] ?? null) : ($v['flow'] ?? null);
-        if ($mv !== null) { $g = 1; $ok = false; foreach ([1, 2, 3, 4] as $i) { $w = $num($p["wl_$i"] ?? null); if ($w === null) continue; $ok = true; if (str_ends_with((string)$p["wl_$i"], 'l/s')) $w /= 1000; if ($mv >= $w) $g = $i + 1; } if ($ok) $v['danger'] = $g; }
+        if ($mv !== null) { $g = 1; $ok = false; $wl = []; foreach ([1, 2, 3, 4] as $i) { $w = $num($p["wl_$i"] ?? null); if ($w === null) continue; $ok = true; if (str_ends_with((string)$p["wl_$i"], 'l/s')) $w /= 1000; if ($mv >= $w) $g = $i + 1; $wl[$i - 1] = round($w, 3); } if ($ok) $v['danger'] = $g; if ($ok && ($p['metric'] ?? '') !== 'masl') $v['wl'] = array_replace([null, null, null, null], $wl); }
         if (isset($v['at']) && preg_match('/level_(\d)$/', (string)($p['icon'] ?? ''), $m) && isset($leg["level_$m[1]"])) $v['cls'] = mb_substr((string)$leg["level_$m[1]"], 0, 30);
         if (!$v) unset($vals[$id]); unset($v); } }
     return $locs ? ['locs' => $locs, 'vals' => $vals] : null; }
@@ -1891,6 +1898,7 @@ if ($route === 'public/state') {
   out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'stops' => $stops, 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'features' => features($inc['kind_id']), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0] + mapsFor($inc['kind_id']) + ['veh' => beaconCfg()['public'] && feature($inc, 'veh') ? vehState($inc, true) : null, 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
 }
 
+require __DIR__ . '/flow.php'; // Fliessgeschwindigkeit an den Messstationen (Issue #254): Kennlinien, Vorhersage, Abschnitte, Meldungen, flowRoute()
 require __DIR__ . '/docs.php'; // Dokumentenablage (Issue #229): Tabellen, Routen ohne Anmeldung (ext/doc, guest/docs), docRoute()
 
 // Funk für Externe (Issue #113): Gastseite funk.html?k=<token> ohne Anmeldung, nur der Kanal des Links; keine Karte, keine Standorte, Einsatzkräfte nur mit Spezialrolle bzw. Einrückoption
@@ -3370,7 +3378,7 @@ const DSAR_TABLES = ['users' => ['Personen', 'id'], 'uroles' => ['Benutzerrollen
   'inc_kinds' => ['Einsatztypen', 'id'], 'modes' => ['Einrückoptionen', 'id'], 'roles' => ['Spezialrollen', 'id'], 'incidents' => ['Einsätze', 'id'], 'participants' => ['Teilnahmen', 'id'],
   'incident_log' => ['Einsatzlog', 'id'], 'messages' => ['Nachrichten', 'id'], 'track' => ['Aufzeichnung (Standortverlauf)', 'id'], 'rec_periods' => ['Aufgezeichnete Zeiträume', 'id'],
   'air_track' => ['Aufzeichnung Luftfahrzeuge', 'id'], 'rescuees' => ['Rettlinge', 'id'], 'rescuee_marks' => ['Frühere Rettling-Markierungen', 'id'], 'externals' => ['Externe Einsatzkräfte', 'id'],
-  'pois' => ['Markierungen, Bereiche und Linien', 'id'], 'inc_hydro' => ['Pegel und Abfluss im Einsatz', 'id'], 'voice' => ['Durchsagen (Funk)', 'id'], 'voice_channels' => ['Funkkanäle', 'id'],
+  'pois' => ['Markierungen, Bereiche und Linien', 'id'], 'inc_hydro' => ['Pegel und Abfluss im Einsatz', 'id'], 'hydro_note' => ['Meldungen zur Fliessgeschwindigkeit', 'id'], 'hydro_curve' => ['Kennlinien der Messstationen', 'station'], 'hydro_lag' => ['Stationen oberhalb', 'id'], 'hydro_reach' => ['Abschnitte der Gewässer', 'id'], 'voice' => ['Durchsagen (Funk)', 'id'], 'voice_channels' => ['Funkkanäle', 'id'],
   'voice_guests' => ['Funk-Links für Externe', 'id'], 'voice_conf' => ['Anwesenheit in der Konferenz', 'incident_id,ident'], 'voice_mute' => ['Stummschaltungen', 'incident_id,channel_id,ident'],
   'ex_plans' => ['Planungen (vorbereitete Übungen)', 'id'], 'ex_injects' => ['Elemente der Planungen', 'id'], 'ex_signups' => ['Anmeldungen zu Übungen', 'id'], 'ext_templates' => ['Vorlagen externe Einsatzkräfte', 'id'],
   'places' => ['Feste Standorte', 'id'], 'place_cats' => ['Kategorien fester Standorte', 'id'], 'place_props' => ['Eigenschaften fester Standorte', 'id'], 'place_nav' => ['Navigationspunkte', 'id'],
@@ -3464,7 +3472,7 @@ const PURGE_KINDS = ['incident' => ['Einsatz', 'stats'], 'user' => ['Benutzer', 
   'ext_template' => ['Vorlage externe Einsatzkraft', 'cfg_inc'], 'skill' => ['Fähigkeit', 'skills'], 'veh_kind' => ['Fahrzeugart', 'cfg_map'], 'vehicle' => ['Fahrzeug', 'cfg_map'], 'doc' => ['Eintrag der Dokumentenablage', 'docs'], 'doc_folder' => ['Ordner der Dokumentenablage', 'docs']];
 // Tabellen mit Daten eines Einsatzes (Spalte incident_id); neue Tabellen mit incident_id hier aufnehmen
 const PURGE_INC_TABLES = ['participants', 'incident_log', 'messages', 'track', 'rec_periods', 'air_track', 'rescuees', 'rescuee_marks', 'externals', 'pois', 'inc_hydro',
-  'voice', 'voice_guests', 'voice_conf', 'voice_mute', 'aar', 'aar_img', 'aar_arch', 'aar_arch_img', 'aar_arch_part', 'fb_req', 'fb_ans', 'vehicle_seen', 'veh_links', 'fed_joint', 'doc_ext'];
+  'voice', 'voice_guests', 'voice_conf', 'voice_mute', 'aar', 'aar_img', 'aar_arch', 'aar_arch_img', 'aar_arch_part', 'fb_req', 'fb_ans', 'vehicle_seen', 'veh_links', 'fed_joint', 'doc_ext', 'hydro_note'];
 function purgeCnt($sql, $p) { global $db; try { $s = $db->prepare($sql); $s->execute($p); return (int)$s->fetchColumn(); } catch (Throwable $e) { return 0; } }
 // Element laden und prüfen; liefert [Name, Folgen (Liste von Sätzen)]
 function purgeInfo($k, $id) {
@@ -3577,6 +3585,7 @@ try { if ((int)setting('applog_purge_at', 0) < $now - 3600) { setSetting('applog
 try { if (!$me['must_change']) geoAuto(); } catch (Throwable $e) { alog('err', 'geo', 'Abgleich der Geodaten: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // Abgleich übernommener Standorte mit der Quelle (Issue #182), täglich im Nachlauf
 if (strncmp($route, 'fed/', 4) === 0) $FED ? fedServe($route) : fedAdmin($route); // Verbund (Issue #60)
 try { if (!$me['must_change']) mailAuto(); } catch (Throwable $e) { alog('err', 'mail', 'E-Mail-Alarm: ' . $e->getMessage(), ['file' => basename($e->getFile()), 'line' => $e->getLine()]); } // E-Mail-Alarm (Issue #65): Postfach im Nachlauf abrufen, höchstens alle every Sekunden
+flowRoute($route); // Fliessgeschwindigkeit (Issue #254), Routen hydro/flow, hydro/along, hydro/curve*, hydro/reach*
 docRoute($route); // Dokumentenablage (Issue #229), beendet die Anfrage bei eigenen Routen
 switch ($route) {
  case 'me': out(['me' => $me + mapsFor(null) + ['lang_default' => langDefault(), 'langs' => LANGS, 'phone_cfg' => phoneCfg(), 'coord_default' => setting('coord_sys', 'lv95'), 'rd_speeds' => rdSpeeds(), 'kinds' => kindsPub(), 'nav_apps' => navApps(), 'nav_default' => navDefault(), 'symbols' => symActive(), 'sym_free' => symCfg()['free'], 'sym_sets' => array_map(fn($x) => $x[0], SYM_SETS), 'features' => featuresAll(), 'my_runs' => myRuns(), 'groups' => myGroups(), 'absent' => absNow($uid)[$uid] ?? null, 'ai' => aiMe(), 'org' => legalCfg()['org'], 'org_info' => orgInfo(), 'session' => $sid ? 1 : 0, 'version' => verPub(), 'app_min' => appMin(), 'beacon_cfg' => beaconMe(), 'skills' => skillSum($uid), 'docs' => docMe(), 'docs_cfg' => docCfgPub()]]); // skills: Ausbildung (Issue #117), Anzahl abgelaufen/bald/fehlende Pflicht // org: Name der Organisation, damit die native App das Backend benennen kann (Issue #108); session 1 = Gerätesitzung // ai: AI-Assistent je Funktion (Issue #111) // my_runs: Meine Einsätze (Issue #61); coord_sys null = Standard der Verwaltung; rd_speeds für das Werkzeug Flussdistanz; kinds: Einsatztypen für «… starten»; features je Einsatztyp für die Flussdistanz ohne Einsatz
@@ -3816,7 +3825,7 @@ switch ($route) {
   if ($F['hydro'] && ($hs === null || ($hs < 0 && -$hs < $now - 120)) && hydroRefs($inc)) {
     $u = $db->prepare("UPDATE incidents SET hydro_s=? WHERE id=? AND (hydro_s IS NULL OR (hydro_s<0 AND hydro_s>?))"); $u->execute([$now, $id, -($now - 120)]);
     if ($u->rowCount()) after(function () use ($id) { global $db; if (!hydroLog($id, 'start')) $db->prepare("UPDATE incidents SET hydro_s=? WHERE id=?")->execute([-time(), $id]); }); }
-  unset($inc['hydro_s']);
+  unset($inc['hydro_s']); if ($F['hydro']) flowPoll($inc); unset($inc['flow_chk']); // Meldungen zur Fliessgeschwindigkeit (Issue #254)
   $inc['stop_on'] = (int)($inc['stop_on'] ?? 1); $inc['stop_off'] = stopOff($inc); $ipl = incPlaces($inc); // Flusssperren (Issue #182)
   $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,p.veh_id,u.name,u.photo,u.phone FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
   $ps->execute([$id]); $phSee = phoneSee($inc); // Direktanruf (Issue #44): Telefonnummern nur gemäss Einstellung phone
@@ -3885,7 +3894,7 @@ switch ($route) {
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
        'air' => airAllowed($inc) ? 1 : 0, 'air_inc' => airCfg()['on'] ? (airInc($inc) ? 1 : 0) : null, 'ex_lead' => $xl, 'ex_title' => $inc['plan_id'] && ($xl || planner()) ? (exPlan($inc)['title'] ?? null) : null, 'plan' => $inc['plan_id'] && $inc['kind']['sec'] && ($xp0 = exPlan($inc)) ? ['title' => $xp0['title'], 'doc' => json_decode((string)$xp0['doc'], true) ?: null] : null, // Einsatzplan eines geplanten Sekundäreinsatzes (Issue #164), für alle
  'ex_injects' => $inc['plan_id'] && ($xl || planner()) ? exInjects((int)$inc['plan_id']) : [],
-       'log' => $cf ? array_values(array_filter(logRows($id), fn($l) => $l['kind'] !== 'voice' || $vcm || in_array($l['ch'], $vmids, true))) : null, 'veh' => vehVisible($inc) ? vehState($inc) : null, 'hydro' => $F['hydro'] ? hydroInc($id) : [], 'now' => $now] + mapsFor($inc['kind_id'])); // maps/map_def: Kartenanbieter des Einsatztyps (Issue #106)
+       'log' => $cf ? array_values(array_filter(logRows($id), fn($l) => $l['kind'] !== 'voice' || $vcm || in_array($l['ch'], $vmids, true))) : null, 'veh' => vehVisible($inc) ? vehState($inc) : null, 'hydro' => $F['hydro'] ? hydroInc($id) : [], 'flow_pred' => $F['hydro'] ? flowIncPred($inc, $F) : null, 'now' => $now] + mapsFor($inc['kind_id'])); // maps/map_def: Kartenanbieter des Einsatztyps (Issue #106)
 
  case 'incident/invite/add': // Nachbieten (Issue #90, Einsatzleitung): groups, persons (wenn der Typ das erlaubt) oder all=1; Alarm nur an die neu Aufgebotenen
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz'); if (!canManage($inc)) fail('Nur die Einsatzleitung kann nachbieten', 403);
@@ -4024,7 +4033,8 @@ switch ($route) {
   $inc = activeIncident(); if (!$inc || !canFlow($inc)) fail('Nur Personen, die am Einsatz teilnehmen, können die Fliessgeschwindigkeit setzen', 403);
   $v = (float)($in['flow_ms'] ?? 0); if ($v <= 0 || $v > 15) fail('Fliessgeschwindigkeit muss zwischen 0 und 15 m/s liegen');
   $db->prepare("UPDATE incidents SET flow_ms=? WHERE id=?")->execute([$v, $inc['id']]);
-  logev($inc['id'], $uid, 'flow', 'setzt die Fliessgeschwindigkeit auf ' . $v . ' m/s');
+  $src = mb_substr(trim((string)($in['src'] ?? '')), 0, 120); // übernommen aus der Vorhersage einer Messstation (Issue #254)
+  logev($inc['id'], $uid, 'flow', $src !== '' ? 'übernimmt die Fliessgeschwindigkeit ' . $v . ' m/s (' . $src . ')' : 'setzt die Fliessgeschwindigkeit auf ' . $v . ' m/s');
   out(['ok' => true]);
 
  case 'incident/mark': // Position des Rettlings: alle Teilnehmenden (eigener Standort), manuell nur Einsatzleitung
@@ -5286,7 +5296,7 @@ switch ($route) {
    'maps' => mapsCfg(), 'map_default' => MAP_DEFAULT, 'map_own' => mapOwn(), 'map_sources' => array_map(fn($k) => mapPub($k) + array_intersect_key(MAP_SOURCES[$k], array_flip(['site', 'terms', 'lic', 'area', 'note', 'def'])), array_keys(MAP_SOURCES)), // Kartenanbieter (Issue #106)
    'air' => airCfg(), 'air_default' => AIR_DEFAULT + array_map(fn($x) => $x[0], AIR_NUM), 'air_num' => AIR_NUM, 'air_filters' => AIR_FILTERS, 'air_app' => AIR_APP, 'air_sources' => array_map(fn($s) => ['name' => $s['name'], 'site' => $s['site'], 'note' => $s['note']], AIR_SOURCES),
    'air_status' => json_decode((string)@file_get_contents(__DIR__ . '/data/air/status.json'), true) ?: (object)[], // Helikopter (Issue #73)
-   'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM, 'hydro_sources' => HYDRO_SOURCES, // Pegel & Abfluss (Issue #125)
+   'hydro' => hydroCfg(), 'hydro_num' => HYDRO_NUM, 'hydro_sources' => HYDRO_SOURCES, 'flow' => flowCfg(), 'flow_num' => FLOW_NUM, // Pegel & Abfluss (Issue #125)
    'sym' => symCfg(), 'sym_sets' => array_map(fn($x) => ['name' => $x[0], 'note' => $x[1]], SYM_SETS), 'sym_all' => array_map('symPub', array_keys(SYMBOLS))] // Einsatzsymbole (Issue #146)
    + (can('cfg_map') ? ['postgis' => pgCfg() + ['pass_set' => setting('postgis_pass', '') !== '' ? 1 : 0, 'ext' => extension_loaded('pdo_pgsql') ? 1 : 0, 'ready' => pgReady() ? 1 : 0], 'postgis_ssl' => PG_SSL, 'postgis_default' => PG_DEFAULT,
      'pgapi' => pgaCfg() + ['key_set' => setting('pgapi_key', '') !== '' ? 1 : 0, 'curl' => function_exists('curl_init') ? 1 : 0, 'ready' => pgaReady() ? 1 : 0], 'pgapi_default' => PGA_DEFAULT, // PostGIS-API, ohne Key
@@ -5352,6 +5362,7 @@ switch ($route) {
   if (isset($in['air'])) setSetting('air', json_encode(airIn($in['air']), JSON_UNESCAPED_UNICODE)); // Helikopter (Issue #73)
   if (isset($in['beacon'])) setSetting('beacon', json_encode(beaconIn($in['beacon']))); // Fahrzeuge (Issue #177)
   if (isset($in['phone'])) setSetting('phone', json_encode(phoneIn(array_merge(phoneCfg(), (array)$in['phone'])))); // Direktanruf (Issue #44)
+  if (isset($in['flow'])) setSetting('flow', json_encode(flowIn($in['flow']))); // Fliessgeschwindigkeit (Issue #254)
   if (isset($in['hydro'])) { setSetting('hydro', json_encode(hydroIn($in['hydro']))); @unlink(__DIR__ . '/data/hydro/bafu.json'); } // Quellen geändert: neu abrufen // Pegel & Abfluss (Issue #125)
   if (isset($in['postgis'])) { // Gewässernetz aus PostGIS (Issue #131): Passwort nur, wenn angegeben (leer = behalten), pass_clear = entfernen
     $v = pgIn($in['postgis']); $pw = $in['postgis']['pass'] ?? '';

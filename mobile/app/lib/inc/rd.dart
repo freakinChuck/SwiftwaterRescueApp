@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'area.dart';
 import 'ctx.dart';
+import 'flow.dart';
 import 'store.dart';
 import 'util.dart';
 import '../i18n.dart';
@@ -58,6 +59,7 @@ class RdState extends ChangeNotifier {
   double air = 0, dist = 0;
   String dir = '';
   bool down = false;
+  List<J>? al; // Abschnitte mit Geschwindigkeit entlang des Wegs (hydro/along, Issue #254)
   int _run = 0;
   _Graph? _net; // zuletzt geladenes Netz, wiederverwendet, solange es beide Punkte abdeckt
 
@@ -73,6 +75,7 @@ class RdState extends ChangeNotifier {
     air = dist = 0;
     dir = '';
     down = false;
+    al = null;
     notifyListeners();
   }
 
@@ -131,6 +134,19 @@ class RdState extends ChangeNotifier {
       dir = d;
       down = d.contains('abwärts');
       map.fitPts([...path, pa, pb]);
+      // Treibzeit nach Abschnitten (rdAlong), nur in Fliessrichtung A → B
+      if (down && s.feat('hydro')) {
+        () async {
+          try {
+            final j = await s.api.call('hydro/along', body: {
+              'a': [pa.latitude, pa.longitude],
+              'b': [pb.latitude, pb.longitude]
+            });
+            final rs = jl(j['reaches']);
+            if (run == _run && rs.isNotEmpty) _set(() => al = rs);
+          } catch (_) {} // ältere Server ohne hydro/along
+        }();
+      }
     } on _RdErr catch (e) {
       if (run != _run) return;
       err = e.m;
@@ -398,6 +414,15 @@ class _RdPanelState extends State<RdPanel> {
               const SizedBox(width: 12),
               Expanded(child: Text(f > 0 ? '${durS(rd.dist / f)} (${(f * 3.6).toStringAsFixed(1)} km/h)' : 'Fliessgeschwindigkeit eingeben')),
             ]),
+            if (rdAlong(rd.al, durS) case final al?) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                const SizedBox(width: 150, child: Text.rich(TextSpan(children: [TextSpan(text: 'Nach Abschnitten', style: TextStyle(fontWeight: FontWeight.bold)), TextSpan(text: ' (Vorhersage jetzt)', style: TextStyle(fontSize: 12))]))),
+                const SizedBox(width: 12),
+                Expanded(child: Text(al.$1, style: const TextStyle(fontWeight: FontWeight.bold))),
+              ]),
+              Mut(al.$2, size: 12),
+            ],
             const SizedBox(height: 6),
             ..._speeds.map((v) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),

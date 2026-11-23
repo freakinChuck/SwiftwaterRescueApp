@@ -1829,6 +1829,10 @@ class Demo {
         return {'folders': [], 'docs': [], 'cfg': {'view': {}, 'secs': {}, 'n': 5, 'menu_n': 5, 'own': 0}, 'my_view': null};
       case 'doc':
         _fail('Dokumente gibt es im Demo-Modus nicht.', 404);
+      case 'hydro/flow': // Fliessgeschwindigkeit an Stationen (Issue #254) braucht den Server
+        return {'flow': {}};
+      case 'hydro/along':
+        return {'reaches': []};
       case 'hydro':
         final ids = b['ids'] is List ? (b['ids'] as List).map((x) => '$x').toList() : _hy.map((h) => '${h['id']}').toList();
         return {
