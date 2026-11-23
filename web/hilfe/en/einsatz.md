@@ -113,6 +113,16 @@ Which channels you hear and where you may speak depends on your special role and
 
 Vehicles with a Bluetooth beacon appear on the map as soon as the native app of a participant sees them. The list is in the “Responders” window under “Vehicles”: who is in it, what is loaded (boat on the trailer) and where it was last seen. Loading and unloading is done via the vehicle's popup.
 
+## Emergency call (SOS) {#sos}
+
+If you get into trouble yourself, press and hold the red **SOS** button at the top left of the map for **2 seconds**. A short countdown follows: **Cancel** stops an accidental call, **Send now** sends it without waiting. The button is only shown while you take part in the incident.
+
+Depending on your organisation's settings, the emergency call alerts the incident command and the responders near you with a **critical** alarm showing your name and location. They see a full-screen alert with distance, 🧭 and **Acknowledge**, a red bar at the top and a flashing marker at your location; the map jumps to you. If you are in a live conference, a signal tone sounds there.
+
+As soon as someone acknowledges, your bar shows "seen by …". When the danger is over, tap **END** (or **End** in the bar); the incident command can end it too. Call, acknowledgement and end are recorded in the incident log and in the replay.
+
+> ! The emergency call does not replace calling 112/144/117 when outside help is needed.
+
 ## Documents {#dokumente}
 
 The **📚 Documents** map button opens your organisation's documents, also without an operation. At the top is the search: it finds titles, descriptions, keywords, the text of pages and the text of PDFs, with page number. Below are the sections the administration has set up, for example open read confirmations, ★ favourites, documents at locations in the operation area, documents for this operation type and the folders. If allowed, you arrange the sections for yourself with **Arrange sections**.

@@ -489,3 +489,13 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **ML-05** – Datum und Zahlen erscheinen im Format der gewählten Sprache; der AI-Assistent antwortet in der Sprache der Person (#66).
 - **ML-06** – Übersetzt werden die Texte der App; Eingaben der Organisation (Einsatztypen, Rollen, Meldungen, Dokumente usw.), Namen und das gespeicherte Einsatzlog bleiben in der Sprache, in der sie erfasst wurden. Fehlende Übersetzungen erscheinen deutsch (#66).
 - **ML-07** – Kapitel der Bedienungsanleitung können je Sprache übersetzt vorliegen; fehlt ein Kapitel, erscheint das deutsche (#66).
+
+## 35. Notruf (SOS)
+
+- **SO-01** – Wer an einem Einsatz teilnimmt, kann über den Kartenknopf «SOS» einen Notruf auslösen: langes Drücken (Standard 2 s), danach ein Countdown (Standard 5 s) mit «Abbrechen» und «Sofort senden» (#240).
+- **SO-02** – Der Notruf alarmiert kritisch (Push `x:<id>`, Vollbild in der App) je nach Einstellung die Einsatzleitung und die Teilnehmenden im Umkreis, nur die Einsatzleitung oder alle Teilnehmenden, nie die auslösende Person; mit Name, Standort, Distanz, 🧭 und «Quittieren» (#240).
+- **SO-03** – Laufende Notrufe stehen bei allen Teilnehmenden als rote Leiste oben und als blinkender Marker auf der Karte; beim Eintreffen springt die Karte auf die Person; in der Live-Konferenz ertönt optional ein Signalton (#240).
+- **SO-04** – Die auslösende Person sieht, wer quittiert hat. Beenden können sie selbst und die Einsatzleitung; Verlassen und Ende des Einsatzes beenden ihn ebenfalls. Beendete Notrufe schliessen den Alarm auf allen Geräten (#240).
+- **SO-05** – Auslösen, Quittieren und Beenden stehen im Einsatzlog; das Replay zeigt laufende Notrufe an der Person (#240).
+- **SO-06** – Funktion «Notruf (SOS)» je Einsatztyp ein-/ausschaltbar; Empfänger, Umkreis, Dauer des Drückens, Countdown und Signalton in der Verwaltung (Funktionen → «Notruf (SOS)») (#240).
+- **SO-07** – Im Demo-Modus löst eine simulierte Einsatzkraft im Beispiel einen Notruf aus, die Einsatzleitung quittiert ihn; ein eigener Notruf wird von der simulierten Einsatzleitung quittiert (#240).

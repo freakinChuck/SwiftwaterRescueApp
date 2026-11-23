@@ -62,6 +62,7 @@ const _feat = {
   'veh': 1,
   'vehp': 1,
   'call': 0,
+  'sos': 1,
 }; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server, Direktanruf (#44) keine echten Nummern
 _J _kind(int id, String name, String color, String alarm, String an, int modeUp, int rec) => {
   'id': id,
@@ -304,7 +305,7 @@ class _Inc {
   final String script; // bsp | gen
   int t0;
   final done = <int>{};
-  final parts = <_J>[], log = <_J>[], msgs = <_J>[], pois = <_J>[], res = <_J>[], ext = <_J>[];
+  final parts = <_J>[], log = <_J>[], msgs = <_J>[], pois = <_J>[], res = <_J>[], ext = <_J>[], sos = <_J>[]; // sos: Notrufe (Issue #240)
   final homes = <int, List<_P>>{};
 }
 
@@ -335,7 +336,7 @@ class Demo {
   bool sim = true; // andere Einsatzkräfte simulieren
   bool lead = true; // Recht inc_lead: nach dem Annehmen alle Rechte der Einsatzleitung
   bool welcomed = false; // Erklärung beim ersten Öffnen gezeigt
-  int _seqInc = 900000, _seqLog = 1, _seqMsg = 1, _seqPoi = 1, _seqRes = 1, _seqExt = 1, _seqAbs = 1;
+  int _seqInc = 900000, _seqLog = 1, _seqMsg = 1, _seqPoi = 1, _seqRes = 1, _seqExt = 1, _seqAbs = 1, _seqSos = 1;
   _Inc? _inc;
   _J? _last;
   final abs = <_J>[];
@@ -655,9 +656,38 @@ class Demo {
     return e;
   }
 
+  // Notruf (Issue #240, wie incident/sos im Server): alle Teilnehmenden werden alarmiert, nur nicht die auslösende Person
+  _J? _sosOf(int uid) => _inc?.sos.where((x) => x['user_id'] == uid && x['ended_at'] == null).firstOrNull;
+  void _sosAdd(int uid, [int? ts]) {
+    final i = _inc, p = _part(uid);
+    if (i == null || p == null || _sosOf(uid) != null) return;
+    final t = ts ?? _now();
+    i.sos.add({'id': _seqSos++, 'user_id': uid, 'at': t, 'lat': p['lat'], 'lon': p['lon'], 'loc_at': p['lat'] != null ? t : null, 'ack_by': null, 'ack_at': null, 'ended_at': null});
+    _logev(uid, 'sos', 'löst einen Notruf (SOS) aus${p['lat'] != null ? ' bei ${_f5(p['lat'] as num)}, ${_f5(p['lon'] as num)}' : ' (ohne Standort)'}', t);
+  }
+
+  void _sosAck(int uid, _J? x, [int? ts]) {
+    if (x == null || x['ended_at'] != null) return;
+    if (x['ack_by'] == null) {
+      x['ack_by'] = uid;
+      x['ack_at'] = ts ?? _now();
+    }
+    _logev(uid, 'sos', 'quittiert den Notruf von ${_uname(x['user_id'] as int)}', ts);
+  }
+
+  void _sosEnd(int? uid, _J? x, [int? ts, String why = '']) {
+    if (x == null || x['ended_at'] != null) return;
+    x['ended_at'] = ts ?? _now();
+    final n = _uname(x['user_id'] as int);
+    _logev(why.isNotEmpty ? null : uid, 'sos', why.isNotEmpty ? 'Notruf von $n beendet$why' : (uid == x['user_id'] ? 'beendet den eigenen Notruf' : 'beendet den Notruf von $n'), ts);
+  }
+
   void _endInc(int uid, [int? t]) {
     final i = _inc;
     if (i == null) return;
+    for (final x in i.sos) {
+      _sosEnd(null, x, t, ' (Einsatzende)');
+    }
     for (final v in _vs) {
       v['inc'] = 0;
     }
@@ -719,6 +749,16 @@ class Demo {
       }
     }),
     _Step(560, 106, (d, t) => d._addMsg(106, 'Decken und Wärmepacks beim KP bereit.', ts: t)),
+    // Notruf (Issue #240): Posten rutscht am Ufer aus, die Einsatzleitung quittiert, Entwarnung
+    _Step(580, 105, (d, t) => d._sosAdd(105, t)),
+    _Step(600, 101, (d, t) {
+      d._sosAck(101, d._sosOf(105), t);
+      d._addMsg(101, 'SOS Posten Emmenmündung gesehen, Boot 1 kommt.', ts: t);
+    }),
+    _Step(640, 105, (d, t) {
+      d._sosEnd(105, d._sosOf(105), t);
+      d._addMsg(105, 'Entwarnung: bin ausgerutscht, Knie verletzt, aber wieder sicher am Ufer.', ts: t);
+    }),
     _Step(620, 101, (d, t) => d._addMsg(101, 'Danke allen. Rettling dem Rettungsdienst übergeben. Rückzug zum Stützpunkt, Material kontrollieren.', ts: t)),
     _Step(1200, 101, (d, t) {
       if (!d.lead && d._inc != null) d._endInc(101, t);
@@ -808,6 +848,15 @@ class Demo {
     final i = _inc;
     if (i == null || i.endedAt != null) return;
     if (!sim && !init) return;
+    // eigener Notruf: die simulierte Einsatzleitung quittiert nach 15 s (Issue #240)
+    for (final x in i.sos) {
+      final at = x['sim_ack'];
+      if (at is int && t >= at && x['ack_by'] == null && x['ended_at'] == null) {
+        x.remove('sim_ack');
+        _sosAck(101, x, t);
+        _addMsg(101, 'Notruf von ${_uname(x['user_id'] as int)} gesehen, wir kommen.', ts: t);
+      }
+    }
     final steps = i.script == 'bsp' ? _bsp : _gen, rel = t - i.t0;
     for (var k = 0; k < steps.length; k++) {
       final s = steps[k];
@@ -1353,6 +1402,10 @@ class Demo {
       'log': act || mgr ? _logRows(i) : null,
       'hydro': _hydroInc(i),
       'veh': _featOf(_kindOf(i))['veh'] == 1 ? _vehOut(i) : null,
+      'sos': _featOf(_kindOf(i))['sos'] == 1
+          ? i.sos.where((x) => x['ended_at'] == null).map((x) => {...x, 'name': _uname(x['user_id'] as int), 'ack_name': x['ack_by'] == null ? null : _uname(x['ack_by'] as int), 'mine': x['user_id'] == _meId ? 1 : 0, 'to_me': x['user_id'] != _meId && act ? 1 : 0}).toList()
+          : [],
+      'sos_cfg': _featOf(_kindOf(i))['sos'] == 1 ? {'hold': 2, 'countdown': 5, 'conf': 1, 'radius_km': 2, 'to': 'near'} : null,
       'now': t,
     };
   }
@@ -1494,6 +1547,7 @@ class Demo {
           p['left_at'] = t;
           p['role_id'] = null;
           _logev(_meId, 'leave', 'hat den Einsatz verlassen');
+          _sosEnd(null, _sosOf(_meId), t, ' (Einsatz verlassen)');
         }
         return {'ok': true};
       case 'incident/role':
@@ -1751,6 +1805,30 @@ class Demo {
           i.air = on;
           _logev(_meId, 'air', on == 1 ? 'schaltet die Helikopter ein' : 'schaltet die Helikopter aus');
         }
+        return {'ok': true};
+      case 'incident/sos':
+        if (_featOf(_kindOf(_needInc()))['sos'] != 1) _fail('Die Funktion «Notruf» ist ausgeschaltet', 403);
+        if (b['on'] == 1 || b['on'] == true) {
+          if (!_active()) _fail('Notruf nur mit Teilnahme am Einsatz', 403);
+          _sosAdd(_meId);
+          final x = _sosOf(_meId)!;
+          if (_fin(b['lat']) && _fin(b['lon'])) {
+            x['lat'] = _d(b['lat']);
+            x['lon'] = _d(b['lon']);
+            x['loc_at'] = t;
+          }
+          if (sim) x['sim_ack'] = t + 15; // Simulation: die Einsatzleitung quittiert nach 15 s
+          return {'ok': true, 'id': x['id']};
+        }
+        final x = (_fin(b['id']) ? _inc!.sos.where((s) => s['id'] == _d(b['id']).toInt() && s['ended_at'] == null).firstOrNull : _sosOf(_meId)) ?? _fail('Kein laufender Notruf', 404);
+        if (x['user_id'] != _meId && !_canManage()) _fail('Beenden kann nur die auslösende Person oder die Einsatzleitung', 403);
+        _sosEnd(_meId, x);
+        return {'ok': true};
+      case 'incident/sos/ack':
+        final x = (_fin(b['id']) ? _needInc().sos.where((s) => s['id'] == _d(b['id']).toInt() && s['ended_at'] == null).firstOrNull : null) ?? _fail('Kein laufender Notruf', 404);
+        if (x['user_id'] == _meId) _fail('Den eigenen Notruf kann man nicht quittieren');
+        _needPart('Nur Teilnehmende können einen Notruf quittieren');
+        _sosAck(_meId, x);
         return {'ok': true};
       case 'incident/vehicle/link':
         if (_featOf(_kindOf(_needInc()))['veh'] != 1) _fail('Die Funktion «Fahrzeuge» ist ausgeschaltet', 403);

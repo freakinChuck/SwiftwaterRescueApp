@@ -92,7 +92,7 @@ Future<bool?> hasDndAccess() async => notes.resolvePlatformSpecificImplementatio
 /// Nachrichten und Einsatzende deshalb doppelt. Ist das Konto für Push angemeldet, meldet im Hintergrund nur noch Push, was der Server
 /// auch pusht (i:, m:, e:); andere Meldungen (z. B. «aus dem Einsatz entfernt») und alles im Vordergrund zeigt weiterhin die App.
 Future<bool> _pushShows(String acc, String tag) async {
-  if (!Platform.isIOS || !RegExp(r'^[imevt]:').hasMatch(tag)) return false; // v: Durchsage im Funk (Issue #113), t: Testalarm (Issue #218)
+  if (!Platform.isIOS || !RegExp(r'^[imevtxy]:').hasMatch(tag)) return false; // v: Durchsage im Funk (Issue #113), t: Testalarm (Issue #218), x/y: Notruf und Quittung (Issue #240)
   if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) return false;
   try {
     final t = await SharedPreferencesAsync().getString('push_$acc'); // gesetzt von syncPush (push.dart): Token = angemeldet
@@ -148,7 +148,7 @@ Future<void> showNote(String acc, String tag, String title, String body, String 
 /// dieses Einsatzes; Nachrichten (m:) und Durchsagen (v:) tragen keinen Einsatz und gehen mit. Der Weckton endet nur, wenn dessen Alarm dabei war.
 Future<void> cancelIncNotes(String acc, [int? inc]) async {
   await initNotes();
-  final re = inc == null ? RegExp(r'^[imkv]:') : RegExp('^(i:$inc\$|k:$inc:|[mv]:)');
+  final re = inc == null ? RegExp(r'^[imkvx]:') : RegExp('^(i:$inc\$|k:$inc:|[mvx]:)'); // x: Notrufe (Issue #240) enden mit dem Einsatz
   var stop = inc == null;
   try {
     for (final n in await notes.getActiveNotifications()) {
@@ -165,6 +165,6 @@ Future<void> cancelIncNotes(String acc, [int? inc]) async {
 }
 
 Future<void> cancelNote(String acc, String tag) async {
-  if (tag.startsWith('i:') || tag.startsWith('t:')) await alarmStop(); // Alarm (bzw. Testalarm) quittiert: Weckton aus
+  if (tag.startsWith('i:') || tag.startsWith('t:') || tag.startsWith('x:')) await alarmStop(); // Alarm (bzw. Testalarm, Notruf) quittiert: Weckton aus
   await notes.cancel(id: noteId(acc, tag), tag: tag);
 }

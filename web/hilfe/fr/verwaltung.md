@@ -105,6 +105,10 @@ Les vitesses de comparaison avec lesquelles l'outil Distance fluviale calcule le
 
 Quelles apps de navigation sont disponibles et laquelle est la valeur par défaut.
 
+### Appel d'urgence (SOS) {#sos}
+
+Qui est alerté lors d'un appel d'urgence : **direction d'intervention et participants dans le rayon** (rayon en km), **seulement la direction d'intervention** ou **tous les participants**. En outre, la durée d'appui sur le bouton (1–5 s), la durée du compte à rebours d'annulation (0–10 s, 0 = sans) et si un signal sonore retentit dans la conférence en direct. La fonction elle-même s'active et se désactive par type d'intervention sous **Fonctions**.
+
 ### Langue {#sprache}
 
 L'app existe en allemand, anglais, français et italien. Ici, vous définissez la **valeur par défaut de l'organisation**. Elle vaut pour les personnes qui n'ont pas choisi de langue elles-mêmes et dont l'appareil n'utilise aucune de ces langues, ainsi que pour les notifications push aux personnes qui n'ont jamais ouvert l'app.

@@ -105,6 +105,10 @@ The comparison speeds with which the river distance tool calculates travel times
 
 Which navigation apps are available and which one is the default.
 
+### Emergency call (SOS) {#sos}
+
+Who is alerted by an emergency call: **incident command and participants within the radius** (radius in km), **incident command only** or **all participants**. Also how long the button must be held (1–5 s), the length of the cancel countdown (0–10 s, 0 = none) and whether a signal tone sounds in the live conference. The function itself is switched on and off per incident type under **Functions**.
+
 ### Language {#sprache}
 
 The app is available in German, English, French and Italian. Here you set the **organisation default**. It applies to persons who have not chosen a language themselves and whose device uses none of these languages, as well as to push notifications to persons who have never opened the app.

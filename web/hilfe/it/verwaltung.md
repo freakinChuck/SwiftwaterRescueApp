@@ -105,6 +105,10 @@ Le velocità di confronto con cui lo strumento Distanza fluviale calcola i tempi
 
 Quali app di navigazione sono disponibili e quale è quella predefinita.
 
+### Chiamata d'emergenza (SOS) {#sos}
+
+Chi viene allertato da una chiamata d'emergenza: **direzione d'intervento e partecipanti nel raggio** (raggio in km), **solo la direzione d'intervento** o **tutti i partecipanti**. Inoltre per quanto tempo va premuto il pulsante (1–5 s), la durata del conto alla rovescia per annullare (0–10 s, 0 = nessuno) e se nella conferenza dal vivo suona un segnale acustico. La funzione stessa si attiva e disattiva per tipo d'intervento sotto **Funzioni**.
+
 ### Lingua {#sprache}
 
 L'app esiste in tedesco, inglese, francese e italiano. Qui imposti l'**impostazione predefinita dell'organizzazione**. Vale per le persone che non hanno scelto una lingua e il cui dispositivo non usa nessuna di queste lingue, nonché per le notifiche push a persone che non hanno mai aperto l'app.

@@ -23,7 +23,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   try{Object.defineProperty(window,'localStorage',{configurable:true,get:()=>store})}catch(e){console.warn('Demo: localStorage nicht umgeleitet',e)}
   const now=()=>Math.floor(Date.now()/1000);
   // ---------- feste Daten ----------
-  let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1,geo:0,veh:1,vehp:1,call:0}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server, Direktanruf (#44) keine echten Nummern
+  let FEAT={area:1,res:1,msg:1,poi:1,ext:1,rd:1,pub:0,rec:1,nav:1,place:1,hydro:1,pinfo:1,geo:0,veh:1,vehp:1,call:0,sos:1}; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server, Direktanruf (#44) keine echten Nummern
   let KINDS=[{id:1,name:'Einsatz',color:'#ff4d2e',alarm:'high',alarm_name:'Hoch',mode_up:0,msg_lvl:'normal',end_lvl:'normal',rec:0,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:'horn2',can:1,no_grp:0,features:FEAT},
                {id:2,name:'Übung',color:'#1d7fd1',alarm:'normal',alarm_name:'Normal',mode_up:1,msg_lvl:'normal',end_lvl:'normal',rec:1,air:1,grp_off:[],grp_def:[],persons:0,open_all:0,plans:0,snd:'horn2',can:1,no_grp:0,features:FEAT}];
   let ROLES=[{id:1,name:'Einsatzleitung',color:'#d62828',is_lead:1,is_post:0,can_message:1},{id:2,name:'Rettungsboot',color:'#1d7fd1',is_lead:0,is_post:0,can_message:1},
@@ -99,7 +99,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const uname=id=>id===ME_ID?S.me.name:(SIM[id]||{}).name||'?';
   const role=id=>ROLES.find(r=>r.id===id);
   const mode=c=>MODES.find(m=>m.code===c);
-  const I=()=>S.inc;
+  const I=()=>{const i=S.inc;if(i&&!i.sos)i.sos=[];return i}; // sos: ältere gespeicherte Stände ohne Notrufe
   const logev=(uid,kind,text,ts)=>{const i=I();if(i)i.log.push({id:S.seq.log++,ts:ts||now(),kind,text,uid})};
   const part=(id=ME_ID)=>I()&&I().parts.find(p=>p.user_id===id);
   const active=(id=ME_ID)=>{const p=part(id);return!!(p&&p.left_at==null&&p.mode!=='declined')};
@@ -113,7 +113,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const kindOf=i=>KINDS.find(k=>k.id===i.kind_id)||KINDS[0];
   const unknownName=()=>{const n=I().res.filter(r=>r.name.startsWith('Unbekannter Rettling')).length;return n?'Unbekannter Rettling '+(n+1):'Unbekannter Rettling'};
   function newInc(o){const t=o.alarm_at||now();return{id:++S.seq.inc,message:o.message,lat:o.lat??null,lon:o.lon??null,pls_at:null,alarm_at:t,ended_at:null,flow_ms:null,created_by:o.by,kind_id:o.kind_id||1,
-    record:o.record?1:0,recorded:o.record?1:0,air:o.air==null?1:o.air?1:0,open_join:0,script:o.script,t0:t,done:{},parts:[],log:[],msgs:[],pois:[],res:[],ext:[],marks:[],homes:{}}}
+    record:o.record?1:0,recorded:o.record?1:0,air:o.air==null?1:o.air?1:0,open_join:0,script:o.script,t0:t,done:{},parts:[],log:[],msgs:[],pois:[],res:[],ext:[],marks:[],sos:[],homes:{}}}
   const addPart=(uid,m,ts)=>{const i=I();let p=part(uid);const prev=p&&{...p};
     if(!p){p={id:i.parts.length+1,incident_id:i.id,user_id:uid,mode:m,role_id:null,lat:null,lon:null,loc_at:null,left_at:null,log_lat:null,log_lon:null,log_at:null,fast_at:null,label:null};i.parts.push(p)}
     p.mode=m;p.left_at=null;const md=mode(m);if(md&&!md.share_location){p.lat=p.lon=p.loc_at=null}if(md&&md.lead_rights)p.role_id=null;
@@ -133,6 +133,13 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const addExt=(uid,o,ts)=>{const e={id:S.seq.ext++,name:o.name,descr:o.descr||'',role_id:o.role_id||null,abbr:o.abbr||null,color:o.color||null,lat:o.lat,lon:o.lon,created_by:uid,created:ts||now(),moved:null,removed:null,manual:o.manual?1:0};
     I().ext.push(e);logev(uid,'ext',`erfasst die externe Einsatzkraft «${e.name}» (${e.role_id?role(e.role_id).name:'ohne Spezialrolle'}, ${f5(e.lat)}, ${f5(e.lon)})`,ts);return e};
 
+  // Notruf (Issue #240, wie incident/sos im Server): alle Teilnehmenden werden alarmiert, nur nicht die auslösende Person
+  const sosAdd=(uid,ts)=>{const i=I(),p=part(uid);if(!i||!p||i.sos.some(x=>x.user_id===uid&&x.ended_at==null))return;const t=ts||now();
+    i.sos.push({id:S.seq.sos=(S.seq.sos||0)+1,user_id:uid,at:t,lat:p.lat,lon:p.lon,loc_at:p.lat!=null?t:null,ack_by:null,ack_at:null,ended_at:null});
+    logev(uid,'sos','löst einen Notruf (SOS) aus'+(p.lat!=null?` bei ${f5(p.lat)}, ${f5(p.lon)}`:' (ohne Standort)'),t)};
+  const sosAck=(uid,x,ts)=>{if(!x||x.ended_at!=null)return;if(x.ack_by==null){x.ack_by=uid;x.ack_at=ts||now()}logev(uid,'sos','quittiert den Notruf von '+uname(x.user_id),ts)};
+  const sosEnd=(uid,x,ts,why)=>{if(!x||x.ended_at!=null)return;x.ended_at=ts||now();logev(why?null:uid,'sos',why?'Notruf von '+uname(x.user_id)+' beendet'+why:uid===x.user_id?'beendet den eigenen Notruf':'beendet den Notruf von '+uname(x.user_id),ts)};
+  const sosOf=uid=>I()&&I().sos.find(x=>x.user_id===uid&&x.ended_at==null);
   // ---------- Szenario mit Beispieldaten: Person in der Reuss bei Luzern ----------
   function bspStart(s,t0){const keep=S;S=s;S.inc=newInc({message:'Person beim Nadelwehr in die Reuss gestürzt, treibt flussabwärts Richtung Reusszopf. Einsatz Wasserrettung.',lat:P.pls[0],lon:P.pls[1],alarm_at:t0,by:101,kind_id:1,script:'bsp'});
     logev(101,'start','hat den Einsatz gestartet (Einsatz, mit Helikoptern): '+S.inc.message,t0);simRun(t0+150,true);if(keep&&keep!==s)S=keep}
@@ -158,6 +165,9 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     [490,104,i=>{const r=I().res[0];if(r&&r.lat==null&&!r.removed){locRes(104,r,P.find,true,i);addMsg(104,'Rettling am linken Ufer gesichtet, hält sich an einem Ast fest! Boot 1 bitte kommen.',{ts:i})}}],
     [540,102,i=>{const r=I().res[0];if(r&&!r.removed){rescue(102,r,true,i);addMsg(102,'Person geborgen, ansprechbar, stark unterkühlt. Übergabe an den Rettungsdienst bei der Einwasserung Reusszopf.',{ts:i})}}],
     [560,106,i=>addMsg(106,'Decken und Wärmepacks beim KP bereit.',{ts:i})],
+    // Notruf (Issue #240): Posten rutscht am Ufer aus, die Einsatzleitung quittiert, Entwarnung
+    [580,105,i=>sosAdd(105,i)],[600,101,i=>{sosAck(101,sosOf(105),i);addMsg(101,'SOS Posten Emmenmündung gesehen, Boot 1 kommt.',{ts:i})}],
+    [640,105,i=>{sosEnd(105,sosOf(105),i);addMsg(105,'Entwarnung: bin ausgerutscht, Knie verletzt, aber wieder sicher am Ufer.',{ts:i})}],
     [620,101,i=>addMsg(101,'Danke allen. Rettling dem Rettungsdienst übergeben. Rückzug zum Stützpunkt, Material kontrollieren.',{ts:i})],
     [1200,101,i=>{if(!S.lead&&I())endInc(101,i)}],
     // Fahrzeuge (Issue #177): Einsatzleitung im Kommandofahrzeug, Boot 1 mit Bus und Anhänger zur Einwasserung, dort abgeladen, nach der Rettung wieder verladen
@@ -188,7 +198,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     vehSim(i,t);
     // Antworten auf eigene Nachrichten
     S.reply=(S.reply||[]).filter(r=>{if(r.at>t)return true;if(I()&&active(r.uid))addMsg(r.uid,r.text,{ts:r.at,to:[ME_ID]});return false})}
-  function endInc(uid,t){const i=I();if(!i)return;VS().forEach(v=>{v.inc=0});if(i.record)i.record=0;i.ended_at=t||now();logev(uid,'end','hat den Einsatz beendet',t);S.last={id:i.id,ended_at:i.ended_at};S.inc=null}
+  function endInc(uid,t){const i=I();if(!i)return;i.sos.forEach(x=>sosEnd(null,x,t,' (Einsatzende)'));VS().forEach(v=>{v.inc=0});if(i.record)i.record=0;i.ended_at=t||now();logev(uid,'end','hat den Einsatz beendet',t);S.last={id:i.id,ended_at:i.ended_at};S.inc=null}
   // Rega-Helikopter über dem Suchgebiet (Beispieldaten) bzw. über dem Bezugspunkt (eigener Einsatz)
   function heli(t){const i=I();if(!i||!i.air)return[];const rel=t-i.t0,a=i.script==='bsp'?{c:P.find,from:380,to:660}:{c:anchor(i),from:150,to:480};if(!a.c||rel<a.from-60||rel>a.to+80)return[];
     const at=x=>{const r=x-i.t0;let ll,trk,alt;if(r<a.from){const f=(r-a.from+60)/60;ll=off(a.c,6000*(1-f)+600,9000*(1-f));trk=214;alt=2600-1000*f}
@@ -266,7 +276,9 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
       groups:GROUPS,marks:[],messages:canRead?i.msgs.filter(m=>m.id>since).map(m=>({id:m.id,from_user:m.from_user,text:m.text,created:m.created,recipients:m.recipients,lat:m.lat,lon:m.lon,mark_lat:m.mark_lat,mark_lon:m.mark_lon,from_name:uname(m.from_user)})):[],
       msg_marks:canRead?i.msgs.filter(m=>m.mark).map(m=>({id:m.id,from_user:m.from_user,text:m.text,created:m.created,lat:m.mark_lat,lon:m.mark_lon,from_name:uname(m.from_user)})):[],
       me:part()?{...part()}:null,is_lead:isLead(),can_manage:mgr,ai:null,can_flow:act||mgr,can_message:act||mgr,can_read_messages:canRead,critical:lvl==='crit',level:lvl,msg_level:K.msg_lvl,end_level:K.end_lvl,
-      alarm:i.created_by!==ME_ID,absent:0,my_abs:absNow(),features:featOf(K),air:i.air?1:0,air_inc:i.air?1:0,ex_lead:false,ex_title:null,ex_injects:[],log:act||mgr?logRows(i):null,hydro:hydroInc(i),veh:featOf(K).veh?vehOut(i):null,...mapsOut(),now:t}}
+      alarm:i.created_by!==ME_ID,absent:0,my_abs:absNow(),features:featOf(K),air:i.air?1:0,air_inc:i.air?1:0,ex_lead:false,ex_title:null,ex_injects:[],log:act||mgr?logRows(i):null,hydro:hydroInc(i),veh:featOf(K).veh?vehOut(i):null,
+      sos:featOf(K).sos?i.sos.filter(x=>x.ended_at==null).map(x=>({...x,name:uname(x.user_id),ack_name:x.ack_by?uname(x.ack_by):null,mine:x.user_id===ME_ID?1:0,to_me:x.user_id!==ME_ID&&act?1:0})):[],
+      sos_cfg:featOf(K).sos?{hold:2,countdown:5,conf:1,radius_km:2,to:'near'}:null,...mapsOut(),now:t}}
   // Overpass: wie der Server ohne Antwort (502 mit fertiger Abfrage), das Gerät fragt dann direkt (overpassNet in common.js); Ergebnisse bleiben bis zum Neuladen im Speicher
   const OPC=new Map(),opKey=b=>JSON.stringify(b.around||b.bbox||null);
   async function realOverpass(b){if(!REAL_TOK||REAL_TOK==='demo')return null;
@@ -290,7 +302,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
       logev(ME_ID,'start',`hat den Einsatz gestartet (${K.name}${S.inc.record?', mit Aufzeichnung':''}${S.inc.air?', mit Helikoptern':''}${pls?'':', ohne PLS'}): ${S.inc.message}`);return{id:S.inc.id}},
     'incident/join':b=>{needInc();if(b.mode==='declined'){const p=part();if(!p){I().parts.push({id:I().parts.length+1,incident_id:I().id,user_id:ME_ID,mode:'declined',role_id:null,lat:null,lon:null,loc_at:null,left_at:null});logev(ME_ID,'decline','hat den Einsatz abgelehnt')}return{ok:true}}
       const m=mode(String(b.mode||''));if(!m||!m.active)fail('Ungültige Auswahl');addPart(ME_ID,m.code);return{ok:true}},
-    'incident/leave':()=>{needInc();const p=part();if(p&&p.left_at==null&&p.mode!=='declined'){p.left_at=now();p.role_id=null;logev(ME_ID,'leave','hat den Einsatz verlassen')}return{ok:true}},
+    'incident/leave':()=>{needInc();const p=part();if(p&&p.left_at==null&&p.mode!=='declined'){p.left_at=now();p.role_id=null;logev(ME_ID,'leave','hat den Einsatz verlassen');const x=sosOf(ME_ID);if(x)sosEnd(null,x,now(),' (Einsatz verlassen)')}return{ok:true}},
     'incident/role':b=>{needInc();const p=part()||fail('Nicht im Einsatz');if(mode(p.mode).lead_rights)fail('Mit dieser Einrückoption gibt es keine Spezialrolle');setRole(ME_ID,b.role_id?+b.role_id:null);return{ok:true}},
     'incident/role/set':b=>{needLead('Nur die Einsatzleitung kann Spezialrollen anderer Personen ändern');const u=+b.user_id,p=part(u);if(!p||p.left_at!=null)fail('Die Person ist nicht im Einsatz');
       if(mode(p.mode).lead_rights)fail('Mit dieser Einrückoption gibt es keine Spezialrolle');const rid=b.role_id?+b.role_id:null;if(rid!==p.role_id){p.role_id=rid;logev(ME_ID,'role',rid?`teilt ${uname(u)} die Rolle ${role(rid).name} zu`:`entfernt die Spezialrolle von ${uname(u)}`)}return{ok:true}},
@@ -345,6 +357,15 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     'incident/open':b=>{needLead();I().open_join=b.on?1:0;return{ok:true}},
     'incident/invite/add':()=>fail('Im Demo-Modus sind bereits alle Personen aufgeboten.'),
     'incident/air/set':b=>{needLead();const on=b.on?1:0;if(on!==I().air){I().air=on;logev(ME_ID,'air',on?'schaltet die Helikopter ein':'schaltet die Helikopter aus')}return{ok:true}},
+    'incident/sos':b=>{const i=needInc();if(!featOf(kindOf(i)).sos)fail('Die Funktion «Notruf» ist ausgeschaltet',403);
+      if(b.on){if(!active())fail('Notruf nur mit Teilnahme am Einsatz',403);const p=part();if(b.lat!=null&&isFinite(b.lat)&&isFinite(b.lon)&&mode(p.mode).share_location){p.lat=+b.lat;p.lon=+b.lon;p.loc_at=now()}
+        sosAdd(ME_ID);const x=sosOf(ME_ID);if(x&&b.lat!=null&&isFinite(b.lat)){x.lat=+b.lat;x.lon=+b.lon;x.loc_at=now()}
+        // Simulation: die Einsatzleitung quittiert nach 15 s
+        if(S.sim&&x)setTimeout(()=>{if(I()&&x.ended_at==null&&x.ack_by==null){sosAck(101,x);addMsg(101,'SOS gesehen, wir kommen zu dir.',{to:[ME_ID]})}},15000);return{ok:true,id:x&&x.id}}
+      const x=b.id?i.sos.find(s=>s.id===+b.id):sosOf(ME_ID);if(!x||x.ended_at!=null)fail('Kein laufender Notruf',404);
+      if(x.user_id!==ME_ID&&!canManage())fail('Beenden kann nur die auslösende Person oder die Einsatzleitung',403);sosEnd(ME_ID,x);return{ok:true}},
+    'incident/sos/ack':b=>{const i=needInc(),x=i.sos.find(s=>s.id===+b.id&&s.ended_at==null);if(!x)fail('Kein laufender Notruf',404);if(x.user_id===ME_ID)fail('Den eigenen Notruf kann man nicht quittieren');
+      needPart('Nur Teilnehmende können einen Notruf quittieren');sosAck(ME_ID,x);return{ok:true}},
     'incident/vehicle/link':b=>{const i=needInc();if(!featOf(kindOf(i)).veh)fail('Die Funktion «Fahrzeuge» ist ausgeschaltet',403);needPart('Nur Personen, die am Einsatz teilnehmen');
       const v=vById(+b.id)||fail('Fahrzeug nicht gefunden',404),c=b.carrier==null?null:vById(+b.carrier)||fail('Träger nicht gefunden',404);
       if(c){if(vTree(v).includes(c))fail(`«${c.name}» wird selbst von «${v.name}» getragen`);if(v.carrier_id!==c.id){const r=vRoom(c,v.kind_id,v.id);
