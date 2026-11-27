@@ -54,6 +54,38 @@ String agoS(num now, num ts) {
   return s < 90 ? 'gerade eben' : s < 5400 ? 'vor ${(s / 60).round()} min' : 'vor ${(s / 3600).round()} h';
 }
 
+/* ---------- Geschwindigkeiten (Issue #259, wie SPEED_UNITS/fmtSpd in common.js) ---------- */
+/// Einheit der Anzeige: eigene Wahl (users.speed_unit), sonst Standard der Organisation (me.speed_default); gespeichert wird in m/s
+const speedUnits = {'ms': 'm/s', 'kmh': 'km/h', 'both': 'm/s und km/h'};
+
+String spdR(double v, int d) {
+  final f = math.pow(10, d), r = (v * f).round() / f;
+  return r == r.roundToDouble() ? r.round().toString() : r.toString();
+}
+
+/// Geschwindigkeit in m/s → Text in der Einheit (beides: «1.8 m/s (6.5 km/h)»)
+String fmtSpd(double? ms, String u) {
+  if (ms == null) return '';
+  final a = '${spdR(ms, 2)} m/s', b = '${spdR(ms * 3.6, 1)} km/h';
+  return u == 'kmh' ? b : u == 'both' ? '$a ($b)' : a;
+}
+
+/// Geschwindigkeit in km/h (Vergleichsgeschwindigkeiten, Helikopter) → Text in der Einheit
+String fmtKmh(double? k, String u) {
+  if (k == null) return '';
+  final a = '${spdR(k / 3.6, 1)} m/s', b = '${spdR(k, 1)} km/h';
+  return u == 'kmh' ? b : u == 'both' ? '$a ($b)' : a;
+}
+
+/// Eingabe der Fliessgeschwindigkeit: in km/h nur bei der Einheit km/h, sonst in m/s
+String spdIn(String u) => u == 'kmh' ? 'km/h' : 'm/s';
+String spdTo(double? ms, String u) => ms == null ? '' : u == 'kmh' ? spdR(ms * 3.6, 1) : spdR(ms, 2);
+double? spdFrom(String t, String u) {
+  final v = double.tryParse(t.trim().replaceAll(',', '.'));
+  if (v == null) return null;
+  return u == 'kmh' ? (v / 3.6 * 100).round() / 100 : v;
+}
+
 /* ---------- Koordinaten ---------- */
 const coordSys = {
   'lv95': 'LV95 (CH1903+, E / N)',

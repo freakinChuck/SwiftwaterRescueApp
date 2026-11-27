@@ -61,7 +61,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const SK='swdemo:__state';let S=null;
   try{S=JSON.parse(sg(SK)||'null')}catch(e){S=null}
   const fresh=mode=>{const t=now(),s={v:1,mode,sim:1,lead:1,seq:{inc:900000,log:1,msg:1,poi:1,res:1,ext:1,abs:1},inc:null,last:null,
-      me:{id:ME_ID,username:'demo',name:'Alex Demo',photo:null,exercise_mode:0,coord_sys:null,nav_app:null,place_view:{},hydro:['D2152'],ai_modes:[]},abs:[],welcome:0,reply:[]};
+      me:{id:ME_ID,username:'demo',name:'Alex Demo',photo:null,exercise_mode:0,coord_sys:null,speed_unit:null,nav_app:null,place_view:{},hydro:['D2152'],ai_modes:[]},abs:[],welcome:0,reply:[]};
     if(mode==='bsp')bspStart(s,t-150);return s};
   const save=()=>ss(SK,JSON.stringify(S));
   function reset(mode){keys().forEach(k=>sr(PFX+k));sr(SK);S=fresh(mode);save();ss(PFX+'sw_token','demo');if(mode==='leer')READY=orgStart()}
@@ -77,8 +77,8 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     const A=x=>Array.isArray(x)?x:null,ks=(A(me.kinds)||[]).map(k=>({...k,alarm:k.alarm==='crit'?'high':k.alarm,alarm_name:k.alarm==='crit'?'Hoch':k.alarm_name,plans:0,persons:0,open_all:0,
       grp_off:[],grp_def:[],can:1,no_grp:0,features:{...FEAT,...(k.features||{}),pub:0,geo:0,call:0}})),md=(A(mo)||[]).filter(x=>x.active);
     const pick=(o,ks)=>Object.fromEntries(ks.filter(k=>o[k]!==undefined).map(k=>[k,o[k]]));
-    return{name:me.org||'',at:now(),me:pick(me,['name','photo','coord_sys','nav_app','place_view','hydro','exercise_mode']),
-      cfg:pick(me,['coord_default','rd_speeds','nav_apps','nav_default','symbols','sym_free','sym_sets']),maps:me.maps||null,map_def:me.map_def||null,version:me.version||null,
+    return{name:me.org||'',at:now(),me:pick(me,['name','photo','coord_sys','speed_unit','nav_app','place_view','hydro','exercise_mode']),
+      cfg:pick(me,['coord_default','speed_default','rd_speeds','nav_apps','nav_default','symbols','sym_free','sym_sets']),maps:me.maps||null,map_def:me.map_def||null,version:me.version||null,
       kinds:ks.length?ks:null,roles:A(ro),modes:md.length?(A(mo)):null,places:st&&A(st.places),place_cats:st&&A(st.place_cats),place_props:st&&A(st.place_props),place_near_km:st&&typeof st.place_near_km==='number'?st.place_near_km:null,
       hydro:hy&&A(hy.stations),ext:A(ex)?ex.filter(x=>x.active).map(({active,...x})=>x):null}}
   function applyOrg(){const o=S&&S.mode==='leer'&&S.org;if(!o)return;if(o.places&&o.places.length&&o.kinds)o.kinds.forEach(k=>{k.features={...k.features,place:1}});if(o.kinds)KINDS=o.kinds;if(o.roles)ROLES=o.roles;if(o.modes)MODES=o.modes;if(o.places)PLACES=o.places;
@@ -245,7 +245,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   // ---------- Antworten ----------
   const kindPub=k=>({...k});
   const meOut=()=>({...S.me,must_change:0,uroles:[{id:3,name:'Einsatzkraft (Demo)',sys:null,perms:['inc_start','ex_start']}],is_admin:0,perms:['inc_start','ex_start',...(S.lead?['inc_lead']:[])],
-    coord_default:'lv95',rd_speeds:[10,20,30],kinds:KINDS.map(kindPub),nav_apps:['google','apple','waze','geo'],nav_default:'google',symbols:SYMS,sym_free:1,sym_sets:{sz:'Taktische Symbole',sw:'Swiftwater'},...(S.org?S.org.cfg:{}),
+    coord_default:'lv95',speed_default:'ms',rd_speeds:[10,20,30],kinds:KINDS.map(kindPub),nav_apps:['google','apple','waze','geo'],nav_default:'google',symbols:SYMS,sym_free:1,sym_sets:{sz:'Taktische Symbole',sw:'Swiftwater'},...(S.org?S.org.cfg:{}),
     features:featAll(),my_runs:'off',groups:GROUPS.slice(0,1),absent:absNow(),ai:null,org:S.org&&S.org.name?'Demo-Modus · '+S.org.name:'Demo-Modus',session:0,demo:S.mode,...mapsOut(),version:VER});
   function absNow(){const t=now();return S.abs.find(a=>!a.removed&&a.from_at<=t&&(a.until_at==null||a.until_at>t))||null}
   const sym=p=>p.sym?{...p,sym_name:(SYM(p.sym)||{}).name||p.sym,sym_foot:(SYM(p.sym)||{}).foot||0}:p;
@@ -289,7 +289,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
   const R={
     'login':()=>({token:'demo'}),'logout':()=>{setTimeout(exit,50);return{ok:true}},
     'me':()=>({me:meOut()}),
-    'me/settings':b=>{['exercise_mode','coord_sys','nav_app','place_view','hydro','ai_modes'].forEach(k=>{if(k in b)S.me[k]=k==='coord_sys'||k==='nav_app'?(b[k]||null):b[k]});return{ok:true}},
+    'me/settings':b=>{['exercise_mode','coord_sys','speed_unit','nav_app','place_view','hydro','ai_modes'].forEach(k=>{if(k in b)S.me[k]=k==='coord_sys'||k==='speed_unit'||k==='nav_app'?(b[k]||null):b[k]});return{ok:true}},
     'me/password':()=>fail('Im Demo-Modus gibt es kein Passwort.'),'me/photo':b=>{S.me.photo=b.photo||null;return{ok:true}},'me/sessions':()=>[],'me/session/remove':()=>({ok:true}),
     'roles':()=>ROLES,'modes':()=>MODES,
     'incident/state':(b,qs)=>({...state(qs),test_alarm:taDue()}),
@@ -309,7 +309,7 @@ var DEMO=(()=>{const q=new URLSearchParams(location.search);if(!q.has('demo'))re
     'incident/location':b=>{needInc();const p=part();if(!p||p.left_at!=null||p.mode==='declined'||!mode(p.mode).share_location)return{ok:true};p.lat=+b.lat;p.lon=+b.lon;p.loc_at=now();return{ok:true}},
     'incident/event':b=>{needInc();if(b.kind==='area'&&!I().log.some(l=>l.uid===ME_ID&&l.kind==='area'))logev(ME_ID,'area','hat das Suchgebiet erreicht');return{ok:true}},
     'incident/flow':b=>{needPart('Nur Personen, die am Einsatz teilnehmen, können die Fliessgeschwindigkeit setzen');const v=+b.flow_ms;if(!(v>0&&v<=15))fail('Fliessgeschwindigkeit muss zwischen 0 und 15 m/s liegen');
-      I().flow_ms=v;logev(ME_ID,'flow','setzt die Fliessgeschwindigkeit auf '+v+' m/s');return{ok:true}},
+      const w=Math.round(v*100)/100;I().flow_ms=w;logev(ME_ID,'flow','setzt die Fliessgeschwindigkeit auf '+w+' m/s ('+Math.round(w*36)/10+' km/h)');return{ok:true}},
     'incident/mark/remove':()=>({ok:true}),
     'incident/poi':b=>{needLead('Nur die Einsatzleitung kann Markierungen und Bereiche setzen');const k=['area','line'].includes(b.kind)?b.kind:'point',pts=ptsIn(b.pts);let s=null;
       if(k==='point'){s=String(b.sym||'').trim()||null;if(s&&!SYM(s))fail('Dieses Symbol steht nicht zur Wahl')}let n=String(b.name||'').trim();if(!n&&s)n=SYM(s).name;if(!n)fail('Bezeichnung fehlt');

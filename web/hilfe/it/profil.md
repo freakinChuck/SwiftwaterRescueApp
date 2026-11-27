@@ -52,6 +52,7 @@ In alto cambi mese (‹ Oggi ›), passi tra **Mese** ed **Elenco** e mostri o n
 
 - **Lingua**: tedesco, inglese, francese o italiano. «Automatica» prende la lingua del dispositivo, altrimenti quella predefinita dell'organizzazione. La scelta vale per il tuo account (anche nell'amministrazione e per le notifiche push); la pagina si ricarica poi. Nell'amministrazione la scegli nel menu dell'account in alto a destra, al login sotto il pulsante «Accedi».
 - **Sistema di coordinate**: LV95 (predefinito), LV03, WGS84 decimale o in gradi/minuti/secondi, oppure nascondi le coordinate.
+- **Velocità**: in m/s, in km/h o entrambe (p. es. «1.8 m/s (6.5 km/h)»), per la velocità della corrente, la distanza fluviale e gli elicotteri. Con km/h inserisci anche la velocità della corrente in km/h. «Predefinito» usa l'impostazione dell'organizzazione.
 - **App di navigazione** per il pulsante 🧭: Google Maps, Mappe di Apple, Waze o un'altra app.
 
 ## Stazioni di misura {#messstationen}

@@ -31,11 +31,12 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KO-01** – Anmeldung mit Benutzername und Passwort (Spec).
 - **KO-02** – Jede Person kann ihr eigenes Passwort ändern (aktuelles Passwort nötig) (AG).
 - **KO-03** – Administratoren setzen Passwörter zurück; die Person wird abgemeldet und muss beim nächsten Login ein eigenes Passwort setzen. Gilt auch für neue Benutzer und das erste Admin-Konto (AG).
-- **KO-04** – Persönliche Einstellungen auf einer eigenen Seite «Profil»: Profilbild, Passwort, Abmelden, Einsatzfähigkeit/Abwesenheiten, Übungsmodus, Push, App installieren, Koordinatensystem, Navigations-App, AI-Assistent (#58, #91, #111).
+- **KO-04** – Persönliche Einstellungen auf einer eigenen Seite «Profil»: Profilbild, Passwort, Abmelden, Einsatzfähigkeit/Abwesenheiten, Übungsmodus, Push, App installieren, Koordinatensystem, Einheit der Geschwindigkeiten, Navigations-App, AI-Assistent (#58, #91, #111, #259).
 - **KO-05** – Abmelden löscht den auf dem Gerät gemerkten Stand (#67).
 - **KO-06** – Das Profil ist in Karten gegliedert (Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches), je Thema mit eigenem Titel; Knöpfe stehen als gleich breite Spalten. Unter «Alarmierung» stehen der Stand der Einsatzfähigkeit und die eigenen Abwesenheiten mit Erfassen, Ändern und Beenden (#126).
 - **KO-07** – Abmelden meldet auch auf dem Server ab: Der Anmeldeschlüssel des Browsers bzw. die Sitzung der App ist danach ungültig (#108).
 - **KO-08** – Die nativen Apps erhalten je Gerät eine eigene Anmeldung: Eine Anmeldung in der App meldet weder den Browser noch andere Geräte ab und umgekehrt. Im Profil stehen die angemeldeten Apps, entfernen meldet sie ab. Passwort zurücksetzen und Deaktivieren melden auch alle Apps ab, das eigene Passwort ändern nicht (#108).
+- **KO-09** – Geschwindigkeiten (Fliessgeschwindigkeit, Flussdistanz, Helikopter) erscheinen wahlweise in m/s, in km/h oder in beiden Einheiten. Den Standard legt die Organisation in der Verwaltung fest (gilt auch für die öffentliche Ansicht), jede Person kann ihn im Profil übersteuern. Mit km/h wird auch die Fliessgeschwindigkeit in km/h eingegeben; gespeichert wird in m/s (#259).
 - Zugriffsschutz bzw. Rate-Limit für den Login (**offen**).
 
 ## 3. Benutzer und Berechtigungen (BE)
