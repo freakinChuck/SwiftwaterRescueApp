@@ -639,6 +639,7 @@ class _IncMenuState extends State<IncMenu> {
       }
       final area = s.feat('area'), secs = s.now - (jn(i['alarm_at']) ?? s.now);
       out.add(MCard(title: area ? 'Fliessgeschwindigkeit & Suchgebiet' : 'Fliessgeschwindigkeit', children: [
+        if (!faSt(s)) // aus den Messstationen: keine Eingabe (Feedback zu PR #257)
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           Expanded(
               child: TextField(

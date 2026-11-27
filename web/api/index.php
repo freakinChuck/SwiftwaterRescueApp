@@ -2610,7 +2610,7 @@ function plsAt($inc) { return (int)($inc['pls_at'] ?? $inc['alarm_at']); }
 function secTake($nid, $par, $in, $plsAt) { global $db, $uid, $now; $tk = [];
   $db->prepare("UPDATE incidents SET parent_id=? WHERE id=?")->execute([(int)$par['id'], $nid]);
   if ($plsAt !== null) { $db->prepare("UPDATE incidents SET pls_at=? WHERE id=?")->execute([$plsAt, $nid]); $tk[] = 'PLS'; }
-  if (!empty($in['take_flow']) && $par['flow_ms'] !== null) { $db->prepare("UPDATE incidents SET flow_ms=? WHERE id=?")->execute([(float)$par['flow_ms'], $nid]); $tk[] = 'Fliessgeschwindigkeit'; }
+  if (!empty($in['take_flow']) && $par['flow_ms'] !== null) { $db->prepare("UPDATE incidents SET flow_ms=?, flow_src='man' WHERE id=?")->execute([(float)$par['flow_ms'], $nid]); $tk[] = 'Fliessgeschwindigkeit'; }
   if (!empty($in['take_res'])) { $s = $db->prepare("SELECT * FROM rescuees WHERE incident_id=? AND removed IS NULL AND rescued_at IS NULL AND lat IS NULL ORDER BY id"); $s->execute([(int)$par['id']]); $n = 0;
     foreach ($s->fetchAll() as $r) { $pl = $r['pls_lat'] !== null ? [$r['pls_lat'], $r['pls_lon'], $r['pls_at']] : ($par['lat'] !== null ? [$par['lat'], $par['lon'], plsAt($par)] : [null, null, null]);
       $db->prepare("INSERT INTO rescuees(incident_id,name,descr,created_by,created,pls_lat,pls_lon,pls_at) VALUES(?,?,?,?,?,?,?,?)")->execute([$nid, $r['name'], $r['descr'], $uid, $now, $pl[0], $pl[1], $pl[2]]); $n++; }
@@ -3890,7 +3890,7 @@ switch ($route) {
   if ($F['hydro'] && ($hs === null || ($hs < 0 && -$hs < $now - 120)) && hydroRefs($inc)) {
     $u = $db->prepare("UPDATE incidents SET hydro_s=? WHERE id=? AND (hydro_s IS NULL OR (hydro_s<0 AND hydro_s>?))"); $u->execute([$now, $id, -($now - 120)]);
     if ($u->rowCount()) after(function () use ($id) { global $db; if (!hydroLog($id, 'start')) $db->prepare("UPDATE incidents SET hydro_s=? WHERE id=?")->execute([-time(), $id]); }); }
-  unset($inc['hydro_s'], $inc['cc_key'], $inc['cc_fit']); if ($F['hydro']) flowPoll($inc); unset($inc['flow_chk']); // Meldungen zur Fliessgeschwindigkeit (Issue #254)
+  unset($inc['hydro_s'], $inc['cc_key'], $inc['cc_fit']); if ($F['hydro']) { flowSync($inc); flowPoll($inc); } unset($inc['flow_chk']); // flowSync: Grundgeschwindigkeit aus den Messstationen (Feedback zu PR #257) // Meldungen zur Fliessgeschwindigkeit (Issue #254)
   $inc['stop_on'] = (int)($inc['stop_on'] ?? 1); $inc['stop_off'] = stopOff($inc); $ipl = incPlaces($inc); // Flusssperren (Issue #182)
   $ps = $db->prepare("SELECT p.user_id,p.mode,p.role_id,p.lat,p.lon,p.loc_at,p.left_at,p.veh_id,u.name,u.photo,u.phone FROM participants p JOIN users u ON u.id=p.user_id WHERE p.incident_id=?");
   $ps->execute([$id]); $phSee = phoneSee($inc); // Direktanruf (Issue #44): Telefonnummern nur gemäss Einstellung phone
@@ -4103,7 +4103,7 @@ switch ($route) {
  case 'incident/flow': // Fliessgeschwindigkeit in m/s (Teilnehmende und Verwaltung)
   $inc = activeIncident(); if (!$inc || !canFlow($inc)) fail('Nur Personen, die am Einsatz teilnehmen, können die Fliessgeschwindigkeit setzen', 403);
   $v = round((float)($in['flow_ms'] ?? 0), 2); if ($v <= 0 || $v > 15) fail('Fliessgeschwindigkeit muss zwischen 0 und 15 m/s liegen'); // Eingabe in km/h rechnet das Gerät um (Issue #259)
-  $db->prepare("UPDATE incidents SET flow_ms=?, flow_pt=NULL WHERE id=?")->execute([$v, $inc['id']]); // von Hand gesetzt: kein Messpunkt mehr (Geschwindigkeit je Abschnitt, flow.php)
+  $db->prepare("UPDATE incidents SET flow_ms=?, flow_pt=NULL, flow_src='man' WHERE id=?")->execute([$v, $inc['id']]); // von Hand gesetzt: kein Messpunkt mehr, nicht mehr aus den Messstationen (Geschwindigkeit je Abschnitt, flow.php)
   $src = mb_substr(trim((string)($in['src'] ?? '')), 0, 120); // übernommen aus der Vorhersage einer Messstation (Issue #254)
   logev($inc['id'], $uid, 'flow', $src !== '' ? 'übernimmt die Fliessgeschwindigkeit ' . $v . ' m/s (' . round($v * 3.6, 1) . ' km/h, ' . $src . ')' : 'setzt die Fliessgeschwindigkeit auf ' . $v . ' m/s (' . round($v * 3.6, 1) . ' km/h)');
   out(['ok' => true]);

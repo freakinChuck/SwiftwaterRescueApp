@@ -75,10 +75,12 @@ Im Register «Einsatz» setzen alle Teilnehmenden die **Fliessgeschwindigkeit** 
 
 ### Geschwindigkeit je Abschnitt {#abschnitte}
 
-Sind für das Gewässer Abschnitte eingerichtet (Verwaltung → «Pegel & Abfluss»), ist der eingegebene Wert die **Grundgeschwindigkeit**: Er gilt ausserhalb der Abschnitte, in den Abschnitten gilt Grundgeschwindigkeit × Faktor des Abschnitts (z. B. langsamer im Stau, schneller in einer Engstelle). Ohne Abschnitte gilt der Wert für den ganzen Flusslauf.
+**Aus den Messstationen:** Gibt es beim PLS eine Messstation mit Kennlinie, musst du nichts eingeben. Die App zeigt die **Grundgeschwindigkeit** aus dieser Station beim aktuellen Abfluss. Jeder Abschnitt erhält seine Geschwindigkeit aus seiner eigenen Station und seinem Faktor. Die Werte stehen so im richtigen Verhältnis zueinander und folgen dem Abfluss. Hast du im Wasser gemessen, gleicht **An einem Punkt gemessen …** alle Werte im selben Verhältnis an. **Von Hand setzen …** ersetzt den Wert aus den Messstationen, **Aus den Messstationen übernehmen** stellt ihn wieder her.
+
+Ohne Messstation mit Kennlinie (oder von Hand gesetzt) gibst du die Geschwindigkeit ein. Sind für das Gewässer Abschnitte eingerichtet (Verwaltung → «Pegel & Abfluss»), ist der eingegebene Wert die **Grundgeschwindigkeit**: Er gilt ausserhalb der Abschnitte, in den Abschnitten gilt Grundgeschwindigkeit × Faktor des Abschnitts (z. B. langsamer im Stau, schneller in einer Engstelle). Ohne Abschnitte gilt der Wert für den ganzen Flusslauf.
 
 - **Geschwindigkeit je Abschnitt** (aufklappen): «Faktoren der Abschnitte anwenden» schaltet die Faktoren für diesen Einsatz aus und ein (Vorgabe aus der Verwaltung). ✎ setzt die Geschwindigkeit eines Abschnitts von Hand, ↺ nimmt sie zurück. Wer die Grundgeschwindigkeit ändert, passt alle übrigen Abschnitte im gleichen Verhältnis an.
-- **An einem Punkt gemessen …**: Punkt auf der Karte antippen und die dort gemessene Geschwindigkeit eingeben (z. B. mit einem Treibkörper). Die App rechnet daraus mit dem Faktor des Abschnitts an diesem Punkt die Grundgeschwindigkeit zurück.
+- **An einem Punkt gemessen …**: Punkt auf der Karte antippen und die dort gemessene Geschwindigkeit eingeben (z. B. mit einem Treibkörper). Mit Werten aus den Messstationen gleicht die App alle Geschwindigkeiten im Verhältnis «gemessen ÷ Wert der Station an diesem Punkt» an. Sonst rechnet sie mit dem Faktor des Abschnitts an diesem Punkt die Grundgeschwindigkeit zurück.
 - **Zuschlag Suchgebiet**: verlängert die Driftdistanz des Suchgebiets um einen Prozentsatz, z. B. +20 % als Reserve. Leer = Vorgabe der Verwaltung.
 
 Das Suchgebiet rechnet in jedem Abschnitt mit dessen Geschwindigkeit; der Hinweis unten auf der Karte nennt Zuschlag und «mit Geschwindigkeit je Abschnitt».

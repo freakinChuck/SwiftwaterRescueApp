@@ -395,7 +395,15 @@ List<Widget> hyFpExtra(BuildContext c, IncStore s, String id, String name, void 
 // ---------- Geschwindigkeit je Abschnitt und Zuschlag fürs Suchgebiet (flow_area, flowAreaHtml/flowAreaBind in index.html) ----------
 // Die eingegebene Fliessgeschwindigkeit ist die Grundgeschwindigkeit (gilt ausserhalb der Abschnitte, ohne Abschnitte überall); je Abschnitt
 // Grundgeschwindigkeit × Faktor (abschaltbar), von Hand übersteuerbar; «An einem Punkt gemessen» rechnet die Grundgeschwindigkeit zurück.
+// src (Feedback zu PR #257): st = aus den Messstationen (keine Eingabe nötig), pt = daraus, an einer Punktmessung im selben Verhältnis angeglichen (k),
+// man = von Hand bzw. ohne Station mit Kennlinie (faSt in index.html).
 bool _faOpen = false;
+
+/// Geschwindigkeiten kommen aus den Messstationen (keine Eingabe der Grundgeschwindigkeit)
+bool faSt(IncStore s) {
+  final a = s.st?['flow_area'];
+  return a is Map && (a['src'] == 'st' || (a['src'] == 'pt' && a['k'] != null));
+}
 
 List<J> faReaches(IncStore s) {
   final a = s.st?['flow_area'];
@@ -415,11 +423,33 @@ List<Widget> flowAreaWidgets(BuildContext c, IncStore s, MapCtl map) {
   final a0 = s.st?['flow_area'];
   if (a0 is! Map) return const [];
   final a = a0.cast<String, dynamic>(), rs = faReaches(s), pc = jd(a['pct']) ?? 0, pt = a['pt'] is Map ? (a['pt'] as Map).cast<String, dynamic>() : null;
-  final auto = jb(a['auto']), area = s.feat('area'), nHand = rs.where((r) => jb(r['o'])).length;
+  final auto = jb(a['auto']), area = s.feat('area'), nHand = rs.where((r) => jb(r['o'])).length, sv = faSt(s);
+  final sti = a['st'] is Map ? (a['st'] as Map).cast<String, dynamic>() : null;
   Future<void> post(J b, [String? ok]) async => s.act('incident/flow/area', b, ok);
   String fac(dynamic f) => (jd(f) ?? 1).toStringAsFixed(2);
   final out = <Widget>[
     const SizedBox(height: 4),
+    if (sv && sti != null) ...[
+      Row(children: [
+        Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Mut('Grundgeschwindigkeit', size: 12),
+          Text(s.spd(s.st?['incident']?['flow_ms']), style: const TextStyle(fontWeight: FontWeight.bold)),
+        ])),
+        OutlinedButton(
+            onPressed: () async {
+              final v = await _spdDlg(c, s, 'Grundgeschwindigkeit von Hand',
+                  'Ersetzt den Wert aus den Messstationen, bis du ihn wieder aus den Messstationen übernimmst. Für eine Messung im Wasser besser «An einem Punkt gemessen …».',
+                  v: jd(s.st?['incident']?['flow_ms']), ok: 'Setzen');
+              if (v == null || v <= 0) return;
+              await s.act('incident/flow', {'flow_ms': v});
+            },
+            child: const Text('Von Hand setzen …')),
+      ]),
+      Mut(
+          '${tr('Aus der Messstation')} ${js(sti['name'])} (${(jd(sti['q']) ?? 0).toStringAsFixed(1)} m³/s)${js(a['src']) == 'pt' ? ', ${tr('angeglichen an die Messung')} (× ${(jd(a['k']) ?? 1).toStringAsFixed(2)})' : ''}${rs.isNotEmpty ? '; ${tr('die Abschnitte mit ihrer Station und ihrem Faktor, im Verhältnis zueinander')}' : ''}. ${tr('Sie folgt dem Abfluss.')}',
+          size: 12),
+    ] else
     Mut(
         rs.isNotEmpty
             ? (auto
@@ -429,7 +459,7 @@ List<Widget> flowAreaWidgets(BuildContext c, IncStore s, MapCtl map) {
         size: 12),
     if (pt != null)
       Mut(
-          '${tr('Gemessen')} ${fmtT(jn(pt['at']))}: ${s.spd(pt['v'])}${js(pt['rname']).isNotEmpty ? ' ${tr('im Abschnitt')} «${js(pt['rname'])}» (${tr('Faktor')} ${fac(pt['fac'])})' : ''}${s.fcs(pt['lat'], pt['lon'])}',
+          '${tr('Gemessen')} ${fmtT(jn(pt['at']))}: ${s.spd(pt['v'])}${js(pt['rname']).isNotEmpty ? ' ${tr('im Abschnitt')} «${js(pt['rname'])}»${pt['k'] != null ? '' : ' (${tr('Faktor')} ${fac(pt['fac'])})'}' : ''}${pt['k'] != null ? ' (${tr('Messstationen')} ${s.spd(pt['vst'])})' : ''}${s.fcs(pt['lat'], pt['lon'])}',
           size: 12),
     Wrap(spacing: 8, runSpacing: 4, children: [
       OutlinedButton(
@@ -437,14 +467,20 @@ List<Widget> flowAreaWidgets(BuildContext c, IncStore s, MapCtl map) {
             final p = await map.pickPoint('Punkt der Messung antippen');
             if (p == null || !map.ctx.mounted) return;
             final v = await _spdDlg(map.ctx, s, 'Gemessene Fliessgeschwindigkeit',
-                rs.isNotEmpty ? 'Daraus wird mit dem Faktor des Abschnitts die Grundgeschwindigkeit berechnet.' : 'Sie gilt für den ganzen Flusslauf.',
+                sv
+                    ? 'Alle Geschwindigkeiten aus den Messstationen werden im selben Verhältnis angeglichen.'
+                    : rs.isNotEmpty
+                        ? 'Daraus wird mit dem Faktor des Abschnitts die Grundgeschwindigkeit berechnet.'
+                        : 'Sie gilt für den ganzen Flusslauf.',
                 ok: 'Übernehmen');
             if (v == null || v <= 0) return;
             await post({
               'pt': {'lat': p.latitude, 'lon': p.longitude, 'v': v}
-            }, 'Grundgeschwindigkeit gesetzt');
+            }, sv ? 'Angeglichen' : 'Grundgeschwindigkeit gesetzt');
           },
           child: const Text('An einem Punkt gemessen …')),
+      if (sti != null && js(a['src']) != 'st')
+        OutlinedButton(onPressed: () => post({'st': 1}, 'Aus den Messstationen übernommen'), child: const Text('Aus den Messstationen übernehmen')),
       if (area)
         OutlinedButton(
             onPressed: () async {
@@ -483,9 +519,11 @@ List<Widget> flowAreaWidgets(BuildContext c, IncStore s, MapCtl map) {
               Mut(
                   jb(r['o'])
                       ? 'von Hand'
-                      : auto
-                          ? '${tr('Faktor')} ${fac(r['fac'])}'
-                          : '${tr('Grundgeschwindigkeit')} (${tr('Faktor')} ${fac(r['fac'])} ${tr('nicht angewendet')})',
+                      : sv
+                          ? '${tr('Messstation')}, ${auto ? '${tr('Faktor')} ${fac(r['fac'])}' : tr('ohne Faktor')}'
+                          : auto
+                              ? '${tr('Faktor')} ${fac(r['fac'])}'
+                              : '${tr('Grundgeschwindigkeit')} (${tr('Faktor')} ${fac(r['fac'])} ${tr('nicht angewendet')})',
                   size: 12),
             ])),
             Text(r['v'] != null ? s.spd(r['v']) : '–', style: const TextStyle(fontWeight: FontWeight.bold)),

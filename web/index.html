@@ -471,25 +471,33 @@ function flowPredHtml(i){const p=st.flow_pred;if(!p)return'';const set=i.flow_ms
 let flSecOpen=(()=>{try{return localStorage.getItem('sw_flsec')!=='0'}catch(e){return true}})();
 function flowPredBind(s){const b=s.querySelector('#bFlTake'),p=st&&st.flow_pred;if(b&&p)b.onclick=()=>api('incident/flow',{flow_ms:+b.dataset.v,src:'Vorschlag '+fpName(p)}).then(()=>{toast('Fliessgeschwindigkeit übernommen','ok');return poll()}).catch(fail);
   const d=s.querySelector('#flSecs');if(d)d.ontoggle=()=>{flSecOpen=d.open;try{localStorage.setItem('sw_flsec',d.open?'1':'0')}catch(e){}}}
-// Geschwindigkeit je Abschnitt und Zuschlag fürs Suchgebiet (st.flow_area, flowAreaPub im Server): Die eingegebene Fliessgeschwindigkeit ist die
+// Geschwindigkeit je Abschnitt und Zuschlag fürs Suchgebiet (st.flow_area, flowAreaPub im Server). a.src (Feedback zu PR #257): st = aus den Messstationen
+// (Grundgeschwindigkeit an der Bezugsstation, je Abschnitt mit seiner Station und seinem Faktor, keine Eingabe nötig), pt = daraus, an einer Punktmessung
+// im selben Verhältnis angeglichen (a.k), man = von Hand bzw. ohne Station mit Kennlinie. Von Hand bzw. ohne Station ist die eingegebene Fliessgeschwindigkeit die
 // Grundgeschwindigkeit (Faktor 1, gilt überall ausserhalb der Abschnitte, ohne Abschnitte also überall); je Abschnitt Grundgeschwindigkeit × Faktor
 // (abschaltbar, Vorgabe in der Verwaltung), von Hand übersteuerbar. «An einem Punkt gemessen»: der Server rechnet die Grundgeschwindigkeit aus dem
 // Faktor des Abschnitts an diesem Punkt zurück. Zuschlag (pct) verlängert die Driftdistanz des Suchgebiets.
 const faRs=()=>(st&&st.flow_area&&st.flow_area.reaches)||[];
 const faPost=(o,ok)=>api('incident/flow/area',o).then(()=>{if(ok)toast(ok,'ok');return poll()});
 let faOpen=(()=>{try{return localStorage.getItem('sw_faopen')==='1'}catch(e){return false}})();
-function flowAreaHtml(i){const a=st.flow_area;if(!a)return'';const rs=faRs(),pc=a.pct||0,pt=a.pt,ar=feat('area');
-  let h=`<div class="mut" style="font-size:.8rem">${rs.length?'Gilt ausserhalb der Abschnitte; in den Abschnitten '+(a.auto?'mit ihrem Faktor':'ohne Faktor')+', sofern nicht von Hand gesetzt.':'Es sind keine Abschnitte eingerichtet: die Geschwindigkeit gilt für den ganzen Flusslauf.'}</div>`;
-  if(pt)h+=`<div class="mut" style="font-size:.8rem">Gemessen ${fmtT(pt.at)}: ${esc(fmtSpd(pt.v))}${pt.rname?' im Abschnitt «'+esc(pt.rname)+'» (Faktor '+hyN(pt.fac,2)+')':''}${esc(fcs(pt.lat,pt.lon))}</div>`;
-  h+=`<div class="mbtns"><button id="bFaPt">An einem Punkt gemessen …</button>${ar?`<button id="bFaPct">Zuschlag Suchgebiet: ${pc?(pc>0?'+':'')+pc+' %':'keiner'}${a.pct_own?'':' (Vorgabe)'}</button>`:''}</div>`;
+const faSt=()=>{const a=st&&st.flow_area;return!!(a&&(a.src==='st'||(a.src==='pt'&&a.k)))};
+function flowAreaHtml(i){const a=st.flow_area;if(!a)return'';const rs=faRs(),pc=a.pct||0,pt=a.pt,ar=feat('area'),sv=faSt();let h='';
+  if(sv)h+=`<div class="mrow"><div><div class="mut">Grundgeschwindigkeit</div><b>${esc(fmtSpd(i.flow_ms))}</b></div><button id="bFlMan">Von Hand setzen …</button></div>`
+    +`<div class="mut" style="font-size:.8rem">Aus der Messstation ${esc(a.st.name)} (${hyN(a.st.q,1)} m³/s)${a.src==='pt'?', angeglichen an die Messung (× '+hyN(a.k,2)+')':''}${rs.length?'; die Abschnitte mit ihrer Station und ihrem Faktor, im Verhältnis zueinander':''}. Sie folgt dem Abfluss.</div>`;
+  else h+=`<div class="mut" style="font-size:.8rem">${rs.length?'Gilt ausserhalb der Abschnitte; in den Abschnitten '+(a.auto?'mit ihrem Faktor':'ohne Faktor')+', sofern nicht von Hand gesetzt.':'Es sind keine Abschnitte eingerichtet: die Geschwindigkeit gilt für den ganzen Flusslauf.'}</div>`;
+  if(pt)h+=`<div class="mut" style="font-size:.8rem">Gemessen ${fmtT(pt.at)}: ${esc(fmtSpd(pt.v))}${pt.rname?' im Abschnitt «'+esc(pt.rname)+'»'+(pt.k?'':' (Faktor '+hyN(pt.fac,2)+')'):''}${pt.k?' (Messstationen '+esc(fmtSpd(pt.vst))+')':''}${esc(fcs(pt.lat,pt.lon))}</div>`;
+  h+=`<div class="mbtns"><button id="bFaPt">An einem Punkt gemessen …</button>${a.st&&a.src!=='st'?'<button id="bFaSt">Aus den Messstationen übernehmen</button>':''}${ar?`<button id="bFaPct">Zuschlag Suchgebiet: ${pc?(pc>0?'+':'')+pc+' %':'keiner'}${a.pct_own?'':' (Vorgabe)'}</button>`:''}</div>`;
   if(rs.length){const n=rs.filter(r=>r.o).length;
     h+=`<details class="fpv fsecs" id="faSecs"${faOpen?' open':''}><summary><b>Geschwindigkeit je Abschnitt</b> <span class="mut">(${rs.length}${n?', '+n+' von Hand':''})</span></summary>`
       +`<label class="ck"><input type="checkbox" id="faAuto"${a.auto?' checked':''}> Faktoren der Abschnitte anwenden${a.auto_own?'':' <span class="mut">(Vorgabe)</span>'}</label>`
-      +rs.map(r=>{const k=FLK[r.kind]||FLK.frei;return`<div class="fsec fa"><div>${esc(r.name)}<span class="k ${k[2]}">${k[0]}</span><div class="mut">${r.o?'von Hand':a.auto?'Faktor '+hyN(r.fac,2):'Grundgeschwindigkeit (Faktor '+hyN(r.fac,2)+' nicht angewendet)'}</div></div><b>${r.v!=null?esc(fmtSpd(r.v)):'–'}</b><span class="bt"><button data-fao="${r.id}" aria-label="Geschwindigkeit im Abschnitt setzen">✎</button>${r.o?`<button data-far="${r.id}" aria-label="Zurücknehmen">↺</button>`:''}</span></div>`}).join('')
+      +rs.map(r=>{const k=FLK[r.kind]||FLK.frei;return`<div class="fsec fa"><div>${esc(r.name)}<span class="k ${k[2]}">${k[0]}</span><div class="mut">${r.o?'von Hand':(sv?'Messstation, ':'')+(a.auto?'Faktor '+hyN(r.fac,2):(sv?'ohne Faktor':'Grundgeschwindigkeit (Faktor '+hyN(r.fac,2)+' nicht angewendet)'))}</div></div><b>${r.v!=null?esc(fmtSpd(r.v)):'–'}</b><span class="bt"><button data-fao="${r.id}" aria-label="Geschwindigkeit im Abschnitt setzen">✎</button>${r.o?`<button data-far="${r.id}" aria-label="Zurücknehmen">↺</button>`:''}</span></div>`}).join('')
       +(n?'<div class="mbtns"><button id="bFaClr">Alle von Hand gesetzten zurücknehmen</button></div>':'')+'</details>'}
   return h}
 function flowAreaBind(s){const a=st&&st.flow_area;if(!a)return;const q=x=>s.querySelector(x);
   const d=q('#faSecs');if(d)d.ontoggle=()=>{faOpen=d.open;try{localStorage.setItem('sw_faopen',d.open?'1':'0')}catch(e){}};
+  const sb=q('#bFaSt');if(sb)sb.onclick=()=>faPost({st:1},'Aus den Messstationen übernommen').catch(fail);
+  const mb=q('#bFlMan');if(mb)mb.onclick=()=>dlg('Grundgeschwindigkeit von Hand',`<div class="mut">Ersetzt den Wert aus den Messstationen, bis du ihn wieder aus den Messstationen übernimmst. Für eine Messung im Wasser besser «An einem Punkt gemessen …».</div><label>Fliessgeschwindigkeit (${spdIn()})<input id="faH" type="number" step="0.1" min="0" value="${spdTo(st.incident.flow_ms)}"></label>`,
+    async dd=>{const v=spdFrom(dd.querySelector('#faH').value);if(!(v>0))throw new Error('Fliessgeschwindigkeit eingeben');await api('incident/flow',{flow_ms:v});await poll()},'Setzen');
   const au=q('#faAuto');if(au)au.onchange=()=>faPost({auto:au.checked?1:0}).catch(fail);
   const c=q('#bFaClr');if(c)c.onclick=async()=>{if(!await ask('Alle von Hand gesetzten Geschwindigkeiten zurücknehmen?\n\nDie Abschnitte gelten danach wieder mit Grundgeschwindigkeit und Faktor.'))return;faPost({ovr_clear:1},'Zurückgenommen').catch(fail)};
   s.querySelectorAll('[data-far]').forEach(b=>b.onclick=()=>faPost({ovr:{[b.dataset.far]:null}}).catch(fail));
@@ -499,8 +507,8 @@ function flowAreaBind(s){const a=st&&st.flow_area;if(!a)return;const q=x=>s.quer
   const pc=q('#bFaPct');if(pc)pc.onclick=()=>dlg('Zuschlag Suchgebiet',`<div class="mut">Verlängert die Driftdistanz des Suchgebiets, z. B. +20 % als Sicherheitsreserve. Leer = Vorgabe der Verwaltung (${a.pct_def>0?'+':''}${a.pct_def} %).</div><label>Zuschlag in %<input id="faP" type="number" step="5" min="-50" max="200" value="${a.pct_own?a.pct:''}"></label>`,
     async dd=>{const v=dd.querySelector('#faP').value.trim();await faPost({pct:v===''?'':+v},'Gespeichert')});
   const pt=q('#bFaPt');if(pt)pt.onclick=async()=>{const ll=await pickPoint('Punkt der Messung antippen');if(!ll)return;
-    dlg('Gemessene Fliessgeschwindigkeit',`<div class="mut">An diesem Punkt gemessen (z. B. mit einem Treibkörper). ${faRs().length?'Die App rechnet daraus mit dem Faktor des Abschnitts die Grundgeschwindigkeit für die übrigen Bereiche zurück.':'Sie gilt für den ganzen Flusslauf.'}</div><label>Fliessgeschwindigkeit (${spdIn()})<input id="faM" type="number" step="0.1" min="0"></label>`,
-      async dd=>{const v=spdFrom(dd.querySelector('#faM').value);if(!(v>0))throw new Error('Fliessgeschwindigkeit eingeben');await faPost({pt:{lat:ll.lat,lon:ll.lng,v}},'Grundgeschwindigkeit gesetzt')},'Übernehmen')}}
+    dlg('Gemessene Fliessgeschwindigkeit',`<div class="mut">An diesem Punkt gemessen (z. B. mit einem Treibkörper). ${faSt()?'Alle Geschwindigkeiten aus den Messstationen werden im selben Verhältnis angeglichen.':faRs().length?'Die App rechnet daraus mit dem Faktor des Abschnitts die Grundgeschwindigkeit für die übrigen Bereiche zurück.':'Sie gilt für den ganzen Flusslauf.'}</div><label>Fliessgeschwindigkeit (${spdIn()})<input id="faM" type="number" step="0.1" min="0"></label>`,
+      async dd=>{const v=spdFrom(dd.querySelector('#faM').value);if(!(v>0))throw new Error('Fliessgeschwindigkeit eingeben');await faPost({pt:{lat:ll.lat,lon:ll.lng,v}},faSt()?'Angeglichen':'Grundgeschwindigkeit gesetzt')},'Übernehmen')}}
 // Meldung in der offenen App (gleicher Schlüssel wie der Push h:<Meldung>), nur an die Empfänger des Servers, nicht älter als 1 h
 function flowNote(){const n=st&&st.incident&&st.flow_pred&&st.flow_pred.note;if(!n||!n.me||Date.now()/1000-n.at>3600)return;
   if(notify(n.title||'Fliessgeschwindigkeit',n.text+' Antippen zum Ansehen.','h:'+n.id,n.lvl||'normal')){const t=$('#toasts').lastElementChild;if(t)t.onclick=()=>{t.remove();menuTab='main';toggleSheet(true);draw();setTimeout(()=>{const f=$('#fl');if(f)f.closest('.mcard').scrollIntoView({block:'start'})},50)}}}
@@ -733,7 +741,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
       +(leadMode(m.mode)?'':`<label class="mut">Meine Spezialrolle${roleSel('rs',m.role_id,'id="rs" aria-label="Meine Spezialrolle"')}</label>`)
       +`<div class="mbtns">${sh?`<button id="bMan">${manual?'GPS-Standort verwenden':'Standort manuell setzen (Test)'}</button>`:''}<button id="bLv">Einsatz verlassen</button></div>`)}
   h+=wtCard(); // Wasserzeit (Issue #241)
-  if(st.can_flow)h+=mcard(feat('area')?'Fliessgeschwindigkeit &amp; Suchgebiet':'Fliessgeschwindigkeit',`<div class="mrow"><label class="mut">${faRs().length?'Grundgeschwindigkeit':'Fliessgeschwindigkeit'} (${spdIn()})<input id="fl" type="number" step="0.1" min="0" value="${spdTo(i.flow_ms)}"></label><button id="bFl">${feat('area')?'Setzen &amp; berechnen':'Setzen'}</button></div>${flowAreaHtml(i)}${feat('hydro')?flowPredHtml(i):''}<div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`);
+  if(st.can_flow)h+=mcard(feat('area')?'Fliessgeschwindigkeit &amp; Suchgebiet':'Fliessgeschwindigkeit',`${faSt()?'':`<div class="mrow"><label class="mut">${faRs().length?'Grundgeschwindigkeit':'Fliessgeschwindigkeit'} (${spdIn()})<input id="fl" type="number" step="0.1" min="0" value="${spdTo(i.flow_ms)}"></label><button id="bFl">${feat('area')?'Setzen &amp; berechnen':'Setzen'}</button></div>`}${flowAreaHtml(i)}${feat('hydro')?flowPredHtml(i):''}<div class="mut">${esc(areaInfo)} Zeit seit Alarm: ${Math.round(secs/60)} min.</div>`);
   // ältere Einzelmarkierungen des Rettlings (vor der Rettlingsverwaltung) nur noch anzeigen und entfernen
   if(joined&&(st.marks||[]).length)h+=mcard('Frühere Rettling-Markierungen',(st.marks||[]).map(x=>`<div class="mli"><span>${x.manual?'Einsatzleitung (manuell)':esc(x.name)} · ${fmtT(x.ts)}${esc(fcs(x.lat,x.lon))}</span>${(st.can_manage||x.user_id==me.id)?`<button data-mr="${x.id}">Entfernen</button>`:''}</div>`).join('')+'<div class="mut">Neue Markierungen über den Kartenknopf «Rettlinge».</div>');
   P.main=jointCard()+h+docCard()+hydroCard()+startMore()+tools;
@@ -765,7 +773,7 @@ function draw(){const pf=$('#prefs');if(pf&&!pf.hidden)prefsDraw(); // Seite «E
   if(joined){if($('#rs'))$('#rs').onchange=e=>{e.target.blur();api('incident/role',{role_id:e.target.value||null}).then(poll).catch(fail)};$('#bLv').onclick=()=>{window.selfLeft=true;api('incident/leave',{}).then(()=>{stop();return poll()}).then(()=>{window.selfLeft=false}).catch(e=>{window.selfLeft=false;fail(e)})};
     if($('#bMan'))$('#bMan').onclick=()=>{if(manual){manual=false;selfDraw();draw();return}toggleSheet(false);locStatus='Tippe auf die Karte, um deinen Standort zu setzen.';map.once('click',e=>{manual=true;sendPos({lat:e.latlng.lat,lon:e.latlng.lng});selfDraw();draw()})};
   }
-  if(st.can_flow){$('#bFl').onclick=()=>api('incident/flow',{flow_ms:spdFrom($('#fl').value)}).then(poll).catch(fail);flowPredBind(s);flowAreaBind(s)}
+  if(st.can_flow){if($('#bFl'))$('#bFl').onclick=()=>api('incident/flow',{flow_ms:spdFrom($('#fl').value)}).then(poll).catch(fail);flowPredBind(s);flowAreaBind(s)}
   if(st.can_manage){if($('#bInv'))$('#bInv').onclick=invAdd;if($('#openJ'))$('#openJ').onchange=async e=>{const c=e.target;c.blur();if(c.checked&&!await ask('Allen den Beitritt erlauben? Alle Personen sehen den Einsatz dann und können ihn annehmen (ohne Alarm).')){c.checked=false;return}api('incident/open',{on:c.checked?1:0}).then(poll).catch(x=>{fail(x);poll()})};
     $('#bEnd').onclick=async()=>await ask('Einsatz für alle beenden?')&&api('incident/end',{}).then(poll).catch(fail);
     $('#bPls').onclick=()=>plsPick('PLS des Einsatzes',i.lat!=null?i.pls_at:i.alarm_at,(lat,lon,at)=>api('incident/pls',{lat,lon,at}));
