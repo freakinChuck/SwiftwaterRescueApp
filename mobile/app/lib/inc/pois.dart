@@ -469,7 +469,7 @@ class _PoisPanelState extends State<PoisPanel> {
           borderRadius: pls ? null : BorderRadius.circular(3),
           border: pls ? Border.all(color: Colors.white, width: 2) : null));
 
-  Widget _item({Widget? check, required Widget sw, required String name, required String info, required List<Widget> acts, bool faded = false}) => Opacity(
+  Widget _item({Widget? check, required Widget sw, required String name, required String info, required List<Widget> acts, bool faded = false, String eta = ''}) => Opacity(
       opacity: faded ? .6 : 1,
       child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
@@ -480,6 +480,7 @@ class _PoisPanelState extends State<PoisPanel> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
               if (info.isNotEmpty) Mut(info, size: 12),
+              if (eta.isNotEmpty) Text(eta, style: const TextStyle(fontSize: 12, color: Color(0xFFFFB35C))), // Issue #258
             ])),
             ...acts,
           ])));
@@ -511,6 +512,7 @@ class _PoisPanelState extends State<PoisPanel> {
       sw: _swatch(js(f['color']).isEmpty ? _placeCol : js(f['color'])),
       name: '${placeBadge(s, f)}${js(f['name'])}',
       info: [placeInfo(s, f), placePropsText(s, f)].where((x) => x.isNotEmpty).join(' · '),
+      eta: s.etaTxt([llOf(f), ...placePts(f)]),
       acts: [
         smallBtn('Zeigen', () => _showPlace(f)),
         if (stopToggleOk(s, f)) smallBtn(stopOn(s, f) ? '⛔ aus' : '⛔ an', () => stopToggle(s, f)),
@@ -585,6 +587,7 @@ class _PoisPanelState extends State<PoisPanel> {
         sw: p['sym'] != null ? Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: symPic(s, js(p['sym']), size: 24)) : _swatch(js(p['color'])),
         name: js(p['name']),
         info: [if (p['cc_role'] != null) ccPostTxt(s, p), _poiInfo(s, p)].where((t) => t.isNotEmpty).join(' · '),
+        eta: s.etaTxt(p['kind'] == 'point' ? poiPts(p) : [c, ...poiPts(p)]),
         acts: [
           smallBtn('Zeigen', () => _showPoi(p)),
           if (c != null) ?navBtn(s, c.latitude, c.longitude, js(p['name'])),

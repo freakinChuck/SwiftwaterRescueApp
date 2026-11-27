@@ -219,7 +219,7 @@ const NAV=[
   ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt],['symbole','sSy','Einsatzsymbole',loadSym],['konzepte','sCc','Einsatzkonzepte',loadCc]]],
   ['Planungen',[['planungen','sEx','Planungen',loadEx]]],
   ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['direktanruf','sTel','Direktanruf',loadTel],['sos','sSos','Notruf (SOS)',loadSos],['sprache','sLng','Sprache',loadLng],['ai','sAi','AI-Assistent',loadAi]]],
-  ['Karte & Daten',[['karten','sMp','Kartenanbieter',loadMaps],['koordinaten','sC','Koordinaten',loadCoords],['geoquellen','sO','Geodaten-Quellen',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['geodaten','sGeo','Geodaten übernehmen',loadGeo],['fahrzeuge','sVeh','Fahrzeuge',loadVeh]]],
+  ['Karte & Daten',[['karten','sMp','Kartenanbieter',loadMaps],['koordinaten','sC','Koordinaten & Einheiten',loadCoords],['geoquellen','sO','Geodaten-Quellen',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['geodaten','sGeo','Geodaten übernehmen',loadGeo],['fahrzeuge','sVeh','Fahrzeuge',loadVeh]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal],['datenschutzauszug','sDs','Datenschutzauszug',loadDsar]]],
   ['Dokumente',[['dokumente','sDk','Ablage',loadDocs],['dokumente-eingang','sDkI','Eingang',loadDocIn],['dokumente-anzeige','sDkV','Anzeige',loadDocView],['dokumente-einstellungen','sDkC','Einstellungen',loadDocCfg]]],
@@ -1340,8 +1340,11 @@ async function loadDsar(){const el=$('#sDs');try{dsCfg=await api('dsar/cfg')}cat
   if(C.org){$('#dsOF').onclick=()=>dsOrg('pdf');$('#dsOZ').onclick=()=>dsOrg('zip')}}
 /* ---------- Koordinatensystem (Standard für alle, pro Person in der Einsatz-App unter «Konto» übersteuerbar) ---------- */
 async function loadCoords(){const el=$('#sC');let s;try{s=await api('settings')}catch(e){return secErr(el,'Koordinaten',e)}
-  el.innerHTML=`<h2>Koordinaten</h2><div data-inst><label class="mut">Standard-Koordinatensystem ${instH} für die Anzeige<select id="cS">${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===s.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
-    <div class="mut">Gilt für alle, die in der Einsatz-App unter «Konto» nichts anderes gewählt haben. Beispiel Brugg AG: ${esc(fmtC(47.4815,8.208,s.coord_sys))}</div></div>`;
+  el.innerHTML=`<h2>Koordinaten &amp; Einheiten</h2><div data-inst><label class="mut">Standard-Koordinatensystem ${instH} für die Anzeige<select id="cS">${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===s.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="mut">Gilt für alle, die in der Einsatz-App unter «Konto» nichts anderes gewählt haben. Beispiel Brugg AG: ${esc(fmtC(47.4815,8.208,s.coord_sys))}</div></div>
+    <div data-inst style="margin-top:1rem"><label class="mut">Standard-Einheit der Geschwindigkeiten ${instH}<select id="cSp">${Object.entries(SPEED_UNITS).map(([k,v])=>`<option value="${k}" ${k===(s.speed_unit||'ms')?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="mut">Fliessgeschwindigkeit, Flussdistanz und Helikopter. Gilt für alle, die im Profil nichts anderes gewählt haben, und für die öffentliche Ansicht. Beispiel: ${esc(fmtSpd(1.8,s.speed_unit||'ms'))}</div></div>`;
+  $('#cSp').onchange=e=>{const v=e.target.value;e.target.disabled=true;api('settings/save',{speed_unit:v}).then(()=>{toast('Gespeichert.','ok');if(me)me.speed_default=v;loadCoords()}).catch(x=>{fail(x);loadCoords()})};
   $('#cS').onchange=e=>{const v=e.target.value;e.target.disabled=true;api('settings/save',{coord_sys:v}).then(()=>{toast('Gespeichert.','ok');loadCoords()}).catch(x=>{fail(x);loadCoords()})}}
 /* ---------- Funktionen (Issue #35): je Einsatztyp ein- oder ausschalten ---------- */
 // Liste und Bezeichnungen kommen vom Server (FEATURES in api/index.php); gespeichert werden die ausgeschalteten je Einsatztyp
@@ -2129,7 +2132,7 @@ function aarSide(el,x,id,row,changed){const i=x.inc;let tab='inc',fb=null,q='';t
   const incHtml=()=>{const res=x.rescuees.filter(r=>!r.removed);return`<div class="row">${lg?`<button data-wl>Einsatzlog (Gross)</button>`:''}${lg&&i.recorded?`<button data-wr>Replay</button>`:''}</div>
     ${kv([['Einsatztyp',kindBadge(i)],...(i.plan?[['Vorbereitete Übung',esc(i.plan)]]:[]),['Alarmmeldung',esc(i.message)],['Alarmeingang',aarDt(i.alarm_at)],['Einsatzende',aarDt(i.ended_at)],['Dauer',aarMin(i.ended_at-i.alarm_at)],
       ['Ausgelöst von',esc(i.creator||'–')],['Erste Annahme nach',aarMin(i.first_accept==null?null:i.first_accept-i.alarm_at)],['Suchgebiet erreicht nach',aarMin(i.first_area==null?null:i.first_area-i.alarm_at)],
-      ...(i.flow_ms!=null?[['Fliessgeschwindigkeit',`${i.flow_ms} m/s`]]:[]),...(i.lat!=null?[['PLS des Einsatzes',fmtC(i.lat,i.lon,'lv95')]]:[])])}
+      ...(i.flow_ms!=null?[['Fliessgeschwindigkeit',fmtSpd(i.flow_ms)]]:[]),...(i.lat!=null?[['PLS des Einsatzes',fmtC(i.lat,i.lon,'lv95')]]:[])])}
     <h4>Einsatzkräfte (${x.people.length})</h4>${x.people.length?`<div class="tw"><table><thead><tr><th>Name</th><th>Einrückoption</th><th>Spezialrolle</th><th>Eingerückt</th><th>Ausgetreten</th></tr></thead><tbody>${x.people.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.mode||'–')}</td><td>${esc(p.role||'–')}</td><td>${aarTm(p.joined)}</td><td>${p.left_at?aarTm(p.left_at):'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="mut">Keine</div>'}
     ${res.length?`<h4>Rettlinge (${res.length})</h4><ul class="aarul">${res.map(r=>`<li><b>${esc(r.name||'Unbekannter Rettling')}</b>${r.descr?' – '+esc(r.descr):''} <span class="mut">${r.rescued_at?'gerettet '+aarTm(r.rescued_at):r.lat!=null?'Fundort bekannt '+aarTm(r.loc_at):'vermisst'}</span></li>`).join('')}</ul>`:''}
     ${x.externals.length?`<h4>Externe Einsatzkräfte (${x.externals.length})</h4><ul class="aarul">${x.externals.map(e=>`<li><b>${esc(e.name)}</b>${e.role?' – '+esc(e.role):''} <span class="mut">${aarTm(e.created)} – ${e.removed?aarTm(e.removed):'Ende'}</span></li>`).join('')}</ul>`:''}`};
@@ -2274,7 +2277,7 @@ function aarModel(x,o){const C=aarC.cfg,A=C.auto,i=x.inc,B=[],act=r=>!r.removed;
     B.push({t:'h',x:'Einsatzdaten'},{t:'kv',rows:[['Einsatztyp',kindOf(i).name],...(i.plan?[['Vorbereitete Übung',i.plan]]:[]),['Alarmmeldung',i.message],
       ['Alarmeingang',aarDt(i.alarm_at)],['Einsatzende',aarDt(i.ended_at)],['Dauer',aarMin(i.ended_at-i.alarm_at)],['Ausgelöst von',i.creator||'–'],['Einsatzkräfte mit App',String(x.people.length)],
       ['Erste Annahme nach',aarMin(i.first_accept==null?null:i.first_accept-i.alarm_at)],['Suchgebiet erreicht nach',aarMin(i.first_area==null?null:i.first_area-i.alarm_at)],
-      ...(i.flow_ms!=null?[['Fliessgeschwindigkeit',`${i.flow_ms} m/s (${Math.round(i.flow_ms*36)/10} km/h)`]]:[]),...(i.lat!=null?[['PLS des Einsatzes',fmtC(i.lat,i.lon,'lv95')+' (LV95)']]:[]),
+      ...(i.flow_ms!=null?[['Fliessgeschwindigkeit',fmtSpd(i.flow_ms,'both')]]:[]),...(i.lat!=null?[['PLS des Einsatzes',fmtC(i.lat,i.lon,'lv95')+' (LV95)']]:[]),
       ...(res.length?[['Rettlinge',`${res.length}, davon ${res.filter(r=>r.rescued_at).length} gerettet`]]:[])]})}
   let kv=[];const flush=()=>{if(kv.length)B.push({t:'kv',rows:kv});kv=[]};
   if(C.fields.length&&C.fields[0].type!=='head')B.push({t:'h',x:'Review'});

@@ -317,7 +317,7 @@ class _RdPanelState extends State<RdPanel> {
     super.initState();
     SharedPreferences.getInstance().then((p) {
       _sp = p;
-      if (_flow.text.isEmpty && mounted) setState(() => _flow.text = p.getString('rdflow') ?? '');
+      if (_flow.text.isEmpty && mounted) setState(() => _flow.text = spdTo(double.tryParse(p.getString('rdflow') ?? ''), widget.s.spdU)); // rdflow in m/s, Feld in der Einheit (Issue #259)
     });
     _flow.text = _incFlow ?? '';
     // wie rdOpen: beim Öffnen gleich mit Punkt A beginnen
@@ -333,7 +333,7 @@ class _RdPanelState extends State<RdPanel> {
   /// Fliessgeschwindigkeit des Einsatzes (rdFlow), sonst null
   String? get _incFlow {
     final f = jd(widget.s.inc?['flow_ms']);
-    return f != null && f > 0 ? '$f' : null;
+    return f != null && f > 0 ? spdTo(f, widget.s.spdU) : null;
   }
 
   List<double> get _speeds {
@@ -354,8 +354,6 @@ class _RdPanelState extends State<RdPanel> {
     widget.map.openPanel(null);
   }
 
-  String _sp2(double v) => v == v.roundToDouble() ? '${v.round()}' : '$v';
-
   @override
   Widget build(BuildContext context) => ListenableBuilder(
       listenable: Listenable.merge([widget.rd, widget.s]),
@@ -375,7 +373,7 @@ class _RdPanelState extends State<RdPanel> {
         } else if (rd.err != null) {
           body = Text(rd.err!);
         } else {
-          final f = double.tryParse(_flow.text.replaceAll(',', '.')) ?? 0;
+          final f = spdFrom(_flow.text, s.spdU) ?? 0;
           body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text.rich(TextSpan(children: [
               TextSpan(text: 'Flussdistanz A → B: ${kmT(rd.dist)}', style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -390,18 +388,18 @@ class _RdPanelState extends State<RdPanel> {
                   child: TextField(
                       controller: _flow,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(labelText: trn('Fliessgeschwindigkeit'), suffixText: trn('m/s'), isDense: true),
+                      decoration: InputDecoration(labelText: trn('Fliessgeschwindigkeit'), suffixText: spdIn(s.spdU), isDense: true),
                       onChanged: (v) {
-                        _sp?.setString('rdflow', v);
+                        _sp?.setString('rdflow', '${spdFrom(v, s.spdU) ?? ''}');
                         setState(() {});
                       })),
               const SizedBox(width: 12),
-              Expanded(child: Text(f > 0 ? '${durS(rd.dist / f)} (${(f * 3.6).toStringAsFixed(1)} km/h)' : 'Fliessgeschwindigkeit eingeben')),
+              Expanded(child: Text(f > 0 ? '${durS(rd.dist / f)} (${s.spdU == 'kmh' ? '${spdR(f, 2)} m/s' : '${spdR(f * 3.6, 1)} km/h'})' : 'Fliessgeschwindigkeit eingeben')),
             ]),
             const SizedBox(height: 6),
             ..._speeds.map((v) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(children: [SizedBox(width: 150, child: Text('Mit ${_sp2(v)} km/h')), const SizedBox(width: 12), Text(durS(rd.dist / (v / 3.6)))]))),
+                child: Row(children: [SizedBox(width: 150, child: Text('Fahrt mit ${s.kmh(v)}')), const SizedBox(width: 12), Text(durS(rd.dist / (v / 3.6)))]))),
             if (!rd.down)
               Padding(
                   padding: const EdgeInsets.only(top: 6),

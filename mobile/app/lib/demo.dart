@@ -411,14 +411,14 @@ class Demo {
     _hy = l(hy['stations'])?.where((h) => h['lat'] is num && h['lon'] is num).toList() ?? _hy;
     if (l(me['symbols']) case final sy?) _sy = sy;
     if (res.length > 4 && l(res[4]) != null) _ext = l(res[4])!.where((x) => x['active'] == 1).map((x) => x..remove('active')).toList();
-    for (final k in ['name', 'photo', 'coord_sys', 'nav_app', 'place_view', 'hydro', 'exercise_mode']) {
+    for (final k in ['name', 'photo', 'coord_sys', 'speed_unit', 'nav_app', 'place_view', 'hydro', 'exercise_mode']) {
       if (me.containsKey(k)) _me[k] = me[k];
     }
     _veh = null;
     org = {
       'name': '${me['org'] ?? ''}',
       'cfg': {
-        for (final k in ['coord_default', 'rd_speeds', 'nav_apps', 'nav_default', 'symbols', 'sym_free', 'sym_sets', 'maps', 'map_def', 'version'])
+        for (final k in ['coord_default', 'speed_default', 'rd_speeds', 'nav_apps', 'nav_default', 'symbols', 'sym_free', 'sym_sets', 'maps', 'map_def', 'version'])
           if (me[k] != null) k: me[k],
       },
       'maps': {
@@ -475,6 +475,7 @@ class Demo {
     'photo': null,
     'exercise_mode': 0,
     'coord_sys': null,
+    'speed_unit': null,
     'nav_app': null,
     'place_view': <String, dynamic>{},
     'hydro': ['D2152'],
@@ -1223,6 +1224,7 @@ class Demo {
     'is_admin': 0,
     'perms': ['inc_start', 'ex_start', if (lead) 'inc_lead'],
     'coord_default': 'lv95',
+    'speed_default': 'ms',
     'rd_speeds': [10, 20, 30],
     'kinds': _ks,
     'nav_apps': ['google', 'apple', 'waze', 'geo'],
@@ -1577,8 +1579,8 @@ class Demo {
       case 'me':
         return {'me': _meOut()};
       case 'me/settings':
-        for (final k in ['exercise_mode', 'coord_sys', 'nav_app', 'place_view', 'hydro', 'ai_modes']) {
-          if (b.containsKey(k)) _me[k] = (k == 'coord_sys' || k == 'nav_app') && '${b[k] ?? ''}'.isEmpty ? null : b[k];
+        for (final k in ['exercise_mode', 'coord_sys', 'speed_unit', 'nav_app', 'place_view', 'hydro', 'ai_modes']) {
+          if (b.containsKey(k)) _me[k] = (k == 'coord_sys' || k == 'speed_unit' || k == 'nav_app') && '${b[k] ?? ''}'.isEmpty ? null : b[k];
         }
         return {'ok': true};
       case 'me/password':
@@ -1679,8 +1681,9 @@ class Demo {
         final i = _needPart('Nur Personen, die am Einsatz teilnehmen, können die Fliessgeschwindigkeit setzen');
         final v = _d(b['flow_ms']);
         if (!(v > 0 && v <= 15)) _fail('Fliessgeschwindigkeit muss zwischen 0 und 15 m/s liegen');
-        i.flow = v;
-        _logev(_meId, 'flow', 'setzt die Fliessgeschwindigkeit auf $v m/s');
+        final w = (v * 100).round() / 100;
+        i.flow = w;
+        _logev(_meId, 'flow', 'setzt die Fliessgeschwindigkeit auf $w m/s (${(w * 36).round() / 10} km/h)');
         return {'ok': true};
       case 'incident/concepts':
         _needLead('Nur die Einsatzleitung kann Einsatzkonzepte laden');

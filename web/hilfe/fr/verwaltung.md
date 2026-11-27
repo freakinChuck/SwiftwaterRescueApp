@@ -142,9 +142,9 @@ Quelles cartes de base (images aériennes, cartes) sont disponibles, leur ordre 
 
 ![Fournisseurs de cartes](img/admin-karten.jpg)
 
-### Coordonnées {#koordinaten}
+### Coordonnées & unités {#koordinaten}
 
-Le système de coordonnées par défaut. Chaque personne peut le modifier dans le profil.
+Le système de coordonnées par défaut et l'unité par défaut des vitesses (m/s, km/h ou les deux) pour la vitesse du courant, la distance fluviale et les hélicoptères. Chaque personne peut modifier les deux dans le profil. La vue publique affiche toujours le réglage par défaut.
 
 ### Sources de géodonnées {#geoquellen}
 

@@ -411,7 +411,10 @@
 "» im Suchgebiet": "» in the search area",
 "Reuss Stadt Luzern (Demo)": "Reuss Lucerne city (demo)",
 "Falls die Organisation Einsatzkonzepte nutzt: Zuteilung deiner Person zu Posten vorbereiteter Lagen. Beim Laden im Einsatz erhältst du den Auftrag als Nachricht. Einsehbar für Personen mit dem Recht «Einsatzkonzepte verwalten».": "If the organisation uses operation concepts: assignment of your person to posts of prepared situations. When the concept is loaded in an operation, you receive the assignment as a message. Visible to persons with the permission «Manage operation concepts».",
-"Bis die Verwaltung die Zuteilung oder das Konzept entfernt; wer endgültig gelöscht wird, verschwindet aus allen Zuteilungen.": "Until administration removes the assignment or the concept; anyone deleted permanently disappears from all assignments."
+"Bis die Verwaltung die Zuteilung oder das Konzept entfernt; wer endgültig gelöscht wird, verschwindet aus allen Zuteilungen.": "Until administration removes the assignment or the concept; anyone deleted permanently disappears from all assignments.",
+"Keine Berechtigung": "No permission",
+"Zu viele Anfragen, bitte später nochmals versuchen": "Too many requests, please try again later",
+"Anfrage abgelehnt (HTTP {0})": "Request rejected (HTTP {0})"
 },
 "fr": {
 "Angemeldet:": "Connecté :",
@@ -825,7 +828,10 @@
 "» im Suchgebiet": "» dans la zone de recherche",
 "Reuss Stadt Luzern (Demo)": "Reuss ville de Lucerne (démo)",
 "Falls die Organisation Einsatzkonzepte nutzt: Zuteilung deiner Person zu Posten vorbereiteter Lagen. Beim Laden im Einsatz erhältst du den Auftrag als Nachricht. Einsehbar für Personen mit dem Recht «Einsatzkonzepte verwalten».": "Si l'organisation utilise des concepts d'intervention : attribution de ta personne à des postes de situations préparées. Lors du chargement en intervention, tu reçois la mission par message. Visible pour les personnes ayant le droit « Gérer les concepts d'intervention ».",
-"Bis die Verwaltung die Zuteilung oder das Konzept entfernt; wer endgültig gelöscht wird, verschwindet aus allen Zuteilungen.": "Jusqu'à ce que l'administration retire l'attribution ou le concept ; toute personne supprimée définitivement disparaît de toutes les attributions."
+"Bis die Verwaltung die Zuteilung oder das Konzept entfernt; wer endgültig gelöscht wird, verschwindet aus allen Zuteilungen.": "Jusqu'à ce que l'administration retire l'attribution ou le concept ; toute personne supprimée définitivement disparaît de toutes les attributions.",
+"Keine Berechtigung": "Pas d’autorisation",
+"Zu viele Anfragen, bitte später nochmals versuchen": "Trop de requêtes, veuillez réessayer plus tard",
+"Anfrage abgelehnt (HTTP {0})": "Requête refusée (HTTP {0})"
 },
 "it": {
 "Angemeldet:": "Connesso:",
@@ -1239,6 +1245,9 @@
 "» im Suchgebiet": "» nell'area di ricerca",
 "Reuss Stadt Luzern (Demo)": "Reuss città di Lucerna (demo)",
 "Falls die Organisation Einsatzkonzepte nutzt: Zuteilung deiner Person zu Posten vorbereiteter Lagen. Beim Laden im Einsatz erhältst du den Auftrag als Nachricht. Einsehbar für Personen mit dem Recht «Einsatzkonzepte verwalten».": "Se l'organizzazione usa i concetti d'intervento: assegnazione della tua persona a postazioni di situazioni preparate. Al caricamento durante l'intervento ricevi l'incarico come messaggio. Visibile alle persone con il diritto «Gestire i concetti d'intervento».",
-"Bis die Verwaltung die Zuteilung oder das Konzept entfernt; wer endgültig gelöscht wird, verschwindet aus allen Zuteilungen.": "Finché l'amministrazione rimuove l'assegnazione o il concetto; chi viene eliminato definitivamente scompare da tutte le assegnazioni."
+"Bis die Verwaltung die Zuteilung oder das Konzept entfernt; wer endgültig gelöscht wird, verschwindet aus allen Zuteilungen.": "Finché l'amministrazione rimuove l'assegnazione o il concetto; chi viene eliminato definitivamente scompare da tutte le assegnazioni.",
+"Keine Berechtigung": "Nessuna autorizzazione",
+"Zu viele Anfragen, bitte später nochmals versuchen": "Troppe richieste, riprova più tardi",
+"Anfrage abgelehnt (HTTP {0})": "Richiesta rifiutata (HTTP {0})"
 }
 }

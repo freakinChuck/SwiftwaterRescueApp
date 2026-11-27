@@ -142,9 +142,9 @@ Welche Grundkarten (Luftbilder, Karten) zur Wahl stehen, ihre Reihenfolge und de
 
 ![Kartenanbieter](img/admin-karten.jpg)
 
-### Koordinaten {#koordinaten}
+### Koordinaten & Einheiten {#koordinaten}
 
-Das Standard-Koordinatensystem. Jede Person kann es im Profil übersteuern.
+Das Standard-Koordinatensystem und die Standard-Einheit der Geschwindigkeiten (m/s, km/h oder beides) für Fliessgeschwindigkeit, Flussdistanz und Helikopter. Jede Person kann beides im Profil übersteuern. Die öffentliche Ansicht zeigt immer den Standard.
 
 ### Geodaten-Quellen {#geoquellen}
 

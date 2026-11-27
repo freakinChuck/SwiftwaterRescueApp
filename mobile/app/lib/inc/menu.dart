@@ -217,9 +217,9 @@ class _IncMenuState extends State<IncMenu> {
   // ---------- Werkzeuge und Fusszeile ----------
   Widget? _tools() {
     if (!s.feat('rd')) return null;
-    final sp = s.me?['rd_speeds'] is List ? (s.me!['rd_speeds'] as List).join(', ') : '10, 20, 30';
+    final sp = (s.me?['rd_speeds'] is List ? s.me!['rd_speeds'] as List : const [10, 20, 30]).map(s.kmh).join(', ');
     return MCard(title: 'Werkzeuge', children: [
-      Mut('Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei $sp km/h.')
+      Mut('Distanz zwischen zwei Punkten entlang des Gewässers mit Treibzeit (Fliessgeschwindigkeit) und Fahrzeiten bei $sp.')
     ], buttons: [
       OutlinedButton(
           onPressed: () {
@@ -535,7 +535,7 @@ class _IncMenuState extends State<IncMenu> {
         sec ? ('Art', 'Sekundäreinsatz (ohne Alarm)') : ('Alarmstufe', lvl),
         ('Folgeeinsatz zu', par == null ? '' : '${js(par['kind_name'])} vom ${fmtDT(jn(par['alarm_at']))}${js(par['message']).isNotEmpty ? ': ${js(par['message'])}' : ''}'),
         ('PLS', i['lat'] != null ? s.fc(i['lat'], i['lon']) : ''),
-        ('Fliessgeschw.', i['flow_ms'] != null ? '${i['flow_ms']} m/s' : ''),
+        ('Fliessgeschw.', s.spd(i['flow_ms'])),
       ]),
       if (rec != 0 || jb(i['public']))
         Padding(
@@ -628,7 +628,7 @@ class _IncMenuState extends State<IncMenu> {
       ]));
     }
     if (jb(st['can_flow'])) {
-      final srv = i['flow_ms'] == null ? '' : '${i['flow_ms']}';
+      final srv = spdTo(jd(i['flow_ms']), s.spdU); // Eingabe in der Einheit der Person (Issue #259)
       if (_flSrv != srv && !_flFocus.hasFocus) {
         _flSrv = srv;
         _fl.text = srv;
@@ -641,7 +641,7 @@ class _IncMenuState extends State<IncMenu> {
                   controller: _fl,
                   focusNode: _flFocus,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: trn('Fliessgeschwindigkeit (m/s)'), isDense: true),
+                  decoration: InputDecoration(labelText: '${trn('Fliessgeschwindigkeit')} (${spdIn(s.spdU)})', isDense: true),
                   onSubmitted: (_) => _setFlow())),
           const SizedBox(width: 8),
           FilledButton(onPressed: _busy.contains('flow') ? null : _setFlow, child: Text(area ? 'Setzen & berechnen' : 'Setzen')),
@@ -794,9 +794,9 @@ class _IncMenuState extends State<IncMenu> {
   }
 
   void _setFlow() {
-    final v = double.tryParse(_fl.text.trim().replaceAll(',', '.'));
+    final v = spdFrom(_fl.text, s.spdU);
     if (v == null || v < 0) {
-      s.toast('Bitte eine Fliessgeschwindigkeit in m/s eingeben', 'err');
+      s.toast('Bitte eine Fliessgeschwindigkeit eingeben', 'err');
       return;
     }
     _flFocus.unfocus();
