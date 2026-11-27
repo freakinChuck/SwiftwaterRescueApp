@@ -28,6 +28,7 @@ import '../sys.dart';
 import '../track.dart';
 import 'area.dart';
 import 'docs.dart';
+import 'rd.dart' show durS;
 import 'util.dart';
 import 'voice.dart';
 
@@ -148,6 +149,24 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   final nets = <String, NetSlot>{};
   int? _netsInc;
   SearchArea? area;
+
+  /// ETA (Issue #258): wann das Suchgebiet eine Stelle flussabwärts erreicht (Uhrzeit und relativ); pts = Punkte einer Position (Bereiche und Linien:
+  /// Mitte und Eckpunkte, es zählt der früheste). Leer, wenn die Stelle schon im Suchgebiet liegt oder nicht flussabwärts davon (etaOf in index.html).
+  String etaTxt(Iterable<LatLng?> pts) {
+    final a = area;
+    if (a == null || inc == null) return '';
+    ({num at, double d, bool inside})? best;
+    for (final p in pts) {
+      if (p == null) continue;
+      final e = a.eta(p);
+      if (e == null) continue;
+      if (e.inside) return '';
+      if (best == null || e.at < best.at) best = e;
+    }
+    if (best == null) return '';
+    final at = best.at, t = at - now > 72000 ? fmtDT(at) : fmtHM(at);
+    return 'Suchgebiet hier ca. $t (in ${durS((at - now).toDouble())})';
+  }
   final _areaLogged = <int>{};
 
   // eigener Standort

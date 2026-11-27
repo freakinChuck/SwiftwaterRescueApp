@@ -61,5 +61,6 @@ La zone de recherche suit le cours d'eau à partir du **PLS** (point last seen, 
 - Si chaque victime a son propre PLS, la zone de recherche est la réunion des sous-zones.
 - L'avis en bas à gauche résume la zone de recherche ; un clic déplie les informations par PLS.
 - Si le réseau hydrographique n'est pas disponible, l'app dessine un cercle autour du PLS.
+- **Arrivée de la zone de recherche (ETA)** : pour les intervenants, les intervenants externes (p. ex. postes), les marqueurs et les emplacements fixes en aval de la zone de recherche, les fenêtres « Intervenants » et « Marqueurs » ainsi que l'info personne indiquent quand la zone de recherche atteindra l'endroit, avec l'heure et en relatif (p. ex. « Zone de recherche ici vers 14:35 (dans 23 min) »). Le calcul se fait le long du cours d'eau avec la vitesse du courant depuis le PLS ; l'endroit doit se trouver à 150 m au plus du cours d'eau. Si un poste ou un barrage se trouve entre les deux, ou si l'endroit est déjà dans la zone de recherche ou hors du réseau hydrographique chargé, l'indication manque.
 
 Tous les participants définissent la vitesse du courant dans le menu (carte « Vitesse du courant & zone de recherche »).

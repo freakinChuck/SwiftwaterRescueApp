@@ -217,14 +217,38 @@ function riverArea(net,i,D,posts,stops){let best=null,bd=1e12;net.ways.forEach(w
     if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=geoDist(pts[j-1],pts[j]);r.maxLen=Math.max(r.maxLen,len);
     r.lines.push(pts);r.polys.push(corridor(pts,BANK_M))});
   r.cutBy=ctx.cut;return r}
+// ETA (Issue #258): Distanz entlang des Gewässers vom PLS (i) bis zur Stelle, an der der Flusslauf flussabwärts an pt vorbeiführt (höchstens ETA_M
+// daneben), mit denselben Regeln wie das Suchgebiet (alle Arme, endet an Posten und Flusssperren); null = nicht flussabwärts erreichbar bzw. ausserhalb
+// des geladenen Gewässernetzes. Zwischengespeichert am Netz (pk = Schlüssel der Posten und Sperren), damit die Listen bei jedem Zeichnen nicht neu suchen.
+const ETA_M=150,ETA_MAX=60000;
+function segProj(a,b,p){const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180),ax=(a.lon-p.lon)*kx,ay=(a.lat-p.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l)):0;return{t,d:Math.hypot(ax+t*dx,ay+t*dy)}}
+function riverReach(net,i,pt,posts,stops,pk){const c=net._eta||(net._eta={ctx:new Map(),d:new Map()}),ck=srcKey(i)+'|'+pk;let x=c.ctx.get(ck);
+  if(x===undefined){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
+    const sc=stopCtx(stops);x=!best||bd>SNAP_M?null:{best,posts:posts.concat(sc.posts).map(q=>snapPost(net,q)),segs:sc.segs};c.ctx.set(ck,x)}
+  if(!x)return null;const dk=ck+'|'+pt.lat.toFixed(5)+','+pt.lon.toFixed(5);if(c.d.has(dk))return c.d.get(dk);
+  const o={d:null};reachWalk(net,x.best.w,x.best.k,0,new Set(),{posts:x.posts,segs:x.segs,done:new Map()},pt,o);c.d.set(dk,o.d);return o.d}
+// wie riverFollow, aber mit zurückgelegter Distanz acc statt Restdistanz; o.d = kürzeste Distanz bis pt
+function reachWalk(net,w,k,acc,seen,ctx,pt,o){if(o.d!=null&&acc>=o.d)return;const key=w.id+':'+k;if((ctx.done.get(key)??Infinity)<=acc)return;ctx.done.set(key,acc);
+  seen=new Set(seen).add(w.id);const last=w.geometry.length-1,hit=v=>{if(o.d==null||v<o.d)o.d=v},post=p=>ctx.posts.some(q=>geoDist(p,q)<(q.r||120));
+  if(post(w.geometry[k])){if(geoDist(w.geometry[k],pt)<ETA_M)hit(acc);return}
+  // c = nächste Stelle im Band ETA_M: erst wenn der Abstand wieder zunimmt (bzw. am Ende des Weges), gilt sie als Treffer
+  let c=null;const done=()=>{if(c)hit(c.v)};
+  for(let j=k;j<last;j++){
+    for(const e of net.byNode.get(w.nodes[j])||[])if(e.k===0&&e.w!==w&&!seen.has(e.w.id))reachWalk(net,e.w,e.k,acc,seen,ctx,pt,o);
+    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b),x1=segHit(ctx.segs,a,b),x2=postHit(ctx.posts,a,b),x=x1&&x2?(x1.t<x2.t?x1:x2):x1||x2,pr=segProj(a,b,pt);
+    if(pr.d<ETA_M&&(!x||pr.t*d<=x.t*d+50)){if(c&&pr.d>=c.m)return done();c={v:acc+pr.t*d,m:pr.d}}else if(c)return done(); // eine Stelle direkt am Posten bzw. an der Sperre zählt noch (z. B. der Posten selbst)
+    if(x)return done();acc+=d;if(acc>ETA_MAX||!c&&o.d!=null&&acc>=o.d)return done();if(post(b)){if(geoDist(b,pt)<ETA_M&&(!c||geoDist(b,pt)<c.m))c={v:acc,m:0};return done()}}
+  done();if(o.d!=null&&acc>=o.d)return;
+  for(const e of net.byNode.get(w.nodes[last])||[])if(!seen.has(e.w.id)&&e.k<e.w.geometry.length-1)reachWalk(net,e.w,e.k,acc,seen,ctx,pt,o)}
 // Suchgebiet aus mehreren PLS (Issue #24): srcs = sources des Servers ([{lat,lon,at,own,names}], vermisste Rettlinge bzw. PLS des Einsatzes),
 // nets = Map je PLS (srcKey) mit dem Gewässernetz, get(s,R) liefert die Overpass-Antwort für einen PLS, redraw nach dem Laden.
-// Ergebnis: polys/lines (entlang Gewässer), circles (Rückfall {lat,lon,r}), info (Text), parts (je PLS: key, names, lat/lon, polys, circles), rs = Rettlinge (für den Hinweis ohne PLS)
+// Ergebnis: polys/lines (entlang Gewässer), circles (Rückfall {lat,lon,r}), info (Text), parts (je PLS: key, names, lat/lon, polys, circles), rs = Rettlinge (für den Hinweis ohne PLS),
+// eta(lat, lon) (Issue #258): wann das Suchgebiet entlang des Gewässers eine Stelle flussabwärts erreicht, {at, d = Meter bis dorthin}, {inside: 1} = schon erreicht, null = nicht (oder unbekannt)
 const srcKey=s=>s.lat.toFixed(6)+','+s.lon.toFixed(6);
 // Schlüssel eines Teilgebiets: PLS mit Zeitpunkt, wie die Zusammenfassung in plsSources()
 const partKey=(lat,lon,at)=>lat.toFixed(6)+','+lon.toFixed(6)+'@'+at;
 const fmtDT=ts=>new Date(ts*1000).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys:[],lines:[],circles:[],info:[],parts:[]};
+function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys:[],lines:[],circles:[],info:[],parts:[],eta:()=>null},reach=[];
   if(!srcs.length){const miss=(rs||[]).filter(x=>!x.rescued_at&&x.lat==null);
     r.info.push(!(rs||[]).length?'Suchgebiet: Kein PLS gesetzt.':miss.length?'Suchgebiet: Kein PLS für '+miss.map(x=>'«'+x.name+'»').join(', ')+'. PLS des Einsatzes oder der Rettlinge setzen.':'Suchgebiet: Alle Rettlinge gefunden.');return r}
   if(!flow){r.info.push('Suchgebiet: Fliessgeschwindigkeit fehlt.');return r}
@@ -237,12 +261,14 @@ function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys
     const circle=why=>{const c={lat:s.lat,lon:s.lon,r:D};r.circles.push(c);p.circles.push(c);r.info.push(lbl+why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.')};
     if(n.fail)return circle('Gewässernetz nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
     if(!n.ways)return circle('Gewässernetz wird geladen.');
-    const a=riverArea(n,s,D,posts,stops);if(!a)return circle('Kein Gewässer nahe der PLS.');
+    const a=riverArea(n,s,D,posts,stops);if(!a)return circle('Kein Gewässer nahe der PLS.');reach.push({s,D,n});
     r.polys.push(...a.polys);r.lines.push(...a.lines);p.polys.push(...a.polys);
     r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet ${a.cutBy}.`:'.'))});
   // Kurzfassung bei mehreren PLS (Hinweis unten in der Karte, Details per Klick)
   if(srcs.length>1){const riv=r.parts.filter(p=>p.polys.length).length,circ=r.parts.length-riv,none=srcs.length-r.parts.length;
     r.short=`Suchgebiet aus ${srcs.length} PLS: ${riv} entlang Gewässer`+(circ?`, ${circ} als Kreis`:'')+(none?`, ${none} ohne Gebiet`:'')}
+  if(reach.length){const pk=JSON.stringify([posts.map(q=>[q.lat,q.lon]),(stops||[]).map(q=>[q.lat,q.lon,q.pts])]);
+    r.eta=(lat,lon)=>{let best=null;for(const q of reach){const d=riverReach(q.n,q.s,{lat,lon},posts,stops,pk);if(d==null)continue;if(d<=q.D)return{inside:1};const at=q.s.at+d/flow;if(!best||at<best.at)best={at,d:d-q.D}}return best}}
   return r}
 /* ---------- Koordinaten ---------- */
 // Standard in der Verwaltung (settings coord_sys), pro Person übersteuerbar (users.coord_sys); Schlüssel wie auf dem Server (COORDS)

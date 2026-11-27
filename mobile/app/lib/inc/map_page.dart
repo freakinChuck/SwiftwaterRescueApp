@@ -719,6 +719,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     final sub = [r != null ? js(r['name']) : 'Ohne Spezialrolle', ext ? 'Externe Einsatzkraft' : js(s.modeOf(js(p['mode']))['name'])].where((x) => x.isNotEmpty).join(' · ');
     final loc = [ext ? 'Fester Standort' : 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}', s.fc(p['lat'], p['lon'])].where((x) => x.isNotEmpty).join(' · ');
     final nav = navBtn(s, p['lat'], p['lon'], js(p['name'])), tel = ext ? null : telBtn(s, p), telT = ext ? null : telTxt(s, p);
+    final eta = s.etaTxt([llOf(p)]); // wann das Suchgebiet diese Stelle erreicht (Issue #258)
     return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
       Row(children: [
         ext ? _personMk(p, ext: true) : avatar(p, r: 22, border: _roleCol(p)),
@@ -751,6 +752,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
       if (ext && js(p['descr']).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(js(p['descr']))),
       if (telT != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(telT)),
       Padding(padding: const EdgeInsets.only(top: 4), child: Mut(loc)),
+      if (eta.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(eta, style: const TextStyle(fontSize: 12, color: Color(0xFFFFB35C)))), // Issue #258
       if (!ext || nav != null)
         Padding(
             padding: const EdgeInsets.only(top: 6),

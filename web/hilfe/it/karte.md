@@ -61,5 +61,6 @@ L'area di ricerca segue il corso d'acqua a partire dal **PLS** (point last seen,
 - Se ogni vittima ha un proprio PLS, l'area di ricerca è l'unione delle sottoaree.
 - L'avviso in basso a sinistra riassume l'area di ricerca; un clic apre i dati per ogni PLS.
 - Se la rete idrografica non è disponibile, l'app disegna un cerchio attorno al PLS.
+- **Arrivo dell'area di ricerca (ETA)**: per i soccorritori, i soccorritori esterni (p. es. posti), i marcatori e le ubicazioni fisse a valle dell'area di ricerca, le finestre «Soccorritori» e «Marcatori» e l'info persona indicano quando l'area di ricerca raggiungerà il punto, con l'ora e in relativo (p. es. «Area di ricerca qui verso le 14:35 (tra 23 min)»). Il calcolo avviene lungo il corso d'acqua con la velocità della corrente dal PLS; il punto deve trovarsi al massimo a 150 m dal corso d'acqua. Se in mezzo c'è un posto o uno sbarramento, oppure se il punto è già nell'area di ricerca o fuori dalla rete idrografica caricata, l'indicazione manca.
 
 La velocità della corrente la impostano tutti i partecipanti nel menu (scheda «Velocità della corrente & area di ricerca»).
