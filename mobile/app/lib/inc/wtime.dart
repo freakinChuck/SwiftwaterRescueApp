@@ -180,7 +180,37 @@ Widget? wtCard(BuildContext c, IncStore s) {
   final act = s.canManage
       ? s.participants.where((p) => (ji(p['user_id']) ?? 0) > 0 && ji(p['user_id']) != s.uid && p['left_at'] == null && p['mode'] != 'declined' && ps['${p['user_id']}'] != null).toList()
       : <J>[];
-  return MCard(title: 'Wasserzeit', children: [
+  return MCard(title: 'Wasserzeit', buttons: [
+    if (s.joined && mine == null)
+      FilledButton(
+          onPressed: () async {
+            final k = await _suitDlg(c, s, 'Ich gehe ins Wasser', my, ok: 'Starten');
+            if (k != null) await s.act('incident/wtime/start', {'suit': k});
+          },
+          child: const Text('🌊 Ich gehe ins Wasser')),
+    if (mine != null) FilledButton(onPressed: () => s.act('incident/wtime/stop', {}), child: const Text('Zurück an Land')),
+    if (s.joined) // auch ausserhalb des Wassers (Feedback zu #241)
+      OutlinedButton(
+          onPressed: () async {
+            final k = await _suitDlg(c, s, 'Kälteschutz ändern', my);
+            if (k != null && k != my) await s.act('incident/wtime/suit', {'suit': k});
+          },
+          child: const Text('Kälteschutz ändern')),
+    if (jb(w['can_temp']))
+      OutlinedButton(
+          onPressed: () async {
+            final v = await inputDlg(c, 'Wassertemperatur von Hand (°C)',
+                value: src == 'manual' && t != null ? '$t' : '', type: const TextInputType.numberWithOptions(decimal: true, signed: true), ok: 'Setzen', hint: src == 'bafu' && t != null ? '$t' : null);
+            if (v == null) return;
+            final n = double.tryParse(v.trim().replaceAll(',', '.'));
+            if (v.trim().isNotEmpty && n == null) {
+              s.toast('Temperatur eingeben (−2 bis 35 °C).', 'err');
+              return;
+            }
+            await s.act('incident/wtime/temp', {'temp': n});
+          },
+          child: const Text('Wassertemperatur setzen')),
+  ], children: [
     Mkv([
       (tr('Wassertemperatur'), tt),
       (tr('Richtwerte'), suits.map((x) => '${tr(js(x['name']))} ${((ji(lim[x['k']]) ?? 0) / 60).round()} min').join(' · ')),
@@ -229,35 +259,5 @@ Widget? wtCard(BuildContext c, IncStore s) {
         child: Mut(
             '${jb(w['auto']) ? 'Die App erkennt den Aufenthalt im Wasser auch selbst (mit geladenem Gewässernetz, nicht in einem Fahrzeug). ' : ''}Warnung bei ${ji(w['warn']) ?? 75} % und beim Erreichen des Richtwerts an dich und die Einsatzleitung.',
             size: 12)),
-  ], buttons: [
-    if (s.joined && mine == null)
-      FilledButton(
-          onPressed: () async {
-            final k = await _suitDlg(c, s, 'Ich gehe ins Wasser', my, ok: 'Starten');
-            if (k != null) await s.act('incident/wtime/start', {'suit': k});
-          },
-          child: const Text('🌊 Ich gehe ins Wasser')),
-    if (mine != null) FilledButton(onPressed: () => s.act('incident/wtime/stop', {}), child: const Text('Zurück an Land')),
-    if (s.joined) // auch ausserhalb des Wassers (Feedback zu #241)
-      OutlinedButton(
-          onPressed: () async {
-            final k = await _suitDlg(c, s, 'Kälteschutz ändern', my);
-            if (k != null && k != my) await s.act('incident/wtime/suit', {'suit': k});
-          },
-          child: const Text('Kälteschutz ändern')),
-    if (jb(w['can_temp']))
-      OutlinedButton(
-          onPressed: () async {
-            final v = await inputDlg(c, 'Wassertemperatur von Hand (°C)',
-                value: src == 'manual' && t != null ? '$t' : '', type: const TextInputType.numberWithOptions(decimal: true, signed: true), ok: 'Setzen', hint: src == 'bafu' && t != null ? '$t' : null);
-            if (v == null) return;
-            final n = double.tryParse(v.trim().replaceAll(',', '.'));
-            if (v.trim().isNotEmpty && n == null) {
-              s.toast('Temperatur eingeben (−2 bis 35 °C).', 'err');
-              return;
-            }
-            await s.act('incident/wtime/temp', {'temp': n});
-          },
-          child: const Text('Wassertemperatur setzen')),
   ]);
 }
