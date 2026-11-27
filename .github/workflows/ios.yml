@@ -1,4 +1,5 @@
-# iOS-IPA bauen, signieren und optional nach App Store Connect (TestFlight) hochladen.
+# iOS-IPA bauen, signieren und optional nach App Store Connect (TestFlight) hochladen; mit «submit» (Release-Tags, Issue #264)
+# zusätzlich als neue App-Store-Version zur Prüfung einreichen (fastlane deliver), nach der Freigabe automatisch veröffentlicht.
 # Wird aufgerufen von mobile.yml (Native Apps, auch für «nur iOS» aus testflight.yml); Geheimnisse über «secrets: inherit», siehe mobile.yml.
 name: iOS bauen
 
@@ -7,6 +8,10 @@ on:
     inputs:
       upload:
         description: Signiertes IPA nach App Store Connect hochladen
+        type: boolean
+        default: false
+      submit:
+        description: Nach dem Upload als App-Store-Version zur Prüfung einreichen (nur mit upload)
         type: boolean
         default: false
       build:
@@ -151,6 +156,7 @@ jobs:
           if-no-files-found: error
       # Nur wenn der Aufrufer es verlangt (Native Apps: auf main; TestFlight: immer), nur signiert für den App Store
       - name: Nach App Store Connect hochladen
+        id: asc
         if: inputs.upload && steps.sign.outputs.signed == '1'
         env:
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -172,6 +178,55 @@ jobs:
           ipa=$(ls out/*.ipa | head -1)
           xcrun altool --upload-app -t ios -f "$ipa" --apiKey "$KEY_ID" --apiIssuer "$ISSUER"
           echo "::notice::$(basename "$ipa") (Build ${{ steps.ver.outputs.build }}) an App Store Connect übergeben, erscheint nach der Verarbeitung in TestFlight"
+          echo "ok=1" >> "$GITHUB_OUTPUT"
+      # Issue #264: Release-Tags gehen in den App Store. deliver wartet, bis App Store Connect den Build verarbeitet hat, legt die Version an
+      # (bzw. nimmt die offene), setzt «Neue Funktionen» aus web/changes.json und reicht zur Prüfung ein. Metadaten, Bildschirmfotos und
+      # Angaben zur App müssen in App Store Connect schon vollständig sein (einmalig von Hand, siehe mobile/README.md).
+      - name: Im App Store zur Prüfung einreichen
+        if: inputs.submit && steps.asc.outputs.ok == '1'
+        env:
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          LOCALE: ${{ vars.ASC_LOCALE || 'de-DE' }}
+          AUTO: ${{ vars.IOS_AUTO_RELEASE || 'true' }}
+          VER: ${{ steps.ver.outputs.name }}
+        shell: bash
+        run: |
+          command -v fastlane >/dev/null || brew install fastlane
+          f=~/.appstoreconnect/private_keys/AuthKey_"$KEY_ID".p8
+          d="$RUNNER_TEMP/fl"; mkdir -p "$d/fastlane"
+          export ASC_JSON="$d/asc.json" NOTES="$d/notes.txt" BUILD_NR="${{ steps.ver.outputs.build }}"
+          jq -n --arg id "$KEY_ID" --arg is "$ISSUER" --rawfile k "$f" '{key_id:$id, issuer_id:$is, key:$k, in_house:false}' > "$ASC_JSON"
+          # «Neue Funktionen» = Punkte von «Was ist neu» dieser Version (höchstens 4000 Zeichen)
+          python3 - "$VER" "$GITHUB_WORKSPACE/web/changes.json" > "$NOTES" <<'PY'
+          import json, sys
+          try: vs = json.load(open(sys.argv[2], encoding='utf-8')).get('versions', [])
+          except Exception: vs = []
+          it = next((x.get('items', []) for x in vs if x.get('version') == sys.argv[1]), [])
+          print(('\n'.join('• ' + i for i in it) or 'Verbesserungen und Fehlerbehebungen')[:4000])
+          PY
+          # Eigene Fastfile nur für diesen Schritt: so gehen Release Notes und Angaben zur Einreichung als Hash an deliver
+          cat > "$d/fastlane/Fastfile" <<'RB'
+          lane :submit do
+            deliver(
+              api_key_path: ENV['ASC_JSON'],
+              app_identifier: 'ch.swiftwaterrescue.app',
+              app_version: ENV['VER'],
+              build_number: ENV['BUILD_NR'],
+              skip_binary_upload: true,
+              skip_screenshots: true,
+              release_notes: { ENV['LOCALE'] => File.read(ENV['NOTES']).strip },
+              submit_for_review: true,
+              automatic_release: ENV['AUTO'] == 'true',
+              submission_information: { export_compliance_uses_encryption: false, add_id_info_uses_idfa: false },
+              run_precheck_before_submit: false,
+              force: true
+            )
+          end
+          RB
+          (cd "$d" && fastlane submit)
+          rm -f "$ASC_JSON"
+          echo "::notice::Version $VER (Build ${{ steps.ver.outputs.build }}) im App Store zur Prüfung eingereicht$([ "$AUTO" = true ] && echo ', wird nach der Freigabe veröffentlicht')"
       - name: API-Schlüssel aufräumen
         if: always()
         shell: bash

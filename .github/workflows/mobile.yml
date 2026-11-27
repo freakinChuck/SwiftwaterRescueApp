@@ -3,13 +3,17 @@
 # Geheimnisse (Repository → Settings → Secrets and variables → Actions), alle optional, siehe mobile/README.md:
 #   Android: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 #   iOS:     IOS_CERT_P12_BASE64, IOS_CERT_PASSWORD, IOS_PROFILE_BASE64, IOS_TEAM_ID, IOS_EXPORT_METHOD (app-store-connect | ad-hoc | enterprise)
-#   Upload:  ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (App-Store-Connect-API-Schlüssel; lädt signierte IPAs von main nach TestFlight)
-#   Play:    PLAY_SERVICE_ACCOUNT_JSON (Dienstkonto mit Zugriff in der Play Console; lädt das signierte AAB von main in Google Play)
-#            Variablen (Actions → Variables, optional): PLAY_TRACK (Standard internal), PLAY_STATUS (Standard completed, draft solange die App unveröffentlicht ist)
+#   Upload:  ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (App-Store-Connect-API-Schlüssel; lädt signierte IPAs von main nach TestFlight,
+#            Release-Tags zusätzlich zur Prüfung und Veröffentlichung im App Store, Issue #264)
+#            Variablen (optional): ASC_LOCALE (Sprache der Notes «Neue Funktionen», Standard de-DE), IOS_AUTO_RELEASE (Standard true = nach der Prüfung sofort veröffentlichen)
+#   Play:    PLAY_SERVICE_ACCOUNT_JSON (Dienstkonto mit Zugriff in der Play Console; lädt das signierte AAB von main und von Release-Tags in Google Play)
+#            Variablen (Actions → Variables, optional): PLAY_TRACK (main, Standard internal = interner Test), PLAY_TRACK_RELEASE (Release-Tags, Standard alpha = geschlossener Test),
+#            PLAY_STATUS (Standard completed, draft solange die App unveröffentlicht ist)
 #   Push:    FCM_API_KEY, FCM_PROJECT_ID, FCM_SENDER_ID, FCM_APP_ID_ANDROID, FCM_APP_ID_IOS
 # Der iOS-Teil steht in ios.yml; nur iOS bauen und nach TestFlight laden: testflight.yml («Run workflow»).
 # Version (Issue #175): gemeinsame Version aus der Datei VERSION. Ein Release-Tag «v<Version>» (Workflow release.yml, startet diesen Workflow auf dem Tag)
-# baut genau diese Version, lädt sie wie main nach TestFlight bzw. Google Play und hängt die Pakete an den GitHub-Release; «mobile-v<Version>» geht weiterhin.
+# baut genau diese Version und hängt die Pakete an den GitHub-Release; «mobile-v<Version>» baut nur, ohne Upload.
+# Ziele (Issue #264): main → TestFlight bzw. Google Play «interner Test»; Release-Tag v… → App Store (Prüfung, dann veröffentlicht) bzw. Google Play «Alpha».
 # Die App erhält Version und Build über --dart-define=APP_VERSION/APP_BUILD (lib/version.dart).
 # Build-Nummer (Issue #230): BUILD_BASE plus Laufnummer dieses Workflows, Android und iOS erhalten dieselbe (siehe Job «check»).
 # Nur iOS nach TestFlight (testflight.yml) startet diesen Workflow mit ios_only, damit es nur einen Zähler gibt.
@@ -165,7 +169,8 @@ jobs:
           packageName: ch.swiftwaterrescue.app
           releaseFiles: mobile/app/out/*.aab
           releaseName: ${{ steps.ver.outputs.name }} (${{ needs.check.outputs.build }})
-          track: ${{ vars.PLAY_TRACK || 'internal' }}
+          # Issue #264: Release-Tags in «Alpha» (geschlossener Test), main in «interner Test»
+          track: ${{ startsWith(github.ref, 'refs/tags/v') && (vars.PLAY_TRACK_RELEASE || 'alpha') || (vars.PLAY_TRACK || 'internal') }}
           status: ${{ vars.PLAY_STATUS || 'completed' }}
 
   ios:
@@ -176,6 +181,8 @@ jobs:
     with:
       # Upload nach TestFlight auf main, bei Release-Tags vX.Y.Z und bei ios_only (beliebiger Branch)
       upload: ${{ inputs.ios_only || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
+      # Issue #264: nur Release-Tags vX.Y.Z gehen zusätzlich in den App Store (Prüfung, dann veröffentlicht); main bleibt in TestFlight
+      submit: ${{ !inputs.ios_only && startsWith(github.ref, 'refs/tags/v') }}
       # dieselbe Build-Nummer wie Android (Issue #230); leer bei ios_only, dann bestimmt ios.yml sie mit derselben Formel
       build: ${{ needs.check.outputs.build }}
     secrets: inherit
