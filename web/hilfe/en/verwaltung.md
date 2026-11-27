@@ -85,6 +85,21 @@ Templates for external responders (name, description, special role, abbreviation
 
 Which tactical symbols are available for markers and whether markers without a symbol are allowed.
 
+### Operation concepts {#konzepte}
+
+Prepared situations for stretches of water (permission «Manage operation concepts»). At the top, the **behaviour per operation type**: what happens when a PLS lies within the scope (Off, Manual only, Suggest, Load automatically) and whether follow-on concepts are suggested. A concept can override the behaviour.
+
+**Edit** opens a dialog with a map:
+
+- **Scope**: «Area on the map» (set corner points) or «Along the water from A to B» (set A and B, «Calculate section» loads the river network; «Buffer» = how far a PLS may be from the water).
+- **Operation types** the concept applies to.
+- **Elements**: post (symbol, special role as assignment, assignment to persons and response groups, optionally set the special role and a vehicle), marker, area, line, external responder (also from a template), message to all, documents, exclude or include a river barrier, radio channels, additional call-out of response groups, switch on helicopters, start recording. «Preselected when loading» sets the ticks of the preview. Points can be moved on the map.
+
+**Take over from operation …** turns the markers, areas, lines and external responders of an operation or exercise into a draft. A concept that has already been loaded can only be deactivated.
+
+![Operation concepts](img/admin-konzepte.jpg)
+![Edit operation concept](img/admin-konzept-dialog.jpg)
+
 ## Plans {#planungen}
 
 Prepared exercises, planned secondary operations and free events with their elements, exercise schedule and registrations, runs with log and replay. See [Exercises and planning](#planung/vorbereiten).
@@ -281,6 +296,7 @@ Some things can normally only be deactivated or not deleted at all, so that oper
 | Template | External responders | external responders already recorded remain |
 | Skill with entries | Training | the recorded training of all persons |
 | Vehicle type with vehicles, vehicle from operations | Vehicles | the vehicles with sightings and combinations, also in the replay |
+| Operation concept | Operation concepts | concept with its elements; loaded markers and the log remain in operations |
 
 Before deleting, a confirmation lists the consequences. **This cannot be undone.** Running operations and your own account cannot be deleted. Every permanent deletion is recorded in the application log (without names).
 

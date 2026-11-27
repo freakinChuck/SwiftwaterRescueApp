@@ -885,6 +885,9 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void toast(String text, [String kind = 'ok']) => toasts.add(Toast(text, kind));
+
+  /// neu zeichnen (z. B. Einsatzkonzepte, Issue #260: Vorschau und Auswahl in cc.dart)
+  void ping() => notifyListeners();
   void fail(Object e) => toasts.add(Toast(e is ApiError ? e.message : '$e', 'err'));
 
   /// Aktion ausführen: Fehler als Hinweis, danach neu laden. Rückgabe: Antwort oder null bei Fehler.

@@ -156,6 +156,27 @@ const placeShape=f=>!f.pts?'':f.line?'Linie, ca. '+lineKm(f.pts).toFixed(lineKm(
 function riverNet(j){if(!j||!j.elements)throw new Error('ungültige Antwort');
   const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();
   ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));return{ways,byNode}}
+// Gewässernetz als Graph (Werkzeug Flussdistanz, Einsatzkonzepte «entlang Gewässer»): Knoten-ID → {id, lat, lon, adj:[[Nachbar, Meter, 1 = in Fliessrichtung]]}
+function rdBuild(j){const g=new Map(),node=(id,p)=>g.get(id)||g.set(id,{id,lat:p.lat,lon:p.lon,adj:[]}).get(id);
+  j.elements.filter(w=>w.geometry&&w.nodes).forEach(w=>{for(let k=1;k<w.nodes.length;k++){const u=node(w.nodes[k-1],w.geometry[k-1]),v=node(w.nodes[k],w.geometry[k]),d=L.latLng(u.lat,u.lon).distanceTo([v.lat,v.lon]);u.adj.push([v.id,d,1]);v.adj.push([u.id,d,0])}});return g}
+// nächster Punkt auf einem Gewässerabschnitt u → v (in Fliessrichtung); du/dv = Meter bis zu den Enden, e = Abstand zum gewählten Punkt
+function rdSnap(g,p){let best=null;const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);
+  g.forEach(u=>u.adj.forEach(([vid,d,f])=>{if(!f)return;const v=g.get(vid),ax=(u.lon-p.lng)*kx,ay=(u.lat-p.lat)*ky,dx=(v.lon-u.lon)*kx,dy=(v.lat-u.lat)*ky,l2=dx*dx+dy*dy,t=l2?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l2)):0,e=Math.hypot(ax+t*dx,ay+t*dy);
+    if(!best||e<best.e)best={e,u:u.id,v:vid,du:d*t,dv:d*(1-t),ll:[u.lat+(v.lat-u.lat)*t,u.lon+(v.lon-u.lon)*t]}}));return best}
+// kürzeste Wege (Dijkstra mit Binärheap); dir = nur in Fliessrichtung
+function rdDijkstra(g,src,dir){const D=new Map(),P=new Map(),h=[];
+  const push=(c,id)=>{h.push([c,id]);let i=h.length-1;while(i){const q=(i-1)>>1;if(h[q][0]<=h[i][0])break;[h[q],h[i]]=[h[i],h[q]];i=q}};
+  const pop=()=>{const t=h[0],x=h.pop();if(h.length){h[0]=x;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<h.length&&h[l][0]<h[m][0])m=l;if(r<h.length&&h[r][0]<h[m][0])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m}}return t};
+  src.forEach(([id,c])=>{if(!D.has(id)||c<D.get(id)){D.set(id,c);P.set(id,null);push(c,id)}});
+  while(h.length){const[c,id]=pop();if(c>D.get(id))continue;g.get(id).adj.forEach(([n,d,f])=>{if(dir&&!f)return;const nc=c+d;if(!D.has(n)||nc<D.get(n)){D.set(n,nc);P.set(n,id);push(nc,n)}})}
+  return{D,P}}
+// Weg vom Lotpunkt A zum Lotpunkt B: {d: Meter, pts: [[lat,lon],…]} oder null
+function rdPath(g,A,B,dir){let best=null;
+  if(A.u===B.u&&A.v===B.v&&(!dir||B.du>=A.du))best={d:Math.abs(B.du-A.du),nodes:[]}; // gleicher Abschnitt
+  const{D,P}=rdDijkstra(g,dir?[[A.v,A.dv]]:[[A.u,A.du],[A.v,A.dv]],dir);
+  (dir?[[B.u,B.du]]:[[B.u,B.du],[B.v,B.dv]]).forEach(([end,add])=>{if(!D.has(end))return;const d=D.get(end)+add;
+    if(!best||d<best.d){const nodes=[];for(let n=end;n!=null;n=P.get(n))nodes.unshift(n);best={d,nodes}}});
+  return best&&{d:best.d,pts:[A.ll,...best.nodes.map(n=>[g.get(n).lat,g.get(n).lon]),B.ll]}}
 // Gewässernetz über den Server (r = overpass bzw. public/net). Erreicht der Server Overpass nicht (502 mit query), fragt das Gerät
 // Overpass selbst mit der Abfrage und den Servern (Reihenfolge aus der Verwaltung) des Servers (andere IP-Adresse, Issue #28) und
 // liefert das Ergebnis über put für den Cache aller ab. Mit put (Einsatz-App, angemeldet) meldet es jeden Versuch für die Statistik (overpass/stat, Issue #45).
@@ -270,7 +291,7 @@ const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
 const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
 const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
-const ADMIN_PERMS=['users','uroles','groups','avail','skills','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','dsar','dsar_org','anon','cfg_conn','applog','versions','docs']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','skills','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','dsar','dsar_org','anon','cfg_conn','applog','versions','docs','concepts']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 // Abmelden: Server meldet die Sitzung ab (Gerätesitzung der App bzw. Browser-Token, Route logout), danach die App benachrichtigen (beendet das Konto, Issue #108)
 function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});

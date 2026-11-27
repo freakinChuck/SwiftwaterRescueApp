@@ -61,6 +61,19 @@ Im Fenster «Markierungen» setzt die Einsatzleitung:
 
 Alle sehen die Lage sofort. Entfernen über ✕ in der Liste. Ein Objekt der Geodaten-Ebene (Wehr, Brücke) lässt sich über sein Popup direkt als Markierung übernehmen.
 
+## Einsatzkonzepte {#konzepte}
+
+Ein Einsatzkonzept ist eine vorbereitete Lage für einen Gewässerabschnitt: Posten mit Auftrag, Markierungen, Bereiche, Linien, Externe, eine Nachricht an alle, Dokumente, Flusssperren, Funkkanäle, Nachbieten, Helikopter und Aufzeichnung. Die Verwaltung legt die Konzepte an ([Einsatzkonzepte](#verwaltung/konzepte)).
+
+- **Vorschlag beim PLS**: Liegt ein PLS (des Einsatzes oder eines Rettlings) im Geltungsbereich eines Konzepts, erscheint auf der Karte der Hinweis «Einsatzkonzept verfügbar» mit «Vorschau …», «Laden» und «Später». Je nach Einsatztyp lädt die App das Konzept auch automatisch; Nachrichten, Zuteilungen und Nachbieten bleiben dann offen, bis die Einsatzleitung sie im Register «Leitung» mit «Jetzt auslösen» schickt.
+- **Vorschau**: Die Elemente erscheinen gestrichelt auf der Karte. Häkchen wählen, was geladen wird; bereits geladene und Elemente ausgeschalteter Funktionen sind ausgegraut. «N von M Elementen laden» übernimmt sie.
+- **Geladen**: Die Elemente sind gewöhnliche Markierungen, Bereiche, Linien und Externe. Im Fenster «Markierungen» stehen sie in der Lage als eigene Gruppe «Einsatzkonzept «Name»». Posten zeigen «noch nicht besetzt» bzw. «besetzt durch …», sobald eine Einsatzkraft mit der Spezialrolle des Auftrags in der Nähe ist. Zugeteilte Personen erhalten ihren Auftrag als Nachricht, auch wenn sie erst später annehmen.
+- **Register «Leitung», Karte «Einsatzkonzepte»**: geladene Konzepte mit «Zeigen», «Elemente …» (fehlende nachladen) und «Entfernen» (die Markierungen und Externen des Konzepts verschwinden, Nachrichten, Funkkanäle, Flusssperren und Nachbieten bleiben), Vorschläge mit «Nicht laden», **Anschlusskonzepte** (das Suchgebiet erreicht den Geltungsbereich eines weiteren Konzepts flussabwärts) und «Anderes Konzept laden …».
+
+![Vorschlag beim PLS](img/konzept-vorschlag.jpg)
+![Vorschau eines Einsatzkonzepts](img/konzept-vorschau.jpg)
+![Karte «Einsatzkonzepte» im Register «Leitung»](img/konzept-leitung.jpg)
+
 ## Einsatzkräfte führen {#einsatzkraefte}
 
 Im Fenster «Einsatzkräfte» ändert die Einsatzleitung die **Spezialrolle** einer Person und **entfernt** Personen aus dem Einsatz (ein Wiedereinstieg bleibt möglich). Im Register «Leitung» gibt es dafür zusätzlich die Karte «Einsatzkräfte».

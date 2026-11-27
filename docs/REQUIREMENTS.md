@@ -499,3 +499,17 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **SO-05** – Auslösen, Quittieren und Beenden stehen im Einsatzlog; das Replay zeigt laufende Notrufe an der Person (#240).
 - **SO-06** – Funktion «Notruf (SOS)» je Einsatztyp ein-/ausschaltbar; Empfänger, Umkreis, Dauer des Drückens, Countdown und Signalton in der Verwaltung (Funktionen → «Notruf (SOS)») (#240).
 - **SO-07** – Im Demo-Modus löst eine simulierte Einsatzkraft im Beispiel einen Notruf aus, die Einsatzleitung quittiert ihn; ein eigener Notruf wird von der simulierten Einsatzleitung quittiert (#240).
+
+## 36. Einsatzkonzepte (KZ)
+
+- **KZ-01** – Die Verwaltung legt Einsatzkonzepte an: vorbereitete Lagen für einen Gewässerabschnitt mit Bezeichnung, Beschreibung, Einsatztypen und Elementen (Recht «Einsatzkonzepte verwalten», Einsatz → «Einsatzkonzepte») (#260).
+- **KZ-02** – Der Geltungsbereich ist ein Bereich auf der Karte oder ein Abschnitt entlang des Gewässers von A bis B (berechnet über das Gewässernetz, mit Puffer in Metern) (#260).
+- **KZ-03** – Elemente: Posten (Symbol, Spezialrolle als Auftrag, Zuteilung an Personen und Einsatzgruppen, optional Spezialrolle setzen und Fahrzeug), Markierung, Bereich, Linie, externe Einsatzkraft (auch aus einer Vorlage), Nachricht an alle, Dokumente, Flusssperre ausnehmen bzw. berücksichtigen, Funkkanäle, Nachbieten von Einsatzgruppen, Helikopter einschalten, Aufzeichnung starten; je Element «beim Laden vorausgewählt» (#260).
+- **KZ-04** – Liegt ein PLS (des Einsatzes oder eines Rettlings) im Geltungsbereich, gilt das Verhalten des Konzepts bzw. des Einsatztyps: aus, nur von Hand, vorschlagen (Standard bei Einsätzen) oder automatisch laden; Typen mit vorbereiteten Übungen standardmässig nur von Hand. Jedes Konzept wird je Einsatz höchstens einmal vorgeschlagen (#260).
+- **KZ-05** – Die Einsatzleitung lädt ein Konzept von Hand (Register «Leitung», Hinweis auf der Karte): Vorschau gestrichelt auf der Karte, Auswahl der Elemente, bereits geladene kommen nicht doppelt (#260).
+- **KZ-06** – Geladene Elemente sind gewöhnliche Markierungen, Bereiche, Linien und Externe des Einsatzes (Log, Replay, öffentliche Ansicht wie von Hand gesetzte); im Fenster «Markierungen» stehen sie als eigene Gruppe je Konzept; Posten zeigen «noch nicht besetzt» bzw. «besetzt durch …» (#260).
+- **KZ-07** – Nachrichten, Zuteilungen der Posten und Nachbieten löst immer eine Person aus: beim automatischen Laden bleiben sie offen, bis die Einsatzleitung sie auslöst oder verwirft. Zugeteilte Personen erhalten ihren Auftrag als Nachricht mit Markierung, auch wenn sie erst später annehmen (#260).
+- **KZ-08** – Anschlusskonzepte: erreicht das Suchgebiet den Geltungsbereich eines weiteren Konzepts, schlägt die App es der Einsatzleitung vor (je Einsatztyp abschaltbar, nie automatisch) (#260).
+- **KZ-09** – Die Einsatzleitung entfernt ein geladenes Konzept; seine Markierungen, Bereiche, Linien und Externen verschwinden, Nachrichten, Funkkanäle, Flusssperren und Nachbieten bleiben (#260).
+- **KZ-10** – «Aus Einsatz übernehmen» macht aus der Lage eines Einsatzes oder einer Übung einen Entwurf; geladene Konzepte lassen sich nur deaktivieren, endgültig löschen mit dem Spezialrecht (#260).
+- **KZ-11** – Funktion «Einsatzkonzepte» je Einsatztyp ein-/ausschaltbar; Web, PWA und native App; im Demo-Modus ein fiktives Konzept an der Reuss, das beim PLS vorgeschlagen wird (#260).

@@ -18,6 +18,7 @@ import '../monitor.dart';
 import '../push.dart';
 import '../service.dart';
 import '../sys.dart';
+import 'cc.dart';
 import 'ctx.dart';
 import 'geo.dart';
 import 'docs.dart';
@@ -1225,6 +1226,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     }
     // Flussdistanz
     if (_panel == 'rd' || rd.a != null) out.addAll(rdLayers(rd));
+    out.addAll(ccPreviewLayers(s, _panel)); // Vorschau eines Einsatzkonzepts (Issue #260)
     // Bereich zeichnen
     if (_draw != null && _drawPts.isNotEmpty) {
       out.add(PolylineLayer(polylines: [Polyline(points: [..._drawPts, if (_drawPts.length > 2 && !_drawLine) _drawPts.first], color: _drawCol, strokeWidth: 3)]));
@@ -1598,6 +1600,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         child: Text(t, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)))),
                 ?_joinBan(),
                 ?sosBar(context, s, this),
+                ?ccBanner(context, s, this, _panel), // Einsatzkonzepte (Issue #260)
                 if (_follow != null || _jfollow != null || s.autoView)
                   Padding(
                       padding: const EdgeInsets.only(top: 6),
@@ -1683,6 +1686,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         'docs' => docBtn(s) ? DocsPanel(s: s, map: this) : null,
         'hyd' => s.hyBtn ? HydPanel(s: s, map: this, openPrefs: _openPrefs) : null,
         'vx' => s.vx.on ? VoicePanel(s: s, map: this) : null,
+        'cc' => ccLead(s) ? CcPanel(s: s, map: this) : null, // Einsatzkonzepte (Issue #260)
         _ => null,
       };
 

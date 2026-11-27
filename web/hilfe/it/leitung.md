@@ -61,6 +61,19 @@ Nella finestra «Marcatori» la direzione dell'intervento imposta:
 
 Tutti vedono subito la situazione. Rimuovi con ✕ nell'elenco. Un oggetto del livello di geodati (traversa, ponte) può essere ripreso direttamente come marcatore dal suo popup.
 
+## Concetti d'intervento {#konzepte}
+
+Un concetto d'intervento è una situazione preparata per un tratto di corso d'acqua: postazioni con incarico, marcatori, aree, linee, soccorritori esterni, un messaggio a tutti, documenti, sbarramenti, canali radio, rinforzi, elicotteri e registrazione. L'amministrazione crea i concetti ([Concetti d'intervento](#verwaltung/konzepte)).
+
+- **Proposta al PLS**: se un PLS (dell'intervento o di un disperso) si trova nell'ambito di un concetto, la carta mostra l'avviso «Concetto d'intervento disponibile» con «Anteprima …», «Carica» e «Più tardi». A seconda del tipo d'intervento l'app carica il concetto anche automaticamente; messaggi, assegnazioni e rinforzi restano allora in sospeso finché la direzione li invia con «Esegui ora» nella scheda «Direzione».
+- **Anteprima**: gli elementi appaiono tratteggiati sulla carta. Spuntare cosa caricare; gli elementi già caricati e quelli di funzioni disattivate sono in grigio. «Carica N di M elementi» li riprende.
+- **Caricato**: gli elementi sono marcatori, aree, linee e soccorritori esterni ordinari. Nella finestra «Marcatori» compaiono nella situazione come gruppo «Concetto d'intervento «Nome»». Le postazioni mostrano «non ancora occupata» o «occupata da …» appena un soccorritore con il ruolo speciale dell'incarico è vicino. Le persone assegnate ricevono l'incarico come messaggio, anche se accettano più tardi.
+- **Scheda «Direzione», scheda «Concetti d'intervento»**: concetti caricati con «Mostra», «Elementi …» (caricare quelli mancanti) e «Rimuovi» (marcatori ed esterni del concetto scompaiono; messaggi, canali radio, sbarramenti e rinforzi restano), proposte con «Non caricare», **concetti successivi** (l'area di ricerca raggiunge l'ambito di un altro concetto a valle) e «Carica un altro concetto …».
+
+![Proposta al PLS](img/konzept-vorschlag.jpg)
+![Anteprima di un concetto d'intervento](img/konzept-vorschau.jpg)
+![Scheda «Concetti d'intervento» nella scheda «Direzione»](img/konzept-leitung.jpg)
+
 ## Gestire i soccorritori {#einsatzkraefte}
 
 Nella finestra «Soccorritori» la direzione dell'intervento modifica il **ruolo speciale** di una persona e **rimuove** persone dall'intervento (resta possibile rientrare). Nella scheda «Direzione» c'è inoltre la scheda «Soccorritori».

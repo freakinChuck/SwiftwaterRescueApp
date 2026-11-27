@@ -1,23 +1,38 @@
 # Konzept: Vordefinierte Einsatzkonzepte (Issue #260)
 
-Version 1 vom 27.11.2026. Grundlage: Issue #260 («Vordefinierte Einsatzkonzepte sollen geladen werden können. Manuelles Laden oder automatisch abhängig vom PLS»).
-Das ist ein Konzept, noch kein Code. Die Bilder sind Mockups: die echte App (Demo-Modus, Szenario Reuss Luzern) bzw. die Verwaltung, die neuen Teile eingesetzt. Offene Fragen an den Auftraggeber stehen am Schluss.
+Version 2 vom 27.11.2026, umgesetzt. Grundlage: Issue #260 («Vordefinierte Einsatzkonzepte sollen geladen werden können. Manuelles Laden oder automatisch abhängig vom PLS») und die Antworten des Auftraggebers auf Version 1.
+Die Bilder 1 bis 6 sind die Mockups von Version 1; die Bilder der umgesetzten Fassung stehen in der Bedienungsanleitung (`web/hilfe/img/konzept-*.jpg`, `admin-konzept*.jpg`).
+
+**Entscheide des Auftraggebers**
+1. Geltungsbereich: **beides**, Bereich auf der Karte und «entlang Gewässer von A bis B».
+2. Allgemeine Konzepte ohne Ort (Elemente relativ zum PLS): **nein**, entfällt.
+3. Automatisch laden: **Vorschlag ist gut** (Standard: Einsatz «Vorschlagen», Typen mit vorbereiteten Übungen «Nur von Hand»; «Automatisch laden» bleibt wählbar).
+4. Posten: **beides**, Markierung mit Auftrag (Spezialrolle) und direkte Zuteilung an Personen bzw. Einsatzgruppen mit Meldung.
+5. Anschlusskonzepte flussabwärts: **ja**.
+6. Recht: **eigenes** Recht `concepts` «Einsatzkonzepte verwalten».
+7. Weitere Bestandteile: **alles, was in einem Einsatz eingesetzt werden kann**, soll planbar sein: Posten, Markierungen, Bereiche, Linien, Externe, Nachricht, Dokumente, Flusssperren, Funkkanäle, Nachbieten von Einsatzgruppen, Helikopter, Aufzeichnung (Fahrzeuge als Angabe im Auftrag eines Postens; ihr Standort kommt von den Beacons und lässt sich nicht planen).
+
+**Abweichungen von Version 1**
+- «Überall» (relativ zum PLS) entfällt (Entscheid 2).
+- Kein festes Anschlusskonzept je Konzept: Die App schlägt jedes Konzept vor, dessen Geltungsbereich das berechnete Suchgebiet erreicht (je Einsatztyp abschaltbar).
+- Nachrichten, Zuteilungen und Nachbieten löst immer eine Person aus; beim automatischen Laden bleiben sie offen («Jetzt auslösen» bzw. «Verwerfen» im Register «Leitung»).
+- «Geändert» bei Elementen entfällt (Markierungen lassen sich im Einsatz nicht bearbeiten, nur entfernen).
 
 ## Ziel
 Für bekannte Gewässerabschnitte gibt es heute Einsatzpläne auf Papier: Wo stehen die Sicherungsposten, wo wird eingewassert, welche Gefahrenstellen gibt es, welche Partner sperren welche Brücke. Im Einsatz zeichnet die Einsatzleitung das alles von Hand in die Karte. Ein **Einsatzkonzept** hält diese Lage vorbereitet fest. Die Einsatzleitung lädt es mit zwei Klicks, oder die App schlägt es vor bzw. lädt es selbst, sobald ein PLS im Abschnitt liegt.
 
 ## Begriffe
 - **Einsatzkonzept**: vorbereitete Lage mit Bezeichnung, Beschreibung, Geltungsbereich, Einsatztypen und Elementen.
-- **Geltungsbereich**, drei Arten:
+- **Geltungsbereich**, zwei Arten:
   - **Bereich auf der Karte**: Polygon (wie feste Bereiche, 3–200 Eckpunkte).
-  - **Entlang Gewässer**: von Punkt A bis Punkt B auf dem Gewässernetz. Der Browser rechnet beim Speichern daraus einen Korridor (Gewässer plus Ufer wie `BANK_M`, dazu einstellbarer Puffer) und speichert ihn als Polygon. So prüft der Server immer nur «Punkt im Polygon» und braucht kein Gewässernetz.
-  - **Überall**: allgemeines Konzept ohne Ort; seine Elemente liegen **relativ zum PLS** (z. B. Beobachtungsposten 1 km und 3 km flussabwärts, Sammelplatz am PLS). Wird nur von Hand geladen.
+  - **Entlang Gewässer**: von Punkt A bis Punkt B auf dem Gewässernetz. Der Browser der Verwaltung berechnet beim Speichern den Weg entlang des Gewässers und speichert ihn mit einem Puffer in Metern. Der Server prüft nur den Abstand eines PLS zu diesen Linien und braucht kein Gewässernetz.
 - **Elemente**:
-  - **Posten**: Markierung mit Symbol (z. B. Sicherungsposten) und einer Spezialrolle als Auftrag. In der Lage steht «noch nicht besetzt» bzw. «besetzt durch …», sobald eine Person mit dieser Rolle in der Nähe ist. Das Suchgebiet begrenzt wie heute erst die Person (Rolle mit `is_post`), nicht die leere Markierung.
+  - **Posten**: Markierung mit Symbol (z. B. Sicherungsposten) und einer Spezialrolle als Auftrag, optional zugeteilt an Personen und Einsatzgruppen (sie erhalten den Auftrag als Nachricht mit Markierung, auf Wunsch mit Spezialrolle) und mit einem Fahrzeug als Angabe. In der Lage steht «noch nicht besetzt» bzw. «besetzt durch …», sobald eine Person mit dieser Rolle in der Nähe ist. Das Suchgebiet begrenzt wie heute erst die Person (Rolle mit `is_post`), nicht die leere Markierung.
   - **Markierung** (mit Einsatzsymbol), **Bereich**, **Linie**: wie in der Einsatz-App.
   - **Externe Einsatzkraft**: wie heute, optional aus einer Vorlage (`ext_templates`); begrenzt das Suchgebiet gemäss ihrer Spezialrolle.
   - **Nachricht**: wird beim Laden als Nachricht der ladenden Person an alle gesendet (z. B. «Posten gemäss Konzept beziehen»).
   - **Dokumente** aus der Ablage (#229): erscheinen im Fenster «Dokumente» unter «Für diesen Einsatz».
+  - **Flusssperre** eines festen Standorts ausnehmen bzw. berücksichtigen, **Funkkanäle** des Einsatzes, **Nachbieten** von Einsatzgruppen, **Helikopter** einschalten, **Aufzeichnung** starten.
   - Je Element «beim Laden vorausgewählt» ja/nein.
 
 ## Einsatz-App (Web und nativ)
@@ -46,12 +61,12 @@ Geladene Elemente sind **gewöhnliche** Markierungen, Bereiche, Linien und Exter
 Neue Karte **«Einsatzkonzepte»** zuoberst im Register «Leitung»:
 - geladene Konzepte mit Zeitpunkt, Person bzw. «automatisch», Anzahl Elemente und Änderungen; «Zeigen», «Elemente …» (fehlende nachladen, z. B. den abgewählten Sammelplatz), «Entfernen» (entfernt die unveränderten Elemente; geänderte nur nach Rückfrage),
 - **Anschlusskonzepte**: erreicht das berechnete Suchgebiet den Geltungsbereich eines weiteren Konzepts flussabwärts (oder nach Fliessgeschwindigkeit in Kürze), steht es hier mit «Vorschau …»; nie automatisch,
-- «Anderes Konzept laden …»: Liste aller Konzepte des Einsatztyps, passende zuerst, mit Suche; allgemeine Konzepte («Überall») werden am PLS ausgerichtet.
+- «Anderes Konzept laden …»: Liste aller Konzepte des Einsatztyps, passende zuerst, mit Suche.
 
 <img src="3-leitung.jpg" width="320">
 
 ### Ablauf auf dem Gerät
-- Allgemeine Konzepte und Anschlusskonzepte brauchen das Gewässernetz. Das rechnet wie das Suchgebiet der Browser bzw. die App der ladenden Person (`riverFollow`) und schickt die fertigen Koordinaten. Ohne Gewässernetz: Luftlinie flussabwärts ist nicht bestimmbar, deshalb Hinweis und Punktwahl auf der Karte für jedes relative Element.
+- Anschlusskonzepte prüft das Gerät der Einsatzleitung mit dem berechneten Suchgebiet (Linien entlang des Gewässers bzw. Kreis). Den Abschnitt «entlang Gewässer» berechnet der Browser der Verwaltung beim Speichern über das Gewässernetz (wie die Flussdistanz).
 - Kein Element wird doppelt geladen: lädt man ein Konzept erneut, kommen nur fehlende bzw. entfernte Elemente dazu.
 
 ## Verwaltung
@@ -66,19 +81,11 @@ Neuer Bereich **Einsatz → «Einsatzkonzepte»** (`NAV` `konzepte`, Recht siehe
 
 <img src="6-bearbeiten.jpg" width="760">
 
-## Server (`api/index.php`, eigene Datei `api/concepts.php` wie `docs.php`)
-**Tabellen**
-- `concepts`: `name`, `descr`, `scope` area|river|any, `area` (JSON-Polygon, bei `river` berechnet), `river` (JSON {a, b, buf}), `mode` NULL = wie Einsatztyp | hand | suggest | auto, `kinds` (JSON, NULL = alle), `next_id` (Anschlusskonzept), `sort`, `active`, `created_*`, `updated_*`.
-- `concept_items`: `concept_id`, `kind` post|point|area|line|ext|msg|doc, `name`, `descr`, `color`, `sym`, `abbr`, `role_id`, `tpl_id`, `lat`/`lon`, `pts`, `rel` (JSON, nur bei `any`: Distanz entlang Gewässer in km, Seite, Versatz), `text`, `doc_ids`, `def_on`, `sort`.
-- `inc_concepts`: `incident_id`, `concept_id`, `state` suggest|loaded|dismissed|removed, `auto`, `at`, `by`, `snap` (Stand des Konzepts beim Laden), `removed_at`/`removed_by`.
-- Neue Spalten `pois.cc_id`/`cc_item`, `externals.cc_id`/`cc_item`, `messages.cc_id`; `inc_kinds.cc_mode`, `inc_kinds.cc_next`.
-
-**Routen**: Verwaltung `concepts`, `concept/save|copy|move|remove`, `concept/from_incident`; Einsatz `incident/concepts` (passende und alle des Typs mit Elementen), `incident/concept/load` (`id`, `items`, bei relativen Elementen die berechneten Koordinaten), `incident/concept/remove` (`id`, `keep_changed`), `incident/concept/dismiss`. Geprüft wird in `conceptCheck($inc)` nach jeder Änderung eines PLS (`incident/pls`, `incident/rescuee/save` mit `pls`, `incident/start`, `mailStart`, `exRelease`), Punkt im Polygon für jede Quelle aus `plsSources()`. `incident/state` liefert `concepts` (geladene und vorgeschlagene, Vorschläge nur für `canManage`). Log-Einträge `cc` («lädt das Einsatzkonzept … (N Elemente)», «entfernt …»).
-
-**Funktion und Recht**
-- Funktion `cc` «Einsatzkonzepte» in `FEATURES` (je Einsatztyp), Routen in `FEATURE_ROUTES`. Elemente ausgeschalteter Funktionen (z. B. Externe) werden übersprungen und in der Vorschau ausgegraut.
-- Laden, Entfernen, Vorschläge: Einsatzleitung (`canManage`), auch die Übungsleitung.
-- Pflegen: neues Recht `concepts` «Einsatzkonzepte verwalten» (in `PERMS`, `ADMIN_PERMS`, `NAV_PERM`).
+## Server (`api/concepts.php`)
+- Tabellen `concepts` (Geltungsbereich `scope` area|river mit `area` bzw. `river` {a, b, buf, lines, km}, `mode`, `kinds`), `concept_items` (`kind` post|point|area|line|ext|msg|doc|stop|voice|invite|opt, `refs` JSON je Art, `def_on`), `inc_concepts` (je Einsatz und Konzept: Zustand, geladene Elemente, offene Aktionen). Herkunft an `pois` und `externals` (`cc_id`, `cc_item`; Posten mit `cc_role`, `cc_users`).
+- Verhalten je Einsatztyp in der Einstellung `cc_kinds`. Geprüft wird im Polling, sobald sich die PLS ändern (`ccCheck`, Punkt im Polygon bzw. Abstand zum Abschnitt).
+- Routen der Verwaltung `concepts`, `concept/save|move|active|remove|copy`, `concepts/cfg/save`, `concept/sources`, `concept/from`; im Einsatz `incident/concepts`, `incident/concept/load|run|drop|remove|dismiss`.
+- Funktion `cc` je Einsatztyp, Recht `concepts`; Laden, Auslösen und Entfernen durch die Einsatzleitung bzw. Übungsleitung.
 
 ## Zu beachten (Projektregeln)
 - Vorbereitete Übungen: optional ein Konzept, das beim Start geladen wird (Auswahl im Dialog der Übung); der AI-Assistent der Übungsvorbereitung kennt die Elemente als Bezugspunkte.
@@ -88,11 +95,8 @@ Neuer Bereich **Einsatz → «Einsatzkonzepte»** (`NAV` `konzepte`, Recht siehe
 - `DSAR_TABLES` (neue Tabellen), `PURGE_INC_TABLES` (`inc_concepts`), endgültig Löschen eines Konzepts (`PURGE_KINDS`), Applikationslog über `APPLOG_ROUTES`.
 - Bedienungsanleitung `verwaltung/konzepte`, `leitung/konzepte`; `docs/REQUIREMENTS.md` neuer Bereich **KZ**; Übersetzungen.
 
-## Offene Fragen an den Auftraggeber
-1. **Geltungsbereich**: Reicht ein Bereich auf der Karte, oder soll es auch «entlang Gewässer von A bis B» geben?
-2. **Allgemeine Konzepte** ohne Ort, deren Elemente relativ zum PLS stehen (z. B. Posten 1 km und 3 km flussabwärts): gewünscht?
-3. **Automatisch laden** auch bei scharfen Einsätzen, oder dort nur vorschlagen? Vorschlag: Einsatz «Vorschlagen», Übung «Nur von Hand».
-4. **Posten**: Genügt eine Markierung mit Auftrag (Spezialrolle), oder sollen Posten direkt Personen bzw. Einsatzgruppen zugeteilt werden, mit Meldung an die Person («Du bist Sicherungsposten 1»)?
-5. **Anschlusskonzepte** flussabwärts vorschlagen, wenn das Suchgebiet weiterwandert: gewünscht?
-6. Wer pflegt die Konzepte: eigenes Recht `concepts` oder das bestehende `cfg_inc`?
-7. Sollen weitere Dinge zum Konzept gehören, z. B. Flusssperren fester Standorte ein-/ausschalten, Funkkanäle, Nachbieten bestimmter Einsatzgruppen oder Fahrzeuge?
+## Umsetzung (Version 2)
+Technische Einzelheiten stehen in `CLAUDE.md` (Abschnitt «Einsatzkonzepte»), die Anforderungen in `docs/REQUIREMENTS.md` (KZ-01 bis KZ-11), die Bedienung in der Anleitung (`leitung/konzepte`, `verwaltung/konzepte`).
+- Server `api/concepts.php`, Prüfung des PLS im Polling (`ccCheck`), Laden/Auslösen/Entfernen, Zuteilung beim Annehmen (`ccJoin`).
+- Web `cc.js` (Hinweis, Vorschau, Register «Leitung», Gruppe im Fenster «Markierungen»), Verwaltung Einsatz → «Einsatzkonzepte».
+- Native App `lib/inc/cc.dart`, Demo im Web und in der App mit einem fiktiven Konzept an der Reuss.
