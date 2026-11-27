@@ -73,6 +73,24 @@ Avec les coches, vous masquez des entrées individuelles ou des groupes entiers 
 
 Dans l'onglet « Intervention », tous les participants définissent la **vitesse du courant** en m/s. L'app en calcule la longueur de la zone de recherche. Les stations de mesure au PLS (voir ci-dessous) aident à l'estimer.
 
+## Temps dans l'eau {#wasserzeit}
+
+Le **temps dans l'eau** surveille combien de temps une personne reste dans l'eau (nageurs, équipage de bateau dans l'eau), comme la surveillance des porteurs d'appareils respiratoires. Ainsi, personne ne reste trop longtemps dans l'eau froide sans que cela soit remarqué.
+
+1. Dans l'onglet « Intervention », carte **Temps dans l'eau**, vérifie ta **protection thermique** (aucune, combinaison néoprène, combinaison étanche). Est présélectionnée ta valeur par défaut du profil (carte « Temps dans l'eau »), sinon la dernière utilisée, sinon celle de l'organisation. Tu peux la modifier à tout moment, aussi à terre.
+2. Touche **🌊 Je vais dans l'eau**. Le temps tourne et s'affiche en haut de la carte avec le bouton **À terre**.
+3. De retour à terre : touche **Retour à terre**.
+
+La **valeur indicative** dépend de la protection thermique et de la température de l'eau. La température provient de la station de mesure de l'OFEV la plus proche ; la direction d'intervention peut la saisir à la main. Sans température, la valeur indicative du palier le plus froid s'applique.
+
+Le temps s'affiche près de la personne dans la fenêtre « Intervenants », dans l'info personne et sous forme de pastille sous son marqueur sur la carte : **bleu** en cours, **jaune** dès le préavertissement (par défaut 75 %), **rouge** dès la valeur indicative. Au préavertissement et lorsque la valeur indicative est atteinte, toi et la direction d'intervention recevez une notification ; les deux figurent dans le journal d'intervention.
+
+> Selon les réglages, l'app détecte aussi elle-même le séjour dans l'eau : si ta position est un moment très proche de l'axe du cours d'eau (pas dans un véhicule, pas en déplacement rapide), le temps dans l'eau démarre et tu reçois un avis. Si c'est faux, touche **Retour à terre**. Cela nécessite le réseau hydrographique (fonction « Zone de recherche »).
+
+La direction d'intervention démarre et termine aussi le temps dans l'eau d'autres personnes (boutons **🌊 Dans l'eau** et **À terre** dans la fenêtre « Intervenants » et dans l'info personne) et saisit la température de l'eau dans la carte « Temps dans l'eau ». Sous **Protection thermique des intervenants**, elle y règle aussi la protection thermique de chaque personne avant qu'elle n'aille dans l'eau ; si le temps dans l'eau court déjà, la nouvelle valeur indicative s'applique immédiatement.
+
+> S'il n'y a pas de station de l'OFEV avec température de l'eau près du PLS ou des intervenants, la température indique « inconnue ». L'app cherche alors à nouveau chaque minute dès que des positions sont transmises.
+
 ## Distance fluviale {#flussdistanz}
 
 L'outil **Distance fluviale** mesure la distance entre deux points le long du cours d'eau. Vous le trouvez comme bouton de carte et dans le menu sous « Outils », aussi sans intervention.

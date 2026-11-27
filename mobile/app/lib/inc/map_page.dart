@@ -35,6 +35,7 @@ import 'store.dart';
 import 'util.dart';
 import 'veh.dart';
 import 'voice.dart';
+import 'wtime.dart';
 import '../i18n.dart';
 
 const _fitPad = EdgeInsets.fromLTRB(50, 90, 80, 50);
@@ -761,6 +762,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                     .toList())),
       if (ext && js(p['descr']).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(js(p['descr']))),
       if (telT != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(telT)),
+      if (!ext) ?wtLine(s, p), // Wasserzeit (Issue #241)
       Padding(padding: const EdgeInsets.only(top: 4), child: Mut(loc)),
       if (eta.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(eta, style: const TextStyle(fontSize: 12, color: Color(0xFFFFB35C)))), // Issue #258
       if (!ext || nav != null)
@@ -770,6 +772,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
               if (!ext && uid != null) smallBtn(f ? 'Folgt' : 'Folgen', () => follow(f ? null : uid), primary: f),
               ?nav,
               ?tel,
+              if (!ext) ?wtBtn(context, s, p),
             ])),
     ]);
   }
@@ -907,7 +910,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         [_roleName(a), if (ext) 'Externe Einsatzkraft' else js(s.modeOf(js(a['mode']))['name'])].where((x) => x.isNotEmpty).join(' · '),
                         if (!ext && a['loc_at'] != null) 'Standort ${agoS(s.now, jn(a['loc_at'])!)}',
                       ]),
-                child: Tooltip(message: js(a['name']), child: _personMk(a, ext: ext))));
+                child: Tooltip(message: js(a['name']), child: wtWrap(_personMk(a, ext: ext), ext ? null : wtMk(s, [a])))));
       }
       final same = g.$2.every((x) => geoDist(llOf(x.$1)!, ll) <= 30);
       final names = g.$2.map((x) => js(x.$1['name'])).join(', ');
@@ -917,10 +920,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
           height: 40,
           child: GestureDetector(
               onTap: () => same ? (s.feat('pinfo') ? _pinfoOpen(g.$2) : _navAsk(ll.latitude, ll.longitude, names)) : fitPts(g.$2.map((x) => llOf(x.$1)!).toList()),
-              child: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: appBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
-                  child: Text('${g.$2.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))));
+              child: wtWrap(
+                  Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: appBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
+                      child: Text('${g.$2.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                  wtMk(s, g.$2.where((x) => !x.$2).map((x) => x.$1).toList()))));
     }).toList());
   }
 
@@ -1623,6 +1628,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                                   ? 'Folgen: ${_jName(_jfollow!)}'
                                   : 'Auto-Übersicht'),
                           onDeleted: _stopFollow)),
+                ?wtSelfChip(s), // eigene Wasserzeit (Issue #241)
               ])),
               const SizedBox(width: 8),
               FloatingActionButton.small(heroTag: 'view', tooltip: trn('Ansicht'), backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: _viewBox, child: const Icon(Icons.layers)),

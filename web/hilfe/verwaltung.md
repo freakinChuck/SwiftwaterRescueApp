@@ -120,6 +120,10 @@ Die Vergleichsgeschwindigkeiten, mit denen das Werkzeug Flussdistanz Fahrzeiten 
 
 Welche Navigations-Apps zur Wahl stehen und welche der Standard ist.
 
+### Wasserzeit {#wasserzeit}
+
+Richtwerte der Wasserzeit in Minuten je **Kälteschutz** (ohne, Neoprenanzug, Trockenanzug) und **Wassertemperatur** (Stufen frei wählbar). Die Vorgaben sind ein Vorschlag für aktive Arbeit in der Strömung; gleiche sie mit den Ausbildungsunterlagen der Organisation ab (**Vorgaben einsetzen** stellt sie wieder her). Dazu die Vorwarnung in Prozent, die Stufe der Meldungen und die automatische Erkennung (Abstand zur Gewässerachse, Dauer bis «im Wasser» bzw. «an Land») sowie der Umkreis für die Messstation mit Wassertemperatur. Je Einsatztyp schaltest du die Funktion unter [Funktionen](#funktionen) ein und aus.
+
 ### Notruf (SOS) {#sos}
 
 Wer bei einem Notruf alarmiert wird: **Einsatzleitung und Teilnehmende im Umkreis** (Umkreis in km), **nur die Einsatzleitung** oder **alle Teilnehmenden**. Dazu, wie lange der Knopf gedrückt werden muss (1–5 s), die Dauer des Countdowns zum Abbrechen (0–10 s, 0 = ohne) und ob in der Live-Konferenz ein Signalton ertönt. Die Funktion selbst schaltest du je Einsatztyp unter **Funktionen** ein und aus.
@@ -184,7 +188,7 @@ Titel, Logo, Felder des Reviews, mitgelieferte Abschnitte, erlaubte Dokumente je
 
 ### Statistik pro Person {#personenstatistik}
 
-Auswertung je Person mit Filter, Diagrammen und CSV.
+Auswertung je Person mit Filter, Diagrammen und CSV, auch mit der Wasserzeit (Summe der Zeiten im Wasser).
 
 ### Einsicht für Einsatzkräfte {#einsicht}
 

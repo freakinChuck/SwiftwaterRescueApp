@@ -55,6 +55,10 @@ In alto cambi mese (‹ Oggi ›), passi tra **Mese** ed **Elenco** e mostri o n
 - **Velocità**: in m/s, in km/h o entrambe (p. es. «1.8 m/s (6.5 km/h)»), per la velocità della corrente, la distanza fluviale e gli elicotteri. Con km/h inserisci anche la velocità della corrente in km/h. «Predefinito» usa l'impostazione dell'organizzazione.
 - **App di navigazione** per il pulsante 🧭: Google Maps, Mappe di Apple, Waze o un'altra app.
 
+## Tempo in acqua {#wasserzeit}
+
+Se la funzione «Tempo in acqua» è attivata, scegli qui la tua **protezione termica** abituale (nessuna, muta in neoprene, muta stagna). È preselezionata in ogni intervento; durante l'intervento puoi modificarla, così come la direzione dell'intervento. «Predefinito dell'organizzazione» usa l'impostazione dell'amministrazione. L'amministrazione può impostarla anche nella finestra «Modifica utente».
+
 ## Stazioni di misura {#messstationen}
 
 Nella scheda **Livello & portata** componi le tue stazioni di misura (fino a 20). Cerca per corso d'acqua o luogo, ↑ sposta, ✕ rimuove. Compaiono nella finestra [Stazioni di misura](#einsatz/messstationen), anche senza intervento.

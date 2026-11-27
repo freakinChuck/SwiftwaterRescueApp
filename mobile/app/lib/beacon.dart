@@ -287,6 +287,22 @@ class Beacons {
     }
   }
 
+  /// Wasserzeit (Issue #241): Abstand zur Gewässerachse in m für die automatische Erkennung im Hintergrund (lädt das Gewässernetz wie water,
+  /// aber ohne Boot in der Nähe); null = kein Gewässernetz
+  static Future<int?> waterD(Account a, double lat, double lon) async {
+    final la = (lat * 100).round() / 100, lo = (lon * 100).round() / 100, key = '$la,$lo';
+    var n = _nets[a.id];
+    if (n == null || n.key != key) {
+      RiverNet? net;
+      try {
+        net = RiverNet.parse(await overpassNet(a.api, {'around': [3000, la, lo]}));
+      } catch (_) {}
+      n = _nets[a.id] = (key: key, net: net);
+    }
+    final net = n.net;
+    return net == null ? null : waterDist(LatLng(lat, lon), [net]).clamp(0, 9999).round();
+  }
+
   /// Auf dem Wasser? Nur wenn im letzten Scan ein Wasserfahrzeug dieses Kontos stark zu sehen war (Boot): dann das Gewässernetz um den
   /// Standort laden (Route overpass, Zelle von 0.01°, gleiche Abfrage für alle Geräte in der Nähe) und wie die Einsatz-App messen.
   static Future<int> water(Account a, double lat, double lon) async {

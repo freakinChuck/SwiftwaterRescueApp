@@ -120,6 +120,10 @@ Le velocità di confronto con cui lo strumento Distanza fluviale calcola i tempi
 
 Quali app di navigazione sono disponibili e quale è quella predefinita.
 
+### Tempo in acqua {#wasserzeit}
+
+Valori indicativi del tempo in acqua in minuti per **protezione termica** (nessuna, muta in neoprene, muta stagna) e **temperatura dell'acqua** (livelli liberamente definibili). I valori predefiniti sono una proposta per il lavoro attivo nella corrente; confrontali con la documentazione di formazione dell'organizzazione (**Inserisci i predefiniti** li ripristina). Inoltre il preavviso in percentuale, il livello delle notifiche e il riconoscimento automatico (distanza dall'asse del corso d'acqua, durata fino a «in acqua» o «a terra») nonché il raggio per la stazione di misura con temperatura dell'acqua. Per tipo d'intervento attivi e disattivi la funzione in [Funzioni](#funktionen).
+
 ### Chiamata d'emergenza (SOS) {#sos}
 
 Chi viene allertato da una chiamata d'emergenza: **direzione d'intervento e partecipanti nel raggio** (raggio in km), **solo la direzione d'intervento** o **tutti i partecipanti**. Inoltre per quanto tempo va premuto il pulsante (1–5 s), la durata del conto alla rovescia per annullare (0–10 s, 0 = nessuno) e se nella conferenza dal vivo suona un segnale acustico. La funzione stessa si attiva e disattiva per tipo d'intervento sotto **Funzioni**.

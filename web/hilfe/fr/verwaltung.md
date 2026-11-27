@@ -120,6 +120,10 @@ Les vitesses de comparaison avec lesquelles l'outil Distance fluviale calcule le
 
 Quelles apps de navigation sont disponibles et laquelle est la valeur par défaut.
 
+### Temps dans l'eau {#wasserzeit}
+
+Valeurs indicatives du temps dans l'eau en minutes par **protection thermique** (aucune, combinaison néoprène, combinaison étanche) et **température de l'eau** (paliers librement définissables). Les valeurs par défaut sont une proposition pour un travail actif dans le courant ; compare-les avec les documents de formation de l'organisation (**Insérer les valeurs par défaut** les rétablit). En outre le préavertissement en pour cent, le niveau des notifications et la détection automatique (distance à l'axe du cours d'eau, durée jusqu'à « dans l'eau » ou « à terre ») ainsi que le rayon pour la station de mesure avec température de l'eau. Par type d'intervention, tu actives ou désactives la fonction sous [Fonctions](#funktionen).
+
 ### Appel d'urgence (SOS) {#sos}
 
 Qui est alerté lors d'un appel d'urgence : **direction d'intervention et participants dans le rayon** (rayon en km), **seulement la direction d'intervention** ou **tous les participants**. En outre, la durée d'appui sur le bouton (1–5 s), la durée du compte à rebours d'annulation (0–10 s, 0 = sans) et si un signal sonore retentit dans la conférence en direct. La fonction elle-même s'active et se désactive par type d'intervention sous **Fonctions**.

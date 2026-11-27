@@ -19,6 +19,7 @@ import 'skills.dart';
 import 'store.dart';
 import 'util.dart';
 import 'voice.dart';
+import 'wtime.dart';
 import '../i18n.dart';
 
 /// Rechte mit einem Bereich in der Verwaltung (ADMIN_PERMS in common.js)
@@ -627,6 +628,8 @@ class _IncMenuState extends State<IncMenu> {
             child: const Text('Einsatz verlassen')),
       ]));
     }
+    final wc = wtCard(c, s); // Wasserzeit (Issue #241)
+    if (wc != null) out.add(wc);
     if (jb(st['can_flow'])) {
       final srv = spdTo(jd(i['flow_ms']), s.spdU); // Eingabe in der Einheit der Person (Issue #259)
       if (_flSrv != srv && !_flFocus.hasFocus) {

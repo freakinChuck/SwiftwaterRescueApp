@@ -55,6 +55,10 @@ En haut, vous changez de mois (‹ Aujourd'hui ›), basculez entre **Mois** et 
 - **Vitesses** : en m/s, en km/h ou les deux (p. ex. « 1.8 m/s (6.5 km/h) »), pour la vitesse du courant, la distance fluviale et les hélicoptères. Avec km/h, tu saisis aussi la vitesse du courant en km/h. « Par défaut » reprend le réglage de l'organisation.
 - **App de navigation** pour le bouton 🧭 : Google Maps, Plans d'Apple, Waze ou une autre app.
 
+## Temps dans l'eau {#wasserzeit}
+
+Si la fonction « Temps dans l'eau » est activée, choisis ici ta **protection thermique** habituelle (aucune, combinaison néoprène, combinaison étanche). Elle est présélectionnée dans chaque intervention ; pendant l'intervention, tu peux la modifier, la direction d'intervention aussi. « Valeur par défaut de l'organisation » reprend le réglage de l'administration. L'administration peut aussi la régler dans le dialogue « Modifier l'utilisateur ».
+
 ## Stations de mesure {#messstationen}
 
 Dans la carte **Niveau & débit**, vous composez vos propres stations de mesure (jusqu'à 20). Recherche par cours d'eau ou lieu, ↑ déplace, ✕ retire. Elles apparaissent dans la fenêtre [Stations de mesure](#einsatz/messstationen), aussi sans intervention.
