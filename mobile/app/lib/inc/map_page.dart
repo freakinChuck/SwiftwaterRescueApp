@@ -595,7 +595,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   bool get _picking => _pick != null || _draw != null;
 
   // ---------- Info-Blatt (statt Popup) ----------
-  Future<void> _sheet(String title, List<String> lines, {double? lat, double? lon, String? navName, List<Widget> Function(BuildContext)? actions, List<Widget> Function(BuildContext)? extra}) async {
+  Future<void> _sheet(String title, List<String> lines, {double? lat, double? lon, String? navName, String eta = '', List<Widget> Function(BuildContext)? actions, List<Widget> Function(BuildContext)? extra}) async {
     if (_picking) return;
     await showModalBottomSheet(
         context: context,
@@ -608,6 +608,14 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                   const SizedBox(height: 4),
                   ...lines.where((l) => l.isNotEmpty).map((l) => Padding(padding: const EdgeInsets.only(top: 2), child: Text(l))),
                   if (lat != null && lon != null && s.fc(lat, lon).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Mut(s.fc(lat, lon))),
+                  if (eta.isNotEmpty) // wann das Suchgebiet diese Stelle erreicht (Issue #258)
+                    Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(children: [
+                          const Icon(Icons.timer_outlined, size: 16, color: Color(0xFFE07B00)),
+                          const SizedBox(width: 4),
+                          Expanded(child: Text(eta, style: const TextStyle(color: Color(0xFFE07B00), fontWeight: FontWeight.w600))),
+                        ])),
                   const SizedBox(height: 10),
                   Wrap(spacing: 8, runSpacing: 6, children: [
                     if (lat != null && lon != null && s.feat('nav'))
@@ -632,6 +640,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         lat: n.length > 1 ? null : (n.isEmpty ? ll.latitude : n[0].lat),
         lon: n.length > 1 ? null : (n.isEmpty ? ll.longitude : n[0].lon),
         navName: n.length == 1 && n[0].note.isNotEmpty ? '${js(p['name'])} – ${n[0].note}' : js(p['name']),
+        eta: s.etaTxt([ll, ...placePts(p)]),
         actions: (c) => [
               if (n.length > 1 && s.feat('nav'))
                 FilledButton(
@@ -1254,6 +1263,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     _sheet(js(p['label']).isEmpty ? js(p['name']) : js(p['label']), [what, js(p['by_name']).isNotEmpty ? 'von ${js(p['by_name'])}' : ''],
         lat: ll.latitude,
         lon: ll.longitude,
+        eta: s.etaTxt(p['kind'] == 'point' ? poiPts(p) : [poiPt(p), ...poiPts(p)]),
         actions: (c) => [
               if (s.canManage)
                 OutlinedButton(

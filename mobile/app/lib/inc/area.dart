@@ -15,7 +15,18 @@ const bankM = 30.0; // Ufergebiet je Seite
 const snapM = 300.0; // maximale Distanz PLS zum Gewässer
 const waterM = 80.0; // so nahe an der Gewässerachse gilt als «auf dem Gewässer»
 
-int netRadius(double d) => ((math.min(math.max(5000, d * 1.3), 30000)) / 1000).ceil() * 1000;
+/// w (Issue #258): weiter laden, damit die ETA auch Positionen flussabwärts ausserhalb des Suchgebiets erreicht (netWant, wie in common.js)
+int netRadius(double d, [double w = 0]) => ((math.min(math.max(math.max(5000, d * 1.3), w), 30000)) / 1000).ceil() * 1000;
+
+/// Radius, den die Positionen far (max = höchstens so weit vom PLS, Standard 30 km) für die ETA brauchen; 1 km Reserve, 5-km-Schritte (netWant in common.js)
+double netWant(LatLng s, List<({LatLng p, double max})> far) {
+  var w = 0.0;
+  for (final q in far) {
+    final d = geoDist(s, q.p);
+    if (d <= math.min(q.max, 30000)) w = math.max(w, d);
+  }
+  return w > 0 ? math.min(((w + 1000) / 5000).ceil() * 5000.0, 30000) : 0;
+}
 
 class Way {
   Way(this.id, this.nodes, this.geometry, this.name);
@@ -398,7 +409,7 @@ class SearchArea {
 
 /// srcs = sources des Servers ([{lat,lon,at,own,names}]), nets je PLS, get lädt das Netz, redraw nach dem Laden; rs = Rettlinge
 SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num now, List<({LatLng p, String name})> posts,
-    Future<J> Function(LatLng s, int r) get, void Function() redraw, List<J> rs, [List<J> stops = const []]) {
+    Future<J> Function(LatLng s, int r) get, void Function() redraw, List<J> rs, [List<J> stops = const [], List<({LatLng p, double max})> far = const []]) {
   final r = SearchArea();
   if (srcs.isEmpty) {
     final miss = rs.where((x) => x['rescued_at'] == null && x['lat'] == null).toList();
@@ -425,9 +436,9 @@ SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num
     final c = LatLng(lat, lon), p = AreaPart(partKey(lat, lon, at), names, c);
     r.parts.add(p);
     var n = nets[k];
-    final now0 = DateTime.now().millisecondsSinceEpoch;
-    if (n == null || (!n.loading && ((!n.fail && n.r < d * 1.1 && n.r < 30000) || (n.fail && now0 > n.retryAt)))) {
-      final rr = netRadius(d), slot = NetSlot(r: n?.r ?? 0, net: n?.net, loading: true);
+    final now0 = DateTime.now().millisecondsSinceEpoch, w = netWant(c, far);
+    if (n == null || (!n.loading && ((!n.fail && (n.r < d * 1.1 || n.r < w) && n.r < 30000) || (n.fail && now0 > n.retryAt)))) {
+      final rr = netRadius(d, w), slot = NetSlot(r: n?.r ?? 0, net: n?.net, loading: true);
       nets[k] = slot;
       get(c, rr).then((j) => NetSlot(r: rr, net: RiverNet.parse(j))).catchError((e) => NetSlot(r: rr, fail: true, err: '$e', retryAt: DateTime.now().millisecondsSinceEpoch + 20000)).then((v) {
         if (nets[k] == slot) {

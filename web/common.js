@@ -140,7 +140,11 @@ const fmtT=ts=>new Date(ts*1000).toLocaleTimeString(LOC,{hour:'2-digit',minute:'
 const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
 const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
 // Radius des Gewässernetzes für eine Driftdistanz D, auf 1 km aufgerundet, damit alle Geräte dieselbe Abfrage stellen (Server-Cache)
-const netRadius=D=>Math.ceil(Math.min(Math.max(5000,D*1.3),30000)/1000)*1000;
+// W (Issue #258): weiter laden, damit die ETA auch Positionen flussabwärts ausserhalb des Suchgebiets erreicht (netWant, in 5-km-Schritten)
+const netRadius=(D,W)=>Math.ceil(Math.min(Math.max(5000,D*1.3,W||0),30000)/1000)*1000;
+// Radius, den die Positionen far ([{lat, lon, max}], max = höchstens so weit vom PLS, Standard 30 km) für die ETA brauchen; 1 km Reserve, 5-km-Schritte,
+// damit alle Geräte dieselbe Abfrage stellen und nicht jede kleine Verschiebung neu lädt
+const netWant=(s,far)=>{let w=0;for(const q of far||[]){if(q.lat==null||q.lon==null)continue;const d=geoDist(s,q);if(d<=Math.min(q.max||30000,30000))w=Math.max(w,d)}return w?Math.min(Math.ceil((w+1000)/5000)*5000,30000):0};
 const geoDist=(a,b)=>L.latLng(a.lat,a.lon).distanceTo([b.lat,b.lon]);
 // feste Standorte mit pts (Issue #96, #134): line 1 = Linie (z. B. Fahrrinne, 2–200 Punkte, breiter Strich), sonst Bereich (Fläche); o = Stil der Fläche
 const placeGeo=(f,o)=>f.line?L.polyline(f.pts,{...o,weight:Math.max(4,(o.weight||0)+2),opacity:.95,fill:false}):L.polygon(f.pts,o);
@@ -248,15 +252,15 @@ const srcKey=s=>s.lat.toFixed(6)+','+s.lon.toFixed(6);
 // Schlüssel eines Teilgebiets: PLS mit Zeitpunkt, wie die Zusammenfassung in plsSources()
 const partKey=(lat,lon,at)=>lat.toFixed(6)+','+lon.toFixed(6)+'@'+at;
 const fmtDT=ts=>new Date(ts*1000).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys:[],lines:[],circles:[],info:[],parts:[],eta:()=>null},reach=[];
+function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops,far){const r={polys:[],lines:[],circles:[],info:[],parts:[],eta:()=>null},reach=[];
   if(!srcs.length){const miss=(rs||[]).filter(x=>!x.rescued_at&&x.lat==null);
     r.info.push(!(rs||[]).length?'Suchgebiet: Kein PLS gesetzt.':miss.length?'Suchgebiet: Kein PLS für '+miss.map(x=>'«'+x.name+'»').join(', ')+'. PLS des Einsatzes oder der Rettlinge setzen.':'Suchgebiet: Alle Rettlinge gefunden.');return r}
   if(!flow){r.info.push('Suchgebiet: Fliessgeschwindigkeit fehlt.');return r}
   srcs.forEach(s=>{const D=flow*(now-s.at),k=srcKey(s),who=s.names&&s.names.length?' «'+s.names.join('», «')+'»':'',lbl=srcs.length>1||who?`Suchgebiet ab PLS${who} (${fmtDT(s.at)}): `:'Suchgebiet: ';
     if(D<=0){r.info.push(lbl+'Der Zeitpunkt des PLS liegt in der Zukunft.');return}
     const p={key:partKey(s.lat,s.lon,s.at),names:s.names||[],lat:s.lat,lon:s.lon,polys:[],circles:[]};r.parts.push(p);
-    let n=nets.get(k);
-    if(!n||(!n.loading&&((!n.fail&&n.R<D*1.1&&n.R<30000)||(n.fail&&Date.now()>n.retryAt)))){const R=netRadius(D),old=n;n={...(old||{}),loading:true};nets.set(k,n);
+    let n=nets.get(k);const W=netWant(s,far);
+    if(!n||(!n.loading&&((!n.fail&&(n.R<D*1.1||n.R<W)&&n.R<30000)||(n.fail&&Date.now()>n.retryAt)))){const R=netRadius(D,W),old=n;n={...(old||{}),loading:true};nets.set(k,n);
       get(s,R).then(j=>({R,...riverNet(j)})).catch(e=>({R,fail:true,err:e.message,retryAt:Date.now()+20000})).then(v=>{if(nets.get(k)===n){nets.set(k,v);redraw()}})}
     const circle=why=>{const c={lat:s.lat,lon:s.lon,r:D};r.circles.push(c);p.circles.push(c);r.info.push(lbl+why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.')};
     if(n.fail)return circle('Gewässernetz nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
