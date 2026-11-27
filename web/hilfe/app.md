@@ -59,4 +59,4 @@ Im Einsatz mit Fahrzeugen fragt die App einmal nach Bluetooth. Sie erkennt die B
 
 ## Updates {#updates}
 
-Ist deine App-Version zu alt für den Server, erscheint ein Hinweis mit **Aktualisieren** (Google Play bzw. TestFlight). **Was ist neu** im Profil zeigt die Änderungen.
+Ist deine App-Version zu alt für den Server, erscheint ein Hinweis mit **Aktualisieren** (Google Play bzw. App Store). **Was ist neu** im Profil zeigt die Änderungen.

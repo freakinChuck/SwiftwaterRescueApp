@@ -28,6 +28,8 @@ import '../sys.dart';
 import '../track.dart';
 import 'area.dart';
 import 'docs.dart';
+import 'pois.dart' show poiPts, placePts;
+import 'rd.dart' show durS;
 import 'util.dart';
 import 'voice.dart';
 
@@ -104,6 +106,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   J? me;
   List<J> roles = [], modes = [];
   J? st; // letzter Stand von incident/state
+  double wtSkew = 0; // Wasserzeit (Issue #241): Serverzeit minus Gerätezeit, damit die Zeiten sekundengenau laufen
   final msgs = <J>[];
   int _lastMsg = 0;
 
@@ -149,6 +152,24 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   final nets = <String, NetSlot>{};
   int? _netsInc;
   SearchArea? area;
+
+  /// ETA (Issue #258): wann das Suchgebiet eine Stelle flussabwärts erreicht (Uhrzeit und relativ); pts = Punkte einer Position (Bereiche und Linien:
+  /// Mitte und Eckpunkte, es zählt der früheste). Leer, wenn die Stelle schon im Suchgebiet liegt oder nicht flussabwärts davon (etaOf in index.html).
+  String etaTxt(Iterable<LatLng?> pts) {
+    final a = area;
+    if (a == null || inc == null) return '';
+    ({num at, double d, bool inside})? best;
+    for (final p in pts) {
+      if (p == null) continue;
+      final e = a.eta(p);
+      if (e == null) continue;
+      if (e.inside) return '';
+      if (best == null || e.at < best.at) best = e;
+    }
+    if (best == null) return '';
+    final at = best.at, t = at - now > 72000 ? fmtDT(at) : fmtHM(at);
+    return 'Suchgebiet hier ca. $t (in ${durS((at - now).toDouble())})';
+  }
   final _areaLogged = <int>{};
 
   // eigener Standort
@@ -313,6 +334,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   String get csys => js(me?['coord_sys']).isNotEmpty ? js(me!['coord_sys']) : (js(me?['coord_default']).isNotEmpty ? js(me!['coord_default']) : 'lv95');
   String fc(dynamic lat, dynamic lon) => fmtC(jd(lat), jd(lon), csys);
+  /// Einheit der Geschwindigkeiten (Issue #259): eigene Wahl, sonst Standard der Organisation, sonst m/s
+  String get spdU => js(me?['speed_unit']).isNotEmpty ? js(me!['speed_unit']) : (js(me?['speed_default']).isNotEmpty ? js(me!['speed_default']) : 'ms');
+  String spd(dynamic ms) => fmtSpd(jd(ms), spdU);
+  String kmh(dynamic k) => fmtKmh(jd(k), spdU);
   String fcs(dynamic lat, dynamic lon, [String pre = ' · ', String post = '']) {
     final t = fc(lat, lon);
     return t.isEmpty ? '' : '$pre$t$post';
@@ -627,6 +652,12 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         final t = jm(nx['test_alarm']);
         notify(js(t['t']), js(t['b']), js(t['tag']), js(t['lvl']));
       }
+      // Wasserzeit (Issue #241): Warnungen an die Person und die Einsatzleitung, entdoppelt über den Schlüssel w:<id>:<Stufe>
+      if (jn(nx['now']) != null) wtSkew = jn(nx['now'])! - DateTime.now().millisecondsSinceEpoch / 1000;
+      for (final a in jl(nx['alerts'])) {
+        notify(js(a['t']), js(a['b']), js(a['tag']), js(a['lvl']));
+      }
+      _sosPoll(nx);
       final i = nx['incident'] is Map ? jm(nx['incident']) : null;
       if (i != null) {
         final id = ji(i['id'])!, lv = js(nx['level']).isEmpty ? 'crit' : js(nx['level']);
@@ -796,6 +827,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> ackAlarm() async {
     final a = alarm;
     if (a == null) return;
+    final sid = int.tryParse(RegExp(r'^x:(\d+)$').firstMatch(a.key)?.group(1) ?? '');
+    if (sid != null) unawaited(api.call('incident/sos/ack', body: {'id': sid}).then((_) => poll(), onError: (_) {})); // Notruf (Issue #240) quittieren
     _ack(a.key);
     alarm = null;
     await cancelNote(acc.id, a.key);
@@ -853,7 +886,57 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  // ---------- Notruf (SOS, Issue #240) ----------
+  Set<int>? _sosKnown;
+
+  /// laufende Notrufe: neue an mich als kritischer Alarm `x:<id>` (Vollbild), Kamera auf die Person, Ton in der Konferenz; beendete schliessen den Alarm
+  void _sosPoll(J nx) {
+    final l = nx['incident'] is Map && nx['sos'] is List ? jl(nx['sos']) : <J>[], ids = l.map((x) => ji(x['id'])!).toSet(), first = _sosKnown == null;
+    final known = _sosKnown ?? <int>{};
+    for (final x in l) {
+      final id = ji(x['id'])!;
+      if (!known.contains(id) && !jb(x['mine'])) {
+        if (!first) {
+          events.add('sos:$id');
+          if (jb(jm(nx['sos_cfg'] ?? {})['conf'])) unawaited(vx.sosTone());
+        }
+      }
+      if (jb(x['to_me']) && x['ack_by'] == null) notify('SOS', '${js(x['name'])} braucht Hilfe (Notruf)', 'x:$id', 'crit');
+    }
+    for (final id in known.difference(ids)) {
+      final k = 'x:$id';
+      alarmQ.removeWhere((q) => q.key == k);
+      if (alarm?.key == k) {
+        _ack(k);
+        alarm = null;
+        unawaited(cancelNote(acc.id, k).then((_) => alarmStop()));
+        _showAlarm();
+        toast('Notruf beendet', 'info');
+      }
+    }
+    _sosKnown = ids;
+  }
+
+  Future<void> sosSend() async {
+    final p = selfAt;
+    final r = await act('incident/sos', {'on': 1, if (p != null) 'lat': p.latitude, if (p != null) 'lon': p.longitude});
+    if (r != null) toast('Notruf gesendet', 'ok');
+  }
+
+  Future<void> sosEnd(int? id) async => act('incident/sos', {'on': 0, 'id': ?id}, 'Notruf beendet');
+
+  Future<void> sosAck(int? id) async {
+    final k = 'x:$id';
+    if (alarm?.key == k) return ackAlarm();
+    _ack(k);
+    alarmQ.removeWhere((q) => q.key == k);
+    await act('incident/sos/ack', {'id': id});
+  }
+
   void toast(String text, [String kind = 'ok']) => toasts.add(Toast(text, kind));
+
+  /// neu zeichnen (z. B. Einsatzkonzepte, Issue #260: Vorschau und Auswahl in cc.dart)
+  void ping() => notifyListeners();
   void fail(Object e) => toasts.add(Toast(e is ApiError ? e.message : '$e', 'err'));
 
   /// Aktion ausführen: Fehler als Hinweis, danach neu laden. Rückgabe: Antwort oder null bei Fehler.
@@ -904,10 +987,17 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     for (final p in [...participants.where((p) => p['lat'] != null && p['left_at'] == null), ...externals.where((x) => x['lat'] != null)]) {
       if (jb(roleOf(p['role_id'])?['is_post'])) posts.add((p: llOf(p)!, name: js(p['name'])));
     }
+    // ETA (Issue #258): Gewässernetz bis zu Markierungen, Bereichen, Linien und Externen (höchstens 30 km vom PLS) und festen Standorten bis place_near_km laden
+    final nearM = (jd(st?['place_near_km']) ?? 10) * 1000;
+    final far = <({LatLng p, double max})>[
+      for (final p in pois) for (final q in poiPts(p)) (p: q, max: 30000.0),
+      for (final x in externals) if (llOf(x) != null) (p: llOf(x)!, max: 30000.0),
+      for (final f in places) for (final q in [?llOf(f), ...placePts(f)]) (p: q, max: nearM),
+    ];
     area = searchArea(jl(st?['sources']), nets, jd(i['flow_ms']), now, posts, (s, r) => overpassNet(api, {'around': [r, s.latitude, s.longitude]}), () {
       _calcArea();
       notifyListeners();
-    }, rescuees, jl(st?['stops'])); // Flusssperren (Issue #182)
+    }, rescuees, jl(st?['stops']), far); // Flusssperren (Issue #182)
   }
 
   void _checkArea() {
@@ -1005,6 +1095,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
         if (manualPos == null && devPos != null) 'acc': devPos!.accuracy,
         // Gewässer nur, wenn der angezeigte Einsatz der eigene ist (sonst ist das Gewässernetz eines anderen geladen, Issue #167)
         'water': !otherShown && waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()) < waterM ? 1 : 0,
+        // Wasserzeit (Issue #241): Abstand zur Gewässerachse, nur mit geladenem Gewässernetz des eigenen Einsatzes
+        if (!otherShown && nets.values.any((n) => n.net != null)) 'wd': waterDist(p, nets.values.map((n) => n.net).whereType<RiverNet>()).clamp(0, 9999).round(),
         'manual': manualPos != null ? 1 : 0
       });
       locStatus = 'Standort wird geteilt (${fmtT(DateTime.now().millisecondsSinceEpoch / 1000)})';

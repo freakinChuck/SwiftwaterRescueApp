@@ -18,6 +18,7 @@ import '../monitor.dart';
 import '../push.dart';
 import '../service.dart';
 import '../sys.dart';
+import 'cc.dart';
 import 'ctx.dart';
 import 'geo.dart';
 import 'docs.dart';
@@ -30,10 +31,12 @@ import 'pois.dart';
 import 'prefs.dart';
 import 'rd.dart';
 import 'res.dart';
+import 'sos.dart';
 import 'store.dart';
 import 'util.dart';
 import 'veh.dart';
 import 'voice.dart';
+import 'wtime.dart';
 import '../i18n.dart';
 
 const _fitPad = EdgeInsets.fromLTRB(50, 90, 80, 50);
@@ -121,6 +124,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     });
     _eSub = s.events.stream.listen((e) {
       if (e == 'inc') _fitted = null;
+      // neuer Notruf (Issue #240): Kamera auf die Person, Folgen und Auto-Übersicht enden
+      final sid = e.startsWith('sos:') ? int.tryParse(e.substring(4)) : null, sp = sid == null ? null : sosById(s, sid);
+      if (sp != null && sosPos(sp) != null && _mapReady) {
+        _stopFollow();
+        centerOn(sosPos(sp)!, zoom: math.max(16, mc.camera.zoom));
+      }
     });
     s.addListener(_onStore);
     s.vx.addListener(_onVx); // Funk (Issue #113): Sprechtaste, Leiste, Zähler
@@ -589,7 +598,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
   bool get _picking => _pick != null || _draw != null;
 
   // ---------- Info-Blatt (statt Popup) ----------
-  Future<void> _sheet(String title, List<String> lines, {double? lat, double? lon, String? navName, List<Widget> Function(BuildContext)? actions, List<Widget> Function(BuildContext)? extra}) async {
+  Future<void> _sheet(String title, List<String> lines, {double? lat, double? lon, String? navName, String eta = '', List<Widget> Function(BuildContext)? actions, List<Widget> Function(BuildContext)? extra}) async {
     if (_picking) return;
     await showModalBottomSheet(
         context: context,
@@ -602,6 +611,14 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                   const SizedBox(height: 4),
                   ...lines.where((l) => l.isNotEmpty).map((l) => Padding(padding: const EdgeInsets.only(top: 2), child: Text(l))),
                   if (lat != null && lon != null && s.fc(lat, lon).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Mut(s.fc(lat, lon))),
+                  if (eta.isNotEmpty) // wann das Suchgebiet diese Stelle erreicht (Issue #258)
+                    Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(children: [
+                          const Icon(Icons.timer_outlined, size: 16, color: Color(0xFFE07B00)),
+                          const SizedBox(width: 4),
+                          Expanded(child: Text(eta, style: const TextStyle(color: Color(0xFFE07B00), fontWeight: FontWeight.w600))),
+                        ])),
                   const SizedBox(height: 10),
                   Wrap(spacing: 8, runSpacing: 6, children: [
                     if (lat != null && lon != null && s.feat('nav'))
@@ -626,6 +643,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         lat: n.length > 1 ? null : (n.isEmpty ? ll.latitude : n[0].lat),
         lon: n.length > 1 ? null : (n.isEmpty ? ll.longitude : n[0].lon),
         navName: n.length == 1 && n[0].note.isNotEmpty ? '${js(p['name'])} – ${n[0].note}' : js(p['name']),
+        eta: s.etaTxt([ll, ...placePts(p)]),
         actions: (c) => [
               if (n.length > 1 && s.feat('nav'))
                 FilledButton(
@@ -713,6 +731,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     final sub = [r != null ? js(r['name']) : 'Ohne Spezialrolle', ext ? 'Externe Einsatzkraft' : js(s.modeOf(js(p['mode']))['name'])].where((x) => x.isNotEmpty).join(' · ');
     final loc = [ext ? 'Fester Standort' : 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}', s.fc(p['lat'], p['lon'])].where((x) => x.isNotEmpty).join(' · ');
     final nav = navBtn(s, p['lat'], p['lon'], js(p['name'])), tel = ext ? null : telBtn(s, p), telT = ext ? null : telTxt(s, p);
+    final eta = s.etaTxt([llOf(p)]); // wann das Suchgebiet diese Stelle erreicht (Issue #258)
     return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
       Row(children: [
         ext ? _personMk(p, ext: true) : avatar(p, r: 22, border: _roleCol(p)),
@@ -744,7 +763,9 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                     .toList())),
       if (ext && js(p['descr']).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(js(p['descr']))),
       if (telT != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(telT)),
+      if (!ext) ?wtLine(s, p), // Wasserzeit (Issue #241)
       Padding(padding: const EdgeInsets.only(top: 4), child: Mut(loc)),
+      if (eta.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(eta, style: const TextStyle(fontSize: 12, color: Color(0xFFFFB35C)))), // Issue #258
       if (!ext || nav != null)
         Padding(
             padding: const EdgeInsets.only(top: 6),
@@ -752,6 +773,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
               if (!ext && uid != null) smallBtn(f ? 'Folgt' : 'Folgen', () => follow(f ? null : uid), primary: f),
               ?nav,
               ?tel,
+              if (!ext) ?wtBtn(context, s, p),
             ])),
     ]);
   }
@@ -889,7 +911,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                         [_roleName(a), if (ext) 'Externe Einsatzkraft' else js(s.modeOf(js(a['mode']))['name'])].where((x) => x.isNotEmpty).join(' · '),
                         if (!ext && a['loc_at'] != null) 'Standort ${agoS(s.now, jn(a['loc_at'])!)}',
                       ]),
-                child: Tooltip(message: js(a['name']), child: _personMk(a, ext: ext))));
+                child: Tooltip(message: js(a['name']), child: wtWrap(_personMk(a, ext: ext), ext ? null : wtMk(s, [a])))));
       }
       final same = g.$2.every((x) => geoDist(llOf(x.$1)!, ll) <= 30);
       final names = g.$2.map((x) => js(x.$1['name'])).join(', ');
@@ -899,10 +921,12 @@ class _IncPageState extends State<IncPage> implements MapCtl {
           height: 40,
           child: GestureDetector(
               onTap: () => same ? (s.feat('pinfo') ? _pinfoOpen(g.$2) : _navAsk(ll.latitude, ll.longitude, names)) : fitPts(g.$2.map((x) => llOf(x.$1)!).toList()),
-              child: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: appBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
-                  child: Text('${g.$2.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))));
+              child: wtWrap(
+                  Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: appBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
+                      child: Text('${g.$2.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                  wtMk(s, g.$2.where((x) => !x.$2).map((x) => x.$1).toList()))));
     }).toList());
   }
 
@@ -1214,7 +1238,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                 onTap: () => _sheet(name, [
                       resc ? 'Rettungshelikopter' : (heli ? 'Helikopter' : 'Luftfahrzeug'),
                       [js(x['type']), js(x['reg'])].where((e) => e.isNotEmpty).join(' · '),
-                      'Höhe $alt${x['gs'] != null ? ' · ${((jd(x['gs']) ?? 0) * 1.852).round()} km/h' : ''}',
+                      'Höhe $alt${x['gs'] != null ? ' · ${s.kmh(((jd(x['gs']) ?? 0) * 1.852).round())}' : ''}',
                       if (x['at'] != null) 'Stand ${fmtT(jn(x['at']))}',
                     ], lat: jd(x['lat']), lon: jd(x['lon'])),
                 child: Opacity(
@@ -1229,12 +1253,15 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     }
     // Flussdistanz
     if (_panel == 'rd' || rd.a != null) out.addAll(rdLayers(rd));
+    out.addAll(ccPreviewLayers(s, _panel)); // Vorschau eines Einsatzkonzepts (Issue #260)
     // Bereich zeichnen
     if (_draw != null && _drawPts.isNotEmpty) {
       out.add(PolylineLayer(polylines: [Polyline(points: [..._drawPts, if (_drawPts.length > 2 && !_drawLine) _drawPts.first], color: _drawCol, strokeWidth: 3)]));
       out.add(CircleLayer(circles: _drawPts.map((p) => CircleMarker(point: p, radius: 6, color: _drawCol, borderColor: Colors.white, borderStrokeWidth: 2)).toList()));
     }
     _selfLayer(out);
+    final so = sosLayer(s); // Notruf (Issue #240) zuoberst
+    if (so != null) out.add(so);
     return out;
   }
 
@@ -1254,6 +1281,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     _sheet(js(p['label']).isEmpty ? js(p['name']) : js(p['label']), [what, js(p['by_name']).isNotEmpty ? 'von ${js(p['by_name'])}' : ''],
         lat: ll.latitude,
         lon: ll.longitude,
+        eta: s.etaTxt(p['kind'] == 'point' ? poiPts(p) : [poiPt(p), ...poiPts(p)]),
         actions: (c) => [
               if (s.canManage)
                 OutlinedButton(
@@ -1586,6 +1614,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
               Column(children: [
                 FloatingActionButton.small(heroTag: 'menu', tooltip: trn('Menü'), backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: () => _sk.currentState?.openDrawer(), child: const Icon(Icons.menu)),
                 if (s.demo) Padding(padding: const EdgeInsets.only(top: 6), child: DemoBadge(onChanged: _demoChanged)), // Demo-Modus (Issue #74)
+                if (sosMay(s)) Padding(padding: const EdgeInsets.only(top: 8), child: SosButton(s: s)), // Notruf (Issue #240)
               ]),
               const SizedBox(width: 8),
               Expanded(
@@ -1598,6 +1627,8 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                             color: s.offline ? const Color(0xFF8A6D00) : (k != null ? hexColor(k.color) : appBlue).withValues(alpha: .92), borderRadius: BorderRadius.circular(16)),
                         child: Text(t, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)))),
                 ?_joinBan(),
+                ?sosBar(context, s, this),
+                ?ccBanner(context, s, this, _panel), // Einsatzkonzepte (Issue #260)
                 if (_follow != null || _jfollow != null || s.autoView)
                   Padding(
                       padding: const EdgeInsets.only(top: 6),
@@ -1608,6 +1639,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                                   ? 'Folgen: ${_jName(_jfollow!)}'
                                   : 'Auto-Übersicht'),
                           onDeleted: _stopFollow)),
+                ?wtSelfChip(s), // eigene Wasserzeit (Issue #241)
               ])),
               const SizedBox(width: 8),
               FloatingActionButton.small(heroTag: 'view', tooltip: trn('Ansicht'), backgroundColor: appBlue, foregroundColor: Colors.white, onPressed: _viewBox, child: const Icon(Icons.layers)),
@@ -1683,6 +1715,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
         'docs' => docBtn(s) ? DocsPanel(s: s, map: this) : null,
         'hyd' => s.hyBtn ? HydPanel(s: s, map: this, openPrefs: _openPrefs) : null,
         'vx' => s.vx.on ? VoicePanel(s: s, map: this) : null,
+        'cc' => ccLead(s) ? CcPanel(s: s, map: this) : null, // Einsatzkonzepte (Issue #260)
         _ => null,
       };
 
@@ -1714,6 +1747,37 @@ class _IncPageState extends State<IncPage> implements MapCtl {
     if (mounted) focusArea();
   }
 
+  /// Notruf im Alarm-Vollbild (Issue #240): Distanz, Zeigen und Navigation zur auslösenden Person
+  List<Widget> _sosAlarm(AlarmItem a) {
+    final id = int.tryParse(RegExp(r'^x:(\d+)$').firstMatch(a.key)?.group(1) ?? ''), x = id == null ? null : sosById(s, id), p = x == null ? null : sosPos(x);
+    if (x == null) return const [];
+    final d = sosDist(s, x), st = OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white, width: 1.5));
+    return [
+      const SizedBox(height: 12),
+      Text([sosAgo(s, x), if (d.isNotEmpty) '$d entfernt', if (p == null) 'ohne Standort'].join(' · '), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 18)),
+      if (p != null) ...[
+        const SizedBox(height: 16),
+        Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
+          OutlinedButton(
+              style: st,
+              onPressed: () async {
+                await s.ackAlarm();
+                centerOn(p, zoom: 16);
+              },
+              child: const Text('Quittieren und zeigen')),
+          if (s.feat('nav'))
+            OutlinedButton(
+                style: st,
+                onPressed: () async {
+                  await s.ackAlarm();
+                  await navGo(s, p.latitude, p.longitude, 'SOS ${js(x['name'])}');
+                },
+                child: const Text('🧭 Navigieren')),
+        ]),
+      ],
+    ];
+  }
+
   Widget _alarm(AlarmItem a) {
     final ms = _alarmModes(a);
     final fill = FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16));
@@ -1734,6 +1798,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                               Text(a.body, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 20)),
                               const SizedBox(height: 8),
                               Text(widget.account.label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+                              ..._sosAlarm(a),
                               const SizedBox(height: 32),
                               // Annehmen direkt im Alarm: eine Taste je Einrückoption
                               for (final x in ms) ...[

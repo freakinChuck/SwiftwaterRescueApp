@@ -73,6 +73,24 @@ Con le spunte nascondi singole voci o interi gruppi sulla mappa; **Mostra** spos
 
 Nella scheda «Intervento» tutti i partecipanti impostano la **velocità della corrente** in m/s. Da essa l'app calcola la lunghezza dell'area di ricerca. Le stazioni di misura al PLS (vedi sotto) aiutano nella stima.
 
+## Tempo in acqua {#wasserzeit}
+
+Il **tempo in acqua** sorveglia quanto a lungo una persona resta in acqua (soccorritori a nuoto, equipaggio di battello in acqua), come la sorveglianza dei portatori di apparecchi respiratori. Così nessuno resta troppo a lungo nell'acqua fredda senza che se ne accorga qualcuno.
+
+1. Nella scheda «Intervento», carta **Tempo in acqua**, verifica la tua **protezione termica** (nessuna, muta in neoprene, muta stagna). È preselezionata la tua impostazione predefinita del profilo (carta «Tempo in acqua»), altrimenti l'ultima usata, altrimenti quella dell'organizzazione. Puoi modificarla in qualsiasi momento, anche a terra.
+2. Tocca **🌊 Vado in acqua**. Il tempo scorre ed è indicato in alto sulla carta con il pulsante **A terra**.
+3. Di nuovo a terra: tocca **Ritorno a terra**.
+
+Il **valore indicativo** dipende dalla protezione termica e dalla temperatura dell'acqua. La temperatura proviene dalla stazione di misura dell'UFAM più vicina; la direzione dell'intervento può impostarla a mano. Senza temperatura vale il valore indicativo del livello più freddo.
+
+Il tempo è indicato presso la persona nella finestra «Soccorritori», nelle info persona e come etichetta sotto il suo marcatore sulla carta: **blu** in corso, **giallo** dal preavviso (predefinito 75 %), **rosso** dal valore indicativo. Al preavviso e al raggiungimento del valore indicativo tu e la direzione dell'intervento ricevete una notifica; entrambi figurano nel registro dell'intervento.
+
+> A seconda delle impostazioni, l'app riconosce anche da sola la permanenza in acqua: se la tua posizione è per un po' molto vicina all'asse del corso d'acqua (non in un veicolo e non in movimento veloce), il tempo in acqua inizia e ricevi un avviso. Se non è corretto, tocca **Ritorno a terra**. Serve la rete idrografica (funzione «Area di ricerca»).
+
+La direzione dell'intervento avvia e termina il tempo in acqua anche per altri (pulsanti **🌊 In acqua** e **A terra** nella finestra «Soccorritori» e nelle info persona) e imposta la temperatura dell'acqua nella carta «Tempo in acqua». Lì, sotto **Protezione termica dei soccorritori**, imposta anche la protezione termica di ogni persona prima che entri in acqua; se il tempo in acqua è già in corso, il nuovo valore indicativo vale subito.
+
+> Se vicino al PLS o ai soccorritori non c'è una stazione UFAM con temperatura dell'acqua, la temperatura risulta «sconosciuta». L'app cerca di nuovo ogni minuto, appena vengono trasmesse posizioni.
+
 ## Distanza fluviale {#flussdistanz}
 
 Lo strumento **Distanza fluviale** misura la distanza tra due punti lungo il corso d'acqua. Lo trovi come pulsante della mappa e nel menu sotto «Strumenti», anche senza intervento.
@@ -112,6 +130,16 @@ Quali canali senti e dove puoi parlare dipende dal tuo ruolo speciale e dalla di
 ## Veicoli {#fahrzeuge}
 
 I veicoli con un beacon Bluetooth compaiono sulla mappa non appena l'app nativa di un partecipante li vede. L'elenco si trova nella finestra «Soccorritori» sotto «Veicoli»: chi è a bordo, cosa è caricato (barca sul rimorchio) e dove è stato visto l'ultima volta. Caricare e scaricare si fa dal popup del veicolo.
+
+## Chiamata d'emergenza (SOS) {#sos}
+
+Se ti trovi tu stesso in pericolo, tieni premuto il pulsante rosso **SOS** in alto a sinistra sulla mappa per **2 secondi**. Segue un breve conto alla rovescia: **Annulla** ferma una chiamata involontaria, **Invia subito** la invia senza attendere. Il pulsante appare solo mentre partecipi all'intervento.
+
+A seconda dell'impostazione dell'organizzazione, la chiamata d'emergenza allerta la direzione d'intervento e i soccorritori vicini a te con un allarme **critico**, con il tuo nome e la tua posizione. Vedono uno schermo intero con la distanza, 🧭 e **Conferma**, una barra rossa in alto e un indicatore lampeggiante nella tua posizione; la mappa si sposta su di te. Se sei in una conferenza dal vivo, vi risuona un segnale acustico.
+
+Appena qualcuno conferma, la tua barra mostra «visto da …». Passato il pericolo, tocca **FINE** (o **Termina** nella barra); può terminarla anche la direzione d'intervento. Chiamata, conferma e fine figurano nel log e nel replay.
+
+> ! La chiamata d'emergenza non sostituisce una chiamata al 112/144/117 se serve aiuto esterno.
 
 ## Documenti {#dokumente}
 

@@ -11,6 +11,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'area.dart' show SearchArea, bankM;
+import 'cc.dart';
 import 'ctx.dart';
 import 'store.dart';
 import 'util.dart';
@@ -468,7 +469,7 @@ class _PoisPanelState extends State<PoisPanel> {
           borderRadius: pls ? null : BorderRadius.circular(3),
           border: pls ? Border.all(color: Colors.white, width: 2) : null));
 
-  Widget _item({Widget? check, required Widget sw, required String name, required String info, required List<Widget> acts, bool faded = false}) => Opacity(
+  Widget _item({Widget? check, required Widget sw, required String name, required String info, required List<Widget> acts, bool faded = false, String eta = ''}) => Opacity(
       opacity: faded ? .6 : 1,
       child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
@@ -479,6 +480,7 @@ class _PoisPanelState extends State<PoisPanel> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
               if (info.isNotEmpty) Mut(info, size: 12),
+              if (eta.isNotEmpty) Text(eta, style: const TextStyle(fontSize: 12, color: Color(0xFFFFB35C))), // Issue #258
             ])),
             ...acts,
           ])));
@@ -510,6 +512,7 @@ class _PoisPanelState extends State<PoisPanel> {
       sw: _swatch(js(f['color']).isEmpty ? _placeCol : js(f['color'])),
       name: '${placeBadge(s, f)}${js(f['name'])}',
       info: [placeInfo(s, f), placePropsText(s, f)].where((x) => x.isNotEmpty).join(' · '),
+      eta: s.etaTxt([llOf(f), ...placePts(f)]),
       acts: [
         smallBtn('Zeigen', () => _showPlace(f)),
         if (stopToggleOk(s, f)) smallBtn(stopOn(s, f) ? '⛔ aus' : '⛔ an', () => stopToggle(s, f)),
@@ -583,7 +586,8 @@ class _PoisPanelState extends State<PoisPanel> {
         check: Checkbox(value: !s.poiHide.contains(id), onChanged: (v) => s.setPoiHidden([id], v != true)),
         sw: p['sym'] != null ? Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: symPic(s, js(p['sym']), size: 24)) : _swatch(js(p['color'])),
         name: js(p['name']),
-        info: _poiInfo(s, p),
+        info: [if (p['cc_role'] != null) ccPostTxt(s, p), _poiInfo(s, p)].where((t) => t.isNotEmpty).join(' · '),
+        eta: s.etaTxt(p['kind'] == 'point' ? poiPts(p) : [c, ...poiPts(p)]),
         acts: [
           smallBtn('Zeigen', () => _showPoi(p)),
           if (c != null) ?navBtn(s, c.latitude, c.longitude, js(p['name'])),
@@ -596,8 +600,14 @@ class _PoisPanelState extends State<PoisPanel> {
   /// Lage: Markierungen der Einsatzleitung während des Einsatzes, je Art eine Untergruppe
   List<Widget> _poiGroups() {
     final ps = s.pois, subs = <Widget>[];
+    // Einsatzkonzepte (Issue #260): je geladenem Konzept eine eigene Untergruppe, die übrigen nach Art
+    for (final cid in {for (final p in ps) if (p['cc_id'] != null) ji(p['cc_id'])!}) {
+      final items = ps.where((p) => ji(p['cc_id']) == cid).toList();
+      subs.add(_grp('lage:cc$cid', '${trn('Einsatzkonzept')} «${ccName(s, cid) ?? ''}»', items.length, items.map(_poiRow).toList(),
+          v: items.every((p) => !s.poiHide.contains('${p['id']}')), on: (v) => s.setPoiHidden(items.map((p) => '${p['id']}'), !v), sub: true));
+    }
     for (final (k, t) in [('point', 'Markierungen'), ('area', 'Bereiche'), ('line', 'Linien')]) {
-      final items = ps.where((p) => (p['kind'] == 'area' || p['kind'] == 'line' ? p['kind'] : 'point') == k).toList();
+      final items = ps.where((p) => p['cc_id'] == null && (p['kind'] == 'area' || p['kind'] == 'line' ? p['kind'] : 'point') == k).toList();
       subs.add(_grp(
           'lage:$k',
           t,

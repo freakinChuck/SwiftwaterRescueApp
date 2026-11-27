@@ -52,7 +52,12 @@ En haut, vous changez de mois (‹ Aujourd'hui ›), basculez entre **Mois** et 
 
 - **Langue** : allemand, anglais, français ou italien. « Automatique » prend la langue de l'appareil, sinon la valeur par défaut de l'organisation. Le choix vaut pour votre compte (aussi dans l'administration et pour les notifications push) ; la page se recharge ensuite. Dans l'administration, vous la choisissez dans le menu du compte en haut à droite, à la connexion sous le bouton « Se connecter ».
 - **Système de coordonnées** : LV95 (par défaut), LV03, WGS84 décimal ou en degrés/minutes/secondes, ou masquer les coordonnées.
+- **Vitesses** : en m/s, en km/h ou les deux (p. ex. « 1.8 m/s (6.5 km/h) »), pour la vitesse du courant, la distance fluviale et les hélicoptères. Avec km/h, tu saisis aussi la vitesse du courant en km/h. « Par défaut » reprend le réglage de l'organisation.
 - **App de navigation** pour le bouton 🧭 : Google Maps, Plans d'Apple, Waze ou une autre app.
+
+## Temps dans l'eau {#wasserzeit}
+
+Si la fonction « Temps dans l'eau » est activée, choisis ici ta **protection thermique** habituelle (aucune, combinaison néoprène, combinaison étanche). Elle est présélectionnée dans chaque intervention ; pendant l'intervention, tu peux la modifier, la direction d'intervention aussi. « Valeur par défaut de l'organisation » reprend le réglage de l'administration. L'administration peut aussi la régler dans le dialogue « Modifier l'utilisateur ».
 
 ## Stations de mesure {#messstationen}
 

@@ -59,4 +59,4 @@ In un intervento con veicoli l'app chiede una volta il Bluetooth. Riconosce i be
 
 ## Aggiornamenti {#updates}
 
-Se la versione della tua app è troppo vecchia per il server, compare un avviso con **Aggiorna** (Google Play o TestFlight). **Novità** nel profilo mostra le modifiche.
+Se la versione della tua app è troppo vecchia per il server, compare un avviso con **Aggiorna** (Google Play o App Store). **Novità** nel profilo mostra le modifiche.

@@ -85,6 +85,21 @@ Templates for external responders (name, description, special role, abbreviation
 
 Which tactical symbols are available for markers and whether markers without a symbol are allowed.
 
+### Operation concepts {#konzepte}
+
+Prepared situations for stretches of water (permission «Manage operation concepts»). At the top, the **behaviour per operation type**: what happens when a PLS lies within the scope (Off, Manual only, Suggest, Load automatically) and whether follow-on concepts are suggested. A concept can override the behaviour.
+
+**Edit** opens a dialog with a map:
+
+- **Scope**: «Area on the map» (set corner points) or «Along the water from A to B» (set A and B, «Calculate section» loads the river network; «Buffer» = how far a PLS may be from the water).
+- **Operation types** the concept applies to.
+- **Elements**: post (symbol, special role as assignment, assignment to persons and response groups, optionally set the special role and a vehicle), marker, area, line, external responder (also from a template), message to all, documents, exclude or include a river barrier, radio channels, additional call-out of response groups, switch on helicopters, start recording. «Preselected when loading» sets the ticks of the preview. Points can be moved on the map.
+
+**Take over from operation …** turns the markers, areas, lines and external responders of an operation or exercise into a draft. A concept that has already been loaded can only be deactivated.
+
+![Operation concepts](img/admin-konzepte.jpg)
+![Edit operation concept](img/admin-konzept-dialog.jpg)
+
 ## Plans {#planungen}
 
 Prepared exercises, planned secondary operations and free events with their elements, exercise schedule and registrations, runs with log and replay. See [Exercises and planning](#planung/vorbereiten).
@@ -105,6 +120,14 @@ The comparison speeds with which the river distance tool calculates travel times
 
 Which navigation apps are available and which one is the default.
 
+### Water time {#wasserzeit}
+
+Guidelines for the water time in minutes per **thermal protection** (none, wetsuit, drysuit) and **water temperature** (bands freely selectable). The defaults are a suggestion for active work in the current; compare them with your organisation's training documents (**Insert defaults** restores them). Also the early warning in percent, the level of the notifications and the automatic detection (distance to the river axis, time until "in the water" or "ashore") as well as the radius for the gauging station with water temperature. Per incident type you switch the function on and off under [Functions](#funktionen).
+
+### Emergency call (SOS) {#sos}
+
+Who is alerted by an emergency call: **incident command and participants within the radius** (radius in km), **incident command only** or **all participants**. Also how long the button must be held (1–5 s), the length of the cancel countdown (0–10 s, 0 = none) and whether a signal tone sounds in the live conference. The function itself is switched on and off per incident type under **Functions**.
+
 ### Language {#sprache}
 
 The app is available in German, English, French and Italian. Here you set the **organisation default**. It applies to persons who have not chosen a language themselves and whose device uses none of these languages, as well as to push notifications to persons who have never opened the app.
@@ -123,9 +146,9 @@ Which base maps (aerial images, maps) are available, their order and the default
 
 ![Map providers](img/admin-karten.jpg)
 
-### Coordinates {#koordinaten}
+### Coordinates & units {#koordinaten}
 
-The default coordinate system. Each person can override it in the profile.
+The default coordinate system and the default unit for speeds (m/s, km/h or both) for flow speed, river distance and helicopters. Each person can override both in the profile. The public view always shows the default.
 
 ### Geodata sources {#geoquellen}
 
@@ -165,7 +188,7 @@ Title, logo, fields of the review, included sections, permitted documents per st
 
 ### Statistics per person {#personenstatistik}
 
-Evaluation per person with filter, charts and CSV.
+Evaluation per person with filter, charts and CSV, including the water time (total time in the water).
 
 ### View for responders {#einsicht}
 
@@ -277,6 +300,7 @@ Some things can normally only be deactivated or not deleted at all, so that oper
 | Template | External responders | external responders already recorded remain |
 | Skill with entries | Training | the recorded training of all persons |
 | Vehicle type with vehicles, vehicle from operations | Vehicles | the vehicles with sightings and combinations, also in the replay |
+| Operation concept | Operation concepts | concept with its elements; loaded markers and the log remain in operations |
 
 Before deleting, a confirmation lists the consequences. **This cannot be undone.** Running operations and your own account cannot be deleted. Every permanent deletion is recorded in the application log (without names).
 

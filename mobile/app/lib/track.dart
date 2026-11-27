@@ -198,8 +198,9 @@ class Tracker {
         try {
           // Fahrzeuge (Issue #177): Beacons des letzten Scans; water nur, wenn ein Boot in der Nähe ist (sonst lädt die App kein Gewässernetz)
           final bs = await Beacons.forReport(a);
+          final wd = (await accState(a.id)).j['wt_auto'] == true ? await Beacons.waterD(a, p.latitude, p.longitude) : null; // Wasserzeit (Issue #241)
           final r = await a.api.call('incident/location',
-              body: {'lat': p.latitude, 'lon': p.longitude, 'acc': p.accuracy, 'water': await Beacons.water(a, p.latitude, p.longitude), 'manual': 0, 'beacons': ?bs, if (bs != null) 'batt': ?Beacons.battFor(a)},
+              body: {'lat': p.latitude, 'lon': p.longitude, 'acc': p.accuracy, 'water': await Beacons.water(a, p.latitude, p.longitude), 'manual': 0, 'wd': ?wd, 'beacons': ?bs, if (bs != null) 'batt': ?Beacons.battFor(a)},
               timeout: const Duration(seconds: 15));
           if (r['shared'] == false) {
             _off.add(key);

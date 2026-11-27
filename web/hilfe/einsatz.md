@@ -84,6 +84,24 @@ Hat die massgebende Messstation beim PLS eine Kennlinie (Verwaltung), zeigt die 
 
 Weicht die Vorhersage deutlich vom eingestellten Wert ab, steigt der Abfluss stark, gilt eine neue Gefahrenstufe oder kommt eine neue Vorhersage, erhält die Einsatzleitung eine Meldung (auf Wunsch der Verwaltung alle Teilnehmenden); sie steht auch im Einsatzlog. Das Suchgebiet bleibt dabei unverändert.
 
+## Wasserzeit {#wasserzeit}
+
+Die **Wasserzeit** überwacht, wie lange jemand im Wasser ist (Swimmer, Bootsbesatzung im Wasser), ähnlich der Atemschutzüberwachung. So bleibt niemand unbemerkt zu lange im kalten Wasser.
+
+1. Im Register «Einsatz», Karte **Wasserzeit**, deinen **Kälteschutz** prüfen (ohne, Neoprenanzug, Trockenanzug). Vorgewählt ist deine Vorgabe aus dem Profil (Karte «Wasserzeit»), sonst die zuletzt verwendete, sonst die der Organisation. Ändern kannst du ihn jederzeit, auch an Land.
+2. **🌊 Ich gehe ins Wasser** antippen. Die Zeit läuft, oben auf der Karte steht sie mit dem Knopf **An Land**.
+3. Zurück an Land: **Zurück an Land** antippen.
+
+Der **Richtwert** hängt vom Kälteschutz und von der Wassertemperatur ab. Die Temperatur kommt von der nächsten Messstation des BAFU; die Einsatzleitung kann sie von Hand setzen. Ohne Temperatur gilt der Richtwert der kältesten Stufe.
+
+Die Zeit steht bei der Person im Fenster «Einsatzkräfte», in der Personeninfo und als Chip unter ihrem Marker auf der Karte: **blau** läuft, **gelb** ab der Vorwarnung (Standard 75 %), **rot** ab dem Richtwert. Bei der Vorwarnung und beim Erreichen des Richtwerts erhalten du und die Einsatzleitung eine Meldung; beides steht im Einsatzlog.
+
+> Je nach Einstellung erkennt die App den Aufenthalt im Wasser auch selbst: Ist dein Standort eine Weile sehr nahe an der Gewässerachse (nicht in einem Fahrzeug und nicht in Fahrt), beginnt die Wasserzeit, und du erhältst einen Hinweis. Stimmt das nicht, tippst du **Zurück an Land**. Das braucht das Gewässernetz (Funktion «Suchgebiet»).
+
+Die Einsatzleitung startet und beendet die Wasserzeit auch für andere (Knöpfe **🌊 Ins Wasser** und **An Land** im Fenster «Einsatzkräfte» und in der Personeninfo) und setzt die Wassertemperatur in der Karte «Wasserzeit». Dort stellt sie unter **Kälteschutz der Einsatzkräfte** auch den Kälteschutz jeder Person ein, bevor sie ins Wasser geht; läuft die Wasserzeit schon, gilt der neue Richtwert sofort.
+
+> Liegt keine BAFU-Station mit Wassertemperatur in der Nähe des PLS oder der Einsatzkräfte, steht die Temperatur auf «unbekannt». Die App sucht dann jede Minute erneut, sobald Standorte gemeldet werden.
+
 ## Flussdistanz {#flussdistanz}
 
 Das Werkzeug **Flussdistanz** misst die Distanz zwischen zwei Punkten entlang des Gewässers. Du findest es als Kartenknopf und im Menü unter «Werkzeuge», auch ohne Einsatz.
@@ -125,6 +143,16 @@ Welche Kanäle du hörst und wo du sprechen darfst, hängt von deiner Spezialrol
 ## Fahrzeuge {#fahrzeuge}
 
 Fahrzeuge mit einem Bluetooth-Beacon erscheinen auf der Karte, sobald die native App eines Teilnehmenden sie sieht. Die Liste steht im Fenster «Einsatzkräfte» unter «Fahrzeuge»: wer darin sitzt, was verladen ist (Boot auf dem Anhänger) und wo es zuletzt gesehen wurde. Verladen und abladen geht über das Popup des Fahrzeugs.
+
+## Notruf (SOS) {#sos}
+
+Gerätst du selbst in Not, halte den roten Knopf **SOS** oben links auf der Karte **2 Sekunden** gedrückt. Danach läuft ein kurzer Countdown: **Abbrechen** stoppt einen versehentlichen Notruf, **Sofort senden** schickt ihn ohne Warten. Den Knopf gibt es nur, solange du am Einsatz teilnimmst.
+
+Der Notruf alarmiert – je nach Einstellung der Organisation – die Einsatzleitung und die Einsatzkräfte in deiner Nähe **kritisch**, mit deinem Namen und Standort. Bei ihnen erscheinen ein Vollbild mit Distanz, 🧭 und **Quittieren**, eine rote Leiste oben und ein blinkender Marker an deinem Standort; die Karte springt zu dir. Bist du in einer Live-Konferenz, ertönt dort ein Signalton.
+
+Sobald jemand quittiert, siehst du in deiner Leiste «gesehen von …». Ist die Gefahr vorbei, tippe auf **ENDE** (bzw. **Beenden** in der Leiste); beenden kann auch die Einsatzleitung. Notruf, Quittung und Ende stehen im Einsatzlog und im Replay.
+
+> ! Der Notruf ersetzt keinen Anruf bei 112/144/117, wenn Hilfe von aussen nötig ist.
 
 ## Dokumente {#dokumente}
 

@@ -85,6 +85,21 @@ Modèles pour intervenants externes (nom, description, rôle spécial, abréviat
 
 Quels symboles tactiques sont disponibles pour les marqueurs et si les marqueurs sans symbole sont autorisés.
 
+### Concepts d'intervention {#konzepte}
+
+Situations préparées pour des tronçons de cours d'eau (droit « Gérer les concepts d'intervention »). En haut, le **comportement par type d'intervention** : ce qui se passe quand un PLS se trouve dans le périmètre (Désactivé, Manuel uniquement, Proposer, Charger automatiquement) et si des concepts suivants sont proposés. Un concept peut déroger à ce comportement.
+
+**Modifier** ouvre une boîte de dialogue avec carte :
+
+- **Périmètre** : « Zone sur la carte » (placer les sommets) ou « Le long du cours d'eau de A à B » (placer A et B, « Calculer le tronçon » charge le réseau hydrographique ; « Marge » = distance maximale d'un PLS au cours d'eau).
+- **Types d'intervention** concernés.
+- **Éléments** : poste (symbole, rôle spécial comme mission, attribution à des personnes et groupes d'intervention, en option rôle spécial et véhicule), marqueur, zone, ligne, intervenant externe (aussi depuis un modèle), message à tous, documents, exclure ou prendre en compte un barrage, canaux radio, renfort de groupes d'intervention, activer les hélicoptères, démarrer l'enregistrement. « Présélectionné au chargement » définit les coches de l'aperçu. Les points se déplacent sur la carte.
+
+**Reprendre d'une intervention …** fait un brouillon à partir des marqueurs, zones, lignes et externes d'une intervention ou d'un exercice. Un concept déjà chargé ne peut plus qu'être désactivé.
+
+![Concepts d'intervention](img/admin-konzepte.jpg)
+![Modifier un concept d'intervention](img/admin-konzept-dialog.jpg)
+
 ## Planifications {#planungen}
 
 Exercices préparés, interventions secondaires planifiées et événements libres avec leurs éléments, plan d'exercices et inscriptions, exécutions avec journal et replay. Voir [Exercices et planifications](#planung/vorbereiten).
@@ -105,6 +120,14 @@ Les vitesses de comparaison avec lesquelles l'outil Distance fluviale calcule le
 
 Quelles apps de navigation sont disponibles et laquelle est la valeur par défaut.
 
+### Temps dans l'eau {#wasserzeit}
+
+Valeurs indicatives du temps dans l'eau en minutes par **protection thermique** (aucune, combinaison néoprène, combinaison étanche) et **température de l'eau** (paliers librement définissables). Les valeurs par défaut sont une proposition pour un travail actif dans le courant ; compare-les avec les documents de formation de l'organisation (**Insérer les valeurs par défaut** les rétablit). En outre le préavertissement en pour cent, le niveau des notifications et la détection automatique (distance à l'axe du cours d'eau, durée jusqu'à « dans l'eau » ou « à terre ») ainsi que le rayon pour la station de mesure avec température de l'eau. Par type d'intervention, tu actives ou désactives la fonction sous [Fonctions](#funktionen).
+
+### Appel d'urgence (SOS) {#sos}
+
+Qui est alerté lors d'un appel d'urgence : **direction d'intervention et participants dans le rayon** (rayon en km), **seulement la direction d'intervention** ou **tous les participants**. En outre, la durée d'appui sur le bouton (1–5 s), la durée du compte à rebours d'annulation (0–10 s, 0 = sans) et si un signal sonore retentit dans la conférence en direct. La fonction elle-même s'active et se désactive par type d'intervention sous **Fonctions**.
+
 ### Langue {#sprache}
 
 L'app existe en allemand, anglais, français et italien. Ici, vous définissez la **valeur par défaut de l'organisation**. Elle vaut pour les personnes qui n'ont pas choisi de langue elles-mêmes et dont l'appareil n'utilise aucune de ces langues, ainsi que pour les notifications push aux personnes qui n'ont jamais ouvert l'app.
@@ -123,9 +146,9 @@ Quelles cartes de base (images aériennes, cartes) sont disponibles, leur ordre 
 
 ![Fournisseurs de cartes](img/admin-karten.jpg)
 
-### Coordonnées {#koordinaten}
+### Coordonnées & unités {#koordinaten}
 
-Le système de coordonnées par défaut. Chaque personne peut le modifier dans le profil.
+Le système de coordonnées par défaut et l'unité par défaut des vitesses (m/s, km/h ou les deux) pour la vitesse du courant, la distance fluviale et les hélicoptères. Chaque personne peut modifier les deux dans le profil. La vue publique affiche toujours le réglage par défaut.
 
 ### Sources de géodonnées {#geoquellen}
 
@@ -277,6 +300,7 @@ Certaines choses ne peuvent normalement qu'être désactivées ou pas du tout su
 | Modèle | Intervenants externes | les externes déjà saisis restent |
 | Compétence avec entrées | Formation | les formations saisies de toutes les personnes |
 | Type de véhicule avec véhicules, véhicule issu d'interventions | Véhicules | les véhicules avec observations et assemblages, aussi dans le replay |
+| Concept d'intervention | Concepts d'intervention | concept avec ses éléments ; les marqueurs chargés et le journal restent dans les interventions |
 
 Avant la suppression, une confirmation énumère les conséquences. **Cela ne peut pas être annulé.** Les interventions en cours et votre propre compte ne peuvent pas être supprimés. Chaque suppression définitive figure dans le journal de l'application (sans noms).
 

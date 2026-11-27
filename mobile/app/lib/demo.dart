@@ -7,6 +7,7 @@
 // - Externe Dienste wie in der echten App direkt vom Gerät: Kartenkacheln und das Gewässernetz (overpass: 502 mit query/servers,
 //   area.dart fragt dann selbst, Ergebnis über overpass/put nur im Speicher). Mit einem angemeldeten Konto holt das Demo das Gewässernetz
 //   über die Route overpass dieses Servers (_netAcc, nur lesend, nichts wird hochgeladen).
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'accounts.dart';
@@ -62,6 +63,9 @@ const _feat = {
   'veh': 1,
   'vehp': 1,
   'call': 0,
+  'wtime': 0, // Wasserzeit (Issue #241) im Demo nicht simuliert
+  'sos': 1,
+  'cc': 1,
 }; // öffentliche Ansicht und Geodaten-Ebene (#182) brauchen den Server, Direktanruf (#44) keine echten Nummern
 _J _kind(int id, String name, String color, String alarm, String an, int modeUp, int rec) => {
   'id': id,
@@ -304,8 +308,10 @@ class _Inc {
   final String script; // bsp | gen
   int t0;
   final done = <int>{};
-  final parts = <_J>[], log = <_J>[], msgs = <_J>[], pois = <_J>[], res = <_J>[], ext = <_J>[];
+  final parts = <_J>[], log = <_J>[], msgs = <_J>[], pois = <_J>[], res = <_J>[], ext = <_J>[], sos = <_J>[]; // sos: Notrufe (Issue #240)
   final homes = <int, List<_P>>{};
+  final cc = <_J>[]; // Einsatzkonzepte (Issue #260)
+  List<int> ccFit = [];
 }
 
 class _Step {
@@ -335,7 +341,7 @@ class Demo {
   bool sim = true; // andere Einsatzkräfte simulieren
   bool lead = true; // Recht inc_lead: nach dem Annehmen alle Rechte der Einsatzleitung
   bool welcomed = false; // Erklärung beim ersten Öffnen gezeigt
-  int _seqInc = 900000, _seqLog = 1, _seqMsg = 1, _seqPoi = 1, _seqRes = 1, _seqExt = 1, _seqAbs = 1;
+  int _seqInc = 900000, _seqLog = 1, _seqMsg = 1, _seqPoi = 1, _seqRes = 1, _seqExt = 1, _seqAbs = 1, _seqSos = 1;
   _Inc? _inc;
   _J? _last;
   final abs = <_J>[];
@@ -406,14 +412,14 @@ class Demo {
     _hy = l(hy['stations'])?.where((h) => h['lat'] is num && h['lon'] is num).toList() ?? _hy;
     if (l(me['symbols']) case final sy?) _sy = sy;
     if (res.length > 4 && l(res[4]) != null) _ext = l(res[4])!.where((x) => x['active'] == 1).map((x) => x..remove('active')).toList();
-    for (final k in ['name', 'photo', 'coord_sys', 'nav_app', 'place_view', 'hydro', 'exercise_mode']) {
+    for (final k in ['name', 'photo', 'coord_sys', 'speed_unit', 'nav_app', 'place_view', 'hydro', 'exercise_mode']) {
       if (me.containsKey(k)) _me[k] = me[k];
     }
     _veh = null;
     org = {
       'name': '${me['org'] ?? ''}',
       'cfg': {
-        for (final k in ['coord_default', 'rd_speeds', 'nav_apps', 'nav_default', 'symbols', 'sym_free', 'sym_sets', 'maps', 'map_def', 'version'])
+        for (final k in ['coord_default', 'speed_default', 'rd_speeds', 'nav_apps', 'nav_default', 'symbols', 'sym_free', 'sym_sets', 'maps', 'map_def', 'version'])
           if (me[k] != null) k: me[k],
       },
       'maps': {
@@ -423,7 +429,7 @@ class Demo {
     };
   }
 
-  _J _featOf(_J? k) => {..._feat, if (k?['features'] is Map) ...Map<String, dynamic>.from(k!['features'] as Map), 'pub': 0, 'geo': 0, 'call': 0};
+  _J _featOf(_J? k) => {..._feat, if (k?['features'] is Map) ...Map<String, dynamic>.from(k!['features'] as Map), 'pub': 0, 'geo': 0, 'call': 0, 'wtime': 0};
   _J get _featAll => {for (final k in _ks) '${k['id']}': _featOf(k)};
   // Flusssperren (Issue #182, wie incStops): feste Standorte mit einer Eigenschaft der Wirkung stop, solange berücksichtigt und nicht ausgenommen
   List<_J> _props = [];
@@ -470,6 +476,7 @@ class Demo {
     'photo': null,
     'exercise_mode': 0,
     'coord_sys': null,
+    'speed_unit': null,
     'nav_app': null,
     'place_view': <String, dynamic>{},
     'hydro': ['D2152'],
@@ -629,6 +636,94 @@ class Demo {
     _logev(uid, 'rescued', on ? 'meldet «${r['name']}» als gerettet' : 'nimmt «gerettet» bei «${r['name']}» zurück', ts);
   }
 
+  // ---------- Einsatzkonzepte (Issue #260): ein fiktives Konzept an der Reuss wie web/demo.js ----------
+  static final _J _ccD = jsonDecode(_ccJson) as _J;
+  static bool _ccPip(double la, double lo, List p) {
+    var n = false;
+    for (var a = 0, b = p.length - 1; a < p.length; b = a++) {
+      final ya = (p[a][0] as num).toDouble(), xa = (p[a][1] as num).toDouble(), yb = (p[b][0] as num).toDouble(), xb = (p[b][1] as num).toDouble();
+      if ((ya > la) != (yb > la) && lo < (xb - xa) * (la - ya) / ((yb - ya) == 0 ? 1e-12 : (yb - ya)) + xa) n = !n;
+    }
+    return n;
+  }
+
+  int? get _ccRole => _rs.where((r) => r['is_post'] == 1).map((r) => r['id'] as int).firstOrNull;
+  List<_J> _ccItems() => [
+        for (final x in (_ccD['items'] as List).cast<_J>())
+          {
+            'id': x['id'], 'concept_id': 1, 'kind': x['kind'], 'name': x['name'], 'descr': x['descr'], 'color': x['color'], 'sym': x['sym'], 'abbr': x['abbr'],
+            'role_id': x['role'] != null ? _ccRole : null, 'lat': x['lat'], 'lon': x['lon'], 'pts': x['pts'], 'text': x['text'], 'refs': <String, dynamic>{}, 'def_on': x['def_on'], 'sort': x['id'],
+          }
+      ];
+  void _ccCheck(_Inc i, List<_J> res) {
+    final k = _kindOf(i);
+    if (_featOf(k)['cc'] != 1) return;
+    final fit = _sources(i, res).any((p) => _ccPip((p['lat'] as num).toDouble(), (p['lon'] as num).toDouble(), _ccD['area'] as List));
+    i.ccFit = fit ? [1] : [];
+    if (fit && k['plans'] != 1 && i.cc.isEmpty) {
+      i.cc.add({'id': 1, 'state': 'suggest', 'at': _now(), 'by': null, 'done': <String, dynamic>{}});
+      _logev(null, 'cc', 'schlägt das Einsatzkonzept «${_ccD['name']}» vor (PLS im Geltungsbereich)');
+    }
+  }
+
+  _J? _ccOut(_Inc i) {
+    if (_featOf(_kindOf(i))['cc'] != 1) return null;
+    final mgr = _canManage();
+    return {
+      'loaded': [
+        for (final r in i.cc.where((r) => r['state'] == 'loaded'))
+          {'id': 1, 'concept_id': 1, 'name': _ccD['name'], 'at': r['at'], 'auto': 0, 'by_name': r['by'] != null ? _uname(r['by'] as int) : null, 'n': (r['done'] as Map).length, 'docs': [], 'pend': []}
+      ],
+      'can': mgr ? 1 : 0,
+      if (mgr) ...{
+        'sug': [
+          for (final r in i.cc.where((r) => r['state'] == 'suggest')) {'id': 1, 'concept_id': 1, 'name': _ccD['name'], 'at': r['at'], 'auto': 0, 'by_name': null, 'n': (_ccD['items'] as List).length}
+        ],
+        'fit': i.ccFit,
+        'dismissed': [for (final r in i.cc.where((r) => r['state'] == 'dismissed')) r['id']],
+        'next': 1,
+        'ver': 1,
+      },
+    };
+  }
+
+  _J _ccLoad(List<int>? items) {
+    final i = _inc!, f = _featOf(_kindOf(i)), nm = <String>[];
+    if (i.cc.isEmpty) i.cc.add({'id': 1, 'state': 'loaded', 'at': _now(), 'by': _meId, 'done': <String, dynamic>{}});
+    final r = i.cc.first;
+    if (r['state'] != 'loaded') {
+      r['state'] = 'loaded';
+      r['at'] = _now();
+      r['by'] = _meId;
+      r['done'] = <String, dynamic>{};
+    }
+    final done = r['done'] as Map<String, dynamic>;
+    for (final x in _ccItems().where((x) => items != null ? items.contains(x['id']) : x['def_on'] == 1)) {
+      final d = done['${x['id']}'] as List?;
+      if (d != null && (d[0] == 'msg' || (d[0] == 'poi' ? i.pois : i.ext).any((y) => y['id'] == d[1] && y['removed'] == null))) continue;
+      final k = x['kind'] as String;
+      if (['post', 'point', 'area', 'line'].contains(k) && f['poi'] == 1) {
+        final pts = x['pts'] != null ? (x['pts'] as List).map((q) => <double>[(q[0] as num).toDouble(), (q[1] as num).toDouble()]).toList() : [<double>[(x['lat'] as num).toDouble(), (x['lon'] as num).toDouble()]];
+        final p = _addPoi(_meId, k == 'post' ? 'point' : k, '${x['name']}', '${x['color'] ?? '#ff9f1c'}', pts, x['sym'] as String?);
+        p['cc_id'] = 1;
+        p['cc_role'] = k == 'post' ? x['role_id'] : null;
+        done['${x['id']}'] = ['poi', p['id']];
+        nm.add('${x['name']}');
+      } else if (k == 'ext' && f['ext'] == 1) {
+        final e = _addExt(_meId, {'name': x['name'], 'descr': x['descr'], 'role_id': x['role_id'], 'abbr': x['abbr'], 'color': x['color'], 'lat': x['lat'], 'lon': x['lon']});
+        e['cc_id'] = 1;
+        done['${x['id']}'] = ['ext', e['id']];
+        nm.add('${x['name']}');
+      } else if (k == 'msg' && f['msg'] == 1) {
+        _addMsg(_meId, '${x['text']}');
+        done['${x['id']}'] = ['msg', null];
+        nm.add('${x['name']}');
+      }
+    }
+    _logev(_meId, 'cc', 'lädt das Einsatzkonzept «${_ccD['name']}»${nm.isNotEmpty ? ': ${nm.join(', ')}' : ' (keine neuen Elemente)'}');
+    return {'ok': true, 'cc': 1};
+  }
+
   _J _addExt(int uid, _J o, [int? ts]) {
     final e = <String, dynamic>{
       'id': _seqExt++,
@@ -655,9 +750,38 @@ class Demo {
     return e;
   }
 
+  // Notruf (Issue #240, wie incident/sos im Server): alle Teilnehmenden werden alarmiert, nur nicht die auslösende Person
+  _J? _sosOf(int uid) => _inc?.sos.where((x) => x['user_id'] == uid && x['ended_at'] == null).firstOrNull;
+  void _sosAdd(int uid, [int? ts]) {
+    final i = _inc, p = _part(uid);
+    if (i == null || p == null || _sosOf(uid) != null) return;
+    final t = ts ?? _now();
+    i.sos.add({'id': _seqSos++, 'user_id': uid, 'at': t, 'lat': p['lat'], 'lon': p['lon'], 'loc_at': p['lat'] != null ? t : null, 'ack_by': null, 'ack_at': null, 'ended_at': null});
+    _logev(uid, 'sos', 'löst einen Notruf (SOS) aus${p['lat'] != null ? ' bei ${_f5(p['lat'] as num)}, ${_f5(p['lon'] as num)}' : ' (ohne Standort)'}', t);
+  }
+
+  void _sosAck(int uid, _J? x, [int? ts]) {
+    if (x == null || x['ended_at'] != null) return;
+    if (x['ack_by'] == null) {
+      x['ack_by'] = uid;
+      x['ack_at'] = ts ?? _now();
+    }
+    _logev(uid, 'sos', 'quittiert den Notruf von ${_uname(x['user_id'] as int)}', ts);
+  }
+
+  void _sosEnd(int? uid, _J? x, [int? ts, String why = '']) {
+    if (x == null || x['ended_at'] != null) return;
+    x['ended_at'] = ts ?? _now();
+    final n = _uname(x['user_id'] as int);
+    _logev(why.isNotEmpty ? null : uid, 'sos', why.isNotEmpty ? 'Notruf von $n beendet$why' : (uid == x['user_id'] ? 'beendet den eigenen Notruf' : 'beendet den Notruf von $n'), ts);
+  }
+
   void _endInc(int uid, [int? t]) {
     final i = _inc;
     if (i == null) return;
+    for (final x in i.sos) {
+      _sosEnd(null, x, t, ' (Einsatzende)');
+    }
     for (final v in _vs) {
       v['inc'] = 0;
     }
@@ -719,6 +843,16 @@ class Demo {
       }
     }),
     _Step(560, 106, (d, t) => d._addMsg(106, 'Decken und Wärmepacks beim KP bereit.', ts: t)),
+    // Notruf (Issue #240): Posten rutscht am Ufer aus, die Einsatzleitung quittiert, Entwarnung
+    _Step(580, 105, (d, t) => d._sosAdd(105, t)),
+    _Step(600, 101, (d, t) {
+      d._sosAck(101, d._sosOf(105), t);
+      d._addMsg(101, 'SOS Posten Emmenmündung gesehen, Boot 1 kommt.', ts: t);
+    }),
+    _Step(640, 105, (d, t) {
+      d._sosEnd(105, d._sosOf(105), t);
+      d._addMsg(105, 'Entwarnung: bin ausgerutscht, Knie verletzt, aber wieder sicher am Ufer.', ts: t);
+    }),
     _Step(620, 101, (d, t) => d._addMsg(101, 'Danke allen. Rettling dem Rettungsdienst übergeben. Rückzug zum Stützpunkt, Material kontrollieren.', ts: t)),
     _Step(1200, 101, (d, t) {
       if (!d.lead && d._inc != null) d._endInc(101, t);
@@ -808,6 +942,15 @@ class Demo {
     final i = _inc;
     if (i == null || i.endedAt != null) return;
     if (!sim && !init) return;
+    // eigener Notruf: die simulierte Einsatzleitung quittiert nach 15 s (Issue #240)
+    for (final x in i.sos) {
+      final at = x['sim_ack'];
+      if (at is int && t >= at && x['ack_by'] == null && x['ended_at'] == null) {
+        x.remove('sim_ack');
+        _sosAck(101, x, t);
+        _addMsg(101, 'Notruf von ${_uname(x['user_id'] as int)} gesehen, wir kommen.', ts: t);
+      }
+    }
     final steps = i.script == 'bsp' ? _bsp : _gen, rel = t - i.t0;
     for (var k = 0; k < steps.length; k++) {
       final s = steps[k];
@@ -1082,6 +1225,7 @@ class Demo {
     'is_admin': 0,
     'perms': ['inc_start', 'ex_start', if (lead) 'inc_lead'],
     'coord_default': 'lv95',
+    'speed_default': 'ms',
     'rd_speeds': [10, 20, 30],
     'kinds': _ks,
     'nav_apps': ['google', 'apple', 'waze', 'geo'],
@@ -1228,7 +1372,9 @@ class Demo {
     for (final e in i.ext.reversed.where((e) => e['manual'] == 1)) {
       itpl.putIfAbsent('${e['name']}'.toLowerCase(), () => {'name': e['name'], 'descr': e['descr'], 'role_id': e['role_id'], 'abbr': e['abbr'], 'color': e['color']});
     }
+    _ccCheck(i, res);
     return {
+      'cc': _ccOut(i),
       'incident': {
         'id': i.id,
         'message': i.message,
@@ -1273,6 +1419,8 @@ class Demo {
           'created_by': p['created_by'],
           'created': p['created'],
           'by_name': _uname(p['created_by'] as int),
+          'cc_id': p['cc_id'],
+          'cc_role': p['cc_role'],
           if (s != null) 'sym_name': s['name'],
           if (s != null) 'sym_foot': s['foot'],
         };
@@ -1353,6 +1501,10 @@ class Demo {
       'log': act || mgr ? _logRows(i) : null,
       'hydro': _hydroInc(i),
       'veh': _featOf(_kindOf(i))['veh'] == 1 ? _vehOut(i) : null,
+      'sos': _featOf(_kindOf(i))['sos'] == 1
+          ? i.sos.where((x) => x['ended_at'] == null).map((x) => {...x, 'name': _uname(x['user_id'] as int), 'ack_name': x['ack_by'] == null ? null : _uname(x['ack_by'] as int), 'mine': x['user_id'] == _meId ? 1 : 0, 'to_me': x['user_id'] != _meId && act ? 1 : 0}).toList()
+          : [],
+      'sos_cfg': _featOf(_kindOf(i))['sos'] == 1 ? {'hold': 2, 'countdown': 5, 'conf': 1, 'radius_km': 2, 'to': 'near'} : null,
       'now': t,
     };
   }
@@ -1428,8 +1580,8 @@ class Demo {
       case 'me':
         return {'me': _meOut()};
       case 'me/settings':
-        for (final k in ['exercise_mode', 'coord_sys', 'nav_app', 'place_view', 'hydro', 'ai_modes']) {
-          if (b.containsKey(k)) _me[k] = (k == 'coord_sys' || k == 'nav_app') && '${b[k] ?? ''}'.isEmpty ? null : b[k];
+        for (final k in ['exercise_mode', 'coord_sys', 'speed_unit', 'nav_app', 'place_view', 'hydro', 'ai_modes']) {
+          if (b.containsKey(k)) _me[k] = (k == 'coord_sys' || k == 'speed_unit' || k == 'nav_app') && '${b[k] ?? ''}'.isEmpty ? null : b[k];
         }
         return {'ok': true};
       case 'me/password':
@@ -1494,6 +1646,7 @@ class Demo {
           p['left_at'] = t;
           p['role_id'] = null;
           _logev(_meId, 'leave', 'hat den Einsatz verlassen');
+          _sosEnd(null, _sosOf(_meId), t, ' (Einsatz verlassen)');
         }
         return {'ok': true};
       case 'incident/role':
@@ -1529,8 +1682,52 @@ class Demo {
         final i = _needPart('Nur Personen, die am Einsatz teilnehmen, können die Fliessgeschwindigkeit setzen');
         final v = _d(b['flow_ms']);
         if (!(v > 0 && v <= 15)) _fail('Fliessgeschwindigkeit muss zwischen 0 und 15 m/s liegen');
-        i.flow = v;
-        _logev(_meId, 'flow', 'setzt die Fliessgeschwindigkeit auf $v m/s');
+        final w = (v * 100).round() / 100;
+        i.flow = w;
+        _logev(_meId, 'flow', 'setzt die Fliessgeschwindigkeit auf $w m/s (${(w * 36).round() / 10} km/h)');
+        return {'ok': true};
+      case 'incident/concepts':
+        _needLead('Nur die Einsatzleitung kann Einsatzkonzepte laden');
+        final i = _inc!, r = i.cc.firstOrNull;
+        return {
+          'list': [
+            {
+              'id': 1, 'name': _ccD['name'], 'descr': _ccD['descr'], 'scope': 'area', 'area': _ccD['area'], 'river': null, 'kinds': null, 'mode': _kindOf(i)['plans'] == 1 ? 'hand' : 'suggest', 'active': 1,
+              'items': _ccItems(), 'fit': i.ccFit.isNotEmpty ? 1 : 0, 'state': r?['state'], 'cc': r?['id'],
+              'done': r != null && r['state'] == 'loaded' ? (r['done'] as Map).keys.map((k) => int.parse('$k')).toList() : <int>[],
+            }
+          ],
+          'post_m': 150,
+        };
+      case 'incident/concept/load':
+        _needLead('Nur die Einsatzleitung kann Einsatzkonzepte laden');
+        if ('${b['id']}' != '1') _fail('Einsatzkonzept nicht gefunden', 404);
+        return _ccLoad(b['items'] is List ? (b['items'] as List).map((x) => (x as num).toInt()).toList() : null);
+      case 'incident/concept/run':
+      case 'incident/concept/drop':
+        _needLead('Nur die Einsatzleitung kann das ändern');
+        return {'ok': true, 'done': []};
+      case 'incident/concept/remove':
+        _needLead('Nur die Einsatzleitung kann Einsatzkonzepte entfernen');
+        final i = _inc!, r = i.cc.where((x) => x['state'] == 'loaded').firstOrNull ?? _fail('Das Einsatzkonzept ist nicht geladen');
+        var n = 0;
+        for (final d in (r['done'] as Map).values.cast<List>()) {
+          final y = d[0] == 'poi' ? i.pois.where((p) => p['id'] == d[1]).firstOrNull : d[0] == 'ext' ? i.ext.where((e) => e['id'] == d[1]).firstOrNull : null;
+          if (y != null && y['removed'] == null) {
+            y['removed'] = _now();
+            n++;
+          }
+        }
+        r['state'] = 'removed';
+        _logev(_meId, 'cc', 'entfernt das Einsatzkonzept «${_ccD['name']}» (${n == 1 ? '1 Element' : '$n Elemente'})');
+        return {'ok': true, 'n': n};
+      case 'incident/concept/dismiss':
+        _needLead('Nur die Einsatzleitung kann das ändern');
+        final r = _inc!.cc.where((x) => x['state'] == 'suggest').firstOrNull;
+        if (r != null) {
+          r['state'] = 'dismissed';
+          _logev(_meId, 'cc', 'lädt das vorgeschlagene Einsatzkonzept «${_ccD['name']}» nicht');
+        }
         return {'ok': true};
       case 'incident/poi':
         _needLead('Nur die Einsatzleitung kann Markierungen und Bereiche setzen');
@@ -1752,6 +1949,30 @@ class Demo {
           _logev(_meId, 'air', on == 1 ? 'schaltet die Helikopter ein' : 'schaltet die Helikopter aus');
         }
         return {'ok': true};
+      case 'incident/sos':
+        if (_featOf(_kindOf(_needInc()))['sos'] != 1) _fail('Die Funktion «Notruf» ist ausgeschaltet', 403);
+        if (b['on'] == 1 || b['on'] == true) {
+          if (!_active()) _fail('Notruf nur mit Teilnahme am Einsatz', 403);
+          _sosAdd(_meId);
+          final x = _sosOf(_meId)!;
+          if (_fin(b['lat']) && _fin(b['lon'])) {
+            x['lat'] = _d(b['lat']);
+            x['lon'] = _d(b['lon']);
+            x['loc_at'] = t;
+          }
+          if (sim) x['sim_ack'] = t + 15; // Simulation: die Einsatzleitung quittiert nach 15 s
+          return {'ok': true, 'id': x['id']};
+        }
+        final x = (_fin(b['id']) ? _inc!.sos.where((s) => s['id'] == _d(b['id']).toInt() && s['ended_at'] == null).firstOrNull : _sosOf(_meId)) ?? _fail('Kein laufender Notruf', 404);
+        if (x['user_id'] != _meId && !_canManage()) _fail('Beenden kann nur die auslösende Person oder die Einsatzleitung', 403);
+        _sosEnd(_meId, x);
+        return {'ok': true};
+      case 'incident/sos/ack':
+        final x = (_fin(b['id']) ? _needInc().sos.where((s) => s['id'] == _d(b['id']).toInt() && s['ended_at'] == null).firstOrNull : null) ?? _fail('Kein laufender Notruf', 404);
+        if (x['user_id'] == _meId) _fail('Den eigenen Notruf kann man nicht quittieren');
+        _needPart('Nur Teilnehmende können einen Notruf quittieren');
+        _sosAck(_meId, x);
+        return {'ok': true};
       case 'incident/vehicle/link':
         if (_featOf(_kindOf(_needInc()))['veh'] != 1) _fail('Die Funktion «Fahrzeuge» ist ausgeschaltet', 403);
         _needPart('Nur Personen, die am Einsatz teilnehmen');
@@ -1856,3 +2077,6 @@ class Demo {
     _fail('Im Demo-Modus nicht verfügbar', 404);
   }
 }
+
+// Einsatzkonzept des Demos (Issue #260), gleich wie CC_D in web/demo.js
+const _ccJson = r'''{"id":1,"name":"Reuss Stadt Luzern (Demo)","descr":"Fiktives Beispiel: Lage für eine vermisste Person ab Seebrücke, Posten bis Emmen.","scope":"area","area":[[47.0524,8.3106],[47.05036,8.30974],[47.05006,8.30502],[47.05094,8.30116],[47.05328,8.2973],[47.05416,8.29429],[47.05416,8.29],[47.05474,8.28742],[47.05708,8.28549],[47.06059,8.28485],[47.06351,8.28506],[47.06585,8.28549],[47.0679,8.28871],[47.06965,8.29257],[47.07258,8.29687],[47.07462,8.3003],[47.07462,8.30373],[47.07287,8.30373],[47.07053,8.29944],[47.0679,8.29515],[47.06644,8.29129],[47.06527,8.28871],[47.06234,8.28828],[47.05942,8.28828],[47.05708,8.28914],[47.0562,8.29129],[47.05591,8.29472],[47.05591,8.29858],[47.05445,8.30202],[47.05445,8.30545],[47.05357,8.3106]],"items":[{"id":1,"kind":"post","name":"Sicherungsposten 1 – Geissmattbrücke","sym":"sw-sp","lat":47.05509,"lon":8.29193,"role":4,"descr":"Wurfsack bereit, Funk Kanal Einsatz","def_on":1},{"id":2,"kind":"point","name":"Gefahrenstelle Nadelwehr","sym":"sw-we","lat":47.05381,"lon":8.29858,"def_on":1},{"id":3,"kind":"point","name":"Sammelplatz Kasernenplatz","sym":"sw-tp","lat":47.05299,"lon":8.29472,"def_on":0},{"id":4,"kind":"post","name":"Beobachtungsposten 2 – Kreuzstutz","sym":"sw-bp","lat":47.06001,"lon":8.28764,"role":4,"def_on":1},{"id":5,"kind":"area","name":"Absperrung Nadelwehr","color":"#d62828","pts":[[47.05445,8.29772],[47.05416,8.29966],[47.05313,8.29953],[47.05334,8.29751]],"def_on":1},{"id":6,"kind":"area","name":"Suchsektor Boot – Reusszopf","color":"#1d7fd1","pts":[[47.06234,8.28614],[47.06498,8.28635],[47.06673,8.28785],[47.06834,8.29172],[47.06761,8.29257],[47.06585,8.28871],[47.06454,8.28764],[47.06234,8.28742]],"def_on":1},{"id":7,"kind":"line","name":"Ufersuche rechts – Kreuzstutz","color":"#2a9d5c","pts":[[47.05562,8.29],[47.05679,8.28807],[47.05884,8.28742],[47.06088,8.28725]],"def_on":1},{"id":8,"kind":"ext","name":"Polizei Emmen – Posten Reussbrücke Emmen","abbr":"PO","color":"#1d3557","lat":47.07097,"lon":8.29665,"role":4,"def_on":1},{"id":9,"kind":"msg","name":"Nachricht an alle","text":"Posten gemäss Einsatzkonzept «Reuss Stadt Luzern» beziehen.","def_on":1}]}''';

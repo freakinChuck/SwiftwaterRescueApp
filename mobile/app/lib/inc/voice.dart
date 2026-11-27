@@ -421,6 +421,15 @@ class VoiceStore extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// Notruf (Issue #240): drei Töne in der Konferenz bzw. beim Mithören, damit es auch hört, wer nur im Funk ist
+  Future<void> sosTone() async {
+    if (confState != 'on' && !listen) return;
+    for (var k = 0; k < 3; k++) {
+      await _tone(true);
+      await Future.delayed(const Duration(milliseconds: 450));
+    }
+  }
+
   Future<void> confJoin(int c) async {
     if (confCh == c && room != null) return;
     if (room != null) await confLeave(sw: true);
