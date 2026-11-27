@@ -265,7 +265,7 @@ void _reach(RiverNet net, Way w, int k, double acc, Set<int> seen, _Ctx ctx, Lat
   // c = nächste Stelle im Band etaM: erst wenn der Abstand wieder zunimmt (bzw. am Ende des Weges), gilt sie als Treffer
   ({double v, double m})? c;
   void done() {
-    if (c != null) hit(c!.v);
+    if (c != null) hit(c.v);
   }
 
   for (var j = k; j < last; j++) {
@@ -275,7 +275,7 @@ void _reach(RiverNet net, Way w, int k, double acc, Set<int> seen, _Ctx ctx, Lat
     final a = w.geometry[j], b = w.geometry[j + 1], d = geoDist(a, b), x = _hit(ctx, a, b), pr = _segProj(a, b, pt);
     if (pr.d < etaM && (x == null || pr.t * d <= x.t * d + 50)) {
       // eine Stelle direkt am Posten bzw. an der Sperre zählt noch (z. B. der Posten selbst)
-      if (c != null && pr.d >= c!.m) return done();
+      if (c != null && pr.d >= c.m) return done();
       c = (v: acc + pr.t * d, m: pr.d);
     } else if (c != null) {
       return done();
@@ -285,7 +285,7 @@ void _reach(RiverNet net, Way w, int k, double acc, Set<int> seen, _Ctx ctx, Lat
     if (acc > etaMax || (c == null && o.d != null && acc >= o.d!)) return done();
     if (post(b)) {
       final g = geoDist(b, pt);
-      if (g < etaM && (c == null || g < c!.m)) c = (v: acc, m: 0.0);
+      if (g < etaM && (c == null || g < c.m)) c = (v: acc, m: 0.0);
       return done();
     }
   }
