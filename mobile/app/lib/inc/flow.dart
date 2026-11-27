@@ -23,7 +23,18 @@ const flk = <String, (String, Color)>{
 (String, Color) flkOf(String k) => flk[k] ?? flk['frei']!;
 
 String f1(double v) => v.toStringAsFixed(1);
-String fpR(List<double> d) => '${f1(d[0])}–${f1(d[1])}';
+/// Einheit der Anzeige (IncStore.spdU, Issue #259), gesetzt von den Einstiegspunkten; Diagramm in km/h nur bei «km/h», sonst m/s
+String fpU = 'ms';
+double get fpK => fpU == 'kmh' ? 3.6 : 1;
+String get fpUL => fpU == 'kmh' ? 'km/h' : 'm/s';
+
+/// Spanne in m/s → Text in der Einheit (fmtSpdR in common.js)
+String fmtSpdR(double lo, double hi, String u) {
+  final a = '${spdR(lo, 1)}–${spdR(hi, 1)} m/s', b = '${spdR(lo * 3.6, 1)}–${spdR(hi * 3.6, 1)} km/h';
+  return u == 'kmh' ? b : u == 'both' ? '$a ($b)' : a;
+}
+
+String fpR(List<double> d) => fmtSpdR(d[0], d[1], fpU);
 String fpKm(num m) => '${(m / 1000).toStringAsFixed(1)} km';
 String fpMin(num a, num b) => a == b ? '$a min' : '$a–$b min';
 String fpName(J p) => '${js(p['water']).isNotEmpty ? '${js(p['water'])} – ' : ''}${js(p['name'])}';
@@ -73,15 +84,15 @@ class FlowChart extends StatelessWidget {
     for (final x in _ser(p)) {
       final h = (x[0]! - at) / 3600;
       if (h < -12 || h > 96) continue;
-      pts.add((h, fpDrift(p, x[1]!, x.length > 2 ? x[2] : null, x.length > 3 ? x[3] : null)));
+      pts.add((h, fpDrift(p, x[1]!, x.length > 2 ? x[2] : null, x.length > 3 ? x[3] : null).map((v) => v * fpK).toList()));
     }
     if (pts.length < 2) return const SizedBox.shrink();
     return Semantics(
-        label: trn('Driftspanne in m/s, 12 Stunden zurück bis 4 Tage voraus'),
+        label: trn(fpU == 'kmh' ? 'Driftspanne in km/h, 12 Stunden zurück bis 4 Tage voraus' : 'Driftspanne in m/s, 12 Stunden zurück bis 4 Tage voraus'),
         child: Container(
             margin: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(color: const Color(0xFF0F2430), borderRadius: BorderRadius.circular(6)),
-            child: AspectRatio(aspectRatio: 330 / 150, child: CustomPaint(painter: _FlowPainter(pts, set, [tr('jetzt'), tr('eingestellt')])))));
+            child: AspectRatio(aspectRatio: 330 / 150, child: CustomPaint(painter: _FlowPainter(pts, set == null ? null : set! * fpK, [tr('jetzt'), tr('eingestellt')])))));
   }
 }
 
@@ -115,7 +126,7 @@ class _FlowPainter extends CustomPainter {
     hi += pad;
     double Y(double v) => 128 - (v - lo) / (hi - lo) * 118;
     const g = Color(0xFF8FB0BD);
-    final st = [.1, .2, .25, .4, .5, 1.0, 2.0].firstWhere((x) => (hi - lo) / x <= 4, orElse: () => 5.0);
+    final st = [.1, .2, .25, .4, .5, 1.0, 2.0, 5.0].firstWhere((x) => (hi - lo) / x <= 4, orElse: () => 5.0);
     final grid = Paint()..color = const Color(0xFF2C4F60);
     for (var v = (lo / st).ceil() * st; v <= hi; v += st) {
       c.drawLine(Offset(34, Y(v)), Offset(322, Y(v)), grid);
@@ -153,9 +164,9 @@ class _FlowPainter extends CustomPainter {
     if (s != null) {
       const y = Color(0xFFFFD23F);
       _dash(c, Offset(34, Y(s)), Offset(322, Y(s)), Paint()..color = y, 5, 3);
-      _txt(c, '${lbl[1]} ${f1(s)}', 320, Y(s) - 3, y, anchor: 'end');
+      _txt(c, '${lbl[1]} ${f1(s)} $fpUL', 320, Y(s) - 3, y, anchor: 'end');
     }
-    _txt(c, 'm/s', 36, 18, g);
+    _txt(c, fpUL, 36, 18, g);
     c.restore();
   }
 
@@ -182,6 +193,7 @@ bool _secOpen = true; // Abschnitte aufgeklappt (sw_flsec), für die Laufzeit de
 
 /// Inhalt der Karte «Fliessgeschwindigkeit» unter dem Eingabefeld (flowPredHtml)
 List<Widget> flowPredWidgets(BuildContext c, IncStore s, void Function(double v, String src) take) {
+  fpU = s.spdU;
   final p = s.flowPred, i = s.inc;
   if (p == null || i == null) return const [];
   final set = jd(i['flow_ms']), d0 = fpD(p, 0) ?? fpDrift(p, jd(p['q']) ?? 0), nm = fpName(p);
@@ -212,7 +224,7 @@ List<Widget> flowPredWidgets(BuildContext c, IncStore s, void Function(double v,
           child: Text.rich(TextSpan(style: const TextStyle(fontSize: 13), children: [
             TextSpan(text: '⚠ In ${w['h']} h deutlich ${jb(w['up']) ? 'schneller' : 'langsamer'}: ', style: const TextStyle(fontWeight: FontWeight.bold)),
             TextSpan(
-                text: '${fpR([jd(w['d0']) ?? 0, jd(w['d1']) ?? 0])} m/s statt eingestellt ${f1(set)} m/s (Abfluss ${js(p['name'])} '
+                text: '${fpR([jd(w['d0']) ?? 0, jd(w['d1']) ?? 0])} statt eingestellt ${s.spd(set)} (Abfluss ${js(p['name'])} '
                     '${(jd(w['q']) ?? 0) > (jd(w['q0']) ?? 0) ? 'steigt' : 'sinkt'}${jb(w['fc']) ? ' gemäss BAFU-Vorhersage' : ''} von ${w['q0']} auf ${w['q']} m³/s).'),
           ]))),
     _box(
@@ -221,14 +233,14 @@ List<Widget> flowPredWidgets(BuildContext c, IncStore s, void Function(double v,
         Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Vorschlag jetzt', style: TextStyle(fontSize: 12, color: mutC)),
-          Text('${fpR(d0)} m/s', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Text('${f1(d0[0] * 3.6)}–${f1(d0[1] * 3.6)} km/h · Abfluss ${(jd(p['q']) ?? 0).round()} m³/s', style: const TextStyle(fontSize: 12, color: mutC)),
+          Text(fpR(d0), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text('Abfluss ${(jd(p['q']) ?? 0).round()} m³/s', style: const TextStyle(fontSize: 12, color: mutC)),
         ])),
         if (jb(s.st?['can_flow']))
           FilledButton(
               style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
               onPressed: () => take(double.parse(f1(d0[2])), 'Vorschlag $nm'),
-              child: Text('Übernehmen ${f1(d0[2])}')),
+              child: Text('Übernehmen ${s.spd(double.parse(f1(d0[2])))}')),
       ]),
       FlowChart(p, set),
       Row(children: [tabCell(3, 'in 3 h'), tabCell(12, 'in 12 h'), tabCell(24, 'in 1 Tag'), tabCell(48, 'in 2 Tagen')]),
@@ -250,13 +262,13 @@ List<Widget> flowPredWidgets(BuildContext c, IncStore s, void Function(double v,
                       dense: true,
                       title: const Text.rich(TextSpan(children: [
                         TextSpan(text: 'Abschnitte bis Ende Suchgebiet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        TextSpan(text: ' (m/s, Schätzung)', style: TextStyle(fontSize: 12, color: mutC)),
+                        TextSpan(text: ' (Schätzung)', style: TextStyle(fontSize: 12, color: mutC)),
                       ])),
-                      children: rs.map((r) => _reach(c, r)).toList())))),
+                      children: rs.map((r) => _reach(c, r, s)).toList())))),
   ];
 }
 
-Widget _reach(BuildContext c, J r) {
+Widget _reach(BuildContext c, J r, IncStore s) {
   final k = flkOf(js(r['kind']));
   return Container(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -271,9 +283,9 @@ Widget _reach(BuildContext c, J r) {
                 decoration: BoxDecoration(color: k.$2.withValues(alpha: .25), borderRadius: BorderRadius.circular(9), border: Border.all(color: k.$2)),
                 child: Text(k.$1, style: const TextStyle(fontSize: 11))),
           ]),
-          Mut('${fpKm(jd(r['len_m']) ?? 0)} · Treibzeit ${fpMin(ji(r['t0']) ?? 0, ji(r['t1']) ?? 0)}', size: 12),
+          Mut('${fpKm(jd(r['len_m']) ?? 0)} · Treibzeit ${fpMin(ji(r['t0']) ?? 0, ji(r['t1']) ?? 0)}${r['va'] != null ? ' · Suchgebiet ${s.spd(r['va'])}' : ''}', size: 12),
         ])),
-        Text('${f1(jd(r['v0']) ?? 0)}–${f1(jd(r['v1']) ?? 0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(fpR([jd(r['v0']) ?? 0, jd(r['v1']) ?? 0]), style: const TextStyle(fontWeight: FontWeight.bold)),
       ]));
 }
 
@@ -281,6 +293,7 @@ Widget _reach(BuildContext c, J r) {
 List<Widget> flowLayers(IncStore s) {
   final p = s.flowPred;
   if (p == null || !s.feat('hydro') || !s.vis('flow')) return const [];
+  fpU = s.spdU;
   final ls = <Polyline>[], mk = <Marker>[];
   for (final r in jl(p['reaches'])) {
     final pts = (r['pts'] is List ? r['pts'] as List : const []).whereType<List>().where((x) => x.length >= 2).map((x) => LatLng(jd(x[0])!, jd(x[1])!)).toList();
@@ -299,7 +312,7 @@ List<Widget> flowLayers(IncStore s) {
                     margin: const EdgeInsets.only(left: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4), boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 3)]),
-                    child: Text('${k.$1} ${f1(jd(r['v0']) ?? 0)}–${f1(jd(r['v1']) ?? 0)}', style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.w600)))))));
+                    child: Text('${k.$1} ${fpR([jd(r['v0']) ?? 0, jd(r['v1']) ?? 0])}', style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.w600)))))));
   }
   if (ls.isEmpty) return const [];
   return [PolylineLayer(polylines: ls), MarkerLayer(markers: mk)];
@@ -311,6 +324,7 @@ Widget? hyFq(IncStore s, String id) {
   if (f == null) {
     return s.hyFlowOk ? const Mut('kein Querprofil, keine Geschwindigkeit', size: 12) : null;
   }
+  fpU = s.spdU;
   final d0 = jd(f['d0']) ?? 0, d1 = jd(f['d1']) ?? 0;
   final h = f['h12'] is List ? (f['h12'] as List).map((x) => jd(x) ?? 0).toList() : null;
   final up = h != null && h.length > 1 && (h[0] + h[1]) / 2 > (d0 + d1) / 2 * 1.1;
@@ -318,8 +332,7 @@ Widget? hyFq(IncStore s, String id) {
       padding: const EdgeInsets.only(top: 2),
       child: Text.rich(TextSpan(style: const TextStyle(fontSize: 12), children: [
         const TextSpan(text: '🌊 '),
-        TextSpan(text: '${f1(d0)}–${f1(d1)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-        const TextSpan(text: ' m/s'),
+        TextSpan(text: fpR([d0, d1]), style: const TextStyle(fontWeight: FontWeight.bold)),
         if (h != null && h.length > 1) ...[
           const TextSpan(text: ' · in 12 h ', style: TextStyle(color: Color(0xFF8FB0BD))),
           TextSpan(text: '${fpR(h)}${up ? ' ↑' : ''}', style: TextStyle(color: up ? _yel : const Color(0xFF8FB0BD))),
@@ -333,8 +346,9 @@ String? hyFqLine(IncStore s, String id) {
   if (f == null) return null;
   final h = f['h12'] is List ? (f['h12'] as List).map((x) => jd(x) ?? 0).toList() : null;
   final src = js(f['src']) == 'prof' ? 'Querprofil${js(f['at']).isNotEmpty ? ' ${js(f['at'])}' : ''}' : js(f['src']) == 'manual' ? 'von Hand' : 'ohne Querprofil';
-  return 'Fliessgeschwindigkeit: ${f1(jd(f['d0']) ?? 0)}–${f1(jd(f['d1']) ?? 0)} m/s · Mittel ${(jd(f['v']) ?? 0).toStringAsFixed(2)} m/s ($src)'
-      '${h != null && h.length > 1 ? ' · in 12 h ${fpR(h)} m/s' : ''}';
+  fpU = s.spdU;
+  return 'Fliessgeschwindigkeit: ${fpR([jd(f['d0']) ?? 0, jd(f['d1']) ?? 0])} · Mittel ${s.spd(f['v'])} ($src)'
+      '${h != null && h.length > 1 ? ' · in 12 h ${fpR(h)}' : ''}';
 }
 
 /// Zusatz im Info-Blatt der Station (hyFpPop): Diagramm bei der Bezugsstation, «Als Fliessgeschwindigkeit übernehmen»
@@ -376,4 +390,136 @@ List<Widget> hyFpExtra(BuildContext c, IncStore s, String id, String name, void 
     t0 == t1 ? durS(t0 * 60.0) : '${durS(t0 * 60.0)} – ${durS(t1 * 60.0)}',
     by.entries.map((e) => '■ ${flk[e.key]!.$1} ${fpKm(e.value[0])}: ${fpMin(e.value[1], e.value[2])}').join(' · '),
   );
+}
+
+// ---------- Geschwindigkeit je Abschnitt und Zuschlag fürs Suchgebiet (flow_area, flowAreaHtml/flowAreaBind in index.html) ----------
+// Die eingegebene Fliessgeschwindigkeit ist die Grundgeschwindigkeit (gilt ausserhalb der Abschnitte, ohne Abschnitte überall); je Abschnitt
+// Grundgeschwindigkeit × Faktor (abschaltbar), von Hand übersteuerbar; «An einem Punkt gemessen» rechnet die Grundgeschwindigkeit zurück.
+bool _faOpen = false;
+
+List<J> faReaches(IncStore s) {
+  final a = s.st?['flow_area'];
+  return a is Map && a['reaches'] is List ? (a['reaches'] as List).whereType<Map>().map((x) => x.cast<String, dynamic>()).toList() : const [];
+}
+
+/// Eingabe einer Geschwindigkeit in der Einheit der Person; null = abgebrochen, -1 = leer
+Future<double?> _spdDlg(BuildContext c, IncStore s, String title, String text, {double? v, String ok = 'Speichern'}) async {
+  final r = await inputDlg(c, title,
+      label: '${trn('Fliessgeschwindigkeit')} (${spdIn(s.spdU)})', value: v == null ? '' : spdTo(v, s.spdU), hint: text, type: const TextInputType.numberWithOptions(decimal: true), ok: ok);
+  if (r == null) return null;
+  if (r.trim().isEmpty) return -1;
+  return spdFrom(r, s.spdU);
+}
+
+List<Widget> flowAreaWidgets(BuildContext c, IncStore s, MapCtl map) {
+  final a0 = s.st?['flow_area'];
+  if (a0 is! Map) return const [];
+  final a = a0.cast<String, dynamic>(), rs = faReaches(s), pc = jd(a['pct']) ?? 0, pt = a['pt'] is Map ? (a['pt'] as Map).cast<String, dynamic>() : null;
+  final auto = jb(a['auto']), area = s.feat('area'), nHand = rs.where((r) => jb(r['o'])).length;
+  Future<void> post(J b, [String? ok]) async => s.act('incident/flow/area', b, ok);
+  String fac(dynamic f) => (jd(f) ?? 1).toStringAsFixed(2);
+  final out = <Widget>[
+    const SizedBox(height: 4),
+    Mut(
+        rs.isNotEmpty
+            ? (auto
+                ? 'Gilt ausserhalb der Abschnitte; in den Abschnitten mit ihrem Faktor, sofern nicht von Hand gesetzt.'
+                : 'Gilt ausserhalb der Abschnitte; in den Abschnitten ohne Faktor, sofern nicht von Hand gesetzt.')
+            : 'Es sind keine Abschnitte eingerichtet: die Geschwindigkeit gilt für den ganzen Flusslauf.',
+        size: 12),
+    if (pt != null)
+      Mut(
+          '${tr('Gemessen')} ${fmtT(jn(pt['at']))}: ${s.spd(pt['v'])}${js(pt['rname']).isNotEmpty ? ' ${tr('im Abschnitt')} «${js(pt['rname'])}» (${tr('Faktor')} ${fac(pt['fac'])})' : ''}${s.fcs(pt['lat'], pt['lon'])}',
+          size: 12),
+    Wrap(spacing: 8, runSpacing: 4, children: [
+      OutlinedButton(
+          onPressed: () async {
+            final p = await map.pickPoint('Punkt der Messung antippen');
+            if (p == null || !map.ctx.mounted) return;
+            final v = await _spdDlg(map.ctx, s, 'Gemessene Fliessgeschwindigkeit',
+                rs.isNotEmpty ? 'Daraus wird mit dem Faktor des Abschnitts die Grundgeschwindigkeit berechnet.' : 'Sie gilt für den ganzen Flusslauf.',
+                ok: 'Übernehmen');
+            if (v == null || v <= 0) return;
+            await post({
+              'pt': {'lat': p.latitude, 'lon': p.longitude, 'v': v}
+            }, 'Grundgeschwindigkeit gesetzt');
+          },
+          child: const Text('An einem Punkt gemessen …')),
+      if (area)
+        OutlinedButton(
+            onPressed: () async {
+              final d = jd(a['pct_def']) ?? 0;
+              final r = await inputDlg(c, 'Zuschlag Suchgebiet',
+                  label: 'Zuschlag in %',
+                  value: jb(a['pct_own']) ? '${pc.round()}' : '',
+                  hint: '${tr('Leer = Vorgabe der Verwaltung')} (${d > 0 ? '+' : ''}${d.round()} %)',
+                  type: const TextInputType.numberWithOptions(signed: true));
+              if (r == null) return;
+              final t = r.trim();
+              await post({'pct': t.isEmpty ? '' : (double.tryParse(t.replaceAll(',', '.')) ?? 0)}, 'Gespeichert');
+            },
+            child: Text('${tr('Zuschlag Suchgebiet:')} ${pc != 0 ? '${pc > 0 ? '+' : ''}${pc.round()} %' : tr('keiner')}${jb(a['pct_own']) ? '' : ' (${tr('Vorgabe')})'}')),
+    ]),
+  ];
+  if (rs.isEmpty) return out;
+  out.add(ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      initiallyExpanded: _faOpen,
+      onExpansionChanged: (v) => _faOpen = v,
+      title: Text('${tr('Geschwindigkeit je Abschnitt')} (${rs.length}${nHand > 0 ? ', $nHand ${tr('von Hand')}' : ''})',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+      children: [
+        CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            value: auto,
+            title: Text('${tr('Faktoren der Abschnitte anwenden')}${jb(a['auto_own']) ? '' : ' (${tr('Vorgabe')})'}'),
+            onChanged: (v) => post({'auto': v == true ? 1 : 0})),
+        for (final r in rs)
+          Row(children: [
+            Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(js(r['name'])),
+              Mut(
+                  jb(r['o'])
+                      ? 'von Hand'
+                      : auto
+                          ? '${tr('Faktor')} ${fac(r['fac'])}'
+                          : '${tr('Grundgeschwindigkeit')} (${tr('Faktor')} ${fac(r['fac'])} ${tr('nicht angewendet')})',
+                  size: 12),
+            ])),
+            Text(r['v'] != null ? s.spd(r['v']) : '–', style: const TextStyle(fontWeight: FontWeight.bold)),
+            IconButton(
+                tooltip: trn('Geschwindigkeit im Abschnitt setzen'),
+                icon: const Icon(Icons.edit, size: 18),
+                onPressed: () async {
+                  final v = await _spdDlg(c, s, 'Geschwindigkeit im Abschnitt', 'Gilt statt Grundgeschwindigkeit × Faktor. Leer = zurücknehmen.',
+                      v: jb(r['o']) ? jd(r['v']) : null);
+                  if (v == null) return;
+                  await post({
+                    'ovr': {'${r['id']}': v < 0 ? null : v}
+                  }, 'Gespeichert');
+                }),
+            if (jb(r['o']))
+              IconButton(
+                  tooltip: trn('Zurücknehmen'),
+                  icon: const Icon(Icons.undo, size: 18),
+                  onPressed: () => post({
+                        'ovr': {'${r['id']}': null}
+                      })),
+          ]),
+        if (nHand > 0)
+          Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                  onPressed: () async {
+                    if (!await confirmDlg(c, 'Die Abschnitte gelten danach wieder mit Grundgeschwindigkeit und Faktor.',
+                        title: 'Alle von Hand gesetzten Geschwindigkeiten zurücknehmen?', ok: 'Zurücknehmen')) {
+                      return;
+                    }
+                    await post({'ovr_clear': 1}, 'Zurückgenommen');
+                  },
+                  child: const Text('Alle von Hand gesetzten zurücknehmen'))),
+      ]));
+  return out;
 }

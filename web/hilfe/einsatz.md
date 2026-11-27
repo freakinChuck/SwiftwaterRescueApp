@@ -71,7 +71,17 @@ Mit den Häkchen blendest du einzelne Einträge oder ganze Gruppen auf der Karte
 
 ## Fliessgeschwindigkeit {#fliessgeschwindigkeit}
 
-Im Register «Einsatz» setzen alle Teilnehmenden die **Fliessgeschwindigkeit** in m/s. Daraus berechnet die App die Länge des Suchgebiets. Die Messstationen beim PLS (siehe unten) helfen bei der Einschätzung.
+Im Register «Einsatz» setzen alle Teilnehmenden die **Fliessgeschwindigkeit** (in der Einheit aus dem Profil, m/s oder km/h). Daraus berechnet die App die Länge des Suchgebiets. Die Messstationen beim PLS (siehe unten) helfen bei der Einschätzung.
+
+### Geschwindigkeit je Abschnitt {#abschnitte}
+
+Sind für das Gewässer Abschnitte eingerichtet (Verwaltung → «Pegel & Abfluss»), ist der eingegebene Wert die **Grundgeschwindigkeit**: Er gilt ausserhalb der Abschnitte, in den Abschnitten gilt Grundgeschwindigkeit × Faktor des Abschnitts (z. B. langsamer im Stau, schneller in einer Engstelle). Ohne Abschnitte gilt der Wert für den ganzen Flusslauf.
+
+- **Geschwindigkeit je Abschnitt** (aufklappen): «Faktoren der Abschnitte anwenden» schaltet die Faktoren für diesen Einsatz aus und ein (Vorgabe aus der Verwaltung). ✎ setzt die Geschwindigkeit eines Abschnitts von Hand, ↺ nimmt sie zurück. Wer die Grundgeschwindigkeit ändert, passt alle übrigen Abschnitte im gleichen Verhältnis an.
+- **An einem Punkt gemessen …**: Punkt auf der Karte antippen und die dort gemessene Geschwindigkeit eingeben (z. B. mit einem Treibkörper). Die App rechnet daraus mit dem Faktor des Abschnitts an diesem Punkt die Grundgeschwindigkeit zurück.
+- **Zuschlag Suchgebiet**: verlängert die Driftdistanz des Suchgebiets um einen Prozentsatz, z. B. +20 % als Reserve. Leer = Vorgabe der Verwaltung.
+
+Das Suchgebiet rechnet in jedem Abschnitt mit dessen Geschwindigkeit; der Hinweis unten auf der Karte nennt Zuschlag und «mit Geschwindigkeit je Abschnitt».
 
 ### Vorhersage {#vorhersage}
 
@@ -82,7 +92,7 @@ Hat die massgebende Messstation beim PLS eine Kennlinie (Verwaltung), zeigt die 
 - **In 3 / 12 / 24 / 48 h**: die erwartete Geschwindigkeit. Quelle ist die Abflussvorhersage des BAFU; ohne sie bleibt der Abfluss wie jetzt.
 - **Abschnitte bis Ende Suchgebiet**: Stau, Schwellen, Engstellen und freie Strecken mit eigener Geschwindigkeit. Auf der Karte erscheinen sie als farbige Linien (Fenster «Ansicht», Kategorie «Fliessgeschwindigkeit je Abschnitt»).
 
-Weicht die Vorhersage deutlich vom eingestellten Wert ab, steigt der Abfluss stark, gilt eine neue Gefahrenstufe oder kommt eine neue Vorhersage, erhält die Einsatzleitung eine Meldung (auf Wunsch der Verwaltung alle Teilnehmenden); sie steht auch im Einsatzlog. Das Suchgebiet bleibt dabei unverändert.
+Weicht die Vorhersage deutlich vom eingestellten Wert ab, steigt der Abfluss stark, gilt eine neue Gefahrenstufe oder kommt eine neue Vorhersage, erhält die Einsatzleitung eine Meldung (auf Wunsch der Verwaltung alle Teilnehmenden); sie steht auch im Einsatzlog. Die Vorhersage ändert die eingestellte Geschwindigkeit nie selbst.
 
 ## Wasserzeit {#wasserzeit}
 

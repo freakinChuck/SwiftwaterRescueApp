@@ -808,7 +808,7 @@ function airFetch($srcs, $la, $lo, $rm) { $f = fn($x) => sprintf('%.4F', $x);
   return null; }
 // Relevanzzone: Kreise [lat, lon, Radius m, Art] um alle aktiven Positionen des Einsatzes. Um den PLS zusätzlich die Driftdistanz
 // (Fliessgeschwindigkeit × Zeit seit dem PLS, höchstens 30 km wie das Gewässernetz), damit das ganze Suchgebiet abgedeckt ist.
-function airZone($inc) { global $db, $now; $c = airCfg(); $R = $c['radius_km'] * 1000; $id = (int)$inc['id']; $z = []; $flow = $inc['flow_ms'] === null ? 0.0 : (float)$inc['flow_ms'];
+function airZone($inc) { global $db, $now; $c = airCfg(); $R = $c['radius_km'] * 1000; $id = (int)$inc['id']; $z = []; $flow = $inc['flow_ms'] === null ? 0.0 : (float)$inc['flow_ms'] * max(0.5, 1 + flowAreaCfg($inc)['pct'] / 100); // mit dem Zuschlag des Suchgebiets
   $q = function ($sql) use ($db, $id) { $s = $db->prepare($sql); $s->execute([$id]); return $s->fetchAll(); };
   foreach (plsSources($inc, incRes($inc)) as $s) $z[] = [$s['lat'], $s['lon'], $R + min(30000, max(0, $flow * ($now - $s['at']))), 'pls'];
   foreach ($q("SELECT lat,lon FROM participants WHERE incident_id=? AND mode<>'declined' AND left_at IS NULL AND lat IS NOT NULL") as $p) $z[] = [(float)$p['lat'], (float)$p['lon'], $R, 'pos'];
@@ -1912,7 +1912,7 @@ if ($route === 'public/state') {
   $res = [];
   foreach (incRes($inc) as $n => $r) $res[] = ['name' => $anon ? ($c['r'][$r['id']] ?? 'Rettling ' . ($n + 1)) : $r['name'], 'descr' => $anon ? null : $r['descr']] + array_intersect_key($r, array_flip(['id', 'lat', 'lon', 'loc_at', 'rescued_at', 'pls_lat', 'pls_lon', 'pls_at']));
   $stops = array_map(fn($x) => ['lat' => $x['lat'], 'lon' => $x['lon'], 'pts' => $x['pts'], 'line' => $x['line']], incStops($inc)); // Flusssperren (Issue #182): nur die Lage, ohne Namen
-  out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'stops' => $stops, 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'speed_unit' => speedDefault(), 'features' => features($inc['kind_id']), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0] + mapsFor($inc['kind_id']) + ['veh' => beaconCfg()['public'] && feature($inc, 'veh') ? vehState($inc, true) : null, 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
+  out(['incident' => $pi, 'sources' => plsSources($inc, $res), 'stops' => $stops, 'anon' => $anon ? 1 : 0, 'roles' => $roles, 'participants' => $parts, 'pois' => $pois, 'rescuees' => $res, 'coord_sys' => setting('coord_sys', 'lv95'), 'speed_unit' => speedDefault(), 'features' => features($inc['kind_id']), 'flow_area' => flowAreaPub($inc, features($inc['kind_id'])), 'air' => airInc($inc) && airCfg()['public'] ? 1 : 0] + mapsFor($inc['kind_id']) + ['veh' => beaconCfg()['public'] && feature($inc, 'veh') ? vehState($inc, true) : null, 'log' => (int)$inc['public_log'] ? array_slice(logRows($id, false, $anon), 0, 300) : null, 'now' => $now]); // features: Fenster «Ansicht» (Issue #48); log: Einsatzprotokoll live, neueste zuerst, anonym wie die Ansicht (Issue #54, public_log)
 }
 
 require __DIR__ . '/flow.php'; // Fliessgeschwindigkeit an den Messstationen (Issue #254): Kennlinien, Vorhersage, Abschnitte, Meldungen, flowRoute()
@@ -3960,7 +3960,7 @@ switch ($route) {
        'groups' => $pg ? $pg['g'] : [], 'marks' => $marks, 'messages' => $msgs, 'msg_marks' => $msgMarks,'me' => part($id) ?: null, 'is_lead' => isLead($id), 'can_manage' => canManage($inc), 'ai' => aiInc($inc), 'can_flow' => $cf, 'can_message' => $F['msg'] && canMessage($inc), 'can_read_messages' => $canRead, 'critical' => critical($inc), 'level' => alarmLvl($inc, $me['exercise_mode']), 'msg_level' => noteLvl($inc, 'msg'), 'end_level' => noteLvl($inc, 'end'), 'alarm' => $alarm, 'absent' => $absent, 'my_abs' => absNow($uid)[$uid] ?? null, 'features' => $F,
        'air' => airAllowed($inc) ? 1 : 0, 'air_inc' => airCfg()['on'] ? (airInc($inc) ? 1 : 0) : null, 'ex_lead' => $xl, 'ex_title' => $inc['plan_id'] && ($xl || planner()) ? (exPlan($inc)['title'] ?? null) : null, 'plan' => $inc['plan_id'] && $inc['kind']['sec'] && ($xp0 = exPlan($inc)) ? ['title' => $xp0['title'], 'doc' => json_decode((string)$xp0['doc'], true) ?: null] : null, // Einsatzplan eines geplanten Sekundäreinsatzes (Issue #164), für alle
  'ex_injects' => $inc['plan_id'] && ($xl || planner()) ? exInjects((int)$inc['plan_id']) : [],
-       'log' => $cf ? array_values(array_filter(logRows($id), fn($l) => $l['kind'] !== 'voice' || $vcm || in_array($l['ch'], $vmids, true))) : null, 'veh' => vehVisible($inc) ? vehState($inc) : null, 'hydro' => $F['hydro'] ? hydroInc($id) : [], 'flow_pred' => $F['hydro'] ? flowIncPred($inc, $F) : null, 'wtime' => $wt, 'alerts' => $wal, 'now' => $now] + mapsFor($inc['kind_id'])); // maps/map_def: Kartenanbieter des Einsatztyps (Issue #106)
+       'log' => $cf ? array_values(array_filter(logRows($id), fn($l) => $l['kind'] !== 'voice' || $vcm || in_array($l['ch'], $vmids, true))) : null, 'veh' => vehVisible($inc) ? vehState($inc) : null, 'hydro' => $F['hydro'] ? hydroInc($id) : [], 'flow_pred' => $F['hydro'] ? flowIncPred($inc, $F) : null, 'flow_area' => flowAreaPub($inc, $F), 'wtime' => $wt, 'alerts' => $wal, 'now' => $now] + mapsFor($inc['kind_id'])); // maps/map_def: Kartenanbieter des Einsatztyps (Issue #106)
 
  case 'incident/invite/add': // Nachbieten (Issue #90, Einsatzleitung): groups, persons (wenn der Typ das erlaubt) oder all=1; Alarm nur an die neu Aufgebotenen
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz'); if (!canManage($inc)) fail('Nur die Einsatzleitung kann nachbieten', 403);
@@ -4103,7 +4103,7 @@ switch ($route) {
  case 'incident/flow': // Fliessgeschwindigkeit in m/s (Teilnehmende und Verwaltung)
   $inc = activeIncident(); if (!$inc || !canFlow($inc)) fail('Nur Personen, die am Einsatz teilnehmen, können die Fliessgeschwindigkeit setzen', 403);
   $v = round((float)($in['flow_ms'] ?? 0), 2); if ($v <= 0 || $v > 15) fail('Fliessgeschwindigkeit muss zwischen 0 und 15 m/s liegen'); // Eingabe in km/h rechnet das Gerät um (Issue #259)
-  $db->prepare("UPDATE incidents SET flow_ms=? WHERE id=?")->execute([$v, $inc['id']]);
+  $db->prepare("UPDATE incidents SET flow_ms=?, flow_pt=NULL WHERE id=?")->execute([$v, $inc['id']]); // von Hand gesetzt: kein Messpunkt mehr (Geschwindigkeit je Abschnitt, flow.php)
   $src = mb_substr(trim((string)($in['src'] ?? '')), 0, 120); // übernommen aus der Vorhersage einer Messstation (Issue #254)
   logev($inc['id'], $uid, 'flow', $src !== '' ? 'übernimmt die Fliessgeschwindigkeit ' . $v . ' m/s (' . round($v * 3.6, 1) . ' km/h, ' . $src . ')' : 'setzt die Fliessgeschwindigkeit auf ' . $v . ' m/s (' . round($v * 3.6, 1) . ' km/h)');
   out(['ok' => true]);

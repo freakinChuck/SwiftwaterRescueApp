@@ -82,7 +82,7 @@ function autoFit(pts){if(!autoView)return;const k=JSON.stringify(pts.map(p=>p.ma
 // Suchgebiet aus allen PLS der vermissten Rettlinge (sources, Issue #24), Gewässernetz je PLS über public/net
 function drawArea(d){if(d.features&&d.features.area===0){areaInfo='';return} // Funktion «Suchgebiet» aus (Issue #75)
   const i=d.incident,posts=d.participants.filter(p=>p.lat!=null&&(d.roles.find(r=>r.id===p.role_id)||{}).is_post);
-  const a=searchArea(d.sources||[],nets,i.flow_ms,d.now,posts,(s,R)=>overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R+'&la='+s.lat+'&lo='+s.lon),()=>{if(ps)draw()},d.rescuees,d.stops||[]);
+  const a=searchArea(d.sources||[],nets,i.flow_ms,d.now,posts,(s,R)=>overpassNet('public/net&k='+encodeURIComponent(K)+'&m='+R+'&la='+s.lat+'&lo='+s.lon),()=>{if(ps)draw()},d.rescuees,d.stops||[],null,d.flow_area);
   areaInfo=a.info.join(' ');if(!vis('area'))return;
   a.circles.forEach(c=>L.circle([c.lat,c.lon],{radius:c.r,color:'#ff4d2e',weight:2,fillOpacity:.12,dashArray:'6',interactive:false}).addTo(lay));
   a.polys.forEach(cp=>L.polygon(cp,{color:'#ff4d2e',weight:1,fillOpacity:.28,interactive:false}).addTo(lay));

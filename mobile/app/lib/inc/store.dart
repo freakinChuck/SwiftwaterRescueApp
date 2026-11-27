@@ -997,7 +997,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     area = searchArea(jl(st?['sources']), nets, jd(i['flow_ms']), now, posts, (s, r) => overpassNet(api, {'around': [r, s.latitude, s.longitude]}), () {
       _calcArea();
       notifyListeners();
-    }, rescuees, jl(st?['stops']), far); // Flusssperren (Issue #182)
+    }, rescuees, jl(st?['stops']), far, st?['flow_area'] is Map ? (st!['flow_area'] as Map).cast<String, dynamic>() : null); // Flusssperren (Issue #182), Geschwindigkeit je Abschnitt
   }
 
   void _checkArea() {

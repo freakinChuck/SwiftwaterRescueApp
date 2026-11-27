@@ -645,13 +645,14 @@ class _IncMenuState extends State<IncMenu> {
                   controller: _fl,
                   focusNode: _flFocus,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: '${trn('Fliessgeschwindigkeit')} (${spdIn(s.spdU)})', isDense: true),
+                  decoration: InputDecoration(labelText: '${trn(faReaches(s).isNotEmpty ? 'Grundgeschwindigkeit' : 'Fliessgeschwindigkeit')} (${spdIn(s.spdU)})', isDense: true),
                   onSubmitted: (_) => _setFlow())),
           const SizedBox(width: 8),
           FilledButton(onPressed: _busy.contains('flow') ? null : _setFlow, child: Text(area ? 'Setzen & berechnen' : 'Setzen')),
         ]),
         const SizedBox(height: 6),
         Mut('${(s.area?.info ?? const <String>[]).join(' ')} Zeit seit Alarm: ${(secs / 60).round()} min.'.trim()),
+        ...flowAreaWidgets(c, s, map), // Geschwindigkeit je Abschnitt, Zuschlag
         ...flowPredWidgets(c, s, (v, src) => s.act('incident/flow', {'flow_ms': v, 'src': src}, 'Fliessgeschwindigkeit übernommen')), // Issue #254
       ]));
     }

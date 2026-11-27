@@ -301,6 +301,9 @@ class _Inc {
   final int alarmAt;
   int? endedAt;
   double? flow;
+  // Geschwindigkeit je Abschnitt (flow_area): Zuschlag, Faktoren an/aus, Punktmessung; im Demo ohne Abschnitte
+  int? faPct, faAuto;
+  Map<String, dynamic>? faPt;
   final int createdBy, kindId;
   int record, air, openJoin = 0, stopOn = 1;
   final stopOff = <int>[];
@@ -1482,6 +1485,7 @@ class Demo {
       'can_manage': mgr,
       'ai': null,
       'can_flow': act || mgr,
+      'flow_area': {'pct': i.faPct ?? 0, 'pct_own': i.faPct == null ? 0 : 1, 'pct_def': 0, 'auto': i.faAuto ?? 1, 'auto_own': i.faAuto == null ? 0 : 1, 'auto_def': 1, 'pt': i.faPt, 'reaches': []},
       'can_message': act || mgr,
       'can_read_messages': canRead,
       'critical': lvl == 'crit',
@@ -1684,7 +1688,25 @@ class Demo {
         if (!(v > 0 && v <= 15)) _fail('Fliessgeschwindigkeit muss zwischen 0 und 15 m/s liegen');
         final w = (v * 100).round() / 100;
         i.flow = w;
+        i.faPt = null;
         _logev(_meId, 'flow', 'setzt die Fliessgeschwindigkeit auf $w m/s (${(w * 36).round() / 10} km/h)');
+        return {'ok': true};
+      case 'incident/flow/area':
+        final i = _needPart('Nur Personen, die am Einsatz teilnehmen, können die Fliessgeschwindigkeit setzen');
+        if (b.containsKey('pct')) {
+          final p = b['pct'];
+          i.faPct = p == null || p == '' ? null : _d(p).round().clamp(-50, 200);
+          _logev(_meId, 'flow', i.faPct == null ? 'setzt den Zuschlag fürs Suchgebiet auf die Vorgabe' : 'setzt den Zuschlag fürs Suchgebiet auf ${i.faPct! > 0 ? '+' : ''}${i.faPct} %');
+        }
+        if (b.containsKey('auto')) i.faAuto = b['auto'] == '' || b['auto'] == null ? null : (_d(b['auto']) > 0 ? 1 : 0);
+        if (b['pt'] is Map) {
+          final p = b['pt'] as Map, v = _d(p['v']);
+          if (!(v > 0 && v <= 15)) _fail('Fliessgeschwindigkeit muss zwischen 0 und 15 m/s liegen');
+          final w = (v * 100).round() / 100;
+          i.flow = w;
+          i.faPt = {'lat': _d(p['lat']), 'lon': _d(p['lon']), 'v': w, 'at': _now(), 'rid': null, 'rname': null, 'fac': 1};
+          _logev(_meId, 'flow', 'misst an einem Punkt $w m/s (${(w * 36).round() / 10} km/h), Grundgeschwindigkeit $w m/s');
+        }
         return {'ok': true};
       case 'incident/concepts':
         _needLead('Nur die Einsatzleitung kann Einsatzkonzepte laden');
