@@ -13,8 +13,10 @@ function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHan
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download=name;document.body.appendChild(l);l.click();setTimeout(()=>{URL.revokeObjectURL(l.href);l.remove()},3000)}
 // Parallele Einsätze (Issue #167): INC_SEL = in der Einsatz-App angezeigter Einsatz, geht als X-Inc mit (0 = der Server wählt; Verwaltung, öffentliche Ansicht)
 let INC_SEL=0;
+// Antwort ohne JSON (z. B. IIS ersetzt den Inhalt einer 401 durch eine eigene Fehlerseite, Hosting-Fehlerseiten): Meldung nach dem Status statt immer «Serverfehler»
+function httpErr(s,r){return s===401?(r==='login'?'Benutzername oder Passwort falsch':'Nicht angemeldet'):s===403?'Keine Berechtigung':s===404?'Nicht gefunden':s===429?'Zu viele Anfragen, bitte später nochmals versuchen':s>=400&&s<500?'Anfrage abgelehnt (HTTP '+s+')':'Serverfehler'}
 async function api(r,body){const o={headers:{'X-Token':token||'','X-Lang':window.LANG||'de'}};if(INC_SEL)o.headers['X-Inc']=String(INC_SEL);if(body){o.method='POST';o.body=JSON.stringify(body)}
-  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:'Serverfehler'}));
+  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:httpErr(res.status,r)}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}
   if(r==='me'&&j.me&&window.I18N&&!DEMO)I18N.me(j.me,l=>api('me/settings',{lang:l}).catch(()=>{})); // Sprache des Kontos übernehmen bzw. die bei der Anmeldung gewählte speichern (Issue #66)
   return j}
@@ -121,7 +123,7 @@ const AIR_SVG={h:c=>`<circle cx="16" cy="12" r="10.5" fill="none" stroke="#fff" 
 function airIconHtml(a,age,rot){const h=a.cat==='A7'||!!a.rescue;
   return`<div class="airk${age>AIR_STALE_S?' old':''}${a.rescue?' resc':''}"><div class="airr" style="transform:rotate(${Math.round(rot||0)}deg)"><svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">${AIR_SVG[h?'h':'p'](airCol(a))}</svg></div><span>${esc(airName(a))} · ${esc(airAltS(a))}</span></div>`}
 function airPop(a,now,fc){const age=Math.max(0,Math.round(now-a.at)),vr=a.vr?(a.vr>0?'steigt ':'sinkt ')+(Math.abs(a.vr)*.00508).toFixed(1)+' m/s':null;
-  const rows=[['Rufzeichen',a.cs],['Kennzeichen',a.reg],['Typ',a.desc||a.type],['Transponder',String(a.hex||'').toUpperCase()],['Höhe',airAltL(a)],['Geschwindigkeit',a.gs!=null?Math.round(a.gs*1.852)+' km/h':null],['Kurs',a.trk!=null?a.trk+'°':null],['Vertikal',vr],
+  const rows=[['Rufzeichen',a.cs],['Kennzeichen',a.reg],['Typ',a.desc||a.type],['Transponder',String(a.hex||'').toUpperCase()],['Höhe',airAltL(a)],['Geschwindigkeit',a.gs!=null?fmtKmh(Math.round(a.gs*1.852)):null],['Kurs',a.trk!=null?a.trk+'°':null],['Vertikal',vr],
     ['Nächster fester Standort',a.near?`${a.near.n} (${(a.near.m/1000).toFixed(1)} km)`:null],['Distanz zum PLS',a.pls_m!=null?(a.pls_m/1000).toFixed(1)+' km Luftlinie':null],['Standort',fc?fc(a.lat,a.lon):null],['Letzte Position',fmtT(a.at)+` (vor ${age} s)`]];
   return`<div class="airpop"><b>${esc(airName(a))}</b><span class="t">${a.rescue?'Rettungshelikopter':a.cat==='A7'?'Helikopter':'Luftfahrzeug'} · ADS-B</span><table>${rows.filter(r=>r[1]).map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join('')}</table></div>`}
 // Marker je Transponder-Adresse nachführen statt neu zeichnen (ein offenes Popup bleibt offen und wird aktualisiert); fehlende entfernen
@@ -140,7 +142,11 @@ const fmtT=ts=>new Date(ts*1000).toLocaleTimeString(LOC,{hour:'2-digit',minute:'
 const BANK_M=30;   // Breite des Ufergebiets pro Seite in Metern
 const SNAP_M=300;  // maximale Distanz PLS zum Gewässer
 // Radius des Gewässernetzes für eine Driftdistanz D, auf 1 km aufgerundet, damit alle Geräte dieselbe Abfrage stellen (Server-Cache)
-const netRadius=D=>Math.ceil(Math.min(Math.max(5000,D*1.3),30000)/1000)*1000;
+// W (Issue #258): weiter laden, damit die ETA auch Positionen flussabwärts ausserhalb des Suchgebiets erreicht (netWant, in 5-km-Schritten)
+const netRadius=(D,W)=>Math.ceil(Math.min(Math.max(5000,D*1.3,W||0),30000)/1000)*1000;
+// Radius, den die Positionen far ([{lat, lon, max}], max = höchstens so weit vom PLS, Standard 30 km) für die ETA brauchen; 1 km Reserve, 5-km-Schritte,
+// damit alle Geräte dieselbe Abfrage stellen und nicht jede kleine Verschiebung neu lädt
+const netWant=(s,far)=>{let w=0;for(const q of far||[]){if(q.lat==null||q.lon==null)continue;const d=geoDist(s,q);if(d<=Math.min(q.max||30000,30000))w=Math.max(w,d)}return w?Math.min(Math.ceil((w+1000)/5000)*5000,30000):0};
 const geoDist=(a,b)=>L.latLng(a.lat,a.lon).distanceTo([b.lat,b.lon]);
 // feste Standorte mit pts (Issue #96, #134): line 1 = Linie (z. B. Fahrrinne, 2–200 Punkte, breiter Strich), sonst Bereich (Fläche); o = Stil der Fläche
 const placeGeo=(f,o)=>f.line?L.polyline(f.pts,{...o,weight:Math.max(4,(o.weight||0)+2),opacity:.95,fill:false}):L.polygon(f.pts,o);
@@ -156,6 +162,27 @@ const placeShape=f=>!f.pts?'':f.line?'Linie, ca. '+lineKm(f.pts).toFixed(lineKm(
 function riverNet(j){if(!j||!j.elements)throw new Error('ungültige Antwort');
   const ways=j.elements.filter(e=>e.geometry&&e.nodes),byNode=new Map();
   ways.forEach(w=>w.nodes.forEach((n,k)=>{(byNode.get(n)||byNode.set(n,[]).get(n)).push({w,k})}));return{ways,byNode}}
+// Gewässernetz als Graph (Werkzeug Flussdistanz, Einsatzkonzepte «entlang Gewässer»): Knoten-ID → {id, lat, lon, adj:[[Nachbar, Meter, 1 = in Fliessrichtung]]}
+function rdBuild(j){const g=new Map(),node=(id,p)=>g.get(id)||g.set(id,{id,lat:p.lat,lon:p.lon,adj:[]}).get(id);
+  j.elements.filter(w=>w.geometry&&w.nodes).forEach(w=>{for(let k=1;k<w.nodes.length;k++){const u=node(w.nodes[k-1],w.geometry[k-1]),v=node(w.nodes[k],w.geometry[k]),d=L.latLng(u.lat,u.lon).distanceTo([v.lat,v.lon]);u.adj.push([v.id,d,1]);v.adj.push([u.id,d,0])}});return g}
+// nächster Punkt auf einem Gewässerabschnitt u → v (in Fliessrichtung); du/dv = Meter bis zu den Enden, e = Abstand zum gewählten Punkt
+function rdSnap(g,p){let best=null;const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180);
+  g.forEach(u=>u.adj.forEach(([vid,d,f])=>{if(!f)return;const v=g.get(vid),ax=(u.lon-p.lng)*kx,ay=(u.lat-p.lat)*ky,dx=(v.lon-u.lon)*kx,dy=(v.lat-u.lat)*ky,l2=dx*dx+dy*dy,t=l2?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l2)):0,e=Math.hypot(ax+t*dx,ay+t*dy);
+    if(!best||e<best.e)best={e,u:u.id,v:vid,du:d*t,dv:d*(1-t),ll:[u.lat+(v.lat-u.lat)*t,u.lon+(v.lon-u.lon)*t]}}));return best}
+// kürzeste Wege (Dijkstra mit Binärheap); dir = nur in Fliessrichtung
+function rdDijkstra(g,src,dir){const D=new Map(),P=new Map(),h=[];
+  const push=(c,id)=>{h.push([c,id]);let i=h.length-1;while(i){const q=(i-1)>>1;if(h[q][0]<=h[i][0])break;[h[q],h[i]]=[h[i],h[q]];i=q}};
+  const pop=()=>{const t=h[0],x=h.pop();if(h.length){h[0]=x;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<h.length&&h[l][0]<h[m][0])m=l;if(r<h.length&&h[r][0]<h[m][0])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m}}return t};
+  src.forEach(([id,c])=>{if(!D.has(id)||c<D.get(id)){D.set(id,c);P.set(id,null);push(c,id)}});
+  while(h.length){const[c,id]=pop();if(c>D.get(id))continue;g.get(id).adj.forEach(([n,d,f])=>{if(dir&&!f)return;const nc=c+d;if(!D.has(n)||nc<D.get(n)){D.set(n,nc);P.set(n,id);push(nc,n)}})}
+  return{D,P}}
+// Weg vom Lotpunkt A zum Lotpunkt B: {d: Meter, pts: [[lat,lon],…]} oder null
+function rdPath(g,A,B,dir){let best=null;
+  if(A.u===B.u&&A.v===B.v&&(!dir||B.du>=A.du))best={d:Math.abs(B.du-A.du),nodes:[]}; // gleicher Abschnitt
+  const{D,P}=rdDijkstra(g,dir?[[A.v,A.dv]]:[[A.u,A.du],[A.v,A.dv]],dir);
+  (dir?[[B.u,B.du]]:[[B.u,B.du],[B.v,B.dv]]).forEach(([end,add])=>{if(!D.has(end))return;const d=D.get(end)+add;
+    if(!best||d<best.d){const nodes=[];for(let n=end;n!=null;n=P.get(n))nodes.unshift(n);best={d,nodes}}});
+  return best&&{d:best.d,pts:[A.ll,...best.nodes.map(n=>[g.get(n).lat,g.get(n).lon]),B.ll]}}
 // Gewässernetz über den Server (r = overpass bzw. public/net). Erreicht der Server Overpass nicht (502 mit query), fragt das Gerät
 // Overpass selbst mit der Abfrage und den Servern (Reihenfolge aus der Verwaltung) des Servers (andere IP-Adresse, Issue #28) und
 // liefert das Ergebnis über put für den Cache aller ab. Mit put (Einsatz-App, angemeldet) meldet es jeden Versuch für die Statistik (overpass/stat, Issue #45).
@@ -217,33 +244,72 @@ function riverArea(net,i,D,posts,stops){let best=null,bd=1e12;net.ways.forEach(w
     if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=geoDist(pts[j-1],pts[j]);r.maxLen=Math.max(r.maxLen,len);
     r.lines.push(pts);r.polys.push(corridor(pts,BANK_M))});
   r.cutBy=ctx.cut;return r}
+// ETA (Issue #258): Distanz entlang des Gewässers vom PLS (i) bis zur Stelle, an der der Flusslauf flussabwärts an pt vorbeiführt (höchstens ETA_M
+// daneben), mit denselben Regeln wie das Suchgebiet (alle Arme, endet an Posten und Flusssperren); null = nicht flussabwärts erreichbar bzw. ausserhalb
+// des geladenen Gewässernetzes. Zwischengespeichert am Netz (pk = Schlüssel der Posten und Sperren), damit die Listen bei jedem Zeichnen nicht neu suchen.
+const ETA_M=150,ETA_MAX=60000;
+function segProj(a,b,p){const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180),ax=(a.lon-p.lon)*kx,ay=(a.lat-p.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l)):0;return{t,d:Math.hypot(ax+t*dx,ay+t*dy)}}
+function riverReach(net,i,pt,posts,stops,pk){const c=net._eta||(net._eta={ctx:new Map(),d:new Map()}),ck=srcKey(i)+'|'+pk;let x=c.ctx.get(ck);
+  if(x===undefined){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
+    const sc=stopCtx(stops);x=!best||bd>SNAP_M?null:{best,posts:posts.concat(sc.posts).map(q=>snapPost(net,q)),segs:sc.segs};c.ctx.set(ck,x)}
+  if(!x)return null;const dk=ck+'|'+pt.lat.toFixed(5)+','+pt.lon.toFixed(5);if(c.d.has(dk))return c.d.get(dk);
+  const o={d:null};reachWalk(net,x.best.w,x.best.k,0,new Set(),{posts:x.posts,segs:x.segs,done:new Map()},pt,o);c.d.set(dk,o.d);return o.d}
+// wie riverFollow, aber mit zurückgelegter Distanz acc statt Restdistanz; o.d = kürzeste Distanz bis pt
+function reachWalk(net,w,k,acc,seen,ctx,pt,o){if(o.d!=null&&acc>=o.d)return;const key=w.id+':'+k;if((ctx.done.get(key)??Infinity)<=acc)return;ctx.done.set(key,acc);
+  seen=new Set(seen).add(w.id);const last=w.geometry.length-1,hit=v=>{if(o.d==null||v<o.d)o.d=v},post=p=>ctx.posts.some(q=>geoDist(p,q)<(q.r||120));
+  if(post(w.geometry[k])){if(geoDist(w.geometry[k],pt)<ETA_M)hit(acc);return}
+  // c = nächste Stelle im Band ETA_M: erst wenn der Abstand wieder zunimmt (bzw. am Ende des Weges), gilt sie als Treffer
+  let c=null;const done=()=>{if(c)hit(c.v)};
+  for(let j=k;j<last;j++){
+    for(const e of net.byNode.get(w.nodes[j])||[])if(e.k===0&&e.w!==w&&!seen.has(e.w.id))reachWalk(net,e.w,e.k,acc,seen,ctx,pt,o);
+    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b),x1=segHit(ctx.segs,a,b),x2=postHit(ctx.posts,a,b),x=x1&&x2?(x1.t<x2.t?x1:x2):x1||x2,pr=segProj(a,b,pt);
+    if(pr.d<ETA_M&&(!x||pr.t*d<=x.t*d+50)){if(c&&pr.d>=c.m)return done();c={v:acc+pr.t*d,m:pr.d}}else if(c)return done(); // eine Stelle direkt am Posten bzw. an der Sperre zählt noch (z. B. der Posten selbst)
+    if(x)return done();acc+=d;if(acc>ETA_MAX||!c&&o.d!=null&&acc>=o.d)return done();if(post(b)){if(geoDist(b,pt)<ETA_M&&(!c||geoDist(b,pt)<c.m))c={v:acc,m:0};return done()}}
+  done();if(o.d!=null&&acc>=o.d)return;
+  for(const e of net.byNode.get(w.nodes[last])||[])if(!seen.has(e.w.id)&&e.k<e.w.geometry.length-1)reachWalk(net,e.w,e.k,acc,seen,ctx,pt,o)}
 // Suchgebiet aus mehreren PLS (Issue #24): srcs = sources des Servers ([{lat,lon,at,own,names}], vermisste Rettlinge bzw. PLS des Einsatzes),
 // nets = Map je PLS (srcKey) mit dem Gewässernetz, get(s,R) liefert die Overpass-Antwort für einen PLS, redraw nach dem Laden.
-// Ergebnis: polys/lines (entlang Gewässer), circles (Rückfall {lat,lon,r}), info (Text), parts (je PLS: key, names, lat/lon, polys, circles), rs = Rettlinge (für den Hinweis ohne PLS)
+// Ergebnis: polys/lines (entlang Gewässer), circles (Rückfall {lat,lon,r}), info (Text), parts (je PLS: key, names, lat/lon, polys, circles), rs = Rettlinge (für den Hinweis ohne PLS),
+// eta(lat, lon) (Issue #258): wann das Suchgebiet entlang des Gewässers eine Stelle flussabwärts erreicht, {at, d = Meter bis dorthin}, {inside: 1} = schon erreicht, null = nicht (oder unbekannt)
 const srcKey=s=>s.lat.toFixed(6)+','+s.lon.toFixed(6);
 // Schlüssel eines Teilgebiets: PLS mit Zeitpunkt, wie die Zusammenfassung in plsSources()
 const partKey=(lat,lon,at)=>lat.toFixed(6)+','+lon.toFixed(6)+'@'+at;
 const fmtDT=ts=>new Date(ts*1000).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys:[],lines:[],circles:[],info:[],parts:[]};
+function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops,far){const r={polys:[],lines:[],circles:[],info:[],parts:[],eta:()=>null},reach=[];
   if(!srcs.length){const miss=(rs||[]).filter(x=>!x.rescued_at&&x.lat==null);
     r.info.push(!(rs||[]).length?'Suchgebiet: Kein PLS gesetzt.':miss.length?'Suchgebiet: Kein PLS für '+miss.map(x=>'«'+x.name+'»').join(', ')+'. PLS des Einsatzes oder der Rettlinge setzen.':'Suchgebiet: Alle Rettlinge gefunden.');return r}
   if(!flow){r.info.push('Suchgebiet: Fliessgeschwindigkeit fehlt.');return r}
   srcs.forEach(s=>{const D=flow*(now-s.at),k=srcKey(s),who=s.names&&s.names.length?' «'+s.names.join('», «')+'»':'',lbl=srcs.length>1||who?`Suchgebiet ab PLS${who} (${fmtDT(s.at)}): `:'Suchgebiet: ';
     if(D<=0){r.info.push(lbl+'Der Zeitpunkt des PLS liegt in der Zukunft.');return}
     const p={key:partKey(s.lat,s.lon,s.at),names:s.names||[],lat:s.lat,lon:s.lon,polys:[],circles:[]};r.parts.push(p);
-    let n=nets.get(k);
-    if(!n||(!n.loading&&((!n.fail&&n.R<D*1.1&&n.R<30000)||(n.fail&&Date.now()>n.retryAt)))){const R=netRadius(D),old=n;n={...(old||{}),loading:true};nets.set(k,n);
+    let n=nets.get(k);const W=netWant(s,far);
+    if(!n||(!n.loading&&((!n.fail&&(n.R<D*1.1||n.R<W)&&n.R<30000)||(n.fail&&Date.now()>n.retryAt)))){const R=netRadius(D,W),old=n;n={...(old||{}),loading:true};nets.set(k,n);
       get(s,R).then(j=>({R,...riverNet(j)})).catch(e=>({R,fail:true,err:e.message,retryAt:Date.now()+20000})).then(v=>{if(nets.get(k)===n){nets.set(k,v);redraw()}})}
     const circle=why=>{const c={lat:s.lat,lon:s.lon,r:D};r.circles.push(c);p.circles.push(c);r.info.push(lbl+why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.')};
     if(n.fail)return circle('Gewässernetz nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
     if(!n.ways)return circle('Gewässernetz wird geladen.');
-    const a=riverArea(n,s,D,posts,stops);if(!a)return circle('Kein Gewässer nahe der PLS.');
+    const a=riverArea(n,s,D,posts,stops);if(!a)return circle('Kein Gewässer nahe der PLS.');reach.push({s,D,n});
     r.polys.push(...a.polys);r.lines.push(...a.lines);p.polys.push(...a.polys);
     r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet ${a.cutBy}.`:'.'))});
   // Kurzfassung bei mehreren PLS (Hinweis unten in der Karte, Details per Klick)
   if(srcs.length>1){const riv=r.parts.filter(p=>p.polys.length).length,circ=r.parts.length-riv,none=srcs.length-r.parts.length;
     r.short=`Suchgebiet aus ${srcs.length} PLS: ${riv} entlang Gewässer`+(circ?`, ${circ} als Kreis`:'')+(none?`, ${none} ohne Gebiet`:'')}
+  if(reach.length){const pk=JSON.stringify([posts.map(q=>[q.lat,q.lon]),(stops||[]).map(q=>[q.lat,q.lon,q.pts])]);
+    r.eta=(lat,lon)=>{let best=null;for(const q of reach){const d=riverReach(q.n,q.s,{lat,lon},posts,stops,pk);if(d==null)continue;if(d<=q.D)return{inside:1};const at=q.s.at+d/flow;if(!best||at<best.at)best={at,d:d-q.D}}return best}}
   return r}
+/* ---------- Geschwindigkeiten (Issue #259) ---------- */
+// Einheit der Anzeige: Standard in der Verwaltung (settings speed_unit, me.speed_default), pro Person übersteuerbar (users.speed_unit); Schlüssel wie SPEEDS im Server.
+// Gespeichert wird immer in m/s (flow_ms), Vergleichsgeschwindigkeiten und Helikopter in km/h; umgerechnet wird nur für die Anzeige und die Eingabe.
+const SPEED_UNITS={ms:'m/s',kmh:'km/h',both:'m/s und km/h'};
+// geltende Einheit: eigene Wahl, sonst Standard der Organisation (öffentliche Ansicht: window.SPEED_DEF aus public/state)
+function spdU(){try{if(typeof me!=='undefined'&&me&&(me.speed_unit||me.speed_default))return me.speed_unit||me.speed_default}catch(e){}return window.SPEED_DEF||'ms'}
+const spdR=(v,d)=>String(Math.round(v*10**d)/10**d);
+// Geschwindigkeit in m/s → Text in der Einheit (beides: «1.8 m/s (6.5 km/h)»)
+function fmtSpd(ms,u){if(ms==null||ms===''||isNaN(+ms))return'';u=u||spdU();const a=spdR(+ms,2)+' m/s',b=spdR(ms*3.6,1)+' km/h';return u==='kmh'?b:u==='both'?a+' ('+b+')':a}
+// Geschwindigkeit in km/h (Vergleichsgeschwindigkeiten, Helikopter) → Text in der Einheit
+function fmtKmh(k,u){if(k==null||isNaN(+k))return'';u=u||spdU();const a=spdR(k/3.6,1)+' m/s',b=spdR(+k,1)+' km/h';return u==='kmh'?b:u==='both'?a+' ('+b+')':a}
+// Eingabe der Fliessgeschwindigkeit: in km/h nur bei der Einheit km/h, sonst in m/s; spdFrom rechnet die Eingabe in m/s um
+const spdIn=u=>(u||spdU())==='kmh'?'km/h':'m/s',spdTo=(ms,u)=>ms==null||ms===''?'':spdIn(u)==='km/h'?spdR(ms*3.6,1):String(ms),spdFrom=(v,u)=>{v=+String(v).replace(',','.');return spdIn(u)==='km/h'?Math.round(v/3.6*100)/100:v};
 /* ---------- Koordinaten ---------- */
 // Standard in der Verwaltung (settings coord_sys), pro Person übersteuerbar (users.coord_sys); Schlüssel wie auf dem Server (COORDS)
 const COORD_SYS={lv95:'LV95 (CH1903+, E / N)',lv03:'LV03 (CH1903, Y / X)',wgs84:'WGS84 Dezimalgrad',wgs84dms:'WGS84 Grad, Minuten, Sekunden'};
@@ -270,7 +336,7 @@ const can=p=>!!(typeof me!=='undefined'&&me&&me.perms&&me.perms.includes(p));
 const kindOf=x=>x.kind_name?{name:x.kind_name,color:x.kind_color}:{name:x.is_exercise?'Übung':'Einsatz',color:x.is_exercise?'#1d7fd1':'#ff4d2e'};
 const kindFg=c=>{const m=/^#(..)(..)(..)$/.exec(c||'');if(!m)return'#fff';const[r,g,b]=m.slice(1).map(x=>parseInt(x,16));return r*.299+g*.587+b*.114>165?'#08161e':'#fff'};
 const kindBadge=x=>{const k=kindOf(x);return`<span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span>`};
-const ADMIN_PERMS=['users','uroles','groups','avail','skills','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','dsar','dsar_org','anon','cfg_conn','applog','versions','docs']; // Rechte mit einem Bereich in der Verwaltung
+const ADMIN_PERMS=['users','uroles','groups','avail','skills','cfg_inc','ex_plan','cfg_func','cfg_ai','cfg_map','stats','cfg_my','aar','aar_rel','aar_cfg','aar_arch','legal','dsar','dsar_org','anon','cfg_conn','applog','versions','docs','concepts']; // Rechte mit einem Bereich in der Verwaltung
 const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerrolle';
 // Abmelden: Server meldet die Sitzung ab (Gerätesitzung der App bzw. Browser-Token, Route logout), danach die App benachrichtigen (beendet das Konto, Issue #108)
 function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});

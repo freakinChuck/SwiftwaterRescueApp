@@ -52,6 +52,7 @@ At the top you change the month (‹ Today ›), switch between **Month** and **
 
 - **Language**: German, English, French or Italian. “Automatic” uses the device language, otherwise the organisation's default. The choice applies to your account (also in the administration and for push notifications); the page then reloads. In the administration you choose it in the account menu at the top right, at login below the “Log in” button.
 - **Coordinate system**: LV95 (default), LV03, WGS84 decimal or in degrees/minutes/seconds, or hide coordinates.
+- **Speeds**: in m/s, in km/h or both (e.g. “1.8 m/s (6.5 km/h)”), for flow speed, river distance and helicopters. With km/h you also enter the flow speed in km/h. “Default” uses the organisation's setting.
 - **Navigation app** for the 🧭 button: Google Maps, Apple Maps, Waze or another app.
 
 ## Water time {#wasserzeit}

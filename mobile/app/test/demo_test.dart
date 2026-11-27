@@ -48,6 +48,28 @@ void main() {
     expect((st['participants'] as List).firstWhere((p) => p['user_id'] == 102)['veh_id'], 1);
   });
 
+  test('Einsatzkonzept: Vorschlag beim PLS, Vorschau, Laden, Entfernen (Issue #260)', () async {
+    Demo.restart('bsp');
+    await c('incident/join', {'mode': 'direct'});
+    var st = await c('incident/state');
+    expect(st['cc']['sug'].length, 1);
+    expect(st['cc']['fit'], [1]);
+    final l = (await c('incident/concepts'))['list'] as List;
+    expect(l.length, 1);
+    final items = (l[0]['items'] as List).where((x) => x['def_on'] == 1).map((x) => x['id'] as int).toList();
+    await c('incident/concept/load', {'id': 1, 'items': items});
+    st = await c('incident/state');
+    expect(st['cc']['loaded'].length, 1);
+    expect(st['cc']['sug'].length, 0);
+    final pois = (st['pois'] as List).where((p) => p['cc_id'] == 1).toList();
+    expect(pois.length, 6);
+    expect(pois.where((p) => p['cc_role'] != null).length, 2);
+    expect((st['externals'] as List).where((e) => e['cc_id'] == 1).length, 1);
+    expect((await c('incident/concept/remove', {'id': 1}))['n'], 7);
+    st = await c('incident/state');
+    expect((st['pois'] as List).where((p) => p['cc_id'] == 1).length, 0);
+  });
+
   test('Annehmen, Leitung, Rettling, Nachricht mit Antwort, Ende', () async {
     Demo.restart('bsp');
     await c('incident/join', {'mode': 'direct'});

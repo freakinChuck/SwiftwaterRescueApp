@@ -83,7 +83,7 @@ Future<bool> isForeground(String id) async {
 Future<void> report(Account a, String tag, String title, String body, String lvl, {int? kind, String? ksnd}) async {
   if (lvl == 'none') return;
   if (!await markTag(a.id, tag)) return;
-  final alarm = RegExp(r'^[it]:').hasMatch(tag) && (lvl == 'crit' || lvl == 'high'); // t: persönlicher Testalarm (Issue #218)
+  final alarm = RegExp(r'^[itx]:').hasMatch(tag) && (lvl == 'crit' || lvl == 'high'); // t: persönlicher Testalarm (Issue #218), x: Notruf (Issue #240)
   if (!alarm && await isForeground(a.id)) return;
   await showNote(a.id, tag, title, body, lvl, sub: a.label, kind: kind, ksnd: ksnd);
 }
@@ -118,6 +118,12 @@ Future<AccState> pollOne(Account a) async {
       if (x is Map) await report(a, '${x['tag']}', '${x['t'] ?? ''}', '${x['b'] ?? ''}', '${x['lvl'] ?? 'normal'}');
     }
     j['wt_auto'] = r['wtime'] is Map && (r['wtime'] as Map)['auto'] == 1;
+    // Notruf (Issue #240): laufende Notrufe an mich, noch nicht quittiert, kritisch (markTag meldet jeden nur einmal)
+    if (inc != null && r['sos'] is List) {
+      for (final x in (r['sos'] as List).whereType<Map>()) {
+        if (x['to_me'] == 1 && x['ack_by'] == null) await report(a, 'x:${x['id']}', 'SOS', '${x['name'] ?? 'Einsatzkraft'} braucht Hilfe (Notruf)', 'crit');
+      }
+    }
     final il = r['incidents'] is List ? (r['incidents'] as List).whereType<Map>().toList() : null;
     if (il != null) await _watchAll(a, st, j, il, r['kinds']);
     if (inc != null) {

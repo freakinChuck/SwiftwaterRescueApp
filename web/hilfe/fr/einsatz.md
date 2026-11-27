@@ -131,6 +131,16 @@ Les canaux que vous entendez et où vous pouvez parler dépendent de votre rôle
 
 Les véhicules équipés d'une balise Bluetooth apparaissent sur la carte dès que l'app native d'un participant les voit. La liste se trouve dans la fenêtre « Intervenants » sous « Véhicules » : qui est à bord, ce qui est chargé (bateau sur la remorque) et où il a été vu en dernier. Charger et décharger se fait via la popup du véhicule.
 
+## Appel d'urgence (SOS) {#sos}
+
+Si tu es toi-même en détresse, maintiens le bouton rouge **SOS** en haut à gauche de la carte appuyé pendant **2 secondes**. Un court compte à rebours suit : **Annuler** arrête un appel involontaire, **Envoyer tout de suite** l'envoie sans attendre. Le bouton n'apparaît que tant que tu participes à l'intervention.
+
+Selon le réglage de l'organisation, l'appel d'urgence alerte la direction d'intervention et les intervenants proches de toi avec une alarme **critique**, avec ton nom et ta position. Ils voient un plein écran avec la distance, 🧭 et **Quittancer**, une barre rouge en haut et un marqueur clignotant à ta position ; la carte se centre sur toi. Si tu es dans une conférence en direct, un signal sonore y retentit.
+
+Dès que quelqu'un quittance, ta barre affiche « vu par … ». Une fois le danger passé, touche **FIN** (ou **Terminer** dans la barre) ; la direction d'intervention peut aussi le terminer. L'appel, la quittance et la fin figurent dans le journal et dans le replay.
+
+> ! L'appel d'urgence ne remplace pas un appel au 112/144/117 si une aide extérieure est nécessaire.
+
 ## Documents {#dokumente}
 
 Le bouton de carte **📚 Documents** ouvre la documentation de votre organisation, aussi sans intervention. Tout en haut se trouve la recherche : elle trouve titres, descriptions, mots-clés, le texte des pages et le texte des PDF, avec numéro de page. En dessous figurent les sections que l'administration a configurées, p. ex. confirmations de lecture ouvertes, ★ favoris, documents sur des sites de la zone d'intervention, documents pour ce type d'intervention et les dossiers. Si c'est permis, vous disposez les sections pour vous avec **Disposer les sections**.

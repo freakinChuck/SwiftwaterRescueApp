@@ -76,7 +76,8 @@ class Api {
     try {
       j = jsonDecode(utf8.decode(r.bodyBytes));
     } catch (_) {
-      throw ApiError(r.statusCode == 404 ? 'Unter dieser Adresse läuft kein Swiftwater-Rescue-Server' : 'Ungültige Antwort vom Server (${r.statusCode})', r.statusCode);
+      // Antwort ohne JSON, z. B. weil IIS den Inhalt einer 401 durch eine eigene Fehlerseite ersetzt
+      throw ApiError(r.statusCode == 404 ? 'Unter dieser Adresse läuft kein Swiftwater-Rescue-Server' : r.statusCode == 401 && route == 'login' ? 'Benutzername oder Passwort falsch' : r.statusCode == 403 ? 'Keine Berechtigung' : 'Ungültige Antwort vom Server (${r.statusCode})', r.statusCode);
     }
     if (j is Map && j['error'] != null) throw ApiError('${j['error']}', r.statusCode, j is Map<String, dynamic> ? j : null);
     if (r.statusCode >= 400) throw ApiError('Fehler ${r.statusCode}', r.statusCode);

@@ -85,6 +85,21 @@ Modelli per soccorritori esterni (nome, descrizione, ruolo speciale, sigla, colo
 
 Quali simboli tattici sono disponibili per i marcatori e se sono ammessi marcatori senza simbolo.
 
+### Concetti d'intervento {#konzepte}
+
+Situazioni preparate per tratti di corsi d'acqua (diritto «Gestire i concetti d'intervento»). In alto il **comportamento per tipo d'intervento**: cosa succede quando un PLS si trova nell'ambito (Spento, Solo manuale, Proponi, Carica automaticamente) e se vengono proposti concetti successivi. Un concetto può derogare a questo comportamento.
+
+**Modifica** apre una finestra con carta:
+
+- **Ambito**: «Area sulla carta» (impostare i vertici) o «Lungo il corso d'acqua da A a B» (impostare A e B, «Calcola tratto» carica la rete idrografica; «Margine» = distanza massima di un PLS dal corso d'acqua).
+- **Tipi d'intervento** per cui vale il concetto.
+- **Elementi**: postazione (simbolo, ruolo speciale come incarico, assegnazione a persone e gruppi d'intervento, facoltativi ruolo speciale e veicolo), marcatore, area, linea, soccorritore esterno (anche da un modello), messaggio a tutti, documenti, escludere o considerare uno sbarramento, canali radio, rinforzo di gruppi d'intervento, attivare gli elicotteri, avviare la registrazione. «Preselezionato al caricamento» imposta le spunte dell'anteprima. I punti si spostano sulla carta.
+
+**Riprendi da un intervento …** crea una bozza da marcatori, aree, linee ed esterni di un intervento o di un'esercitazione. Un concetto già caricato può solo essere disattivato.
+
+![Concetti d'intervento](img/admin-konzepte.jpg)
+![Modifica concetto d'intervento](img/admin-konzept-dialog.jpg)
+
 ## Pianificazioni {#planungen}
 
 Esercitazioni preparate, interventi secondari pianificati ed eventi liberi con i loro elementi, piano delle esercitazioni e iscrizioni, esecuzioni con registro e replay. Vedi [Esercitazioni e pianificazioni](#planung/vorbereiten).
@@ -109,6 +124,10 @@ Quali app di navigazione sono disponibili e quale è quella predefinita.
 
 Valori indicativi del tempo in acqua in minuti per **protezione termica** (nessuna, muta in neoprene, muta stagna) e **temperatura dell'acqua** (livelli liberamente definibili). I valori predefiniti sono una proposta per il lavoro attivo nella corrente; confrontali con la documentazione di formazione dell'organizzazione (**Inserisci i predefiniti** li ripristina). Inoltre il preavviso in percentuale, il livello delle notifiche e il riconoscimento automatico (distanza dall'asse del corso d'acqua, durata fino a «in acqua» o «a terra») nonché il raggio per la stazione di misura con temperatura dell'acqua. Per tipo d'intervento attivi e disattivi la funzione in [Funzioni](#funktionen).
 
+### Chiamata d'emergenza (SOS) {#sos}
+
+Chi viene allertato da una chiamata d'emergenza: **direzione d'intervento e partecipanti nel raggio** (raggio in km), **solo la direzione d'intervento** o **tutti i partecipanti**. Inoltre per quanto tempo va premuto il pulsante (1–5 s), la durata del conto alla rovescia per annullare (0–10 s, 0 = nessuno) e se nella conferenza dal vivo suona un segnale acustico. La funzione stessa si attiva e disattiva per tipo d'intervento sotto **Funzioni**.
+
 ### Lingua {#sprache}
 
 L'app esiste in tedesco, inglese, francese e italiano. Qui imposti l'**impostazione predefinita dell'organizzazione**. Vale per le persone che non hanno scelto una lingua e il cui dispositivo non usa nessuna di queste lingue, nonché per le notifiche push a persone che non hanno mai aperto l'app.
@@ -127,9 +146,9 @@ Quali mappe di base (immagini aeree, mappe) sono disponibili, il loro ordine e q
 
 ![Fornitori di mappe](img/admin-karten.jpg)
 
-### Coordinate {#koordinaten}
+### Coordinate e unità {#koordinaten}
 
-Il sistema di coordinate predefinito. Ogni persona può modificarlo nel profilo.
+Il sistema di coordinate predefinito e l'unità predefinita delle velocità (m/s, km/h o entrambe) per la velocità della corrente, la distanza fluviale e gli elicotteri. Ogni persona può modificare entrambi nel profilo. La vista pubblica mostra sempre l'impostazione predefinita.
 
 ### Fonti di geodati {#geoquellen}
 
@@ -281,6 +300,7 @@ Alcune cose normalmente si possono solo disattivare o non eliminare affatto, aff
 | Modello | Soccorritori esterni | gli esterni già registrati restano |
 | Competenza con voci | Formazione | le formazioni registrate di tutte le persone |
 | Tipo di veicolo con veicoli, veicolo da interventi | Veicoli | i veicoli con avvistamenti e composizioni, anche nel replay |
+| Concetto d'intervento | Concetti d'intervento | concetto con i suoi elementi; i marcatori caricati e il registro restano negli interventi |
 
 Prima dell'eliminazione una richiesta di conferma elenca le conseguenze. **Non si può annullare.** Gli interventi in corso e il proprio account non si possono eliminare. Ogni eliminazione definitiva compare nel registro dell'applicazione (senza nomi).
 

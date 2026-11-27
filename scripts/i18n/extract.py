@@ -16,8 +16,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 LANGS = ['en', 'fr', 'it']
 SRC = (
     [f'web/{f}' for f in ('index.html', 'admin.html', 'public.html', 'funk.html', 'dok.html', 'legal.html', 'hilfe.html',
-                          'common.js', 'demo.js', 'voice.js', 'docs.js', 'sw.js')]
-    + ['web/api/index.php', 'web/api/fed.php', 'web/api/docs.php', 'web/api/wtime.php']
+                          'common.js', 'demo.js', 'voice.js', 'sos.js', 'cc.js', 'docs.js', 'sw.js')]
+    + ['web/api/index.php', 'web/api/fed.php', 'web/api/docs.php', 'web/api/wtime.php', 'web/api/concepts.php']
 )
 DART_DIR = 'mobile/app/lib'
 

@@ -113,6 +113,11 @@ details.fbmy{display:block;margin:.4rem 0}details.fbmy>*+*{margin-top:.4rem}labe
 .exmap{height:min(24rem,55dvh);margin-top:.5rem;border-radius:8px;border:1px solid var(--line);background:#0c1c25;isolation:isolate}
 .explc{width:20px;height:20px;border-radius:3px;border:2px solid #fff;color:#fff;display:grid;place-items:center;font-size:.6rem;font-weight:700;box-shadow:0 0 0 1px #0008;text-shadow:0 0 2px #000;overflow:hidden;white-space:nowrap}
 .exleg{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.3rem;font-size:.8rem}.exleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;border:1px solid #fff;margin-right:.3rem;vertical-align:-.05rem}
+.cctab{width:100%;border-collapse:collapse;margin:.4rem 0}.cctab td,.cctab th{padding:.35rem .4rem;border-bottom:1px solid var(--line);text-align:left}.cctab th{font-weight:600;color:var(--mut);font-size:.85rem}.cctab select{padding:.35rem .5rem}
+.ccil{display:grid;gap:.3rem;max-height:40dvh;overflow:auto}.ccir{display:flex;align-items:center;gap:.4rem;border:1px solid var(--line);border-radius:6px;padding:.25rem .4rem;background:#0c1c25;font-size:.9rem}.ccir.off{opacity:.65}.ccir .t{flex:1;min-width:0}.ccir .t small{display:block;color:var(--mut)}.ccir button{padding:.25rem .45rem}
+.ccadd button{flex:0 0 auto;padding:.35rem .55rem;font-size:.85rem}.ccsw{display:inline-block;width:14px;height:14px;border-radius:3px}.ccsym{display:inline-block;width:22px;text-align:center}.ccmk img{filter:drop-shadow(0 1px 2px #000a)}.ccmk .ccsym{font-size:20px;text-shadow:0 0 2px #000}
+.cctip{background:#3b1f6ecc;color:#fff;border:1px dashed #c9b4ff;border-radius:4px;padding:1px 5px;font-size:12px}.ccab{width:22px;height:22px;border-radius:50%;background:#7b4bd6;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-weight:800;font-size:12px}
+.ccchk{display:flex;flex-wrap:wrap;gap:.2rem .9rem;margin:.2rem 0 .4rem}.ccbar{position:absolute;left:50%;top:1rem;transform:translateX(-50%);z-index:5;display:flex;gap:.5rem;align-items:center;background:#3b1f6e;border:1px solid #9b7be6;border-radius:8px;padding:.4rem .6rem}.dlg .card.kdlg{position:relative}
 .pickmap{height:min(24rem,48dvh);isolation:isolate;border-radius:8px;border:1px solid var(--line);background:#0c1c25}
 .pickmap.geomap{height:min(36rem,62dvh)} /* Geodaten übernehmen (Issue #182) */
 .pickmap.vpmap{height:min(40rem,62dvh)} /* Standort eines Fahrzeugs (Issue #177) */
@@ -211,10 +216,10 @@ async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwate
 // Es ist immer nur ein Abschnitt sichtbar (Hash in der Adresse, Neuladen und Zurück funktionieren); er wird bei jedem Öffnen frisch geladen.
 const NAV=[
   ['Personen',[['benutzer','sU','Benutzer',loadUsers],['benutzerrollen','sUR','Benutzerrollen',loadURoles],['einsatzgruppen','sG','Einsatzgruppen',loadGroups],['abwesenheiten','sAb','Abwesenheiten',loadAbs],['ausbildung','sSk','Ausbildung',loadSkills]]],
-  ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt],['symbole','sSy','Einsatzsymbole',loadSym]]],
+  ['Einsatz',[['einsatztypen','sT','Einsatztypen',loadTypes],['einrueckoptionen','sM','Einrückoptionen',loadModes],['spezialrollen','sR','Spezialrollen',loadRoles],['externe','sX','Externe Einsatzkräfte',loadExt],['symbole','sSy','Einsatzsymbole',loadSym],['konzepte','sCc','Einsatzkonzepte',loadCc]]],
   ['Planungen',[['planungen','sEx','Planungen',loadEx]]],
-  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['direktanruf','sTel','Direktanruf',loadTel],['wasserzeit','sWt','Wasserzeit',loadWt],['sprache','sLng','Sprache',loadLng],['ai','sAi','AI-Assistent',loadAi]]],
-  ['Karte & Daten',[['karten','sMp','Kartenanbieter',loadMaps],['koordinaten','sC','Koordinaten',loadCoords],['geoquellen','sO','Geodaten-Quellen',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['geodaten','sGeo','Geodaten übernehmen',loadGeo],['fahrzeuge','sVeh','Fahrzeuge',loadVeh]]],
+  ['Funktionen',[['funktionen','sFn','Funktionen',loadFeat],['flussdistanz','sF','Flussdistanz',loadRd],['navigation','sNv','Navigation',loadNav],['direktanruf','sTel','Direktanruf',loadTel],['wasserzeit','sWt','Wasserzeit',loadWt],['sos','sSos','Notruf (SOS)',loadSos],['sprache','sLng','Sprache',loadLng],['ai','sAi','AI-Assistent',loadAi]]],
+  ['Karte & Daten',[['karten','sMp','Kartenanbieter',loadMaps],['koordinaten','sC','Koordinaten & Einheiten',loadCoords],['geoquellen','sO','Geodaten-Quellen',loadOp],['helikopter','sH','Helikopter',loadAir],['pegel','sHy','Pegel & Abfluss',loadHydro],['standorte','sPl','Feste Standorte',loadPlaces],['geodaten','sGeo','Geodaten übernehmen',loadGeo],['fahrzeuge','sVeh','Fahrzeuge',loadVeh]]],
   ['Auswertung',[['einsatzlog','stats','Einsatzstatistik und Einsatzlog',loadStats],['aarcfg','sAarC','After Action Review einrichten',loadAarCfg],['personenstatistik','sPS','Statistik pro Person',loadPS],['einsicht','sMyS','Einsicht für Einsatzkräfte',loadMyS],['anonymisierung','sAnon','Anonymisierung',loadAnon]]],
   ['Rechtliches',[['rechtliches','sLg','Impressum & Datenschutz',loadLegal],['datenschutzauszug','sDs','Datenschutzauszug',loadDsar]]],
   ['Dokumente',[['dokumente','sDk','Ablage',loadDocs],['dokumente-eingang','sDkI','Eingang',loadDocIn],['dokumente-anzeige','sDkV','Anzeige',loadDocView],['dokumente-einstellungen','sDkC','Einstellungen',loadDocCfg]]],
@@ -222,7 +227,7 @@ const NAV=[
   ['System',[['applog','sAL','Applikationslog',loadAppLog],['versionen','sVer','Versionen',loadVer]]],
 ];
 // Recht je Bereich (Issue #63); sichtbar sind nur Bereiche, für die die Person das Recht hat (bei einer Liste: eines davon)
-const NAV_PERM={benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',ausbildung:'skills',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',planungen:'ex_plan',funktionen:'cfg_func',sprache:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',direktanruf:'cfg_func',wasserzeit:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',datenschutzauszug:['dsar','dsar_org'],emailalarm:'cfg_conn',funk:'cfg_conn',partner:'cfg_conn',applog:'applog',versionen:'versions',dokumente:['docs','docs_ed'],'dokumente-eingang':['docs','docs_ed'],'dokumente-anzeige':'docs','dokumente-einstellungen':'docs'};
+const NAV_PERM={sos:'cfg_func',benutzer:'users',benutzerrollen:'uroles',einsatzgruppen:'groups',abwesenheiten:'avail',ausbildung:'skills',einsatztypen:'cfg_inc',einrueckoptionen:'cfg_inc',spezialrollen:'cfg_inc',externe:'cfg_inc',symbole:'cfg_inc',konzepte:'concepts',planungen:'ex_plan',funktionen:'cfg_func',sprache:'cfg_func',flussdistanz:'cfg_func',navigation:'cfg_func',direktanruf:'cfg_func',wasserzeit:'cfg_func',ai:'cfg_ai',karten:'cfg_map',koordinaten:'cfg_map',geoquellen:'cfg_map',helikopter:'cfg_map',pegel:'cfg_map',standorte:'cfg_map',fahrzeuge:'cfg_map',geodaten:'geo',einsatzlog:['stats','aar','aar_rel','aar_arch'],aarcfg:'aar_cfg',personenstatistik:'stats',einsicht:'cfg_my',anonymisierung:'anon',rechtliches:'legal',datenschutzauszug:['dsar','dsar_org'],emailalarm:'cfg_conn',funk:'cfg_conn',partner:'cfg_conn',applog:'applog',versionen:'versions',dokumente:['docs','docs_ed'],'dokumente-eingang':['docs','docs_ed'],'dokumente-anzeige':'docs','dokumente-einstellungen':'docs'};
 const nav=()=>NAV.map(([g,its])=>[g,its.filter(([k])=>[].concat(NAV_PERM[k]).some(p=>p==='docs_ed'?!!(me&&me.docs&&me.docs.edit):can(p)))]).filter(([,its])=>its.length);
 // «Meine Einsätze» (Issue #61) ist getrennt von der Verwaltung (#meine, ohne Navigation): die Ansicht als Einsatzkraft, auch für Administratoren und Übungsleiter
 // (API mit my=1, also nur eigene Einsätze, gemäss Einstellung my_runs). Einsatzkräfte ohne Verwaltungsrechte sehen nur sie.
@@ -696,6 +701,145 @@ async function loadRoles(){const el=$('#sR');try{roles=await api('roles')}catch(
     c.onchange=()=>{c.disabled=true;api('settings/save',{[k]:c.checked?1:0}).then(()=>toast('Gespeichert.','ok')).catch(e=>{c.checked=!c.checked;fail(e)}).finally(()=>{c.disabled=false})}})).catch(fail)}
 /* ---------- Vorlagen für externe Einsatzkräfte (Issue #39) ---------- */
 // Die Einsatzleitung erfasst damit Externe ohne App-Konto (z. B. Posten der Feuerwehr) mit wenigen Klicks; ohne Standort wird er beim Erfassen gewählt
+/* ---------- Einsatzkonzepte (Issue #260) ---------- */
+// Vorbereitete Lagen für Gewässerabschnitte: Geltungsbereich (Bereich auf der Karte oder entlang Gewässer von A bis B), Elemente (Posten mit Zuteilung,
+// Markierungen, Bereiche, Linien, Externe, Nachricht, Dokumente, Flusssperren, Funkkanäle, Nachbieten, Einstellungen) und Verhalten je Einsatztyp (cc_kinds).
+let CCD=null;
+const CC_KN={post:'Posten',point:'Markierung',area:'Bereich',line:'Linie',ext:'Externe Einsatzkraft',msg:'Nachricht an alle',doc:'Dokumente',stop:'Flusssperre',voice:'Funkkanäle',invite:'Nachbieten',opt:'Einstellung des Einsatzes'};
+const CC_MD={'':'Wie Einsatztyp',off:'Aus',hand:'Nur von Hand',suggest:'Vorschlagen',auto:'Automatisch laden'};
+const CC_MC={suggest:'#9b7be6',auto:'#35c27a'};
+const ccCnt=c=>{const g=[['Posten',['post','ext']],['Markierungen',['point']],['Bereiche und Linien',['area','line']],['Weitere',['msg','doc','stop','voice','invite','opt']]];return g.map(([t,ks])=>[t,c.items.filter(i=>ks.includes(i.kind)).length]).filter(x=>x[1]).map(([t,n])=>n+' '+t).join(' · ')};
+const ccGeoTxt=c=>c.scope==='river'?'Entlang Gewässer'+(c.river&&c.river.km?', ca. '+c.river.km+' km':'')+', Puffer '+((c.river||{}).buf||CCD.buf)+' m':'Bereich auf der Karte, '+(c.area||[]).length+' Eckpunkte';
+async function loadCc(){const el=$('#sCc');try{CCD=await api('concepts')}catch(e){return secErr(el,'Einsatzkonzepte',e)}
+  const D=CCD,ks=D.kinds,kn=id=>(ks.find(k=>k.id===id)||{}).name,act=D.concepts.filter(c=>c.active),cfg=D.cfg;
+  const card=(c,i)=>ent({t:c.name,ic:'📋',off:!c.active,ch:chip(CC_MD[c.mode||''],CC_MC[c.mode]||''),d:c.descr,
+    rows:[['Geltung',esc(ccGeoTxt(c))],['Elemente',esc(ccCnt(c))||'keine'],['Einsatztypen',esc(c.kinds?c.kinds.map(kn).filter(Boolean).join(', ')||'keiner':'alle')]],
+    kv:[['Geladen',c.used.n+'×'],['Zuletzt',c.used.last?esc(fmtDT(c.used.last)):'–']],btns:`<button data-cck="${c.id}">Kopieren</button>`,ed:['cce',c.id],mv:c.active?['ccm',c.id,i,act.length]:null,
+    del:['ccd',c.id,c.active?'Deaktivieren':'Aktivieren'],pg:['concept',c.id],q:[c.name,c.descr].join(' ')});
+  el.innerHTML=`<h2>Einsatzkonzepte</h2><div class="mut">Vorbereitete Lagen für einen Gewässerabschnitt: Posten mit Auftrag und Zuteilung, Markierungen, Bereiche, Linien, Externe, eine Nachricht an alle, Dokumente, Flusssperren, Funkkanäle, Nachbieten, Helikopter und Aufzeichnung. Die Einsatzleitung lädt ein Konzept im Einsatz (Register «Leitung»); liegt ein PLS im Geltungsbereich, schlägt die App es vor oder lädt es automatisch. Geladene Elemente sind gewöhnliche Markierungen usw. des Einsatzes. Nachrichten, Zuteilungen und Nachbieten löst immer eine Person aus, auch beim automatischen Laden.</div>
+    <div class="scard"><h3>Verhalten je Einsatztyp</h3><div class="mut">Was geschieht, wenn ein PLS (des Einsatzes oder eines Rettlings) im Geltungsbereich eines Konzepts liegt. Gilt für Konzepte mit «Wie Einsatztyp». Anschlusskonzepte: weitere Konzepte vorschlagen, sobald das Suchgebiet ihren Geltungsbereich erreicht.</div>
+      <table class="cctab"><tr><th>Einsatztyp</th><th>PLS im Geltungsbereich</th><th>Anschlusskonzepte</th></tr>${ks.map(k=>{const c=cfg[k.id]||{mode:'hand',next:1};return `<tr><td><span class="badge" style="background:${esc(k.color)};color:${kindFg(k.color)}">${esc(k.name)}</span></td><td><select data-cckm="${k.id}" aria-label="Verhalten bei ${esc(k.name)}">${Object.entries(D.modes).map(([m,l])=>`<option value="${m}" ${m===c.mode?'selected':''}>${esc(l)}</option>`).join('')}</select></td><td><label class="chk"><input type="checkbox" data-cckn="${k.id}" ${c.next?'checked':''}> vorschlagen</label></td></tr>`}).join('')}</table>${sbar('ccSv')}</div>
+    ${newBar('ccNew','Neues Einsatzkonzept',`<button id="ccFrom">Aus Einsatz übernehmen …</button>${D.concepts.length>5?qIn('ccQ','Konzept suchen'):''}`)}
+    ${act.length?act.map(card).join(''):empty('Noch keine Einsatzkonzepte. Beispiel: «Reuss Stadt Luzern (Seebrücke – Emmen)» mit drei Sicherungsposten, der Gefahrenstelle am Nadelwehr und der Einwasserung am Reusszopf.')}${offGrp(D.concepts.filter(c=>!c.active).map(card))}`;
+  qWire(el,'ccQ');
+  $('#ccSv').onclick=()=>{const v={};ks.forEach(k=>{v[k.id]={mode:$(`[data-cckm="${k.id}"]`,el).value,next:$(`[data-cckn="${k.id}"]`,el).checked?1:0}});api('concepts/cfg/save',{kinds:v}).then(()=>{toast('Gespeichert.','ok');loadCc()}).catch(fail)};
+  $('#ccNew').onclick=()=>ccDlg({name:'',scope:'area',area:[],items:[],mode:null,kinds:null});
+  $('#ccFrom').onclick=ccFromDlg;
+  el.onclick=async e=>{const b=e.target.closest('[data-cce],[data-cck],[data-ccm],[data-ccd]');if(!b)return;const C=id=>D.concepts.find(c=>c.id===+id);
+    if(b.dataset.cce)return ccDlg(JSON.parse(JSON.stringify(C(b.dataset.cce))));
+    if(b.dataset.cck)return api('concept/copy',{id:+b.dataset.cck}).then(()=>{toast('Kopiert.','ok');loadCc()}).catch(fail);
+    if(b.dataset.ccm)return api('concept/move',{id:+b.dataset.ccm,dir:+b.dataset.d}).then(loadCc).catch(fail);
+    if(b.dataset.ccd){const c=C(b.dataset.ccd);if(c.active&&!await ask(`«${c.name}» deaktivieren?\n\nDas Konzept wird nicht mehr vorgeschlagen und lässt sich nicht mehr laden. Bereits geladene Elemente bleiben in den Einsätzen.`))return;api('concept/active',{id:c.id,on:c.active?0:1}).then(loadCc).catch(fail)}}}
+// Lage eines Einsatzes als Entwurf
+async function ccFromDlg(){let r;try{r=await api('concept/sources')}catch(e){return fail(e)}
+  if(!r.list.length)return toast('Kein Einsatz mit Markierungen oder Externen gefunden.','info');
+  const d=dlg('Aus Einsatz übernehmen',`<div class="mut">Markierungen, Bereiche, Linien und Externe des Einsatzes werden zu Elementen eines neuen Konzepts (Entwurf, erst «Speichern» legt es an). Ausgenommene Flusssperren und angepasste Funkkanäle kommen mit.</div><label class="mut">Einsatz<select id="ccFs">${r.list.map(x=>`<option value="${x.id}">${esc(fmtDT(x.alarm_at))} · ${esc(x.kind_name)} · ${esc((x.message||'').slice(0,70))} (${x.np} Markierungen, ${x.ne} Externe)</option>`).join('')}</select></label>`,
+    async d=>{const x=await api('concept/from&incident_id='+$('#ccFs',d).value);setTimeout(()=>ccDlg({...x.draft,mode:null,kinds:null}),0)},'Übernehmen')}
+// Bearbeiten: links Angaben und Elemente, rechts die Karte
+function ccDlg(c){const D=CCD;let its=(c.items||[]).map(x=>({...x,refs:{...(x.refs||{})}})),area=(c.area||[]).map(q=>q.slice()),rv=c.river?{...c.river}:{a:null,b:null,buf:D.buf,lines:[],km:0},scope=c.scope||'area',pick=null;
+  const d=dlg(c.id?'Einsatzkonzept bearbeiten':'Neues Einsatzkonzept',`<div class="jgrid"><div class="jcol">
+    <label class="mut">Bezeichnung<input id="ccN" maxlength="120" value="${esc(c.name||'')}" placeholder="z. B. Reuss Stadt Luzern (Seebrücke – Emmen)"></label>
+    <label class="mut">Beschreibung (für die Einsatzleitung)<textarea id="ccDs" rows="2" maxlength="1000">${esc(c.descr||'')}</textarea></label>
+    <div class="mut" style="margin-top:.4rem">Geltungsbereich</div><div class="row" role="radiogroup" aria-label="Geltungsbereich"><label class="chk"><input type="radio" name="ccS" value="area" ${scope==='area'?'checked':''}> Bereich auf der Karte</label><label class="chk"><input type="radio" name="ccS" value="river" ${scope==='river'?'checked':''}> Entlang Gewässer von A bis B</label></div>
+    <div id="ccGa"><div class="mut" id="ccGai"></div><div class="row"><button type="button" id="ccGad">Eckpunkte setzen</button><button type="button" id="ccGau">Letzten entfernen</button><button type="button" id="ccGax">Alle entfernen</button></div></div>
+    <div id="ccGr"><div class="mut" id="ccGri"></div><div class="row" style="align-items:flex-end"><button type="button" id="ccRa">A setzen</button><button type="button" id="ccRb">B setzen</button><label class="mut" style="flex:0 0 7rem">Puffer (m)<input id="ccRbuf" type="number" min="20" max="2000" step="10" value="${rv.buf||D.buf}"></label><button type="button" id="ccRc">Abschnitt berechnen</button></div></div>
+    <label class="mut">Laden, wenn ein PLS im Geltungsbereich liegt<select id="ccM">${Object.entries(CC_MD).map(([m,l])=>`<option value="${m}" ${(c.mode||'')===m?'selected':''}>${esc(l)}</option>`).join('')}</select></label>
+    <div class="mut">Einsatztypen</div><div class="row">${D.kinds.map(k=>`<label class="chk"><input type="checkbox" data-cckk="${k.id}" ${!c.kinds||c.kinds.includes(k.id)?'checked':''}> ${esc(k.name)}</label>`).join('')}</div>
+    <div class="mut" style="margin-top:.5rem">Elemente <span id="ccIn"></span></div><div id="ccIl" class="ccil"></div>
+    <div class="row ccadd">${Object.entries(CC_KN).map(([k,l])=>`<button type="button" data-ccadd="${k}">+ ${esc(l)}</button>`).join('')}</div></div>
+    <div class="jcol jm"><div class="mut" id="ccMi">Elemente lassen sich auf der Karte verschieben.</div><div id="ccMap" class="pickmap"></div></div></div>`,
+    async d=>{const kk=[...d.querySelectorAll('[data-cckk]')],kinds=kk.every(x=>x.checked)?null:kk.filter(x=>x.checked).map(x=>+x.dataset.cckk);
+      if(scope==='area'&&area.length<3)throw new Error('Der Geltungsbereich braucht mindestens 3 Eckpunkte: «Eckpunkte setzen» und auf der Karte antippen.');
+      if(scope==='river'&&!(rv.lines||[]).length)throw new Error('Bitte A und B setzen und «Abschnitt berechnen».');
+      await api('concept/save',{id:c.id,name:$('#ccN',d).value,descr:$('#ccDs',d).value,scope,area:scope==='area'?area:null,river:scope==='river'?{...rv,buf:+$('#ccRbuf',d).value||D.buf}:null,mode:$('#ccM',d).value||null,kinds,
+        items:its.map(x=>({id:x.id,kind:x.kind,name:x.name,descr:x.descr,color:x.color,sym:x.sym,abbr:x.abbr,role_id:x.role_id,lat:x.lat,lon:x.lon,pts:x.pts,text:x.text,refs:x.refs,def_on:x.def_on??1}))});
+      toast('Gespeichert.','ok');loadCc()});
+  d.firstElementChild.classList.add('kdlg');
+  const m=L.map($('#ccMap',d));addBases(m);const gL=L.layerGroup().addTo(m),iL=L.layerGroup().addTo(m);
+  (D.places||[]).forEach(f=>(f.pts?placeGeo(f,{color:'#8a9aa5',weight:2,fillOpacity:.1}):L.circleMarker([f.lat,f.lon],{radius:5,color:'#fff',weight:1,fillColor:'#8a9aa5',fillOpacity:.9})).bindTooltip(esc(f.name)).addTo(m));
+  const all=()=>{const b=L.latLngBounds([]);area.forEach(q=>b.extend(q));(rv.lines||[]).forEach(l=>l.forEach(q=>b.extend(q)));[rv.a,rv.b].forEach(q=>q&&b.extend(q));its.forEach(x=>{if(x.lat!=null)b.extend([x.lat,x.lon]);(x.pts||[]).forEach(q=>b.extend(q))});return b};
+  setTimeout(()=>{m.invalidateSize();const b=all();if(b.isValid())m.fitBounds(b,{padding:[30,30]});else{const p=D.places[0];m.setView(p?[p.lat,p.lon]:[46.8,8.2],p?13:8)}},50);
+  const info=t=>{$('#ccMi',d).textContent=t||'Elemente lassen sich auf der Karte verschieben.'};
+  // Geltungsbereich zeichnen
+  const drawG=()=>{gL.clearLayers();const sc=$('[name=ccS]:checked',d).value;scope=sc;$('#ccGa',d).hidden=sc!=='area';$('#ccGr',d).hidden=sc!=='river';
+    if(sc==='area'){if(area.length)L.polygon(area,{color:'#b18cff',weight:3,dashArray:'8 6',fillColor:'#7b4bd6',fillOpacity:.1,interactive:false}).addTo(gL);
+      area.forEach((q,i)=>L.circleMarker(q,{radius:5,color:'#fff',weight:2,fillColor:'#7b4bd6',fillOpacity:1}).bindTooltip(String(i+1)).addTo(gL));
+      $('#ccGai',d).textContent=(area.length?area.length+' Eckpunkte':'Noch keine Eckpunkte')+(pick==='area'?' · Eckpunkte der Reihe nach auf der Karte antippen, danach «Fertig».':'');$('#ccGad',d).textContent=pick==='area'?'Fertig':'Eckpunkte setzen';$('#ccGau',d).disabled=$('#ccGax',d).disabled=!area.length}
+    else{(rv.lines||[]).forEach(l=>L.polyline(l,{color:'#b18cff',weight:Math.max(6,Math.min(30,(+$('#ccRbuf',d).value||D.buf)/8)),opacity:.45,interactive:false}).addTo(gL));
+      [['A',rv.a],['B',rv.b]].forEach(([t,q])=>q&&L.marker(q,{icon:L.divIcon({className:'',html:`<div class="ccab">${t}</div>`,iconSize:[22,22],iconAnchor:[11,11]})}).addTo(gL));
+      $('#ccGri',d).textContent=(rv.lines&&rv.lines.length?`Abschnitt ca. ${rv.km} km entlang des Gewässers. `:'A (oben) und B (unten am Gewässer) setzen, dann «Abschnitt berechnen». ')+'Massgebend: PLS höchstens «Puffer» vom Gewässer entfernt.'+(pick==='a'||pick==='b'?' · Punkt '+pick.toUpperCase()+' auf der Karte antippen.':'')}};
+  d.querySelectorAll('[name=ccS]').forEach(r=>r.onchange=()=>{pick=null;drawG()});
+  $('#ccGad',d).onclick=()=>{pick=pick==='area'?null:'area';drawG()};$('#ccGau',d).onclick=()=>{area.pop();drawG()};$('#ccGax',d).onclick=()=>{area=[];drawG()};
+  $('#ccRa',d).onclick=()=>{pick='a';drawG()};$('#ccRb',d).onclick=()=>{pick='b';drawG()};$('#ccRbuf',d).oninput=drawG;
+  $('#ccRc',d).onclick=async()=>{if(!rv.a||!rv.b)return toast('Bitte zuerst A und B setzen.','info');const b=$('#ccRc',d);b.disabled=true;b.textContent='Gewässernetz wird geladen …';
+    try{const a=L.latLng(rv.a),z=L.latLng(rv.b),mm=Math.max(1500,a.distanceTo(z)*.3),la=mm/111320,lo=mm/(111320*Math.cos(a.lat*Math.PI/180));
+      const bb=[Math.floor((Math.min(a.lat,z.lat)-la)*100)/100,Math.floor((Math.min(a.lng,z.lng)-lo)*100)/100,Math.ceil((Math.max(a.lat,z.lat)+la)*100)/100,Math.ceil((Math.max(a.lng,z.lng)+lo)*100)/100];
+      const g=rdBuild(await overpassNet('overpass',{bbox:bb})),A=rdSnap(g,a),B=rdSnap(g,z);if(!A||A.e>SNAP_M||!B||B.e>SNAP_M)throw new Error(`Kein Gewässer im Umkreis von ${SNAP_M} m um A bzw. B.`);
+      let r=rdPath(g,A,B,true);if(!r){r=rdPath(g,B,A,true);if(r)r.pts.reverse()}if(!r)r=rdPath(g,A,B,false);if(!r)throw new Error('Zwischen A und B gibt es keine Verbindung über das Gewässernetz.');
+      rv.lines=[r.pts.map(q=>[+q[0].toFixed(6),+q[1].toFixed(6)])];rv.km=Math.round(r.d/10)/100;drawG();m.fitBounds(all(),{padding:[30,30]})}
+    catch(e){fail(e)}finally{b.disabled=false;b.textContent='Abschnitt berechnen'}};
+  // Elemente: Liste und Karte (Punkte verschiebbar)
+  const IC=x=>x.sym?`<img src="img/sym/${esc(x.sym)}.svg" width="22" height="22" alt="">`:x.kind==='ext'?abbrB(x.abbr||'EX',x.color||'#5a6b74'):x.kind==='area'||x.kind==='line'?`<span class="ccsw" style="background:${esc(x.color||'#ff9f1c')}${x.kind==='line'?';height:4px':''}"></span>`:`<span class="ccsym">${{msg:'✉',doc:'📄',stop:'⛔',voice:'🎙',invite:'📣',opt:'⚙',post:'⚑',point:'⚑'}[x.kind]}</span>`;
+  const drawI=()=>{iL.clearLayers();its.forEach((x,i)=>{const tip=esc(x.name.replace(/ –.*/,''));
+      if(x.lat!=null&&['post','point','ext'].includes(x.kind)){const mk=L.marker([x.lat,x.lon],{draggable:true,icon:L.divIcon({className:'',html:`<div class="ccmk">${IC(x)}</div>`,iconSize:[28,28],iconAnchor:[14,14]})}).bindTooltip(tip,{permanent:true,direction:'right',offset:[14,0],className:'cctip'}).addTo(iL);
+        mk.on('dragend',()=>{const q=mk.getLatLng();x.lat=+q.lat.toFixed(7);x.lon=+q.lng.toFixed(7)})}
+      else if(x.pts&&x.kind==='area')L.polygon(x.pts,{color:x.color||'#ff9f1c',weight:2,fillOpacity:.2}).bindTooltip(tip).addTo(iL);
+      else if(x.pts&&x.kind==='line')L.polyline(x.pts,{color:x.color||'#ff9f1c',weight:4}).bindTooltip(tip).addTo(iL)});
+    $('#ccIn',d).textContent='('+its.length+')';
+    $('#ccIl',d).innerHTML=its.map((x,i)=>`<div class="ccir${x.def_on===0?' off':''}">${IC(x)}<div class="t">${esc(x.name||CC_KN[x.kind])}<small>${esc(CC_KN[x.kind])}${x.def_on===0?' · beim Laden nicht vorausgewählt':''}</small></div><button type="button" data-cciu="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button type="button" data-ccid="${i}" ${i<its.length-1?'':'disabled'} aria-label="Nach unten">↓</button><button type="button" data-ccie="${i}">Bearbeiten</button><button type="button" data-ccix="${i}" aria-label="Entfernen" title="Entfernen">✕</button></div>`).join('')||'<div class="mut">Noch keine Elemente. Unten eine Art wählen.</div>'};
+  d.addEventListener('click',e=>{const b=e.target.closest('[data-cciu],[data-ccid],[data-ccie],[data-ccix],[data-ccadd]');if(!b)return;const t=b.dataset;
+    if(t.cciu){const i=+t.cciu;[its[i-1],its[i]]=[its[i],its[i-1]];drawI()}else if(t.ccid){const i=+t.ccid;[its[i+1],its[i]]=[its[i],its[i+1]];drawI()}
+    else if(t.ccix){its.splice(+t.ccix,1);drawI()}else if(t.ccie)ccItemDlg(its[+t.ccie],x=>{its[+t.ccie]=x;drawI()},m,d,info);
+    else if(t.ccadd)ccItemDlg({kind:t.ccadd,name:'',refs:{},def_on:1,lat:null,lon:null},x=>{its.push(x);drawI()},m,d,info)});
+  m.on('click',e=>{const q=[+e.latlng.lat.toFixed(7),+e.latlng.lng.toFixed(7)];if(pick==='area'){area.push(q);drawG()}else if(pick==='a'||pick==='b'){rv[pick]=q;rv.lines=[];pick=null;drawG()}});
+  drawG();drawI()}
+// ein Element bearbeiten (eigener Dialog über dem Konzept); Standort, Bereich bzw. Linie auf der Karte des Konzepts (Dialog wird dafür ausgeblendet)
+function ccItemDlg(x0,done,m,cd,info){const D=CCD,x={...x0,refs:{...(x0.refs||{})}},k=x.kind;let pts=(x.pts||[]).map(q=>q.slice()),P=null;
+  const opt=(l,v,f)=>l.map(o=>`<option value="${o.id}" ${o.id===v?'selected':''}>${esc(f?f(o):o.name)}</option>`).join('');
+  const chks=(attr,l,sel)=>`<div class="ccchk">${l.map(o=>`<label class="chk"><input type="checkbox" ${attr}="${o.id}" ${(sel||[]).includes(o.id)?'checked':''}> ${esc(o.name||o.title)}</label>`).join('')||'<span class="mut">Keine vorhanden</span>'}</div>`;
+  const cats=[...new Set(D.symbols.map(s=>s.cat))],symSel=`<label class="mut">Symbol<select id="ciSy"><option value="">Kein Symbol (Fahne in der Farbe)</option>${cats.map(c=>`<optgroup label="${esc(c)}">${D.symbols.filter(s=>s.cat===c).map(s=>`<option value="${s.k}" ${s.k===x.sym?'selected':''}>${esc(s.name)}</option>`).join('')}</optgroup>`).join('')}</select></label>`;
+  const roleSel=`<label class="mut">Spezialrolle${k==='post'?' (Auftrag)':''}<select id="ciR"><option value="">Keine Spezialrolle</option>${opt(D.roles,x.role_id,r=>r.name+(r.is_post?' (Posten)':''))}</select></label>`;
+  const loc=`<label class="mut">Standort<input id="ciL" value="${x.lat!=null?esc(fmtC(x.lat,x.lon,'wgs84')):''}" placeholder="LV95 2'665'000 / 1'212'000 oder WGS84 47.05, 8.30"></label><div class="row"><button type="button" id="ciLp">Auf der Karte wählen</button></div>`;
+  const geo=`<div class="mut" id="ciPi">${pts.length?pts.length+' Punkte':'Noch nicht gezeichnet'}</div><div class="row"><button type="button" id="ciPd">Auf der Karte zeichnen</button></div>`;
+  const col=`<label class="mut" style="flex:0 0 auto">Farbe<input type="color" id="ciC" value="${esc(x.color||(k==='area'?'#1d7fd1':'#ff9f1c'))}" style="width:4rem"></label>`;
+  const nm=(ph)=>`<label class="mut">Bezeichnung<input id="ciN" maxlength="80" value="${esc(x.name||'')}" placeholder="${esc(ph)}"></label>`;
+  const body={post:nm('z. B. Sicherungsposten 1 – Geissmattbrücke')+symSel+roleSel+`<label class="mut">Auftrag (Text der Zuteilung)<input id="ciD" maxlength="500" value="${esc(x.descr||'')}" placeholder="z. B. Wurfsack und Funk, Kanal Einsatz"></label>`
+      +`<div class="mut" style="margin-top:.4rem">Zuteilung (optional): diese Personen bzw. Mitglieder dieser Einsatzgruppen erhalten den Auftrag als Nachricht, sobald sie teilnehmen</div><div id="ciUs" class="lsel"></div><input id="ciUq" type="search" autocomplete="off" placeholder="Person suchen" aria-label="Person zuteilen"><div id="ciUr" class="lres"></div>`
+      +chks('data-cig',D.groups,x.refs.groups)+`<label class="chk"><input type="checkbox" id="ciSr" ${x.refs.sr?'checked':''}> Spezialrolle der Zugeteilten beim Zuteilen setzen</label>`
+      +(D.vehicles.length?`<label class="mut">Fahrzeug (Angabe im Auftrag)<select id="ciV"><option value="">Kein Fahrzeug</option>${opt(D.vehicles,x.refs.veh)}</select></label>`:'')+loc,
+    point:nm('z. B. Gefahrenstelle Nadelwehr')+symSel+`<div class="row">${col}</div>`+loc,
+    area:nm('z. B. Absperrung Nadelwehr')+`<div class="row">${col}</div>`+geo, line:nm('z. B. Ufersuche rechts')+`<div class="row">${col}</div>`+geo,
+    ext:(D.ext_templates.length?`<label class="mut">Aus Vorlage übernehmen<select id="ciT"><option value="">Keine Vorlage</option>${opt(D.ext_templates,x.refs.tpl)}</select></label>`:'')+nm('z. B. Polizei Emmen, Posten Brücke')+`<label class="mut">Beschreibung<textarea id="ciD" rows="2" maxlength="500">${esc(x.descr||'')}</textarea></label>`+roleSel+extStyleFields(x)+loc,
+    msg:`<label class="mut">Text der Nachricht an alle Teilnehmenden<textarea id="ciX" rows="3" maxlength="2000">${esc(x.text||'')}</textarea></label>`,
+    doc:nm('Dokumente')+'<div class="mut">Erscheinen im Fenster «Dokumente» unter «Für diesen Einsatz».</div>'+chks('data-cidc',D.docs,x.refs.docs),
+    stop:`<label class="mut">Fester Standort mit Flusssperre<select id="ciPl">${opt(D.places.filter(f=>(f.props||[]).some(p=>D.stop_props.includes(p))),x.refs.place)}</select></label><div class="row" role="radiogroup"><label class="chk"><input type="radio" name="ciO" value="1" ${x.refs.off!==0?'checked':''}> im Suchgebiet nicht berücksichtigen (z. B. passierbar)</label><label class="chk"><input type="radio" name="ciO" value="0" ${x.refs.off===0?'checked':''}> berücksichtigen</label></div>`,
+    voice:'<div class="mut">Funkkanäle des Einsatzes</div>'+chks('data-civ',D.channels,x.refs.ids),
+    invite:'<div class="mut">Diese Einsatzgruppen nachbieten (mit Alarm; nur Gruppen, die die ladende Person aufbieten darf)</div>'+chks('data-cii',D.groups,x.refs.groups),
+    opt:`<label class="mut">Einstellung<select id="ciOk">${Object.entries(D.opts).map(([o,l])=>`<option value="${o}" ${x.refs.k===o?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`}[k];
+  const d=dlg(CC_KN[k]+(x0.id||x0.name?' bearbeiten':' hinzufügen'),body+`<label class="chk"><input type="checkbox" id="ciOn" ${x.def_on!==0?'checked':''}> Beim Laden vorausgewählt</label>`,async d=>{
+      const v=id=>$(id,d)?$(id,d).value:'';const r={...x,name:v('#ciN').trim(),def_on:$('#ciOn',d).checked?1:0};
+      if(['post','point','ext'].includes(k)){const q=parseC(v('#ciL'));if(!q)throw new Error('Standort fehlt oder nicht erkannt: eingeben oder «Auf der Karte wählen».');r.lat=+q.lat.toFixed(7);r.lon=+q.lon.toFixed(7)}
+      if(k==='post'||k==='point'){r.sym=v('#ciSy')||null;if(!r.name&&r.sym)r.name=D.symbols.find(s=>s.k===r.sym).name}
+      if(k==='point'||k==='area'||k==='line')r.color=v('#ciC');
+      if(k==='area'||k==='line'){if(pts.length<(k==='area'?3:2))throw new Error(k==='area'?'Ein Bereich braucht mindestens 3 Eckpunkte.':'Eine Linie braucht mindestens 2 Punkte.');r.pts=pts}
+      if(k==='post'){r.role_id=+v('#ciR')||null;r.descr=v('#ciD');r.refs={users:P.get(),groups:[...d.querySelectorAll('[data-cig]:checked')].map(i=>+i.dataset.cig),sr:$('#ciSr',d).checked?1:0,veh:+v('#ciV')||null}}
+      if(k==='ext'){r.role_id=+v('#ciR')||null;r.descr=v('#ciD');Object.assign(r,extStyleVal(d));r.refs={tpl:+v('#ciT')||null}}
+      if(k==='msg'){r.text=v('#ciX').trim();if(!r.text)throw new Error('Text fehlt');r.name='Nachricht an alle'}
+      if(k==='doc'){r.refs={docs:[...d.querySelectorAll('[data-cidc]:checked')].map(i=>+i.dataset.cidc)};if(!r.refs.docs.length)throw new Error('Bitte mindestens ein Dokument wählen.');r.name=r.name||'Dokumente'}
+      if(k==='stop'){const pl=+v('#ciPl');if(!pl)throw new Error('Es gibt keinen festen Standort mit einer Flusssperre.');const off=$('[name=ciO]:checked',d).value==='1'?1:0,f=D.places.find(p=>p.id===pl);r.refs={place:pl,off};r.name=(off?'Flusssperre ausnehmen: ':'Flusssperre berücksichtigen: ')+f.name}
+      if(k==='voice'){r.refs={ids:[...d.querySelectorAll('[data-civ]:checked')].map(i=>+i.dataset.civ)};if(!r.refs.ids.length)throw new Error('Bitte mindestens einen Kanal wählen.');r.name='Funkkanäle: '+D.channels.filter(c=>r.refs.ids.includes(c.id)).map(c=>c.name).join(', ')}
+      if(k==='invite'){r.refs={groups:[...d.querySelectorAll('[data-cii]:checked')].map(i=>+i.dataset.cii)};if(!r.refs.groups.length)throw new Error('Bitte mindestens eine Einsatzgruppe wählen.');r.name='Nachbieten: '+D.groups.filter(g=>r.refs.groups.includes(g.id)).map(g=>g.name).join(', ')}
+      if(k==='opt'){r.refs={k:v('#ciOk')};r.name=D.opts[r.refs.k]}
+      if(!r.name)throw new Error('Bezeichnung fehlt');done(r)},x0.id||x0.name?'Übernehmen':'Hinzufügen');
+  if(k==='post')P=pickPpl(D.users,d,'ciU',x.refs.users||[],()=>[],'Niemand zugeteilt');
+  if(k==='ext'){extStyleBind(d);if($('#ciT',d))$('#ciT',d).onchange=()=>{const t=D.ext_templates.find(y=>y.id===+$('#ciT',d).value);if(!t)return;$('#ciN',d).value=t.name;$('#ciD',d).value=t.descr||'';$('#ciR',d).value=t.role_id||'';$('#xK',d).value=t.abbr||'';if(t.color){$('#xFc',d).checked=true;$('#xF',d).value=t.color}if(t.lat!=null)$('#ciL',d).value=fmtC(t.lat,t.lon,'wgs84')}}
+  // Punkt bzw. Linie/Bereich auf der Karte des Konzepts: Dialog ausblenden, danach wieder zeigen
+  const show=on=>{d.style.display=on?'':'none'};
+  if($('#ciLp',d))$('#ciLp',d).onclick=()=>{show(0);info('Standort auf der Karte antippen.');m.once('click',e=>{$('#ciL',d).value=fmtC(e.latlng.lat,e.latlng.lng,'wgs84');info();show(1)})};
+  if($('#ciPd',d))$('#ciPd',d).onclick=()=>{show(0);pts=[];const tmp=(k==='area'?L.polygon([],{color:'#fff',dashArray:'5 5'}):L.polyline([],{color:'#fff',dashArray:'5 5',weight:4})).addTo(m);
+    const bar=document.createElement('div');bar.className='ccbar';bar.innerHTML=`<span>${k==='area'?'Eckpunkte':'Punkte'} der Reihe nach antippen</span><button type="button" data-u>Rückgängig</button><button type="button" class="pri" data-f>Fertig</button>`;cd.firstElementChild.appendChild(bar);
+    const ck=e=>{pts.push([+e.latlng.lat.toFixed(7),+e.latlng.lng.toFixed(7)]);tmp.setLatLngs(pts)};m.on('click',ck);
+    bar.querySelector('[data-u]').onclick=()=>{pts.pop();tmp.setLatLngs(pts)};bar.querySelector('[data-f]').onclick=()=>{m.off('click',ck);m.removeLayer(tmp);bar.remove();$('#ciPi',d).textContent=pts.length+' Punkte';show(1)}}}
 async function loadExt(){const el=$('#sX');let xs,rs;try{[xs,rs]=await Promise.all([api('ext_templates'),api('roles')])}catch(e){return secErr(el,'Externe Einsatzkräfte',e)}
   const cs=me&&(me.coord_sys&&me.coord_sys!=='none'?me.coord_sys:me.coord_default)||'lv95',rn=id=>(rs.find(r=>r.id===id)||{}).name;
   const card=x=>ent({t:x.name,c:x.color,off:!x.active,ic:x.abbr||x.color?abbrB(x.abbr,x.color):'',d:x.descr,rows:[['Spezialrolle',rn(x.role_id)?`<span>${esc(rn(x.role_id))}</span>`:''],['Standort',`<span>${x.lat!=null?esc(fmtC(x.lat,x.lon,cs)):'beim Erfassen wählen'}</span>`]],ed:['x',x.id],pg:['ext_template',x.id],q:[x.name,x.descr,x.abbr,rn(x.role_id)].join(' ')});
@@ -1134,6 +1278,7 @@ function dsUserModel(x,photo){const d=x.data,u=d.user,m=x.meta,B=dsHead(m,'Daten
   sec('Empfangene Nachrichten (an diese Person gerichtet)',['Einsatz','Zeit','Von','Text'],[1000,800,900,2300],d.received.map(n=>[iL(n.incident_id),dsT(n.created),n.from||'–',n.text]));
   sec('Gemeinsamer Kanal mit Partnerorganisationen (gesendet)',['Einsatz','Zeit','Text'],[1000,800,3200],(d.jmsg||[]).map(n=>[iL(n.incident_id),dsT(n.at),n.text]));
   sec('Wasserzeiten',['Einsatz','Im Wasser','Kälteschutz','Temperatur','Richtwert'],[900,1300,900,700,700],(d.wtime||[]).map(w=>[iL(w.incident_id),dsT(w.start_at)+' – '+(w.end_at?dsT(w.end_at):'–')+(w.auto?' (automatisch)':''),w.suit,w.temp!=null?w.temp+' °C':'–',w.limit_min+' min'])); // Issue #241
+  sec('Posten in Einsatzkonzepten (zugeteilt)',['Einsatzkonzept','Posten'],[2500,2500],(d.cc_posts||[]).map(x=>[x.concept,x.post]));
   sec('Durchsagen (Funk)',['Einsatz','Zeit','Kanal','Dauer','Transkript','Aufnahme'],[900,700,700,400,1700,600],d.voice.map(v=>[iL(v.incident_id),dsT(v.rec_at),v.channel||'–',v.dur_s+' s',v.transcript||'–',v.audio?'im ZIP':'gelöscht']));
   if(d.feedback.length){B.push({t:'h',x:`Einsatzfeedback (${d.feedback.length})`});d.feedback.forEach(f=>B.push({t:'q',x:`${iL(f.incident_id)} · ${dsT(f.updated||f.created)}`},{t:'kv',rows:f.answers.length?f.answers:[['–','keine Angaben']]}))}
   sec('Erfasst oder bearbeitet',['Was','Einsatz','Bezeichnung','Zeit'],[1400,1100,1500,1000],d.created.map(c=>[c.what,iL(c.incident_id),c.name||'–',dsT(c.at)]));
@@ -1199,8 +1344,11 @@ async function loadDsar(){const el=$('#sDs');try{dsCfg=await api('dsar/cfg')}cat
   if(C.org){$('#dsOF').onclick=()=>dsOrg('pdf');$('#dsOZ').onclick=()=>dsOrg('zip')}}
 /* ---------- Koordinatensystem (Standard für alle, pro Person in der Einsatz-App unter «Konto» übersteuerbar) ---------- */
 async function loadCoords(){const el=$('#sC');let s;try{s=await api('settings')}catch(e){return secErr(el,'Koordinaten',e)}
-  el.innerHTML=`<h2>Koordinaten</h2><div data-inst><label class="mut">Standard-Koordinatensystem ${instH} für die Anzeige<select id="cS">${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===s.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
-    <div class="mut">Gilt für alle, die in der Einsatz-App unter «Konto» nichts anderes gewählt haben. Beispiel Brugg AG: ${esc(fmtC(47.4815,8.208,s.coord_sys))}</div></div>`;
+  el.innerHTML=`<h2>Koordinaten &amp; Einheiten</h2><div data-inst><label class="mut">Standard-Koordinatensystem ${instH} für die Anzeige<select id="cS">${Object.entries(COORD_SYS).map(([k,v])=>`<option value="${k}" ${k===s.coord_sys?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="mut">Gilt für alle, die in der Einsatz-App unter «Konto» nichts anderes gewählt haben. Beispiel Brugg AG: ${esc(fmtC(47.4815,8.208,s.coord_sys))}</div></div>
+    <div data-inst style="margin-top:1rem"><label class="mut">Standard-Einheit der Geschwindigkeiten ${instH}<select id="cSp">${Object.entries(SPEED_UNITS).map(([k,v])=>`<option value="${k}" ${k===(s.speed_unit||'ms')?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="mut">Fliessgeschwindigkeit, Flussdistanz und Helikopter. Gilt für alle, die im Profil nichts anderes gewählt haben, und für die öffentliche Ansicht. Beispiel: ${esc(fmtSpd(1.8,s.speed_unit||'ms'))}</div></div>`;
+  $('#cSp').onchange=e=>{const v=e.target.value;e.target.disabled=true;api('settings/save',{speed_unit:v}).then(()=>{toast('Gespeichert.','ok');if(me)me.speed_default=v;loadCoords()}).catch(x=>{fail(x);loadCoords()})};
   $('#cS').onchange=e=>{const v=e.target.value;e.target.disabled=true;api('settings/save',{coord_sys:v}).then(()=>{toast('Gespeichert.','ok');loadCoords()}).catch(x=>{fail(x);loadCoords()})}}
 /* ---------- Funktionen (Issue #35): je Einsatztyp ein- oder ausschalten ---------- */
 // Liste und Bezeichnungen kommen vom Server (FEATURES in api/index.php); gespeichert werden die ausgeschalteten je Einsatztyp
@@ -1264,6 +1412,15 @@ async function loadWt(D){const el=$('#sWt');let r;try{r=D&&D.cfg&&D.suits?D:awai
     n.def=$('#wtD').value;n.lvl=$('#wtL').value;n.auto=$('#wtA').checked?1:0;Object.keys(r.num).forEach(k=>n[k]=+$('#wt_'+k).value);return n};
   const save=()=>api('wtime/cfg/save',{cfg:gather()}).then(()=>{toast('Gespeichert.','ok');loadWt()}).catch(fail);['wtS1','wtS2','wtS3'].forEach(k=>$('#'+k).onclick=save);
   $('#wtDef').onclick=async()=>{if(!await ask('Vorgaben einsetzen?\n\nRichtwerte, Stufen und die übrigen Werte werden auf die Vorschläge der App zurückgesetzt (erst nach «Speichern» gültig).',{ok:'Einsetzen'}))return;loadWt({...r,cfg:{...r.def,min:r.def.min}}).then(()=>markDirty($("#wtS1").closest(".sbar")))}}
+/* ---------- Notruf (SOS, Issue #240): Empfänger, Umkreis, Auslösen (Einstellung sos, Recht cfg_func) ---------- */
+async function loadSos(){const el=$('#sSos');let s;try{s=await api('settings')}catch(e){return secErr(el,'Notruf (SOS)',e)}
+  const c=s.sos||{},to=s.sos_to||{};
+  el.innerHTML=`<h2>Notruf (SOS)</h2><div class="mut">Einsatzkräfte lösen im Einsatz über den Kartenknopf «SOS» einen Notruf aus (lange drücken, danach ein Countdown zum Abbrechen). Die Empfänger erhalten immer einen kritischen Alarm, unabhängig von der Alarmstufe des Einsatztyps, mit Name, Standort und Navigation. Ob die Funktion je Einsatztyp angeboten wird, steht unter «Funktionen» («Notruf»).</div>
+    <div class="scard"><label class="mut">Wer wird alarmiert?<select id="soTo">${Object.entries(to).map(([k,v])=>`<option value="${esc(k)}" ${k===c.to?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+    <div class="anums">${numCard('soR','Umkreis',c.radius_km,'km',0.1,50,0.1,2,'Gilt bei «im Umkreis»; ohne Standort des Notrufs werden alle Teilnehmenden alarmiert')}${numCard('soH','Knopf gedrückt halten',c.hold,'s',1,5,1,2)}${numCard('soC','Countdown zum Abbrechen',c.countdown,'s',0,10,1,5,'0 = sofort senden')}</div>
+    <label class="row" style="align-items:center"><input type="checkbox" id="soF" ${c.conf?'checked':''}> <span>Im Funk mit einem Ton ankündigen (Live-Konferenz und Mithören, auch über Links für Externe)</span></label>
+    <div class="mut">Die Einsatzleitung wird immer alarmiert, die auslösende Person nie. Den Notruf beenden die auslösende Person und die Einsatzleitung; Auslösen, Quittieren und Beenden stehen im Einsatzlog und im Replay.</div>${sbar('soSv')}</div>`;dirtyWire(el);
+  $('#soSv').onclick=()=>api('settings/save',{sos:{to:$('#soTo').value,radius_km:+$('#soR').value,hold:+$('#soH').value,countdown:+$('#soC').value,conf:$('#soF').checked?1:0}}).then(()=>{toast('Gespeichert.','ok');loadSos()}).catch(fail)}
 /* ---------- Sprache (Issue #66): Vorgabe der Organisation (Einstellung lang, Recht cfg_func) ---------- */
 // Gilt für Personen ohne eigene Wahl, deren Gerät keine der Sprachen nutzt, und für Push an Personen, die die App noch nie geöffnet haben
 async function loadLng(){const el=$('#sLng');let s;try{s=await api('settings')}catch(e){return secErr(el,'Sprache',e)}
@@ -2003,7 +2160,7 @@ function aarSide(el,x,id,row,changed){const i=x.inc;let tab='inc',fb=null,q='';t
   const incHtml=()=>{const res=x.rescuees.filter(r=>!r.removed);return`<div class="row">${lg?`<button data-wl>Einsatzlog (Gross)</button>`:''}${lg&&i.recorded?`<button data-wr>Replay</button>`:''}</div>
     ${kv([['Einsatztyp',kindBadge(i)],...(i.plan?[['Vorbereitete Übung',esc(i.plan)]]:[]),['Alarmmeldung',esc(i.message)],['Alarmeingang',aarDt(i.alarm_at)],['Einsatzende',aarDt(i.ended_at)],['Dauer',aarMin(i.ended_at-i.alarm_at)],
       ['Ausgelöst von',esc(i.creator||'–')],['Erste Annahme nach',aarMin(i.first_accept==null?null:i.first_accept-i.alarm_at)],['Suchgebiet erreicht nach',aarMin(i.first_area==null?null:i.first_area-i.alarm_at)],
-      ...(i.flow_ms!=null?[['Fliessgeschwindigkeit',`${i.flow_ms} m/s`]]:[]),...(i.lat!=null?[['PLS des Einsatzes',fmtC(i.lat,i.lon,'lv95')]]:[])])}
+      ...(i.flow_ms!=null?[['Fliessgeschwindigkeit',fmtSpd(i.flow_ms)]]:[]),...(i.lat!=null?[['PLS des Einsatzes',fmtC(i.lat,i.lon,'lv95')]]:[])])}
     <h4>Einsatzkräfte (${x.people.length})</h4>${x.people.length?`<div class="tw"><table><thead><tr><th>Name</th><th>Einrückoption</th><th>Spezialrolle</th><th>Eingerückt</th><th>Ausgetreten</th></tr></thead><tbody>${x.people.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.mode||'–')}</td><td>${esc(p.role||'–')}</td><td>${aarTm(p.joined)}</td><td>${p.left_at?aarTm(p.left_at):'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="mut">Keine</div>'}
     ${res.length?`<h4>Rettlinge (${res.length})</h4><ul class="aarul">${res.map(r=>`<li><b>${esc(r.name||'Unbekannter Rettling')}</b>${r.descr?' – '+esc(r.descr):''} <span class="mut">${r.rescued_at?'gerettet '+aarTm(r.rescued_at):r.lat!=null?'Fundort bekannt '+aarTm(r.loc_at):'vermisst'}</span></li>`).join('')}</ul>`:''}
     ${x.externals.length?`<h4>Externe Einsatzkräfte (${x.externals.length})</h4><ul class="aarul">${x.externals.map(e=>`<li><b>${esc(e.name)}</b>${e.role?' – '+esc(e.role):''} <span class="mut">${aarTm(e.created)} – ${e.removed?aarTm(e.removed):'Ende'}</span></li>`).join('')}</ul>`:''}
@@ -2149,7 +2306,7 @@ function aarModel(x,o){const C=aarC.cfg,A=C.auto,i=x.inc,B=[],act=r=>!r.removed;
     B.push({t:'h',x:'Einsatzdaten'},{t:'kv',rows:[['Einsatztyp',kindOf(i).name],...(i.plan?[['Vorbereitete Übung',i.plan]]:[]),['Alarmmeldung',i.message],
       ['Alarmeingang',aarDt(i.alarm_at)],['Einsatzende',aarDt(i.ended_at)],['Dauer',aarMin(i.ended_at-i.alarm_at)],['Ausgelöst von',i.creator||'–'],['Einsatzkräfte mit App',String(x.people.length)],
       ['Erste Annahme nach',aarMin(i.first_accept==null?null:i.first_accept-i.alarm_at)],['Suchgebiet erreicht nach',aarMin(i.first_area==null?null:i.first_area-i.alarm_at)],
-      ...(i.flow_ms!=null?[['Fliessgeschwindigkeit',`${i.flow_ms} m/s (${Math.round(i.flow_ms*36)/10} km/h)`]]:[]),...(i.lat!=null?[['PLS des Einsatzes',fmtC(i.lat,i.lon,'lv95')+' (LV95)']]:[]),
+      ...(i.flow_ms!=null?[['Fliessgeschwindigkeit',fmtSpd(i.flow_ms,'both')]]:[]),...(i.lat!=null?[['PLS des Einsatzes',fmtC(i.lat,i.lon,'lv95')+' (LV95)']]:[]),
       ...(res.length?[['Rettlinge',`${res.length}, davon ${res.filter(r=>r.rescued_at).length} gerettet`]]:[])]})}
   let kv=[];const flush=()=>{if(kv.length)B.push({t:'kv',rows:kv});kv=[]};
   if(C.fields.length&&C.fields[0].type!=='head')B.push({t:'h',x:'Review'});
@@ -2613,8 +2770,12 @@ function drawReplay(){const{d,t}=rp,i=d.incident,on=(a,b)=>a!=null&&a<=t&&(b==nu
     marks.filter(()=>rpVis('mm')).forEach(m=>L.circleMarker([m.mark_lat,m.mark_lon],{radius:rz(6),color:'#0f2430',weight:2,fillColor:'#2ee6d6',fillOpacity:1}).bindTooltip(esc((m.name||'')+': '+m.text.slice(0,60))).addTo(rp.poiL));
     ext.filter(()=>rpVis('ext')).forEach(e=>{const rc=(roles.find(r=>r.id===e.role_id)||{}).color;return L.circleMarker([e.lat,e.lon],{radius:rz(8),color:e.color&&rc?rc:'#fff',weight:e.color&&rc?3:2,dashArray:'3',fillColor:e.color||rc||'#cfd8dc',fillOpacity:1}).bindTooltip(esc(e.name)+' (extern)',{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'}).addTo(rp.poiL)});
     res.filter(r=>r.pos&&rpVis('res')).forEach(r=>L.circleMarker(r.pos,{radius:rz(9),color:'#fff',weight:2,fillColor:r.ok?'#35c27a':'#ff9f1c',fillOpacity:1}).bindTooltip((r.ok?'✓ ':'R ')+esc(r.name),{permanent:true,direction:'right',offset:[rz(8),0],className:'rplbl'}).addTo(rp.poiL))}
+  // Notruf (Issue #240): roter Ring um die auslösende Person, solange der Notruf läuft
+  const sosNow=(d.sos||[]).map((x,i)=>({i,p:rp.people.find(p=>p.user_id===x[0]),ack:x[3]!=null&&x[3]<=t,on:x[1]<=t&&(x[2]==null||t<x[2])}));rp.sosMk=rp.sosMk||[];
+  sosNow.forEach(s=>{let m=rp.sosMk[s.i];if(s.on&&s.p&&s.p.ll){if(!m)m=rp.sosMk[s.i]=L.circleMarker(s.p.ll,{radius:rz(16),color:'#e5383b',weight:4,fill:false,interactive:false});m.setLatLng(s.p.ll).setRadius(rz(16));rp.dynL.addLayer(m)}else if(m)rp.dynL.removeLayer(m)});
+  const sosTxt=sosNow.filter(s=>s.on).map(s=>esc(s.p?s.p.name:'Einsatzkraft')+(s.ack?' (quittiert)':''));
   const fl=d.flow.filter(f=>f.ts<=t).pop();
-  $('#rpInfo').innerHTML=`<h3 style="margin-top:0">Lage</h3>${rec?'':'<div><b>Aufzeichnung zu diesem Zeitpunkt pausiert oder aus</b> – keine Standorte der Einsatzkräfte</div>'}<div class="mut">${fl?esc(fl.text.replace(/^setzt die /,'')):'Fliessgeschwindigkeit nicht gesetzt'}</div>
+  $('#rpInfo').innerHTML=`<h3 style="margin-top:0">Lage</h3>${sosTxt.length?`<div style="color:#e5383b"><b>SOS: ${sosTxt.join(', ')}</b></div>`:''}${rec?'':'<div><b>Aufzeichnung zu diesem Zeitpunkt pausiert oder aus</b> – keine Standorte der Einsatzkräfte</div>'}<div class="mut">${fl?esc(fl.text.replace(/^setzt die /,'')):'Fliessgeschwindigkeit nicht gesetzt'}</div>
     ${ext.length?`<div class="mut">Externe Einsatzkräfte: ${ext.map(e=>esc(e.name)).join(', ')}</div>`:''}${airNow.length?`<div class="mut">Helikopter: ${airNow.map(x=>esc(airName(x))+' ('+esc(airAltS(x))+')').join(', ')}</div>`:''}<div class="mut">Rettlinge: ${res.length?res.map(r=>esc(r.name)+' – '+(r.ok?'gerettet':r.pos?'Standort bekannt':'vermisst')).join(', '):'keine erfasst'}</div>
 `;
   rpPeople(info);

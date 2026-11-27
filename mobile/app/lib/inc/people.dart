@@ -301,7 +301,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
     return _entry(
       lead: _mk(p),
       title: '${js(p['name'])}${me ? ' (du)' : ''}',
-      lines: ['${js(s.modeOf(js(p['mode']))['name'])} · ${has ? 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}' : 'kein Standort'}', ?vehOfPerson(s, p), ?telTxt(s, p), if (cs.isNotEmpty) cs],
+      lines: ['${js(s.modeOf(js(p['mode']))['name'])} · ${has ? 'Standort ${agoS(s.now, jn(p['loc_at']) ?? s.now)}' : 'kein Standort'}', ?vehOfPerson(s, p), ?telTxt(s, p), if (cs.isNotEmpty) cs, if (has) s.etaTxt([llOf(p)])].where((x) => x.isNotEmpty).toList(),
       extra: wtLine(s, p),
       buttons: [
         if (has) smallBtn('Zentrieren', () => _center(p)),
@@ -321,7 +321,7 @@ class _PeoplePanelState extends State<PeoplePanel> {
     return _entry(
       lead: _mk(e),
       title: js(e['name']),
-      lines: ['Extern${js(e['descr']).isNotEmpty ? ' · ${js(e['descr'])}' : ''}', if (cs.isNotEmpty) cs],
+      lines: ['Extern${js(e['descr']).isNotEmpty ? ' · ${js(e['descr'])}' : ''}', if (cs.isNotEmpty) cs, s.etaTxt([llOf(e)])].where((x) => x.isNotEmpty).toList(),
       buttons: [
         if (llOf(e) != null) smallBtn('Zentrieren', () => _center(e)),
         ?_infoBtn(e, ext: true),

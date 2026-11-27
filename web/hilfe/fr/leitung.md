@@ -61,6 +61,19 @@ Dans la fenêtre « Marqueurs », la direction d'intervention place :
 
 Tout le monde voit la situation immédiatement. Retirer via ✕ dans la liste. Un objet de la couche de géodonnées (barrage, pont) peut être repris directement comme marqueur via sa popup.
 
+## Concepts d'intervention {#konzepte}
+
+Un concept d'intervention est une situation préparée pour un tronçon de cours d'eau : postes avec mission, marqueurs, zones, lignes, intervenants externes, un message à tous, documents, barrages, canaux radio, renforts, hélicoptères et enregistrement. L'administration crée les concepts ([Concepts d'intervention](#verwaltung/konzepte)).
+
+- **Proposition au PLS** : si un PLS (de l'intervention ou d'une victime) se trouve dans le périmètre d'un concept, la carte affiche l'avis « Concept d'intervention disponible » avec « Aperçu … », « Charger » et « Plus tard ». Selon le type d'intervention, l'app charge aussi le concept automatiquement ; les messages, attributions et renforts restent alors en attente jusqu'à ce que la direction les envoie avec « Déclencher maintenant » dans l'onglet « Direction ».
+- **Aperçu** : les éléments apparaissent en traitillé sur la carte. Cocher ce qui est chargé ; les éléments déjà chargés et ceux de fonctions désactivées sont grisés. « Charger N de M éléments » les reprend.
+- **Chargé** : les éléments sont des marqueurs, zones, lignes et intervenants externes ordinaires. Dans la fenêtre « Marqueurs », ils figurent dans la situation comme groupe « Concept d'intervention « Nom » ». Les postes indiquent « pas encore occupé » ou « occupé par … » dès qu'un intervenant avec le rôle spécial de la mission est à proximité. Les personnes attribuées reçoivent leur mission par message, même si elles acceptent plus tard.
+- **Onglet « Direction », carte « Concepts d'intervention »** : concepts chargés avec « Afficher », « Éléments … » (charger les manquants) et « Retirer » (les marqueurs et externes du concept disparaissent ; messages, canaux radio, barrages et renforts restent), propositions avec « Ne pas charger », **concepts suivants** (la zone de recherche atteint le périmètre d'un autre concept en aval) et « Charger un autre concept … ».
+
+![Proposition au PLS](img/konzept-vorschlag.jpg)
+![Aperçu d'un concept d'intervention](img/konzept-vorschau.jpg)
+![Carte « Concepts d'intervention » dans l'onglet « Direction »](img/konzept-leitung.jpg)
+
 ## Gérer les intervenants {#einsatzkraefte}
 
 Dans la fenêtre « Intervenants », la direction d'intervention modifie le **rôle spécial** d'une personne et **retire** des personnes de l'intervention (un retour reste possible). L'onglet « Direction » a en plus la carte « Intervenants » à cet effet.

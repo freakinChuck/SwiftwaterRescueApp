@@ -37,7 +37,7 @@ $c = Get-Content $Config -Raw | ConvertFrom-Json
 # Webroot im Repo, die Dateiliste ist relativ dazu. deploy-dev.ps1 und deploy.ps1 selbst lesen beides aus dem deploy.ps1 des ausgelieferten Stands;
 # diese Werte gelten nur als Rückfall, wenn der Stand kein solches Skript hat. Format beibehalten (eine Zeile je Variable, Einträge in '…').
 $web = 'web'
-$files ='index.html', 'admin.html', 'public.html', 'funk.html', 'dok.html', 'legal.html', 'hilfe.html', 'hilfe', 'common.js', 'demo.js', 'common.css', 'voice.js', 'docs.js', 'i18n.js', 'i18n', '.htaccess', 'manifest.webmanifest', 'sw.js', 'changes.json', 'img', 'api/index.php', 'api/fed.php', 'api/docs.php', 'api/wtime.php', 'api/data/.htaccess'
+$files ='index.html', 'admin.html', 'public.html', 'funk.html', 'dok.html', 'legal.html', 'hilfe.html', 'hilfe', 'common.js', 'demo.js', 'common.css', 'voice.js', 'sos.js', 'cc.js', 'docs.js', 'i18n.js', 'i18n', '.htaccess', 'manifest.webmanifest', 'sw.js', 'changes.json', 'img', 'api/index.php', 'api/fed.php', 'api/docs.php', 'api/wtime.php', 'api/concepts.php', 'api/web.config', 'api/data/.htaccess'
 $opt = @('-i', $c.key, '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes')
 $dest = "$($c.user)@$($c.host)"
 $envName = if ($c.env) { $c.env } elseif ((Split-Path $Config -Leaf) -match "prod") { "prod" } else { "test" }
