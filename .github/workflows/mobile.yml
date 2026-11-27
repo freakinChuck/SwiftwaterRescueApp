@@ -5,7 +5,7 @@
 #   iOS:     IOS_CERT_P12_BASE64, IOS_CERT_PASSWORD, IOS_PROFILE_BASE64, IOS_TEAM_ID, IOS_EXPORT_METHOD (app-store-connect | ad-hoc | enterprise)
 #   Upload:  ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (App-Store-Connect-API-Schlüssel; lädt signierte IPAs von main nach TestFlight,
 #            Release-Tags zusätzlich zur Prüfung und Veröffentlichung im App Store, Issue #264)
-#            Variablen (optional): ASC_LOCALE (Sprache der Notes «Neue Funktionen», Standard de-DE), IOS_AUTO_RELEASE (Standard true = nach der Prüfung sofort veröffentlichen)
+#            Variablen (optional): ASC_LOCALE (Sprachen der Notes «Neue Funktionen», leer = die der veröffentlichten Version), IOS_AUTO_RELEASE (Standard true = nach der Prüfung sofort veröffentlichen)
 #   Play:    PLAY_SERVICE_ACCOUNT_JSON (Dienstkonto mit Zugriff in der Play Console; lädt das signierte AAB von main und von Release-Tags in Google Play)
 #            Variablen (Actions → Variables, optional): PLAY_TRACK (main, Standard internal = interner Test), PLAY_TRACK_RELEASE (Release-Tags, Standard alpha = geschlossener Test),
 #            PLAY_STATUS (Standard completed, draft solange die App unveröffentlicht ist)

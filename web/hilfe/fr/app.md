@@ -59,4 +59,4 @@ En intervention avec des véhicules, l'app demande une fois l'accès au Bluetoot
 
 ## Mises à jour {#updates}
 
-Si la version de votre app est trop ancienne pour le serveur, un avis apparaît avec **Mettre à jour** (Google Play ou TestFlight). **Nouveautés** dans le profil montre les changements.
+Si la version de votre app est trop ancienne pour le serveur, un avis apparaît avec **Mettre à jour** (Google Play ou App Store). **Nouveautés** dans le profil montre les changements.

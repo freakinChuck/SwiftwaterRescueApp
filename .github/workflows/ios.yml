@@ -180,23 +180,22 @@ jobs:
           echo "::notice::$(basename "$ipa") (Build ${{ steps.ver.outputs.build }}) an App Store Connect übergeben, erscheint nach der Verarbeitung in TestFlight"
           echo "ok=1" >> "$GITHUB_OUTPUT"
       # Issue #264: Release-Tags gehen in den App Store. deliver wartet, bis App Store Connect den Build verarbeitet hat, legt die Version an
-      # (bzw. nimmt die offene), setzt «Neue Funktionen» aus web/changes.json und reicht zur Prüfung ein. Metadaten, Bildschirmfotos und
-      # Angaben zur App müssen in App Store Connect schon vollständig sein (einmalig von Hand, siehe mobile/README.md).
+      # (bzw. nimmt die offene), setzt «Neue Funktionen» aus web/changes.json in allen Sprachen der Store-Seite und reicht zur Prüfung ein.
+      # Übrige Metadaten und Bildschirmfotos übernimmt App Store Connect von der veröffentlichten Version.
       - name: Im App Store zur Prüfung einreichen
         if: inputs.submit && steps.asc.outputs.ok == '1'
         env:
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER: ${{ secrets.ASC_ISSUER_ID }}
-          LOCALE: ${{ vars.ASC_LOCALE || 'de-DE' }}
+          # leer = die Sprachen der veröffentlichten Version (sonst legte deliver neue, unvollständige Sprachen an und Apple lehnte ab)
+          LOCALE: ${{ vars.ASC_LOCALE }}
           AUTO: ${{ vars.IOS_AUTO_RELEASE || 'true' }}
           VER: ${{ steps.ver.outputs.name }}
         shell: bash
         run: |
           command -v fastlane >/dev/null || brew install fastlane
-          f=~/.appstoreconnect/private_keys/AuthKey_"$KEY_ID".p8
           d="$RUNNER_TEMP/fl"; mkdir -p "$d/fastlane"
-          export ASC_JSON="$d/asc.json" NOTES="$d/notes.txt" BUILD_NR="${{ steps.ver.outputs.build }}"
-          jq -n --arg id "$KEY_ID" --arg is "$ISSUER" --rawfile k "$f" '{key_id:$id, issuer_id:$is, key:$k, in_house:false}' > "$ASC_JSON"
+          export P8=~/.appstoreconnect/private_keys/AuthKey_"$KEY_ID".p8 NOTES="$d/notes.txt" BUILD_NR="${{ steps.ver.outputs.build }}"
           # «Neue Funktionen» = Punkte von «Was ist neu» dieser Version (höchstens 4000 Zeichen)
           python3 - "$VER" "$GITHUB_WORKSPACE/web/changes.json" > "$NOTES" <<'PY'
           import json, sys
@@ -208,14 +207,22 @@ jobs:
           # Eigene Fastfile nur für diesen Schritt: so gehen Release Notes und Angaben zur Einreichung als Hash an deliver
           cat > "$d/fastlane/Fastfile" <<'RB'
           lane :submit do
+            app_store_connect_api_key(key_id: ENV['KEY_ID'], issuer_id: ENV['ISSUER'], key_filepath: ENV['P8'])
+            locs = ENV['LOCALE'].to_s.split(',').map(&:strip).reject(&:empty?)
+            if locs.empty?
+              live = Spaceship::ConnectAPI::App.find('ch.swiftwaterrescue.app')&.get_live_app_store_version
+              locs = live ? live.get_app_store_version_localizations.map(&:locale) : []
+            end
+            UI.user_error!('Keine Sprache der Store-Seite gefunden: Variable ASC_LOCALE setzen (z. B. en-US)') if locs.empty?
+            UI.message("Neue Funktionen für: #{locs.join(', ')}")
+            notes = File.read(ENV['NOTES']).strip
             deliver(
-              api_key_path: ENV['ASC_JSON'],
               app_identifier: 'ch.swiftwaterrescue.app',
               app_version: ENV['VER'],
               build_number: ENV['BUILD_NR'],
               skip_binary_upload: true,
               skip_screenshots: true,
-              release_notes: { ENV['LOCALE'] => File.read(ENV['NOTES']).strip },
+              release_notes: locs.to_h { |l| [l, notes] },
               submit_for_review: true,
               automatic_release: ENV['AUTO'] == 'true',
               submission_information: { export_compliance_uses_encryption: false, add_id_info_uses_idfa: false },
@@ -225,7 +232,6 @@ jobs:
           end
           RB
           (cd "$d" && fastlane submit)
-          rm -f "$ASC_JSON"
           echo "::notice::Version $VER (Build ${{ steps.ver.outputs.build }}) im App Store zur Prüfung eingereicht$([ "$AUTO" = true ] && echo ', wird nach der Freigabe veröffentlicht')"
       - name: API-Schlüssel aufräumen
         if: always()

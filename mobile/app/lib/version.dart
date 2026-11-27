@@ -55,9 +55,9 @@ String? updateNote(Map? ver, String? appMin) {
   return null;
 }
 
-/// Store öffnen: Android Google Play, iOS TestFlight (Verteilung vor dem Produktivstart)
+/// Store öffnen: Android Google Play, iOS App Store (Seite der App, Apple-ID 6832287746; Issue #264)
 Future<void> openStore() async {
-  final u = Uri.parse(Platform.isAndroid ? 'https://play.google.com/store/apps/details?id=ch.swiftwaterrescue.app' : 'itms-beta://');
+  final u = Uri.parse(Platform.isAndroid ? 'https://play.google.com/store/apps/details?id=ch.swiftwaterrescue.app' : 'https://apps.apple.com/app/id6832287746');
   try {
     await launchUrl(u, mode: LaunchMode.externalApplication);
   } catch (_) {}

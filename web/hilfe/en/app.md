@@ -59,4 +59,4 @@ In an operation with vehicles the app asks once for Bluetooth. It detects the be
 
 ## Updates {#updates}
 
-If your app version is too old for the server, a notice with **Update** appears (Google Play or TestFlight). **What's new** in the profile shows the changes.
+If your app version is too old for the server, a notice with **Update** appears (Google Play or App Store). **What's new** in the profile shows the changes.
