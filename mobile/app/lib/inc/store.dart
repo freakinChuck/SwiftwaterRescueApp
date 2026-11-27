@@ -28,6 +28,8 @@ import '../sys.dart';
 import '../track.dart';
 import 'area.dart';
 import 'docs.dart';
+import 'pois.dart' show poiPts, placePts;
+import 'rd.dart' show durS;
 import 'util.dart';
 import 'voice.dart';
 
@@ -148,6 +150,24 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   final nets = <String, NetSlot>{};
   int? _netsInc;
   SearchArea? area;
+
+  /// ETA (Issue #258): wann das Suchgebiet eine Stelle flussabwärts erreicht (Uhrzeit und relativ); pts = Punkte einer Position (Bereiche und Linien:
+  /// Mitte und Eckpunkte, es zählt der früheste). Leer, wenn die Stelle schon im Suchgebiet liegt oder nicht flussabwärts davon (etaOf in index.html).
+  String etaTxt(Iterable<LatLng?> pts) {
+    final a = area;
+    if (a == null || inc == null) return '';
+    ({num at, double d, bool inside})? best;
+    for (final p in pts) {
+      if (p == null) continue;
+      final e = a.eta(p);
+      if (e == null) continue;
+      if (e.inside) return '';
+      if (best == null || e.at < best.at) best = e;
+    }
+    if (best == null) return '';
+    final at = best.at, t = at - now > 72000 ? fmtDT(at) : fmtHM(at);
+    return 'Suchgebiet hier ca. $t (in ${durS((at - now).toDouble())})';
+  }
   final _areaLogged = <int>{};
 
   // eigener Standort
@@ -939,10 +959,17 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     for (final p in [...participants.where((p) => p['lat'] != null && p['left_at'] == null), ...externals.where((x) => x['lat'] != null)]) {
       if (jb(roleOf(p['role_id'])?['is_post'])) posts.add((p: llOf(p)!, name: js(p['name'])));
     }
+    // ETA (Issue #258): Gewässernetz bis zu Markierungen, Bereichen, Linien und Externen (höchstens 30 km vom PLS) und festen Standorten bis place_near_km laden
+    final nearM = (jd(st?['place_near_km']) ?? 10) * 1000;
+    final far = <({LatLng p, double max})>[
+      for (final p in pois) for (final q in poiPts(p)) (p: q, max: 30000.0),
+      for (final x in externals) if (llOf(x) != null) (p: llOf(x)!, max: 30000.0),
+      for (final f in places) for (final q in [?llOf(f), ...placePts(f)]) (p: q, max: nearM),
+    ];
     area = searchArea(jl(st?['sources']), nets, jd(i['flow_ms']), now, posts, (s, r) => overpassNet(api, {'around': [r, s.latitude, s.longitude]}), () {
       _calcArea();
       notifyListeners();
-    }, rescuees, jl(st?['stops'])); // Flusssperren (Issue #182)
+    }, rescuees, jl(st?['stops']), far); // Flusssperren (Issue #182)
   }
 
   void _checkArea() {
