@@ -85,6 +85,21 @@ Modelli per soccorritori esterni (nome, descrizione, ruolo speciale, sigla, colo
 
 Quali simboli tattici sono disponibili per i marcatori e se sono ammessi marcatori senza simbolo.
 
+### Concetti d'intervento {#konzepte}
+
+Situazioni preparate per tratti di corsi d'acqua (diritto «Gestire i concetti d'intervento»). In alto il **comportamento per tipo d'intervento**: cosa succede quando un PLS si trova nell'ambito (Spento, Solo manuale, Proponi, Carica automaticamente) e se vengono proposti concetti successivi. Un concetto può derogare a questo comportamento.
+
+**Modifica** apre una finestra con carta:
+
+- **Ambito**: «Area sulla carta» (impostare i vertici) o «Lungo il corso d'acqua da A a B» (impostare A e B, «Calcola tratto» carica la rete idrografica; «Margine» = distanza massima di un PLS dal corso d'acqua).
+- **Tipi d'intervento** per cui vale il concetto.
+- **Elementi**: postazione (simbolo, ruolo speciale come incarico, assegnazione a persone e gruppi d'intervento, facoltativi ruolo speciale e veicolo), marcatore, area, linea, soccorritore esterno (anche da un modello), messaggio a tutti, documenti, escludere o considerare uno sbarramento, canali radio, rinforzo di gruppi d'intervento, attivare gli elicotteri, avviare la registrazione. «Preselezionato al caricamento» imposta le spunte dell'anteprima. I punti si spostano sulla carta.
+
+**Riprendi da un intervento …** crea una bozza da marcatori, aree, linee ed esterni di un intervento o di un'esercitazione. Un concetto già caricato può solo essere disattivato.
+
+![Concetti d'intervento](img/admin-konzepte.jpg)
+![Modifica concetto d'intervento](img/admin-konzept-dialog.jpg)
+
 ## Pianificazioni {#planungen}
 
 Esercitazioni preparate, interventi secondari pianificati ed eventi liberi con i loro elementi, piano delle esercitazioni e iscrizioni, esecuzioni con registro e replay. Vedi [Esercitazioni e pianificazioni](#planung/vorbereiten).
@@ -281,6 +296,7 @@ Alcune cose normalmente si possono solo disattivare o non eliminare affatto, aff
 | Modello | Soccorritori esterni | gli esterni già registrati restano |
 | Competenza con voci | Formazione | le formazioni registrate di tutte le persone |
 | Tipo di veicolo con veicoli, veicolo da interventi | Veicoli | i veicoli con avvistamenti e composizioni, anche nel replay |
+| Concetto d'intervento | Concetti d'intervento | concetto con i suoi elementi; i marcatori caricati e il registro restano negli interventi |
 
 Prima dell'eliminazione una richiesta di conferma elenca le conseguenze. **Non si può annullare.** Gli interventi in corso e il proprio account non si possono eliminare. Ogni eliminazione definitiva compare nel registro dell'applicazione (senza nomi).
 

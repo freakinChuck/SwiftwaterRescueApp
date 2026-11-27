@@ -242,8 +242,9 @@ function docState($inc, $places) { global $db, $uid; if ($inc && !feature($inc, 
   $pids = array_map(fn($p) => (int)$p['id'], $places ?: []); $byPl = [];
   if ($pids) { $s = $db->prepare("SELECT place_id,doc_id FROM place_docs WHERE place_id IN (" . qm($pids) . ")"); $s->execute($pids); foreach ($s->fetchAll() as $x) $byPl[(int)$x['doc_id']][] = (int)$x['place_id']; }
   $kid = $inc ? (int)kindOf($inc)['id'] : 0; $sel = [];
-  foreach (docsVisible() as $id => $d) if (isset($byPl[$id]) || ($kid && in_array($kid, $d['kinds'], true))) $sel[$id] = $d;
-  $l = docShorts($sel); foreach ($l as &$x) { $x['places'] = $byPl[$x['id']] ?? []; $x['kind_hit'] = $kid && in_array($kid, $x['kinds'], true) ? 1 : 0; } unset($x);
+  $ccd = ccDocIds($inc); // Dokumente geladener Einsatzkonzepte (Issue #260) gelten wie die des Einsatztyps
+  foreach (docsVisible() as $id => $d) if (isset($byPl[$id]) || ($kid && in_array($kid, $d['kinds'], true)) || in_array((int)$id, $ccd, true)) $sel[$id] = $d;
+  $l = docShorts($sel); foreach ($l as &$x) { $x['places'] = $byPl[$x['id']] ?? []; $x['kind_hit'] = ($kid && in_array($kid, $x['kinds'], true)) || in_array($x['id'], $ccd, true) ? 1 : 0; } unset($x);
   $ext = null; if ($inc && canManage($inc) && docsCfg()['ext']['on']) $ext = docExtRows((int)$inc['id']);
   return ['on' => 1, 'list' => $l, 'ext' => $ext, 'ext_cfg' => $ext === null ? null : ['guest' => docsCfg()['ext']['guest'], 'link' => docsCfg()['ext']['link'], 'folder_only' => docsCfg()['ext']['folder_only']]]; }
 // Ordner mit allen Unterordnern

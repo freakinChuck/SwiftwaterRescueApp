@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../org.dart';
 import '../version.dart';
+import 'cc.dart';
 import 'ctx.dart';
 import 'docs.dart';
 import 'hydro.dart';
@@ -21,7 +22,7 @@ import 'voice.dart';
 import '../i18n.dart';
 
 /// Rechte mit einem Bereich in der Verwaltung (ADMIN_PERMS in common.js)
-const _adminPerms = ['users', 'uroles', 'groups', 'avail', 'cfg_inc', 'ex_plan', 'cfg_func', 'cfg_ai', 'cfg_map', 'stats', 'cfg_my', 'aar', 'aar_rel', 'aar_cfg', 'aar_arch', 'legal', 'dsar', 'dsar_org', 'anon', 'cfg_conn', 'applog', 'versions', 'docs'];
+const _adminPerms = ['users', 'uroles', 'groups', 'avail', 'cfg_inc', 'ex_plan', 'cfg_func', 'cfg_ai', 'cfg_map', 'stats', 'cfg_my', 'aar', 'aar_rel', 'aar_cfg', 'aar_arch', 'legal', 'dsar', 'dsar_org', 'anon', 'cfg_conn', 'applog', 'versions', 'docs', 'concepts'];
 
 /// Arten der Übungselemente (EXK)
 const _exk = {'pls': 'PLS des Einsatzes', 'res': 'Neuer Rettling', 'seen': 'Rettling gesichtet', 'ext': 'Neue externe Einsatzkraft', 'extdel': 'Externe Einsatzkraft entfernen'};
@@ -846,6 +847,7 @@ class _IncMenuState extends State<IncMenu> {
     final act = s.participants.where((p) => p['mode'] != 'declined').toList();
     final hasPls = i['lat'] != null;
     return [
+      ?ccLeadCard(c, s, map), // Einsatzkonzepte (Issue #260)
       MCard(title: 'Aufgebot', children: [
         Mut(_invTxt(i['aufgebot'])),
         if (i['aufgebot'] != null)

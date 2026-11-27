@@ -61,6 +61,19 @@ In the “Markers” window the operation lead sets:
 
 Everyone sees the situation immediately. Remove via ✕ in the list. An object of the geodata layer (weir, bridge) can be taken over directly as a marker via its popup.
 
+## Operation concepts {#konzepte}
+
+An operation concept is a prepared situation for a stretch of water: posts with an assignment, markers, areas, lines, external responders, a message to all, documents, river barriers, radio channels, additional call-outs, helicopters and recording. Administration creates the concepts ([Operation concepts](#verwaltung/konzepte)).
+
+- **Suggestion at the PLS**: If a PLS (of the operation or of a casualty) lies within the scope of a concept, the map shows the notice «Operation concept available» with «Preview …», «Load» and «Later». Depending on the operation type the app also loads the concept automatically; messages, assignments and call-outs then remain pending until the operation command sends them with «Trigger now» on the «Command» tab.
+- **Preview**: The elements appear dashed on the map. Tick what is loaded; elements already loaded and elements of disabled functions are greyed out. «Load N of M elements» adds them.
+- **Loaded**: The elements are ordinary markers, areas, lines and external responders. In the «Markers» window they appear in the situation as a separate group «Operation concept «Name»». Posts show «not yet staffed» or «staffed by …» as soon as a responder with the special role of the assignment is nearby. Assigned persons receive their assignment as a message, even if they accept later.
+- **«Command» tab, card «Operation concepts»**: loaded concepts with «Show», «Elements …» (load missing ones) and «Remove» (the markers and external responders of the concept disappear; messages, radio channels, river barriers and call-outs remain), suggestions with «Do not load», **follow-on concepts** (the search area reaches the scope of another concept downstream) and «Load another concept …».
+
+![Suggestion at the PLS](img/konzept-vorschlag.jpg)
+![Preview of an operation concept](img/konzept-vorschau.jpg)
+![Card «Operation concepts» on the «Command» tab](img/konzept-leitung.jpg)
+
 ## Managing responders {#einsatzkraefte}
 
 In the “Responders” window the operation lead changes a person's **special role** and **removes** persons from the operation (rejoining remains possible). The “Lead” tab also has the “Responders” card for this.

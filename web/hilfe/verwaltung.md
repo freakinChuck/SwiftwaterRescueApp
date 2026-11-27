@@ -85,6 +85,21 @@ Vorlagen für externe Einsatzkräfte (Name, Beschreibung, Spezialrolle, Kürzel,
 
 Welche taktischen Symbole für Markierungen zur Wahl stehen und ob Markierungen ohne Symbol erlaubt sind.
 
+### Einsatzkonzepte {#konzepte}
+
+Vorbereitete Lagen für Gewässerabschnitte (Recht «Einsatzkonzepte verwalten»). Oben das **Verhalten je Einsatztyp**: was geschieht, wenn ein PLS im Geltungsbereich liegt (Aus, Nur von Hand, Vorschlagen, Automatisch laden) und ob Anschlusskonzepte vorgeschlagen werden. Ein Konzept kann das Verhalten übersteuern.
+
+**Bearbeiten** öffnet einen Dialog mit Karte:
+
+- **Geltungsbereich**: «Bereich auf der Karte» (Eckpunkte setzen) oder «Entlang Gewässer von A bis B» (A und B setzen, «Abschnitt berechnen» lädt das Gewässernetz; «Puffer» = wie weit ein PLS vom Gewässer entfernt sein darf).
+- **Einsatztypen**, für die das Konzept gilt.
+- **Elemente**: Posten (Symbol, Spezialrolle als Auftrag, Zuteilung an Personen und Einsatzgruppen, optional Spezialrolle setzen und Fahrzeug), Markierung, Bereich, Linie, Externe Einsatzkraft (auch aus einer Vorlage), Nachricht an alle, Dokumente, Flusssperre ausnehmen bzw. berücksichtigen, Funkkanäle, Nachbieten von Einsatzgruppen, Helikopter einschalten, Aufzeichnung starten. «Beim Laden vorausgewählt» bestimmt die Häkchen der Vorschau. Punkte lassen sich auf der Karte verschieben.
+
+**Aus Einsatz übernehmen …** macht aus Markierungen, Bereichen, Linien und Externen eines Einsatzes oder einer Übung einen Entwurf. Ein Konzept, das schon geladen wurde, lässt sich nur deaktivieren.
+
+![Einsatzkonzepte](img/admin-konzepte.jpg)
+![Einsatzkonzept bearbeiten](img/admin-konzept-dialog.jpg)
+
 ## Planungen {#planungen}
 
 Vorbereitete Übungen, geplante Sekundäreinsätze und freie Ereignisse mit ihren Elementen, Übungsplan und Anmeldungen, Durchführungen mit Log und Replay. Siehe [Übungen und Planungen](#planung/vorbereiten).
@@ -281,6 +296,7 @@ Manches lässt sich normalerweise nur deaktivieren oder gar nicht löschen, dami
 | Vorlage | Externe Einsatzkräfte | bereits erfasste Externe bleiben |
 | Fähigkeit mit Einträgen | Ausbildung | die erfassten Ausbildungen aller Personen |
 | Fahrzeugart mit Fahrzeugen, Fahrzeug aus Einsätzen | Fahrzeuge | die Fahrzeuge mit Sichtungen und Verbund, auch im Replay |
+| Einsatzkonzept | Einsatzkonzepte | Konzept mit Elementen; in Einsätzen bleiben die geladenen Markierungen und das Log |
 
 Vor dem Löschen zählt eine Rückfrage die Folgen auf. **Das lässt sich nicht rückgängig machen.** Laufende Einsätze und das eigene Konto lassen sich nicht löschen. Jedes endgültige Löschen steht im Applikationslog (ohne Namen).
 

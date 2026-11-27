@@ -85,6 +85,21 @@ Modèles pour intervenants externes (nom, description, rôle spécial, abréviat
 
 Quels symboles tactiques sont disponibles pour les marqueurs et si les marqueurs sans symbole sont autorisés.
 
+### Concepts d'intervention {#konzepte}
+
+Situations préparées pour des tronçons de cours d'eau (droit « Gérer les concepts d'intervention »). En haut, le **comportement par type d'intervention** : ce qui se passe quand un PLS se trouve dans le périmètre (Désactivé, Manuel uniquement, Proposer, Charger automatiquement) et si des concepts suivants sont proposés. Un concept peut déroger à ce comportement.
+
+**Modifier** ouvre une boîte de dialogue avec carte :
+
+- **Périmètre** : « Zone sur la carte » (placer les sommets) ou « Le long du cours d'eau de A à B » (placer A et B, « Calculer le tronçon » charge le réseau hydrographique ; « Marge » = distance maximale d'un PLS au cours d'eau).
+- **Types d'intervention** concernés.
+- **Éléments** : poste (symbole, rôle spécial comme mission, attribution à des personnes et groupes d'intervention, en option rôle spécial et véhicule), marqueur, zone, ligne, intervenant externe (aussi depuis un modèle), message à tous, documents, exclure ou prendre en compte un barrage, canaux radio, renfort de groupes d'intervention, activer les hélicoptères, démarrer l'enregistrement. « Présélectionné au chargement » définit les coches de l'aperçu. Les points se déplacent sur la carte.
+
+**Reprendre d'une intervention …** fait un brouillon à partir des marqueurs, zones, lignes et externes d'une intervention ou d'un exercice. Un concept déjà chargé ne peut plus qu'être désactivé.
+
+![Concepts d'intervention](img/admin-konzepte.jpg)
+![Modifier un concept d'intervention](img/admin-konzept-dialog.jpg)
+
 ## Planifications {#planungen}
 
 Exercices préparés, interventions secondaires planifiées et événements libres avec leurs éléments, plan d'exercices et inscriptions, exécutions avec journal et replay. Voir [Exercices et planifications](#planung/vorbereiten).
@@ -281,6 +296,7 @@ Certaines choses ne peuvent normalement qu'être désactivées ou pas du tout su
 | Modèle | Intervenants externes | les externes déjà saisis restent |
 | Compétence avec entrées | Formation | les formations saisies de toutes les personnes |
 | Type de véhicule avec véhicules, véhicule issu d'interventions | Véhicules | les véhicules avec observations et assemblages, aussi dans le replay |
+| Concept d'intervention | Concepts d'intervention | concept avec ses éléments ; les marqueurs chargés et le journal restent dans les interventions |
 
 Avant la suppression, une confirmation énumère les conséquences. **Cela ne peut pas être annulé.** Les interventions en cours et votre propre compte ne peuvent pas être supprimés. Chaque suppression définitive figure dans le journal de l'application (sans noms).
 
