@@ -121,7 +121,7 @@ const AIR_SVG={h:c=>`<circle cx="16" cy="12" r="10.5" fill="none" stroke="#fff" 
 function airIconHtml(a,age,rot){const h=a.cat==='A7'||!!a.rescue;
   return`<div class="airk${age>AIR_STALE_S?' old':''}${a.rescue?' resc':''}"><div class="airr" style="transform:rotate(${Math.round(rot||0)}deg)"><svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">${AIR_SVG[h?'h':'p'](airCol(a))}</svg></div><span>${esc(airName(a))} · ${esc(airAltS(a))}</span></div>`}
 function airPop(a,now,fc){const age=Math.max(0,Math.round(now-a.at)),vr=a.vr?(a.vr>0?'steigt ':'sinkt ')+(Math.abs(a.vr)*.00508).toFixed(1)+' m/s':null;
-  const rows=[['Rufzeichen',a.cs],['Kennzeichen',a.reg],['Typ',a.desc||a.type],['Transponder',String(a.hex||'').toUpperCase()],['Höhe',airAltL(a)],['Geschwindigkeit',a.gs!=null?Math.round(a.gs*1.852)+' km/h':null],['Kurs',a.trk!=null?a.trk+'°':null],['Vertikal',vr],
+  const rows=[['Rufzeichen',a.cs],['Kennzeichen',a.reg],['Typ',a.desc||a.type],['Transponder',String(a.hex||'').toUpperCase()],['Höhe',airAltL(a)],['Geschwindigkeit',a.gs!=null?fmtKmh(Math.round(a.gs*1.852)):null],['Kurs',a.trk!=null?a.trk+'°':null],['Vertikal',vr],
     ['Nächster fester Standort',a.near?`${a.near.n} (${(a.near.m/1000).toFixed(1)} km)`:null],['Distanz zum PLS',a.pls_m!=null?(a.pls_m/1000).toFixed(1)+' km Luftlinie':null],['Standort',fc?fc(a.lat,a.lon):null],['Letzte Position',fmtT(a.at)+` (vor ${age} s)`]];
   return`<div class="airpop"><b>${esc(airName(a))}</b><span class="t">${a.rescue?'Rettungshelikopter':a.cat==='A7'?'Helikopter':'Luftfahrzeug'} · ADS-B</span><table>${rows.filter(r=>r[1]).map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join('')}</table></div>`}
 // Marker je Transponder-Adresse nachführen statt neu zeichnen (ein offenes Popup bleibt offen und wird aktualisiert); fehlende entfernen
@@ -244,6 +244,19 @@ function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops){const r={polys
   if(srcs.length>1){const riv=r.parts.filter(p=>p.polys.length).length,circ=r.parts.length-riv,none=srcs.length-r.parts.length;
     r.short=`Suchgebiet aus ${srcs.length} PLS: ${riv} entlang Gewässer`+(circ?`, ${circ} als Kreis`:'')+(none?`, ${none} ohne Gebiet`:'')}
   return r}
+/* ---------- Geschwindigkeiten (Issue #259) ---------- */
+// Einheit der Anzeige: Standard in der Verwaltung (settings speed_unit, me.speed_default), pro Person übersteuerbar (users.speed_unit); Schlüssel wie SPEEDS im Server.
+// Gespeichert wird immer in m/s (flow_ms), Vergleichsgeschwindigkeiten und Helikopter in km/h; umgerechnet wird nur für die Anzeige und die Eingabe.
+const SPEED_UNITS={ms:'m/s',kmh:'km/h',both:'m/s und km/h'};
+// geltende Einheit: eigene Wahl, sonst Standard der Organisation (öffentliche Ansicht: window.SPEED_DEF aus public/state)
+function spdU(){try{if(typeof me!=='undefined'&&me&&(me.speed_unit||me.speed_default))return me.speed_unit||me.speed_default}catch(e){}return window.SPEED_DEF||'ms'}
+const spdR=(v,d)=>String(Math.round(v*10**d)/10**d);
+// Geschwindigkeit in m/s → Text in der Einheit (beides: «1.8 m/s (6.5 km/h)»)
+function fmtSpd(ms,u){if(ms==null||ms===''||isNaN(+ms))return'';u=u||spdU();const a=spdR(+ms,2)+' m/s',b=spdR(ms*3.6,1)+' km/h';return u==='kmh'?b:u==='both'?a+' ('+b+')':a}
+// Geschwindigkeit in km/h (Vergleichsgeschwindigkeiten, Helikopter) → Text in der Einheit
+function fmtKmh(k,u){if(k==null||isNaN(+k))return'';u=u||spdU();const a=spdR(k/3.6,1)+' m/s',b=spdR(+k,1)+' km/h';return u==='kmh'?b:u==='both'?a+' ('+b+')':a}
+// Eingabe der Fliessgeschwindigkeit: in km/h nur bei der Einheit km/h, sonst in m/s; spdFrom rechnet die Eingabe in m/s um
+const spdIn=u=>(u||spdU())==='kmh'?'km/h':'m/s',spdTo=(ms,u)=>ms==null||ms===''?'':spdIn(u)==='km/h'?spdR(ms*3.6,1):String(ms),spdFrom=(v,u)=>{v=+String(v).replace(',','.');return spdIn(u)==='km/h'?Math.round(v/3.6*100)/100:v};
 /* ---------- Koordinaten ---------- */
 // Standard in der Verwaltung (settings coord_sys), pro Person übersteuerbar (users.coord_sys); Schlüssel wie auf dem Server (COORDS)
 const COORD_SYS={lv95:'LV95 (CH1903+, E / N)',lv03:'LV03 (CH1903, Y / X)',wgs84:'WGS84 Dezimalgrad',wgs84dms:'WGS84 Grad, Minuten, Sekunden'};

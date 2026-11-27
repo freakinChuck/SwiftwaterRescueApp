@@ -818,6 +818,17 @@ class _PrefsPageState extends State<PrefsPage> {
             const DropdownMenuItem(value: 'none', child: Text('Keine Koordinaten anzeigen')),
           ],
           onChanged: (v) => _set({'coord_sys': v ?? ''}, poll: true)),
+      const SizedBox(height: 8),
+      DropdownButtonFormField<String>( // Issue #259: Einheit der Geschwindigkeiten
+          key: ValueKey('sp${js(me['speed_unit'])}'),
+          isExpanded: true,
+          initialValue: speedUnits.containsKey(js(me['speed_unit'])) ? js(me['speed_unit']) : '',
+          decoration: InputDecoration(labelText: trn('Geschwindigkeiten')),
+          items: [
+            DropdownMenuItem(value: '', child: Text('Standard: ${speedUnits[js(me['speed_default'])] ?? speedUnits['ms']}', overflow: TextOverflow.ellipsis)),
+            ...speedUnits.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))),
+          ],
+          onChanged: (v) => _set({'speed_unit': v ?? ''}, poll: true)),
       if (s.feat('nav')) ...[
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(

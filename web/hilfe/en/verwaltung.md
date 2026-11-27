@@ -127,9 +127,9 @@ Which base maps (aerial images, maps) are available, their order and the default
 
 ![Map providers](img/admin-karten.jpg)
 
-### Coordinates {#koordinaten}
+### Coordinates & units {#koordinaten}
 
-The default coordinate system. Each person can override it in the profile.
+The default coordinate system and the default unit for speeds (m/s, km/h or both) for flow speed, river distance and helicopters. Each person can override both in the profile. The public view always shows the default.
 
 ### Geodata sources {#geoquellen}
 

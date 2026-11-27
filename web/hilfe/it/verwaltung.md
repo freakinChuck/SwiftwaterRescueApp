@@ -127,9 +127,9 @@ Quali mappe di base (immagini aeree, mappe) sono disponibili, il loro ordine e q
 
 ![Fornitori di mappe](img/admin-karten.jpg)
 
-### Coordinate {#koordinaten}
+### Coordinate e unità {#koordinaten}
 
-Il sistema di coordinate predefinito. Ogni persona può modificarlo nel profilo.
+Il sistema di coordinate predefinito e l'unità predefinita delle velocità (m/s, km/h o entrambe) per la velocità della corrente, la distanza fluviale e gli elicotteri. Ogni persona può modificare entrambi nel profilo. La vista pubblica mostra sempre l'impostazione predefinita.
 
 ### Fonti di geodati {#geoquellen}
 

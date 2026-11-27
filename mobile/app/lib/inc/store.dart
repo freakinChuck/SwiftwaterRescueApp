@@ -312,6 +312,10 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
 
   String get csys => js(me?['coord_sys']).isNotEmpty ? js(me!['coord_sys']) : (js(me?['coord_default']).isNotEmpty ? js(me!['coord_default']) : 'lv95');
   String fc(dynamic lat, dynamic lon) => fmtC(jd(lat), jd(lon), csys);
+  /// Einheit der Geschwindigkeiten (Issue #259): eigene Wahl, sonst Standard der Organisation, sonst m/s
+  String get spdU => js(me?['speed_unit']).isNotEmpty ? js(me!['speed_unit']) : (js(me?['speed_default']).isNotEmpty ? js(me!['speed_default']) : 'ms');
+  String spd(dynamic ms) => fmtSpd(jd(ms), spdU);
+  String kmh(dynamic k) => fmtKmh(jd(k), spdU);
   String fcs(dynamic lat, dynamic lon, [String pre = ' · ', String post = '']) {
     final t = fc(lat, lon);
     return t.isEmpty ? '' : '$pre$t$post';

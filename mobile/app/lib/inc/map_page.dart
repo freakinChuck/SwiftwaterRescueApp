@@ -1210,7 +1210,7 @@ class _IncPageState extends State<IncPage> implements MapCtl {
                 onTap: () => _sheet(name, [
                       resc ? 'Rettungshelikopter' : (heli ? 'Helikopter' : 'Luftfahrzeug'),
                       [js(x['type']), js(x['reg'])].where((e) => e.isNotEmpty).join(' · '),
-                      'Höhe $alt${x['gs'] != null ? ' · ${((jd(x['gs']) ?? 0) * 1.852).round()} km/h' : ''}',
+                      'Höhe $alt${x['gs'] != null ? ' · ${s.kmh(((jd(x['gs']) ?? 0) * 1.852).round())}' : ''}',
                       if (x['at'] != null) 'Stand ${fmtT(jn(x['at']))}',
                     ], lat: jd(x['lat']), lon: jd(x['lon'])),
                 child: Opacity(
