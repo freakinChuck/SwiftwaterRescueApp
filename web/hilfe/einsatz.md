@@ -77,7 +77,7 @@ Im Register «Einsatz» setzen alle Teilnehmenden die **Fliessgeschwindigkeit** 
 
 Die **Wasserzeit** überwacht, wie lange jemand im Wasser ist (Swimmer, Bootsbesatzung im Wasser), ähnlich der Atemschutzüberwachung. So bleibt niemand unbemerkt zu lange im kalten Wasser.
 
-1. Im Register «Einsatz», Karte **Wasserzeit**, deinen **Kälteschutz** wählen (ohne, Neoprenanzug, Trockenanzug).
+1. Im Register «Einsatz», Karte **Wasserzeit**, deinen **Kälteschutz** prüfen (ohne, Neoprenanzug, Trockenanzug). Vorgewählt ist deine Vorgabe aus dem Profil (Karte «Wasserzeit»), sonst die zuletzt verwendete, sonst die der Organisation. Ändern kannst du ihn jederzeit, auch an Land.
 2. **🌊 Ich gehe ins Wasser** antippen. Die Zeit läuft, oben auf der Karte steht sie mit dem Knopf **An Land**.
 3. Zurück an Land: **Zurück an Land** antippen.
 
@@ -87,7 +87,9 @@ Die Zeit steht bei der Person im Fenster «Einsatzkräfte», in der Personeninfo
 
 > Je nach Einstellung erkennt die App den Aufenthalt im Wasser auch selbst: Ist dein Standort eine Weile sehr nahe an der Gewässerachse (nicht in einem Fahrzeug und nicht in Fahrt), beginnt die Wasserzeit, und du erhältst einen Hinweis. Stimmt das nicht, tippst du **Zurück an Land**. Das braucht das Gewässernetz (Funktion «Suchgebiet»).
 
-Die Einsatzleitung startet und beendet die Wasserzeit auch für andere (Knöpfe **🌊 Ins Wasser** und **An Land** im Fenster «Einsatzkräfte» und in der Personeninfo) und setzt die Wassertemperatur in der Karte «Wasserzeit».
+Die Einsatzleitung startet und beendet die Wasserzeit auch für andere (Knöpfe **🌊 Ins Wasser** und **An Land** im Fenster «Einsatzkräfte» und in der Personeninfo) und setzt die Wassertemperatur in der Karte «Wasserzeit». Dort stellt sie unter **Kälteschutz der Einsatzkräfte** auch den Kälteschutz jeder Person ein, bevor sie ins Wasser geht; läuft die Wasserzeit schon, gilt der neue Richtwert sofort.
+
+> Liegt keine BAFU-Station mit Wassertemperatur in der Nähe des PLS oder der Einsatzkräfte, steht die Temperatur auf «unbekannt». Die App sucht dann jede Minute erneut, sobald Standorte gemeldet werden.
 
 ## Flussdistanz {#flussdistanz}
 

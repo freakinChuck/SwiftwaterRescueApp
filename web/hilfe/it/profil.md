@@ -54,6 +54,10 @@ In alto cambi mese (‹ Oggi ›), passi tra **Mese** ed **Elenco** e mostri o n
 - **Sistema di coordinate**: LV95 (predefinito), LV03, WGS84 decimale o in gradi/minuti/secondi, oppure nascondi le coordinate.
 - **App di navigazione** per il pulsante 🧭: Google Maps, Mappe di Apple, Waze o un'altra app.
 
+## Tempo in acqua {#wasserzeit}
+
+Se la funzione «Tempo in acqua» è attivata, scegli qui la tua **protezione termica** abituale (nessuna, muta in neoprene, muta stagna). È preselezionata in ogni intervento; durante l'intervento puoi modificarla, così come la direzione dell'intervento. «Predefinito dell'organizzazione» usa l'impostazione dell'amministrazione. L'amministrazione può impostarla anche nella finestra «Modifica utente».
+
 ## Stazioni di misura {#messstationen}
 
 Nella scheda **Livello & portata** componi le tue stazioni di misura (fino a 20). Cerca per corso d'acqua o luogo, ↑ sposta, ✕ rimuove. Compaiono nella finestra [Stazioni di misura](#einsatz/messstationen), anche senza intervento.

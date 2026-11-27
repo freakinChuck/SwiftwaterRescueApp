@@ -92,8 +92,21 @@ Future<void> wtStopFor(BuildContext c, IncStore s, J p) async {
 }
 
 Future<void> wtStartFor(BuildContext c, IncStore s, J p) async {
-  final k = await _suitDlg(c, s, 'Wasserzeit für ${js(p['name'])}', null, ok: 'Starten');
+  final k = await _suitDlg(c, s, 'Wasserzeit für ${js(p['name'])}', _psOf(s, p['user_id']), ok: 'Starten');
   if (k != null) await s.act('incident/wtime/start', {'user_id': p['user_id'], 'suit': k});
+}
+
+/// Kälteschutz einer Einsatzkraft (ps, nur für die Einsatzleitung)
+String? _psOf(IncStore s, dynamic uid) {
+  final v = jm(wtState(s)?['ps'])['$uid'];
+  return v == null ? null : js(v);
+}
+
+/// Einsatzleitung: Kälteschutz anderer setzen, auch ausserhalb des Wassers (Feedback zu #241)
+Future<void> wtSuitFor(BuildContext c, IncStore s, J p) async {
+  final cur = _psOf(s, p['user_id']);
+  final k = await _suitDlg(c, s, 'Kälteschutz von ${js(p['name'])}', cur);
+  if (k != null && k != cur) await s.act('incident/wtime/suit', {'user_id': p['user_id'], 'suit': k});
 }
 
 Future<String?> _suitDlg(BuildContext c, IncStore s, String title, String? cur, {String ok = 'OK'}) {
@@ -163,6 +176,10 @@ Widget? wtCard(BuildContext c, IncStore s) {
   final tt = t != null ? '${t.toString().replaceAll(RegExp(r'\.0$'), '')} °C · ${src == 'manual' ? tr('von Hand gesetzt') : 'BAFU ${js(w['temp_txt'])}'}' : tr('unbekannt, es gilt der Richtwert der kältesten Stufe');
   final suits = jl(w['suits']), my = mine != null ? js(mine['suit']) : js(w['suit']);
   String suitName(String k) => js(suits.where((x) => x['k'] == k).firstOrNull?['name']);
+  final ps = jm(w['ps']);
+  final act = s.canManage
+      ? s.participants.where((p) => (ji(p['user_id']) ?? 0) > 0 && ji(p['user_id']) != s.uid && p['left_at'] == null && p['mode'] != 'declined' && ps['${p['user_id']}'] != null).toList()
+      : <J>[];
   return MCard(title: 'Wasserzeit', children: [
     Mkv([
       (tr('Wassertemperatur'), tt),
@@ -191,6 +208,22 @@ Widget? wtCard(BuildContext c, IncStore s) {
               if (s.canManage && ji(r['user_id']) != s.uid) smallBtn('An Land', () => wtStopFor(c, s, {'user_id': r['user_id'], 'name': r['name']})),
             ])),
     ],
+    if (act.isNotEmpty)
+      ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: EdgeInsets.zero,
+          title: Text('Kälteschutz der Einsatzkräfte (${act.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          children: [
+            for (final p in act)
+              Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(children: [
+                    Expanded(child: Text(js(p['name']))),
+                    Mut(tr(suitName(js(ps['${p['user_id']}']))), size: 12),
+                    const SizedBox(width: 6),
+                    smallBtn('Ändern', () => wtSuitFor(c, s, p)),
+                  ])),
+          ]),
     Padding(
         padding: const EdgeInsets.only(top: 6),
         child: Mut(
@@ -205,11 +238,11 @@ Widget? wtCard(BuildContext c, IncStore s) {
           },
           child: const Text('🌊 Ich gehe ins Wasser')),
     if (mine != null) FilledButton(onPressed: () => s.act('incident/wtime/stop', {}), child: const Text('Zurück an Land')),
-    if (mine != null)
+    if (s.joined) // auch ausserhalb des Wassers (Feedback zu #241)
       OutlinedButton(
           onPressed: () async {
             final k = await _suitDlg(c, s, 'Kälteschutz ändern', my);
-            if (k != null && k != my) await s.act('incident/wtime/start', {'suit': k});
+            if (k != null && k != my) await s.act('incident/wtime/suit', {'suit': k});
           },
           child: const Text('Kälteschutz ändern')),
     if (jb(w['can_temp']))

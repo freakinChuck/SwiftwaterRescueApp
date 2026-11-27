@@ -493,7 +493,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 ## 35. Wasserzeit (WZT)
 
 - **WZT-01** – Wer im Wasser arbeitet, startet im Einsatz die Wasserzeit («Ich gehe ins Wasser») und beendet sie («Zurück an Land»); die Einsatzleitung kann sie für andere starten und beenden. Funktion je Einsatztyp ein- und ausschaltbar (#241).
-- **WZT-02** – Beim Start wählt die Person ihren Kälteschutz (ohne, Neoprenanzug, Trockenanzug); die App merkt sich die letzte Wahl (#241).
+- **WZT-02** – Beim Start wählt die Person ihren Kälteschutz (ohne, Neoprenanzug, Trockenanzug); vorgewählt ist die persönliche Vorgabe (Profil bzw. Verwaltung im Benutzerdialog), sonst die letzte Wahl, sonst die Vorgabe der Organisation. Der Kälteschutz lässt sich im Einsatz jederzeit ändern, auch ausserhalb des Wassers (#241, Feedback zum PR).
 - **WZT-03** – Der Richtwert in Minuten hängt vom Kälteschutz und von der Wassertemperatur ab; die Tabelle (Temperaturstufen und Minuten) ist in der Verwaltung einstellbar, mit einem Vorschlag als Vorgabe (#241, AG: konfigurierbar, Vorschläge für Neopren und Trockenanzug).
 - **WZT-04** – Die Wassertemperatur kommt von der nächsten BAFU-Station mit Wassertemperatur; die Einsatzleitung kann sie von Hand setzen. Ohne Temperatur gilt die kälteste Stufe (#241).
 - **WZT-05** – Die laufende Zeit steht bei der Person im Fenster «Einsatzkräfte», in der Personeninfo, als Chip unter dem Marker und die eigene oben auf der Karte; gelb ab der Vorwarnung (Standard 75 %), rot ab 100 % (#241).
@@ -501,3 +501,5 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **WZT-07** – Optional erkennt die App den Aufenthalt im Wasser selbst über den Standort nahe der Gewässerachse (ohne Fahrzeug, nicht in Fahrt) und beendet automatisch gestartete Wasserzeiten wieder an Land; die Person erhält beim automatischen Start einen Hinweis (#241, AG: ja).
 - **WZT-08** – Die Wasserzeit je Person erscheint in der Statistik pro Person (auch «Meine Statistik») und im After Action Review (Abschnitt «Wasserzeiten») (#241).
 - **WZT-09** – Austritt, Entfernen aus dem Einsatz und Einsatzende beenden eine laufende Wasserzeit. Im Demo-Modus ist die Funktion aus (#241).
+- **WZT-10** – Die Einsatzleitung setzt den Kälteschutz der übrigen Einsatzkräfte, auch bevor sie ins Wasser gehen; das steht im Einsatzlog (#241, Feedback zum PR).
+- **WZT-11** – Die Wassertemperatur sucht die nächste Station um die PLS und um die Standorte der Einsatzkräfte; solange keine gefunden ist, sucht der Server jede Minute erneut, beim Start einer Wasserzeit sofort (#241, Feedback zum PR: «unbekannt», obwohl die Person in der Aare war).

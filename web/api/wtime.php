@@ -17,9 +17,10 @@ foreach ([
     warned INT DEFAULT 0, w1_at BIGINT NULL, w2_at BIGINT NULL, auto INT DEFAULT 0, by_start INT NULL, by_end INT NULL, end_auto INT DEFAULT 0)",
 ] as $s) $db->exec($s);
 try { $db->exec("CREATE INDEX water_time_inc ON water_time(incident_id,end_at)"); } catch (Throwable $e) {}
-// incidents: von Hand gesetzte Temperatur und zuletzt ermittelte der BAFU-Station; participants: Erkennung (wt_wet = seit im Wasser, wt_dry = seit ausserhalb) und zuletzt gewählter Kälteschutz
+// incidents: von Hand gesetzte Temperatur und zuletzt ermittelte der BAFU-Station; participants: Erkennung (wt_wet = seit im Wasser, wt_dry = seit ausserhalb) und Kälteschutz im Einsatz;
+// users.wt_suit: persönliche Vorgabe des Kälteschutzes (Profil bzw. Verwaltung, NULL = Vorgabe der Organisation)
 foreach (['incidents' => ['wt_temp DOUBLE NULL', 'wt_temp_at BIGINT NULL', 'wt_temp_by INT NULL', 'wt_bafu DOUBLE NULL', 'wt_bafu_txt TEXT NULL', 'wt_bafu_at BIGINT NULL'],
-  'participants' => ['wt_wet BIGINT NULL', 'wt_dry BIGINT NULL', 'wt_suit TEXT NULL']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
+  'participants' => ['wt_wet BIGINT NULL', 'wt_dry BIGINT NULL', 'wt_suit TEXT NULL'], 'users' => ['wt_suit TEXT NULL']] as $t => $cs) foreach ($cs as $c) { try { $db->exec("ALTER TABLE $t ADD COLUMN $c"); } catch (Throwable $e) {} }
 
 // Kälteschutz: Schlüssel => [Bezeichnung, Erklärung]
 const WT_SUITS = ['none' => ['Ohne Kälteschutz', 'Badekleidung oder Alltagskleidung'], 'wet' => ['Neoprenanzug', 'Nassanzug (z. B. 5–7 mm) mit Haube, Handschuhen und Füsslingen'], 'dry' => ['Trockenanzug', 'Trockenanzug mit wärmender Unterbekleidung']];
@@ -31,6 +32,7 @@ const WT_NUM = ['warn' => [50, 95, 'Vorwarnung bei (Prozent des Richtwerts)'], '
   'auto_m' => [5, 80, 'Höchstens so weit von der Gewässerachse (m)'], 'radius_km' => [1, 100, 'BAFU-Station mit Wassertemperatur im Umkreis (km)']];
 const WT_LVL = ['crit', 'high', 'normal', 'low'];
 const WT_BAFU_S = 600; // Temperatur der BAFU-Station höchstens so oft nachführen
+const WT_BAFU_RETRY_S = 60; // solange keine Station gefunden ist (z. B. noch kein Standort gemeldet), häufiger suchen
 const WT_ALERT_S = 900; // Warnungen so lange in incident/state (für Geräte ohne Push), die Geräte entdoppeln über den Schlüssel
 
 function wtIn($v) { $d = WT_DEFAULT; if (!is_array($v)) $v = []; $r = [];
@@ -58,12 +60,13 @@ function wtTemp($inc) { if ($inc['wt_temp'] !== null) return [(float)$inc['wt_te
   if ($inc['wt_bafu'] !== null) return [(float)$inc['wt_bafu'], 'bafu', (string)$inc['wt_bafu_txt'], (int)$inc['wt_bafu_at']];
   return [null, 'none', '', null]; }
 function wtTempTxt($t) { return $t[0] === null ? 'Wassertemperatur unbekannt, Richtwert der kältesten Stufe' : 'Wasser ' . wtNum($t[0]) . ' °C' . ($t[1] === 'bafu' ? ', BAFU ' . $t[2] : ($t[1] === 'manual' ? ', von Hand' : '')); }
-// nächste BAFU-Station mit Wassertemperatur zu den PLS bzw. den Standorten der Einsatzkräfte; liest den Zwischenspeicher der Messwerte (hydroBafu, 5 min)
+// nächste BAFU-Station mit Wassertemperatur zu den PLS und den Standorten der Einsatzkräfte (Feedback zu #241: ohne PLS blieb sie sonst unbekannt,
+// obwohl die Person in der Aare stand); liest den Zwischenspeicher der Messwerte (hydroBafu, 5 min). Ohne Messwerte (Quellen nicht erreichbar) bleibt der bisherige Wert.
 function wtBafu($id) { global $db, $now;
   $s = $db->prepare("SELECT * FROM incidents WHERE id=?"); $s->execute([(int)$id]); $inc = $s->fetch(); $s->closeCursor(); if (!$inc || $inc['ended_at'] !== null) return;
   $refs = hydroRefs($inc);
-  if (!$refs) { $q = $db->prepare("SELECT lat,lon FROM participants WHERE incident_id=? AND lat IS NOT NULL AND left_at IS NULL AND mode<>'declined'"); $q->execute([(int)$id]); foreach ($q->fetchAll() as $p) $refs[] = [(float)$p['lat'], (float)$p['lon']]; }
-  [$L] = hydroLatest(); $best = null;
+  $q = $db->prepare("SELECT lat,lon FROM participants WHERE incident_id=? AND lat IS NOT NULL AND left_at IS NULL AND mode<>'declined'"); $q->execute([(int)$id]); foreach ($q->fetchAll() as $p) $refs[] = [(float)$p['lat'], (float)$p['lon']];
+  [$L] = hydroLatest(); $best = null; if (!$L) return;
   if ($refs && $L) foreach (hydroLocs() as $st) { $t = $L[$st['id']]['temp'] ?? null; if ($t === null) continue;
     foreach ($refs as [$la, $lo]) { $d = hav($la, $lo, $st['lat'], $st['lon']); if ($d <= wtCfg()['radius_km'] * 1000 && (!$best || $d < $best[1])) $best = [$st, $d, (float)$t]; } }
   $old = $inc['wt_bafu'] === null ? null : (float)$inc['wt_bafu'];
@@ -79,11 +82,25 @@ function wtApply($id) { global $db, $now;
 function wtStage($el, $lim) { $p = $lim > 0 ? 100 * $el / $lim : 0; return $p >= 100 ? 2 : ($p >= wtCfg()['warn'] ? 1 : 0); }
 
 function wtRunning($partId) { global $db; $s = $db->prepare("SELECT * FROM water_time WHERE part_id=? AND end_at IS NULL ORDER BY id DESC LIMIT 1"); $s->execute([(int)$partId]); $r = $s->fetch(); $s->closeCursor(); return $r ?: null; }
-// zuletzt gewählter Kälteschutz: in diesem Einsatz, sonst in einem früheren, sonst die Vorgabe
+// Kälteschutz einer Teilnahme: in diesem Einsatz gesetzt (selbst oder Einsatzleitung), sonst die persönliche Vorgabe, sonst der zuletzt verwendete, sonst die Vorgabe der Organisation
 function wtSuitOf($p) { global $db; $on = array_column(wtSuits(), 'k');
   if (!empty($p['wt_suit']) && in_array($p['wt_suit'], $on, true)) return $p['wt_suit'];
+  if ($v = wtUserSuit($p['user_id'])) return $v;
   $s = $db->prepare("SELECT w.suit FROM water_time w JOIN participants x ON x.id=w.part_id WHERE x.user_id=? ORDER BY w.id DESC LIMIT 1"); $s->execute([(int)$p['user_id']]); $v = $s->fetchColumn(); $s->closeCursor();
   return $v && in_array($v, $on, true) ? $v : wtCfg()['def']; }
+// persönliche Vorgabe (users.wt_suit), nur wenn dieser Kälteschutz eingeschaltet ist
+function wtUserSuit($u) { global $db; $s = $db->prepare("SELECT wt_suit FROM users WHERE id=?"); $s->execute([(int)$u]); $v = $s->fetchColumn(); $s->closeCursor();
+  return $v && in_array($v, array_column(wtSuits(), 'k'), true) ? $v : null; }
+function wtSuitIn($v) { $v = (string)$v; if ($v !== '' && !isset(WT_SUITS[$v])) fail('Unbekannter Kälteschutz'); return $v === '' ? null : $v; }
+// für me: Auswahl und persönliche Vorgabe
+function wtMe($uid) { return ['suit' => wtUserSuit($uid), 'suits' => wtSuits(), 'def' => wtCfg()['def']]; }
+// Kälteschutz einer Teilnahme setzen (auch ausserhalb des Wassers); läuft eine Wasserzeit, gilt der neue Richtwert sofort
+function wtSetSuit($inc, $p, $suit, $by) { global $db, $now; $u = (int)$p['user_id']; $run = wtRunning($p['id']);
+  $db->prepare("UPDATE participants SET wt_suit=? WHERE id=?")->execute([$suit, (int)$p['id']]);
+  if ($run && $run['suit'] !== $suit) { $t = wtTemp($inc); $lim = wtLimit($suit, $t[0]);
+    $db->prepare("UPDATE water_time SET suit=?,lim_s=?,warned=? WHERE id=?")->execute([$suit, $lim, min((int)$run['warned'], wtStage($now - (int)$run['start_at'], $lim)), (int)$run['id']]);
+    logev($inc['id'], $by, 'wtime', ($u === $by ? 'ändert den Kälteschutz' : 'ändert den Kälteschutz von ' . wtName($u)) . ' auf ' . wtSuitName($suit) . ' (Richtwert ' . wtMin($lim) . ' min)'); return; }
+  if (!$run && $u !== $by) logev($inc['id'], $by, 'wtime', 'setzt den Kälteschutz von ' . wtName($u) . ' auf ' . wtSuitName($suit)); }
 function wtName($u) { global $db; $s = $db->prepare("SELECT name FROM users WHERE id=?"); $s->execute([(int)$u]); $v = $s->fetchColumn(); $s->closeCursor(); return $v ?: '?'; }
 // Einsatzleitung des Einsatzes (wie canManage, für Push und Hinweise): Teilnehmende mit Leitungsrechten und die Übungsleitung
 function wtLeads($inc) { global $db; $s = $db->prepare("SELECT user_id FROM participants WHERE incident_id=? AND mode<>'declined' AND left_at IS NULL"); $s->execute([(int)$inc['id']]);
@@ -92,6 +109,7 @@ function wtLeads($inc) { global $db; $s = $db->prepare("SELECT user_id FROM part
 
 // Beginnen: $p = Teilnahme, $by = wer (NULL = automatisch), $at = Beginn
 function wtStart($inc, $p, $suit, $by, $at) { global $db; $t = wtTemp($inc); $lim = wtLimit($suit, $t[0]);
+  if ($t[0] === null) { $id = (int)$inc['id']; after(fn() => wtBafu($id)); } // Temperatur noch unbekannt: gleich suchen, der Richtwert folgt über wtApply
   $db->prepare("INSERT INTO water_time(incident_id,part_id,start_at,suit,temp,src,src_txt,lim_s,auto,by_start) VALUES(?,?,?,?,?,?,?,?,?,?)")->execute([(int)$inc['id'], (int)$p['id'], $at, $suit, $t[0], $t[1], $t[2], $lim, $by === null ? 1 : 0, $by]);
   $db->prepare("UPDATE participants SET wt_suit=?,wt_wet=NULL,wt_dry=NULL WHERE id=?")->execute([$suit, (int)$p['id']]);
   $w = wtSuitName($suit) . ', ' . wtTempTxt($t) . ', Richtwert ' . wtMin($lim) . ' min';
@@ -135,8 +153,9 @@ function wtMsg($sg, $nm, $m, $l) { return $nm === null ? ($sg === 2 ? "Du bist s
 
 // incident/state: laufende Wasserzeiten (alle), Summe der beendeten je Person, Temperatur, Kälteschutz; alerts = Warnungen für mich (Person oder Einsatzleitung)
 function wtState($inc) { global $db, $uid, $now; $c = wtCfg(); $id = (int)$inc['id'];
-  if ($inc['wt_bafu_at'] === null || $now - (int)$inc['wt_bafu_at'] >= WT_BAFU_S) { // Temperatur der BAFU-Station nach der Antwort nachführen
-    $u = $db->prepare("UPDATE incidents SET wt_bafu_at=? WHERE id=? AND (wt_bafu_at IS NULL OR wt_bafu_at<?)"); $u->execute([$now, $id, $now - WT_BAFU_S]); if ($u->rowCount()) after(fn() => wtBafu($id)); }
+  $ev = $inc['wt_bafu'] === null ? WT_BAFU_RETRY_S : WT_BAFU_S;
+  if ($inc['wt_bafu_at'] === null || $now - (int)$inc['wt_bafu_at'] >= $ev) { // Temperatur der BAFU-Station nach der Antwort nachführen
+    $u = $db->prepare("UPDATE incidents SET wt_bafu_at=? WHERE id=? AND (wt_bafu_at IS NULL OR wt_bafu_at<?)"); $u->execute([$now, $id, $now - $ev]); if ($u->rowCount()) after(fn() => wtBafu($id)); }
   wtCheck($inc);
   $q = $db->prepare("SELECT w.id,w.part_id,w.start_at,w.end_at,w.suit,w.temp,w.src,w.lim_s,w.warned,w.w1_at,w.w2_at,w.auto,p.user_id,u.name FROM water_time w JOIN participants p ON p.id=w.part_id LEFT JOIN users u ON u.id=p.user_id WHERE w.incident_id=? ORDER BY w.id"); $q->execute([$id]);
   $run = []; $sum = []; $n = []; $al = []; $lead = canManage($inc);
@@ -149,8 +168,9 @@ function wtState($inc) { global $db, $uid, $now; $c = wtCfg(); $id = (int)$inc['
       $al[] = ['tag' => 'w:' . (int)$w['id'] . ':' . $sg, 't' => $sg === 2 ? 'Wasserzeit erreicht' : 'Wasserzeit', 'b' => wtMsg($sg, $mine ? null : $w['name'], $m, $l), 'lvl' => $c['lvl']];
     if ($mine && (int)$w['auto'] && $now - (int)$w['start_at'] <= WT_ALERT_S + $c['auto_s'])
       $al[] = ['tag' => 'w:' . (int)$w['id'] . ':a', 't' => 'Wasserzeit läuft', 'b' => "Automatisch erkannt: Du bist im Wasser, Richtwert $l min. Falls nicht, «Zurück an Land» antippen.", 'lvl' => 'normal']; }
-  $t = wtTemp($inc); $p = part($id);
-  return [['auto' => $c['auto'], 'warn' => $c['warn'], 'suits' => wtSuits(), 'suit' => $p ? wtSuitOf($p) : $c['def'], 'temp' => $t[0], 'temp_src' => $t[1], 'temp_txt' => $t[2], 'temp_at' => $t[3],
+  $t = wtTemp($inc); $p = part($id); $ps = []; // ps: Kälteschutz je Einsatzkraft, für die Einsatzleitung
+  if ($lead) { $q = $db->prepare("SELECT * FROM participants WHERE incident_id=? AND left_at IS NULL AND mode<>'declined' AND user_id>0"); $q->execute([$id]); foreach ($q->fetchAll() as $x) $ps[(int)$x['user_id']] = wtSuitOf($x); }
+  return [['auto' => $c['auto'], 'ps' => (object)$ps, 'warn' => $c['warn'], 'suits' => wtSuits(), 'suit' => $p ? wtSuitOf($p) : $c['def'], 'temp' => $t[0], 'temp_src' => $t[1], 'temp_txt' => $t[2], 'temp_at' => $t[3],
     'lim' => array_map(fn($s) => wtLimit($s['k'], $t[0]), array_column(wtSuits(), null, 'k')), 'run' => $run, 'sum' => (object)$sum, 'n' => (object)$n, 'can_temp' => $lead ? 1 : 0], $al]; }
 
 // After Action Review (aarDoc): alle Wasserzeiten des Einsatzes, Namen wie die Einsatzkräfte ($c = anonCtx)
@@ -174,16 +194,14 @@ function wtRoute($route) { global $db, $in, $uid, $now;
   switch ($route) {
   case 'incident/wtime/start': // user = andere Person (Einsatzleitung), suit = Kälteschutz; läuft schon eine, ändert suit den Kälteschutz
   case 'incident/wtime/stop':
-    $u = (int)($in['user_id'] ?? $uid); if ($u !== $uid && !$lead) fail('Nur die Einsatzleitung kann die Wasserzeit anderer Personen starten und beenden', 403);
+  case 'incident/wtime/suit': // Kälteschutz setzen, auch ausserhalb des Wassers (Feedback zu #241)
+    $u = (int)($in['user_id'] ?? $uid); if ($u !== $uid && !$lead) fail('Nur die Einsatzleitung kann die Wasserzeit und den Kälteschutz anderer Personen ändern', 403);
     $p = part($inc['id'], $u); if (!$p || $p['left_at'] !== null || $p['mode'] === 'declined') fail($u === $uid ? 'Du nimmst nicht am Einsatz teil' : 'Die Person ist nicht im Einsatz');
     $run = wtRunning($p['id']);
     if ($route === 'incident/wtime/stop') { if ($run) wtStop($inc, $run, $uid, $now); out(['ok' => true]); }
     $suit = isset($in['suit']) ? (string)$in['suit'] : wtSuitOf($p); if (!in_array($suit, array_column(wtSuits(), 'k'), true)) fail('Unbekannter Kälteschutz');
-    if (!$run) { wtStart($inc, $p, $suit, $uid, $now); out(['ok' => true]); }
-    if ($run['suit'] !== $suit) { $t = wtTemp($inc); $lim = wtLimit($suit, $t[0]);
-      $db->prepare("UPDATE water_time SET suit=?,lim_s=?,warned=? WHERE id=?")->execute([$suit, $lim, min((int)$run['warned'], wtStage($now - (int)$run['start_at'], $lim)), (int)$run['id']]);
-      $db->prepare("UPDATE participants SET wt_suit=? WHERE id=?")->execute([$suit, (int)$p['id']]);
-      logev($inc['id'], $uid, 'wtime', ($u === $uid ? 'ändert den Kälteschutz' : 'ändert den Kälteschutz von ' . wtName($u)) . ' auf ' . wtSuitName($suit) . ' (Richtwert ' . wtMin($lim) . ' min)'); }
+    if ($route === 'incident/wtime/start' && !$run) { wtStart($inc, $p, $suit, $uid, $now); out(['ok' => true]); }
+    if ($route === 'incident/wtime/suit' || $run['suit'] !== $suit) wtSetSuit($inc, $p, $suit, $uid);
     out(['ok' => true]);
   case 'incident/wtime/temp': // Wassertemperatur von Hand (Einsatzleitung), null = wieder die der BAFU-Station
     if (!$lead) fail('Nur die Einsatzleitung kann die Wassertemperatur setzen', 403);

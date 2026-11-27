@@ -54,6 +54,10 @@ At the top you change the month (‹ Today ›), switch between **Month** and **
 - **Coordinate system**: LV95 (default), LV03, WGS84 decimal or in degrees/minutes/seconds, or hide coordinates.
 - **Navigation app** for the 🧭 button: Google Maps, Apple Maps, Waze or another app.
 
+## Water time {#wasserzeit}
+
+If the "Water time" function is switched on, choose your usual **thermal protection** here (none, wetsuit, drysuit). It is preselected in every operation; during the operation you can change it, and so can the operation lead. "Organisation default" uses the setting of the administration. The administration can also set it in the "Edit user" dialog.
+
 ## Gauging stations {#messstationen}
 
 In the **Water level & discharge** card you put together your own gauging stations (up to 20). Search by water body or place, ↑ moves, ✕ removes. They appear in the [Gauging stations](#einsatz/messstationen) window, also without an operation.

@@ -54,6 +54,10 @@ Oben wechselst du den Monat (‹ Heute ›), zwischen **Monat** und **Liste** un
 - **Koordinatensystem**: LV95 (Standard), LV03, WGS84 dezimal oder in Grad/Minuten/Sekunden, oder Koordinaten ausblenden.
 - **Navigations-App** für den Knopf 🧭: Google Maps, Apple Karten, Waze oder eine andere App.
 
+## Wasserzeit {#wasserzeit}
+
+Ist die Funktion «Wasserzeit» eingeschaltet, wählst du hier deinen üblichen **Kälteschutz** (ohne, Neoprenanzug, Trockenanzug). Er ist in jedem Einsatz vorgewählt; im Einsatz kannst du ihn ändern, die Einsatzleitung ebenso. «Vorgabe der Organisation» nimmt die Einstellung der Verwaltung. Die Verwaltung kann den Kälteschutz auch im Dialog «Benutzer bearbeiten» setzen.
+
 ## Messstationen {#messstationen}
 
 In der Karte **Pegel & Abfluss** stellst du deine eigenen Messstationen zusammen (bis 20). Suche nach Gewässer oder Ort, ↑ verschiebt, ✕ entfernt. Sie erscheinen im Fenster [Messstationen](#einsatz/messstationen), auch ohne Einsatz.

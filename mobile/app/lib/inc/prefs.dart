@@ -834,6 +834,28 @@ class _PrefsPageState extends State<PrefsPage> {
     ]);
   }
 
+  /// Wasserzeit (Feedback zu #241): persönliche Vorgabe des Kälteschutzes, gilt in jedem Einsatz, bis man ihn dort ändert
+  Widget? _wt(J me) {
+    final w = jm(me['wt']), suits = jl(w['suits']);
+    if (s.demo || suits.isEmpty || !s.feat('wtime')) return null;
+    final cur = js(w['suit']), d = js(suits.where((x) => x['k'] == w['def']).firstOrNull?['name']);
+    return MCard(title: 'Wasserzeit', children: [
+      DropdownButtonFormField<String>(
+          key: ValueKey('wt$cur'),
+          isExpanded: true,
+          initialValue: suits.any((x) => x['k'] == cur) ? cur : '',
+          decoration: InputDecoration(labelText: trn('Mein Kälteschutz')),
+          items: [
+            DropdownMenuItem(value: '', child: Text('Vorgabe der Organisation (${tr(d)})', overflow: TextOverflow.ellipsis)),
+            ...suits.map((x) => DropdownMenuItem(value: js(x['k']), child: Text(js(x['name']), overflow: TextOverflow.ellipsis))),
+          ],
+          onChanged: (v) => _set({'wt_suit': v ?? ''})),
+      const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Mut('Wird beim Annehmen eines Einsatzes vorgewählt. Im Einsatz kannst du ihn jederzeit ändern, die Einsatzleitung ebenso.', size: 12)),
+    ]);
+  }
+
   Widget? _ai(J me) {
     final ai = me['ai'];
     if (ai is! Map || ai.isEmpty) return null;
@@ -1034,6 +1056,7 @@ class _PrefsPageState extends State<PrefsPage> {
                   _alarm(me),
                   if (!s.demo && (ji(jm(me['skills'])['n']) ?? 0) > 0) SkillPrefs(s: s), // Ausbildung (Issue #117)
                   _anzeige(me),
+                  ?_wt(me),
                   ?_veh(me),
                   if (s.feat('hydro')) HydroPrefs(s: s), // persönliche Messstationen (Issue #165)
                   if (s.feat('voice')) VoicePrefs(s: s), // Funk (Issue #113)

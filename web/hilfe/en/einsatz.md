@@ -77,7 +77,7 @@ In the “Operation” tab all participants set the **flow speed** in m/s. From 
 
 **Water time** monitors how long someone is in the water (swimmers, boat crew in the water), similar to breathing apparatus monitoring. Nobody stays in cold water too long without being noticed.
 
-1. In the "Operation" tab, card **Water time**, choose your **thermal protection** (none, wetsuit, drysuit).
+1. In the "Operation" tab, card **Water time**, check your **thermal protection** (none, wetsuit, drysuit). Preselected is your default from the profile ("Water time" card), otherwise the one you used last, otherwise the organisation's. You can change it at any time, also ashore.
 2. Tap **🌊 I am going into the water**. The time runs and is shown at the top of the map with the button **Ashore**.
 3. Back on land: tap **Back ashore**.
 
@@ -87,7 +87,9 @@ The time is shown with the person in the "Responders" panel, in the person info 
 
 > Depending on the settings, the app also detects the stay in the water by itself: if your location is very close to the river axis for a while (not in a vehicle and not moving fast), the water time starts and you get a notice. If that is wrong, tap **Back ashore**. This needs the river network (function "Search area").
 
-The operation lead also starts and ends the water time for others (buttons **🌊 Into the water** and **Ashore** in the "Responders" panel and in the person info) and sets the water temperature in the "Water time" card.
+The operation lead also starts and ends the water time for others (buttons **🌊 Into the water** and **Ashore** in the "Responders" panel and in the person info) and sets the water temperature in the "Water time" card. There, under **Thermal protection of responders**, it also sets each person's thermal protection before they go into the water; if the water time is already running, the new guide value applies immediately.
+
+> If there is no BAFU station with water temperature near the PLS or the responders, the temperature shows "unknown". The app then searches again every minute as soon as locations are reported.
 
 ## River distance {#flussdistanz}
 

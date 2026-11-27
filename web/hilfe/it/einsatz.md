@@ -77,7 +77,7 @@ Nella scheda «Intervento» tutti i partecipanti impostano la **velocità della 
 
 Il **tempo in acqua** sorveglia quanto a lungo una persona resta in acqua (soccorritori a nuoto, equipaggio di battello in acqua), come la sorveglianza dei portatori di apparecchi respiratori. Così nessuno resta troppo a lungo nell'acqua fredda senza che se ne accorga qualcuno.
 
-1. Nella scheda «Intervento», carta **Tempo in acqua**, scegli la tua **protezione termica** (nessuna, muta in neoprene, muta stagna).
+1. Nella scheda «Intervento», carta **Tempo in acqua**, verifica la tua **protezione termica** (nessuna, muta in neoprene, muta stagna). È preselezionata la tua impostazione predefinita del profilo (carta «Tempo in acqua»), altrimenti l'ultima usata, altrimenti quella dell'organizzazione. Puoi modificarla in qualsiasi momento, anche a terra.
 2. Tocca **🌊 Vado in acqua**. Il tempo scorre ed è indicato in alto sulla carta con il pulsante **A terra**.
 3. Di nuovo a terra: tocca **Ritorno a terra**.
 
@@ -87,7 +87,9 @@ Il tempo è indicato presso la persona nella finestra «Soccorritori», nelle in
 
 > A seconda delle impostazioni, l'app riconosce anche da sola la permanenza in acqua: se la tua posizione è per un po' molto vicina all'asse del corso d'acqua (non in un veicolo e non in movimento veloce), il tempo in acqua inizia e ricevi un avviso. Se non è corretto, tocca **Ritorno a terra**. Serve la rete idrografica (funzione «Area di ricerca»).
 
-La direzione dell'intervento avvia e termina il tempo in acqua anche per altri (pulsanti **🌊 In acqua** e **A terra** nella finestra «Soccorritori» e nelle info persona) e imposta la temperatura dell'acqua nella carta «Tempo in acqua».
+La direzione dell'intervento avvia e termina il tempo in acqua anche per altri (pulsanti **🌊 In acqua** e **A terra** nella finestra «Soccorritori» e nelle info persona) e imposta la temperatura dell'acqua nella carta «Tempo in acqua». Lì, sotto **Protezione termica dei soccorritori**, imposta anche la protezione termica di ogni persona prima che entri in acqua; se il tempo in acqua è già in corso, il nuovo valore indicativo vale subito.
+
+> Se vicino al PLS o ai soccorritori non c'è una stazione UFAM con temperatura dell'acqua, la temperatura risulta «sconosciuta». L'app cerca di nuovo ogni minuto, appena vengono trasmesse posizioni.
 
 ## Distanza fluviale {#flussdistanz}
 

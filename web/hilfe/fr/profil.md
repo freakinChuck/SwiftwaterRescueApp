@@ -54,6 +54,10 @@ En haut, vous changez de mois (‹ Aujourd'hui ›), basculez entre **Mois** et 
 - **Système de coordonnées** : LV95 (par défaut), LV03, WGS84 décimal ou en degrés/minutes/secondes, ou masquer les coordonnées.
 - **App de navigation** pour le bouton 🧭 : Google Maps, Plans d'Apple, Waze ou une autre app.
 
+## Temps dans l'eau {#wasserzeit}
+
+Si la fonction « Temps dans l'eau » est activée, choisis ici ta **protection thermique** habituelle (aucune, combinaison néoprène, combinaison étanche). Elle est présélectionnée dans chaque intervention ; pendant l'intervention, tu peux la modifier, la direction d'intervention aussi. « Valeur par défaut de l'organisation » reprend le réglage de l'administration. L'administration peut aussi la régler dans le dialogue « Modifier l'utilisateur ».
+
 ## Stations de mesure {#messstationen}
 
 Dans la carte **Niveau & débit**, vous composez vos propres stations de mesure (jusqu'à 20). Recherche par cours d'eau ou lieu, ↑ déplace, ✕ retire. Elles apparaissent dans la fenêtre [Stations de mesure](#einsatz/messstationen), aussi sans intervention.

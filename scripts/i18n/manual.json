@@ -102,7 +102,14 @@
 "ändert": "changes",
 "überfällig": "overdue",
 "übernommen": "taken over",
-", Standort {0}, {1}": ", location {0}, {1}"
+", Standort {0}, {1}": ", location {0}, {1}",
+"Kälteschutz der Einsatzkräfte ({0})": "Thermal protection of responders ({0})",
+"Kälteschutz von {0}": "Thermal protection of {0}",
+"Wird beim Annehmen eines Einsatzes vorgewählt. Im Einsatz kannst du ihn jederzeit ändern, die Einsatzleitung ebenso.": "Preselected when you accept an operation. During the operation you can change it at any time, and so can the operation lead.",
+"Kälteschutz gespeichert": "Thermal protection saved",
+"Kälteschutz für die Wasserzeit": "Thermal protection for water time",
+"setzt den Kälteschutz von {0} auf {1}": "sets the thermal protection of {0} to {1}",
+"Nur die Einsatzleitung kann die Wasserzeit und den Kälteschutz anderer Personen ändern": "Only the operation lead can change the water time and thermal protection of other people"
 },
 "fr": {
 "Angemeldet:": "Connecté :",
@@ -207,7 +214,14 @@
 "ändert": "modifie",
 "überfällig": "en retard",
 "übernommen": "repris",
-", Standort {0}, {1}": ", position {0}, {1}"
+", Standort {0}, {1}": ", position {0}, {1}",
+"Kälteschutz der Einsatzkräfte ({0})": "Protection thermique des intervenants ({0})",
+"Kälteschutz von {0}": "Protection thermique de {0}",
+"Wird beim Annehmen eines Einsatzes vorgewählt. Im Einsatz kannst du ihn jederzeit ändern, die Einsatzleitung ebenso.": "Présélectionnée lorsque tu acceptes une intervention. Pendant l'intervention, tu peux la modifier à tout moment, la direction d'intervention aussi.",
+"Kälteschutz gespeichert": "Protection thermique enregistrée",
+"Kälteschutz für die Wasserzeit": "Protection thermique pour le temps dans l'eau",
+"setzt den Kälteschutz von {0} auf {1}": "règle la protection thermique de {0} sur {1}",
+"Nur die Einsatzleitung kann die Wasserzeit und den Kälteschutz anderer Personen ändern": "Seule la direction d'intervention peut modifier le temps dans l'eau et la protection thermique d'autres personnes"
 },
 "it": {
 "Angemeldet:": "Connesso:",
@@ -312,6 +326,13 @@
 "ändert": "modifica",
 "überfällig": "scaduto",
 "übernommen": "ripreso",
-", Standort {0}, {1}": ", posizione {0}, {1}"
+", Standort {0}, {1}": ", posizione {0}, {1}",
+"Kälteschutz der Einsatzkräfte ({0})": "Protezione termica dei soccorritori ({0})",
+"Kälteschutz von {0}": "Protezione termica di {0}",
+"Wird beim Annehmen eines Einsatzes vorgewählt. Im Einsatz kannst du ihn jederzeit ändern, die Einsatzleitung ebenso.": "Preselezionata quando accetti un intervento. Durante l'intervento puoi modificarla in qualsiasi momento, così come la direzione dell'intervento.",
+"Kälteschutz gespeichert": "Protezione termica salvata",
+"Kälteschutz für die Wasserzeit": "Protezione termica per il tempo in acqua",
+"setzt den Kälteschutz von {0} auf {1}": "imposta la protezione termica di {0} su {1}",
+"Nur die Einsatzleitung kann die Wasserzeit und den Kälteschutz anderer Personen ändern": "Solo la direzione dell'intervento può modificare il tempo in acqua e la protezione termica di altre persone"
 }
 }
