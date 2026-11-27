@@ -163,7 +163,10 @@
 "Notruf beendet": "Emergency call ended",
 "Notruf gesendet": "Emergency call sent",
 "{0} h {1} min": "{0} h {1} min",
-"{0} min": "{0} min"
+"{0} min": "{0} min",
+"Keine Berechtigung": "No permission",
+"Zu viele Anfragen, bitte später nochmals versuchen": "Too many requests, please try again later",
+"Anfrage abgelehnt (HTTP {0})": "Request rejected (HTTP {0})"
 },
 "fr": {
 "Angemeldet:": "Connecté :",
@@ -329,7 +332,10 @@
 "Notruf beendet": "Appel d'urgence terminé",
 "Notruf gesendet": "Appel d'urgence envoyé",
 "{0} h {1} min": "{0} h {1} min",
-"{0} min": "{0} min"
+"{0} min": "{0} min",
+"Keine Berechtigung": "Pas d’autorisation",
+"Zu viele Anfragen, bitte später nochmals versuchen": "Trop de requêtes, veuillez réessayer plus tard",
+"Anfrage abgelehnt (HTTP {0})": "Requête refusée (HTTP {0})"
 },
 "it": {
 "Angemeldet:": "Connesso:",
@@ -495,6 +501,9 @@
 "Notruf beendet": "Chiamata d'emergenza terminata",
 "Notruf gesendet": "Chiamata d'emergenza inviata",
 "{0} h {1} min": "{0} h {1} min",
-"{0} min": "{0} min"
+"{0} min": "{0} min",
+"Keine Berechtigung": "Nessuna autorizzazione",
+"Zu viele Anfragen, bitte später nochmals versuchen": "Troppe richieste, riprova più tardi",
+"Anfrage abgelehnt (HTTP {0})": "Richiesta rifiutata (HTTP {0})"
 }
 }

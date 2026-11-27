@@ -13,8 +13,10 @@ function saveBlob(blob,name){const w=window.flutter_inappwebview;if(w&&w.callHan
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download=name;document.body.appendChild(l);l.click();setTimeout(()=>{URL.revokeObjectURL(l.href);l.remove()},3000)}
 // Parallele Einsätze (Issue #167): INC_SEL = in der Einsatz-App angezeigter Einsatz, geht als X-Inc mit (0 = der Server wählt; Verwaltung, öffentliche Ansicht)
 let INC_SEL=0;
+// Antwort ohne JSON (z. B. IIS ersetzt den Inhalt einer 401 durch eine eigene Fehlerseite, Hosting-Fehlerseiten): Meldung nach dem Status statt immer «Serverfehler»
+function httpErr(s,r){return s===401?(r==='login'?'Benutzername oder Passwort falsch':'Nicht angemeldet'):s===403?'Keine Berechtigung':s===404?'Nicht gefunden':s===429?'Zu viele Anfragen, bitte später nochmals versuchen':s>=400&&s<500?'Anfrage abgelehnt (HTTP '+s+')':'Serverfehler'}
 async function api(r,body){const o={headers:{'X-Token':token||'','X-Lang':window.LANG||'de'}};if(INC_SEL)o.headers['X-Inc']=String(INC_SEL);if(body){o.method='POST';o.body=JSON.stringify(body)}
-  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:'Serverfehler'}));
+  const res=await fetch(`${API}?r=${r}`,o);verNew(res.headers.get('X-Build'));const j=await res.json().catch(()=>({error:httpErr(res.status,r)}));
   if(res.status===401&&r!=='login'){token=null;localStorage.removeItem('sw_token');onUnauth();swNative('swUnauth')}if(j.error){const e=new Error(j.error);e.data=j;throw e}
   if(r==='me'&&j.me&&window.I18N&&!DEMO)I18N.me(j.me,l=>api('me/settings',{lang:l}).catch(()=>{})); // Sprache des Kontos übernehmen bzw. die bei der Anmeldung gewählte speichern (Issue #66)
   return j}
