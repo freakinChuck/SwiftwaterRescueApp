@@ -162,6 +162,22 @@ Quellen der ADS-B-Daten, Filter (Rettungshelikopter, Helikopter, alle), wer die 
 
 Umkreis und Anzahl der Messstationen beim PLS, Seen ja oder nein, Datenquellen mit Test.
 
+**Suchgebiet**: «Faktoren der Abschnitte anwenden» (Vorgabe für jeden Einsatz, dort umschaltbar) und **Zuschlag auf die Driftdistanz** in % (Vorgabe, im Einsatz übersteuerbar).
+
+**Fliessgeschwindigkeit**: Faktoren der Driftgeschwindigkeit (Unter- und Obergrenze), **Zusatzmarge Hauptströmung** (Zuschlag in % auf die Obergrenze, Standard 20 %: in der Flussmitte fliesst das Wasser schneller als der Durchschnitt, den die Kennlinie liefert), Schwellen der Meldungen (Abweichung in %, Horizont = so viele Stunden voraus wird geprüft, Standard 2 h, Anstieg des Abflusses, Gefahrenstufe, neue Vorhersage) und je Einsatztyp Anzeige und Meldungen ein oder aus.
+
+**Kennlinien**: je Station aus den Querprofilen der BAFU-Flussvermessung bzw. aus den Messreihen berechnen («+ Station», «Berechnen» bzw. «Neu berechnen»; das dauert bis eine Minute, der Knopf zählt die Sekunden, danach meldet ein Hinweis das Ergebnis oder den Grund, weshalb es keine Kennlinie gibt), prüfen (Querschnitt des Flussbetts mit dem Wasserspiegel bei tiefem Abfluss (grün, nur in 5 % der Stunden des letzten Jahres tiefer), jetzt (blau) und hoch (rot, höchster Stundenwert des letzten Jahres); umschaltbar auf **Gefahrenstufen**: farbige Bänder je Stufe zwischen den Grenzwerten des BAFU, die Wasserspiegel dazu aus der Kennlinie; darunter das Diagramm v(Q) mit den Stundenwerten als Punkten und der Kennlinie als Linie) oder von Hand übersteuern.
+
+**Abschnitte**: «Vorschlag erzeugen» legt je Gewässer eine lückenlose Strecke über alle Stationen mit Flussvermessung an (wählbar ein Gewässer oder alle; km oberhalb der obersten und unterhalb der untersten Station). Geschnitten wird an Wehren, Schwellen und Blockrampen, jede Station erhält einen eigenen Abschnitt, die übrigen gehören zur nächsten Station. In der Liste steht bei jedem Abschnitt die **Bezugsstation**: Ihr Abfluss und der Faktor des Abschnitts ergeben die Fliessgeschwindigkeit dort. Ändern unter «Bearbeiten» bzw. rechts auf der grossen Karte; zur Wahl stehen die Stationen mit Flussvermessung am selben Gewässer. Von Hand gesetzte oder geteilte Abschnitte bleiben bei einem neuen Vorschlag erhalten, der Vorschlag füllt die Strecke zwischen ihnen.
+
+«Auf der Karte bearbeiten» (oder «Gross bearbeiten» auf der kleinen Karte) öffnet die Abschnitte im Vollbild:
+
+- Abschnitt auf der Karte oder in der Liste antippen = auswählen; rechts Bezeichnung, Bezugsstation, Art (Stau, Schwellen, Engstelle, frei), Faktor und Zusatzmarge (leer = Standard) ändern und «Speichern».
+- «Teilen»: den Punkt im Abschnitt antippen, an dem er geteilt wird.
+- «Neu zeichnen»: oberes und unteres Ende am Gewässer antippen. Die Punkte werden auf die Flussvermessung gesetzt (höchstens 1.5 km daneben); angrenzende Abschnitte werden gekürzt bzw. verlängert, die Strecke bleibt lückenlos.
+- «+ Abschnitt»: Anfang und Ende antippen; überdeckte Abschnitte werden gekürzt oder geteilt.
+- Escape bricht das Antippen ab bzw. schliesst die Karte. Alles gilt sofort.
+
 ### Feste Standorte {#standorte}
 
 Orte, Bereiche und Linien, die in jedem Einsatz auf der Karte stehen, zum Beispiel Bootseinwasserungen, Magazine oder Fahrrinnen. Mit Kategorien (Standard ein- oder ausgeblendet, priorisiert), Eigenschaften (zum Beispiel «Flusssperre», die das Suchgebiet begrenzt, oder eine Warnung) und Navigationspunkten (Zufahrten).

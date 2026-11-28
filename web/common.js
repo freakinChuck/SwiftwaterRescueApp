@@ -41,7 +41,7 @@ const fail=e=>toast(e instanceof TypeError?'Keine Verbindung zum Server. Bitte s
 // public/state und incident/replay (maps, map_def) und setzen sie mit mapsSet. MAP_PROVIDERS unten ist nur der Rückfall, bis die Liste da ist (älterer Server, erster Start offline).
 let DEFAULT_BASE='swisstopo_sat'; // Standard-Hintergrund; der Benutzer kann über das Ebenen-Symbol (oben rechts) umschalten, die Wahl wird gemerkt.
 // Fenster «Ansicht» (Issue #34, öffentliche Ansicht #48): Kategorien auf der Karte [Schlüssel, Bezeichnung, Funktion (feat)]. Neue Kartenelemente hier aufnehmen.
-const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro'],['geo','Geodaten (OpenStreetMap)','geo'],['veh','Fahrzeuge','veh']];
+const VIEW=[['app','Einsatzkräfte mit App'],['ext','Externe Einsatzkräfte','ext'],['res','Rettlinge','res'],['pls','PLS'],['place','Feste Standorte','place'],['area','Suchgebiet','area'],['pt','Markierungen','poi'],['ar','Bereiche','poi'],['ln','Linien','poi'],['mm','Nachrichten-Markierungen','msg'],['air','Helikopter'],['hydro','Messstationen (Pegel & Abfluss)','hydro'],['flow','Fliessgeschwindigkeit je Abschnitt','hydro'],['geo','Geodaten (OpenStreetMap)','geo'],['veh','Fahrzeuge','veh']];
 const VIEW_OFF=['geo']; // Issue #182: auf jedem Gerät zuerst ausgeblendet (die Ebene schaltet man bewusst zu) // Helikopter: keine Funktion, sondern Hauptschalter und Schalter je Einsatz (st.air / ps.air)
 const VIEW_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 // Inhalt des Fensters: Grundkarte (Radio vbase) und, wenn cats (Liste aus VIEW), Häkchen je Kategorie (data-vk) mit «Alle einblenden/ausblenden» (data-va)
@@ -201,6 +201,18 @@ async function overpassNet(r,body,put){try{return await api(r,body)}catch(e){con
 // in OSM beginnt der Arm oft mitten im Weg des Hauptflusses). Jede Linie endet am ersten Posten (ctx.posts, ctx.cut = Text, wo es endet)
 // bzw. an der ersten Flusssperre (Issue #182: feste Standorte mit Wirkung «begrenzt Suchgebiet»; Punkte wie Posten, Linien und Ränder von Bereichen über ctx.segs, wo der Fluss sie schneidet).
 // ctx.done verhindert, dass derselbe Einstieg (Weg, Knoten) mehrfach verfolgt wird, wenn Arme wieder zusammenfliessen.
+// Geschwindigkeit je Abschnitt (flow_area.reaches, Server flowAreaPub): rel = Geschwindigkeit im Abschnitt ÷ Grundgeschwindigkeit. Die Strecken zählen dann
+// in «Grundmetern» (Länge ÷ rel), so endet das Suchgebiet nach derselben Zeit. Zuordnung einer Strecke des Gewässernetzes zum nächsten Abschnitt (≤ REL_M), am Netz zwischengespeichert.
+const REL_M=120;
+function relCtx(net,fa,flow){const rs=((fa&&fa.reaches)||[]).filter(r=>r.v!=null&&r.v>0&&r.pts&&r.pts.length>1);if(!rs.length||!flow)return null;
+  const key=JSON.stringify(rs.map(r=>[r.id,r.v]))+'|'+flow,c=net._rel;if(c&&c.key===key)return c;
+  const segs=[];rs.forEach(r=>{const rel=r.v/flow;for(let i=1;i<r.pts.length;i++){const a={lat:r.pts[i-1][0],lon:r.pts[i-1][1]},b={lat:r.pts[i][0],lon:r.pts[i][1]},m=.002;
+    segs.push({a,b,rel,s:Math.min(a.lat,b.lat)-m,n:Math.max(a.lat,b.lat)+m,w:Math.min(a.lon,b.lon)-m*1.5,e:Math.max(a.lon,b.lon)+m*1.5})}});
+  return net._rel={key,segs,m:new Map()}}
+function relOf(ctx,w,j){const c=ctx.rel;if(!c)return 1;const k=w.id+':'+j;let v=c.m.get(k);if(v!==undefined)return v;
+  const a=w.geometry[j],b=w.geometry[j+1],p={lat:(a.lat+b.lat)/2,lon:(a.lon+b.lon)/2};let bd=REL_M;v=1;
+  for(const q of c.segs){if(p.lat<q.s||p.lat>q.n||p.lon<q.w||p.lon>q.e)continue;const d=segDist(q.a,q.b,p);if(d<bd){bd=d;v=q.rel}}
+  c.m.set(k,v);return v}
 function riverFollow(net,w,k,rem,seen,ctx){const key=w.id+':'+k;if((ctx.done.get(key)??-1)>=rem)return null;ctx.done.set(key,rem);
   const pts=[w.geometry[k]],out=[],last=w.geometry.length-1;seen=new Set(seen).add(w.id);
   const post=p=>{const po=ctx.posts.find(q=>geoDist(p,q)<(q.r||120));if(po)ctx.cut=po.cut||'am Posten '+po.name;return!!po};
@@ -208,7 +220,7 @@ function riverFollow(net,w,k,rem,seen,ctx){const key=w.id+':'+k;if((ctx.done.get
   if(post(pts[0]))return[pts];
   for(let j=k;j<last;j++){
     for(const e of net.byNode.get(w.nodes[j])||[])if(e.k===0&&e.w!==w&&!seen.has(e.w.id))out.push(...sub(e,rem));
-    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b),x1=segHit(ctx.segs,a,b),x2=postHit(ctx.posts,a,b),x=x1&&x2?(x1.t<x2.t?x1:x2):x1||x2;
+    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b)/relOf(ctx,w,j),x1=segHit(ctx.segs,a,b),x2=postHit(ctx.posts,a,b),x=x1&&x2?(x1.t<x2.t?x1:x2):x1||x2;
     if(x&&d*x.t<rem){pts.push({lat:a.lat+(b.lat-a.lat)*x.t,lon:a.lon+(b.lon-a.lon)*x.t});ctx.cut=x.cut;return[pts,...out]}
     if(d>=rem){const f=rem/d;pts.push({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});return[pts,...out]}
     pts.push(b);rem-=d;if(post(b))return[pts,...out]}
@@ -237,9 +249,9 @@ function corridor(pts,w){const C=L.CRS.EPSG3857,k=w/Math.cos(pts[0].lat*Math.PI/
   P.forEach((p,j)=>{const a=P[Math.max(0,j-1)],b=P[Math.min(P.length-1,j+1)];let dx=b.x-a.x,dy=b.y-a.y;const n=Math.hypot(dx,dy)||1;dx/=n;dy/=n;
     A.push(C.unproject(L.point(p.x-dy*k,p.y+dx*k)));B.push(C.unproject(L.point(p.x+dy*k,p.y-dx*k)))});return A.concat(B.reverse())}
 // Suchgebiet ab PLS (i) über die Driftdistanz D, endet am ersten Posten (posts: [{lat,lon,name}]) bzw. an der ersten Flusssperre (stops); null = kein Gewässer nahe der PLS
-function riverArea(net,i,D,posts,stops){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
+function riverArea(net,i,D,posts,stops,rel){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
   if(!best||bd>SNAP_M)return null;const r={lines:[],polys:[],cutBy:null,maxLen:0};
-  const sc=stopCtx(stops),ctx={posts:posts.concat(sc.posts).map(q=>snapPost(net,q)),segs:sc.segs,done:new Map(),cut:null};
+  const sc=stopCtx(stops),ctx={posts:posts.concat(sc.posts).map(q=>snapPost(net,q)),segs:sc.segs,done:new Map(),cut:null,rel};
   (riverFollow(net,best.w,best.k,D,new Set(),ctx)||[]).forEach(pts=>{
     if(pts.length<2)return;let len=0;for(let j=1;j<pts.length;j++)len+=geoDist(pts[j-1],pts[j]);r.maxLen=Math.max(r.maxLen,len);
     r.lines.push(pts);r.polys.push(corridor(pts,BANK_M))});
@@ -249,11 +261,11 @@ function riverArea(net,i,D,posts,stops){let best=null,bd=1e12;net.ways.forEach(w
 // des geladenen Gewässernetzes. Zwischengespeichert am Netz (pk = Schlüssel der Posten und Sperren), damit die Listen bei jedem Zeichnen nicht neu suchen.
 const ETA_M=150,ETA_MAX=60000;
 function segProj(a,b,p){const ky=111320,kx=ky*Math.cos(p.lat*Math.PI/180),ax=(a.lon-p.lon)*kx,ay=(a.lat-p.lat)*ky,dx=(b.lon-a.lon)*kx,dy=(b.lat-a.lat)*ky,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/l)):0;return{t,d:Math.hypot(ax+t*dx,ay+t*dy)}}
-function riverReach(net,i,pt,posts,stops,pk){const c=net._eta||(net._eta={ctx:new Map(),d:new Map()}),ck=srcKey(i)+'|'+pk;let x=c.ctx.get(ck);
+function riverReach(net,i,pt,posts,stops,pk,rel){const c=net._eta||(net._eta={ctx:new Map(),d:new Map()}),ck=srcKey(i)+'|'+pk;let x=c.ctx.get(ck);
   if(x===undefined){let best=null,bd=1e12;net.ways.forEach(w=>w.geometry.forEach((g,k)=>{const d=geoDist(g,i);if(d<bd){bd=d;best={w,k}}}));
     const sc=stopCtx(stops);x=!best||bd>SNAP_M?null:{best,posts:posts.concat(sc.posts).map(q=>snapPost(net,q)),segs:sc.segs};c.ctx.set(ck,x)}
   if(!x)return null;const dk=ck+'|'+pt.lat.toFixed(5)+','+pt.lon.toFixed(5);if(c.d.has(dk))return c.d.get(dk);
-  const o={d:null};reachWalk(net,x.best.w,x.best.k,0,new Set(),{posts:x.posts,segs:x.segs,done:new Map()},pt,o);c.d.set(dk,o.d);return o.d}
+  const o={d:null};reachWalk(net,x.best.w,x.best.k,0,new Set(),{posts:x.posts,segs:x.segs,done:new Map(),rel},pt,o);c.d.set(dk,o.d);return o.d}
 // wie riverFollow, aber mit zurückgelegter Distanz acc statt Restdistanz; o.d = kürzeste Distanz bis pt
 function reachWalk(net,w,k,acc,seen,ctx,pt,o){if(o.d!=null&&acc>=o.d)return;const key=w.id+':'+k;if((ctx.done.get(key)??Infinity)<=acc)return;ctx.done.set(key,acc);
   seen=new Set(seen).add(w.id);const last=w.geometry.length-1,hit=v=>{if(o.d==null||v<o.d)o.d=v},post=p=>ctx.posts.some(q=>geoDist(p,q)<(q.r||120));
@@ -262,7 +274,7 @@ function reachWalk(net,w,k,acc,seen,ctx,pt,o){if(o.d!=null&&acc>=o.d)return;cons
   let c=null;const done=()=>{if(c)hit(c.v)};
   for(let j=k;j<last;j++){
     for(const e of net.byNode.get(w.nodes[j])||[])if(e.k===0&&e.w!==w&&!seen.has(e.w.id))reachWalk(net,e.w,e.k,acc,seen,ctx,pt,o);
-    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b),x1=segHit(ctx.segs,a,b),x2=postHit(ctx.posts,a,b),x=x1&&x2?(x1.t<x2.t?x1:x2):x1||x2,pr=segProj(a,b,pt);
+    const a=w.geometry[j],b=w.geometry[j+1],d=geoDist(a,b)/relOf(ctx,w,j),x1=segHit(ctx.segs,a,b),x2=postHit(ctx.posts,a,b),x=x1&&x2?(x1.t<x2.t?x1:x2):x1||x2,pr=segProj(a,b,pt);
     if(pr.d<ETA_M&&(!x||pr.t*d<=x.t*d+50)){if(c&&pr.d>=c.m)return done();c={v:acc+pr.t*d,m:pr.d}}else if(c)return done(); // eine Stelle direkt am Posten bzw. an der Sperre zählt noch (z. B. der Posten selbst)
     if(x)return done();acc+=d;if(acc>ETA_MAX||!c&&o.d!=null&&acc>=o.d)return done();if(post(b)){if(geoDist(b,pt)<ETA_M&&(!c||geoDist(b,pt)<c.m))c={v:acc,m:0};return done()}}
   done();if(o.d!=null&&acc>=o.d)return;
@@ -275,27 +287,28 @@ const srcKey=s=>s.lat.toFixed(6)+','+s.lon.toFixed(6);
 // Schlüssel eines Teilgebiets: PLS mit Zeitpunkt, wie die Zusammenfassung in plsSources()
 const partKey=(lat,lon,at)=>lat.toFixed(6)+','+lon.toFixed(6)+'@'+at;
 const fmtDT=ts=>new Date(ts*1000).toLocaleString(LOC,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops,far){const r={polys:[],lines:[],circles:[],info:[],parts:[],eta:()=>null},reach=[];
+// fa = flow_area des Servers: pct = Zuschlag auf die Driftdistanz in %, reaches = Geschwindigkeit je Abschnitt (flow = Grundgeschwindigkeit)
+function searchArea(srcs,nets,flow,now,posts,get,redraw,rs,stops,far,fa){const pc=fa&&fa.pct?Math.max(-90,+fa.pct):0,fz=1+pc/100,mx=Math.max(1,...((fa&&fa.reaches)||[]).filter(x=>x.v>0).map(x=>flow?x.v/flow:1));const r={polys:[],lines:[],circles:[],info:[],parts:[],eta:()=>null},reach=[];
   if(!srcs.length){const miss=(rs||[]).filter(x=>!x.rescued_at&&x.lat==null);
     r.info.push(!(rs||[]).length?'Suchgebiet: Kein PLS gesetzt.':miss.length?'Suchgebiet: Kein PLS für '+miss.map(x=>'«'+x.name+'»').join(', ')+'. PLS des Einsatzes oder der Rettlinge setzen.':'Suchgebiet: Alle Rettlinge gefunden.');return r}
   if(!flow){r.info.push('Suchgebiet: Fliessgeschwindigkeit fehlt.');return r}
-  srcs.forEach(s=>{const D=flow*(now-s.at),k=srcKey(s),who=s.names&&s.names.length?' «'+s.names.join('», «')+'»':'',lbl=srcs.length>1||who?`Suchgebiet ab PLS${who} (${fmtDT(s.at)}): `:'Suchgebiet: ';
+  srcs.forEach(s=>{const D=flow*fz*(now-s.at),k=srcKey(s),who=s.names&&s.names.length?' «'+s.names.join('», «')+'»':'',lbl=srcs.length>1||who?`Suchgebiet ab PLS${who} (${fmtDT(s.at)}): `:'Suchgebiet: ';
     if(D<=0){r.info.push(lbl+'Der Zeitpunkt des PLS liegt in der Zukunft.');return}
     const p={key:partKey(s.lat,s.lon,s.at),names:s.names||[],lat:s.lat,lon:s.lon,polys:[],circles:[]};r.parts.push(p);
     let n=nets.get(k);const W=netWant(s,far);
-    if(!n||(!n.loading&&((!n.fail&&(n.R<D*1.1||n.R<W)&&n.R<30000)||(n.fail&&Date.now()>n.retryAt)))){const R=netRadius(D,W),old=n;n={...(old||{}),loading:true};nets.set(k,n);
+    if(!n||(!n.loading&&((!n.fail&&(n.R<D*mx*1.1||n.R<W)&&n.R<30000)||(n.fail&&Date.now()>n.retryAt)))){const R=netRadius(D*mx,W),old=n;n={...(old||{}),loading:true};nets.set(k,n);
       get(s,R).then(j=>({R,...riverNet(j)})).catch(e=>({R,fail:true,err:e.message,retryAt:Date.now()+20000})).then(v=>{if(nets.get(k)===n){nets.set(k,v);redraw()}})}
     const circle=why=>{const c={lat:s.lat,lon:s.lon,r:D};r.circles.push(c);p.circles.push(c);r.info.push(lbl+why+' Darstellung als Kreis, Radius '+Math.round(D)+' m.')};
     if(n.fail)return circle('Gewässernetz nicht verfügbar ('+n.err+'), neuer Versuch folgt.');
     if(!n.ways)return circle('Gewässernetz wird geladen.');
-    const a=riverArea(n,s,D,posts,stops);if(!a)return circle('Kein Gewässer nahe der PLS.');reach.push({s,D,n});
+    const rel=relCtx(n,fa,flow),a=riverArea(n,s,D,posts,stops,rel);if(!a)return circle('Kein Gewässer nahe der PLS.');reach.push({s,D,n,rel});
     r.polys.push(...a.polys);r.lines.push(...a.lines);p.polys.push(...a.polys);
-    r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet ${a.cutBy}.`:'.'))});
+    r.info.push(lbl+`${(a.maxLen/1000).toFixed(1)} km Flusslauf ab PLS (Driftdistanz ${Math.round(D)} m${pc?', Zuschlag '+(pc>0?'+':'')+pc+' %':''}${rel?', mit Geschwindigkeit je Abschnitt':''}), Ufergebiet ${BANK_M} m je Seite`+(a.cutBy?`, endet ${a.cutBy}.`:'.'))});
   // Kurzfassung bei mehreren PLS (Hinweis unten in der Karte, Details per Klick)
   if(srcs.length>1){const riv=r.parts.filter(p=>p.polys.length).length,circ=r.parts.length-riv,none=srcs.length-r.parts.length;
     r.short=`Suchgebiet aus ${srcs.length} PLS: ${riv} entlang Gewässer`+(circ?`, ${circ} als Kreis`:'')+(none?`, ${none} ohne Gebiet`:'')}
-  if(reach.length){const pk=JSON.stringify([posts.map(q=>[q.lat,q.lon]),(stops||[]).map(q=>[q.lat,q.lon,q.pts])]);
-    r.eta=(lat,lon)=>{let best=null;for(const q of reach){const d=riverReach(q.n,q.s,{lat,lon},posts,stops,pk);if(d==null)continue;if(d<=q.D)return{inside:1};const at=q.s.at+d/flow;if(!best||at<best.at)best={at,d:d-q.D}}return best}}
+  if(reach.length){const pk=JSON.stringify([posts.map(q=>[q.lat,q.lon]),(stops||[]).map(q=>[q.lat,q.lon,q.pts]),fz]);
+    r.eta=(lat,lon)=>{let best=null;for(const q of reach){const d=riverReach(q.n,q.s,{lat,lon},posts,stops,pk+(q.rel?q.rel.key:''),q.rel);if(d==null)continue;if(d<=q.D)return{inside:1};const at=q.s.at+d/(flow*fz);if(!best||at<best.at)best={at,d:d-q.D}}return best}}
   return r}
 /* ---------- Geschwindigkeiten (Issue #259) ---------- */
 // Einheit der Anzeige: Standard in der Verwaltung (settings speed_unit, me.speed_default), pro Person übersteuerbar (users.speed_unit); Schlüssel wie SPEEDS im Server.
@@ -306,6 +319,8 @@ function spdU(){try{if(typeof me!=='undefined'&&me&&(me.speed_unit||me.speed_def
 const spdR=(v,d)=>String(Math.round(v*10**d)/10**d);
 // Geschwindigkeit in m/s → Text in der Einheit (beides: «1.8 m/s (6.5 km/h)»)
 function fmtSpd(ms,u){if(ms==null||ms===''||isNaN(+ms))return'';u=u||spdU();const a=spdR(+ms,2)+' m/s',b=spdR(ms*3.6,1)+' km/h';return u==='kmh'?b:u==='both'?a+' ('+b+')':a}
+// Spanne in m/s → Text in der Einheit («0.9–1.4 m/s», «3.2–5 km/h»); d = Nachkommastellen in m/s
+function fmtSpdR(lo,hi,u,d){u=u||spdU();d=d??1;const a=spdR(+lo,d)+'–'+spdR(+hi,d)+' m/s',b=spdR(lo*3.6,1)+'–'+spdR(hi*3.6,1)+' km/h';return u==='kmh'?b:u==='both'?a+' ('+b+')':a}
 // Geschwindigkeit in km/h (Vergleichsgeschwindigkeiten, Helikopter) → Text in der Einheit
 function fmtKmh(k,u){if(k==null||isNaN(+k))return'';u=u||spdU();const a=spdR(k/3.6,1)+' m/s',b=spdR(+k,1)+' km/h';return u==='kmh'?b:u==='both'?a+' ('+b+')':a}
 // Eingabe der Fliessgeschwindigkeit: in km/h nur bei der Einheit km/h, sonst in m/s; spdFrom rechnet die Eingabe in m/s um
@@ -577,3 +592,61 @@ function aiPanel(o){let res=o.pre||null,busy=false;const hist=[],only=!!o.chatOn
   return d}
 // begleitender Modus: Vorschlag im Hintergrund holen (auto=1, der Server nimmt gespeicherte Vorschläge, solange sie gelten); Fehler still
 const aiAuto=(req,my)=>api('ai/ask'+(my?'&my=1':''),Object.assign({auto:1},req)).catch(()=>null);
+
+/* ---------- Kennlinie der Fliessgeschwindigkeit (Issue #254, Verwaltung und Einsatz-App) ---------- */
+const flN=(v,d=2)=>v==null?'–':(+v).toLocaleString(LOC,{maximumFractionDigits:d}),flMon=s=>{const d=new Date(s);return isNaN(d)?esc(s||''):d.toLocaleDateString(LOC,{month:'short',year:'numeric'})};
+// Querprofil mit Wasserspiegeln (Tabelle kl: [Q, Pegel, Fläche, v̄]); mode 'dg' = Wasserspiegel bei den Grenzwerten der Gefahrenstufen (wl: Abfluss ab Stufe 2–5)
+const FL_DG=[['#c9a800','mässige Gefahr'],['#e07b00','erhebliche Gefahr'],['#d0021b','grosse Gefahr'],['#7a0010','sehr grosse Gefahr']];
+function flProfSvg(c,qNow,mode,wl){const p=(c.prof||[])[0];if(!p||!p.pts||p.pts.length<3)return'';const kl=c.kl||[],W=520,H=210,L0=40,R0=10,T0=10,B0=26,P=p.pts;
+  // benetzte Fläche bei Wasserspiegel z (am Rand senkrechte Wände) und Spiegel zu einem Abfluss: in der Tabelle interpoliert, ausserhalb über die Kennlinie geschätzt
+  const area=z=>{let s=0;for(let i=1;i<P.length;i++){const d1=Math.max(0,z-P[i-1][1]),d2=Math.max(0,z-P[i][1]);s+=(d1+d2)/2*(P[i][0]-P[i-1][0])}return s};
+  const zFor=A=>{let lo=Math.min(...P.map(x=>x[1])),hi=lo+60;for(let i=0;i<50;i++){const m=(lo+hi)/2;if(area(m)<A)lo=m;else hi=m}return(lo+hi)/2};
+  const vf=q=>c.a*Math.pow(q,c.m),kA=r=>r&&r[2]!=null&&r[0]>0?r[2]/(r[0]/vf(r[0])):1;
+  const wlAt=q=>{if(!kl.length||q==null)return null;const f=kl[0],l=kl[kl.length-1];
+    if(c.a!=null&&(q<f[0]||q>l[0]))return zFor(q/vf(q)*kA(q<f[0]?f:l));
+    let a=f,b=l;for(let i=1;i<kl.length;i++)if(kl[i][0]>=q){a=kl[i-1];b=kl[i];break}return b[0]===a[0]?a[1]:a[1]+(q-a[0])/(b[0]-a[0])*(b[1]-a[1])};
+  // Gefahrenstufen als Bänder: die Fläche bis zum Grenzwert von Stufe k+1 trägt die Farbe von Stufe k (unter Stufe 2 blau = Stufe 1), dazu je eine Linie in der Farbe der Stufe
+  const lv=[];if(mode==='dg'){let pc='#1d7fd1';(wl||[]).forEach((q,i)=>{if(q!=null&&q>0){lv.push([q,wlAt(q),pc+'d0','Stufe '+(i+2),0,FL_DG[i][0]]);pc=FL_DG[i][0]}})}
+  else if(kl.length){lv.push([kl[kl.length-1][0],kl[kl.length-1][1],'#ff4d2e55','hoch']);lv.push([kl[0][0],kl[0][1],'#35c27a66','tief'])}
+  if(qNow&&kl.length)lv.push([qNow,wlAt(qNow),mode==='dg'?'#1d7fd100':'#1d7fd188','jetzt',1]);lv.forEach(x=>{if(x[1]==null)x[1]=-1e9});lv.sort((x,y)=>y[1]-x[1]);
+  const zs=P.map(x=>x[1]),zmin=Math.min(...zs),zmax=Math.max(...zs),ztop=Math.max(...lv.map(x=>Math.min(x[1],zmax)),zmin+2)+3,pts=P.filter(x=>x[1]<=ztop+1),xs=pts.map(x=>x[0]),x0=Math.min(...xs),x1=Math.max(...xs);
+  const z0=Math.floor(zmin)-1,z1=Math.ceil(ztop),X=x=>L0+(x-x0)/(x1-x0||1)*(W-L0-R0),Y=z=>T0+(z1-z)/(z1-z0)*(H-T0-B0),stp=z1-z0>12?4:2,cp='flcp'+(mode==='dg'?'d':''),o=[`<svg viewBox="0 0 ${W} ${H}" width="100%" style="font:11px system-ui;display:block"><defs><clipPath id="${cp}"><rect x="${L0}" y="0" width="${W-L0}" height="${H-B0}"/></clipPath></defs>`];
+  for(let z=Math.ceil(z0/stp)*stp;z<=z1;z+=stp)o.push(`<line x1="${L0}" x2="${W-R0}" y1="${Y(z).toFixed(1)}" y2="${Y(z).toFixed(1)}" stroke="#2c4f60"/><text x="${L0-4}" y="${(Y(z)+3).toFixed(1)}" fill="#8fb0bd" text-anchor="end">${z}</text>`);
+  // benetzte Teile je Wasserspiegel: nur wo die Sohle tiefer liegt, mit Schnittpunkten (Inseln und Dämme bleiben trocken)
+  const wet=z=>{const r=[];let cur=null;for(let i=0;i<pts.length;i++){const[x,y]=pts[i],pr=pts[i-1],cr=pr&&((pr[1]<z)!==(y<z))?[pr[0]+(z-pr[1])/(y-pr[1])*(x-pr[0]),z]:null;
+      if(y<z){if(!cur){cur=[];r.push(cur);if(cr)cur.push(cr)}cur.push([x,y])}else if(cur){if(cr)cur.push(cr);cur=null}}return r},tx=[];
+  let ly=-99;lv.forEach(([q,wl,col,lab,now,lc])=>{if(wl<-1e8)return;const ws=wet(Math.min(wl,z1+2)),over=wl>zmax,yw=Math.max(Y(wl),T0+2);if(!ws.length)return;const ty=Math.max(yw-3,ly+13,T0+9);ly=ty;
+    ws.forEach(w=>{const xa=X(w[0][0]).toFixed(1),xb=X(w[w.length-1][0]).toFixed(1);o.push(`<polygon clip-path="url(#${cp})" points="${xa},${yw.toFixed(1)} ${w.map(x=>X(x[0]).toFixed(1)+','+Y(x[1]).toFixed(1)).join(' ')} ${xb},${yw.toFixed(1)}" fill="${col}"/>`);
+      if(lc)o.push(`<line clip-path="url(#${cp})" x1="${xa}" x2="${xb}" y1="${yw.toFixed(1)}" y2="${yw.toFixed(1)}" stroke="${lc}" stroke-width="2"/>`);
+      if(now&&mode==='dg')o.push(`<line x1="${xa}" x2="${xb}" y1="${yw.toFixed(1)}" y2="${yw.toFixed(1)}" stroke="#5fb8ff" stroke-width="2" stroke-dasharray="6 3"/>`)});
+    tx.push(`<text x="${W-R0-2}" y="${ty.toFixed(1)}" fill="#eaf3f6" stroke="#0f2430" stroke-width="3" paint-order="stroke" text-anchor="end">${lab}: ${flN(q,0)} m³/s, Spiegel ${over?'über '+flN(zmax,0):flN(wl,2)} m</text>`)});
+  o.push(`<path clip-path="url(#${cp})" d="${pts.map((x,i)=>(i?'L':'M')+X(x[0]).toFixed(1)+','+Y(x[1]).toFixed(1)).join(' ')}" fill="none" stroke="#eaf3f6" stroke-width="1.5"/>`,...tx);
+  o.push(`<text x="${L0}" y="${H-7}" fill="#8fb0bd">Querprofil GEWISS ${p.g} (BAFU-Flussvermessung, ${flMon(p.at)}), Höhe m ü. M., Breite ${flN(x1-x0,0)} m</text></svg>`);
+  const sw=(col,t,d)=>`<div class="fllg"><i style="background:${col}"></i><span><b>${t}</b> – ${d}</span></div>`,base='<div class="mut">Die weisse Linie ist die Flusssohle. Alles unterhalb eines Wasserspiegels ist bei diesem Abfluss unter Wasser (benetzte Fläche); die Flächen liegen übereinander. Je mehr Abfluss durch dieselbe Fläche muss, desto schneller fliesst das Wasser: mittlere Geschwindigkeit = Abfluss ÷ benetzte Fläche.</div>';
+  const dq=(wl||[]).map((q,i)=>[q,i]).filter(x=>x[0]!=null&&x[0]>0);
+  if(mode==='dg')o.push(`<div class="fllgs">${dq.length?sw('#1d7fd1','Stufe 1',`keine oder geringe Gefahr, unter ${flN(dq[0][0],0)} m³/s.`):''}${dq.map(([q,i],j)=>sw(FL_DG[i][0],'Stufe '+(i+2),dq[j+1]?`${FL_DG[i][1]}, ${flN(q,0)} bis ${flN(dq[j+1][0],0)} m³/s.`:`${FL_DG[i][1]}, ab ${flN(q,0)} m³/s.`)).join('')}${qNow?`<div class="fllg"><i style="background:none;border-top:2px dashed #5fb8ff;height:0;margin-top:.5rem"></i><span><b>Jetzt</b> – aktueller Abfluss und Wasserspiegel.</span></div>`:''}<div class="mut">Die Farben zeigen, welche Gefahrenstufe gilt, solange der Wasserspiegel in diesem Band liegt; die Linien sind die Grenzwerte des BAFU für diese Station. Den Wasserspiegel dazu rechnet die App aus der Kennlinie; über dem höchsten Wert der Tabelle ist er geschätzt.</div>${base}</div>`);
+  else o.push(`<div class="fllgs">${sw('#ff4d2e','Hoch','Hochwasser des letzten Jahres: höchster Abfluss in den Stundenwerten (nur in 0.1 % der Stunden höher).')}${qNow?sw('#1d7fd1','Jetzt','aktueller Abfluss und Wasserspiegel.'):''}${sw('#35c27a','Tief','Niedrigwasser des letzten Jahres: nur in 5 % der Stunden war der Abfluss tiefer.')}${base}</div>`);return o.join('')}
+// Querprofil mit Umschalter «Tief/Hoch» ↔ «Gefahrenstufen» (nur mit Grenzwerten des BAFU), Wahl pro Gerät in sw_flprof
+function flProfBox(c,s){const dg=(s.wl||[]).some(x=>x!=null&&x>0);if(!dg)return`<div class="flsvg">${flProfSvg(c,s.q)}</div>`;let m='hl';try{m=localStorage.getItem('sw_flprof')||'hl'}catch(e){}
+  return`<div class="flpm" data-flpm="${m}"><div class="seg"><button type="button" data-flpb="hl">Tief / Hoch</button><button type="button" data-flpb="dg">Gefahrenstufen</button></div><div class="flsvg" data-flpv="hl">${flProfSvg(c,s.q)}</div><div class="flsvg" data-flpv="dg">${flProfSvg(c,s.q,'dg',s.wl)}</div></div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-flpb]');if(!b)return;const m=b.dataset.flpb;b.closest('[data-flpm]').dataset.flpm=m;try{localStorage.setItem('sw_flprof',m)}catch(x){}});
+// Kennlinie v̄(Q): Stichprobe (blass), Tabelle (weiss), aktuell (gelb)
+function flKlSvg(c,qNow){if(c.a==null)return'';const fit=c.fit||[],kl=c.kl||[],qm=Math.max(...fit.map(x=>x[0]),...kl.map(x=>x[0]),qNow||0,10)*1.08,vf=q=>c.a*Math.pow(q,c.m),vm=Math.max(vf(qm),...fit.map(x=>x[1]),...kl.map(x=>x[3]))*1.12;
+  const W=520,H=210,L0=40,R0=10,T0=10,B0=26,X=q=>L0+q/qm*(W-L0-R0),Y=v=>T0+(vm-v)/vm*(H-T0-B0),vs=[.1,.2,.25,.5,1].find(s=>vm/s<=6)||1,qs=[10,20,50,100,200,500,1000,2000].find(s=>qm/s<=5)||5000,o=[`<svg viewBox="0 0 ${W} ${H}" width="100%" style="font:11px system-ui;display:block">`];
+  for(let v=vs;v<vm;v+=vs)o.push(`<line x1="${L0}" x2="${W-R0}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#2c4f60"/><text x="${L0-4}" y="${(Y(v)+3).toFixed(1)}" fill="#8fb0bd" text-anchor="end">${flN(v,2)}</text>`);
+  for(let q=0;q<qm*.93;q+=qs)o.push(`<text x="${X(q).toFixed(1)}" y="${H-8}" fill="#8fb0bd" text-anchor="middle">${q}</text>`);
+  fit.forEach(x=>o.push(`<circle cx="${X(x[0]).toFixed(1)}" cy="${Y(x[1]).toFixed(1)}" r="2" fill="#8fb0bd" opacity=".45"/>`));
+  const n=60,q0=Math.max(qm/200,c.q_lo?c.q_lo*.5:0);o.push(`<path d="${Array.from({length:n+1},(_,i)=>{const q=q0+(qm-q0)*i/n;return(i?'L':'M')+X(q).toFixed(1)+','+Y(vf(q)).toFixed(1)}).join(' ')}" fill="none" stroke="#5fb8ff" stroke-width="2"/>`);
+  kl.forEach(x=>o.push(`<circle cx="${X(x[0]).toFixed(1)}" cy="${Y(x[3]).toFixed(1)}" r="3.5" fill="#eaf3f6"/>`));
+  if(qNow){const v=vf(qNow);o.push(`<circle cx="${X(qNow).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="5" fill="#ffd23f"/><text x="${(X(qNow)+(X(qNow)>W-170?-8:8)).toFixed(1)}" y="${(Y(v)+16).toFixed(1)}" fill="#ffd23f" text-anchor="${X(qNow)>W-170?'end':'start'}">jetzt ${flN(qNow,0)} m³/s → ${flN(v,2)} m/s</text>`)}
+  o.push(`<text x="${L0+4}" y="${T0+10}" fill="#8fb0bd">v̄ [m/s]</text><text x="${W-R0}" y="${H-8}" fill="#8fb0bd" text-anchor="end">Q [m³/s]</text></svg>`);
+  const sw=(st,t,d)=>`<div class="fllg"><i style="${st}"></i><span><b>${t}</b> – ${d}</span></div>`;
+  o.push(`<div class="fllgs">${fit.length?sw('background:#8fb0bd;border-radius:50%;transform:scale(.5)','Stundenwerte','mittlere Geschwindigkeit je Stunde des letzten Jahres (Abfluss ÷ benetzte Fläche, Auswahl).'):''}${sw('background:#5fb8ff;height:.2rem;margin-top:.5rem','Kennlinie',`v̄ = ${flN(c.a,3)} · Q<sup>${flN(c.m,2)}</sup>, damit rechnet die App.`)}${kl.length?sw('background:#eaf3f6;border-radius:50%;transform:scale(.7)','Tabellenwerte','die Zeilen der Tabelle.'):''}${qNow?sw('background:#ffd23f;border-radius:50%','Jetzt','aktueller Abfluss und Geschwindigkeit nach der Kennlinie.'):''}</div>`);return o.join('')}
+// Kennlinie einer Station ansehen (Verwaltung und Einsatz-App): s = Antwort von hydro/curve bzw. hydro/curve/view, Driftfaktoren f_lo/f_hi, Zusatzmarge der Hauptströmung mg (%) auf der oberen Grenze
+function flCurveHtml(s,fLo,fHi,mg){const c=s.curve||{},f=v=>`${flN(fLo*v/.85,1)}–${flN(fHi*v/.85*(1+(mg||0)/100),1)}`;
+  return `<div class="mut">${c.src==='prof'?'Oben der Querschnitt des Flussbetts beim Pegel der Station mit dem Wasserspiegel bei tiefem, aktuellem und hohem Abfluss bzw. bei den Grenzwerten der Gefahrenstufen. Unten die daraus berechnete mittlere Geschwindigkeit: jeder Punkt ist ein Stundenwert des letzten Jahres (Abfluss ÷ benetzte Fläche), die Linie die Kennlinie v̄ = a · Q<sup>m</sup>, mit der die App rechnet.':c.src==='manual'?'Von Hand festgelegt: v̄ = a · Q<sup>m</sup>.':esc(c.msg||'')}</div>
+    <div class="flgrid"><div>${c.src==='prof'?`${flProfBox(c,s)}`:''}</div>
+    <div><div class="flsvg">${flKlSvg(c,s.q)}</div>${(c.kl||[]).length?`<table class="fltt"><tr><th>Abfluss</th><th>Q m³/s</th><th>Pegel m ü. M.</th><th>Fläche m²</th><th>v̄ m/s</th><th>Drift m/s</th></tr>${c.kl.map((r,i)=>`<tr><td class="flp">${(c.kl.length===6?['tief (5 %)','25 %','mittel (50 %)','75 %','95 %','hoch (99.9 %)']:c.kl.length===3?['tief (5 %)','mittel (50 %)','hoch (95 %)']:[])[i]||''}</td><td>${flN(r[0],0)}</td><td>${r[1]!=null?flN(r[1],2):'–'}</td><td>${r[2]!=null?flN(r[2],0):'–'}</td><td>${flN(r[3],2)}</td><td>${f(r[3])}</td></tr>`).join('')}</table><div class="mut">Prozent = Anteil der Stunden im letzten Jahr mit tieferem Abfluss. Drift = Spanne der Treibgeschwindigkeit an der Oberfläche.</div>`:''}</div></div>`}
+// Dialog nur zum Ansehen (Einsatz-App, Popup und Liste der Messstationen)
+async function flCurveOpen(id){let s;try{s=await api('hydro/curve/view',{id})}catch(e){return fail(e)}
+  const d=dlg(`Kennlinie ${s.water?s.water+' – ':''}${s.name} (${s.station})`,flCurveHtml(s,s.f_lo,s.f_hi,s.mg),async()=>{},'Schliessen');d.querySelector('.card').classList.add('flk');d.querySelector('[data-x]').hidden=true}

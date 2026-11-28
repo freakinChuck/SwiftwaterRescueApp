@@ -71,7 +71,30 @@ Mit den Häkchen blendest du einzelne Einträge oder ganze Gruppen auf der Karte
 
 ## Fliessgeschwindigkeit {#fliessgeschwindigkeit}
 
-Im Register «Einsatz» setzen alle Teilnehmenden die **Fliessgeschwindigkeit** in m/s. Daraus berechnet die App die Länge des Suchgebiets. Die Messstationen beim PLS (siehe unten) helfen bei der Einschätzung.
+Im Register «Einsatz» setzen alle Teilnehmenden die **Fliessgeschwindigkeit** (in der Einheit aus dem Profil, m/s oder km/h). Daraus berechnet die App die Länge des Suchgebiets. Die Messstationen beim PLS (siehe unten) helfen bei der Einschätzung.
+
+### Geschwindigkeit je Abschnitt {#abschnitte}
+
+**Aus den Messstationen:** Gibt es beim PLS eine Messstation mit Kennlinie, musst du nichts eingeben. Die App zeigt die **Grundgeschwindigkeit** aus dieser Station beim aktuellen Abfluss. Jeder Abschnitt erhält seine Geschwindigkeit aus seiner eigenen Station und seinem Faktor. Die Werte stehen so im richtigen Verhältnis zueinander und folgen dem Abfluss. Hast du im Wasser gemessen, gleicht **An einem Punkt gemessen …** alle Werte im selben Verhältnis an. **Von Hand setzen …** ersetzt den Wert aus den Messstationen, **Aus den Messstationen übernehmen** stellt ihn wieder her.
+
+Ohne Messstation mit Kennlinie (oder von Hand gesetzt) gibst du die Geschwindigkeit ein. Sind für das Gewässer Abschnitte eingerichtet (Verwaltung → «Pegel & Abfluss»), ist der eingegebene Wert die **Grundgeschwindigkeit**: Er gilt ausserhalb der Abschnitte, in den Abschnitten gilt Grundgeschwindigkeit × Faktor des Abschnitts (z. B. langsamer im Stau, schneller in einer Engstelle). Ohne Abschnitte gilt der Wert für den ganzen Flusslauf.
+
+- **Geschwindigkeit je Abschnitt** (aufklappen): «Faktoren der Abschnitte anwenden» schaltet die Faktoren für diesen Einsatz aus und ein (Vorgabe aus der Verwaltung). ✎ setzt die Geschwindigkeit eines Abschnitts von Hand, ↺ nimmt sie zurück. Wer die Grundgeschwindigkeit ändert, passt alle übrigen Abschnitte im gleichen Verhältnis an.
+- **An einem Punkt gemessen …**: Punkt auf der Karte antippen und die dort gemessene Geschwindigkeit eingeben (z. B. mit einem Treibkörper). Mit Werten aus den Messstationen gleicht die App alle Geschwindigkeiten im Verhältnis «gemessen ÷ Wert der Station an diesem Punkt» an. Sonst rechnet sie mit dem Faktor des Abschnitts an diesem Punkt die Grundgeschwindigkeit zurück.
+- **Zuschlag Suchgebiet**: verlängert die Driftdistanz des Suchgebiets um einen Prozentsatz, z. B. +20 % als Reserve. Leer = Vorgabe der Verwaltung.
+
+Das Suchgebiet rechnet in jedem Abschnitt mit dessen Geschwindigkeit; der Hinweis unten auf der Karte nennt Zuschlag und «mit Geschwindigkeit je Abschnitt».
+
+### Vorhersage {#vorhersage}
+
+Hat die massgebende Messstation beim PLS eine Kennlinie (Verwaltung), zeigt die Karte eine **Vorhersage der Fliessgeschwindigkeit**:
+
+- **Vorschlag jetzt**: Driftgeschwindigkeit mit Unter- und Obergrenze aus dem aktuellen Abfluss. Die Obergrenze enthält eine Zusatzmarge für die schnellere Hauptströmung in der Flussmitte (Angabe unter dem Diagramm). **Übernehmen** setzt den Wert; die App ändert ihn nie selbst.
+- **Diagramm**: die letzten 12 Stunden (weiss), die Vorhersage (blau) mit Band und der eingestellte Wert (gelb gestrichelt).
+- **In 3 / 12 / 24 / 48 h**: die erwartete Geschwindigkeit. Quelle ist die Abflussvorhersage des BAFU; ohne sie bleibt der Abfluss wie jetzt.
+- **Abschnitte bis Ende Suchgebiet**: Stau, Schwellen, Engstellen und freie Strecken mit eigener Geschwindigkeit. Auf der Karte erscheinen sie als farbige Linien (Fenster «Ansicht», Kategorie «Fliessgeschwindigkeit je Abschnitt»).
+
+Weicht die Vorhersage deutlich vom eingestellten Wert ab, steigt der Abfluss stark, gilt eine neue Gefahrenstufe oder kommt eine neue Vorhersage, erhält die Einsatzleitung eine Meldung (auf Wunsch der Verwaltung alle Teilnehmenden); sie steht auch im Einsatzlog. Die Vorhersage ändert die eingestellte Geschwindigkeit nie selbst.
 
 ## Wasserzeit {#wasserzeit}
 
@@ -99,7 +122,7 @@ Das Werkzeug **Flussdistanz** misst die Distanz zwischen zwei Punkten entlang de
 2. Startpunkt A auf der Karte antippen.
 3. Zielpunkt B antippen.
 
-Die App setzt beide Punkte aufs nächste Gewässer und zeigt die Distanz entlang des Gewässers und in Luftlinie, die Fliessrichtung, die Treibzeit mit der Fliessgeschwindigkeit des Einsatzes (ohne Einsatz gibst du sie ein) und die Dauer für einige Vergleichsgeschwindigkeiten. Passiert der Weg ein Wehr oder eine andere Gefahrenstelle, steht das ebenfalls dabei. Höchstens 50 km Luftlinie.
+Die App setzt beide Punkte aufs nächste Gewässer und zeigt die Distanz entlang des Gewässers und in Luftlinie, die Fliessrichtung, die Treibzeit mit der Fliessgeschwindigkeit des Einsatzes (ohne Einsatz gibst du sie ein) und die Dauer für einige Vergleichsgeschwindigkeiten. Passiert der Weg ein Wehr oder eine andere Gefahrenstelle, steht das ebenfalls dabei. Gibt es für das Gewässer Abschnitte, steht zusätzlich die Treibzeit **nach Abschnitten** mit der aktuellen Vorhersage. Höchstens 50 km Luftlinie.
 
 ## Navigation {#navigation}
 
@@ -113,6 +136,8 @@ Der Kartenknopf **Messstationen** zeigt Pegel, Abfluss und Wassertemperatur der 
 
 - **Beim PLS**: die nächsten Stationen, mit den Werten bei Einsatzbeginn und den aktuellen.
 - **Meine Messstationen**: deine eigene Auswahl, auch ohne Einsatz (im [Profil](#profil/messstationen)).
+
+Bei Stationen mit Kennlinie steht zusätzlich die aktuelle **Fliessgeschwindigkeit** (Bereich in m/s). **Kennlinie** (in der Liste und im Popup des Markers) zeigt den Querschnitt des Flussbetts mit dem Wasserspiegel und die Geschwindigkeit je Abfluss. Über dem Querschnitt schaltest du zwischen **Tief / Hoch** (Niedrig- und Hochwasser des letzten Jahres) und **Gefahrenstufen** um: Dann zeigen farbige Bänder, ab welchem Wasserspiegel welche Gefahrenstufe des BAFU gilt, und die gestrichelte Linie den Wasserspiegel jetzt (nur bei Stationen mit Grenzwerten für den Abfluss).
 
 ![Messstationen](img/messstationen.jpg)
 

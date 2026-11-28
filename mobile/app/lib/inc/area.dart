@@ -49,6 +49,8 @@ class RiverNet {
   // Zwischenspeicher der ETA (Issue #258, riverReach): Start und Posten je PLS, Distanz je Stelle
   final etaCtx = <String, _ReachCtx?>{};
   final etaD = <String, double?>{};
+  // Geschwindigkeit je Abschnitt (relCtx), zwischengespeichert je Schlüssel
+  RelCtx? rel;
 
   factory RiverNet.parse(J j) {
     final els = j['elements'];
@@ -82,8 +84,55 @@ class NetSlot {
   int retryAt;
 }
 
+// Geschwindigkeit je Abschnitt (flow_area.reaches, relCtx/relOf in common.js): rel = Geschwindigkeit im Abschnitt ÷ Grundgeschwindigkeit;
+// die Strecken zählen in «Grundmetern» (Länge ÷ rel), so endet das Suchgebiet nach derselben Zeit. Zuordnung zum nächsten Abschnitt (≤ relM).
+const relM = 120.0;
+
+class RelCtx {
+  RelCtx(this.key, this.segs);
+  final String key;
+  final List<({LatLng a, LatLng b, double rel, double s, double n, double w, double e})> segs;
+  final m = <String, double>{};
+}
+
+RelCtx? relCtx(RiverNet net, J? fa, double flow) {
+  final rs = (fa?['reaches'] is List ? fa!['reaches'] as List : const []).whereType<Map>().where((r) => (jd(r['v']) ?? 0) > 0 && r['pts'] is List && (r['pts'] as List).length > 1).toList();
+  if (rs.isEmpty || flow <= 0) return null;
+  final key = '${jsonEncode(rs.map((r) => [r['id'], r['v']]).toList())}|$flow';
+  if (net.rel?.key == key) return net.rel;
+  final segs = <({LatLng a, LatLng b, double rel, double s, double n, double w, double e})>[];
+  for (final r in rs) {
+    final rel = jd(r['v'])! / flow, pts = (r['pts'] as List).whereType<List>().map((x) => LatLng(jd(x[0])!, jd(x[1])!)).toList();
+    for (var i = 1; i < pts.length; i++) {
+      final a = pts[i - 1], b = pts[i];
+      const m = .002;
+      segs.add((a: a, b: b, rel: rel, s: math.min(a.latitude, b.latitude) - m, n: math.max(a.latitude, b.latitude) + m, w: math.min(a.longitude, b.longitude) - m * 1.5, e: math.max(a.longitude, b.longitude) + m * 1.5));
+    }
+  }
+  return net.rel = RelCtx(key, segs);
+}
+
+double _relOf(_Ctx ctx, Way w, int j) {
+  final c = ctx.rel;
+  if (c == null) return 1;
+  final k = '${w.id}:$j', v0 = c.m[k];
+  if (v0 != null) return v0;
+  final a = w.geometry[j], b = w.geometry[j + 1], p = LatLng((a.latitude + b.latitude) / 2, (a.longitude + b.longitude) / 2);
+  var bd = relM, v = 1.0;
+  for (final q in c.segs) {
+    if (p.latitude < q.s || p.latitude > q.n || p.longitude < q.w || p.longitude > q.e) continue;
+    final d = _segProj(q.a, q.b, p).d;
+    if (d < bd) {
+      bd = d;
+      v = q.rel;
+    }
+  }
+  return c.m[k] = v;
+}
+
 class _Ctx {
-  _Ctx(this.posts, this.segs);
+  _Ctx(this.posts, this.segs, [this.rel]);
+  RelCtx? rel;
   final List<({LatLng p, String cut, double r})> posts; // r = Radius in m (3 = auf den Wasserlauf gesetzt, _snapPost), cut = Text, wo das Gebiet endet («am Posten …», «an «Wehr» (Flusssperrung)»)
   final List<_Seg> segs; // Flusssperren als Linien bzw. Ränder von Bereichen (Issue #182)
   final done = <String, double>{};
@@ -185,7 +234,7 @@ List<List<LatLng>>? _follow(RiverNet net, Way w, int k, double rem, Set<int> see
     for (final e in net.byNode[w.nodes[j]] ?? <WayRef>[]) {
       if (e.k == 0 && e.w != w && !seen.contains(e.w.id)) out.addAll(sub(e, rem));
     }
-    final a = w.geometry[j], b = w.geometry[j + 1], d = geoDist(a, b), x = _hit(ctx, a, b);
+    final a = w.geometry[j], b = w.geometry[j + 1], d = geoDist(a, b) / _relOf(ctx, w, j), x = _hit(ctx, a, b);
     if (x != null && d * x.t < rem) {
       pts.add(LatLng(a.latitude + (b.latitude - a.latitude) * x.t, a.longitude + (b.longitude - a.longitude) * x.t));
       ctx.cut = x.cut;
@@ -227,7 +276,7 @@ class _Best {
   return (t: t, d: math.sqrt(ox * ox + oy * oy));
 }
 
-double? riverReach(RiverNet net, LatLng i, LatLng pt, List<({LatLng p, String name})> posts, List<J> stops, String pk) {
+double? riverReach(RiverNet net, LatLng i, LatLng pt, List<({LatLng p, String name})> posts, List<J> stops, String pk, [RelCtx? rel]) {
   final ck = '${srcKey(i.latitude, i.longitude)}|$pk';
   if (!net.etaCtx.containsKey(ck)) {
     WayRef? best;
@@ -251,6 +300,7 @@ double? riverReach(RiverNet net, LatLng i, LatLng pt, List<({LatLng p, String na
   final dk = '$ck|${pt.latitude.toStringAsFixed(5)},${pt.longitude.toStringAsFixed(5)}';
   if (net.etaD.containsKey(dk)) return net.etaD[dk];
   x.ctx.done.clear();
+  x.ctx.rel = rel;
   final o = _Best();
   _reach(net, x.best.w, x.best.k, 0, {}, x.ctx, pt, o);
   return net.etaD[dk] = o.d;
@@ -283,7 +333,7 @@ void _reach(RiverNet net, Way w, int k, double acc, Set<int> seen, _Ctx ctx, Lat
     for (final e in net.byNode[w.nodes[j]] ?? <WayRef>[]) {
       if (e.k == 0 && e.w != w && !seen.contains(e.w.id)) _reach(net, e.w, e.k, acc, seen, ctx, pt, o);
     }
-    final a = w.geometry[j], b = w.geometry[j + 1], d = geoDist(a, b), x = _hit(ctx, a, b), pr = _segProj(a, b, pt);
+    final a = w.geometry[j], b = w.geometry[j + 1], d = geoDist(a, b) / _relOf(ctx, w, j), x = _hit(ctx, a, b), pr = _segProj(a, b, pt);
     if (pr.d < etaM && (x == null || pr.t * d <= x.t * d + 50)) {
       // eine Stelle direkt am Posten bzw. an der Sperre zählt noch (z. B. der Posten selbst)
       if (c != null && pr.d >= c.m) return done();
@@ -333,7 +383,7 @@ class RiverArea {
   double maxLen = 0;
 }
 
-RiverArea? riverArea(RiverNet net, LatLng i, double d, List<({LatLng p, String name})> posts, [List<J> stops = const []]) {
+RiverArea? riverArea(RiverNet net, LatLng i, double d, List<({LatLng p, String name})> posts, [List<J> stops = const [], RelCtx? rel]) {
   WayRef? best;
   var bd = 1e12;
   for (final w in net.ways) {
@@ -346,7 +396,7 @@ RiverArea? riverArea(RiverNet net, LatLng i, double d, List<({LatLng p, String n
     }
   }
   if (best == null || bd > snapM) return null;
-  final sc = _stopCtx(stops), r = RiverArea(), ctx = _Ctx([...posts.map((q) => _snapPost(net, q.p, 'am Posten ${q.name}')), ...sc.posts.map((q) => _snapPost(net, q.p, q.cut))], sc.segs);
+  final sc = _stopCtx(stops), r = RiverArea(), ctx = _Ctx([...posts.map((q) => _snapPost(net, q.p, 'am Posten ${q.name}')), ...sc.posts.map((q) => _snapPost(net, q.p, q.cut))], sc.segs, rel);
   for (final pts in _follow(net, best.w, best.k, d, {}, ctx) ?? <List<LatLng>>[]) {
     if (pts.length < 2) continue;
     var len = 0.0;
@@ -385,8 +435,8 @@ class SearchArea {
   String? short;
   bool get empty => polys.isEmpty && circles.isEmpty;
   // ETA (Issue #258): Teilgebiete entlang des Gewässers mit Netz und Driftdistanz
-  final _reachSrc = <({LatLng c, num at, double d, RiverNet n})>[];
-  double _flow = 0;
+  final _reachSrc = <({LatLng c, num at, double d, RiverNet n, RelCtx? rel})>[];
+  double _flow = 0, _fz = 1;
   List<({LatLng p, String name})> _posts = const [];
   List<J> _stops = const [];
   String _pk = '';
@@ -395,10 +445,10 @@ class SearchArea {
   ({num at, double d, bool inside})? eta(LatLng p) {
     ({num at, double d, bool inside})? best;
     for (final q in _reachSrc) {
-      final d = riverReach(q.n, q.c, p, _posts, _stops, _pk);
+      final d = riverReach(q.n, q.c, p, _posts, _stops, _pk + (q.rel?.key ?? ''), q.rel);
       if (d == null) continue;
       if (d <= q.d) return (at: 0, d: 0.0, inside: true);
-      final at = q.at + d / _flow;
+      final at = q.at + d / (_flow * _fz);
       if (best == null || at < best.at) best = (at: at, d: d - q.d, inside: false);
     }
     return best;
@@ -409,7 +459,7 @@ class SearchArea {
 
 /// srcs = sources des Servers ([{lat,lon,at,own,names}]), nets je PLS, get lädt das Netz, redraw nach dem Laden; rs = Rettlinge
 SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num now, List<({LatLng p, String name})> posts,
-    Future<J> Function(LatLng s, int r) get, void Function() redraw, List<J> rs, [List<J> stops = const [], List<({LatLng p, double max})> far = const []]) {
+    Future<J> Function(LatLng s, int r) get, void Function() redraw, List<J> rs, [List<J> stops = const [], List<({LatLng p, double max})> far = const [], J? fa]) {
   final r = SearchArea();
   if (srcs.isEmpty) {
     final miss = rs.where((x) => x['rescued_at'] == null && x['lat'] == null).toList();
@@ -424,8 +474,16 @@ SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num
     r.info.add('Suchgebiet: Fliessgeschwindigkeit fehlt.');
     return r;
   }
+  // fa = flow_area des Servers: pct = Zuschlag auf die Driftdistanz in %, reaches = Geschwindigkeit je Abschnitt (flow = Grundgeschwindigkeit)
+  final pc = math.max(-90.0, jd(fa?['pct']) ?? 0), fz = 1 + pc / 100;
+  var mx = 1.0;
+  for (final x in (fa?['reaches'] is List ? fa!['reaches'] as List : const []).whereType<Map>()) {
+    final v = jd(x['v']) ?? 0;
+    if (v > 0) mx = math.max(mx, v / flow);
+  }
+  r._fz = fz;
   for (final s in srcs) {
-    final lat = jd(s['lat'])!, lon = jd(s['lon'])!, at = jn(s['at']) ?? now, d = flow * (now - at), k = srcKey(lat, lon);
+    final lat = jd(s['lat'])!, lon = jd(s['lon'])!, at = jn(s['at']) ?? now, d = flow * fz * (now - at), k = srcKey(lat, lon);
     final names = (s['names'] is List ? (s['names'] as List).map((e) => '$e').toList() : <String>[]);
     final who = names.isNotEmpty ? ' «${names.join('», «')}»' : '';
     final lbl = srcs.length > 1 || who.isNotEmpty ? 'Suchgebiet ab PLS$who (${fmtDT(at)}): ' : 'Suchgebiet: ';
@@ -437,8 +495,8 @@ SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num
     r.parts.add(p);
     var n = nets[k];
     final now0 = DateTime.now().millisecondsSinceEpoch, w = netWant(c, far);
-    if (n == null || (!n.loading && ((!n.fail && (n.r < d * 1.1 || n.r < w) && n.r < 30000) || (n.fail && now0 > n.retryAt)))) {
-      final rr = netRadius(d, w), slot = NetSlot(r: n?.r ?? 0, net: n?.net, loading: true);
+    if (n == null || (!n.loading && ((!n.fail && (n.r < d * mx * 1.1 || n.r < w) && n.r < 30000) || (n.fail && now0 > n.retryAt)))) {
+      final rr = netRadius(d * mx, w), slot = NetSlot(r: n?.r ?? 0, net: n?.net, loading: true);
       nets[k] = slot;
       get(c, rr).then((j) => NetSlot(r: rr, net: RiverNet.parse(j))).catchError((e) => NetSlot(r: rr, fail: true, err: '$e', retryAt: DateTime.now().millisecondsSinceEpoch + 20000)).then((v) {
         if (nets[k] == slot) {
@@ -463,16 +521,16 @@ SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num
       circle('Gewässernetz wird geladen.');
       continue;
     }
-    final a = riverArea(n.net!, c, d, posts, stops);
+    final rel = relCtx(n.net!, fa, flow), a = riverArea(n.net!, c, d, posts, stops, rel);
     if (a == null) {
       circle('Kein Gewässer nahe der PLS.');
       continue;
     }
-    r._reachSrc.add((c: c, at: at, d: d, n: n.net!));
+    r._reachSrc.add((c: c, at: at, d: d, n: n.net!, rel: rel));
     r.polys.addAll(a.polys);
     r.lines.addAll(a.lines);
     p.polys.addAll(a.polys);
-    r.info.add('$lbl${(a.maxLen / 1000).toStringAsFixed(1)} km Flusslauf ab PLS (Driftdistanz ${d.round()} m), Ufergebiet ${bankM.round()} m je Seite${a.cutBy != null ? ', endet ${a.cutBy}.' : '.'}');
+    r.info.add('$lbl${(a.maxLen / 1000).toStringAsFixed(1)} km Flusslauf ab PLS (Driftdistanz ${d.round()} m${pc != 0 ? ', Zuschlag ${pc > 0 ? '+' : ''}${pc.round()} %' : ''}${rel != null ? ', mit Geschwindigkeit je Abschnitt' : ''}), Ufergebiet ${bankM.round()} m je Seite${a.cutBy != null ? ', endet ${a.cutBy}.' : '.'}');
   }
   if (srcs.length > 1) {
     final riv = r.parts.where((p) => p.polys.isNotEmpty).length, circ = r.parts.length - riv, none = srcs.length - r.parts.length;
@@ -483,7 +541,8 @@ SearchArea searchArea(List<J> srcs, Map<String, NetSlot> nets, double? flow, num
   r._stops = stops;
   r._pk = jsonEncode([
     posts.map((q) => [q.p.latitude, q.p.longitude]).toList(),
-    stops.map((q) => [q['lat'], q['lon'], q['pts']]).toList()
+    stops.map((q) => [q['lat'], q['lon'], q['pts']]).toList(),
+    fz
   ]);
   return r;
 }

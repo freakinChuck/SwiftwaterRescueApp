@@ -48,6 +48,7 @@ const viewCatsAll = [
   ('air', 'Helikopter', ''),
   ('veh', 'Fahrzeuge', 'veh'),
   ('hydro', 'Messstationen', 'hydro'),
+  ('flow', 'Fliessgeschwindigkeit je Abschnitt', 'hydro'), // Issue #254
   ('geo', 'Geodaten (OpenStreetMap)', 'geo'), // Issue #182, zuerst ausgeblendet
 ];
 
@@ -552,6 +553,8 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   // Messstationen des BAFU: die des Einsatzes (st.hydro, zu Beginn und am Ende erfasst) und die persönlichen (me.hydro, im Profil gewählt).
   // Aktuelle Werte über hydro (Server mit Cache), höchstens alle 5 Minuten und sofort, wenn sich die Stationen ändern (hyPoll).
   Map<String, J> hyData = {};
+  Map<String, J> hyFlow = {}; // Fliessgeschwindigkeit je Station (hydro/flow, Issue #254)
+  bool hyFlowOk = false;
   String? hyErr;
   List<J>? hyAll; // alle Stationen (Suche im Profil), einmal geladen
   int _hyAt = 0;
@@ -583,6 +586,11 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       final d = await api.call('hydro', body: {'ids': ids});
       hyData = {for (final x in jl(d['stations'])) js(x['id']): x};
       hyErr = d['err'] == null ? null : js(d['err']);
+      try {
+        final f = await api.call('hydro/flow', body: {'ids': ids});
+        hyFlow = {for (final e in jm(f['flow']).entries) e.key: jm(e.value)};
+        hyFlowOk = true;
+      } catch (_) {} // ältere Server ohne hydro/flow
     } on ApiError catch (e) {
       hyErr = e.offline ? 'Keine Verbindung zum Server' : e.message;
     } catch (e) {
@@ -611,6 +619,16 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       fail(e);
       notifyListeners();
     }
+  }
+
+  /// Vorhersage der Fliessgeschwindigkeit beim PLS (st.flow_pred, Issue #254)
+  J? get flowPred => inc != null && st?['flow_pred'] is Map ? jm(st!['flow_pred']) : null;
+
+  /// Meldung «relevante Veränderung» in der offenen App (flowNote): gleicher Schlüssel wie der Push `h:<Meldung>`, nur an die Empfänger, nicht älter als 1 h
+  void _flowNote() {
+    final n = flowPred?['note'];
+    if (n is! Map || !jb(n['me']) || DateTime.now().millisecondsSinceEpoch / 1000 - (jd(n['at']) ?? 0) > 3600) return;
+    notify(js(n['title']).isNotEmpty ? js(n['title']) : 'Fliessgeschwindigkeit', js(n['text']), 'h:${n['id']}', js(n['lvl']).isNotEmpty ? js(n['lvl']) : 'normal');
   }
 
   int get unread => msgs.where((m) => (ji(m['id']) ?? 0) > msgSeen && ji(m['from_user']) != uid).length;
@@ -670,6 +688,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
           notify('AUS EINSATZ ENTFERNT', 'Die Einsatzleitung hat dich aus dem Einsatz entfernt.', 'k:$id:${nm['left_at']}', kr);
         }
         st = nx;
+        _flowNote();
         unawaited(vx.onState(nx));
         final mine = myIncId; // Issue #167: Teilnahme an irgendeinem laufenden Einsatz
         if (_joinedSeen != mine && mine != null) _trackNow(); // angenommen: Teilen im Hintergrund sofort vorbereiten, nicht erst beim nächsten Polling
@@ -978,7 +997,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
     area = searchArea(jl(st?['sources']), nets, jd(i['flow_ms']), now, posts, (s, r) => overpassNet(api, {'around': [r, s.latitude, s.longitude]}), () {
       _calcArea();
       notifyListeners();
-    }, rescuees, jl(st?['stops']), far); // Flusssperren (Issue #182)
+    }, rescuees, jl(st?['stops']), far, st?['flow_area'] is Map ? (st!['flow_area'] as Map).cast<String, dynamic>() : null); // Flusssperren (Issue #182), Geschwindigkeit je Abschnitt
   }
 
   void _checkArea() {

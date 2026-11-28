@@ -142,13 +142,13 @@ Future<void> showNote(String acc, String tag, String title, String body, String 
   await notes.show(id: noteId(acc, tag), title: title, body: body, notificationDetails: NotificationDetails(android: android, iOS: ios), payload: '$acc|$tag');
 }
 
-/// Einsatzende (Issue #174): alle Meldungen des Kontos zum Einsatz schliessen (Alarm i:, Nachrichten m:, Durchsagen v:, Entfernen k:;
+/// Einsatzende (Issue #174): alle Meldungen des Kontos zum Einsatz schliessen (Alarm i:, Nachrichten m:, Durchsagen v:, Fliessgeschwindigkeit h: (Issue #254), Entfernen k:;
 /// es läuft nur ein Einsatz gleichzeitig) und den Weckton beenden. Meldungen, die iOS selbst über APNs zeigt, ersetzt dort der Server (collapse-id).
 /// Meldungen eines beendeten Einsatzes zurücknehmen (Issue #174). Mit inc (parallele Einsätze, Issue #167) nur Alarm `i:<inc>` und «entfernt» `k:<inc>:…`
 /// dieses Einsatzes; Nachrichten (m:) und Durchsagen (v:) tragen keinen Einsatz und gehen mit. Der Weckton endet nur, wenn dessen Alarm dabei war.
 Future<void> cancelIncNotes(String acc, [int? inc]) async {
   await initNotes();
-  final re = inc == null ? RegExp(r'^[imkvx]:') : RegExp('^(i:$inc\$|k:$inc:|[mvx]:)'); // x: Notrufe (Issue #240) enden mit dem Einsatz
+  final re = inc == null ? RegExp(r'^[imkvxh]:') : RegExp('^(i:$inc\$|k:$inc:|[mvxh]:)'); // x: Notrufe (Issue #240) enden mit dem Einsatz
   var stop = inc == null;
   try {
     for (final n in await notes.getActiveNotifications()) {

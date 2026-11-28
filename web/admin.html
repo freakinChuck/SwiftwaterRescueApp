@@ -58,7 +58,14 @@ details.agrp{margin:.6rem 0}details.agrp>summary{cursor:pointer;font-weight:600;
 .abb{display:inline-flex;min-width:1.5rem;height:1.4rem;padding:0 .3rem;box-sizing:border-box;border-radius:4px;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#fff;background:var(--mut)}
 .ent0{color:var(--mut);margin:.4rem 0}.nq{color:var(--mut);margin:.4rem 0}
 .inst{font-size:.75rem;color:var(--mut);margin-left:.4rem}
-.scard{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.6rem 0}.scard>h3:first-child{margin-top:0}
+.scard{border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.6rem 0}
+
+.kch{display:inline-block;margin-left:.4rem;padding:0 .45rem;border-radius:9px;font-size:.78rem;font-weight:600;color:#fff}.kch.pool{background:#1d7fd1}.kch.thr{background:#ff8a3d}.kch.gorge{background:#c34fff}.kch.free{background:#35c27a}.scard>h3:first-child{margin-top:0}
+#flEd{position:fixed;inset:0;z-index:4800;background:var(--bg);display:flex;flex-direction:column}#flEd .fleh{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;padding:.5rem .8rem;padding-top:max(.5rem,env(safe-area-inset-top));border-bottom:1px solid var(--line)}#flEd .fleh b{flex:1 1 auto;font-size:1.1rem}#flEd .fleh select{max-width:16rem}
+#flEd .fleb{flex:1;display:flex;min-height:0}#flEd .flem{flex:1;position:relative;min-width:0}#fleM{position:absolute;inset:0}#flEd .fles{flex:0 0 22rem;overflow:auto;padding:.6rem .8rem;border-left:1px solid var(--line)}#flEd.picking #fleM{cursor:crosshair}
+#flEd .fleht{position:absolute;left:50%;top:.6rem;transform:translateX(-50%);z-index:1000;display:flex;gap:.6rem;align-items:center;max-width:calc(100% - 2rem);background:#ff9f1c;color:#111;font-weight:600;padding:.4rem .5rem .4rem .8rem;border-radius:8px;box-shadow:0 2px 8px #0006}
+#flEd .fleL{display:flex;flex-direction:column;gap:.25rem}#flEd .fleI{display:flex;gap:.5rem;align-items:flex-start;text-align:left;width:100%;padding:.35rem .5rem}#flEd .fleI i{flex:0 0 .9rem;height:.9rem;border-radius:3px;margin-top:.2rem}#flEd .fleI span{display:flex;flex-direction:column}#flEd .fleI small{color:var(--mut,#8fb0bd)}#flEd .fleI.on{outline:2px solid #fff}#flEd .fleI.off{opacity:.5}
+.fleo{font-weight:600;padding:.3rem .6rem}@media(max-width:760px){#flEd .fleb{flex-direction:column}#flEd .fles{flex:0 0 42%;border-left:0;border-top:1px solid var(--line)}}
 .sbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-top:.8rem}.sbar .sbn{color:var(--mut);font-size:.85rem}.sbar.dirty{position:sticky;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--ex);padding:.5rem 0}.sbar.dirty .sbn{color:var(--ex)}
 /* Statistik pro Person (Issue #87): Filterzeile, Diagramme als SVG, Hinweis beim Darüberfahren */
 .psf label{flex:1 1 9rem}.psf .psinc{flex:3 1 18rem}.psf select,.psf input{width:100%}
@@ -1798,11 +1805,148 @@ async function loadHydro(){const el=$('#sHy');let s,h;try{[s,h]=await Promise.al
     <h3>Stationen im Einsatz</h3><div class="anums">${numCard('hyR','Umkreis um jeden PLS',c.radius_km,'km',N.radius_km[1],N.radius_km[2],1,N.radius_km[0])}${numCard('hyN','Stationen je PLS',c.n,'Stationen',N.n[1],N.n[2],1,N.n[0])}</div>
     <label class="chk"><input type="checkbox" id="hyL" ${c.lakes?'checked':''}> Auch Messstationen an Seen (meist nur Pegel)</label>
     ${sbar('hySv')}
+    <div id="hyFlow"></div>
     <h3>Datenabruf</h3><div class="mut" id="hySt">${st(h)}</div><div class="row"><button id="hyRf">Jetzt abrufen</button></div>`;
   $('#hySv').onclick=()=>api('settings/save',{hydro:{radius_km:$('#hyR').value,n:$('#hyN').value,lakes:$('#hyL').checked?1:0,src:Object.fromEntries(ks.map(k=>[k,el.querySelector(`[data-hs="${k}"]`).checked?1:0]))}}).then(()=>{toast(ks.some(k=>el.querySelector(`[data-hs="${k}"]`).checked)?'Gespeichert. Gilt für die nächsten Erfassungen.':'Gespeichert. Ohne Datenquelle gibt es keine Messwerte.',ks.some(k=>el.querySelector(`[data-hs="${k}"]`).checked)?'ok':'info');loadHydro()}).catch(fail);
   el.querySelectorAll('[data-ht]').forEach(b=>b.onclick=async()=>{const k=b.dataset.ht,o=$('#ht_'+k);b.disabled=true;o.textContent='Wird abgefragt …';
     try{const r=await api('hydro/test',{src:k});o.innerHTML=r.ok?`✓ Antwort in ${r.ms} ms: ${r.stations} Stationen, Werte für ${r.values}.${r.example?' Beispiel '+esc(r.example):''}`:`✗ Keine gültige Antwort (${r.ms} ms)${r.err?': '+esc(r.err):''}`}catch(e){o.textContent='✗ '+e.message}finally{b.disabled=false}});
-  $('#hyRf').onclick=e=>{const b=e.target;b.disabled=true;api('hydro/status',{fresh:1}).then(x=>{$('#hySt').innerHTML=st(x)+` Abruf in ${x.ms} ms.`}).catch(fail).finally(()=>{b.disabled=false})}}
+  $('#hyRf').onclick=e=>{const b=e.target;b.disabled=true;api('hydro/status',{fresh:1}).then(x=>{$('#hySt').innerHTML=st(x)+` Abruf in ${x.ms} ms.`}).catch(fail).finally(()=>{b.disabled=false})};flowLoad()}
+/* ---------- Fliessgeschwindigkeit an den Stationen (Issue #254) ---------- */
+// Kennlinie v̄ = a·Q^m je Station (Querprofil der BAFU-Flussvermessung, sonst Strickler, oder von Hand), Abschnitte mit Faktor, Meldungen
+// Server: hydro/curves, hydro/curve(/calc|/save|/remove), hydro/reaches, hydro/reach/(propose|save|remove), Einstellung flow (settings/save)
+const FLW={prof:'Kennlinie aus Querprofil',strickler:'ohne Querprofil',manual:'Kennlinie von Hand',none:'ohne Kennlinie'};
+const flNeed=s=>{const c=s.curve;return !c||c.src==='none'||c.src==='strickler'||!!c.msg&&c.src!=='manual'};
+let flowA=null,flowMap=null,flowGrp=null,flowStP=null; // Stand der Verwaltung: {cur, rch}
+function flowStH(s){const c=s.curve||{},q=s.q!=null?Math.round(s.q):null,d=s.drift;
+  const desc=c.src==='prof'?`Kennlinie v̄ = ${flN(c.a,3)} · Q^${flN(c.m,2)} aus ${(c.prof||[]).length>1?'den Querprofilen':'dem Querprofil'} GEWISS ${(c.prof||[]).map(p=>p.g).join(' und ')} (${(c.prof||[]).map(p=>flMon(p.at)).filter((x,i,a)=>a.indexOf(x)===i).join(', ')}, ${(c.prof||[]).map(p=>flN(p.d,0)).join(' bzw. ')} m von der Station) und ${flN(c.n,0)} Stundenwerten${c.r2!=null?` · R² ${flN(c.r2,3)}`:''}${c.upd?' · Stand '+new Date(c.upd*1000).toLocaleDateString(LOC):''}`
+    :c.src==='manual'?`Kennlinie von Hand: v̄ = ${flN(c.a,3)} · Q^${flN(c.m,2)}`:esc(c.msg||'Kennlinie noch nicht berechnet');
+  return ent({t:`${s.water?s.water+' – ':''}${s.name} (${s.station})`,q:`${s.water} ${s.name} ${s.station}`,cls:flNeed(s)?'flneed':'',
+    ch:chip(FLW[c.src]||FLW.none,c.src==='prof'||c.src==='manual'?'var(--ok)':'#ff9f1c')+(s.fc?chip('BAFU-Vorhersage'):''),dh:(c.src==='prof'||c.src==='manual'?'':'⚠ ')+desc,
+    kv:[[q!=null?`jetzt ${flN(q,0)} m³/s`:'jetzt',s.v!=null?flN(s.v,2)+' m/s':'–'],['Drift',d?`${flN(d[0],1)}–${flN(d[1],1)} m/s`:'–']],
+    btns:(c.a!=null?`<button data-flk="${esc(s.station)}">Kennlinie</button>`:'')+`<button data-flr="${esc(s.station)}">Neu berechnen</button>`,del:['fld',esc(s.station)]})}
+async function flowCurveDlg(id){let s;try{s=await api('hydro/curve',{id})}catch(e){return fail(e)}const c=s.curve||{},cf=flowA.cur.cfg;
+  const d=dlg(`Kennlinie ${s.water?s.water+' – ':''}${s.name} (${s.station})`,`${flCurveHtml(s,cf.f_lo,cf.f_hi,cf.mg)}
+    <label class="chk" style="margin-top:.5rem"><input type="checkbox" id="flMan" ${c.manual?'checked':''}> Kennlinie von Hand festlegen</label>
+    <div class="row" id="flManF" ${c.manual?'':'hidden'}><label>a <input type="number" id="flA" step="0.001" min="0.001" max="5" value="${c.a??''}"></label><label>m <input type="number" id="flM" step="0.01" min="0.01" max="1.2" value="${c.m??''}"></label></div>`,
+    async d=>{const man=d.querySelector('#flMan').checked;if(man===!!c.manual&&(!man||+d.querySelector('#flA').value===c.a&&+d.querySelector('#flM').value===c.m))return;
+      await api('hydro/curve/save',man?{id,manual:1,a:d.querySelector('#flA').value,m:d.querySelector('#flM').value}:{id,manual:0});toast(man?'Kennlinie von Hand gespeichert.':'Kennlinie neu berechnet.','ok');flowLoad()},'Schliessen','Abbrechen');
+  d.querySelector('.card').classList.add('flk');const ok=d.querySelector('[data-ok]'),upd=()=>{const m=d.querySelector('#flMan').checked;d.querySelector('#flManF').hidden=!m;ok.textContent=m!==!!c.manual||m?'Speichern':'Schliessen'};d.querySelector('#flMan').onchange=upd;upd()}
+// Kennlinie berechnen: holt Querprofil und Stundenwerte bei der BAFU-Datenplattform (bis eine Minute), der Knopf zählt die Sekunden, das Ergebnis kommt als Hinweis
+async function flowCalcRun(id,b,reset){const t0=Date.now(),lb=b.textContent,tick=()=>{b.textContent=`Wird berechnet … ${Math.round((Date.now()-t0)/1000)} s`};
+  b.disabled=true;tick();const iv=setInterval(tick,1000);
+  try{const r=await api('hydro/curve/calc',reset?{id,reset:1}:{id}),c=r.curve||{},nm=`${r.water?r.water+' – ':''}${r.name}`;
+    if(c.src==='prof')toast(`Kennlinie berechnet (${nm}): v̄ = ${flN(c.a,3)} · Q^${flN(c.m,2)}.`,'ok');
+    else if(c.src==='manual')toast(`Kennlinie von Hand bleibt (${nm}).`,'info');
+    else toast(`${nm}: ${c.msg||'Keine Kennlinie berechnet.'}`,c.a!=null?'info':'err');
+    flowLoad();return r}finally{clearInterval(iv);b.disabled=false;b.textContent=lb}}
+// Abschnitte: Karte und Liste je Gruppe (Flussstrecke um eine Station)
+// Bezugsstation: Name der Station, Auswahl unter den Stationen mit Flussvermessung am selben Gewässer
+const flowStN=id=>{const s=flowA.cur.stations.find(x=>String(x.station)===String(id));return s?s.name:'Station '+id};
+function flowStOpts(gwl,cur){const rv=(flowA.rch.rivers||[]).find(x=>x.gwl===gwl),ids=(rv?rv.stations:[]).map(String);if(cur&&!ids.includes(String(cur)))ids.push(String(cur));
+  return ids.map(i=>`<option value="${esc(i)}" ${i===String(cur)?'selected':''}>${esc(flowStN(i))} (${esc(i)})</option>`).join('')}
+function flowReachDlg(r,st){const K=flowA.rch.kinds,isN=!r;r=r||{name:'',kind:'frei',fac:K.frei[2],mg:null,g_from:'',g_to:'',active:1,station:st};const mgD=flowA.cur.cfg.mg;
+  dlg(isN?'Neuer Abschnitt':'Abschnitt bearbeiten',`<label>Bezeichnung<input id="frN" value="${esc(r.name)}" placeholder="Beispiel: Blockrampe km 24.3 bis Schwelle km 19.6"></label>
+    <label>Bezugsstation<select id="frS">${flowStOpts(r.gwl||(flowA.rch.groups.find(x=>x.grp===flowGrp)||{}).gwl,r.station)}</select></label>
+    <label>Art<select id="frK">${Object.entries(K).map(([k,x])=>`<option value="${k}" ${k===r.kind?'selected':''}>${esc(x[1])}</option>`).join('')}</select></label>
+    <div class="row"><label>von km (oberhalb)<input id="frA" type="number" step="0.1" value="${r.g_from!==''?(r.g_from/1000).toFixed(1):''}"></label><label>bis km<input id="frB" type="number" step="0.1" value="${r.g_to!==''?(r.g_to/1000).toFixed(1):''}"></label><label>Faktor zur Station<input id="frF" type="number" step="0.05" min="0.05" max="2" value="${r.fac}"></label><label>Zusatzmarge Hauptströmung %<input id="frM" type="number" step="5" min="0" max="100" value="${r.mg??''}" placeholder="${mgD}"></label></div>
+    <div class="mut">km ab der Mündung gemäss BAFU-Flussvermessung. Faktor = Geschwindigkeit im Abschnitt im Verhältnis zur Bezugsstation, deren Abfluss gilt (Stau 0.33, Schwellen 0.75, frei 0.8, Engstelle 1). Zusatzmarge = Zuschlag auf die obere Grenze der Driftspanne, weil die Hauptströmung in der Flussmitte schneller ist als der Durchschnitt; leer = Standard (${mgD} %).</div>
+    ${isN?'':`<label class="chk"><input type="checkbox" id="frO" ${r.active?'':'checked'}> Abschnitt ausschalten</label>`}`,
+    async d=>{await api('hydro/reach/save',{id:r.id||0,station:d.querySelector('#frS').value||r.station,gwl:r.gwl||(flowA.rch.groups.find(x=>x.grp===flowGrp)||{}).gwl,grp:flowGrp,name:d.querySelector('#frN').value,kind:d.querySelector('#frK').value,fac:d.querySelector('#frF').value,mg:d.querySelector('#frM').value,km_from:d.querySelector('#frA').value,km_to:d.querySelector('#frB').value,off:d.querySelector('#frO')?.checked?1:0,fit:1});toast('Gespeichert.','ok');flowLoad()})
+    .querySelector('#frK').onchange=e=>{const f=document.querySelector('#frF');if(f)f.value=K[e.target.value][2]}}
+// Vorschlag lückenlos je Gewässer über alle Stationen mit Flussvermessung (oberste bis unterste plus Rand); von Hand gesetzte bleiben, der Vorschlag füllt die Strecke zwischen ihnen
+function flowPropDlg(){const rv=flowA.rch.rivers||[];if(!rv.length)return toast('Zuerst eine Station mit Kennlinie aus der Flussvermessung erfassen.','info');const g=flowA.rch.groups.find(x=>x.grp===flowGrp);
+  dlg('Vorschlag erzeugen',`<label>Gewässer<select id="fpG"><option value="">Alle Gewässer (${rv.length})</option>${rv.map(x=>`<option value="${esc(x.gwl)}" ${g&&g.gwl===x.gwl?'selected':''}>${esc(x.name)} (${x.stations.length===1?'1 Station':x.stations.length+' Stationen'})</option>`).join('')}</select></label><div class="row"><label>km oberhalb der obersten Station<input id="fpU" type="number" min="1" max="60" value="10"></label><label>km unterhalb der untersten Station<input id="fpD" type="number" min="0.5" max="30" value="3"></label></div>
+    <div class="mut">Je Gewässer eine lückenlose Strecke über alle Stationen mit Flussvermessung: geschnitten an Wehren, Schwellen und Blockrampen, je Station ein eigener Abschnitt; die übrigen gehören zur nächsten Station. Ersetzt die vorgeschlagenen Abschnitte; von Hand gesetzte oder geteilte bleiben, der Vorschlag füllt die Strecke zwischen ihnen. Dauert je Gewässer bis eine Minute.</div>`,async d=>{const r=await api('hydro/reach/propose',{gwl:d.querySelector('#fpG').value,up_km:d.querySelector('#fpU').value,down_km:d.querySelector('#fpD').value});
+      flowGrp=r.grps[0]||null;toast(`${r.n} Abschnitte vorgeschlagen (${r.grps.join(', ')}).`,'ok');if(r.err&&r.err.length)toast('Kein Längenprofil gefunden: '+r.err.join(', '),'err');flowLoad()},'Erzeugen')}
+function flowReachHtml(){const R=flowA.rch,K=R.kinds,gs=R.groups;if(!gs.length)return empty('Noch keine Abschnitte. Beispiel: «Vorschlag erzeugen» für die Aare schlägt aus Längenprofil, Wehren und Schwellen eine lückenlose Strecke über alle Stationen vor, 10 km oberhalb der obersten bis 3 km unterhalb der untersten.');
+  if(flowStP){const g=gs.find(x=>x.station===flowStP);if(g)flowGrp=g.grp;flowStP=null}if(!gs.some(g=>g.grp===flowGrp))flowGrp=gs[0].grp;const st=flowA.cur.stations,rs=R.reaches.filter(r=>r.grp===flowGrp);
+  return`<div id="flMap" style="height:330px;border-radius:6px;margin:.4rem 0"></div>${rs.map(r=>{const s=st.find(x=>x.station===r.station),d=s&&s.drift,k=K[r.kind]||K.frei;
+    return ent({th:esc(r.name)+`<span class="kch ${k[4]}">${esc(k[1])}</span>`,off:!r.active,c:k[3],dh:[flN(r.len_m/1000,1)+' km',r.width?'Sohlenbreite '+esc(r.width)+' m':'',r.slope?'Gefälle '+esc(r.slope)+' ‰':'','km '+flN(r.g_from/1000,1)+' bis '+flN(r.g_to/1000,1),'Faktor '+flN(r.fac,2),r.mg!=null?'Zusatzmarge '+flN(r.mg,0)+' %':''].filter(Boolean).join(' · '),
+      kv:[['Bezugsstation',`<span title="Station ${esc(String(r.station))}">${esc(flowStN(r.station))}</span>`],['jetzt (m/s)',d?`${flN(d[0]*r.fac,1)}–${flN(d[1]*r.fac*(r.mg!=null?(1+r.mg/100)/(1+(flowA.cur.cfg.mg||0)/100):1),1)}`:'–'],['Herkunft',r.src==='prop'?'Flussvermessung':'von Hand']],ed:['fre',r.id],del:['frd',r.id]})}).join('')}`}
+function flowMapDraw(){const box=$('#flMap');if(flowMap){flowMap.remove();flowMap=null}if(!box)return;const K=flowA.rch.kinds,rs=flowA.rch.reaches.filter(r=>r.grp===flowGrp&&r.pts&&r.pts.length>1),m=flowMap=L.map(box);addBases(m);const b=[];
+  rs.forEach(r=>{const ll=r.pts.map(p=>[p[0],p[1]]);b.push(...ll);L.polyline(ll,{color:(K[r.kind]||K.frei)[3],weight:7,opacity:r.active?.9:.35}).bindTooltip(esc(r.name)).addTo(m)});
+  flowA.cur.stations.filter(s=>s.lat!=null&&rs.some(r=>r.station===s.station)).forEach(s=>{b.push([s.lat,s.lon]);L.circleMarker([s.lat,s.lon],{radius:7,color:'#fff',fillColor:'#1d7fd1',fillOpacity:1}).bindTooltip('Station '+esc(s.name),{permanent:true}).addTo(m)});
+  if(b.length)m.fitBounds(L.latLngBounds(b),{padding:[14,14]});else m.setView([46.8,8.2],8);setTimeout(()=>m.invalidateSize(),0);
+  const bt=L.control({position:'topright'});bt.onAdd=()=>{const x=L.DomUtil.create('button','fleo');x.textContent='Gross bearbeiten';L.DomEvent.disableClickPropagation(x);x.onclick=()=>flowEd();return x};bt.addTo(m)}
+// Abschnitte auf der grossen Karte bearbeiten (Vollbild): antippen = auswählen, «Teilen» = Punkt im Abschnitt antippen, «Neu zeichnen» bzw. «+ Abschnitt» = beide Enden am Gewässer antippen (gefangen auf die Flussvermessung);
+// die angrenzenden Abschnitte passen sich an (fit), die Strecke bleibt lückenlos; alles wirkt sofort
+let flowE=null;
+const FLE_H={split:'Teilen: Punkt im Abschnitt antippen, an dem er geteilt wird.',redraw:'Neu zeichnen: oberes und unteres Ende am Gewässer antippen. Die angrenzenden Abschnitte passen sich an.',add:'Neuer Abschnitt: Anfang und Ende am Gewässer antippen. Überdeckte Abschnitte werden gekürzt oder geteilt.'};
+function flowEd(){if(!flowA||!flowA.rch.groups.length)return toast('Zuerst einen Vorschlag erzeugen.','info');if(flowE)return;
+  const o=document.createElement('div');o.id='flEd';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-label','Abschnitte bearbeiten');
+  o.innerHTML=`<div class="fleh"><b>Abschnitte bearbeiten</b><select id="fleG" aria-label="Gewässer"></select><button id="fleNw">+ Abschnitt</button><button class="hlp" data-hlp="verwaltung/pegel" title="Hilfe">?</button><button id="fleX" class="sec">Schliessen</button></div>
+    <div class="fleb"><div class="flem"><div id="fleM"></div><div id="fleH" class="fleht" hidden><span></span><button id="fleC" class="sec">Abbrechen</button></div></div><div class="fles" id="fleS"></div></div>`;
+  document.body.appendChild(o);const m=L.map(o.querySelector('#fleM'));addBases(m);
+  flowE={o,map:m,ly:L.layerGroup().addTo(m),sel:null,mode:'sel',pA:null,busy:0};m.on('click',flowEdClick);
+  o.querySelector('#fleX').onclick=flowEdClose;o.querySelector('#fleC').onclick=()=>flowEdMode('sel');o.querySelector('#fleNw').onclick=()=>flowEdMode('add');
+  o.querySelector('#fleG').onchange=e=>{flowGrp=e.target.value;flowE.sel=null;flowEdMode('sel');flowEdDraw(true)};
+  document.addEventListener('keydown',flowEdKey);flowEdDraw(true);setTimeout(()=>{m.invalidateSize();flowEdDraw(true)},50)}
+function flowEdKey(e){if(e.key!=='Escape'||!flowE||document.querySelector('.dlg'))return;e.preventDefault();if(flowE.mode!=='sel')flowEdMode('sel');else flowEdClose()}
+function flowEdClose(){if(!flowE)return;document.removeEventListener('keydown',flowEdKey);flowE.map.remove();flowE.o.remove();flowE=null;flowLoad()}
+const flowEdG=()=>{const gs=flowA.rch.groups;return gs.find(x=>x.grp===flowGrp)||gs[0]};
+const flowEdR=()=>flowE&&flowE.sel?flowA.rch.reaches.find(r=>r.id===flowE.sel):null;
+function flowEdMode(md){if(!flowE)return;if((md==='split'||md==='redraw')&&!flowEdR())return;flowE.mode=md;flowE.pA=null;flowE.o.classList.toggle('picking',md!=='sel');
+  const h=flowE.o.querySelector('#fleH');h.hidden=md==='sel';h.querySelector('span').textContent=FLE_H[md]||'';flowEdDraw()}
+function flowEdDraw(fit){if(!flowE)return;const R=flowA.rch,K=R.kinds,g=flowEdG();if(!g)return flowEdClose();flowGrp=g.grp;const m=flowE.map,ly=flowE.ly,sel=flowE.sel;
+  const gs=flowE.o.querySelector('#fleG');gs.innerHTML=R.groups.map(x=>`<option ${x.grp===flowGrp?'selected':''}>${esc(x.grp)}</option>`).join('');
+  const rs=R.reaches.filter(r=>r.grp===flowGrp);if(sel&&!rs.some(r=>r.id===sel))flowE.sel=null;ly.clearLayers();const b=[];
+  rs.forEach(r=>{if(!r.pts||r.pts.length<2)return;const ll=r.pts.map(p=>[p[0],p[1]]),on=flowE.sel===r.id,k=K[r.kind]||K.frei;b.push(...ll);
+    if(on)L.polyline(ll,{color:'#fff',weight:16,opacity:.95,interactive:false}).addTo(ly);
+    L.polyline(ll,{color:k[3],weight:on?10:8,opacity:r.active?.95:.4}).bindTooltip(`${esc(r.name)} · ${esc(k[1])} · ${esc(flowStN(r.station))}`,{sticky:true})
+      .on('click',e=>{if(flowE.mode==='sel'){L.DomEvent.stopPropagation(e);flowE.sel=r.id;flowEdDraw()}}).addTo(ly);
+    [ll[0],ll[ll.length-1]].forEach(p=>L.circleMarker(p,{radius:4,color:'#fff',weight:2,fillColor:'#0f2430',fillOpacity:1,interactive:false}).addTo(ly))});
+  flowA.cur.stations.filter(s=>s.lat!=null&&s.curve&&s.curve.gwl===g.gwl).forEach(s=>{b.push([s.lat,s.lon]);L.circleMarker([s.lat,s.lon],{radius:7,color:'#fff',fillColor:'#1d7fd1',fillOpacity:1,interactive:false}).bindTooltip('Station '+esc(s.name),{permanent:true}).addTo(ly)});
+  if(flowE.pA)L.circleMarker(flowE.pA,{radius:7,color:'#ff9f1c',weight:3,fillColor:'#fff',fillOpacity:1,interactive:false}).addTo(ly);
+  if(fit){const sr=flowEdR();if(sr&&sr.pts.length>1)m.fitBounds(L.latLngBounds(sr.pts.map(p=>[p[0],p[1]])),{padding:[40,40]});else if(b.length)m.fitBounds(L.latLngBounds(b),{padding:[30,30]});else m.setView([46.8,8.2],8)}
+  flowEdSide(rs)}
+function flowEdSide(rs){const K=flowA.rch.kinds,r=flowEdR(),mgD=flowA.cur.cfg.mg,S=flowE.o.querySelector('#fleS');
+  S.innerHTML=(r?`<div class="scard"><h4>${esc(r.name)}</h4><div class="mut">km ${flN(r.g_from/1000,1)} bis ${flN(r.g_to/1000,1)} · ${flN(r.len_m/1000,1)} km · ${r.src==='prop'?'Vorschlag aus der Flussvermessung':'von Hand'}</div>
+      <div class="mbtns"><button id="feSp">Teilen</button><button id="feRd">Neu zeichnen</button></div>
+      <label>Bezeichnung<input id="feN" value="${esc(r.name)}"></label><label>Bezugsstation<select id="feSt">${flowStOpts(r.gwl,r.station)}</select></label><label>Art<select id="feK">${Object.entries(K).map(([k,x])=>`<option value="${k}" ${k===r.kind?'selected':''}>${esc(x[1])}</option>`).join('')}</select></label>
+      <div class="row"><label>Faktor zur Station<input id="feF" type="number" step="0.05" min="0.05" max="2" value="${r.fac}"></label><label>Zusatzmarge %<input id="feM" type="number" step="5" min="0" max="100" value="${r.mg??''}" placeholder="${mgD}"></label></div>
+      <label class="chk"><input type="checkbox" id="feO" ${r.active?'':'checked'}> Abschnitt ausschalten</label><div class="mbtns"><button id="feSv">Speichern</button><button id="feDl" class="sec">Entfernen</button></div></div>`
+    :`<div class="mut" style="margin:.3rem 0 .6rem">Abschnitt auf der Karte oder in der Liste antippen, um ihn zu teilen, neu zu zeichnen oder Art und Faktor zu ändern. Mit «+ Abschnitt» Anfang und Ende am Gewässer antippen.</div>`)+
+    `<div class="fleL">${rs.map(x=>{const k=K[x.kind]||K.frei;return`<button class="fleI${x.id===flowE.sel?' on':''}${x.active?'':' off'}" data-fei="${x.id}"><i style="background:${k[3]}"></i><span>${esc(x.name)}<small>km ${flN(x.g_from/1000,1)}–${flN(x.g_to/1000,1)} · ${esc(k[1])} · Faktor ${flN(x.fac,2)} · ${esc(flowStN(x.station))}</small></span></button>`}).join('')}</div>`;
+  S.querySelectorAll('[data-fei]').forEach(b=>b.onclick=()=>{flowE.sel=+b.dataset.fei;flowEdMode('sel');flowEdDraw(true)});
+  if(!r)return;const v=id=>S.querySelector(id);
+  v('#feK').onchange=e=>{v('#feF').value=K[e.target.value][2]};v('#feSp').onclick=()=>flowEdMode('split');v('#feRd').onclick=()=>flowEdMode('redraw');
+  v('#feSv').onclick=()=>flowEdApi('hydro/reach/save',{id:r.id,name:v('#feN').value,station:v('#feSt').value,kind:v('#feK').value,fac:v('#feF').value,mg:v('#feM').value,km_from:r.g_from/1000,km_to:r.g_to/1000,off:v('#feO').checked?1:0},'Gespeichert.');
+  v('#feDl').onclick=async()=>{if(!await ask('Abschnitt entfernen?\n\nDie Strecke hat danach eine Lücke. Einen Nachbarn mit «Neu zeichnen» verlängern oder einen neuen Vorschlag erzeugen.'))return;flowE.sel=null;flowEdApi('hydro/reach/remove',{id:r.id},'Entfernt.')}}
+async function flowEdApi(rt,p,msg){if(!flowE||flowE.busy)return;flowE.busy=1;try{const x=await api(rt,p);if(x.id&&rt!=='hydro/reach/remove')flowE.sel=x.id;flowA.rch=await api('hydro/reaches');
+    if(typeof msg==='function')msg=msg(x);toast(msg,'ok');if(flowE){flowE.busy=0;flowEdMode('sel')}}catch(e){if(flowE){flowE.busy=0;flowE.pA=null;flowEdDraw()}fail(e)}}
+function flowEdClick(e){if(!flowE||flowE.busy)return;const md=flowE.mode,ll=[+e.latlng.lat.toFixed(6),+e.latlng.lng.toFixed(6)];
+  if(md==='sel'){if(flowE.sel){flowE.sel=null;flowEdDraw()}return}
+  const r=flowEdR();if(md==='split')return flowEdApi('hydro/reach/split',{id:r.id,at:ll},x=>`Geteilt bei km ${flN(x.km,1)}.`);
+  if(!flowE.pA){flowE.pA=ll;flowE.o.querySelector('#fleH span').textContent='Jetzt das andere Ende antippen.';return flowEdDraw()}
+  const pa=flowE.pA,K=flowA.rch.kinds;
+  if(md==='redraw')return flowEdApi('hydro/reach/save',{id:r.id,name:/^km [\d.]+ – km [\d.]+$/.test(r.name)?'':r.name,station:r.station,kind:r.kind,fac:r.fac,mg:r.mg??'',off:r.active?0:1,pa,pb:ll,fit:1},'Neu gezeichnet.');
+  flowEdApi('hydro/reach/save',{id:0,gwl:flowEdG().gwl,name:'',kind:'frei',fac:K.frei[2],mg:'',pa,pb:ll,fit:1},'Abschnitt erstellt.')}
+async function flowLoad(){const el=$('#hyFlow');if(!el)return;let cur,rch,ks;try{[cur,rch,ks]=await Promise.all([api('hydro/curves'),api('hydro/reaches'),api('kinds')])}catch(e){return secErr(el,'Fliessgeschwindigkeit',e)}
+  flowA={cur,rch};const flowRH=flowReachHtml();const c=cur.cfg,N=cur.num,K=(ks.kinds||[]).filter(k=>!k.deleted&&k.active),kc=id=>c.kinds[id]||{show:1,note:1};
+  el.innerHTML=`<h3>Fliessgeschwindigkeit an den Stationen</h3><div class="mut">Die Geschwindigkeit an jeder Station folgt aus Abfluss und benetztem Querschnitt (BAFU-Flussvermessung), die Vorhersage aus der BAFU-Abflussvorhersage. Nachts neu berechnet. Die App zeigt einen Vorschlag mit «Übernehmen» und ändert nie selbst.</div>
+    ${newBar('flAdd','Station',`${qIn('flQ','Station suchen')}<label class="chk"><input type="checkbox" id="flNeed"> nur mit Handlungsbedarf</label>`)}
+    <div id="flSt">${cur.stations.length?cur.stations.map(flowStH).join(''):empty('Noch keine Station. Die App berechnet die Kennlinie der Station beim PLS beim ersten Einsatz selbst. Beispiel: «+ Station» Aare – Brugg (2016).')}</div>
+    <h3>Abschnitte</h3><div class="mut">Vorschlag je Gewässer lückenlos über alle Stationen, aus Längenprofil, Wehren und Schwellen der Flussvermessung. Bestätigen oder korrigieren: auf der grossen Karte teilen, neu zeichnen oder Art und Faktor ändern; Kraftwerke mit Ausbau- und Dotierwassermenge von Hand.</div>
+    <div class="row" style="margin:.5rem 0">${rch.groups.length?`<select id="flGrp" style="flex:1 1 14rem">${rch.groups.map(g=>`<option ${g.grp===flowGrp?'selected':''}>${esc(g.grp)}</option>`).join('')}</select>`:''}<button id="flProp">${rch.groups.length?'Vorschlag neu erzeugen':'Vorschlag erzeugen'}</button>${rch.groups.length?'<button id="flEdB">Auf der Karte bearbeiten</button><button id="flRAdd">+ Abschnitt</button>':''}</div>
+    <div id="flR">${flowRH}</div>
+    <div class="scard"><h3>Vorhersage und Meldungen</h3><div class="mut">Driftspanne = Faktor × Geschwindigkeit an der Oberfläche (≈ mittlere ÷ 0.85), die obere Grenze zusätzlich mit der Zusatzmarge für die Hauptströmung: in der Flussmitte fliesst das Wasser schneller als der Durchschnitt. Je Abschnitt übersteuerbar. Relevante Veränderungen gehen an die Einsatzleitung: Hinweis in der Einsatz-App, Eintrag im Einsatzlog, Push mit der Stufe des Einsatztyps für Nachrichten. Fliessgeschwindigkeit und Suchgebiet bleiben unverändert.</div>
+    <div class="anums">${numCard('flLo','Driftfaktor von',c.f_lo,'',N.f_lo[1],N.f_lo[2],0.05,N.f_lo[0])}${numCard('flHi','Driftfaktor bis',c.f_hi,'',N.f_hi[1],N.f_hi[2],0.05,N.f_hi[0])}${numCard('flMg','Zusatzmarge Hauptströmung',c.mg,'%',N.mg[1],N.mg[2],5,N.mg[0])}${numCard('flDev','Abweichung zur eingestellten',c.dev,'%',N.dev[1],N.dev[2],5,N.dev[0])}${numCard('flMin','und mindestens',c.min_kmh,'km/h',N.min_kmh[1],N.min_kmh[2],0.1,N.min_kmh[0])}${numCard('flHor','Horizont der Prüfung',c.hor,'h',N.hor[1],N.hor[2],1,N.hor[0])}${numCard('flDq','Abfluss ändert sich um',c.dq,'% in 3 h',N.dq[1],N.dq[2],5,N.dq[0])}</div>
+    <h4>Suchgebiet</h4><div class="mut">Die im Einsatz eingegebene Fliessgeschwindigkeit ist die Grundgeschwindigkeit; ohne Abschnitte gilt sie für den ganzen Flusslauf. In den Abschnitten gilt Grundgeschwindigkeit × Faktor, sofern unten eingeschaltet. Die Einsatzkräfte können beides im Einsatz übersteuern (je Abschnitt, Grundgeschwindigkeit, Messung an einem Punkt).</div>
+    <label class="chk"><input type="checkbox" id="flAuto" ${c.auto?'checked':''}> Faktoren der Abschnitte im Suchgebiet automatisch anwenden</label><div class="anums">${numCard('flPct','Zuschlag auf die Driftdistanz',c.pct??0,'%',N.pct?N.pct[1]:-50,N.pct?N.pct[2]:200,5,N.pct?N.pct[0]:0,'Vorgabe für neue Einsätze, z. B. 20 = Suchgebiet 20 % länger')}</div>
+    <h4>Meldungen</h4>    <label class="chk"><input type="checkbox" id="flDg" ${c.danger?'checked':''}> Melden, wenn eine höhere Gefahrenstufe vorhergesagt ist</label><label class="chk"><input type="checkbox" id="flFc" ${c.fc_new?'checked':''}> Melden bei einer neuen BAFU-Vorhersage mit ≥ 20 % höherem Median</label><label class="chk"><input type="checkbox" id="flAll" ${c.all?'checked':''}> Auch Teilnehmenden ohne Leitungsrechte melden</label>
+    <h4>Je Einsatztyp</h4><table class="fltt"><tr><th></th>${K.map(k=>`<th>${esc(k.name)}</th>`).join('')}</tr><tr><td>Vorhersage anzeigen</td>${K.map(k=>`<td><input type="checkbox" data-fks="${k.id}" aria-label="Vorhersage anzeigen: ${esc(k.name)}" ${kc(k.id).show?'checked':''}></td>`).join('')}</tr><tr><td>Relevante Veränderungen melden</td>${K.map(k=>`<td><input type="checkbox" data-fkn="${k.id}" aria-label="Melden: ${esc(k.name)}" ${kc(k.id).note?'checked':''}></td>`).join('')}</tr></table>${sbar('flSv')}</div>`;
+  qWire(el,'flQ');const nd=$('#flNeed'),nf=()=>el.querySelectorAll('#flSt .ent').forEach(x=>{if(nd.checked&&!x.classList.contains('flneed'))x.style.display='none';else if(!nd.checked&&x.style.display==='none')x.style.display=''});nd.onchange=nf;
+  el.querySelectorAll('[data-flk]').forEach(b=>b.onclick=()=>flowCurveDlg(b.dataset.flk));
+  el.querySelectorAll('[data-flr]').forEach(b=>b.onclick=()=>flowCalcRun(b.dataset.flr,b,1).catch(fail));
+  el.querySelectorAll('[data-fld]').forEach(b=>b.onclick=async()=>{if(!await ask('Station entfernen?\n\nDie Kennlinie wird gelöscht. Im nächsten Einsatz beim PLS berechnet die App sie neu.'))return;api('hydro/curve/remove',{id:b.dataset.fld}).then(flowLoad).catch(fail)});
+  $('#flAdd').onclick=()=>{const all=cur.all,nm=x=>`${x.water} – ${x.name} (${x.id})`;dlg('Station erfassen',`<label>Station<input id="flNew" list="flAllN" placeholder="Beispiel: Aare – Brugg"></label><datalist id="flAllN">${all.map(x=>`<option value="${esc(nm(x))}">`).join('')}</datalist><div class="mut">Die App holt Querprofil und Stundenwerte bei der BAFU-Datenplattform und berechnet die Kennlinie (dauert bis eine Minute).</div>`,
+    async d=>{const v=d.querySelector('#flNew').value,m=v.match(/\(([^()]+)\)\s*$/),id=m?m[1]:v.trim();if(!all.some(x=>x.id===id))throw new Error('Station nicht gefunden. Bitte aus der Liste wählen.');await flowCalcRun(id,d.querySelector('[data-ok]'))},'Berechnen')};
+  if($('#flGrp'))$('#flGrp').onchange=e=>{flowGrp=e.target.value;$('#flR').innerHTML=flowReachHtml();flowRBind()};
+  $('#flProp').onclick=flowPropDlg;if($('#flEdB'))$('#flEdB').onclick=()=>flowEd();if($('#flRAdd'))$('#flRAdd').onclick=()=>flowReachDlg(null,(rch.groups.find(g=>g.grp===flowGrp)||{}).station);
+  const flowRBind=()=>{el.querySelectorAll('[data-fre]').forEach(b=>b.onclick=()=>flowReachDlg(rch.reaches.find(r=>r.id===+b.dataset.fre)));
+    el.querySelectorAll('[data-frd]').forEach(b=>b.onclick=async()=>{if(!await ask('Abschnitt entfernen?\n\nEin neuer Vorschlag kann ihn wieder erzeugen.'))return;api('hydro/reach/remove',{id:+b.dataset.frd}).then(flowLoad).catch(fail)});flowMapDraw()};flowRBind();
+  $('#flSv').onclick=()=>api('settings/save',{flow:{f_lo:$('#flLo').value,f_hi:$('#flHi').value,mg:$('#flMg').value,dev:$('#flDev').value,min_kmh:$('#flMin').value,hor:$('#flHor').value,dq:$('#flDq').value,danger:$('#flDg').checked?1:0,auto:$('#flAuto').checked?1:0,pct:$('#flPct').value,fc_new:$('#flFc').checked?1:0,all:$('#flAll').checked?1:0,
+    kinds:Object.fromEntries(K.map(k=>[k.id,{show:el.querySelector(`[data-fks="${k.id}"]`).checked?1:0,note:el.querySelector(`[data-fkn="${k.id}"]`).checked?1:0}]))}}).then(()=>{toast('Gespeichert.','ok');flowLoad()}).catch(fail)}
 /* ---------- Übungen vorbereiten (Issue #29) ---------- */
 // Aufgebotsmeldung, Übungsleitung (Rechte der Einsatzleitung, nimmt nicht teil), Aufzeichnung, öffentlicher Link (schon vor dem Start gültig, zeigt bis dahin eine Warteseite)
 // und Elemente, die die Übungsleitung in der Einsatz-App freigibt: PLS des Einsatzes, neuer Rettling, Rettling gesichtet, je mit optionaler Meldung (Nachricht an alle)

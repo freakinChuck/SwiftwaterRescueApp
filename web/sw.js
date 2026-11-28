@@ -39,7 +39,7 @@ self.addEventListener('fetch',e=>{const q=e.request;if(q.method!=='GET')return;c
 // Einsatzende (Issue #174): end = Einsatz, zuerst alle Meldungen des Einsatzes schliessen (i:<id>, k:<id>:, dazu m: und v:, die keinen Einsatz tragen; Issue #167), dann die
 // Meldung «beendet» zeigen; rt = nur zurücknehmen (Alarmierte ohne Teilnahme), still. Web-Push muss immer etwas anzeigen, sonst sperren Browser das Abo.
 // parallele Einsätze (Issue #167): Alarm und «entfernt» nur dieses Einsatzes; Nachrichten (m:) und Durchsagen (v:) tragen keinen Einsatz und gehen mit
-const incNotesClose=id=>{const re=new RegExp('^(i:'+id+'$|k:'+id+':|[mv]:)');return self.registration.getNotifications().then(ns=>ns.forEach(n=>{if(re.test(n.tag||''))n.close()})).catch(()=>{})};
+const incNotesClose=id=>{const re=new RegExp('^(i:'+id+'$|k:'+id+':|[mvh]:)');return self.registration.getNotifications().then(ns=>ns.forEach(n=>{if(re.test(n.tag||''))n.close()})).catch(()=>{})};
 self.addEventListener('push',e=>{let m={};try{m=e.data?e.data.json():{}}catch(_){m={t:'Swiftwater Rescue',b:e.data?e.data.text():''}}
   e.waitUntil((m.end?incNotesClose(m.end):Promise.resolve()).then(()=>self.clients.matchAll({type:'window',includeUncontrolled:true})).then(cs=>{
     if(cs.some(c=>c.visibilityState==='visible'&&c.focused))return;
@@ -48,7 +48,7 @@ self.addEventListener('push',e=>{let m={};try{m=e.data?e.data.json():{}}catch(_)
       ...(m.silent?{silent:true}:{vibrate:m.crit?[600,200,600,200,600,200,600]:[200]}),icon:'img/icon-192.png',badge:'img/badge-96.png',data:{url:'./'}})}))}); // silent und vibrate zusammen wirft einen Fehler
 // Klick: offene App in den Vordergrund holen, sonst öffnen. Alarm (i:), Nachricht (m:) und Entfernen (k:) gehören zum laufenden Einsatz:
 // die App zeigt dann das Einsatzgebiet (Feedback zu #108; offene App über postMessage, neue über ?fokus=1)
-self.addEventListener('notificationclick',e=>{e.notification.close();const inc=/^[imkv]:/.test(e.notification.tag||''); // v: Durchsage im Funk (Issue #113)
+self.addEventListener('notificationclick',e=>{e.notification.close();const inc=/^[imkvh]:/.test(e.notification.tag||''); // v: Durchsage im Funk (Issue #113), h: Fliessgeschwindigkeit (Issue #254)
   // f: Feedback-Anfrage zum AAR (Issue #103) öffnet «Meine Einsätze»
   if(/^f:/.test(e.notification.tag||''))return e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(c=>c.url.includes('admin.html'));
     if(c&&'navigate'in c)return c.navigate(new URL('admin.html#meine',self.registration.scope).href).then(w=>(w||c).focus()).catch(()=>c.focus());return self.clients.openWindow('admin.html#meine')}));
