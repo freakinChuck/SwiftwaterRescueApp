@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "version": "1.6.0",
+      "date": "2026-11-28",
+      "items": [
+        "Notruf-Knopf (SOS) für Einsatzkräfte (Issue #240) (#255)",
+        "Geschwindigkeiten wählbar in m/s, km/h oder beidem (Issue #259) (#261)",
+        "Falsches Login: «Benutzername oder Passwort falsch» statt «Serverfehler» (#265)",
+        "ETA: wann das Suchgebiet Positionen flussabwärts erreicht (Issue #258) (#262)",
+        "Einsatzkonzepte: vorbereitete Lagen laden, Vorschlag beim PLS (Issue #260) (#263)",
+        "Release-Pipelines: Releases in App Store und Play «Alpha» (Issue #264) (#266)",
+        "Wasserzeit-Überwachung für Einsatzkräfte im Wasser (Issue #241) (#256)",
+        "Fliessgeschwindigkeit an den Messstationen vorhersagen (Issue #254) (#257)"
+      ]
+    },
+    {
       "version": "1.5.0",
       "date": "2026-11-22",
       "items": [
