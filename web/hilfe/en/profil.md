@@ -6,7 +6,7 @@ The 👤 button in the header of the menu opens your **profile** with all person
 
 ## Account {#konto}
 
-Name, username and your response groups. Here you change your **profile picture** and your **password** and **log out**. Logging out deletes the state stored on the device. Under **Logged-in apps** you see the devices on which the native app is logged in with your account and can log them out.
+Name, username and your response groups. Here you change your **profile picture** and your **password** and **log out**. A password needs at least 10 characters and must be neither your user name nor a common password; if your current one does not meet this, the app asks for a new one when you log in. Logging out deletes the state stored on the device. Under **Logged-in apps** you see the devices on which the native app is logged in with your account and can log them out.
 
 ## Alerting {#alarmierung}
 

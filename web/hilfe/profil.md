@@ -6,7 +6,7 @@ Der Knopf 👤 in der Kopfzeile des Menüs öffnet dein **Profil** mit allen per
 
 ## Konto {#konto}
 
-Name, Benutzername und deine Einsatzgruppen. Hier änderst du dein **Profilbild** und dein **Passwort** und meldest dich **ab**. Abmelden löscht den auf dem Gerät gemerkten Stand. Unter **Angemeldete Apps** siehst du die Geräte, auf denen die native App mit deinem Konto angemeldet ist, und kannst sie abmelden.
+Name, Benutzername und deine Einsatzgruppen. Hier änderst du dein **Profilbild** und dein **Passwort** und meldest dich **ab**. Ein Passwort braucht mindestens 10 Zeichen und darf weder dein Benutzername noch ein häufiges Passwort sein; erfüllt dein bisheriges das nicht, fragt die App bei der Anmeldung nach einem neuen. Abmelden löscht den auf dem Gerät gemerkten Stand. Unter **Angemeldete Apps** siehst du die Geräte, auf denen die native App mit deinem Konto angemeldet ist, und kannst sie abmelden.
 
 ## Alarmierung {#alarmierung}
 
