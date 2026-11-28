@@ -11,4 +11,8 @@ return [
   // der App (Firebase-Konsole → Projekteinstellungen → Dienstkonten → Neuen privaten Schlüssel generieren). Datei ausserhalb des Webroots oder in api/data/ ablegen, nie committen.
   // Ohne diesen Eintrag erhalten die Apps keinen Push und überwachen den Server nur per Polling.
   // 'fcm' => __DIR__ . '/data/firebase-service-account.json',
+  // Optional (Issue #274): Der Server ruft nur öffentliche Adressen ab. Dienste im internen Netz (eigener AI-Server wie Ollama, LiveKit, PostGIS-API,
+  // Partnerorganisation, Postfach) hier freigeben: Hosts bzw. IP-Adressen genau so, wie sie in der Verwaltung eingetragen sind.
+  // 'net_allow' => ['ollama.intern', '10.0.0.5'],
+  // 'net_private' => true, // alle internen Adressen erlauben (nur, wenn niemand Unbefugtes die Einstellungen ändern kann)
 ];
