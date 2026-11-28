@@ -98,10 +98,12 @@ if ($missing.Count) {
   Remove-Item $tar
   throw "Abbruch: Im Archiv fehlen eingebundene Dateien: $($missing -join ', '). Dateiliste `$files in scripts/deploy.ps1 von $Ref ergaenzen."
 }
-# api/data/version.json (Issue #175): angezeigte Version, Commit (= ?v= der Seiten) und System; liest die API (verInfo)
+# api/data/version.json (Issue #175): angezeigte Version, Commit, Kennung build (= ?v= der Seiten) und System; liest die API (verInfo)
 $ver = Get-SwVersion $Ref $sha
+# build = zufällige Kennung je Deployment für ?v= der Seiten und den Header X-Build (Issue #275): Ohne Anmeldung soll sich der Commit nicht nachschlagen lassen
+$build = -join ((1..10) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
 $vj = Join-Path $env:TEMP "swiftwater-version-$sha.json"
-[IO.File]::WriteAllText($vj, (@{ version = $ver.version; full = $ver.full; commit = "$sha"; env = $envName; ref = $Ref; at = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() } | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false)))
+[IO.File]::WriteAllText($vj, (@{ version = $ver.version; full = $ver.full; commit = "$sha"; build = $build; env = $envName; ref = $Ref; at = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() } | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false)))
 
 # Auf dem Server zuerst in einen Zwischenordner entpacken und die PHP-Syntax prüfen, erst dann übernehmen.
 # common.js/common.css werden in den HTML-Seiten mit ?v=<Stand> eingebunden, damit Browser nach jedem Deployment die neuen Dateien laden. In sw.js ebenso, damit der Service Worker (Issue #67) sich mit jedem Deployment erneuert.
@@ -109,6 +111,6 @@ $stage = ".swiftwater-deploy-$sha"
 Write-Host "Deploye $Ref ($sha, Version $($ver.full)) nach $envName, ${dest}:$($c.path)"
 scp @opt $tar "${dest}:$stage.tar"; Check 'Upload'
 scp @opt $vj "${dest}:$stage.json"; Check 'Upload Version'
-ssh @opt $dest "set -e; rm -rf $stage; mkdir $stage; tar -xf $stage.tar -C $stage; rm $stage.tar; php -l $stage/api/index.php; if [ $envName != dev ]; then cp $stage/img/$envName/* $stage/img/; fi; rm -rf $stage/img/test $stage/img/prod; sed -i 's/?v=[0-9a-z]*/?v=$sha/g' $stage/*.html $stage/sw.js; cp -r $stage/. $($c.path)/; rm -rf $stage; mv $stage.json $($c.path)/api/data/version.json; echo '$Ref $sha' > $($c.path)/api/data/deployed.txt; echo Fertig."
+ssh @opt $dest "set -e; rm -rf $stage; mkdir $stage; tar -xf $stage.tar -C $stage; rm $stage.tar; php -l $stage/api/index.php; if [ $envName != dev ]; then cp $stage/img/$envName/* $stage/img/; fi; rm -rf $stage/img/test $stage/img/prod; sed -i 's/?v=[0-9a-z]*/?v=$build/g' $stage/*.html $stage/sw.js; cp -r $stage/. $($c.path)/; rm -rf $stage; mv $stage.json $($c.path)/api/data/version.json; echo '$Ref $sha' > $($c.path)/api/data/deployed.txt; echo Fertig."
 Check 'Installation auf dem Server'
 Remove-Item $tar, $vj

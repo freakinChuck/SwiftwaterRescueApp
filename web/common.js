@@ -1,6 +1,6 @@
 /* Gemeinsamer Code für Einsatz-App (index.html) und Verwaltung (admin.html) */
 const API='api/index.php';
-const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 if(!window.LOC)window.LOC='de-CH';if(!window.T)window.T=s=>String(s??''); // Mehrsprachigkeit (Issue #66): i18n.js setzt LOC (Datumsformat) und T (Übersetzen ausserhalb des DOM)
 var DEMO=window.DEMO||null; // Demo-Modus (Issue #74): gesetzt von demo.js (nur index.html lädt es, nur mit ?demo), sonst null
 let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt die jeweilige Seite
@@ -357,14 +357,14 @@ const roleNames=m=>(m&&m.uroles||[]).map(r=>r.name).join(', ')||'keine Benutzerr
 function logout(){const t=token;if(t)fetch(`${API}?r=logout`,{method:'POST',headers:{'X-Token':t},body:'{}',keepalive:true}).catch(()=>{});
   token=null;localStorage.removeItem('sw_token');['sw_last','sw_boot'].forEach(k=>localStorage.removeItem(k));swNative('swLogout')} // letzter Stand gehört der abgemeldeten Person
 /* ---------- Versionen (Issue #175) ---------- */
-// Stand dieser Seite = ?v= von common.js (deploy.ps1 setzt den Commit ein, im Repo 0 = unbekannt). Der Server liefert seinen Stand im Header X-Build (api());
+// Stand dieser Seite = ?v= von common.js (deploy.ps1 setzt je Deployment eine zufällige Kennung ein, Issue #275, im Repo 0 = unbekannt). Der Server liefert seinen Stand im Header X-Build (api());
 // weicht er ab, ist inzwischen eine neuere Fassung ausgeliefert: Hinweis «Neue Version verfügbar» mit «Neu laden», einmal je Seitenaufruf («Später» blendet ihn aus).
 const BUILD=(()=>{try{const m=/[?&]v=([0-9a-z]+)/.exec(document.currentScript.src);return m&&m[1]!=='0'?m[1]:''}catch(e){return''}})();
 let verNewShown=false;
 function verNew(b){if(verNewShown||!BUILD||!b||b===BUILD||!document.body)return;verNewShown=true;const d=document.createElement('div');d.id='verNew';d.setAttribute('role','status');
   d.innerHTML='<span>Neue Version verfügbar.</span><button class="pri" data-r>Neu laden</button><button data-x>Später</button>';
   d.querySelector('[data-r]').onclick=()=>location.reload();d.querySelector('[data-x]').onclick=()=>d.remove();document.body.appendChild(d)}
-// Anzeige der Version (verPub im Server): Produktiv nur die Nummer, sonst mit Abstand, Commit und System, z. B. «0.1.0+12.abc1234 · Test»
+// Anzeige der Version (verPub im Server): Produktiv bzw. ohne Anmeldung nur die Nummer, sonst mit Abstand, Commit und System, z. B. «0.1.0+12.abc1234 · Test»
 const verTxt=v=>v&&v.version?v.full+(v.env&&v.env!=='prod'?' · '+(v.env_name||v.env)+(v.pr?' PR '+v.pr:''):''):'';
 const verParse=s=>String(s||'').split(/[^0-9.]/)[0].split('.').map(Number);
 function verCmp(a,b){const x=verParse(a),y=verParse(b);for(let i=0;i<3;i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0}

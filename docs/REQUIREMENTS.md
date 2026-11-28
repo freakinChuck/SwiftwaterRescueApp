@@ -382,14 +382,15 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 
 - **VS-01** – Web-App, Server und native App haben eine gemeinsame Versionsnummer MAJOR.MINOR.PATCH, vor dem Produktivstart 0.x (AG, #175).
 - **VS-02** – Releases sind im Quellcode als Tag vX.Y.Z auf main markiert und als GitHub-Release mit Release Notes veröffentlicht; ein Release entsteht von Hand über einen Workflow, der die Version erhöht, die Notes schreibt und die App-Builds (App Store, Google Play «Alpha») für genau diese Version startet (#175, #264).
-- **VS-03** – Test- und Entwicklungssysteme zeigen zwischen zwei Releases den Abstand zum letzten Release und den Commit sowie das System (z. B. «0.1.0+12.abc1234 · Test», DEV mit PR-Nummer), das Produktivsystem nur die Versionsnummer (AG, #175).
-- **VS-04** – Die Version ist auch ohne Anmeldung sichtbar (Anmeldung, Seite «Impressum, Lizenzen & Datenschutz»), angemeldet im Profil, im Register «Info» bzw. in der Fusszeile des Menüs und im Konto-Menü der Verwaltung (AG, #175).
+- **VS-03** – Test- und Entwicklungssysteme zeigen zwischen zwei Releases den Abstand zum letzten Release und den Commit sowie das System (z. B. «0.1.0+12.abc1234 · Test», DEV mit PR-Nummer), das Produktivsystem nur die Versionsnummer (AG, #175). Abstand, Commit und System sehen nur Angemeldete (#275).
+- **VS-04** – Die Release-Version ist auch ohne Anmeldung sichtbar (Anmeldung, Seite «Impressum, Lizenzen & Datenschutz»; ohne Abstand, Commit und System, #275), angemeldet im Profil, im Register «Info» bzw. in der Fusszeile des Menüs und im Konto-Menü der Verwaltung (AG, #175).
 - **VS-05** – «Was ist neu»: Nach einem Update zeigen Web-App, Verwaltung und native App einmal die Änderungen seit der zuletzt gesehenen Version; jederzeit abrufbar im Profil bzw. in den Einstellungen und in der Verwaltung (AG, #175).
 - **VS-06** – Läuft auf dem Server inzwischen eine neuere Fassung als die geladene Seite, erscheint der Hinweis «Neue Version verfügbar» mit «Neu laden» (#175).
 - **VS-07** – Die native App meldet ihre Version dem Server; die Verwaltung (System → «Versionen», eigenes Recht) zeigt den ausgelieferten Stand des Servers und die angemeldeten Apps je Plattform und Version (#175).
 - **VS-08** – In der Verwaltung lässt sich eine Mindestversion der App festlegen. Ältere Apps zeigen nur den Hinweis «Bitte App aktualisieren» (im Menü mit «Später» für 7 Tage ausblendbar, in der Kontenliste und im Profil); Alarmierung und Einsatz funktionieren weiter, gesperrt wird nie. Denselben Hinweis gibt es, wenn der Server eine höhere API-Stufe hat als die App (AG, #175).
 - **VS-09** – Jedes Deployment einer neuen Version steht im Applikationslog («Version a → b») (#175).
 - **VS-10** – Android- und iOS-App desselben Pipeline-Laufs haben dieselbe Build-Nummer; sie steigt mit jedem Lauf um 1 (fortlaufend, keine grossen Sprünge, die Google Play ablehnt), auch über den von Hand ausgelösten iOS-Build hinweg (AG, #230).
+- **VS-11** – Ohne Anmeldung lässt sich der ausgelieferte Code-Stand nicht nachschlagen: Die Kennung, an der die Seiten eine neuere Fassung erkennen (Header und Adressen der Skripte), ist je Deployment zufällig und nicht der Commit (#275).
 
 ## 27. Demo-Modus (DM)
 

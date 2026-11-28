@@ -2511,7 +2511,7 @@ async function aarArchGet(id){try{await aarArchSync();const f=await api(`aar/arc
     aarSave(blob,f.name)}catch(e){fail(e)}}
 // Word: minimales Office-Open-XML-Paket (Dokument, Formatvorlagen, Fusszeile mit Seitenzahl, Logo)
 async function aarDocx(B,logo,title){await loadJs(AAR_LIB.zip);
-  const X=s=>String(s??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const X=s=>String(s??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const run=(t,rp='')=>`<w:r>${rp?`<w:rPr>${rp}</w:rPr>`:''}${String(t??'').split('\n').map((l,n)=>`${n?'<w:br/>':''}<w:t xml:space="preserve">${X(l)}</w:t>`).join('')}</w:r>`;
   const par=(st,t,rp,pp='')=>`<w:p><w:pPr>${st?`<w:pStyle w:val="${st}"/>`:''}${pp}</w:pPr>${run(t,rp)}</w:p>`;
   const TW=9638,cell=(t,w,b,fill)=>`<w:tc><w:tcPr><w:tcW w:w="${Math.round(w*TW/5000)}" w:type="dxa"/>${fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:''}</w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr>${run(t,(b?'<w:b/>':'')+'<w:sz w:val="18"/><w:szCs w:val="18"/>')}</w:p></w:tc>`;
