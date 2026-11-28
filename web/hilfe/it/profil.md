@@ -6,7 +6,7 @@ Il pulsante 👤 nell'intestazione del menu apre il tuo **profilo** con tutte le
 
 ## Account {#konto}
 
-Nome, nome utente e i tuoi gruppi d'intervento. Qui cambi la tua **immagine del profilo** e la tua **password** ed **esci**. L'uscita cancella lo stato salvato sul dispositivo. Sotto **App connesse** vedi i dispositivi su cui l'app nativa è connessa con il tuo account e puoi disconnetterli.
+Nome, nome utente e i tuoi gruppi d'intervento. Qui cambi la tua **immagine del profilo** e la tua **password** ed **esci**. L'uscita cancella lo stato salvato sul dispositivo. Sotto **App connesse** vedi i dispositivi su cui l'app nativa è connessa con il tuo account e puoi disconnetterli. Quando cambi la password, tutti gli altri browser e app vengono disconnessi finché la casella **Disconnetti altri dispositivi e app** è spuntata. Dopo cinque password errate l'accesso è bloccato per 15 minuti. Un accesso non utilizzato per 90 giorni (app: 180 giorni, tranne con push) scade.
 
 ## Allarme {#alarmierung}
 

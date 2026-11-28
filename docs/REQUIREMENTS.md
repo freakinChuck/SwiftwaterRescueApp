@@ -35,9 +35,10 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KO-05** – Abmelden löscht den auf dem Gerät gemerkten Stand (#67).
 - **KO-06** – Das Profil ist in Karten gegliedert (Konto, Alarmierung, Anzeige, AI-Assistent, Rechtliches), je Thema mit eigenem Titel; Knöpfe stehen als gleich breite Spalten. Unter «Alarmierung» stehen der Stand der Einsatzfähigkeit und die eigenen Abwesenheiten mit Erfassen, Ändern und Beenden (#126).
 - **KO-07** – Abmelden meldet auch auf dem Server ab: Der Anmeldeschlüssel des Browsers bzw. die Sitzung der App ist danach ungültig (#108).
-- **KO-08** – Die nativen Apps erhalten je Gerät eine eigene Anmeldung: Eine Anmeldung in der App meldet weder den Browser noch andere Geräte ab und umgekehrt. Im Profil stehen die angemeldeten Apps, entfernen meldet sie ab. Passwort zurücksetzen und Deaktivieren melden auch alle Apps ab, das eigene Passwort ändern nicht (#108).
+- **KO-08** – Die nativen Apps erhalten je Gerät eine eigene Anmeldung: Eine Anmeldung in der App meldet weder den Browser noch andere Geräte ab und umgekehrt. Im Profil stehen die angemeldeten Apps, entfernen meldet sie ab. Passwort zurücksetzen und Deaktivieren melden auch alle Apps ab; das eigene Passwort ändern meldet alle anderen Browser und Apps ab, sofern die Person das Häkchen «Andere Geräte und Apps abmelden» nicht entfernt (#108, #270).
 - **KO-09** – Geschwindigkeiten (Fliessgeschwindigkeit, Flussdistanz, Helikopter) erscheinen wahlweise in m/s, in km/h oder in beiden Einheiten. Den Standard legt die Organisation in der Verwaltung fest (gilt auch für die öffentliche Ansicht), jede Person kann ihn im Profil übersteuern. Mit km/h wird auch die Fliessgeschwindigkeit in km/h eingegeben; gespeichert wird in m/s (#259).
-- Zugriffsschutz bzw. Rate-Limit für den Login (**offen**).
+- **KO-12** – Nach 5 Fehlversuchen für einen Benutzernamen bzw. 30 Fehlversuchen von einer IP-Adresse innert 15 Minuten lehnt der Server weitere Anmeldungen ab, bis die Frist abgelaufen ist; ebenso das falsche aktuelle Passwort beim Ändern des eigenen Passworts. Unbekannte Benutzernamen dauern gleich lang wie falsche Passwörter (#269).
+- **KO-13** – Anmeldeschlüssel werden auf dem Server nur als Hash gespeichert. Eine Anmeldung im Browser verfällt nach 90 Tagen ohne Verwendung, eine Anmeldung der App nach 180 Tagen, ausser die App ist für Push angemeldet (sonst endete die Alarmierung unbemerkt) (#270).
 
 ## 3. Benutzer und Berechtigungen (BE)
 

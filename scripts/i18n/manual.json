@@ -546,7 +546,10 @@
 "Grundgeschwindigkeit von Hand": "Base speed set manually",
 "Ersetzt den Wert aus den Messstationen, bis du ihn wieder aus den Messstationen übernimmst. Für eine Messung im Wasser besser «An einem Punkt gemessen …».": "Replaces the value from the gauging stations until you take it from the gauging stations again. For a measurement in the water, better use “Measured at a point …”.",
 "Alle Geschwindigkeiten aus den Messstationen werden im selben Verhältnis angeglichen.": "All speeds from the gauging stations are adjusted in the same proportion.",
-"Angeglichen": "Adjusted"
+"Angeglichen": "Adjusted",
+"Andere Geräte und Apps abmelden": "Log out other devices and apps",
+"Passwort geändert, {0} andere Anmeldungen beendet.": "Password changed, {0} other logins ended.",
+"Zu viele Fehlversuche, bitte in {0} min erneut versuchen": "Too many failed attempts, please try again in {0} min"
 },
 "fr": {
 "Angemeldet:": "Connecté :",
@@ -1095,7 +1098,10 @@
 "Grundgeschwindigkeit von Hand": "Vitesse de base manuelle",
 "Ersetzt den Wert aus den Messstationen, bis du ihn wieder aus den Messstationen übernimmst. Für eine Messung im Wasser besser «An einem Punkt gemessen …».": "Remplace la valeur des stations de mesure jusqu'à ce que tu la reprennes des stations de mesure. Pour une mesure dans l'eau, utilise plutôt « Mesuré en un point … ».",
 "Alle Geschwindigkeiten aus den Messstationen werden im selben Verhältnis angeglichen.": "Toutes les vitesses des stations de mesure sont ajustées dans la même proportion.",
-"Angeglichen": "Ajustée"
+"Angeglichen": "Ajustée",
+"Andere Geräte und Apps abmelden": "Déconnecter les autres appareils et apps",
+"Passwort geändert, {0} andere Anmeldungen beendet.": "Mot de passe modifié, {0} autres connexions terminées.",
+"Zu viele Fehlversuche, bitte in {0} min erneut versuchen": "Trop de tentatives échouées, veuillez réessayer dans {0} min"
 },
 "it": {
 "Angemeldet:": "Connesso:",
@@ -1644,6 +1650,9 @@
 "Grundgeschwindigkeit von Hand": "Velocità di base manuale",
 "Ersetzt den Wert aus den Messstationen, bis du ihn wieder aus den Messstationen übernimmst. Für eine Messung im Wasser besser «An einem Punkt gemessen …».": "Sostituisce il valore delle stazioni di misura finché non lo riprendi dalle stazioni di misura. Per una misurazione in acqua meglio «Misurato in un punto …».",
 "Alle Geschwindigkeiten aus den Messstationen werden im selben Verhältnis angeglichen.": "Tutte le velocità delle stazioni di misura vengono adattate nella stessa proporzione.",
-"Angeglichen": "Adattata"
+"Angeglichen": "Adattata",
+"Andere Geräte und Apps abmelden": "Disconnetti altri dispositivi e app",
+"Passwort geändert, {0} andere Anmeldungen beendet.": "Password modificata, {0} altri accessi terminati.",
+"Zu viele Fehlversuche, bitte in {0} min erneut versuchen": "Troppi tentativi falliti, riprova tra {0} min"
 }
 }

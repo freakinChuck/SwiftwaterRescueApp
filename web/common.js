@@ -487,9 +487,13 @@ function pwDialog(forced,done){
   dlg('Passwort ändern',`${forced?'<div class="mut">Dein Passwort wurde neu gesetzt. Bitte vergib jetzt ein eigenes Passwort.</div>':''}
     <label class="mut">${forced?'Erhaltenes Startpasswort':'Aktuelles Passwort'}<input id="pwO" type="password" autocomplete="current-password"></label>
     <label class="mut">Neues Passwort<input id="pwN" type="password" autocomplete="new-password"></label>
-    <label class="mut">Neues Passwort wiederholen<input id="pwR" type="password" autocomplete="new-password"></label>`,
+    <label class="mut">Neues Passwort wiederholen<input id="pwR" type="password" autocomplete="new-password"></label>
+    <label class="chk"><input id="pwX" type="checkbox" checked> Andere Geräte und Apps abmelden</label>`,
     async d=>{const n=$('#pwN',d).value;if(n!==$('#pwR',d).value)throw new Error('Die neuen Passwörter stimmen nicht überein.');
-      await api('me/password',{old:$('#pwO',d).value,new:n});toast('Passwort geändert.');done&&done()},
+      // Issue #270: Standard meldet alle anderen Browser und Apps ab; Web-Push meldet sich danach über pushSync neu an
+      const r=await api('me/password',{old:$('#pwO',d).value,new:n,keep:$('#pwX',d).checked?0:1});
+      toast(r&&r.others?T('Passwort geändert, {0} andere Anmeldungen beendet.',r.others):'Passwort geändert.');
+      typeof window.pushSync==='function'&&window.pushSync();done&&done()},
     'Speichern',forced?'Abmelden':'Abbrechen',forced?()=>{logout();done&&done()}:null)}
 /* ---------- Ausbildungskontrolle (Issue #117): Fähigkeiten mit Datum der letzten Ausbildung, Ablauf und Vorwarnung; gemeinsam für Profil (Einsatz-App) und Verwaltung ---------- */
 const SK_ST={ok:['gültig','ok'],warn:['läuft bald ab','warn'],exp:['abgelaufen','exp'],miss:['fehlt (Pflicht)','warn'],none:['nicht erfasst','none']};

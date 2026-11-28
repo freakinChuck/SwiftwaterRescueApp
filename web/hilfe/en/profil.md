@@ -6,7 +6,7 @@ The 👤 button in the header of the menu opens your **profile** with all person
 
 ## Account {#konto}
 
-Name, username and your response groups. Here you change your **profile picture** and your **password** and **log out**. Logging out deletes the state stored on the device. Under **Logged-in apps** you see the devices on which the native app is logged in with your account and can log them out.
+Name, username and your response groups. Here you change your **profile picture** and your **password** and **log out**. Logging out deletes the state stored on the device. Under **Logged-in apps** you see the devices on which the native app is logged in with your account and can log them out. When you change your password, all other browsers and apps are logged out as long as **Log out other devices and apps** is ticked. After five wrong passwords, logging in is blocked for 15 minutes. A login you do not use for 90 days (app: 180 days, except with push) expires.
 
 ## Alerting {#alarmierung}
 

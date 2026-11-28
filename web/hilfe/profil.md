@@ -6,7 +6,7 @@ Der Knopf 👤 in der Kopfzeile des Menüs öffnet dein **Profil** mit allen per
 
 ## Konto {#konto}
 
-Name, Benutzername und deine Einsatzgruppen. Hier änderst du dein **Profilbild** und dein **Passwort** und meldest dich **ab**. Abmelden löscht den auf dem Gerät gemerkten Stand. Unter **Angemeldete Apps** siehst du die Geräte, auf denen die native App mit deinem Konto angemeldet ist, und kannst sie abmelden.
+Name, Benutzername und deine Einsatzgruppen. Hier änderst du dein **Profilbild** und dein **Passwort** und meldest dich **ab**. Abmelden löscht den auf dem Gerät gemerkten Stand. Unter **Angemeldete Apps** siehst du die Geräte, auf denen die native App mit deinem Konto angemeldet ist, und kannst sie abmelden. Beim Ändern des Passworts meldest du alle anderen Browser und Apps ab, solange das Häkchen **Andere Geräte und Apps abmelden** gesetzt ist. Nach fünf falschen Passwörtern ist die Anmeldung für 15 Minuten gesperrt. Eine Anmeldung, die du 90 Tage (App: 180 Tage, ausser mit Push) nicht verwendest, verfällt.
 
 ## Alarmierung {#alarmierung}
 

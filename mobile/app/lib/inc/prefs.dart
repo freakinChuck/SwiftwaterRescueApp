@@ -322,7 +322,7 @@ class _PrefsPageState extends State<PrefsPage> {
   Future<void> _pw() async {
     final o = TextEditingController(), n = TextEditingController(), r = TextEditingController();
     String? err;
-    var busy = false;
+    var busy = false, others = true; // Issue #270: andere Geräte und Apps abmelden (Standard)
     await showDialog<void>(
         context: context,
         builder: (d) => StatefulBuilder(
@@ -335,6 +335,7 @@ class _PrefsPageState extends State<PrefsPage> {
                           TextField(controller: o, obscureText: true, autofillHints: const [AutofillHints.password], decoration: InputDecoration(labelText: trn('Aktuelles Passwort'))),
                           TextField(controller: n, obscureText: true, autofillHints: const [AutofillHints.newPassword], decoration: InputDecoration(labelText: trn('Neues Passwort'))),
                           TextField(controller: r, obscureText: true, decoration: InputDecoration(labelText: trn('Neues Passwort wiederholen'))),
+                          CheckboxListTile(value: others, contentPadding: EdgeInsets.zero, controlAffinity: ListTileControlAffinity.leading, title: const Text('Andere Geräte und Apps abmelden'), onChanged: (v) => ss(() => others = v ?? true)),
                           if (err != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(err!, style: const TextStyle(color: accRed))),
                         ])),
                     actions: [
@@ -346,7 +347,7 @@ class _PrefsPageState extends State<PrefsPage> {
                                   if (n.text != r.text) return ss(() => err = 'Die neuen Passwörter stimmen nicht überein.');
                                   ss(() => (busy = true, err = null));
                                   try {
-                                    await s.api.call('me/password', body: {'old': o.text, 'new': n.text});
+                                    await s.api.call('me/password', body: {'old': o.text, 'new': n.text, 'keep': others ? 0 : 1});
                                     if (d.mounted) Navigator.pop(d);
                                     s.toast('Passwort geändert.');
                                   } catch (e) {
