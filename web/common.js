@@ -1,6 +1,8 @@
 /* Gemeinsamer Code für Einsatz-App (index.html) und Verwaltung (admin.html) */
 const API='api/index.php';
 const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Werte für style- und src-Attribute (Issue #267): nur geprüfte Farben (#rgb, #rrggbb) und Bilder als Base64-Data-URL
+const hexCol=c=>/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(c||'')?c:'', imgOk=v=>/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+\/]+={0,2}$/.test(v||'');
 if(!window.LOC)window.LOC='de-CH';if(!window.T)window.T=s=>String(s??''); // Mehrsprachigkeit (Issue #66): i18n.js setzt LOC (Datumsformat) und T (Übersetzen ausserhalb des DOM)
 var DEMO=window.DEMO||null; // Demo-Modus (Issue #74): gesetzt von demo.js (nur index.html lädt es, nur mit ?demo), sonst null
 let token=localStorage.getItem('sw_token'),onUnauth=()=>{}; // onUnauth setzt die jeweilige Seite
@@ -484,10 +486,12 @@ function ruleBind(el,rs,done){el.querySelectorAll('[data-rle]').forEach(b=>b.onc
   el.querySelectorAll('[data-rlx]').forEach(b=>b.onclick=async()=>{if(!await ask('Regel entfernen?'))return;try{await api('avail/rule/remove',{id:+b.dataset.rlx});toast('Entfernt.','ok');done&&done()}catch(e){fail(e)}})}
 // Eigenes Passwort ändern; forced = nach Zurücksetzen durch die Verwaltung (nur Abmelden als Alternative)
 function pwDialog(forced,done){
-  dlg('Passwort ändern',`${forced?'<div class="mut">Dein Passwort wurde neu gesetzt. Bitte vergib jetzt ein eigenes Passwort.</div>':''}
-    <label class="mut">${forced?'Erhaltenes Startpasswort':'Aktuelles Passwort'}<input id="pwO" type="password" autocomplete="current-password"></label>
+  // forced 'weak' (Issue #268): Passwort erfüllt die Regeln nicht, bei der Anmeldung erkannt
+  dlg('Passwort ändern',`${forced==='weak'?'<div class="mut">Dein Passwort erfüllt die Mindestanforderungen nicht mehr. Bitte vergib jetzt ein neues Passwort.</div>':forced?'<div class="mut">Dein Passwort wurde neu gesetzt. Bitte vergib jetzt ein eigenes Passwort.</div>':''}
+    <label class="mut">${forced&&forced!=='weak'?'Erhaltenes Startpasswort':'Aktuelles Passwort'}<input id="pwO" type="password" autocomplete="current-password"></label>
     <label class="mut">Neues Passwort<input id="pwN" type="password" autocomplete="new-password"></label>
-    <label class="mut">Neues Passwort wiederholen<input id="pwR" type="password" autocomplete="new-password"></label>`,
+    <label class="mut">Neues Passwort wiederholen<input id="pwR" type="password" autocomplete="new-password"></label>
+    <div class="mut">Mindestens 10 Zeichen, nicht der Benutzername und kein häufiges Passwort.</div>`,
     async d=>{const n=$('#pwN',d).value;if(n!==$('#pwR',d).value)throw new Error('Die neuen Passwörter stimmen nicht überein.');
       await api('me/password',{old:$('#pwO',d).value,new:n});toast('Passwort geändert.');done&&done()},
     'Speichern',forced?'Abmelden':'Abbrechen',forced?()=>{logout();done&&done()}:null)}

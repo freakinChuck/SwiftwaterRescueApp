@@ -6,7 +6,7 @@ Il pulsante 👤 nell'intestazione del menu apre il tuo **profilo** con tutte le
 
 ## Account {#konto}
 
-Nome, nome utente e i tuoi gruppi d'intervento. Qui cambi la tua **immagine del profilo** e la tua **password** ed **esci**. L'uscita cancella lo stato salvato sul dispositivo. Sotto **App connesse** vedi i dispositivi su cui l'app nativa è connessa con il tuo account e puoi disconnetterli.
+Nome, nome utente e i tuoi gruppi d'intervento. Qui cambi la tua **immagine del profilo** e la tua **password** ed **esci**. Una password deve avere almeno 10 caratteri e non può essere né il tuo nome utente né una password comune; se quella attuale non lo soddisfa, l'app ne chiede una nuova all'accesso. L'uscita cancella lo stato salvato sul dispositivo. Sotto **App connesse** vedi i dispositivi su cui l'app nativa è connessa con il tuo account e puoi disconnetterli.
 
 ## Allarme {#alarmierung}
 

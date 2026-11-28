@@ -37,6 +37,8 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **KO-07** – Abmelden meldet auch auf dem Server ab: Der Anmeldeschlüssel des Browsers bzw. die Sitzung der App ist danach ungültig (#108).
 - **KO-08** – Die nativen Apps erhalten je Gerät eine eigene Anmeldung: Eine Anmeldung in der App meldet weder den Browser noch andere Geräte ab und umgekehrt. Im Profil stehen die angemeldeten Apps, entfernen meldet sie ab. Passwort zurücksetzen und Deaktivieren melden auch alle Apps ab, das eigene Passwort ändern nicht (#108).
 - **KO-09** – Geschwindigkeiten (Fliessgeschwindigkeit, Flussdistanz, Helikopter) erscheinen wahlweise in m/s, in km/h oder in beiden Einheiten. Den Standard legt die Organisation in der Verwaltung fest (gilt auch für die öffentliche Ansicht), jede Person kann ihn im Profil übersteuern. Mit km/h wird auch die Fliessgeschwindigkeit in km/h eingegeben; gespeichert wird in m/s (#259).
+- **KO-10** – Passwortregeln: mindestens 10 Zeichen, nicht der Benutzername, kein häufiges Passwort; gilt beim Ändern, Zurücksetzen und für neue Benutzer. Erfüllt ein bestehendes Passwort die Regeln nicht, muss die Person bei der nächsten Anmeldung ein neues setzen (#268).
+- **KO-11** – Profilbilder nimmt der Server nur als Bild (PNG, JPEG, WebP, GIF als Data-URL) an; Farben der Spezialrollen nur als #rrggbb. Bestehende ungültige Werte werden entfernt (#267).
 - Zugriffsschutz bzw. Rate-Limit für den Login (**offen**).
 
 ## 3. Benutzer und Berechtigungen (BE)

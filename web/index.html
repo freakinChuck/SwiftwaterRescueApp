@@ -368,9 +368,9 @@ function addCompass(){const C=L.Control.extend({options:{position:'bottomright'}
   new C().addTo(map)}
 // p.ext: externe Einsatzkraft (eckig, gestrichelt); Rand = Spezialrolle, Füllung = Farbe (ohne Rolle auch Rand), Text = Kürzel
 const txtOn=c=>{const n=parseInt(c.slice(1),16);return .299*(n>>16)+.587*(n>>8&255)+.114*(n&255)>150?'#000':'#fff'};
-function mk(p){const r=roles.find(x=>x.id==p.role_id),fc=p.ext&&p.color,col=r?r.color:fc||'#8fb0bd';
+function mk(p){const r=roles.find(x=>x.id==p.role_id),fc=p.ext&&hexCol(p.color),col=(r&&hexCol(r.color))||fc||'#8fb0bd';
   const ini=p.ext&&p.abbr?p.abbr:(p.name||'?').split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase();
-  return `<div class="mk${p.ext?' ext':''}${ini.length>2?' sm':''}" style="border-color:${col};${fc?`background-color:${fc};color:${txtOn(fc)};`:''}${p.photo?`background-image:url(${p.photo})`:''}">${p.photo?'':esc(ini)}</div>`}
+  return `<div class="mk${p.ext?' ext':''}${ini.length>2?' sm':''}" style="border-color:${col};${fc?`background-color:${fc};color:${txtOn(fc)};`:''}${imgOk(p.photo)?`background-image:url(${p.photo})`:''}">${imgOk(p.photo)?'':esc(ini)}</div>`}
 /* ---------- Helikopter (Issue #73) ---------- */
 // Daten über incident/air (Server mit Cache und Relevanzzone), höchstens alle 3.5 s und nur, wenn die Kategorie eingeblendet ist; Anzeige mit airSync (common.js).
 // st.air: für diese Person freigegeben (Verwaltung → Helikopter); nicht in Kamerafokus und Auto-Übersicht (sie bewegen sich zu schnell)
@@ -1143,7 +1143,7 @@ function pinfoHtml(it){const gs=(st&&st.groups)||[];
   const one=p=>{const r=!p.jk&&roles.find(x=>x.id==p.role_id),g=p.ext||p.jk?[]:(p.groups||[]).map(id=>gs.find(x=>x.id===id)).filter(Boolean),f=!p.ext&&followId===(p.jk||p.user_id);
     const sub=p.jk?[esc(p.role||'Ohne Spezialrolle'),p.ext?'Externe Einsatzkraft':esc(p.mode||''),esc(p.org_name)].filter(Boolean).join(' · ') // Partnerorganisation: Rolle und Option als Text
       :[r?`<span style="color:${esc(r.color)}">●</span> ${esc(r.name)}`:'Ohne Spezialrolle',p.ext?'Externe Einsatzkraft':esc(modeOf(p.mode).name)].join(' · ');
-    return `<div class="pih">${/^data:image\//.test(p.photo||'')?`<img src="${esc(p.photo)}" alt="">`:mk(p)}<div><b>${esc(p.name)}</b><small>${sub}</small></div></div>`+
+    return `<div class="pih">${imgOk(p.photo)?`<img src="${esc(p.photo)}" alt="">`:mk(p)}<div><b>${esc(p.name)}</b><small>${sub}</small></div></div>`+
       (g.length?`<div class="pig">${g.map(x=>`<span class="gchip"><i style="background:${esc(x.color)}"></i>${esc(x.name)}</span>`).join('')}</div>`:'')+
       (p.ext&&p.descr?`<div class="pid">${esc(p.descr)}</div>`:'')+(p.ext||p.jk?'':vehOf(p)+wtLine(p))+(telTxt(p)?`<div class="pid">${telTxt(p)}</div>`:'')+
       `<small class="mut">${p.ext?'Fester Standort':p.loc_at?'Standort '+esc(ago(p.loc_at)):'Standort'}${esc(fcs(p.lat,p.lon))}</small>`+(p.jk?'':etaS([p]))+
@@ -1884,7 +1884,7 @@ function skDone(){api('me').then(r=>{me.skills=r.me.skills;prefsHtml='';prefsDra
 function absDone(){api('me').then(r=>{me.absent=r.me.absent;prefsHtml='';prefsDraw();return poll()}).catch(fail)}
 async function render(){clearTimeout(timer);if(!token)return loginView($('#app'),'Swiftwater Rescue',render);
   try{me=(await api('me')).me}catch(e){if(e instanceof TypeError&&!bootOff&&bootOffline())return;if(e instanceof TypeError)setTimeout(render,5000);return} // offline: letzter Stand (Issue #67)
-  if(me.must_change){$('#app').innerHTML='';return pwDialog(true,render)} // nach Zurücksetzen zuerst eigenes Passwort setzen
+  if(me.must_change){$('#app').innerHTML='';return pwDialog(me.pw_weak?'weak':true,render)} // nach Zurücksetzen zuerst eigenes Passwort setzen
   whatsNew(me.version); // nach einem Update einmal «Was ist neu» (Issue #175)
   try{roles=await api('roles');modes=await api('modes')}catch(e){return}
   lsSet('sw_boot',{uid:me.id,me,roles,modes});bootOff=false;if(me.docs&&me.docs.off)dkOffSync(me.docs.off,me.docs_cfg);if(docReq)setTimeout(()=>docGo(docReq),300);pushSync().then(()=>{if($('#bPushOn,#bPushOff')||pushSt!=='?')draw()});

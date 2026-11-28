@@ -1986,7 +1986,8 @@ class _MustChangeState extends State<_MustChange> {
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('Eigenes Passwort setzen')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        const Text('Bitte setze zuerst ein eigenes Passwort.'),
+        Text(widget.s.pwWeak ? 'Dein Passwort erfüllt die Mindestanforderungen nicht mehr. Bitte vergib jetzt ein neues Passwort.' : 'Bitte setze zuerst ein eigenes Passwort.'),
+        const Text('Mindestens 10 Zeichen, nicht der Benutzername und kein häufiges Passwort.'),
         TextField(controller: _old, obscureText: true, decoration: InputDecoration(labelText: trn('Aktuelles Passwort'))),
         TextField(controller: _n1, obscureText: true, decoration: InputDecoration(labelText: trn('Neues Passwort'))),
         TextField(controller: _n2, obscureText: true, decoration: InputDecoration(labelText: trn('Neues Passwort wiederholen'))),

@@ -147,6 +147,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
   int? offAt; // Zeitpunkt der letzten Verbindung (ms)
   bool unauth = false; // Server hat den Schlüssel abgelehnt
   bool mustChange = false;
+  bool pwWeak = false; // Issue #268: Passwort erfüllt die Regeln nicht
 
   // Suchgebiet
   final nets = <String, NetSlot>{};
@@ -398,6 +399,7 @@ class IncStore extends ChangeNotifier with WidgetsBindingObserver {
       unawaited(Beacons.putMe(acc.id, me)); // Fahrzeuge (Issue #177)
       unawaited(docOffSync(this)); // Dokumente offline (Issue #229)
       mustChange = jb(me!['must_change']);
+      pwWeak = jb(me!['pw_weak']);
       if (mustChange) {
         ready = true;
         notifyListeners();

@@ -244,8 +244,10 @@ if (setting('place_props_mig', '') === '') { if (!$db->query("SELECT COUNT(*) FR
 try { $db->exec("ALTER TABLE skills ADD COLUMN req_grp TEXT NULL"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE users ADD COLUMN purged INT DEFAULT 0"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {}
+try { $db->exec("ALTER TABLE users ADD COLUMN pw_weak INTEGER NOT NULL DEFAULT 0"); } catch (Throwable $e) {} // Issue #268: Passwort erfüllt die Regeln nicht (bei der Anmeldung erkannt), must_change mit eigenem Hinweis
 try { $db->exec("ALTER TABLE users ADD COLUMN lang TEXT NULL"); } catch (Throwable $e) {} // Mehrsprachigkeit (Issue #66): eigene Wahl, NULL = automatisch
 try { $db->exec("ALTER TABLE users ADD COLUMN lang_ui TEXT NULL"); } catch (Throwable $e) {} // zuletzt angezeigte Sprache (Header X-Lang), für Push // persönlicher Testalarm (Issue #218): JSON {id, lvl, at} // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
+if (setting('photo_sec_mig', '') === '') { foreach ($db->query("SELECT id,photo FROM users WHERE photo IS NOT NULL")->fetchAll() as $r) if (!preg_match('~^data:image/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$~', (string)$r['photo'])) $db->prepare("UPDATE users SET photo=NULL WHERE id=?")->execute([$r['id']]); foreach ($db->query("SELECT id,color FROM roles")->fetchAll() as $r) if (!preg_match('/^#[0-9a-fA-F]{6}$/', (string)$r['color'])) $db->prepare("UPDATE roles SET color='#888888' WHERE id=?")->execute([$r['id']]); setSetting('photo_sec_mig', '1'); } // ungültige Profilbilder entfernen (Issue #267)
 if (setting('skill_y0_mig', '') === '') { $db->exec("UPDATE skills SET n=n-1 WHERE exp='year' AND n>0"); setSetting('skill_y0_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX voice_inc ON voice(incident_id,upd)"); } catch (Throwable $e) {}
@@ -1521,10 +1523,14 @@ if ($route === 'mail/hook') { if (!mailKeyOk()) fail('Ungültiger Schlüssel', 4
   $raw = file_get_contents('php://input', false, null, 0, 2 * 1048576); if (!is_string($raw) || trim($raw) === '') fail('Leere E-Mail');
   $r = mailHandle($raw, 'hook'); out(['ok' => 1, 'res' => $r, 'text' => MAIL_RES[$r]]); }
 
+// Passwortregeln (Issue #268), Konstanten vor der Route login (pwWeak steht bei den Benutzerfunktionen)
+const PW_MIN = 10;
+const PW_COMMON = ['1234567890', '0123456789', '12345678910', '1234567891', '9876543210', 'qwertzuiop', 'qwertyuiop', 'asdfghjkl', 'passwort123', 'password123', 'password1234', 'passwort1234', 'administrator', 'admin12345', 'admin123456', 'adminadmin', 'swiftwater', 'swiftwater1', 'swiftwaterrescue', 'wasserrettung', 'rettung123', 'sommer2026', 'winter2026', 'iloveyou12', '1111111111', '0000000000', 'aaaaaaaaaa', 'abcdefghij', 'abc1234567', 'letmein123', 'willkommen', 'willkommen1', 'changeme123', 'bitte-aendern'];
 if ($route === 'login') {
   $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
   $u = $st->fetch();
   if (!$u || !password_verify($in['password'] ?? '', $u['pass_hash'])) { alog('warn', 'auth', 'Anmeldung fehlgeschlagen', ['username' => mb_substr((string)($in['username'] ?? ''), 0, 60), 'known' => $u ? 1 : 0]); fail('Benutzername oder Passwort falsch', 401); }
+  if (!(int)$u['must_change'] && pwWeak((string)$in['password'], $u['username']) !== null) $db->prepare("UPDATE users SET must_change=1, pw_weak=1 WHERE id=?")->execute([$u['id']]); // Issue #268: Passwort erfüllt die Regeln nicht = zuerst ein neues setzen
   $uid = (int)$u['id']; alog('info', 'auth', 'Angemeldet', ['app' => trim((string)($in['device'] ?? '')) !== '' ? 1 : 0, 'platform' => in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : null]); // Applikationslog (Issue #139)
   $t = bin2hex(random_bytes(24));
   // Native App (Issue #108): mit device eine eigene Gerätesitzung, andere Geräte bleiben angemeldet; höchstens 20 je Person (die ältesten fallen weg)
@@ -1952,18 +1958,18 @@ if (strncmp($route, 'guest/', 6) === 0) {
 
 require __DIR__ . '/fed.php'; // Verbund eigenständiger Server (Issue #60)
 $tok = (string)($_SERVER['HTTP_X_TOKEN'] ?? ''); $sid = null; // $sid = Gerätesitzung der nativen App (Issue #108), null = Anmeldung über users.token (Browser)
-$ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.speed_unit,u.nav_app,u.place_view,u.ai_modes,u.hydro,u.beacon,u.phone,u.lang,u.lang_ui';
+$ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.pw_weak,u.coord_sys,u.speed_unit,u.nav_app,u.place_view,u.ai_modes,u.hydro,u.beacon,u.phone,u.lang,u.lang_ui';
 $me = null; if ($tok !== '') { $st = $db->prepare("SELECT $ucols FROM users u WHERE u.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor(); } // Lesezugriff sofort beenden, nicht erst am Ende des Requests
 if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_seen, s.app_ver FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor();
   if ($me) { $sid = (int)$me['sid']; if ((int)$me['last_seen'] < $now - 600) $db->prepare("UPDATE sessions SET last_seen=? WHERE id=?")->execute([$now, $sid]);
     $av = appVer($_SERVER['HTTP_X_APP_VERSION'] ?? ''); if ($av !== '' && $av !== (string)$me['app_ver']) $db->prepare("UPDATE sessions SET app_ver=? WHERE id=?")->execute([$av, $sid]); // Version der App nachführen (Issue #175)
     unset($me['sid'], $me['last_seen'], $me['app_ver']); } }
 // signierte Anfrage eines Partnerservers (fed/*): ohne Konto, nur die Routen in fedServe
-if (!$me && strncmp($route, 'fed/', 4) === 0 && !empty($_SERVER['HTTP_X_FED_KEY'])) { $FED = fedAuth(); $me = ['id' => 0, 'username' => '', 'name' => 'System', 'photo' => null, 'exercise_mode' => 0, 'must_change' => 0, 'coord_sys' => null, 'speed_unit' => null, 'nav_app' => null, 'place_view' => null, 'ai_modes' => null, 'hydro' => null, 'beacon' => 0, 'phone' => null]; }
+if (!$me && strncmp($route, 'fed/', 4) === 0 && !empty($_SERVER['HTTP_X_FED_KEY'])) { $FED = fedAuth(); $me = ['id' => 0, 'username' => '', 'name' => 'System', 'photo' => null, 'exercise_mode' => 0, 'must_change' => 0, 'pw_weak' => 0, 'coord_sys' => null, 'speed_unit' => null, 'nav_app' => null, 'place_view' => null, 'ai_modes' => null, 'hydro' => null, 'beacon' => 0, 'phone' => null]; }
 if (!$me) fail('Nicht angemeldet', 401);
 if ($uid0 = (int)($me['id'] ?? 0)) { $hl = (string)($_SERVER['HTTP_X_LANG'] ?? ''); if (langOk($hl) && $hl !== (string)($me['lang_ui'] ?? '')) $db->prepare("UPDATE users SET lang_ui=? WHERE id=?")->execute([$hl, $uid0]); } // angezeigte Sprache für Push (Issue #66)
 unset($me['lang_ui']);
-$me = ints($me, ['id', 'exercise_mode', 'must_change', 'beacon']); $me['place_view'] = (object)placeView($me['place_view'] ?? null); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
+$me = ints($me, ['id', 'exercise_mode', 'must_change', 'beacon', 'pw_weak']); $me['place_view'] = (object)placeView($me['place_view'] ?? null); unset($me['is_admin'], $me['is_planner']); $uid = $me['id'];
 $me['ai_modes'] = json_decode((string)$me['ai_modes'], true) ?: []; // AI-Assistent (Issue #111): gewählter Modus je Funktion
 $me['hydro'] = array_values(array_filter((array)(json_decode((string)$me['hydro'], true) ?: []), 'is_string')); // persönliche Messstationen (Issue #125)
 // Benutzerrollen und Rechte (Issue #63): Vereinigung aller Rollen; is_admin = hat die Rolle Systemadministrator (alle Rechte)
@@ -2014,7 +2020,17 @@ function usersUsed() { global $db; $q = []; foreach (['participants' => 'user_id
   foreach (['loc_by', 'rescued_by'] as $c) $q[] = "SELECT $c u FROM rescuees WHERE $c IS NOT NULL";
   return array_flip(array_map('intval', $db->query("SELECT DISTINCT u FROM (" . implode(' UNION ', $q) . ") x")->fetchAll(PDO::FETCH_COLUMN))); }
 function needUserEditable($id) { if (!userEditable($id)) fail('Diese Person hat Rechte, die du selbst nicht hast; nur jemand mit diesen Rechten kann sie bearbeiten', 403); }
-function pwCheck($p) { if (!is_string($p) || $p === '') fail('Das Passwort darf nicht leer sein'); }
+// Profilbild (Issue #267): nur PNG, JPEG, WebP oder GIF als Base64-Data-URL
+function photoOk($v) { return is_string($v) && preg_match('~^data:image/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$~', $v) === 1; }
+// Passwortregeln (Issue #268): mindestens PW_MIN Zeichen, nicht der Benutzername, kein häufiges Passwort (PW_COMMON, ohne Gross-/Kleinschreibung)
+function pwWeak($p, $un = '') { // Grund als Text, null = in Ordnung
+  if (!is_string($p) || $p === '') return 'Das Passwort darf nicht leer sein';
+  if (mb_strlen($p) < PW_MIN) return 'Das Passwort muss mindestens ' . PW_MIN . ' Zeichen lang sein';
+  $l = mb_strtolower($p);
+  if ($un !== '' && $l === mb_strtolower((string)$un)) return 'Das Passwort darf nicht der Benutzername sein';
+  if (in_array($l, PW_COMMON, true) || preg_match('/^(.)\1+$/u', $p)) return 'Dieses Passwort ist zu häufig, bitte ein anderes wählen';
+  return null; }
+function pwCheck($p, $un = '') { if (($w = pwWeak($p, $un)) !== null) fail($w); }
 // Einsatztypen (Issue #90): alle Zeilen, auch gelöschte (bisherige Einsätze behalten ihre Einstellungen); $KINDS = Zwischenspeicher je Anfrage
 $KINDS = null;
 function kinds() { global $db, $KINDS; if ($KINDS === null) { $KINDS = []; foreach ($db->query("SELECT * FROM inc_kinds ORDER BY pos, name")->fetchAll() as $k) { $k = ints($k, ['id', 'pos', 'active', 'deleted', 'mode_up', 'rec', 'air', 'persons', 'open_all', 'plans', 'sec', 'ref']); if ($k['sec'] === 1) { $k['alarm'] = 'none'; $k['mode_up'] = 0; } elseif (!$k['sec']) $k['ref'] = 0; foreach (['feat_off', 'grp_off', 'grp_def', 'map_off'] as $c) $k[$c] = json_decode($k[$c] ?? '[]', true) ?: []; $k['snd_own'] = $k['snd']; $k['snd'] = $k['snd'] ?? sndDefault(); $KINDS[$k['id']] = $k; } } return $KINDS; }
@@ -5152,8 +5168,9 @@ switch ($route) {
  case 'me/password': // eigenes Passwort ändern (aktuelles Passwort nötig)
   $s = $db->prepare("SELECT pass_hash FROM users WHERE id=?"); $s->execute([$uid]);
   if (!password_verify($in['old'] ?? '', $s->fetch()['pass_hash'])) fail('Das aktuelle Passwort ist falsch', 403);
-  pwCheck($in['new'] ?? '');
-  $db->prepare("UPDATE users SET pass_hash=?, must_change=0 WHERE id=?")->execute([password_hash($in['new'], PASSWORD_DEFAULT), $uid]);
+  pwCheck($in['new'] ?? '', $me['username']);
+  if (hash_equals((string)($in['old'] ?? ''), (string)$in['new'])) fail('Das neue Passwort muss sich vom bisherigen unterscheiden');
+  $db->prepare("UPDATE users SET pass_hash=?, must_change=0, pw_weak=0 WHERE id=?")->execute([password_hash($in['new'], PASSWORD_DEFAULT), $uid]);
   // Gerätesitzungen (Issue #108) bleiben bewusst bestehen: Wer das eigene Passwort ändert, soll die Alarmierung über die App nicht verlieren.
   // Abmelden einzelner Apps über «Angemeldete Apps» im Profil (me/session/remove); Zurücksetzen durch die Verwaltung löscht alle.
   out(['ok' => true]);
@@ -5224,7 +5241,7 @@ switch ($route) {
     $db->prepare("UPDATE users SET name=? WHERE id=?")->execute([$nm, $id]);
   } else {
     $un = trim($in['username'] ?? ''); if ($un === '') fail('Benutzername ist Pflicht');
-    pwCheck($in['password'] ?? '');
+    pwCheck($in['password'] ?? '', $un);
     try { $db->prepare("INSERT INTO users(username,name,pass_hash,must_change) VALUES(?,?,?,1)")->execute([$un, $nm ?: $un, password_hash($in['password'], PASSWORD_DEFAULT)]); }
     catch (PDOException $e) { fail('Benutzername existiert bereits'); }
     $id = (int)$db->lastInsertId();
@@ -5243,7 +5260,7 @@ switch ($route) {
   $id = (int)($in['id'] ?? 0);
   if ($id === $uid) fail('Das eigene Passwort bitte über «Passwort ändern» setzen');
   needUserEditable($id);
-  pwCheck($in['password'] ?? '');
+  $s = $db->prepare("SELECT username FROM users WHERE id=?"); $s->execute([$id]); pwCheck($in['password'] ?? '', (string)$s->fetchColumn());
   $s = $db->prepare("UPDATE users SET pass_hash=?, must_change=1, token=NULL WHERE id=?"); $s->execute([password_hash($in['password'], PASSWORD_DEFAULT), $id]);
   $db->prepare("DELETE FROM push_subs WHERE user_id=?")->execute([$id]); // abgemeldet: Geräte erhalten keine Push-Nachrichten mehr
   foreach (['sessions', 'push_native'] as $t) $db->prepare("DELETE FROM $t WHERE user_id=?")->execute([$id]); // auch die Apps abmelden (Issue #108)
@@ -5289,8 +5306,10 @@ switch ($route) {
  case 'purge': // Issue #211: endgültig löschen (Recht purge plus Recht des Bereichs), nicht umkehrbar
   $k = (string)($in['what'] ?? ''); $id = (int)($in['id'] ?? 0); [$nm] = purgeInfo($k, $id); purgeDo($k, $id, $nm); out(['ok' => true]);
  case 'me/photo': // kleines Bild als Data-URL (Client verkleinert auf ca. 96px)
-  if (strlen($in['photo'] ?? '') > 200000) fail('Bild zu gross');
-  $db->prepare("UPDATE users SET photo=? WHERE id=?")->execute([$in['photo'], $uid]);
+  $ph = $in['photo'] ?? null; if ($ph === '') $ph = null; // leer = entfernen
+  if ($ph !== null && (!is_string($ph) || strlen($ph) > 200000)) fail('Bild zu gross');
+  if ($ph !== null && !photoOk($ph)) fail('Ungültiges Bild'); // nur Data-URL eines Bildes (Issue #267: sonst XSS in der Einsatz-App)
+  $db->prepare("UPDATE users SET photo=? WHERE id=?")->execute([$ph, $uid]);
   out(['ok' => true]);
  /* ---------- Benutzerrollen (Issue #63) ---------- */
  case 'uroles': need('users', 'uroles'); // alle Rollen mit Rechten und Anzahl Personen, dazu die Liste der Rechte (PERMS)
@@ -5402,6 +5421,7 @@ switch ($route) {
  case 'kind/order': need('cfg_inc');
   $st = $db->prepare("UPDATE inc_kinds SET pos=? WHERE id=?"); foreach (idsIn($in['ids'] ?? []) as $i => $t) $st->execute([$i + 1, $t]); out(['ok' => true]);
  case 'role/save': need('cfg_inc');
+  $in['color'] = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($in['color'] ?? '')) ? strtolower($in['color']) : '#888888'; // nur #rrggbb (Issue #267: Farbe steht im Marker als style)
   if (!empty($in['id'])) { $db->prepare("UPDATE roles SET name=?,color=?,is_lead=?,is_post=?,active=?,can_message=? WHERE id=?")->execute([$in['name'], $in['color'], (int)$in['is_lead'], (int)($in['is_post'] ?? 0), (int)($in['active'] ?? 1), (int)($in['can_message'] ?? 1), $in['id']]);
     if (isset($in['can_voice'])) $db->prepare("UPDATE roles SET can_voice=? WHERE id=?")->execute([(int)$in['can_voice'] ? 1 : 0, $in['id']]); // Sprechrecht im Funk (Issue #113), fehlt = unverändert
     if (isset($in['sec'])) $db->prepare("UPDATE roles SET sec=? WHERE id=?")->execute([secIn($in['sec']), $in['id']]); } // Kategorie (Issue #164), fehlt = unverändert

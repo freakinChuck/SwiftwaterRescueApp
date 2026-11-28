@@ -201,7 +201,7 @@ const roleVal=el=>[...el.querySelectorAll('[data-ur]')].filter(c=>c.getAttribute
 async function start(){const a=$('#app');if(!token)return loginView(a,'Swiftwater Rescue – Verwaltung',start);
   try{me=(await api('me')).me}catch(e){if(token)a.innerHTML=`<div class="card"><p>${esc(e.message)}</p></div>`;return}
   mapsSet(me.maps,me.map_def); // Kartenanbieter für die kleinen Karten (Issue #106)
-  if(me.must_change){a.innerHTML='';return pwDialog(true,start)}
+  if(me.must_change){a.innerHTML='';return pwDialog(me.pw_weak?'weak':true,start)}
   whatsNew(me.version); // nach einem Update einmal «Was ist neu» (Issue #175)
   CALV=false;if(calMode())return calView(a); // Kalender (Issue #181): für alle Angemeldeten
   if(!nav().length&&me.my_runs==='off'&&location.hash!=='#meine'){a.innerHTML=`<div class="card"><h1>Kein Zugriff</h1><p>Deine Benutzerrollen geben dir keinen Zugriff auf die Verwaltung.</p><div class="row"><a class="btn" href="./">Zur Einsatz-App</a><button id="bOut">Abmelden</button></div></div>`;$('#bOut').onclick=()=>{logout();start()};return}
@@ -341,7 +341,7 @@ async function loadUsers(){const el=$('#sU');let gs;try{[users,uroles,gs]=await 
   const dt=t=>t?new Date(t*1000).toLocaleString(LOC,{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'vor der Erfassung';
   const ugs=u=>(u.groups||[]).map(id=>gs.find(g=>g.id===id)).filter(Boolean);
   // Profilbild (nur Data-URLs von Bildern, sonst Platzhalter)
-  const uav=u=>/^data:image\//.test(u.photo||'')?`<img class="uav" src="${esc(u.photo)}" alt="" loading="lazy">`:'<span class="uav" aria-hidden="true">👤</span>';
+  const uav=u=>imgOk(u.photo)?`<img class="uav" src="${esc(u.photo)}" alt="" loading="lazy">`:'<span class="uav" aria-hidden="true">👤</span>';
   const card=u=>{const self=u.id===me.id;
     return`<div class="inc usr${u.active?'':' off'}"><div class="ih uih">${uav(u)}<div class="uim"><b>${nmG(u.name,u.id)}${self?' <span class="mut">(du)</span>':''}</b><span class="mut">${esc(u.username)}</span>${absChip(u.absent)}
       <div class="fl">${u.uroles.length?u.uroles.map(id=>`<span${UR(id).sys==='admin'?' class="adm"':''}>${esc(UR(id).name)}</span>`).join(''):'<span>keine Benutzerrolle</span>'}</div>${gs.length?`<div class="ugr">${ugs(u).map(grpChip).join('')||'<span class="mut">in keiner Einsatzgruppe</span>'}</div>`:''}</div></div>

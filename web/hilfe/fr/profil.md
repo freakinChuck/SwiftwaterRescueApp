@@ -6,7 +6,7 @@ Le bouton 👤 dans l'en-tête du menu ouvre votre **profil** avec tous les rég
 
 ## Compte {#konto}
 
-Nom, nom d'utilisateur et vos groupes d'intervention. Ici, vous changez votre **photo de profil** et votre **mot de passe** et vous vous **déconnectez**. La déconnexion efface l'état enregistré sur l'appareil. Sous **Apps connectées**, vous voyez les appareils sur lesquels l'app native est connectée avec votre compte et pouvez les déconnecter.
+Nom, nom d'utilisateur et vos groupes d'intervention. Ici, vous changez votre **photo de profil** et votre **mot de passe** et vous vous **déconnectez**. Un mot de passe doit comporter au moins 10 caractères et ne doit être ni votre nom d'utilisateur ni un mot de passe courant ; si l'actuel ne remplit pas ces conditions, l'app en demande un nouveau à la connexion. La déconnexion efface l'état enregistré sur l'appareil. Sous **Apps connectées**, vous voyez les appareils sur lesquels l'app native est connectée avec votre compte et pouvez les déconnecter.
 
 ## Alarme {#alarmierung}
 
