@@ -6,7 +6,7 @@ Le bouton 👤 dans l'en-tête du menu ouvre votre **profil** avec tous les rég
 
 ## Compte {#konto}
 
-Nom, nom d'utilisateur et vos groupes d'intervention. Ici, vous changez votre **photo de profil** et votre **mot de passe** et vous vous **déconnectez**. La déconnexion efface l'état enregistré sur l'appareil. Sous **Apps connectées**, vous voyez les appareils sur lesquels l'app native est connectée avec votre compte et pouvez les déconnecter.
+Nom, nom d'utilisateur et vos groupes d'intervention. Ici, vous changez votre **photo de profil** et votre **mot de passe** et vous vous **déconnectez**. La déconnexion efface l'état enregistré sur l'appareil. Sous **Apps connectées**, vous voyez les appareils sur lesquels l'app native est connectée avec votre compte et pouvez les déconnecter. Lorsque vous changez votre mot de passe, tous les autres navigateurs et apps sont déconnectés tant que la case **Déconnecter les autres appareils et apps** est cochée. Après cinq mots de passe erronés, la connexion est bloquée pendant 15 minutes. Une connexion inutilisée pendant 90 jours (app : 180 jours, sauf avec push) expire.
 
 ## Alarme {#alarmierung}
 

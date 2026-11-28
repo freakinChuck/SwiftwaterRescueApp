@@ -246,6 +246,12 @@ try { $db->exec("ALTER TABLE users ADD COLUMN purged INT DEFAULT 0"); } catch (T
 try { $db->exec("ALTER TABLE users ADD COLUMN test_alarm TEXT NULL"); } catch (Throwable $e) {}
 try { $db->exec("ALTER TABLE users ADD COLUMN lang TEXT NULL"); } catch (Throwable $e) {} // Mehrsprachigkeit (Issue #66): eigene Wahl, NULL = automatisch
 try { $db->exec("ALTER TABLE users ADD COLUMN lang_ui TEXT NULL"); } catch (Throwable $e) {} // zuletzt angezeigte Sprache (Header X-Lang), für Push // persönlicher Testalarm (Issue #218): JSON {id, lvl, at} // endgültig gelöscht (Issue #211): Zeile ohne Personendaten, damit Einsatzdaten gültig bleiben
+try { $db->exec("ALTER TABLE users ADD COLUMN token_seen BIGINT NULL"); } catch (Throwable $e) {} // Issue #270: letzte Verwendung des Browser-Tokens (Ablauf nach TOKEN_IDLE_S)
+try { $db->exec("CREATE TABLE IF NOT EXISTS login_fail(k VARCHAR(190), at BIGINT)"); } catch (Throwable $e) {} // Issue #269: Fehlversuche je Benutzername (u:) und IP (i:)
+try { $db->exec("CREATE INDEX login_fail_k ON login_fail(k,at)"); } catch (Throwable $e) {}
+// Issue #270: Tokens nur noch als SHA-256 speichern (tokH); bisherige (48 hex) einmalig umrechnen, die Geräte bleiben angemeldet
+if (setting('tok_hash_mig', '') === '') { foreach (['users', 'sessions'] as $t) foreach ($db->query("SELECT id,token FROM $t WHERE token IS NOT NULL")->fetchAll() as $r) if (strlen((string)$r['token']) !== 64) $db->prepare("UPDATE $t SET token=? WHERE id=?")->execute([tokH((string)$r['token']), $r['id']]);
+  $db->exec("UPDATE users SET token_seen=" . time() . " WHERE token IS NOT NULL"); setSetting('tok_hash_mig', '1'); }
 if (setting('skill_y0_mig', '') === '') { $db->exec("UPDATE skills SET n=n-1 WHERE exp='year' AND n>0"); setSetting('skill_y0_mig', '1'); }
 try { $db->exec("CREATE INDEX air_track_inc ON air_track(incident_id,ts)"); } catch (Throwable $e) {}
 try { $db->exec("CREATE INDEX voice_inc ON voice(incident_id,upd)"); } catch (Throwable $e) {}
@@ -1521,21 +1527,41 @@ if ($route === 'mail/hook') { if (!mailKeyOk()) fail('Ungültiger Schlüssel', 4
   $raw = file_get_contents('php://input', false, null, 0, 2 * 1048576); if (!is_string($raw) || trim($raw) === '') fail('Leere E-Mail');
   $r = mailHandle($raw, 'hook'); out(['ok' => 1, 'res' => $r, 'text' => MAIL_RES[$r]]); }
 
+/* ---------- Schutz der Anmeldung (Issue #269, #270) ---------- */
+// Tokens: in users.token und sessions.token steht nur der SHA-256-Wert, das Gerät erhält den Token selbst.
+// Ablauf ohne Verwendung: Browser TOKEN_IDLE_S, App-Sitzungen SESS_IDLE_S (Sitzungen mit Push-Anmeldung laufen nicht ab, sonst endete die Alarmierung still).
+// Fehlversuche: höchstens LOGIN_MAX_U je Benutzername und LOGIN_MAX_IP je IP-Adresse in LOGIN_WIN Sekunden, danach 429 mit Retry-After.
+const TOKEN_IDLE_S = 90 * 86400; const SESS_IDLE_S = 180 * 86400;
+const LOGIN_WIN = 900; const LOGIN_MAX_U = 5; const LOGIN_MAX_IP = 30;
+const LOGIN_DUMMY = '$2y$10$yEvao5U2uX9OhO0ITIvmcuQgsPlw6UtzQOnY5Yuru4tbQ8a2lr56e'; // gleiche Rechenzeit bei unbekanntem Benutzernamen
+function tokH($t) { return hash('sha256', (string)$t); }
+function loginKeys($un) { return ['u:' . mb_substr(mb_strtolower(trim((string)$un)), 0, 120) => LOGIN_MAX_U, 'i:' . (string)($_SERVER['REMOTE_ADDR'] ?? '') => LOGIN_MAX_IP]; }
+function loginWait($keys) { global $db; $w = 0; $t0 = time() - LOGIN_WIN; // Sekunden bis zum nächsten Versuch, 0 = erlaubt
+  foreach ($keys as $k => $max) { $s = $db->prepare("SELECT at FROM login_fail WHERE k=? AND at>? ORDER BY at DESC"); $s->execute([$k, $t0]); $a = $s->fetchAll(PDO::FETCH_COLUMN);
+    if (count($a) >= $max) $w = max($w, (int)$a[$max - 1] + LOGIN_WIN - time()); }
+  return max(0, $w); }
+function loginGuard($keys) { if ($w = loginWait($keys)) { header('Retry-After: ' . $w); alog('warn', 'auth', 'Anmeldung gesperrt (zu viele Fehlversuche)', ['keys' => count($keys)]); fail('Zu viele Fehlversuche, bitte in ' . max(1, (int)ceil($w / 60)) . ' min erneut versuchen', 429); } }
+function loginFail($keys) { global $db; $s = $db->prepare("INSERT INTO login_fail(k,at) VALUES(?,?)"); foreach (array_keys($keys) as $k) $s->execute([$k, time()]);
+  $db->prepare("DELETE FROM login_fail WHERE at<?")->execute([time() - 86400]); }
+function loginClear($k) { global $db; $db->prepare("DELETE FROM login_fail WHERE k=?")->execute([$k]); }
 if ($route === 'login') {
-  $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([$in['username'] ?? '']);
-  $u = $st->fetch();
-  if (!$u || !password_verify($in['password'] ?? '', $u['pass_hash'])) { alog('warn', 'auth', 'Anmeldung fehlgeschlagen', ['username' => mb_substr((string)($in['username'] ?? ''), 0, 60), 'known' => $u ? 1 : 0]); fail('Benutzername oder Passwort falsch', 401); }
+  $lk = loginKeys($in['username'] ?? ''); loginGuard($lk);
+  $st = $db->prepare("SELECT * FROM users WHERE username=? AND active=1"); $st->execute([(string)($in['username'] ?? '')]);
+  $u = $st->fetch(); $pwOk = password_verify((string)($in['password'] ?? ''), $u ? (string)$u['pass_hash'] : LOGIN_DUMMY) && $u;
+  if (!$pwOk) { loginFail($lk); alog('warn', 'auth', 'Anmeldung fehlgeschlagen', ['username' => mb_substr((string)($in['username'] ?? ''), 0, 60), 'known' => $u ? 1 : 0]); fail('Benutzername oder Passwort falsch', 401); }
+  loginClear(array_key_first($lk));
+  $db->prepare("DELETE FROM push_native WHERE session_id IN (SELECT id FROM sessions WHERE user_id=? AND last_seen<?)")->execute([$u['id'], time() - SESS_IDLE_S]); // abgelaufene Sitzungen aufräumen (Issue #270)
   $uid = (int)$u['id']; alog('info', 'auth', 'Angemeldet', ['app' => trim((string)($in['device'] ?? '')) !== '' ? 1 : 0, 'platform' => in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : null]); // Applikationslog (Issue #139)
   $t = bin2hex(random_bytes(24));
   // Native App (Issue #108): mit device eine eigene Gerätesitzung, andere Geräte bleiben angemeldet; höchstens 20 je Person (die ältesten fallen weg)
   $dev = mb_substr(trim(preg_replace('/[\x00-\x1f]/u', ' ', (string)($in['device'] ?? ''))), 0, 80);
   if ($dev !== '') { $pf = in_array($in['platform'] ?? '', ['android', 'ios'], true) ? $in['platform'] : '';
-    $db->prepare("INSERT INTO sessions(user_id,token,device,platform,created,last_seen,app_ver) VALUES(?,?,?,?,?,?,?)")->execute([$u['id'], $t, $dev, $pf, time(), time(), appVer($in['app_ver'] ?? '') ?: null]);
+    $db->prepare("INSERT INTO sessions(user_id,token,device,platform,created,last_seen,app_ver) VALUES(?,?,?,?,?,?,?)")->execute([$u['id'], tokH($t), $dev, $pf, time(), time(), appVer($in['app_ver'] ?? '') ?: null]);
     $db->prepare("UPDATE users SET last_login=? WHERE id=?")->execute([time(), $u['id']]);
     $s = $db->prepare("SELECT id FROM sessions WHERE user_id=? ORDER BY last_seen DESC, id DESC"); $s->execute([$u['id']]);
     foreach (array_slice($s->fetchAll(PDO::FETCH_COLUMN), 20) as $x) { $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$x]); $db->prepare("DELETE FROM sessions WHERE id=?")->execute([$x]); }
     out(['token' => $t, 'session' => 1]); }
-  $db->prepare("UPDATE users SET token=?, last_login=? WHERE id=?")->execute([$t, time(), $u['id']]);
+  $db->prepare("UPDATE users SET token=?, token_seen=?, last_login=? WHERE id=?")->execute([tokH($t), time(), time(), $u['id']]);
   out(['token' => $t]);
 }
 
@@ -1953,9 +1979,14 @@ if (strncmp($route, 'guest/', 6) === 0) {
 require __DIR__ . '/fed.php'; // Verbund eigenständiger Server (Issue #60)
 $tok = (string)($_SERVER['HTTP_X_TOKEN'] ?? ''); $sid = null; // $sid = Gerätesitzung der nativen App (Issue #108), null = Anmeldung über users.token (Browser)
 $ucols = 'u.id,u.username,u.name,u.photo,u.exercise_mode,u.must_change,u.coord_sys,u.speed_unit,u.nav_app,u.place_view,u.ai_modes,u.hydro,u.beacon,u.phone,u.lang,u.lang_ui';
-$me = null; if ($tok !== '') { $st = $db->prepare("SELECT $ucols FROM users u WHERE u.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor(); } // Lesezugriff sofort beenden, nicht erst am Ende des Requests
-if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_seen, s.app_ver FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1"); $st->execute([$tok]); $me = $st->fetch() ?: null; $st->closeCursor();
-  if ($me) { $sid = (int)$me['sid']; if ((int)$me['last_seen'] < $now - 600) $db->prepare("UPDATE sessions SET last_seen=? WHERE id=?")->execute([$now, $sid]);
+$tokh = tokH($tok); // Issue #270: gespeichert ist nur der Hash
+$me = null; if ($tok !== '') { $st = $db->prepare("SELECT $ucols, u.token_seen FROM users u WHERE u.token=? AND u.active=1"); $st->execute([$tokh]); $me = $st->fetch() ?: null; $st->closeCursor();
+  if ($me) { $ts = (int)$me['token_seen']; unset($me['token_seen']);
+    if ($ts && $ts < $now - TOKEN_IDLE_S) { $db->prepare("UPDATE users SET token=NULL WHERE id=?")->execute([$me['id']]); $me = null; alog('info', 'auth', 'Anmeldung im Browser abgelaufen'); } // zu lange nicht verwendet
+    elseif ($ts < $now - 600) $db->prepare("UPDATE users SET token_seen=? WHERE id=?")->execute([$now, $me['id']]); } } // Lesezugriff sofort beenden, nicht erst am Ende des Requests
+if (!$me && $tok !== '') { $st = $db->prepare("SELECT $ucols, s.id sid, s.last_seen, s.app_ver, (SELECT COUNT(*) FROM push_native n WHERE n.session_id=s.id) np FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1"); $st->execute([$tokh]); $me = $st->fetch() ?: null; $st->closeCursor();
+  if ($me && !(int)$me['np'] && (int)$me['last_seen'] < $now - SESS_IDLE_S) { $db->prepare("DELETE FROM sessions WHERE id=?")->execute([$me['sid']]); $me = null; alog('info', 'auth', 'Sitzung der App abgelaufen'); } // Issue #270
+  if ($me) { $sid = (int)$me['sid']; unset($me['np']); if ((int)$me['last_seen'] < $now - 600) $db->prepare("UPDATE sessions SET last_seen=? WHERE id=?")->execute([$now, $sid]);
     $av = appVer($_SERVER['HTTP_X_APP_VERSION'] ?? ''); if ($av !== '' && $av !== (string)$me['app_ver']) $db->prepare("UPDATE sessions SET app_ver=? WHERE id=?")->execute([$av, $sid]); // Version der App nachführen (Issue #175)
     unset($me['sid'], $me['last_seen'], $me['app_ver']); } }
 // signierte Anfrage eines Partnerservers (fed/*): ohne Konto, nur die Routen in fedServe
@@ -5150,13 +5181,20 @@ switch ($route) {
   if (!can('skills') && ((int)$e['user_id'] !== $uid || (int)$e['created_by'] !== $uid || !(int)$e['self'])) fail('Diesen Eintrag kann nur die Verwaltung entfernen', 403);
   $db->prepare("UPDATE user_skills SET removed=1 WHERE id=?")->execute([(int)$e['id']]); out(['ok' => true]);
  case 'me/password': // eigenes Passwort ändern (aktuelles Passwort nötig)
+  $pk = ['p:' . $uid => LOGIN_MAX_U]; loginGuard($pk); // Issue #269: Raten des aktuellen Passworts begrenzen
   $s = $db->prepare("SELECT pass_hash FROM users WHERE id=?"); $s->execute([$uid]);
-  if (!password_verify($in['old'] ?? '', $s->fetch()['pass_hash'])) fail('Das aktuelle Passwort ist falsch', 403);
+  if (!password_verify((string)($in['old'] ?? ''), $s->fetch()['pass_hash'])) { loginFail($pk); fail('Das aktuelle Passwort ist falsch', 403); }
+  loginClear('p:' . $uid);
   pwCheck($in['new'] ?? '');
   $db->prepare("UPDATE users SET pass_hash=?, must_change=0 WHERE id=?")->execute([password_hash($in['new'], PASSWORD_DEFAULT), $uid]);
-  // Gerätesitzungen (Issue #108) bleiben bewusst bestehen: Wer das eigene Passwort ändert, soll die Alarmierung über die App nicht verlieren.
-  // Abmelden einzelner Apps über «Angemeldete Apps» im Profil (me/session/remove); Zurücksetzen durch die Verwaltung löscht alle.
-  out(['ok' => true]);
+  // Issue #270: andere Geräte abmelden (Standard), mit keep 1 bleiben sie angemeldet (Häkchen im Dialog). Diese Sitzung bzw. dieser Browser bleibt.
+  // Web-Push-Abos aller Browser fallen weg; der eigene meldet sich beim nächsten pushSync wieder an.
+  $n = 0; if (empty($in['keep'])) {
+    $x = $db->prepare("SELECT id FROM sessions WHERE user_id=? AND id<>?"); $x->execute([$uid, (int)$sid]); $ids = $x->fetchAll(PDO::FETCH_COLUMN); $n = count($ids);
+    foreach ($ids as $i) { $db->prepare("DELETE FROM push_native WHERE session_id=?")->execute([$i]); $db->prepare("DELETE FROM sessions WHERE id=?")->execute([$i]); }
+    if ($sid) { $db->prepare("UPDATE users SET token=NULL WHERE id=?")->execute([$uid]); $db->prepare("DELETE FROM push_native WHERE user_id=? AND session_id IS NULL")->execute([$uid]); }
+    $db->prepare("DELETE FROM push_subs WHERE user_id=?")->execute([$uid]); }
+  out(['ok' => true, 'others' => $n]);
  case 'me/testalarm': // persönlicher Testalarm (Issue #218): lvl crit|high|normal|low, nach 30 Sekunden an die Person selbst; '' = abbrechen
   $l = (string)($in['lvl'] ?? '');
   if ($l === '') { $db->prepare("UPDATE users SET test_alarm=NULL WHERE id=?")->execute([$uid]); out(['ok' => 1]); }
