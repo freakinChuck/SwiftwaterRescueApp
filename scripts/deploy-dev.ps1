@@ -64,6 +64,8 @@ foreach ($n in $targets) {
   if ($isBase) { git fetch -q origin main; Check 'git fetch main' } else { git fetch -q origin "pull/$n/head"; Check "git fetch PR $n" }
   $full = (git rev-parse FETCH_HEAD); Check 'git rev-parse'
   $sha = $full.Substring(0, 7)
+  # Zufaellige Kennung je Deployment fuer ?v= und X-Build (Issue #275), der Commit steht nur in version.json
+  $build = -join ((1..10) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
   $script = git show "${full}:scripts/deploy.ps1" | Out-String
   $m = [regex]::Match($script, '\$files\s*=\s*([^\r\n]+)')
   if (-not $m.Success) { throw "PR ${n}: Dateiliste nicht gefunden" }
@@ -86,7 +88,7 @@ foreach ($n in $targets) {
   'img\test', 'img\prod' | ForEach-Object { $p = Join-Path $stage $_; if (Test-Path $p) { Remove-Item -Recurse -Force $p } }
   $enc = New-Object System.Text.UTF8Encoding($false)
   Get-ChildItem $stage -File | Where-Object { $_.Extension -eq '.html' -or $_.Name -eq 'sw.js' } | ForEach-Object {
-    $t = [IO.File]::ReadAllText($_.FullName, $enc) -replace '\?v=[0-9a-z]*', "?v=$sha"
+    $t = [IO.File]::ReadAllText($_.FullName, $enc) -replace '\?v=[0-9a-z]*', "?v=$build"
     # Kennung im Seitentitel, auch dort, wo die Seite den Titel zur Laufzeit neu setzt
     $t = $t -replace '<title>', "<title>$label" -replace 'document\.title=(?!=)', "document.title='$label'+"
     [IO.File]::WriteAllText($_.FullName, $t, $enc)
@@ -104,9 +106,9 @@ foreach ($n in $targets) {
   $cfg = Join-Path $dest 'api\config.php'
   if (-not (Test-Path $cfg)) { git show $cfgSrc | Set-Content -Encoding Ascii $cfg }
   [IO.File]::WriteAllText((Join-Path $data 'deployed.txt'), "$($label.Trim()) $sha`n", $enc)
-  # Version für die API (Issue #175, verInfo): Commit = ?v= der Seiten, pr = PR-Nummer (testbase ohne)
+  # Version für die API (Issue #175, verInfo): Commit, build = ?v= der Seiten, pr = PR-Nummer (testbase ohne)
   $ver = Get-SwVersion $full $sha
-  [IO.File]::WriteAllText((Join-Path $data 'version.json'), (@{ version = $ver.version; full = $ver.full; commit = $sha; env = 'dev'; pr = $(if ($isBase) { $null } else { [int]$n }); at = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() } | ConvertTo-Json -Compress), $enc)
+  [IO.File]::WriteAllText((Join-Path $data 'version.json'), (@{ version = $ver.version; full = $ver.full; commit = $sha; build = $build; env = 'dev'; pr = $(if ($isBase) { $null } else { [int]$n }); at = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() } | ConvertTo-Json -Compress), $enc)
   $db = Join-Path $data 'swiftwater.sqlite'
   $baseDb = Join-Path $Base 'api\data\swiftwater.sqlite'
   $seeded = ''

@@ -327,11 +327,14 @@ function verInfo() { static $v = null; if ($v !== null) return $v;
   $j = json_decode((string)@file_get_contents(__DIR__ . '/data/version.json'), true);
   if (!is_array($j) || !preg_match(VER_RX, (string)($j['version'] ?? ''))) { $b = trim((string)@file_get_contents(dirname(__DIR__, 2) . '/VERSION')); $b = preg_match(VER_RX, $b) ? $b : '0.0.0';
     $j = ['version' => $b, 'full' => "$b+lokal", 'commit' => '', 'env' => 'local']; }
-  $f = (string)($j['full'] ?? ''); $c = (string)($j['commit'] ?? '');
-  return $v = ['version' => $j['version'], 'full' => preg_match('/^[0-9A-Za-z.+-]{1,60}$/', $f) ? $f : $j['version'], 'commit' => preg_match('/^[0-9a-f]{4,40}$/', $c) ? $c : '',
+  $f = (string)($j['full'] ?? ''); $c = (string)($j['commit'] ?? ''); $c = preg_match('/^[0-9a-f]{4,40}$/', $c) ? $c : ''; $bd = (string)($j['build'] ?? '');
+  // build = zufällige Kennung je Deployment (= ?v= der Seiten, Header X-Build, Issue #275), lässt sich keinem Commit zuordnen; ältere version.json ohne build: Commit
+  return $v = ['version' => $j['version'], 'full' => preg_match('/^[0-9A-Za-z.+-]{1,60}$/', $f) ? $f : $j['version'], 'commit' => $c, 'build' => preg_match('/^[0-9a-z]{4,40}$/', $bd) ? $bd : $c,
     'env' => isset(VER_ENV[$j['env'] ?? '']) ? $j['env'] : 'test', 'pr' => is_numeric($j['pr'] ?? null) ? (int)$j['pr'] : null, 'at' => (int)($j['at'] ?? 0)]; }
-// Für alle, auch ohne Anmeldung: auf dem Produktivsystem nur die Version, sonst mit Abstand, Commit und Umgebung (Rückmeldungen eindeutig zuordnen)
-function verPub() { $v = verInfo(); $p = $v['env'] === 'prod';
+// Angemeldet: auf dem Produktivsystem nur die Version, sonst mit Abstand, Commit und Umgebung (Rückmeldungen eindeutig zuordnen).
+// Ohne Anmeldung ($full false: Routen version, org, legal) nur Release-Version und API-Stufe (Issue #275), sonst liesse sich der genaue Code-Stand nachschlagen
+function verPub($full = true) { $v = verInfo(); $p = $v['env'] === 'prod';
+  if (!$full) return ['version' => $v['version'], 'full' => $v['version'], 'api' => API_LEVEL];
   return ['version' => $v['version'], 'full' => $p ? $v['version'] : $v['full'], 'env' => $v['env'], 'env_name' => VER_ENV[$v['env']], 'commit' => $p ? '' : $v['commit'], 'pr' => $v['env'] === 'dev' ? $v['pr'] : null, 'api' => API_LEVEL]; }
 // Versionen vergleichen (nur MAJOR.MINOR.PATCH, Zusätze wie +45 zählen nicht): <0, 0, >0
 function verCmp($a, $b) { $x = array_map('intval', explode('.', preg_replace('/[^0-9.].*$/', '', (string)$a) . '.0.0')); $y = array_map('intval', explode('.', preg_replace('/[^0-9.].*$/', '', (string)$b) . '.0.0'));
@@ -340,13 +343,13 @@ function verCmp($a, $b) { $x = array_map('intval', explode('.', preg_replace('/[
 function appMin() { $v = (string)setting('app_min', ''); return preg_match(VER_RX, $v) ? $v : ''; }
 // Version der App aus der Anmeldung bzw. dem Header X-App-Version, z. B. 0.4.0+2611131200 (Version + Build); sonst ''
 function appVer($s) { $s = trim((string)$s); return preg_match('/^\d{1,4}\.\d{1,4}\.\d{1,4}(\+\d{1,12})?$/', $s) ? $s : ''; }
-// Commit des ausgelieferten Stands in jeder Antwort: Die Seiten vergleichen ihn mit ihrem ?v= und bieten «Neu laden» an, wenn eine neuere Version ausgeliefert ist
-if (verInfo()['commit'] !== '') header('X-Build: ' . verInfo()['commit']);
+// Kennung des ausgelieferten Stands in jeder Antwort: Die Seiten vergleichen sie mit ihrem ?v= und bieten «Neu laden» an, wenn eine neuere Version ausgeliefert ist
+if (verInfo()['build'] !== '') header('X-Build: ' . verInfo()['build']);
 // Applikationslog: beim ersten Aufruf nach einem Deployment «Version a → b» (Stand in der Einstellung ver_seen)
 try { $vi = verInfo(); if ($vi['env'] !== 'local' && ($vs = (string)setting('ver_seen', '')) !== $vi['full']) { setSetting('ver_seen', $vi['full']);
   alog('info', 'api', $vs === '' ? 'Version ' . $vi['full'] . ' ausgeliefert' : "Version $vs → " . $vi['full'], ['commit' => $vi['commit'], 'env' => $vi['env']] + ($vi['pr'] ? ['pr' => $vi['pr']] : [])); } } catch (Throwable $e) {}
 // Version ohne Anmeldung (Anmeldung, legal.html, Kontenliste der App)
-if ($route === 'version') out(verPub() + ['app_min' => appMin()]);
+if ($route === 'version') out(verPub(false) + ['app_min' => appMin()]);
 // Release Notes («Was ist neu», Datei changes.json, geschrieben von release.yml): nur ausgelieferte Versionen (bis zur eigenen), neueste zuerst; ohne Anmeldung
 if ($route === 'changes') { $j = json_decode((string)@file_get_contents(dirname(__DIR__) . '/changes.json'), true); $cur = verInfo()['version'];
   $vs = array_values(array_filter(is_array($j['versions'] ?? null) ? $j['versions'] : [], fn($x) => is_array($x) && preg_match(VER_RX, (string)($x['version'] ?? '')) && ($cur === '0.0.0' || verCmp($x['version'], $cur) <= 0)));
@@ -1831,7 +1834,7 @@ function i18nTr($l, $s) { $s = (string)$s; if ($l === 'de' || !langOk($l) || tri
 function i18nUp($l, $s) { return mb_strtoupper(i18nTr($l, $s)); }
 // Sprache der laufenden Anfrage (für den AI-Assistenten): eigene Wahl, sonst Header X-Lang, sonst Vorgabe
 function reqLang() { global $me; $l = $me['lang'] ?? null; if (langOk($l)) return $l; $h = (string)($_SERVER['HTTP_X_LANG'] ?? ''); return langOk($h) ? $h : langDefault(); }
-if ($route === 'org') out(orgInfo() + ['version' => verPub(), 'lang' => langDefault()]);
+if ($route === 'org') out(orgInfo() + ['version' => verPub(false), 'lang' => langDefault()]);
 if ($route === 'org/logo') { $l = (string)setting('aar_logo', '');
   if (!preg_match('~^data:(image/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$~', $l, $m) || ($b = base64_decode($m[2], true)) === false) { http_response_code(404); exit; }
   $et = '"' . substr(sha1($l), 0, 16) . '"'; header('ETag: ' . $et); header('Cache-Control: public, max-age=86400');
@@ -1845,7 +1848,7 @@ if ($route === 'legal') {
   $aiOn = !empty($ai['on']) && trim((string)($ai['model'] ?? '')) !== '' && ($aiPv === 'anthropic' ? (string)setting('ai_key', '') !== '' : $aiU !== '');
   $aiP = fn($p) => (object)array_map(fn($k) => is_array($ai[$p] ?? null) ? (int)($ai[$p][(string)$k['id']] ?? 1) : (int)($ai[$p] ?? 1), $ks);
   out(['ai' => ['on' => $aiOn ? 1 : 0, 'host' => $aiOn ? ($aiPv === 'anthropic' && $aiU === '' ? 'api.anthropic.com' : (string)(parse_url($aiU, PHP_URL_HOST) ?: '')) : '', 'anon' => $aiP('anon'), 'round_loc' => $aiP('round_loc')],
-    'cfg' => legalCfg(), 'org_info' => orgInfo(), 'updated' => (int)setting('legal_at', '0'), 'version' => verPub(),
+    'cfg' => legalCfg(), 'org_info' => orgInfo(), 'updated' => (int)setting('legal_at', '0'), 'version' => verPub(false),
     'kinds' => array_values(array_map(fn($k) => ['id' => $k['id'], 'name' => $k['name'], 'color' => $k['color']], $ks)),
     'features' => array_map(fn($k) => ['k' => $k, 'name' => FEATURES[$k], 'on' => (object)array_map(fn($f) => $f[$k], $fk)], array_keys(FEATURES)),
     'overpass' => ['servers' => overpassActive(), 'ttl' => (int)setting('overpass_ttl', '120'), 'postgis' => pgReady() ? 1 : 0, 'pgapi' => pgaReady() ? 1 : 0, 'order' => array_values(array_filter(waterOrder(), fn($k) => waterReady()[$k]))],
