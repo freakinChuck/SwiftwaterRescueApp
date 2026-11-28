@@ -2,11 +2,13 @@
 // Verbund eigenständiger Server (Issue #60): Vereinbarungen zwischen zwei Organisationen mit je eigener Installation.
 // Jede Seite trägt die andere unter Verwaltung → Konnektivität → «Partnerorganisationen» ein (Adresse und gemeinsamer Schlüssel)
 // und legt selbst fest, was die andere darf (Einsatzgruppen, Zuordnung der Einsatztypen). Anfragen zwischen den Servern sind
-// signiert: X-Fed-Key (Kennung des Schlüssels), X-Fed-Ts (Unix-Zeit) und X-Fed-Sig = HMAC-SHA256(Schlüssel, Ts \n Route \n Body).
+// signiert: X-Fed-Key (Kennung des Schlüssels), X-Fed-Ts (Unix-Zeit), X-Fed-Nonce (Einmalwert, 32 hex) und
+// X-Fed-Sig = HMAC-SHA256(Schlüssel, Ts \n Nonce \n Route \n Body). Jeder Einmalwert gilt nur einmal (Tabelle fed_nonce, Issue #273),
+// eine abgefangene Anfrage lässt sich also nicht wiederholen. Ältere Fassungen ohne Einmalwert werden abgelehnt.
 // Ein gemeinsamer Einsatz hat eine auslösende Organisation (host); die übrigen sprechen nur mit ihr, sie leitet weiter (Stern).
 // Wird von index.php vor der Anmeldeprüfung eingebunden; die Funktionen nutzen die Hilfsfunktionen aus index.php.
 
-const FED_WIN = 300;      // erlaubte Zeitabweichung der Signatur in s
+const FED_WIN = 120;      // erlaubte Zeitabweichung der Signatur in s (Issue #273: kürzer, Einmalwerte werden so lange gemerkt)
 const FED_TO = 4;         // Wartezeit je Anfrage an einen Partner in s
 const FED_STATE_S = 3;    // Lage eines Partners zwischengespeichert in s
 const FED_DOWN_S = 15;    // nach einem Ausfall so lange nicht erneut fragen
@@ -20,9 +22,10 @@ function fedSelf() { $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !=
   return ($https ? 'https://' : 'http://') . appBase(); }
 function fedTag() { return 'f' . substr(sha1(appBase()), 0, 8); } // Kennung dieses Servers in Schlüsseln (Einsätze, Konferenz)
 function fedKid($secret) { return substr(hash('sha256', (string)$secret), 0, 16); } // gleich auf beiden Seiten, verrät den Schlüssel nicht
-// Adresse eines Partners: Basis der Installation (Ordner von index.html), https ausser für localhost
+// Adresse eines Partners: Basis der Installation (Ordner von index.html), https; http nur zu localhost und nur, wenn dieser Server selbst lokal läuft (Entwicklung, Issue #273)
+function fedLocal($h) { return in_array(strtolower(trim((string)$h, '[]')), ['localhost', '127.0.0.1', '::1'], true); }
 function fedUrl($u) { $u = trim((string)$u); if ($u === '') return null; $p = parse_url($u); if (!$p || empty($p['host']) || !in_array(strtolower($p['scheme'] ?? ''), ['http', 'https'], true)) return null;
-  $loc = in_array(strtolower($p['host']), ['localhost', '127.0.0.1', '::1'], true); if (strtolower($p['scheme']) !== 'https' && !$loc) return null;
+  $loc = fedLocal($p['host']) && fedLocal(parse_url('http://' . appBase(), PHP_URL_HOST)); if (strtolower($p['scheme']) !== 'https' && !$loc) return null;
   $path = $p['path'] ?? '/'; if (preg_match('~/[^/]*\.[a-z0-9]+$~i', $path)) $path = dirname($path) . '/'; // index.html, admin.html … weglassen
   $path = preg_replace('~/api/?$~', '/', rtrim($path, '/') . '/');
   return strtolower($p['scheme']) . '://' . $p['host'] . (isset($p['port']) ? ':' . (int)$p['port'] : '') . $path; }
@@ -38,21 +41,27 @@ function fedPub($p) { return ['id' => $p['id'], 'name' => $p['name'], 'url' => $
 
 // Eingehende signierte Anfrage prüfen, liefert den Partner
 function fedAuth() { global $db, $route;
-  $kid = (string)($_SERVER['HTTP_X_FED_KEY'] ?? ''); $ts = (int)($_SERVER['HTTP_X_FED_TS'] ?? 0); $sig = (string)($_SERVER['HTTP_X_FED_SIG'] ?? '');
+  $kid = (string)($_SERVER['HTTP_X_FED_KEY'] ?? ''); $ts = (int)($_SERVER['HTTP_X_FED_TS'] ?? 0); $sig = (string)($_SERVER['HTTP_X_FED_SIG'] ?? ''); $nc = (string)($_SERVER['HTTP_X_FED_NONCE'] ?? '');
   $s = $db->prepare("SELECT * FROM fed_partners WHERE kid=? AND active=1"); $s->execute([$kid]); $p = $s->fetch() ?: null; $s->closeCursor();
-  $ok = $p && $p['secret'] !== '' && abs(time() - $ts) <= FED_WIN && hash_equals(hash_hmac('sha256', $ts . "\n" . $route . "\n" . file_get_contents('php://input'), $p['secret']), $sig);
-  if (!$ok) { alog('warn', 'fed', 'Anfrage eines Partners abgelehnt', ['route' => $route, 'known' => $p ? 1 : 0, 'skew' => $p && abs(time() - $ts) > FED_WIN ? 1 : 0]); fail('Ungültige Signatur oder unbekannter Partner', 401); }
+  $okN = (bool)preg_match('/^[0-9a-f]{32}$/', $nc);
+  $ok = $p && $p['secret'] !== '' && $okN && abs(time() - $ts) <= FED_WIN && hash_equals(hash_hmac('sha256', $ts . "\n" . $nc . "\n" . $route . "\n" . file_get_contents('php://input'), $p['secret']), $sig);
+  if ($ok) { // Einmalwert merken; schon gesehen = Wiederholung
+    $db->prepare("DELETE FROM fed_nonce WHERE at<?")->execute([time() - 2 * FED_WIN - 60]);
+    try { $db->prepare("INSERT INTO fed_nonce(kid,n,at) VALUES(?,?,?)")->execute([$kid, $nc, time()]); }
+    catch (Throwable $e) { alog('warn', 'fed', 'Wiederholte Anfrage eines Partners abgelehnt', ['route' => $route]); fail('Anfrage wurde bereits verarbeitet', 401); } }
+  if (!$ok) { alog('warn', 'fed', 'Anfrage eines Partners abgelehnt', ['route' => $route, 'known' => $p ? 1 : 0, 'nonce' => $okN ? 1 : 0, 'skew' => $p && abs(time() - $ts) > FED_WIN ? 1 : 0]); fail('Ungültige Signatur oder unbekannter Partner', 401); }
   return fedRow($p); }
 
 // Anfragen an Partner, gleichzeitig über curl_multi. $calls = [Schlüssel => [Partner, Route, Body]]; Rückgabe je Schlüssel {ok, code, data, err}
-function fedMulti($calls, $to = FED_TO) { global $db, $now; if (!$calls) return []; $mh = curl_multi_init(); $hs = [];
-  foreach ($calls as $i => [$p, $r, $b]) { $body = json_encode((object)$b, JSON_UNESCAPED_UNICODE); $ts = time();
+function fedMulti($calls, $to = FED_TO) { global $db, $now; if (!$calls) return []; $mh = curl_multi_init(); $hs = []; $pre = [];
+  foreach ($calls as $i => [$p, $r, $b]) { $body = json_encode((object)$b, JSON_UNESCAPED_UNICODE); $ts = time(); $nc = bin2hex(random_bytes(16));
+    [$ne, $no] = netCheck(fedEp($p, $r)); if ($ne) { $pre[$i] = $ne; continue; } // Issue #274
     $h = curl_init(fedEp($p, $r));
-    curl_setopt_array($h, CURL_CA + [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => $to, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_USERAGENT => 'SwiftwaterRescue/fed',
-      CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Fed-Key: ' . $p['kid'], 'X-Fed-Ts: ' . $ts, 'X-Fed-Sig: ' . hash_hmac('sha256', $ts . "\n" . $r . "\n" . $body, $p['secret'])]]);
+    curl_setopt_array($h, CURL_CA + $no + [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => $to, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_USERAGENT => 'SwiftwaterRescue/fed',
+      CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Fed-Key: ' . $p['kid'], 'X-Fed-Ts: ' . $ts, 'X-Fed-Nonce: ' . $nc, 'X-Fed-Sig: ' . hash_hmac('sha256', $ts . "\n" . $nc . "\n" . $r . "\n" . $body, $p['secret'])]]);
     curl_multi_add_handle($mh, $h); $hs[$i] = $h; }
   do { $st = curl_multi_exec($mh, $run); if ($run) curl_multi_select($mh, 0.5); } while ($run && $st === CURLM_OK);
-  $out = [];
+  $out = []; foreach ($pre as $i => $e) $out[$i] = ['ok' => false, 'code' => 0, 'data' => null, 'err' => $e];
   foreach ($hs as $i => $h) { $c = (int)curl_getinfo($h, CURLINFO_HTTP_CODE); $d = json_decode((string)curl_multi_getcontent($h), true); $e = curl_error($h); curl_multi_remove_handle($mh, $h);
     $ok = $c === 200 && is_array($d); $p = $calls[$i][0]; $err = $ok ? null : ($c ? (is_array($d) && isset($d['error']) ? (string)$d['error'] : 'HTTP ' . $c) : ($e !== '' ? $e : 'keine Antwort'));
     $out[$i] = ['ok' => $ok, 'code' => $c, 'data' => $ok ? $d : null, 'err' => $err];

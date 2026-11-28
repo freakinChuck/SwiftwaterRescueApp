@@ -5,6 +5,20 @@
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>
+# Sicherheits-Header (Issue #271) für alle Dateien ausser PHP; die API setzt sie selbst (api/index.php, doc/get mit eigener CSP «sandbox»),
+# sonst überschriebe Apache dort ihre Werte bzw. doppelte sie.
+# Fremde Seiten dürfen die App nicht einbetten (Clickjacking), keine MIME-Erkennung, Referer nur mit Host, Gerätefunktionen nur für die eigenen Seiten.
+# public.html, funk.html, dok.html usw. setzen ihren Referer weiterhin selbst (meta referrer geht vor).
+<IfModule mod_headers.c>
+ <FilesMatch "\.(?!php$)[^.]+$">
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(self), microphone=(self), camera=(self), payment=(), usb=()"
+  Header always set Content-Security-Policy "frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
+  Header always set Strict-Transport-Security "max-age=31536000" env=HTTPS
+ </FilesMatch>
+</IfModule>
 # PWA (Issue #67): Manifest mit dem richtigen Typ ausliefern; sw.js ist JS und wird damit ebenfalls bei jedem Aufruf geprüft
 <IfModule mod_mime.c>
   AddType application/manifest+json .webmanifest

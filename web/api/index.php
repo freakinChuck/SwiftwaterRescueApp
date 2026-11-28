@@ -3,9 +3,38 @@
 $cfg = require __DIR__ . '/config.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
+// Sicherheits-Header (Issue #271): auch dort, wo .htaccess nicht greift (IIS, Server ohne mod_headers); HSTS nur über HTTPS
+(function () { header('X-Content-Type-Options: nosniff'); header('X-Frame-Options: SAMEORIGIN'); header('Referrer-Policy: strict-origin-when-cross-origin');
+  header("Content-Security-Policy: frame-ancestors 'self'; object-src 'none'; base-uri 'self'");
+  $https = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off' || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+  if ($https) header('Strict-Transport-Security: max-age=31536000'); })();
 ini_set('serialize_precision', '-1'); // Zahlen im JSON kurz ausgeben (47.481 statt 47.48100000000000164…), Hosting-Einstellung übersteuern
 // HTTPS-Abrufe unter Windows (lokales DEV mit IIS): Zertifikate aus dem Windows-Speicher, PHP bringt dort keine Liste mit (sonst schlägt jeder Abruf fehl, Feedback zu #125)
 define('CURL_CA', PHP_OS_FAMILY === 'Windows' && defined('CURLSSLOPT_NATIVE_CA') ? [CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA] : []);
+// Schutz vor Anfragen an interne Adressen (SSRF, Issue #274): Abrufe zu Adressen aus der Verwaltung, von Partnern oder aus Push-Abos nur zu
+// öffentlichen IP-Adressen über http/https, ohne Weiterleitungen; die geprüfte Adresse wird über CURLOPT_RESOLVE festgehalten (kein DNS-Rebinding).
+// Ausnahmen in config.php: 'net_allow' => ['ollama.lan', '10.0.0.5'] (Hosts bzw. IP-Adressen, z. B. eigener AI-, LiveKit- oder PostGIS-API-Server
+// im internen Netz) oder 'net_private' => true (alle internen Adressen). Läuft dieser Server selbst auf localhost (Entwicklung), gilt alles als erlaubt.
+function netIpPub($ip) { return (bool)filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)
+  && !preg_match('/^(100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|0\.|169\.254\.|fe80:|fc|fd|::ffff:)/i', $ip); }
+function netFree($host) { $c = $GLOBALS['cfg'] ?? []; $h = strtolower(trim((string)$host, '[]'));
+  if (!empty($c['net_private'])) return true;
+  if (in_array($h, array_map(fn($x) => strtolower(trim((string)$x, '[]')), (array)($c['net_allow'] ?? [])), true)) return true;
+  $self = strtolower((string)preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? ''))); return in_array(trim($self, '[]'), ['localhost', '127.0.0.1', '::1'], true) || PHP_SAPI === 'cli'; }
+// Prüft Adresse bzw. Host; [Fehler|null, curl-Optionen]. $ports = erlaubte Ports (null = alle)
+function netCheck($url, $hostOnly = false) { $p = $hostOnly ? ['host' => $url, 'scheme' => 'tcp'] : parse_url((string)$url);
+  $sch = strtolower($p['scheme'] ?? ''); $h = trim((string)($p['host'] ?? ''), '[]');
+  if ($h === '' || (!$hostOnly && !in_array($sch, ['http', 'https'], true))) return ['Ungültige Adresse', []];
+  $port = (int)($p['port'] ?? ($sch === 'https' ? 443 : 80));
+  $opt = [CURLOPT_FOLLOWLOCATION => false] + (defined('CURLOPT_PROTOCOLS') ? [CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS] : []);
+  if (netFree($h)) return [null, $opt];
+  if (filter_var($h, FILTER_VALIDATE_IP)) $ips = [$h];
+  else { $ips = []; foreach ((array)@dns_get_record($h, DNS_A | DNS_AAAA) as $r) if (!empty($r['ip']) || !empty($r['ipv6'])) $ips[] = $r['ip'] ?? $r['ipv6'];
+    if (!$ips) { $g = @gethostbynamel($h); $ips = $g ?: []; } }
+  if (!$ips) return [null, $opt]; // nicht auflösbar: curl scheitert selbst (oder fragt über einen Proxy, der intern nicht weiterleitet)
+  foreach ($ips as $ip) if (!netIpPub($ip)) { alog('warn', 'net', 'Abruf zu interner Adresse abgelehnt', ['host' => $h]); return ['Adresse im internen Netz nicht erlaubt: ' . $h . ' (Ausnahme in config.php mit net_allow)', []]; }
+  if (!$hostOnly) $opt[CURLOPT_RESOLVE] = [$h . ':' . $port . ':' . (str_contains($ips[0], ':') ? '[' . $ips[0] . ']' : $ips[0])];
+  return [null, $opt]; }
 function out($d, $c = 200) { if ($c < 400 && isset(APPLOG_ROUTES[$GLOBALS['route'] ?? ''])) alogRoute($d); // Ereignis fürs Applikationslog (Issue #139)
   http_response_code($c); echo json_encode($d, JSON_UNESCAPED_UNICODE);
   if (!empty($GLOBALS['pushQ']) || !empty($GLOBALS['AFTER'])) { // Web-Push erst nach der Antwort senden (Issue #67), damit z. B. «Alarm auslösen» nicht auf die Push-Dienste wartet
@@ -27,7 +56,7 @@ set_exception_handler(function ($e) { global $db;
 // alog schreibt nie einen Fehler weiter (der Log-Eintrag darf eine Anfrage nicht scheitern lassen); Warnungen und Fehler gehen zusätzlich ins error_log des Servers.
 // Nie Passwörter, Schlüssel oder Inhalte von Einsätzen ins Log, nur Kennungen und technische Angaben.
 const APPLOG_LVL = ['info' => 'Ereignis', 'warn' => 'Warnung', 'err' => 'Fehler'];
-const APPLOG_CATS = ['api' => 'Server', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
+const APPLOG_CATS = ['api' => 'Server', 'net' => 'Netzwerk', 'php' => 'PHP', 'auth' => 'Anmeldung', 'user' => 'Benutzer & Rollen', 'cfg' => 'Einstellungen', 'inc' => 'Einsatz', 'anon' => 'Anonymisierung',
   'push' => 'Push', 'overpass' => 'Geodaten-Quellen', 'air' => 'Helikopter', 'hydro' => 'Pegel & Abfluss', 'ai' => 'AI-Assistent', 'mail' => 'E-Mail-Alarm', 'voice' => 'Funk & Konferenz', 'geo' => 'Geodaten übernehmen', 'veh' => 'Fahrzeuge', 'dsar' => 'Datenschutz', 'fed' => 'Partnerorganisationen', 'docs' => 'Dokumente', 'client' => 'Browser & App'];
 const APPLOG_MAX = 50; // höchstens so viele Einträge je Anfrage (z. B. Warnungen in einer Schleife)
 const APPLOG_DAYS = 30; // Standard der Aufbewahrung in Tagen (Einstellung applog_days, 1–365)
@@ -192,6 +221,7 @@ foreach ([
   // Verbund eigenständiger Server (Issue #60, fed.php): Partner mit gemeinsamem Schlüssel, gemeinsame Einsätze (host = von uns ausgelöst), Mitglieder (nur bei der auslösenden Organisation), gemeinsamer Kanal
   "CREATE TABLE IF NOT EXISTS fed_partners(id $ai, name $tx, url TEXT, secret $tx, kid $tx, active INT DEFAULT 1, grp TEXT NULL, kinds TEXT NULL, info TEXT NULL, created BIGINT, last_ok BIGINT NULL, last_err TEXT NULL)",
   "CREATE TABLE IF NOT EXISTS fed_joint(id $ai, jkey $tx, incident_id INT, host INT DEFAULT 0, host_partner INT NULL, host_inc INT NULL, leads TEXT NULL, ended_at BIGINT NULL, created BIGINT)",
+  "CREATE TABLE IF NOT EXISTS fed_nonce(kid VARCHAR(32), n VARCHAR(64), at BIGINT, PRIMARY KEY(kid,n))", // Issue #273: gesehene Einmalwerte signierter Anfragen
   "CREATE TABLE IF NOT EXISTS fed_joint_m(id $ai, joint_id INT, partner_id INT, inc INT, created BIGINT)",
   "CREATE TABLE IF NOT EXISTS fed_jmsg(id $ai, joint_id INT, src INT DEFAULT 0, uid INT, org $tx NULL, name $tx, text TEXT, at BIGINT)",
   // Notruf (SOS, Issue #240): je Auslösung eine Zeile; lat/lon/loc_at = letzter Standort (bei jeder Standortmeldung nachgeführt), ack_* = zuerst quittiert von, ended_* = beendet
@@ -1130,7 +1160,8 @@ function pgaReady() { $c = pgaCfg(); return $c['on'] && $c['url'] !== '' && func
 // Eine Anfrage an die API, Antwort als Array; Fehler mit Titel/Detail der Problem-Antwort (RFC 7807) bzw. HTTP-Code
 function pgaReq($c, $key, $path, $body = null) { if (!function_exists('curl_init')) throw new RuntimeException('PHP-Erweiterung curl fehlt auf dem Server');
   $h = ['Accept: application/json, application/geo+json']; if ($key !== '') $h[] = 'X-API-Key: ' . $key; if ($body !== null) $h[] = 'Content-Type: application/json';
-  $ch = curl_init($c['url'] . $path); curl_setopt_array($ch, CURL_CA + [CURLOPT_RETURNTRANSFER => 1, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 15, CURLOPT_HTTPHEADER => $h, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']
+  [$ne, $no] = netCheck($c['url'] . $path); if ($ne) throw new RuntimeException($ne);
+  $ch = curl_init($c['url'] . $path); curl_setopt_array($ch, CURL_CA + $no + [CURLOPT_RETURNTRANSFER => 1, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 15, CURLOPT_HTTPHEADER => $h, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']
     + ($body !== null ? [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => json_encode($body)] : []));
   $r = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
   if ($r === false) throw new RuntimeException(curl_errno($ch) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : (curl_error($ch) ?: 'Keine Antwort'));
@@ -1382,7 +1413,7 @@ function mailKey() { $k = (string)setting('mail_in_key', ''); if (!preg_match('/
 function mailKeyOk() { $k = (string)($_GET['key'] ?? ''); $s = (string)setting('mail_in_key', ''); return $s !== '' && preg_match('/^[0-9a-f]{40}$/', $k) && hash_equals($s, $k); }
 
 /* IMAP über Sockets: nur LOGIN, SELECT, UID SEARCH, UID FETCH, UID STORE, LOGOUT */
-function imapOpen($c, $pass) {
+function imapOpen($c, $pass) { if ($ne = netCheck($c['host'], true)[0]) throw new RuntimeException($ne); // Issue #274
   $ctx = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true, 'peer_name' => $c['host']]]);
   $fp = @stream_socket_client(($c['sec'] === 'ssl' ? 'ssl://' : 'tcp://') . $c['host'] . ':' . $c['port'], $no, $err, 10, STREAM_CLIENT_CONNECT, $ctx);
   if (!$fp) throw new RuntimeException('Keine Verbindung zu ' . $c['host'] . ':' . $c['port'] . ($err ? ' (' . $err . ')' : ''));
@@ -1696,8 +1727,9 @@ function voiceLkToken($room, $ident, $name, $pub) { $c = voiceCfg()['lk']; $t = 
 // Room-API (Twirp über HTTP(S) derselben Adresse): ListRooms, RemoveParticipant, DeleteRoom; [HTTP-Status, Antwort, Fehler]
 function voiceLkApi($method, $body, $grant) { $c = voiceCfg()['lk']; if (!function_exists('curl_init') || !preg_match('~^wss?://~i', $c['url']) || $c['key'] === '' || (string)setting('voice_lk_secret', '') === '') return [0, null, 'nicht eingerichtet'];
   $base = preg_replace('~^ws(s?)://~i', 'http$1://', rtrim($c['url'], '/')); $t = time();
+  [$ne, $no] = netCheck("$base/twirp/livekit.RoomService/$method"); if ($ne) { alog('warn', 'voice', "LiveKit $method: $ne"); return [0, null, $ne]; }
   $h = curl_init("$base/twirp/livekit.RoomService/$method");
-  curl_setopt_array($h, CURL_CA + [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => json_encode((object)$body), CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 5,
+  curl_setopt_array($h, CURL_CA + $no + [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => json_encode((object)$body), CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 5,
     CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . voiceJwt(['iss' => $c['key'], 'nbf' => $t - 30, 'exp' => $t + 600, 'video' => $grant])]]);
   $r = curl_exec($h); $code = (int)curl_getinfo($h, CURLINFO_HTTP_CODE); $e = curl_error($h); $j = is_string($r) ? json_decode($r, true) : null;
   if ($r === false || $code >= 400 || $code === 0) { $m = $e ?: (is_array($j) ? ($j['msg'] ?? '') : '') ?: "HTTP $code"; alog('warn', 'voice', "LiveKit $method: $m"); return [$code, $j, $m]; }
@@ -1730,8 +1762,9 @@ function voiceDur($ms) { $s = (int)round($ms / 1000); return intdiv($s, 60) . ':
 function voiceTranscribe($vid) { global $db; $s = $db->prepare("SELECT v.*,i.ended_at,i.kind_id FROM voice v JOIN incidents i ON i.id=v.incident_id WHERE v.id=?"); $s->execute([(int)$vid]); $v = $s->fetch(); $s->closeCursor();
   if (!$v || !($p = voicePath($v)) || !is_file($p)) return; $ep = voiceTrEp(); $set = fn($st, $t) => $db->prepare("UPDATE voice SET tr_state=?, transcript=?, upd=? WHERE id=?")->execute([$st, $t, time(), (int)$vid]);
   if (!$ep) { $set(-1, null); return; }
+  [$ne, $no] = netCheck($ep['url']); if ($ne) { $set(-1, null); alog('warn', 'voice', 'Transkription: ' . $ne, ['voice' => (int)$vid]); return; }
   $h = curl_init($ep['url']); $hd = $ep['key'] !== '' ? ['Authorization: Bearer ' . $ep['key']] : [];
-  curl_setopt_array($h, CURL_CA + [CURLOPT_POST => 1, CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 50, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_HTTPHEADER => $hd,
+  curl_setopt_array($h, CURL_CA + $no + [CURLOPT_POST => 1, CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 50, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_HTTPHEADER => $hd,
     CURLOPT_POSTFIELDS => ['file' => new CURLFile($p, (string)$v['mime'], 'audio.' . pathinfo($p, PATHINFO_EXTENSION)), 'model' => $ep['model'], 'language' => $ep['lang'], 'response_format' => 'json']]);
   $r = curl_exec($h); $code = (int)curl_getinfo($h, CURLINFO_HTTP_CODE); $j = is_string($r) ? json_decode($r, true) : null;
   if ($r === false || $code >= 400 || !is_array($j) || !isset($j['text'])) { $set(-1, null); alog('warn', 'voice', 'Transkription fehlgeschlagen: ' . ($r === false ? curl_error($h) : (is_array($j) ? (string)($j['error']['message'] ?? $j['error'] ?? "HTTP $code") : "HTTP $code")), ['host' => $ep['host'], 'voice' => (int)$vid]); return; }
@@ -2709,8 +2742,9 @@ function pushFlush() { global $db, $pushQ; $q = $pushQ; $pushQ = []; if (!$q) re
     $pu = parse_url($sub['endpoint']); if (!$pu || !in_array($pu['scheme'] ?? '', ['https', 'http'], true)) continue;
     $aud = $pu['scheme'] . '://' . $pu['host'] . (isset($pu['port']) ? ':' . $pu['port'] : ''); $jwt[$aud] = $jwt[$aud] ?? vapidJwt($aud);
     $body = pushEncrypt(json_encode($m, JSON_UNESCAPED_UNICODE), $sub['p256dh'], $sub['auth']); if ($body === null) continue;
+    $nk = $aud; $nc[$nk] = $nc[$nk] ?? netCheck($sub['endpoint']); if ($nc[$nk][0]) continue; // Issue #274: nur öffentliche Push-Dienste
     $h = curl_init($sub['endpoint']);
-    curl_setopt_array($h, CURL_CA + [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4,
+    curl_setopt_array($h, CURL_CA + $nc[$nk][1] + [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4,
       CURLOPT_HTTPHEADER => ['Content-Type: application/octet-stream', 'Content-Encoding: aes128gcm', 'TTL: ' . (!empty($m['crit']) ? 3600 : 600), 'Urgency: high', 'Topic: ' . substr(preg_replace('/[^A-Za-z0-9_-]/', '_', (string)($m['rp'] ?? $m['tag'] ?? 'sw')), 0, 32), 'Authorization: vapid t=' . $jwt[$aud] . ', k=' . vapid()['pub']]]);
     curl_multi_add_handle($mh, $h); $hs[] = [$h, (int)$sub['id']]; }
   do { $st = curl_multi_exec($mh, $run); if ($run) curl_multi_select($mh, 1); } while ($run && $st === CURLM_OK);
@@ -2879,21 +2913,31 @@ function overpassServe($q, $area = null) { global $now;
   // Sperre je Abfrage: gleichzeitige Anfragen warten auf die erste und lesen danach den Cache, statt selbst zu Overpass zu gehen
   $lk = @fopen("$file.lock", 'c'); if ($lk) flock($lk, LOCK_EX);
   $hit();
-  foreach (array_merge(glob("$dir/*.json") ?: [], glob("$dir/*.lock") ?: []) as $x) if ($now - filemtime($x) > max($ttl, OVERPASS_KEEP_S)) @unlink($x); // aufräumen, auch als Rückfall zu alt
+  foreach (array_merge(glob("$dir/*.json") ?: [], glob("$dir/*.lock") ?: [], glob("$dir/*.want") ?: []) as $x) if ($now - filemtime($x) > max($ttl, OVERPASS_KEEP_S)) @unlink($x); // aufräumen, auch als Rückfall zu alt
   set_time_limit(90);
   $r = null; foreach ($srcs as $src) { $r = $src === 'postgis' ? pgFetch($area) : ($src === 'pgapi' ? pgaFetch($area) : overpassFetch($q)); if ($r !== null) break; }
   if ($r !== null) { if ($ttl && file_put_contents("$file.tmp", $r) !== false) rename("$file.tmp", $file); header('X-Cache: MISS'); header("X-Source: $src"); echo $r; }
   elseif (is_file($file)) { header('X-Cache: STALE'); readfile($file); } // nicht erreichbar: abgelaufene Daten sind besser als keine
-  elseif ($op) out(['error' => 'Overpass antwortet nicht', 'query' => $q, 'servers' => overpassActive()], 502); // mit Abfrage und Servern: das Gerät fragt Overpass dann selbst (overpassNet in common.js)
+  elseif ($op) { @file_put_contents("$file.want", json_encode(['uid' => (int)($GLOBALS['uid'] ?? 0), 'at' => time()])); // Issue #272: nur danach nimmt overpass/put ein Ergebnis an
+    out(['error' => 'Overpass antwortet nicht', 'query' => $q, 'servers' => overpassActive()], 502); } // mit Abfrage und Servern: das Gerät fragt Overpass dann selbst (overpassNet in common.js)
   else fail('PostGIS bzw. die PostGIS-API antwortet nicht, und Overpass ist in der Verwaltung ausgeschaltet', 503);
   exit;
 }
 // Rückfall (Issue #28): Vom Hosting aus lehnt Overpass oft ab, vom Gerät aus nicht. Das Gerät liefert sein Ergebnis hier für den Cache
 // aller ab. Der Schlüssel kommt aus denselben Parametern wie bei overpass; gespeichert werden nur geprüfte Wege mit den nötigen Feldern.
-function overpassPut($q, $els) {
+// Issue #272: Angenommen wird nur, wenn der Server dieser Person für genau diese Abfrage vor höchstens OVERPASS_PUT_S mit 502 geantwortet hat (Datei .want),
+// und jeder Weg muss mit mindestens einem Punkt im abgefragten Ausschnitt liegen (plus OVERPASS_PUT_M Rand). Sonst liesse sich der Cache für alle mit erfundenen Gewässern füllen.
+const OVERPASS_PUT_S = 600; const OVERPASS_PUT_M = 5000;
+function overpassPut($q, $els, $area = null) { global $uid;
   $ttl = max(0, (int)setting('overpass_ttl', '120')) * 60;
   if (!overpassActive()) out(['ok' => true]); // Overpass ausgeschaltet: nichts annehmen
   if (!is_array($els) || count($els) > 50000) fail('Ungültiges Gewässernetz');
+  $wf = __DIR__ . '/data/overpass/' . sha1($q) . '.json.want'; $want = is_file($wf) ? json_decode((string)@file_get_contents($wf), true) : null;
+  if (!is_array($want) || (int)($want['uid'] ?? 0) !== (int)$uid || time() - (int)($want['at'] ?? 0) > OVERPASS_PUT_S) { alog('warn', 'api', 'Gewässernetz vom Gerät abgelehnt (keine offene Abfrage)'); fail('Für diese Abfrage wird kein Gewässernetz erwartet', 409); }
+  // Ausschnitt als [s, w, n, e] mit Rand
+  $bb = null; if ($area) { $dl = OVERPASS_PUT_M / 111320;
+    if ($area[0] === 'around') { $r = $area[1] / 111320; $dlo = ($r + $dl) / max(0.01, cos(deg2rad($area[2]))); $bb = [$area[2] - $r - $dl, $area[3] - $dlo, $area[2] + $r + $dl, $area[3] + $dlo]; }
+    else { $dlo = $dl / max(0.01, cos(deg2rad(($area[1] + $area[3]) / 2))); $bb = [$area[1] - $dl, $area[2] - $dlo, $area[3] + $dl, $area[4] + $dlo]; } }
   $num = fn($x, $m) => (is_int($x) || is_float($x)) && abs($x) <= $m;
   $w = [];
   foreach ($els as $e) {
@@ -2905,13 +2949,14 @@ function overpassPut($q, $els) {
       if (!is_int($id) || !$num($g[$k]['lat'] ?? null, 90) || !$num($g[$k]['lon'] ?? null, 180)) fail('Ungültiges Gewässernetz');
       $p[] = ['lat' => (float)$g[$k]['lat'], 'lon' => (float)$g[$k]['lon']];
     }
+    if ($bb && !array_filter($p, fn($x) => $x['lat'] >= $bb[0] && $x['lat'] <= $bb[2] && $x['lon'] >= $bb[1] && $x['lon'] <= $bb[3])) fail('Ungültiges Gewässernetz (ausserhalb des Ausschnitts)');
     $w[] = ['type' => 'way', 'id' => $e['id'], 'nodes' => array_values($n), 'geometry' => $p, 'tags' => ['waterway' => $t['waterway']] + (is_string($t['name'] ?? null) ? ['name' => mb_substr($t['name'], 0, 200)] : [])];
   }
   $dir = __DIR__ . '/data/overpass'; if (!is_dir($dir)) @mkdir($dir, 0775, true);
   $file = "$dir/" . sha1($q) . '.json'; clearstatcache(true, $file);
   if (!$ttl || (is_file($file) && time() - filemtime($file) < $ttl)) out(['ok' => true]); // kein Cache bzw. schon aktuell: nichts überschreiben
   $tmp = "$file." . bin2hex(random_bytes(4)) . '.tmp';
-  if (file_put_contents($tmp, json_encode(['elements' => $w])) !== false) rename($tmp, $file);
+  if (file_put_contents($tmp, json_encode(['elements' => $w])) !== false) { rename($tmp, $file); @unlink($wf); }
   out(['ok' => true]);
 }
 // Ausschnitt aus den Parametern, geprüft und auf 5 Nachkommastellen gerundet wie in der Overpass-Abfrage: ['around', m, lat, lon] oder ['bbox', s, w, n, e]
@@ -2935,8 +2980,10 @@ function overpassQuery($in) { // Abfrage aus Parametern bauen (keine freien Abfr
 function overpassFetch($q) { // erste Antwort mit elements, sonst null; jeder Versuch zählt in der Statistik (opStat)
   foreach (overpassActive() as $url) {
     $t = microtime(true); $err = '';
-    if (function_exists('curl_init')) {
-      $c = curl_init($url); curl_setopt_array($c, CURL_CA + [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 15, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
+    [$ne, $no] = netCheck($url); $code = 0; $r = false;
+    if ($ne) $err = $ne;
+    elseif (function_exists('curl_init')) {
+      $c = curl_init($url); curl_setopt_array($c, CURL_CA + $no + [CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 15, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query(['data' => $q]), CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
       $r = curl_exec($c); $code = curl_getinfo($c, CURLINFO_HTTP_CODE);
       if ($r === false) $err = curl_errno($c) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($c);
     } else {
@@ -3268,7 +3315,8 @@ function aiCall($sys, $msgs, $maxTok = null) { $c = aiCfg(); $key = aiKey(); $rl
     $body = ['model' => $model, 'max_tokens' => $mt, 'system' => $sys, 'messages' => $msgs]; }
   else { $url = rtrim(trim((string)$c['base_url']), '/') . '/chat/completions'; $h = ['Content-Type: application/json']; if ($key !== '') $h[] = 'Authorization: Bearer ' . $key;
     $body = ['model' => $model, 'max_tokens' => $mt, 'temperature' => 0.3, 'messages' => array_merge([['role' => 'system', 'content' => $sys]], $msgs)]; }
-  $k = curl_init($url); curl_setopt_array($k, CURL_CA + [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => json_encode($body, JSON_UNESCAPED_UNICODE), CURLOPT_HTTPHEADER => $h, CURLOPT_RETURNTRANSFER => 1,
+  [$ne, $no] = netCheck($url); if ($ne) throw new AiErr($ne);
+  $k = curl_init($url); curl_setopt_array($k, CURL_CA + $no + [CURLOPT_POST => 1, CURLOPT_POSTFIELDS => json_encode($body, JSON_UNESCAPED_UNICODE), CURLOPT_HTTPHEADER => $h, CURLOPT_RETURNTRANSFER => 1,
     CURLOPT_TIMEOUT => (int)$c['timeout'], CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_USERAGENT => 'SwiftwaterRescue/0.1']);
   $r = curl_exec($k); $code = curl_getinfo($k, CURLINFO_HTTP_CODE); $err = $r === false ? (curl_errno($k) === CURLE_OPERATION_TIMEDOUT ? 'Zeitüberschreitung' : curl_error($k)) : ''; // ohne curl_close: wirkungslos seit PHP 8.0, veraltet ab 8.5
   if ($r === false) throw new AiErr('Keine Antwort vom AI-Anbieter: ' . $err);
@@ -3670,7 +3718,7 @@ switch ($route) {
  case 'overpass/stats/reset': need('cfg_map');
   $db->exec("DELETE FROM overpass_stats"); setSetting('overpass_stats_since', (string)time()); out(['ok' => true]);
  case 'overpass/put': // Ergebnis einer direkten Abfrage des Geräts (Rückfall bei 502), gleiche Parameter wie overpass plus elements
-  overpassPut(overpassQuery($in), $in['elements'] ?? null);
+  overpassPut(overpassQuery($in), $in['elements'] ?? null, overpassArea($in));
 
  case 'incident/air': // Helikopter in der Relevanzzone des laufenden Einsatzes (Issue #73), Abruf alle paar Sekunden durch die Einsatz-App
   $inc = activeIncident(); if (!$inc) fail('Kein aktiver Einsatz', 404);
@@ -4436,7 +4484,8 @@ switch ($route) {
  case 'voice/test': need('cfg_conn'); // what lk: Medienserver erreichbar (ListRooms mit Schlüssel); tr: Transkriptionsdienst mit 1 s Stille
   if (($in['what'] ?? '') === 'tr') { $ep = voiceTrEp(); if (!$ep) fail('Kein Transkriptionsdienst eingerichtet'); $t0 = microtime(true);
     $tmp = tempnam(sys_get_temp_dir(), 'swv'); file_put_contents($tmp, voiceWavSilence());
-    $h = curl_init($ep['url']); curl_setopt_array($h, CURL_CA + [CURLOPT_POST => 1, CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 30, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_HTTPHEADER => $ep['key'] !== '' ? ['Authorization: Bearer ' . $ep['key']] : [],
+    [$ne, $no] = netCheck($ep['url']); if ($ne) { @unlink($tmp); fail('Transkription: ' . $ne); }
+    $h = curl_init($ep['url']); curl_setopt_array($h, CURL_CA + $no + [CURLOPT_POST => 1, CURLOPT_RETURNTRANSFER => 1, CURLOPT_TIMEOUT => 30, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_HTTPHEADER => $ep['key'] !== '' ? ['Authorization: Bearer ' . $ep['key']] : [],
       CURLOPT_POSTFIELDS => ['file' => new CURLFile($tmp, 'audio/wav', 'test.wav'), 'model' => $ep['model'], 'language' => $ep['lang'], 'response_format' => 'json']]);
     $r = curl_exec($h); $code = (int)curl_getinfo($h, CURLINFO_HTTP_CODE); $e = curl_error($h); @unlink($tmp); $j = is_string($r) ? json_decode($r, true) : null;
     if ($r === false || $code >= 400 || !is_array($j) || !array_key_exists('text', $j)) fail('Transkription: ' . ($e ?: (is_array($j) ? (string)($j['error']['message'] ?? (is_string($j['error'] ?? null) ? $j['error'] : "HTTP $code")) : "HTTP $code")));
@@ -5011,6 +5060,7 @@ switch ($route) {
   if (!pushOk()) fail('Push ist auf diesem Server nicht verfügbar (PHP ohne openssl/curl)');
   $ep = (string)($in['endpoint'] ?? ''); $k = $in['keys'] ?? [];
   if (!preg_match('~^https://~', $ep) || strlen($ep) > 1000 || strlen(b64ud((string)($k['p256dh'] ?? ''))) !== 65 || strlen(b64ud((string)($k['auth'] ?? ''))) < 16) fail('Ungültiges Abonnement');
+  if (netCheck($ep)[0]) fail('Ungültiges Abonnement'); // Issue #274: nur öffentliche Push-Dienste
   $db->prepare("DELETE FROM push_subs WHERE endpoint=?")->execute([$ep]);
   $db->prepare("INSERT INTO push_subs(user_id,endpoint,p256dh,auth,created) VALUES(?,?,?,?,?)")->execute([$uid, $ep, $k['p256dh'], $k['auth'], $now]);
   out(['ok' => true]);
@@ -5427,7 +5477,7 @@ switch ($route) {
  case 'dsar/org': need('dsar_org'); $tb = [];
   foreach (DSAR_TABLES as $t => [$l]) { try { $n = (int)$db->query("SELECT COUNT(*) FROM $t")->fetchColumn(); } catch (Throwable $e) { $n = null; } $tb[] = ['t' => $t, 'label' => $l, 'n' => $n]; }
   $f = in_array($in['fmt'] ?? '', ['pdf', 'zip'], true) ? $in['fmt'] : 'pdf'; dsarHist('org', null, $f . (!empty($in['voice']) ? '+voice' : '') . (!empty($in['arch']) ? '+arch' : ''));
-  out(['meta' => dsarMeta(), 'tables' => $tb, 'hidden' => DSAR_HIDE, 'secret' => DSAR_SECRET, 'skipped' => ['ai_cache' => 'Zwischenspeicher der AI-Antworten', 'veh_cand' => 'Zwischenstand des automatischen Fahrzeugverbunds', 'aar_arch_part' => 'gesicherte PDFs, als eigene Dateien'],
+  out(['meta' => dsarMeta(), 'tables' => $tb, 'hidden' => DSAR_HIDE, 'secret' => DSAR_SECRET, 'skipped' => ['ai_cache' => 'Zwischenspeicher der AI-Antworten', 'veh_cand' => 'Zwischenstand des automatischen Fahrzeugverbunds', 'aar_arch_part' => 'gesicherte PDFs, als eigene Dateien', 'fed_nonce' => 'Einmalwerte signierter Anfragen der Partner (nur Minuten gültig)'],
     'people' => array_map(fn($r) => ints($r, ['id', 'active', 'last_login']), $db->query("SELECT id,name,username,active,last_login FROM users WHERE COALESCE(purged,0)=0 ORDER BY name")->fetchAll()),
     'voice' => array_map(fn($r) => ints($r, ['id', 'incident_id']), array_values(array_filter(dsarQ("SELECT id,incident_id,file,mime FROM voice WHERE file IS NOT NULL ORDER BY id"), fn($v) => ($p = voicePath($v)) && is_file($p)))),
     'arch' => array_map(fn($r) => ints($r, ['incident_id', 'pdf_at']), dsarQ("SELECT incident_id,pdf_at,pdf_name FROM aar_arch WHERE pdf_at IS NOT NULL ORDER BY incident_id"))]);

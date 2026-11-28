@@ -25,6 +25,9 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **RB-11** – Test-, Entwicklungs- und Produktivsystem sind an unterschiedlich umrandeten App-Symbolen erkennbar (#56).
 - **RB-12** – Übersichtliche Ordnerstruktur im Repository: Web-App und API in einem eigenen Ordner, der dem Webroot auf dem Server entspricht (Adressen bleiben gleich), daneben Platz für künftige native Apps, Dokumentation und Skripte (#109).
 - **RB-13** – Rückfragen erscheinen überall (Einsatz-App, Verwaltung, «Meine Einsätze») als eigener Dialog im Stil der App statt als Fenster des Browsers: Frage hervorgehoben, Erklärung darunter, Knopf mit der Handlung («Entfernen», «Beenden» …), bei Entfernen/Löschen rot, dazu «Abbrechen»; Escape und Klick daneben brechen ab. Hinweise bleiben kurze Meldungen ohne Klick (VW-03) (#104).
+- **RB-14** – Alle Seiten und Antworten der API senden Sicherheits-Header: kein Einbetten in fremde Seiten (Clickjacking), kein Erraten des Inhaltstyps, Referrer nur mit dem Host, eingeschränkte Gerätefunktionen, über HTTPS zusätzlich HSTS; für Apache (`.htaccess`) und IIS (`web.config`) (#271).
+- **RB-15** – Der Server ruft Adressen aus der Verwaltung, von Partnern oder aus Push-Abos nur auf öffentlichen IP-Adressen über http/https ohne Weiterleitungen ab; Dienste im internen Netz (z. B. eigener AI- oder LiveKit-Server) gibt die Konfiguration des Servers ausdrücklich frei (#274).
+- **RB-16** – Ein Gerät kann nur ein Gewässernetz in den Zwischenspeicher laden, das der Server kurz zuvor für dieselbe Person nicht liefern konnte, und nur mit Wegen im angefragten Ausschnitt (#272).
 
 ## 2. Anmeldung und Konto (KO)
 
@@ -472,6 +475,7 @@ Status: alle aufgeführten Anforderungen sind umgesetzt, ausser sie sind mit **o
 - **PO-10** – Gemeinsame Übungen: Eine vorbereitete Übung bietet Einsatzgruppen von Partnern auf und trägt Personen der Partner als Übungsleitung ein; diese sehen die Übung in ihrer Verwaltung (nur lesend) und haben im verknüpften Einsatz die Rechte der Übungsleitung ohne Alarm (#60).
 - **PO-11** – Die native App zeigt gemeinsame Einsätze wie die Web-App (Karte «Gemeinsamer Einsatz», Lage, Listen, Folgen, gemeinsamer Kanal und Konferenz) (#60).
 - **PO-12** – Datenschutzerklärung nennt die eingetragenen Partner mit Host als Empfänger; Export der Organisation und Datenschutzauszug enthalten die Tabellen bzw. Nachrichten im gemeinsamen Kanal; endgültiges Löschen eines Einsatzes löscht seine Verknüpfung (#60).
+- **PO-13** – Signierte Anfragen zwischen Partnern gelten nur einmal (Einmalwert) und nur 2 Minuten; eine abgefangene Anfrage lässt sich nicht wiederholen. Partner über http nur zu Entwicklungszwecken zwischen lokalen Installationen. Beide Installationen müssen dafür auf demselben Stand sein (#273).
 
 ## 33. Dokumentenablage (DO)
 
